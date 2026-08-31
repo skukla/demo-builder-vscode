@@ -9,7 +9,6 @@
 
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
-import type { Logger } from '@/types/logger';
 
 jest.setTimeout(5000);
 
@@ -19,19 +18,11 @@ jest.setTimeout(5000);
 
 const mockEnsureDaLiveAuth = jest.fn();
 
-jest.mock('vscode', () => ({
-    window: { showWarningMessage: jest.fn(), showInformationMessage: jest.fn() },
-    ProgressLocation: { Notification: 15 },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
 }));
 
-jest.mock('@/core/constants', () => ({
-    COMPONENT_IDS: { EDS_STOREFRONT: 'eds-storefront' },
-}));
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -57,38 +48,19 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: (...args: unknown[]) => mockEnsureDaLiveAuth(...args),
 }));
 
-jest.mock('@/features/eds/services/inspectorHelpers', () => ({
-    generateInspectorTreeEntries: jest.fn().mockResolvedValue([]),
-    installInspectorTagging: jest.fn().mockResolvedValue({ success: true }),
-}));
 
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
-}));
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        getAccessToken: jest.fn().mockResolvedValue('token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    })),
-}));
 
 const mockExecuteEdsPipeline = jest.fn();
 jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: (...args: unknown[]) => mockExecuteEdsPipeline(...args),
 }));
 
-jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
-    updateStorefrontState: jest.fn(),
-}));
 
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    updateMeshState: jest.fn(),
-}));
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
@@ -98,15 +70,7 @@ jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollections: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/configGenerator', () => ({
-    generateConfigJson: jest.fn().mockReturnValue({ success: true, content: '{}' }),
-    extractConfigParams: jest.fn().mockReturnValue({}),
-    buildConfigGeneratorParams: jest.fn().mockReturnValue({}),
-}));
 
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mock-fstab'),
-}));
 
 // Mock fetch for code sync verification
 global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 }) as jest.Mock;
@@ -117,42 +81,16 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 }) as jest.Mo
 
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
-import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
-import { createMockLogger } from '../../../../helpers/loggerFake';
+import {
+    createResetContext,
+    meshDeps,
+} from './edsResetService.testUtils';
 
-/** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
-const meshDeps = createMeshDepsFake();
 
 
 // =============================================================================
 // Helpers
 // =============================================================================
-
-function createMockContext(): HandlerContext {
-    return {
-        panel: {
-            webview: { postMessage: jest.fn() },
-        } as unknown as HandlerContext['panel'],
-        stateManager: {
-            getCurrentProject: jest.fn(),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: createMockLogger() as unknown as Logger,
-        debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: {
-            secrets: {},
-            globalState: { get: jest.fn(), update: jest.fn() },
-        } as unknown as HandlerContext['context'],
-        sharedState: {},
-        authManager: {
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            getTokenManager: jest.fn().mockReturnValue({
-                getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-            }),
-        },
-    } as unknown as HandlerContext;
-}
 
 function createProject(): Project {
     return {
@@ -206,7 +144,7 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockContext = createMockContext();
+        mockContext = createResetContext();
         mockExecuteEdsPipeline.mockResolvedValue({
             success: true, contentFilesCopied: 5, libraryPaths: [],
         });

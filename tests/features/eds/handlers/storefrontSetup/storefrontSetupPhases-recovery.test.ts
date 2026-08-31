@@ -15,7 +15,6 @@
  */
 
 import type { HandlerContext } from '@/types/handlers';
-import type { Logger } from '@/types/logger';
 
 jest.setTimeout(5000);
 
@@ -27,16 +26,6 @@ jest.setTimeout(5000);
 // (ADR-015 / D-2 — the cache holds the token-validation result). That builder
 // calls `getLogger()`, which throws unless the logger is initialised. Same mock
 // the other suites of getGitHubServices consumers use.
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        trace: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: jest.fn(),
@@ -51,34 +40,9 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: jest.fn(),
 }));
 
-jest.mock('vscode', () => ({
-    window: {
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-    },
-}), { virtual: true });
 
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-        getUserEmail: jest.fn().mockResolvedValue('user@test.com'),
-    })),
-}));
 
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
-    createDaLiveTokenProvider: jest.fn().mockReturnValue({
-        getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-    }),
-    createDaLiveServiceTokenProvider: jest.fn().mockReturnValue({
-        getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-    }),
-}));
 
-jest.mock('@/features/eds/services/github/githubTokenService', () => ({
-    GitHubTokenService: jest.fn().mockImplementation(() => ({})),
-}));
 
 jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     GitHubRepoOperations: jest.fn().mockImplementation(() => ({
@@ -87,12 +51,6 @@ jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     })),
 }));
 
-jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
-    GitHubFileOperations: jest.fn().mockImplementation(() => ({
-        getFileContent: jest.fn().mockResolvedValue(null),
-        createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
 
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
@@ -103,9 +61,6 @@ jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mountpoints:\n  /: https://content.da.live/org/site'),
-}));
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -128,12 +83,14 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 // =============================================================================
 
 import { DaLiveAuthError } from '@/features/eds/services/types';
-import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhases';
+import {
+    createSetupContext,
+    executeStorefrontSetupPhases,
+} from './storefrontSetupPhases.testUtils';
 import type { SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import { ensureDaLiveAuth, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { ServiceLocator } from '@/core/di';
-import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // Get mock references
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
@@ -143,32 +100,6 @@ const mockConfigurePerms = configureDaLivePermissions as jest.MockedFunction<typ
 // =============================================================================
 // Helpers
 // =============================================================================
-
-function createMockContext(): HandlerContext {
-    return {
-        panel: {
-            webview: { postMessage: jest.fn() },
-        } as unknown as HandlerContext['panel'],
-        stateManager: {
-            getCurrentProject: jest.fn(),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: createMockLogger() as unknown as Logger,
-        debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: {
-            secrets: {},
-            globalState: { get: jest.fn(), update: jest.fn() },
-        } as unknown as HandlerContext['context'],
-        sharedState: {},
-        authManager: {
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            getTokenManager: jest.fn().mockReturnValue({
-                getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-            }),
-        },
-    } as unknown as HandlerContext;
-}
 
 function createEdsConfig() {
     return {
@@ -221,7 +152,7 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockContext = createMockContext();
+        mockContext = createSetupContext();
     });
 
     // =========================================================================
@@ -451,7 +382,7 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockContext = createMockContext();
+        mockContext = createSetupContext();
         // Default: pipeline succeeds
         mockExecuteEdsPipeline.mockResolvedValue({ success: true, contentFilesCopied: 0, libraryPaths: [] });
     });

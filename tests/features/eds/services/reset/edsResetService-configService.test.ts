@@ -36,11 +36,6 @@ jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
 }));
 
-jest.mock('vscode', () => ({
-    window: { showWarningMessage: jest.fn(), showInformationMessage: jest.fn() },
-    ProgressLocation: { Notification: 15 },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
@@ -49,23 +44,8 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     },
 }));
 
-jest.mock('@/core/constants', () => ({
-    COMPONENT_IDS: { EDS_STOREFRONT: 'eds-storefront' },
-}));
 
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(() => ({
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-        })),
-        getCommandExecutor: jest.fn(() => ({})),
-    },
-}));
 
-jest.mock('@/types/typeGuards', () => ({
-    getMeshComponentInstance: jest.fn(() => undefined),
-    hasEntries: jest.fn((obj: unknown) => obj && Object.keys(obj as object).length > 0),
-}));
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -74,15 +54,7 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mock-fstab'),
-}));
 
-jest.mock('@/features/eds/services/configGenerator', () => ({
-    generateConfigJson: jest.fn().mockReturnValue({ success: true, content: '{}' }),
-    extractConfigParams: jest.fn().mockReturnValue({}),
-    buildConfigGeneratorParams: jest.fn().mockReturnValue({}),
-}));
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollections: jest.fn().mockResolvedValue({ success: true, blocksCount: 0, blockIds: [] }),
@@ -106,25 +78,12 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     surfaceOverlayRegistrationFailure: jest.fn(),
 }));
 
-jest.mock('@/features/eds/services/inspectorHelpers', () => ({
-    generateInspectorTreeEntries: jest.fn().mockResolvedValue([]),
-    installInspectorTagging: jest.fn().mockResolvedValue({ success: true }),
-}));
 
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
-}));
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        getAccessToken: jest.fn().mockResolvedValue('token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    })),
-}));
 
 jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: jest.fn().mockResolvedValue({
@@ -132,13 +91,7 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
     }),
 }));
 
-jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
-    updateStorefrontState: jest.fn(),
-}));
 
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    updateMeshState: jest.fn(),
-}));
 
 global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 
@@ -147,13 +100,13 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 // =============================================================================
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
+import {
+    meshDeps,
+} from './edsResetService.testUtils';
 import type { ConfigStepServices } from '@/features/eds/services/reset/edsResetConfigStep';
 import { surfaceOverlayRegistrationFailure } from '@/features/eds/handlers/edsHelpers';
-import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
-/** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
-const meshDeps = createMeshDepsFake();
 
 
 const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.MockedFunction<

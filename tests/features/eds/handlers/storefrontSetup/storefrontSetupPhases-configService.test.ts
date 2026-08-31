@@ -11,7 +11,6 @@
  */
 
 import type { HandlerContext } from '@/types/handlers';
-import type { Logger } from '@/types/logger';
 
 jest.setTimeout(5000);
 
@@ -26,16 +25,6 @@ const mockUpdateSiteConfig = jest.fn();
 // (ADR-015 / D-2 — the cache holds the token-validation result). That builder
 // calls `getLogger()`, which throws unless the logger is initialised. Same mock
 // the other suites of getGitHubServices consumers use.
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        trace: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -88,27 +77,8 @@ jest.mock(
     { virtual: true }
 );
 
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-        getUserEmail: jest.fn().mockResolvedValue('user@test.com'),
-    })),
-}));
 
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
-    createDaLiveTokenProvider: jest.fn().mockReturnValue({
-        getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-    }),
-    createDaLiveServiceTokenProvider: jest.fn().mockReturnValue({
-        getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-    }),
-}));
 
-jest.mock('@/features/eds/services/github/githubTokenService', () => ({
-    GitHubTokenService: jest.fn().mockImplementation(() => ({})),
-}));
 
 jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     GitHubRepoOperations: jest.fn().mockImplementation(() => ({
@@ -117,23 +87,12 @@ jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     })),
 }));
 
-jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
-    GitHubFileOperations: jest.fn().mockImplementation(() => ({
-        getFileContent: jest.fn().mockResolvedValue(null),
-        createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
 
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest
-        .fn()
-        .mockReturnValue('mountpoints:\n  /: https://content.da.live/org/site'),
-}));
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -157,14 +116,16 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 // Import module under test (after mocks)
 // =============================================================================
 
-import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhases';
+import {
+    createSetupContext,
+    executeStorefrontSetupPhases,
+} from './storefrontSetupPhases.testUtils';
 import type { SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import {
     ensureDaLiveAuth,
     surfaceOverlayRegistrationFailure,
 } from '@/features/eds/handlers/edsHelpers';
 import { ServiceLocator } from '@/core/di';
-import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockEnsureDaLiveAuth = ensureDaLiveAuth as jest.MockedFunction<typeof ensureDaLiveAuth>;
 const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.MockedFunction<
@@ -174,32 +135,6 @@ const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.Mock
 // =============================================================================
 // Helpers
 // =============================================================================
-
-function createMockContext(): HandlerContext {
-    return {
-        panel: {
-            webview: { postMessage: jest.fn() },
-        } as unknown as HandlerContext['panel'],
-        stateManager: {
-            getCurrentProject: jest.fn(),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: createMockLogger() as unknown as Logger,
-        debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: {
-            secrets: {},
-            globalState: { get: jest.fn(), update: jest.fn() },
-        } as unknown as HandlerContext['context'],
-        sharedState: {},
-        authManager: {
-            isAuthenticated: jest.fn().mockResolvedValue(true),
-            getTokenManager: jest.fn().mockReturnValue({
-                getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-            }),
-        },
-    } as unknown as HandlerContext;
-}
 
 function createEdsConfig() {
     return {
@@ -255,7 +190,7 @@ describe('registerConfigurationService - error handling', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        context = createMockContext();
+        context = createSetupContext();
         mockRegisterSite.mockResolvedValue({ success: true });
     });
 
@@ -310,7 +245,7 @@ describe('registerConfigurationService - existing repo 403', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        context = createMockContext();
+        context = createSetupContext();
     });
 
     it('sends warning and does not retry for existing repo 403', async () => {
@@ -350,7 +285,7 @@ describe('registerConfigurationService - new repo 403 multi-retry on propagation
 
     beforeEach(() => {
         jest.clearAllMocks();
-        context = createMockContext();
+        context = createSetupContext();
     });
 
     it('retries with backoff and succeeds on first retry', async () => {
@@ -466,7 +401,7 @@ describe('registerConfigurationService - BYOM overlay threading', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        context = createMockContext();
+        context = createSetupContext();
         mockRegisterSite.mockResolvedValue({ success: true });
     });
 
@@ -505,7 +440,7 @@ describe('registerConfigurationService - overlay registration failure is surface
 
     beforeEach(() => {
         jest.clearAllMocks();
-        context = createMockContext();
+        context = createSetupContext();
     });
 
     it('surfaces the overlay failure when overlay configured but registration fails', async () => {

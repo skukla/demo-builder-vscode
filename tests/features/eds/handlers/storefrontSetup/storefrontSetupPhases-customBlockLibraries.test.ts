@@ -17,22 +17,7 @@ import type { CustomBlockLibrary } from '@/types/blockLibraries';
 // (ADR-015 / D-2 — the cache holds the token-validation result). That builder
 // calls `getLogger()`, which throws unless the logger is initialised. Same mock
 // the other suites of getGitHubServices consumers use.
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        trace: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 
-jest.mock('vscode', () => ({
-    window: { showWarningMessage: jest.fn(), showInformationMessage: jest.fn() },
-    ProgressLocation: { Notification: 15 },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollections: jest.fn(),
@@ -44,20 +29,8 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mock-fstab-content'),
-}));
 
-jest.mock('@/features/eds/services/github/githubTokenService', () => ({
-    GitHubTokenService: jest.fn().mockImplementation(() => ({})),
-}));
 
-jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
-    GitHubFileOperations: jest.fn().mockImplementation(() => ({
-        getFileContent: jest.fn().mockResolvedValue(null),
-        createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
 
 jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     GitHubRepoOperations: jest.fn().mockImplementation(() => ({
@@ -70,22 +43,11 @@ jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
-    createDaLiveTokenProvider: jest.fn().mockReturnValue({ getAccessToken: jest.fn().mockResolvedValue('token') }),
-    createDaLiveServiceTokenProvider: jest.fn().mockReturnValue({ getAccessToken: jest.fn().mockResolvedValue('token') }),
-}));
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
-    DaLiveAuthService: jest.fn().mockImplementation(() => ({
-        getAccessToken: jest.fn().mockResolvedValue('token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    })),
-}));
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
@@ -120,13 +82,14 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true }) as jest.Mock;
 // Imports (after mocks)
 // =============================================================================
 
-import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhases';
+import {
+    createSetupContext,
+    executeStorefrontSetupPhases,
+} from './storefrontSetupPhases.testUtils';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { getBlockLibrarySource, getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
-import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di';
-import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // Cast imported mocks for type-safe access
 const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<typeof installBlockCollections>;
@@ -136,24 +99,6 @@ const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<typeo
 // =============================================================================
 // Helpers
 // =============================================================================
-
-function createMockContext(): HandlerContext {
-    return {
-        panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
-        stateManager: {
-            getCurrentProject: jest.fn().mockResolvedValue(null),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: createMockLogger() as unknown as HandlerContext['logger'],
-        debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
-        sendMessage: jest.fn(),
-        context: { secrets: {} },
-        sharedState: {},
-        authManager: {
-            getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-        },
-    } as unknown as HandlerContext;
-}
 
 function createEdsConfig(overrides?: Partial<StorefrontSetupStartPayload['edsConfig']>): StorefrontSetupStartPayload['edsConfig'] {
     return {
@@ -204,7 +149,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
 
     it('should install all block libraries in a single deduped call via installBlockCollections', async () => {
         // Given: Both built-in and custom block libraries selected
-        const context = createMockContext();
+        const context = createSetupContext();
         const edsConfig = createEdsConfig();
 
         // When: Executing setup with both built-in and custom libraries
@@ -231,7 +176,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
 
     it('should call installBlockCollections with only built-in sources when custom is undefined', async () => {
         // Given: Only built-in block libraries, no custom
-        const context = createMockContext();
+        const context = createSetupContext();
         const edsConfig = createEdsConfig();
 
         // When: Executing setup without custom libraries
@@ -273,7 +218,7 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
 
     it('should send progress message mentioning library count', async () => {
         // Given: Custom block libraries with specific names
-        const context = createMockContext();
+        const context = createSetupContext();
         const edsConfig = createEdsConfig();
         const customLibs: CustomBlockLibrary[] = [
             { name: 'My Fancy Blocks', source: { owner: 'user', repo: 'fancy', branch: 'main' } },
