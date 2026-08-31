@@ -3,7 +3,7 @@
 import type { CustomBlockLibrary } from './blockLibraries';
 import type { CommerceStoreStructure } from './commerceStore';
 import type { ComponentConfigs } from './components';
-import { ErrorCode } from './errorCodes';
+import type { ErrorCode } from './errorCodes';
 import type { PrerequisitePluginState, GitHubUser } from './webviewPayloads';
 
 export type ThemeMode = 'light' | 'dark';

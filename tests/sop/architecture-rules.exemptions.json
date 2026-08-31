@@ -18,12 +18,9 @@
         "src/commands/diagnostics.ts:DiagnosticsCommand": "pre-ADR-015: converge to BaseCommand"
     },
     "typesPurity": {
-        "src/types/typeGuards.ts": "runtime type guards colocated in types/ by long-standing convention \u2014 candidate for ratification",
-        "src/types/errors.ts": "pre-ADR-015: runtime import in a types file \u2014 adjudicate (move code out, or ratify the exception)",
-        "src/types/handlers.ts": "pre-ADR-015: runtime import in a types file \u2014 adjudicate (move code out, or ratify the exception)",
-        "src/types/shell.ts": "pre-ADR-015: runtime import in a types file \u2014 adjudicate (move code out, or ratify the exception)",
-        "src/types/state.ts": "pre-ADR-015: runtime import in a types file \u2014 adjudicate (move code out, or ratify the exception)",
-        "src/types/webview.ts": "pre-ADR-015: runtime import in a types file \u2014 adjudicate (move code out, or ratify the exception)"
+        "src/types/typeGuards.ts": "Runtime type guards colocated in types/ by long-standing convention, and genuinely runtime: needs COMPONENT_IDS, getMeshAppBuilderComponent, deriveAccsAdminUrl, lookupComponentConfigValue and two endpoint constants as VALUES. The strongest RATIFY candidate of the three \u2014 a type guard is the one kind of runtime code that belongs beside the types it narrows. OWNER DECISION PENDING.",
+        "src/types/errors.ts": "NOT a types file: it declares error CLASSES and the functions that build them, and needs ErrorCode / getErrorTitle / isRecoverableError as VALUES. Proven 2026-08-31 by converting every import in the file to a type-only import and reading tsc: 17 errors, all \"cannot be used as a value\". So the row is not an import to tidy \u2014 the file is runtime code living in src/types/. Fix by MOVING it (to @/core/errors) or RATIFY the colocation. OWNER DECISION PENDING.",
+        "src/types/shell.ts": "NOT a types file: uses the os module as a value. Same measurement as errors.ts, same two options. OWNER DECISION PENDING."
     },
     "patternBSendMessageCeiling": 142,
     "compositionPointLifetime": {},

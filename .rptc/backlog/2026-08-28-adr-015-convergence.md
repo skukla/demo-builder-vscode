@@ -56,3 +56,6 @@ is a RATIFIED permanent exception recorded in ADR-015.
 - 2026-08-29  refactor(eds): six files stop rebuilding the GitHub token service (`8a367813d`)
 - 2026-08-29  refactor(components): the registry arrives on the context instead of being rebuilt (`dab31319a`)
 - 2026-08-29  feat(architecture): enforce the construction boundary ADR-015 actually states (`03f77a7ec`)
+- 2026-08-31  refactor(features): retire four feature barrels (`355c18c63`)
+- 2026-08-31  refactor(commands): two commands stop living in core/ (`1078859a1`)
+- 2026-08-31  refactor(types): core's progress engine stops naming a feature (`e0360093e`)
