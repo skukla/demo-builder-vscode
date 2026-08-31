@@ -59,6 +59,16 @@ const PAIRED: ReadonlyArray<{ rule: string; claudeMd: string; handbook: string }
     // than for the work. Pairing does not prevent that — the rule was in context and was
     // not applied — but a rule that steers the work belongs in both documents, and
     // unpaired it was also unpinned.
+    // Added 2026-08-31. React's own conventions were enforced by eslint but stated in
+    // neither document — hooks correctness appeared in exactly one ADR and nowhere a
+    // person or an agent would meet it. This rule is the one React footgun in this
+    // codebase that NO tool catches: exhaustive-deps reads the dependency array inside
+    // the hook and cannot see across the prop boundary to the caller.
+    {
+        rule: 'a value passed into a hook is stable across renders',
+        claudeMd: 'must be stable across renders',
+        handbook: 'no inline array, object or arrow literal as a prop',
+    },
     {
         rule: 'a control proves the tool works, not that you aimed it right',
         claudeMd: 'not that you aimed it right',

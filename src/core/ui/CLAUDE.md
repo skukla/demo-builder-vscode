@@ -60,6 +60,28 @@ webview: no Playwright, no screenshot, no reachable devtools. The global "verify
 browser" instinct does not apply, and nothing automatic replaces it — ask for a
 screenshot rather than reporting a visual result you did not see.
 
+## React's own rules, and the one nothing enforces
+
+Three of React's conventions fail the build here: `rules-of-hooks` (a hook called
+conditionally or below a return), `jsx-key`, and the a11y checks on `alt-text` and
+`aria-props`. `exhaustive-deps` is a WARNING, and CI allows warnings — the zero-warning
+bar in the `gate` skill is what actually catches it.
+
+**The one no tool catches: a value passed INTO a hook must be stable across renders.**
+
+```tsx
+const EMPTY: never[] = [];              // module level — one reference, forever
+useThing({ items: EMPTY });             // safe
+
+useThing({ items: [] });                // a NEW array every render
+```
+
+An inline `[]`, `{}` or arrow literal is a new reference on every render. An effect
+depending on it runs every render; one that sets state loops forever. `exhaustive-deps`
+reads the dependency array *inside* the hook and cannot see across the prop boundary to
+the caller that made the value, and the types are identical so the compiler sees nothing
+either. It has already happened in this codebase.
+
 ## Before writing a new component
 
 Check the vocabulary first. On one day in July a single new surface shipped six

@@ -352,6 +352,23 @@ declared in one place, with vendor styles below ours.
 > enforced by `tests/sop/webview-architecture-rules.test.ts`.
 > *Why:* it puts the wiring in one readable place per surface, and keeps components testable without a running extension.
 
+**React's own rules are enforced, and it is worth knowing which.** `rules-of-hooks` is an
+ERROR: a hook called conditionally, or below a return, fails the build. `jsx-key`,
+`no-deprecated`, `jsx-no-target-blank` and the a11y checks on `alt-text` and `aria-props`
+are errors too. `exhaustive-deps` is a WARNING — and CI allows warnings, so what actually
+catches it is the zero-warning bar the `gate` skill sets on changed files, not the build.
+Know the difference before relying on it.
+
+> **Convention.** A value passed into a hook is stable across renders. No inline array,
+> object or arrow literal as a prop that will reach a dependency array — hoist it to a
+> module-level constant or wrap it.
+> *Why:* a literal is a NEW reference every render, so an effect that depends on it runs
+> every render, and one that sets state loops forever. It has already happened here.
+> **Not enforced, and it cannot be by the obvious rule** — `exhaustive-deps` reads the
+> dependency array inside the hook and cannot see across the prop boundary to the caller
+> that created the value. The compiler cannot see it either: the types are identical.
+> This is the React footgun in this codebase that no tool catches.
+
 > **Convention.** Vendor CSS sits in the lowest cascade layer.
 > *Why:* layers settle specificity by declaration order rather than by escalation, so
 > nothing downstream has to out-shout the vendor.
@@ -710,7 +727,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 77 conventions. 61 of them are enforced; 16 are not.**
+**This handbook states 78 conventions. 61 of them are enforced; 17 are not.**
 
 The fifteen that remain are not one thing, and treating them as one is what kept them
 open:

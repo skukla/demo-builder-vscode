@@ -12,6 +12,17 @@ It absorbed `docs/development/ui-patterns.md` on 2026-08-30. That document held 
 territory in 585 lines, plus a description of an "Adobe Setup two-column layout" that no
 longer exists — `TwoColumnLayout` has zero uses in authentication.
 
+## Hook inputs must be stable — the footgun no tool catches
+
+An inline `[]`, `{}` or arrow literal passed as a prop is a NEW reference every render.
+An effect depending on it runs every render; one that sets state loops forever. Hoist it:
+`const EMPTY: never[] = [];` at module level.
+
+`exhaustive-deps` will not save you — it reads the dependency array INSIDE the hook and
+cannot see across the prop boundary to the caller. Nor will the compiler: the types are
+identical. This has already happened here, which is why it is written in three places
+(handbook §7, the root CLAUDE.md, and `src/core/ui/CLAUDE.md`) rather than one.
+
 ## When NOT to use
 - Adding a wizard step / Build-Your-Project area or its layout — use `wizard-step-authoring`.
 - Wiring an extension↔webview message — use `webview-command-handler`.

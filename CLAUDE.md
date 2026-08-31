@@ -243,7 +243,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 77 of them, 61 with an enforcer that fails the build — and
+this codebase holds itself to — 78 of them, 61 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent
@@ -497,6 +497,13 @@ are sure is present, re-Read rather than re-deriving it from memory.
 
 ## Gotchas (verified, load-bearing)
 
+- **A value passed into a hook must be stable across renders.** An inline `[]`, `{}` or
+  arrow literal as a prop is a NEW reference every render, so an effect depending on it
+  runs every render and one that sets state loops forever. Hoist it to a module-level
+  constant (`const EMPTY: never[] = [];`). **No tool catches this** — `exhaustive-deps`
+  reads the dependency array inside the hook and cannot see across the prop boundary, and
+  the types are identical so the compiler sees nothing either. It has already happened
+  here.
 - **Adobe Spectrum Flex constrains width** (450px): use a standard HTML div with flex styles for critical wizard layouts.
 - **Layout components accept Spectrum design tokens**: `GridLayout`/`TwoColumnLayout` take `DimensionValue` props (`gap="size-300"`). See `.claude/skills/spectrum-webview-ui/` and `docs/development/styling-guide.md`.
 - **Never pipe jest through `tail`/`head`/`grep`** — output buffering makes it look hung. Redirect to a file instead (enforced by a PreToolUse hook; details in `tests/README.md`).
