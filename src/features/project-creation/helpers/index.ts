@@ -8,12 +8,4 @@ export { generateComponentEnvFile, generateComponentConfigFiles, regenerateProje
 export type { EnvGenerationConfig } from './envFileGenerator';
 export { ProjectSetupContext } from '../services/ProjectSetupContext';
 export { deployMeshComponent, MeshDeploymentResult } from '@/features/mesh/services/meshDeployment';
-
-// UI validation function - simple validator for form fields
-export function validateField(field: string, value: string): { isValid: boolean; message?: string } {
-    // Basic validation - can be expanded as needed
-    if (!value || value.trim().length === 0) {
-        return { isValid: false, message: `${field} is required` };
-    }
-    return { isValid: true };
-}
+export { validateField } from './validateField';

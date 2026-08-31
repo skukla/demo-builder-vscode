@@ -1,9 +1,9 @@
 import { handleValidate } from '@/features/project-creation/handlers/validateHandler';
 import { HandlerContext } from '@/types/handlers';
-import * as helpers from '@/features/project-creation/helpers';
+import { validateField } from '@/features/project-creation/helpers/validateField';
 
 // Mock dependencies
-jest.mock('@/features/project-creation/helpers');
+jest.mock('@/features/project-creation/helpers/validateField');
 
 describe('Project Creation - Validate Handler', () => {
     let mockContext: jest.Mocked<HandlerContext>;
@@ -24,7 +24,7 @@ describe('Project Creation - Validate Handler', () => {
 
     describe('happy path', () => {
         it('should validate valid project name', async () => {
-            (helpers.validateField as jest.Mock).mockReturnValue({
+            (validateField as jest.Mock).mockReturnValue({
                 isValid: true,
                 message: '',
             });
@@ -35,7 +35,7 @@ describe('Project Creation - Validate Handler', () => {
             });
 
             expect(result.success).toBe(true);
-            expect(helpers.validateField).toHaveBeenCalledWith('projectName', 'my-project');
+            expect(validateField).toHaveBeenCalledWith('projectName', 'my-project');
             expect(mockContext.sendMessage).toHaveBeenCalledWith('validationResult', {
                 field: 'projectName',
                 isValid: true,
@@ -44,7 +44,7 @@ describe('Project Creation - Validate Handler', () => {
         });
 
         it('should validate valid commerce URL', async () => {
-            (helpers.validateField as jest.Mock).mockReturnValue({
+            (validateField as jest.Mock).mockReturnValue({
                 isValid: true,
                 message: '',
             });
@@ -55,7 +55,7 @@ describe('Project Creation - Validate Handler', () => {
             });
 
             expect(result.success).toBe(true);
-            expect(helpers.validateField).toHaveBeenCalledWith('commerceUrl', 'https://example.com');
+            expect(validateField).toHaveBeenCalledWith('commerceUrl', 'https://example.com');
             expect(mockContext.sendMessage).toHaveBeenCalledWith('validationResult', {
                 field: 'commerceUrl',
                 isValid: true,
@@ -64,7 +64,7 @@ describe('Project Creation - Validate Handler', () => {
         });
 
         it('should validate empty optional field', async () => {
-            (helpers.validateField as jest.Mock).mockReturnValue({
+            (validateField as jest.Mock).mockReturnValue({
                 isValid: true,
                 message: '',
             });
@@ -83,7 +83,7 @@ describe('Project Creation - Validate Handler', () => {
         });
 
         it('should validate unknown field type', async () => {
-            (helpers.validateField as jest.Mock).mockReturnValue({
+            (validateField as jest.Mock).mockReturnValue({
                 isValid: true,
                 message: '',
             });
@@ -94,13 +94,13 @@ describe('Project Creation - Validate Handler', () => {
             });
 
             expect(result.success).toBe(true);
-            expect(helpers.validateField).toHaveBeenCalledWith('customField', 'some value');
+            expect(validateField).toHaveBeenCalledWith('customField', 'some value');
         });
     });
 
     describe('validation failures', () => {
         it('should return invalid for project name with spaces', async () => {
-            (helpers.validateField as jest.Mock).mockReturnValue({
+            (validateField as jest.Mock).mockReturnValue({
                 isValid: false,
                 message: 'Project name can only contain letters, numbers, hyphens, and underscores',
             });
@@ -119,7 +119,7 @@ describe('Project Creation - Validate Handler', () => {
         });
 
         it('should return invalid for empty required project name', async () => {
-            (helpers.validateField as jest.Mock).mockReturnValue({
+            (validateField as jest.Mock).mockReturnValue({
                 isValid: false,
                 message: 'Project name is required',
             });
@@ -138,7 +138,7 @@ describe('Project Creation - Validate Handler', () => {
         });
 
         it('should return invalid for project name too long', async () => {
-            (helpers.validateField as jest.Mock).mockReturnValue({
+            (validateField as jest.Mock).mockReturnValue({
                 isValid: false,
                 message: 'Project name must be 50 characters or less',
             });
@@ -157,7 +157,7 @@ describe('Project Creation - Validate Handler', () => {
         });
 
         it('should return invalid for malformed URL', async () => {
-            (helpers.validateField as jest.Mock).mockReturnValue({
+            (validateField as jest.Mock).mockReturnValue({
                 isValid: false,
                 message: 'Invalid URL format',
             });
@@ -176,7 +176,7 @@ describe('Project Creation - Validate Handler', () => {
         });
 
         it('should return invalid for URL without http/https', async () => {
-            (helpers.validateField as jest.Mock).mockReturnValue({
+            (validateField as jest.Mock).mockReturnValue({
                 isValid: false,
                 message: 'URL must start with http:// or https://',
             });
@@ -197,7 +197,7 @@ describe('Project Creation - Validate Handler', () => {
 
     describe('error handling', () => {
         it('should handle validation helper throwing error', async () => {
-            (helpers.validateField as jest.Mock).mockImplementation(() => {
+            (validateField as jest.Mock).mockImplementation(() => {
                 throw new Error('Validation crashed');
             });
 
@@ -219,7 +219,7 @@ describe('Project Creation - Validate Handler', () => {
         });
 
         it('should handle sendMessage failure gracefully', async () => {
-            (helpers.validateField as jest.Mock).mockReturnValue({
+            (validateField as jest.Mock).mockReturnValue({
                 isValid: true,
                 message: '',
             });
@@ -234,11 +234,11 @@ describe('Project Creation - Validate Handler', () => {
                 })
             ).rejects.toThrow('WebView not ready');
 
-            expect(helpers.validateField).toHaveBeenCalled();
+            expect(validateField).toHaveBeenCalled();
         });
 
         it('should handle unexpected validation result structure', async () => {
-            (helpers.validateField as jest.Mock).mockReturnValue(null);
+            (validateField as jest.Mock).mockReturnValue(null);
 
             const result = await handleValidate(mockContext, {
                 field: 'projectName',
@@ -252,7 +252,7 @@ describe('Project Creation - Validate Handler', () => {
 
     describe('edge cases', () => {
         it('should handle empty field name', async () => {
-            (helpers.validateField as jest.Mock).mockReturnValue({
+            (validateField as jest.Mock).mockReturnValue({
                 isValid: true,
                 message: '',
             });
@@ -263,11 +263,11 @@ describe('Project Creation - Validate Handler', () => {
             });
 
             expect(result.success).toBe(true);
-            expect(helpers.validateField).toHaveBeenCalledWith('', 'test');
+            expect(validateField).toHaveBeenCalledWith('', 'test');
         });
 
         it('should handle special characters in field value', async () => {
-            (helpers.validateField as jest.Mock).mockReturnValue({
+            (validateField as jest.Mock).mockReturnValue({
                 isValid: false,
                 message: 'Invalid characters',
             });
@@ -287,7 +287,7 @@ describe('Project Creation - Validate Handler', () => {
 
         it('should handle very long validation messages', async () => {
             const longMessage = 'a'.repeat(500);
-            (helpers.validateField as jest.Mock).mockReturnValue({
+            (validateField as jest.Mock).mockReturnValue({
                 isValid: false,
                 message: longMessage,
             });

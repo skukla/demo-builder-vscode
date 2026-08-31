@@ -110,3 +110,4 @@ sentence has been updated to say the ledger is closed.
 - 2026-08-31  refactor(barrels): core/utils and its nested progressUnifier index — 7 to 5 (`23ae25fb6`)
 - 2026-08-31  refactor(barrels): core/logging retired, and the landmine it was carrying — 5 to 4 (`a7f5e6605`)
 - 2026-08-31  refactor(barrels): core/state, and a doc that stated the old rule — 4 to 3 (`f3bd0fe2b`)
+- 2026-08-31  refactor(barrels): core/shell across 95 importers — 3 to 2 (`4cf21e74a`)
