@@ -17,7 +17,6 @@
     },
     "_layerDirection_note": "Direction rule: nothing under src/core/ imports @/features or @/commands. Ratified 2026-08-30 after the rule was found stated as law in src/core/CLAUDE.md, present in NO handbook/ADR/convention, enforced by nothing, and violated seven times. Webview files are out of scope (isWebview), so core/ui/ is excluded. The set may only shrink: clearing a file means fixing it AND deleting its row.",
     "reExportIndex": {
-        "src/types/index.ts": "PURE: 11 re-export line(s); ~190 importer(s). Repoint them at the modules that declare the symbols, then delete the file.",
-        "src/features/project-creation/helpers/index.ts": "MIXED: 5 re-export line(s), 1 own declaration(s); ~9 importer(s). Move the declarations to a named module FIRST, then treat as PURE."
+        "src/types/index.ts": "PURE: 11 re-export line(s); ~190 importer(s). Repoint them at the modules that declare the symbols, then delete the file."
     }
 }

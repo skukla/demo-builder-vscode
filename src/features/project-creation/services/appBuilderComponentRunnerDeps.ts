@@ -39,7 +39,7 @@ import {
     calculateMeshSourceHash,
     readMeshEnvVarsFromFile,
 } from '@/features/mesh/services/stalenessDetector';
-import { regenerateComponentEnvFile } from '@/features/project-creation/helpers';
+import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
 import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { ComponentRegistry } from '@/types/components';

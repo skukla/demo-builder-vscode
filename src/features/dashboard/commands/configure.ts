@@ -39,7 +39,7 @@ import {
 } from '@/features/eds/services/authoringExperienceFlip';
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers';
+import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileGenerator';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { Project } from '@/types';
 import type { AuthoringExperience } from '@/types/base';

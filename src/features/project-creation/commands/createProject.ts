@@ -19,9 +19,7 @@ import type { PrerequisitesManager } from '@/features/prerequisites/services/Pre
 import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 // Handler utilities and handlers
 import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
-import {
-    formatGroupName as formatGroupNameHelper,
-} from '@/features/project-creation/helpers';
+import { formatGroupName as formatGroupNameHelper } from '@/features/project-creation/helpers/formatters';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import type { SettingsFile } from '@/types/settingsFile';

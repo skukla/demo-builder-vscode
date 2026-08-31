@@ -13,11 +13,9 @@ import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
-import {
-    ProjectSetupContext,
-    generateComponentEnvFile,
-    deployMeshComponent,
-} from '@/features/project-creation/helpers';
+import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
+import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
+import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { Project, TransformedComponentDefinition, Logger } from '@/types';
 import { getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
