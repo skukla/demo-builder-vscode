@@ -2,7 +2,7 @@ import { DaLiveConfigOperations } from '@/features/eds/services/daLive/daLiveCon
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const makeLogger = () =>
-    createMockLogger() as never;
+    createMockLogger();
 
 const makeApiClient = () =>
     ({

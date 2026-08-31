@@ -37,6 +37,7 @@ import {
     makeOpenInClaudeProject,
 } from './openInClaude.testkit';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import type { StateManager } from '@/core/state';
 
 const PROJECTS_ROOT = '/projects';
 
@@ -56,7 +57,7 @@ function launchWith(project: ReturnType<typeof makeOpenInClaudeProject> | null):
     setupVscodeMocks();
     const command = new OpenInClaudeCommand(
         makeOpenInClaudeContext(makeGlobalState()),
-        makeStateManager(project) as never,
+        makeStateManager(project) as unknown as StateManager,
         makeLogger() as never
     );
     return command.execute();
@@ -133,7 +134,7 @@ describe('OpenInClaudeCommand — home AGENTS.md active project', () => {
         const mocks = setupVscodeMocks({ hasClaudeConversation: true });
         const command = new OpenInClaudeCommand(
             makeOpenInClaudeContext(makeGlobalState()),
-            makeStateManager(null) as never,
+            makeStateManager(null) as unknown as StateManager,
             makeLogger() as never
         );
 

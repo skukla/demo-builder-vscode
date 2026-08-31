@@ -16,6 +16,7 @@ import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 import * as vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import type { StateManager } from '@/core/state';
 
 jest.mock('@/core/communication/webviewCommunicationManager');
 
@@ -48,7 +49,7 @@ type Internals = {
 function makeCommand(): ShowDataInstallerCommand & Internals {
     return new ShowDataInstallerCommand(
         makeExtensionContext(),
-        makeStateManager() as never,
+        makeStateManager() as unknown as StateManager,
         logger as never
     ) as ShowDataInstallerCommand & Internals;
 }

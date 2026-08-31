@@ -16,7 +16,7 @@ import {
 import { RUNTIME_SURFACES } from '@/features/eds/services/runtimeSurfaceInventory';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-const logger = createMockLogger() as never;
+const logger = createMockLogger();
 const source: RuntimeSurfaceSource = { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b' };
 
 beforeEach(() => _clearRuntimeSurfaceCacheForTests());

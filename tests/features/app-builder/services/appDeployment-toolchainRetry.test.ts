@@ -114,7 +114,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
         const cm = makeHealableExecutor();
         const consent = jest.fn().mockResolvedValue(true);
 
-        const result = await deployAppComponent('/app', cm as never, makeLogger() as never, {
+        const result = await deployAppComponent('/app', cm as never, makeLogger(), {
             confirmToolchainRefresh: consent,
         });
 
@@ -130,7 +130,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
         const cm = makeHealableExecutor();
         const consent = jest.fn().mockResolvedValue(false);
 
-        const result = await deployAppComponent('/app', cm as never, makeLogger() as never, {
+        const result = await deployAppComponent('/app', cm as never, makeLogger(), {
             confirmToolchainRefresh: consent,
         });
 
@@ -144,7 +144,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
     it('no consent source at all: same hint, no prompt-shaped behaviour', async () => {
         const cm = makeHealableExecutor();
 
-        const result = await deployAppComponent('/app', cm as never, makeLogger() as never, {});
+        const result = await deployAppComponent('/app', cm as never, makeLogger(), {});
 
         expect(result.success).toBe(false);
         expect(result.error).toContain('out-of-date Adobe CLI toolchain');
@@ -166,7 +166,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
         const result = await deployAppComponent(
             '/app',
             { execute } as never,
-            makeLogger() as never,
+            makeLogger(),
             {
                 confirmToolchainRefresh: consent,
             }
@@ -192,7 +192,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
         const result = await deployAppComponent(
             '/app',
             { execute } as never,
-            makeLogger() as never,
+            makeLogger(),
             {
                 confirmToolchainRefresh: consent,
             }
@@ -217,7 +217,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
         const result = await deployAppComponent(
             '/app',
             { execute } as never,
-            makeLogger() as never,
+            makeLogger(),
             {
                 confirmToolchainRefresh: async () => true,
             }

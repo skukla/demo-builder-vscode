@@ -74,7 +74,7 @@ function makeDeps(
             accessToken: 'fake-test-pw-not-a-secret',
             imsOrgId: 'ABC@AdobeOrg',
         }),
-        logger: createMockLogger() as never,
+        logger: createMockLogger(),
         clientFactory: () => client,
         wait: async () => undefined,
         ...overrides,

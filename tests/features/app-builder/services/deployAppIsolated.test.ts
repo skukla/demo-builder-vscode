@@ -30,7 +30,7 @@ const mockApply = applyIsolatedPackages as jest.MockedFunction<typeof applyIsola
 const mockDeploy = deployAppComponent as jest.MockedFunction<typeof deployAppComponent>;
 
 function createLogger(): Logger {
-    return createMockLogger() as never;
+    return createMockLogger();
 }
 
 const commandManager = createMockCommandExecutor({ execute: jest.fn() });

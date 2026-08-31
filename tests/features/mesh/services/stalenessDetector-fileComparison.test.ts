@@ -28,7 +28,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
  * collaborators now — and it IS the exported function, replacing a no-argument
  * wrapper that had zero production callers. The suite passes both explicitly.
  */
-const meshLogger = createMockLogger() as never;
+const meshLogger = createMockLogger();
 
 describe('StalenessDetector - File Comparison', () => {
     beforeEach(() => {

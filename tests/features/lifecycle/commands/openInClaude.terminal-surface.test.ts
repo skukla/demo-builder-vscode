@@ -12,6 +12,7 @@ import type { Project } from '@/types/base';
 import {
     setupVscodeMocks, makeLogger, makeStateManager, makeGlobalState, makeOpenInClaudeContext, makeOpenInClaudeProject,
 } from './openInClaude.testkit';
+import type { StateManager } from '@/core/state';
 
 // The home Chat always launches at the projects root. Pin the root to a known
 // path via DEMO_BUILDER_PROJECTS_DIR so cwd / session-probe assertions are
@@ -87,7 +88,7 @@ describe('OpenInClaudeCommand', () => {
             const project = makeOpenInClaudeProject({ path: '/projects/demo' });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(project) as never,
+                makeStateManager(project) as unknown as StateManager,
                 makeLogger() as never,
             );
 
@@ -102,7 +103,7 @@ describe('OpenInClaudeCommand', () => {
             const project = makeOpenInClaudeProject({ path: '/projects/demo' });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(globalState),
-                makeStateManager(project) as never,
+                makeStateManager(project) as unknown as StateManager,
                 makeLogger() as never,
             );
 
@@ -257,7 +258,7 @@ describe('OpenInClaudeCommand', () => {
             const project = makeOpenInClaudeProject({ path: '/projects/demo' });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(project) as never,
+                makeStateManager(project) as unknown as StateManager,
                 makeLogger() as never,
             );
 
@@ -287,7 +288,7 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(null) as never,
+                makeStateManager(null) as unknown as StateManager,
                 makeLogger() as never,
             );
 

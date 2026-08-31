@@ -3,7 +3,7 @@ import { DaLiveError, DaLiveAuthError, DaLiveNetworkError } from '@/features/eds
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const makeLogger = () =>
-    createMockLogger() as never;
+    createMockLogger();
 
 const makeClient = (token: string | null) =>
     new DaLiveApiClient({ getAccessToken: jest.fn().mockResolvedValue(token) }, makeLogger());

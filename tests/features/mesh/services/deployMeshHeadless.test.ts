@@ -94,7 +94,7 @@ function deps(overrides: Record<string, unknown> = {}) {
         commandManager: { execute: jest.fn() } as never,
         secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn() } as never,
         stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) } as never,
-        logger: createMockLogger() as never,
+        logger: createMockLogger(),
         extensionPath: '/ext',
         ...overrides,
     };

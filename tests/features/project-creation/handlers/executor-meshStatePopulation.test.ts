@@ -24,7 +24,7 @@ jest.mock('@/features/mesh/services/stalenessDetector');
  * collaborators now. The spy below still intercepts it, so these fakes only
  * satisfy the signature.
  */
-const meshLogger = createMockLogger() as never;
+const meshLogger = createMockLogger();
 /** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
 const meshDeps = createMeshDepsFake();
 
