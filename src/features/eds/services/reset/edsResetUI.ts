@@ -27,6 +27,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import type { GitHubAppService } from '../github/githubAppService';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -66,6 +67,15 @@ export interface EdsResetWithUIOptions {
      * defaults to the bundled demo-packages.json inside extractResetParams.
      */
     packages?: Parameters<typeof extractResetParams>[1];
+    /**
+     * GitHub App service. Injectable for tests; defaults to one built from the
+     * context's GitHub and DA.live credentials inside the App check.
+     *
+     * The check reaches it through `await import(...)`, which is precisely why the
+     * six suites in this family could only supply one by mocking the module —
+     * ADR-016's wall. A dynamic import has no seam unless the caller offers one.
+     */
+    githubAppService?: GitHubAppService;
 }
 
 // ==========================================================
@@ -194,6 +204,7 @@ async function checkGitHubAppInstallation(
     project: Project,
     originalStatus: ProjectStatus,
     logPrefix: string,
+    injectedAppService?: GitHubAppService,
 ): Promise<EdsResetResult | null> {
     const { getGitHubServices } = await import('../../handlers/edsHelpers');
     const { tokenService: preCheckTokenService } = getGitHubServices(context);
@@ -202,11 +213,13 @@ async function checkGitHubAppInstallation(
     // refuses the GitHub token outright, and storefront setup now pins one on
     // every project it registers.
     const { tryCreateDaLiveTokenProvider } = await import('../../handlers/edsHelpers');
-    const appService = new GitHubAppService(
-        preCheckTokenService,
-        context.logger,
-        tryCreateDaLiveTokenProvider(context.context),
-    );
+    const appService =
+        injectedAppService ??
+        new GitHubAppService(
+            preCheckTokenService,
+            context.logger,
+            tryCreateDaLiveTokenProvider(context.context),
+        );
     const { resolveAppInstallation } = await import('../appInstallationResolver');
     const outcome = await resolveAppInstallation(
         appService,
@@ -477,6 +490,7 @@ export async function resetEdsProjectWithUI(options: EdsResetWithUIOptions): Pro
                     project,
                     originalStatus,
                     logPrefix,
+                    options.githubAppService,
                 );
                 if (appResult) return appResult;
 
