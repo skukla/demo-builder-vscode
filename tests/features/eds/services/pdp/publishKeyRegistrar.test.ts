@@ -11,22 +11,40 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     resolveByomOverlayUrl: () => mockResolveOverlayUrl(),
 }));
 
+/**
+ * Helix arrives through the front door — `registerPublishKey`'s fourth parameter —
+ * rather than by mocking the module. ADR-016 lists this suite among the thirteen that
+ * module-mocked a STATELESS collaborator purely because they could not hand one in.
+ *
+ * What that buys, concretely: the fake is typed `PublishKeyHelix`, so it stops
+ * compiling the day the seam changes. A `jest.mock` factory answers the same shape
+ * forever and would not.
+ */
 const mockCreateAdminApiKey = jest.fn<Promise<string | null>, [string, string]>();
 const mockForgetApiKey = jest.fn<Promise<void>, [string, string]>();
-jest.mock('@/features/eds/services/helix/helixService', () => ({
-    HelixService: Object.assign(
-        jest.fn().mockImplementation(() => ({ createAdminApiKey: mockCreateAdminApiKey })),
-        { forgetApiKey: (o: string, s: string) => mockForgetApiKey(o, s) }
-    ),
-}));
 
-import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
+import {
+    registerPublishKey,
+    type PublishKeyHelix,
+} from '@/features/eds/services/pdp/publishKeyRegistrar';
+import type { Logger } from '@/types/logger';
+
+const makeHelix = (): PublishKeyHelix => ({
+    forgetApiKey: (owner, repo) => mockForgetApiKey(owner, repo),
+    createAdminApiKey: (owner, repo) => mockCreateAdminApiKey(owner, repo),
+});
 
 const OVERLAY =
     'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp?org=a&site=b';
 const SITE = { owner: 'skukla', repo: 'demo-site' };
 
-function makeLogger() {
+/**
+ * Typed `jest.Mocked<Logger>`, not `Logger`. It is assignable to `Logger` — so no cast
+ * at the call boundary — while keeping `.mock` reachable for the assertions below.
+ * Typing it as bare `Logger` compiled the calls and broke `logger.debug.mock`, which is
+ * the typechecker doing the job the eleven `as never` casts used to suppress.
+ */
+function makeLogger(): jest.Mocked<Logger> {
     return {
         info: jest.fn(),
         warn: jest.fn(),
@@ -50,7 +68,7 @@ beforeEach(() => {
 describe('registerPublishKey', () => {
     it('mints a key and POSTs it to the register action with the DA.live bearer', async () => {
         const logger = makeLogger();
-        const result = await registerPublishKey(makeTokenProvider(), SITE, logger as never);
+        const result = await registerPublishKey(makeTokenProvider(), SITE, logger, makeHelix());
 
         expect(result).toEqual({ registered: true });
         const [url, opts] = (global.fetch as jest.Mock).mock.calls[0];
@@ -69,7 +87,7 @@ describe('registerPublishKey', () => {
     // The only reason to call this is that a config write just destroyed the
     // key server-side, so a cache hit would register a dead key.
     it('drops the locally cached key BEFORE minting', async () => {
-        await registerPublishKey(makeTokenProvider(), SITE, makeLogger() as never);
+        await registerPublishKey(makeTokenProvider(), SITE, makeLogger(), makeHelix());
 
         expect(mockForgetApiKey).toHaveBeenCalledWith('skukla', 'demo-site');
         const forgetOrder = mockForgetApiKey.mock.invocationCallOrder[0];
@@ -78,7 +96,7 @@ describe('registerPublishKey', () => {
     });
 
     it('derives the register URL from the overlay URL, dropping its query', async () => {
-        await registerPublishKey(makeTokenProvider(), SITE, makeLogger() as never);
+        await registerPublishKey(makeTokenProvider(), SITE, makeLogger(), makeHelix());
         const [url] = (global.fetch as jest.Mock).mock.calls[0];
         expect(url).not.toContain('?');
         expect(url).toContain('/register-publish-key');
@@ -90,7 +108,8 @@ describe('registerPublishKey', () => {
             const result = await registerPublishKey(
                 makeTokenProvider(),
                 SITE,
-                makeLogger() as never
+                makeLogger(),
+                makeHelix()
             );
             expect(result.registered).toBe(false);
             expect(result.reason).toMatch(/BYOM disabled/);
@@ -103,7 +122,8 @@ describe('registerPublishKey', () => {
             const result = await registerPublishKey(
                 makeTokenProvider(),
                 SITE,
-                makeLogger() as never
+                makeLogger(),
+                makeHelix()
             );
             expect(result.registered).toBe(false);
             expect(global.fetch).not.toHaveBeenCalled();
@@ -114,7 +134,8 @@ describe('registerPublishKey', () => {
             const result = await registerPublishKey(
                 makeTokenProvider(),
                 SITE,
-                makeLogger() as never
+                makeLogger(),
+                makeHelix()
             );
             expect(result.registered).toBe(false);
             expect(global.fetch).not.toHaveBeenCalled();
@@ -124,7 +145,7 @@ describe('registerPublishKey', () => {
             const result = await registerPublishKey(
                 makeTokenProvider(null),
                 SITE,
-                makeLogger() as never
+                makeLogger()
             );
             expect(result.registered).toBe(false);
             expect(global.fetch).not.toHaveBeenCalled();
@@ -135,7 +156,8 @@ describe('registerPublishKey', () => {
             const result = await registerPublishKey(
                 makeTokenProvider(),
                 SITE,
-                makeLogger() as never
+                makeLogger(),
+                makeHelix()
             );
             expect(result).toEqual({ registered: false, reason: 'registration returned 403' });
         });
@@ -145,7 +167,8 @@ describe('registerPublishKey', () => {
             const result = await registerPublishKey(
                 makeTokenProvider(),
                 SITE,
-                makeLogger() as never
+                makeLogger(),
+                makeHelix()
             );
             expect(result.registered).toBe(false);
             expect(result.reason).toBe('ECONNRESET');
@@ -156,13 +179,13 @@ describe('registerPublishKey', () => {
     it('never rejects, whatever fails', async () => {
         mockForgetApiKey.mockRejectedValue(new Error('secret store unavailable'));
         await expect(
-            registerPublishKey(makeTokenProvider(), SITE, makeLogger() as never)
+            registerPublishKey(makeTokenProvider(), SITE, makeLogger(), makeHelix())
         ).resolves.toEqual(expect.objectContaining({ registered: false }));
     });
 
     it('does not log the key', async () => {
         const logger = makeLogger();
-        await registerPublishKey(makeTokenProvider(), SITE, logger as never);
+        await registerPublishKey(makeTokenProvider(), SITE, logger, makeHelix());
         const logged = [...logger.info.mock.calls, ...logger.debug.mock.calls].flat().join(' ');
         expect(logged).not.toContain('hlx_minted_key');
         expect(logged).not.toContain('da-live-bearer');
