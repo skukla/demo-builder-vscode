@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # Give StateManager and Project fixtures a shared builder, the way HandlerContext has one
