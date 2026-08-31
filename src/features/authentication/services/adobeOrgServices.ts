@@ -14,7 +14,9 @@
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { OrgServiceInfo, SDKResponse, ServiceSubscriptionInfo } from './types';
 import { getLogger } from '@/core/logging';
-import { CACHE_TTL, formatDuration, SingleFlight, TIMEOUTS } from '@/core/utils';
+import { SingleFlight } from '@/core/utils/singleFlight';
+import { formatDuration } from '@/core/utils/timeFormatting';
+import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { tryWithTimeout } from '@/core/utils/promiseUtils';
 import { sleep } from '@/core/utils/sleep';
 

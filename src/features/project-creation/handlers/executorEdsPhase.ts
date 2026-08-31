@@ -15,7 +15,7 @@ import * as vscode from 'vscode';
 import { ensureEdsContent } from '@/features/project-creation/services/edsContentSetup';
 import type { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
-import { parseGitHubUrl } from '@/core/utils';
+import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { detectB2bReadiness } from '@/features/eds/services/b2bReadinessDetection';
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';

@@ -10,7 +10,7 @@
 
 import * as vscode from 'vscode';
 import { hasAdobeWorkspaceContext, hasAdobeProjectContext } from './meshStatusHelpers';
-import { openInIncognito } from '@/core/utils';
+import { openInIncognito } from '@/core/utils/browserUtils';
 import { validateURL } from '@/core/validation/URLValidator';
 import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import {

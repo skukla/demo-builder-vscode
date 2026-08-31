@@ -15,7 +15,7 @@ import {
     createExportSettings,
     getSuggestedFilename,
 } from './settingsSerializer';
-import { showWebviewQuickPick } from '@/core/utils';
+import { showWebviewQuickPick } from '@/core/utils/quickPickUtils';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';

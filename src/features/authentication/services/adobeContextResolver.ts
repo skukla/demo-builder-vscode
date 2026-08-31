@@ -27,7 +27,7 @@ import type {
 } from './types';
 import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
-import { TIMEOUTS } from '@/core/utils';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { parseJSON } from '@/types/typeGuards';
 

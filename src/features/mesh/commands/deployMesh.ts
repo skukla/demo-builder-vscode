@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state';
-import { ExecutionLock } from '@/core/utils';
+import { ExecutionLock } from '@/core/utils/executionLock';
 import type { Logger } from '@/types/logger';
 
 /**

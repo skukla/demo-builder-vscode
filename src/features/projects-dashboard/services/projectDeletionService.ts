@@ -11,7 +11,8 @@
 
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
-import { TIMEOUTS, showOneTimeTip } from '@/core/utils';
+import { showOneTimeTip } from '@/core/utils/oneTimeTip';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sleep } from '@/core/utils/sleep';
 import { ensureDaLiveAuth as ensureDaLiveAuthShared, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';

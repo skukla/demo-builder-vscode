@@ -90,7 +90,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     }),
 }));
 
-jest.mock('@/core/utils', () => ({
+jest.mock('@/core/utils/githubUrlParser', () => ({
     parseGitHubUrl: jest.fn((url: string) => {
         if (url === 'https://github.com/test-owner/test-repo') {
             return { owner: 'test-owner', repo: 'test-repo' };

@@ -17,7 +17,7 @@ import { ProjectDirectoryScanner, ProjectSummary } from './projectDirectoryScann
 import { ProjectFileLoader } from './projectFileLoader';
 import { RecentProjectsManager, RecentProject } from './recentProjectsManager';
 import { getLogger } from '@/core/logging';
-import { ExecutionLock } from '@/core/utils';
+import { ExecutionLock } from '@/core/utils/executionLock';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { Project, StateData, ProcessInfo } from '@/types';
 import { parseJSON } from '@/types/typeGuards';

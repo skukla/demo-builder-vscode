@@ -16,7 +16,8 @@ import { checkMultipleNodeVersions, getInstalledNodeVersions, getLatestInFamily 
 import { checkVersionSatisfaction } from '@/features/prerequisites/services/versioning/VersionSatisfactionChecker';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import type { CommandExecutor } from '@/core/shell';
-import { TIMEOUTS, formatDuration } from '@/core/utils';
+import { formatDuration } from '@/core/utils/timeFormatting';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { isTimeout, toAppError } from '@/core/errors';
 import { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';

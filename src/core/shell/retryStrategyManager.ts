@@ -1,7 +1,8 @@
 import { RateLimiter } from './rateLimiter';
 import type { RetryStrategy, CommandResult } from './types';
 import { getLogger } from '@/core/logging';
-import { TIMEOUTS, formatDuration } from '@/core/utils';
+import { formatDuration } from '@/core/utils/timeFormatting';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sleep } from '@/core/utils/sleep';
 import { toAppError, isTimeout, isNetwork } from '@/core/errors';
 

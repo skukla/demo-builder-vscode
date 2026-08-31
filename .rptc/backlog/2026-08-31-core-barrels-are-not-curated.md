@@ -106,3 +106,4 @@ sentence has been updated to say the ledger is closed.
 - 2026-08-31  refactor(barrels): core/validation and its nested validators index — 25 to 23 (`7c88295eb`)
 - 2026-08-31  refactor(barrels): eight UI/service barrels, and the classification was wrong — 23 to 15 (`3fc45e929`)
 - 2026-08-31  refactor(barrels): five more retired, and the fifth barrel-shaped test — 15 to 10 (`22ad6ed56`)
+- 2026-08-31  refactor(barrels): the UI hooks and integrations barrels go — 10 to 7 (`350c6f900`)

@@ -15,7 +15,7 @@
  */
 
 import * as vscode from 'vscode';
-import { parseGitHubUrl } from '@/core/utils';
+import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLive/daLiveConstants';
 import { createPatchReport, reportUnapplied } from '@/features/eds/services/patches/patchReportHelper';

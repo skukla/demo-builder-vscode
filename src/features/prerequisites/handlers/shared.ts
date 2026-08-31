@@ -7,7 +7,8 @@
 
 import type { PrerequisiteDefinition } from '../services/PrerequisitesManager';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { TIMEOUTS, formatDuration } from '@/core/utils';
+import { formatDuration } from '@/core/utils/timeFormatting';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import { ComponentSelection } from '@/types/components';
 import { isTimeout, toAppError } from '@/core/errors';

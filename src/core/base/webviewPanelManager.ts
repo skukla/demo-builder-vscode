@@ -13,7 +13,8 @@
 
 import * as vscode from 'vscode';
 import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
-import { ExecutionLock, TIMEOUTS } from '@/core/utils';
+import { ExecutionLock } from '@/core/utils/executionLock';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Singleton manager for webview panels

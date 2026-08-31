@@ -25,7 +25,7 @@
 
 import type { CommandExecutor } from '@/core/shell';
 import type { StateManager } from '@/core/state';
-import { TIMEOUTS } from '@/core/utils';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import { resolveMcpToolsDir } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 import type { Project } from '@/types/base';

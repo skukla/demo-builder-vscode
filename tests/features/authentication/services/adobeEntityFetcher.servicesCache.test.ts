@@ -18,7 +18,7 @@ import {
     getLogger,
 } from './adobeEntityFetcher.testUtils';
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
-import { CACHE_TTL, TIMEOUTS } from '@/core/utils';
+import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { Logger } from '@/types/logger';

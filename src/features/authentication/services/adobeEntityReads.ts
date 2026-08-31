@@ -29,7 +29,9 @@ import type {
 } from './types';
 import { getLogger, StepLogger } from '@/core/logging';
 import { withOrgContext } from '@/core/shell';
-import { formatDuration, SingleFlight, TIMEOUTS } from '@/core/utils';
+import { SingleFlight } from '@/core/utils/singleFlight';
+import { formatDuration } from '@/core/utils/timeFormatting';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { tryWithTimeout } from '@/core/utils/promiseUtils';
 import type { Logger } from '@/types/logger';
 

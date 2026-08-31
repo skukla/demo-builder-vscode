@@ -16,7 +16,7 @@
 
 import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
-import { formatDuration } from '@/core/utils';
+import { formatDuration } from '@/core/utils/timeFormatting';
 import { ErrorCode } from '@/types/errorCodes';
 import { AuthError } from '@/core/errors';
 import { parseJSON } from '@/types/typeGuards';
