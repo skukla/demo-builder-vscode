@@ -16,6 +16,24 @@ describe('AdobeAuthStep - Authentication Flow', () => {
     const mockUpdateState = jest.fn();
     const mockSetCanProceed = jest.fn();
 
+    /**
+     * The one render this suite performs, in one place.
+     *
+     * It was written out fifteen times, identically — 344 duplicated lines, the largest
+     * single clone in the test tree. Nothing about the repetition was deliberate: every
+     * copy passed the same two mocks and cast `state` the same way, so the only thing
+     * that varied between tests was the state itself, which is now the argument.
+     */
+    function renderStep(state: unknown) {
+        return render(
+            <AdobeAuthStep
+                state={state as WizardState}
+                updateState={mockUpdateState}
+                setCanProceed={mockSetCanProceed}
+            />
+        );
+    }
+
     beforeEach(() => {
         resetMocks();
     });
@@ -31,13 +49,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeAuth: { isAuthenticated: false, isChecking: false },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             expect(screen.getByText('Sign In with Adobe')).toBeInTheDocument();
         });
@@ -49,13 +61,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeAuth: { isAuthenticated: false, isChecking: false },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             const signInButton = screen.getByText('Sign In with Adobe');
             await user.click(signInButton);
@@ -70,13 +76,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeOrg: { id: 'org1', code: 'ORG1', name: 'Test Organization' },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             expect(screen.getByText('Connected')).toBeInTheDocument();
             expect(screen.getByText('Test Organization')).toBeInTheDocument();
@@ -90,13 +90,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeOrg: { id: 'org1', code: 'ORG1', name: 'Test Organization' },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             expect(mockSetCanProceed).toHaveBeenCalledWith(true);
         });
@@ -108,13 +102,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeOrg: undefined,
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             expect(mockSetCanProceed).toHaveBeenCalledWith(false);
         });
@@ -127,13 +115,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeAuth: { isAuthenticated: false, isChecking: true },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             expect(screen.getByTestId('loading-display')).toBeInTheDocument();
             expect(screen.getByText('Connecting to Adobe services...')).toBeInTheDocument();
@@ -147,13 +129,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeAuth: { isAuthenticated: false, isChecking: true },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             // Simulate auth status message
             messageCallback({
@@ -173,13 +149,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeAuth: { isAuthenticated: false, isChecking: false },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             // Should always call check-auth on mount to validate token and auto-skip if valid
             expect(mockPostMessage).toHaveBeenCalledWith('check-auth');
@@ -192,13 +162,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeOrg: { id: 'org1', code: 'ORG1', name: 'Test Org' },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             // Always validate token on mount, even if already authenticated
             // This ensures token is still valid and provides consistent behavior
@@ -215,13 +179,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeAuth: { isAuthenticated: false, isChecking: true },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             // Simulate successful auth message
             messageCallback({
@@ -262,13 +220,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeOrg: { id: 'org1', code: 'ORG1', name: 'Test Org' },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             // Simulate message without org
             messageCallback({
@@ -295,13 +247,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeAuth: { isAuthenticated: false, isChecking: false },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             const signInButton = screen.getByText('Sign In with Adobe');
             await user.click(signInButton);
@@ -319,13 +265,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeAuth: { isAuthenticated: false, isChecking: false },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             // Simulate existing subMessage from previous operation
             messageCallback({
@@ -356,13 +296,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeAuth: { isAuthenticated: false, isChecking: false },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             // Click Sign In
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
@@ -390,13 +324,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
                 adobeAuth: { isAuthenticated: false, isChecking: false },
             };
 
-            render(
-                <AdobeAuthStep
-                    state={state as WizardState}
-                    updateState={mockUpdateState}
-                    setCanProceed={mockSetCanProceed}
-                />
-            );
+            renderStep(state);
 
             const signInButton = screen.getByText('Sign In with Adobe');
             await user.click(signInButton);

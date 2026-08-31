@@ -48,6 +48,30 @@
                 "conventions.enforced": 61,
                 "suite.testFiles": 1204
             }
+        },
+        {
+            "at": "2026-08-31",
+            "commit": "3ab1d0328",
+            "note": "AdobeAuthStep render helper extracted; webview floor adjudicated",
+            "metrics": {
+                "dup.src.clones": 67,
+                "dup.tests.clones": 90,
+                "dup.tests.duplicatedLines": 4725,
+                "dup.tests.pct": 1.44,
+                "dup.tests.pairsWebview": 12,
+                "dup.tests.pairsService": 78,
+                "mutation.scoreWeighted": 60.48,
+                "mutation.modulesPinned": 12,
+                "mutation.highValueSurvivors": 173,
+                "mutation.noCoverage": 232,
+                "debt.testFamilies": 63,
+                "debt.loggerFakes": 296,
+                "debt.consoleNoise": 0,
+                "debt.archExemptions": 30,
+                "conventions.total": 78,
+                "conventions.enforced": 61,
+                "suite.testFiles": 1204
+            }
         }
     ],
     "_definitions": {
@@ -61,7 +85,7 @@
     },
     "_floors": {
         "dup.tests.pairsService": "78 as of 2026-08-31. Duplication BETWEEN files; none is a suite repeating itself. Shared setup wanting one home.",
-        "dup.tests.pairsWebview": "13 as of 2026-08-31. Half the lines are a suite repeating ITSELF — a missing local renderX() helper, no design question.",
+        "dup.tests.pairsWebview": "12 as of 2026-08-31. ADJUDICATED, not merely counted: of the three pairs that looked like a suite repeating itself, only AdobeAuthStep was a missing helper (fixed — 15 identical render blocks became one renderStep). ProjectCard and ConfigureScreen-rendering ALREADY use a render helper; jscpd matches those files against themselves at an offset because twenty render-and-assert tests are structurally alike by nature. Those two are a legitimate floor, not debt.",
         "dup.src.clones": "67 as of 2026-08-31 (the skill says 66; +/-1 is jitter). 7 are JSON config structure, an inert floor.",
         "_why_two": "Judged apart because the defect differs. One number let a 2026-08-31 reading describe the whole tree from its five largest clones, which happened to be .tsx and were not representative."
     }
