@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # ADR-015 convergence — empty the exemption ledger
@@ -87,3 +87,4 @@ RATIFIED permanent exception recorded in ADR-015.
 - 2026-08-31  refactor(prerequisites): the manager stops building its own cache, and the command stops building its own manager (`155183f98`)
 - 2026-08-31  refactor(core): the backend-owned-scope helper follows its only caller into core (`1bb896c9d`)
 - 2026-08-31  2026-08-31  Loop closed: ledger 30 -> 6, and every remaining row is ratified or an owner decision — no mechanical work left. constructionBoundary and featureBarrels are both EMPTY (39 and 5 at their first measurement). Owner decisions: serviceLocator (recommend ratify), errors.ts (recommend move to @/core/errors), shell.ts (decide on sight), typeGuards.ts (recommend ratify), apiOwners (modelling question: should core/state resolve a catalog entry). CommandManager ratified in place. Full detail in .rptc/handoff/2026-08-31-loop-report.md
+- 2026-08-31  2026-08-31  CLOSED. Ledger at 3 rows, every one a RATIFIED permanent exception recorded in ADR-015 (CommandManager by role; typeGuards.ts — a guard belongs beside its types; serviceLocator.ts — a locator must name what it locates, with the two rejected alternatives measured). That is this item's stated done-condition. It held 75 rows when written and 30 this morning. constructionBoundary and featureBarrels are empty by enforcement, not ratchet. Owner decisions this session: errors.ts and shell.ts MOVED to core; typeGuards and serviceLocator RATIFIED; apiOwners withdrawn from the decision list and fixed (receives the catalog lookup).
