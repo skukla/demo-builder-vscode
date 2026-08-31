@@ -1,6 +1,6 @@
 {
     "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-    "_comment": "PL-22 — does the pilot's 93% hold OUTSIDE the four modules it measured? The seven files below were picked by a deterministic stride across all 423 source files that have a matching test (path-sorted, every 59th), so they are a spread rather than a selection. envMerge.ts is the eighth: it is a PILOT file, included as a CONTROL — if the harness no longer reproduces its known score, the other seven numbers mean nothing. See .claude/skills/mutation-test-pilot/SKILL.md for how to read a mutation score.",
+    "_comment": "PL-22 \u2014 does the pilot's 93% hold OUTSIDE the four modules it measured? The original eight were a deterministic stride across source files with a matching test, plus envMerge.ts as a CONTROL: if the harness stops reproducing its known score, none of the other numbers mean anything. WIDENED 2026-08-31 with FOUR UI-layer modules (hooks, helpers, view-models under ui/) by the same stride method. Before that the sample was 8 modules with nothing from the UI layer at all, so the weighted score described the service half and was reported as the number for the whole codebase. COMPONENTS (.tsx) ARE STILL NOT MEASURED, and it is a tooling conflict rather than a choice \u2014 see the backlog item on component mutation coverage. Two blockers: 41 of 203 component suites carry a @jest-environment pragma that Stryker cannot read coverage through, and removing it breaks them under Stryker's SANDBOX where the jest project config no longer applies; separately, 33 suites use user-event, whose clipboard teardown throws in Stryker's jsdom environment. The original eight are KEPT AND UNCHANGED so their pinned baselines stay comparable.",
     "packageManager": "npm",
     "testRunner": "jest",
     "jest": {
@@ -9,12 +9,16 @@
     },
     "mutate": [
         "src/commands/claudeCodeFootprint.ts",
+        "src/core/ui/utils/spectrumTokens.ts",
         "src/core/utils/mcpSocketPath.ts",
         "src/features/ai/server/siteTools.ts",
         "src/features/components/services/commerceCredentialStore.ts",
+        "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
+        "src/features/data-installer/ui/importProgress.ts",
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts",
         "src/features/eds/services/patches/codePatchRegistry.ts",
         "src/features/prerequisites/handlers/installHandler.ts",
+        "src/features/project-creation/ui/helpers/buttonTextHelpers.ts",
         "src/features/updates/services/envMerge.ts"
     ],
     "reporters": [

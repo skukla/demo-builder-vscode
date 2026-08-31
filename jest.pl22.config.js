@@ -53,5 +53,12 @@ module.exports = {
         '**/tests/features/project-creation/services/aiBundle/homeAiContextWriter.test.ts',
         '**/tests/features/project-creation/services/aiBundle/mcpConfigWriter.test.ts',
         '**/tests/features/updates/services/envMerge.test.ts',
+        // added 2026-08-31 with the sample's widening — UI-LAYER LOGIC, which runs
+        // under the node project. Components (.tsx) are not here: see the stryker
+        // config's comment for the two tooling blockers that stop them being measured.
+        '**/tests/webview-ui/shared/utils/spectrumTokens.test.ts',
+        '**/tests/features/dashboard/ui/components/integrations/integrationCardModel.test.ts',
+        '**/tests/features/data-installer/ui/importProgress.test.ts',
+        '**/tests/features/project-creation/ui/helpers/buttonTextHelpers.test.ts',
     ],
 };

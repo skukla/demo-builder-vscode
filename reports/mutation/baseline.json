@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "Pass 1 batch 1 (cache invalidation + final status message, 8 tests): installHandler 41.77% -> 49.17%, branch/block 89 -> 73, uncovered 122 -> 112. Accepted by the ratchet as a real improvement. The 8 plugin tests are NOT in these numbers — they landed after this run.",
+    "_note": "widened to 12: adds four UI-layer modules. The pinned eight are byte-identical, control envMerge reproduced at 100%, so this accepts no regression.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -27,6 +27,21 @@
                 "optionalChain": 5
             },
             "highValueSurvivors": 16
+        },
+        "src/features/dashboard/ui/components/integrations/integrationCardModel.ts": {
+            "score": 42.96,
+            "killed": 122,
+            "survived": 89,
+            "noCoverage": 73,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 37,
+                "string": 25,
+                "block": 4,
+                "optionalChain": 9,
+                "other": 14
+            },
+            "highValueSurvivors": 41
         },
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts": {
             "score": 67.04,
@@ -73,6 +88,19 @@
             },
             "highValueSurvivors": 73
         },
+        "src/core/ui/utils/spectrumTokens.ts": {
+            "score": 88.24,
+            "killed": 30,
+            "survived": 4,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 2,
+                "block": 1,
+                "string": 1
+            },
+            "highValueSurvivors": 3
+        },
         "src/core/utils/mcpSocketPath.ts": {
             "score": 77.78,
             "killed": 7,
@@ -94,6 +122,27 @@
             "survivorCategories": {
                 "string": 1
             },
+            "highValueSurvivors": 0
+        },
+        "src/features/data-installer/ui/importProgress.ts": {
+            "score": 94.44,
+            "killed": 34,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "string": 1
+            },
+            "highValueSurvivors": 0
+        },
+        "src/features/project-creation/ui/helpers/buttonTextHelpers.ts": {
+            "score": 100,
+            "killed": 10,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
             "highValueSurvivors": 0
         },
         "src/features/updates/services/envMerge.ts": {
