@@ -230,7 +230,12 @@ export const LAST_UPDATE_CHECK = 'lastUpdateCheck';
 // commerce-extensibility server FIRST. Both ERP journeys measured that server
 // at zero calls while the kit build re-derived its rules from source — the
 // routing lead the journey measurement's calls-by-server line exists to catch.
-export const AI_CONTEXT_VERSION = 31;
+// v32 (2026-08-30): sync-changes named the mesh deploy command `aio api:mesh:update`.
+// No such command exists — the topic is `api-mesh`, and that spelling appeared in
+// exactly one file in the repo: this shipped template. An agent following it got
+// "command not found" in every project generated since. Found by reading every
+// document; the fix only reaches existing projects because of this bump.
+export const AI_CONTEXT_VERSION = 32;
 
 /**
  * Component IDs for standardized component instance access

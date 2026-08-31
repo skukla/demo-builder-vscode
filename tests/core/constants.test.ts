@@ -109,8 +109,13 @@ describe('AI_CONTEXT_VERSION', () => {
     // v31: extend-app-builder-app routes kit knowledge to the
     // commerce-extensibility server first (measured at zero uses across both
     // ERP journeys while agents re-derived its rules from source).
-    it('is 31 (kit knowledge routes to the commerce-extensibility server)', () => {
-        expect(AI_CONTEXT_VERSION).toBe(31);
+    // v32: sync-changes named the mesh deploy command `aio api:mesh:update`. No
+    // such command exists — the topic is `api-mesh`, and that misspelling lived in
+    // exactly one file in the repo: the shipped template. Every project generated
+    // since carried it, so an agent following the skill got "command not found".
+    // The bump is what delivers the correction to projects that already have it.
+    it('is 32 (the mesh deploy command in sync-changes is api-mesh, not api:mesh)', () => {
+        expect(AI_CONTEXT_VERSION).toBe(32);
     });
 });
 
@@ -149,7 +154,7 @@ describe('COMPONENT_IDS', () => {
         });
 
         it('should have exactly 4 component IDs', () => {
-            expect(Object.keys(COMPONENT_IDS).length).toBe(4);
+            expect(Object.keys(COMPONENT_IDS)).toHaveLength(4);
         });
     });
 
