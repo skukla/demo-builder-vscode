@@ -17,7 +17,6 @@ import {
 import type { Project } from '@/types';
 
 // Re-declare mocks to ensure proper typing and hoisting
-jest.mock('vscode');
 jest.mock('fs/promises');
 jest.mock('os');
 

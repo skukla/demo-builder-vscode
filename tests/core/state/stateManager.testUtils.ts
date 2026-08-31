@@ -11,7 +11,6 @@ import type { Project } from '@/types';
 import { createMockProject as createMockProjectBase } from '../../helpers/projectFake';
 
 // Mock VS Code API
-jest.mock('vscode');
 jest.mock('fs/promises');
 jest.mock('os');
 

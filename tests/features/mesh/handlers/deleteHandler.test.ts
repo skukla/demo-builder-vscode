@@ -28,7 +28,6 @@ jest.mock('@/core/shell', () => ({
 }));
 
 jest.mock('@/core/di');
-jest.mock('vscode');
 jest.mock('@/core/utils/meshConfig', () => ({
     getMeshNodeVersion: () => '20',
 }));

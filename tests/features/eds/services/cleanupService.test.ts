@@ -8,7 +8,6 @@
  */
 
 // Mock vscode module
-jest.mock('vscode');
 
 // Mock logging
 const mockLogger = {

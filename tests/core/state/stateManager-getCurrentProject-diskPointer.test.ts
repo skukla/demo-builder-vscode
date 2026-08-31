@@ -17,7 +17,6 @@
 import * as fs from 'fs/promises';
 import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
 
-jest.mock('vscode');
 jest.mock('fs/promises');
 jest.mock('os');
 

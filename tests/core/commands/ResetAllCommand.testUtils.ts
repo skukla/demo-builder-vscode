@@ -15,7 +15,6 @@
  */
 
 // Mock dependencies
-jest.mock('vscode');
 jest.mock('@/core/di');
 jest.mock('fs/promises');
 jest.mock('@/features/eds/handlers/edsHelpers');

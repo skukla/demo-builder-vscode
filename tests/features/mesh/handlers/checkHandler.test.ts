@@ -19,7 +19,6 @@ jest.mock('@/core/shell', () => ({
 
 // Mock dependencies
 jest.mock('@/core/di');
-jest.mock('vscode');
 jest.mock('fs', () => ({
     promises: {
         mkdir: jest.fn().mockResolvedValue(undefined),

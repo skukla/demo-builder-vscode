@@ -14,7 +14,6 @@ import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 
 // Mock dependencies
-jest.mock('vscode');
 jest.mock('@/core/communication/webviewCommunicationManager');
 jest.mock('@/core/utils/loadingHTML');
 jest.mock('@/core/logging/debugLogger');

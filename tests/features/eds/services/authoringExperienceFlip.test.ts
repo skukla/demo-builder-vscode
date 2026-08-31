@@ -16,7 +16,6 @@ import type { Logger } from '@/types/logger';
 import type { AuthoringExperience, Project } from '@/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock('vscode');
 
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({

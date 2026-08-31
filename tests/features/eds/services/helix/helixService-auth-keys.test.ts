@@ -10,7 +10,6 @@
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 
 // Mock vscode module
-jest.mock('vscode');
 
 // Mock logging
 const mockLogger = {

@@ -21,7 +21,6 @@ import { detectProjectOrgMismatch } from '@/features/authentication/services/det
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
-jest.mock('vscode');
 jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => ({
     detectProjectOrgMismatch: jest.fn(),
 }));

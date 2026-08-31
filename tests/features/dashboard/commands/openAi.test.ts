@@ -13,7 +13,6 @@ import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
 
 // Mock VS Code API
-jest.mock('vscode');
 
 // Mock dependencies
 jest.mock('@/core/state');

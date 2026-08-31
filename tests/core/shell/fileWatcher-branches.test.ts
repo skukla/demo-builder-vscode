@@ -25,8 +25,6 @@ import { PollingService } from '@/core/shell/pollingService';
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events';
 
-// Mock vscode
-jest.mock('vscode');
 
 // Mock polling service
 // CONVERTED 2026-08-28 (ADR-015): FileWatcher takes its poller, so the fake is

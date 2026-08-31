@@ -25,7 +25,6 @@ export function setupMocks() {
         homedir: jest.fn(() => '/mock/home'),
         platform: jest.fn(() => process.platform),
     }));
-    jest.mock('vscode');
     jest.mock('child_process', () => ({
         execSync: jest.fn(),
     }));
