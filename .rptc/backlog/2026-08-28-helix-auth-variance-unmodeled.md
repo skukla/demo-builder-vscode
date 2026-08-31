@@ -72,9 +72,14 @@ after the item was filed: **read who registers the default, and when.**
 ## Residual, if anything
 
 Small and cosmetic. `logger, undefined, tokenProvider` at
-`pdp/publishKeyRegistrar.ts:87` passes an explicit provider that duplicates the
+`pdp/publishKeyRegistrar.ts:76` passes an explicit provider that duplicates the
 activation default; the middle `undefined` is noise. Worth tidying whenever that
-file is next open. Not worth an item — which is why this one is retracted rather
+file is next open.
+
+(Was line 87. It moved to 76 on 2026-08-31 when that construction was pulled into
+a `realHelix` factory for the ADR-016 seam work — the observation is unchanged,
+only its address. Caught by `rptc-hygiene-scan` section 6, which is what that
+section is for.) Not worth an item — which is why this one is retracted rather
 than rescoped.
 
 ## Standing lesson

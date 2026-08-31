@@ -1,42 +1,105 @@
 # Track 3 convergence — overnight loop report
 
-Started 2026-08-31 when the owner went to bed. Appended as work happens.
-State and contract: `2026-08-31-track3-loop-state.md`.
+Started 2026-08-31 when you went to bed. Read the summary; the rest is detail you can
+skip. Contract and state: `2026-08-31-track3-loop-state.md`.
 
-## Summary
+---
 
-Converting 28 test suites off their module mocks, so a stateless collaborator arrives
-through a seam instead of by intercepting its module. **8 of 28 done** at loop start.
+## The whole night in a paragraph
 
-## What has landed
+Track 3 is finished. The job was to stop tests faking out shared services by
+intercepting whole modules, and to give sets of related test files one place to keep
+their shared setup. Both are done. Along the way the same thing kept turning up: **159
+lines of test setup that no test needed** — fakes claiming the code touches something it
+does not. I deleted all of them, built a tool that finds more, and wrote the finding into
+the two places someone reads before doing this work again. Everything is on the branch,
+every commit gated, nothing touched develop.
 
-| Suite | Wall | Note |
-|---|---|---|
-| `publishKeyRegistrar` | Helix | Removing it exposed 11 `as never` casts hiding that `Logger` has no `.mock` |
-| `refreshBlockLibraryHeadless` | Helix | The mock returned an empty object and asserted nothing |
-| `storefrontRepublishContent` | Helix | Assertion got STRONGER — `expect.anything()` became the named instance |
-| `contentAuthoringTools` x2 | Helix | Factory seam; 99 tests green |
-| `edsResetUI.testUtils` | GitHubApp | Frees 6 suites; the service sat behind a dynamic import |
-| `catalogPrewarmPhase` | Helix + tokens | The suite was WRITTEN as this conversion's witness. Lost no assertion |
+## Shipped
 
-Seams also added to `storefrontSetupPhases` (retires three walls at once) and
-`edsResetConfigStep`.
+| What | Result |
+|---|---|
+| **Module-mock walls** | All 28 converted. Only 6 needed the plumbing I set out to build; 22 needed the fake deleted |
+| **PL-14 — enforcement tooling** | All seven artifacts. Last was the webview test guide, which had no reference to the document governing it. Item set to `built`, not `shipped` — the instruments run, nobody has written a test against the new guidance yet |
+| **PL-16 — shared fixtures** | Half was already done. Added a shrink-only list that stops NEW hand-rolled logger fakes; converted the files this session touched |
+| **Shared-setup extraction** | All 11 targets on the worklist |
+| **`dead-mock-scan`** | New tool, registered so the sweep runs it. Self-tested four ways; its own first run found a bug in itself |
+| **The 63-family sweep** | All swept. 37 more dead fakes; 45 of the 63 share nothing at all |
 
-## Findings so far
+**The number:** 159 dead fakes removed — 79 in the big families, 43 the new tool found by
+a static rule, 37 in the sweep. Test count unchanged throughout: 15,572 tests, 1,206
+files, green on every commit.
 
-**Every wall that comes down exposes something it was hiding.** Three for three: the
-casts above, a partial fake tsc refused, and an assertion that could not name its own
-subject. This is the argument for the work — the tests get stronger, not just cheaper.
+**Three things the work uncovered that were not on anyone's list:**
 
-**One wall is load-bearing and must not be removed carelessly.** `edsResetConfigStep`
-asserts Helix is CONSTRUCTED with the token provider. That check exists because its
-absence caused a live 401 on 2026-08-15 — a site carrying an admin role refuses the
-GitHub token, and the CDN kept serving a stale config. A handed-in fake hides it.
-Convert by keeping one test on the default path.
+- **A whole step of project deletion was untested and looked tested.** Deleting a
+  storefront is supposed to pull its pages off the public CDN and destroy the site's
+  access key first. A stale fake made that step crash on its first line; the crash was
+  swallowed as a warning and all 23 tests passed. Proved it rather than assumed it, and
+  wrote four tests. Without that step a deleted demo keeps serving pages publicly that
+  nobody can take down.
+- **Five function signatures asked for far more than they use** — declaring a whole
+  service, then calling two methods on it. That is *why* the fakes existed. Narrowing
+  each fixed the test and left an honest signature.
+- **A duplicate nothing could see.** Sharing one fixture meant exporting it, and the
+  duplicate-name check immediately failed: a second thing with the same name existed
+  elsewhere with a different shape. Both had been local. Deleted the weaker one.
 
-**tsc found a better seam than I designed.** For `catalogPrewarmPhase` I typed a factory
-return as unknown; the compiler named `PdpPublisher`, the narrow interface the consumer
-actually needs. Injecting that beats injecting the whole class.
+## Handed off
+
+Nothing is half-finished. Two things are deliberately left for you:
+
+- **PL-22** — the mutation-testing evidence and what the 93%-vs-59% gap means for policy.
+  Yours, not the loop's; I did not run it.
+- **The rewrite of `tests/README.md` and the splitting playbook.** Track 3 unblocks it and
+  you said those are yours.
+
+## Filed
+
+- **Nothing new filed.** The backlog is at 88 items, all frontmatter valid, all references
+  resolving. What the night produced went into code and instruments rather than items.
+- The 63 families still on the shared-setup list are a **finished state, not a backlog**:
+  45 share no setup at all, and the rest genuinely need what they share.
+
+## Retracted / corrected
+
+Six things I got wrong and fixed. Listing them because you cannot check what you are not
+told:
+
+1. **"21 of 28 walls done"** — two different counting rules subtracted from each other.
+2. **Called one file's fake "genuinely needed"** and left it. It needed deleting, same as
+   twenty-one others.
+3. **"301 to 299"** in a commit message. It was 301 to 300; the file was always right.
+4. **A claim that a reset line prevents a specific failure.** Nothing proved it — the
+   comment now says it is a reasoned precaution, not a demonstrated one.
+5. **Named a fixture field as asserted-on when it is not.** Replaced with the measurement.
+6. **The tool I built was demanding the impossible** — failing files for something the
+   test runner forbids. The only way to satisfy it was to put the duplicate back.
+
+Plus three automated edits that landed somewhere I did not intend, each caught by a test
+naming the wrong thing, each reverted and redone bounded. That is a pattern rather than
+bad luck, and the lesson is to check where an edit actually landed rather than trust it.
+
+## Environment facts
+
+- Nothing external was touched: no cloud writes, no sign-ins, no browser.
+- **40 commits** on `loop/2026-08-30-track3-convergence`, pushed. Develop untouched.
+- Scans at close: no dependency cycles; duplication in `src` at 60 clones against a
+  ratified floor of 66; the record scan clean apart from three advisories where code moved
+  under an item's citation — one was mine and is corrected, two predate tonight and say
+  only that the ground moved, not that the item is wrong.
+
+## Your decisions
+
+1. **Merge `loop/2026-08-30-track3-convergence` into develop?** 40 commits, all gated.
+2. **PL-22** — yours to run and to rule on.
+3. **`tests/README.md` and the splitting playbook** — yours; Track 3 has unblocked them.
+
+---
+
+# Detail, in the order it happened
+
+Everything below is the running log. Skip it unless you want a specific thing.
 
 ## Not every "wall" is the same defect (found 2026-08-31)
 
@@ -412,9 +475,3 @@ probably-legitimate splits was right about the thing they were judging — none 
 wanted a shared file. What they could not have known is that a fifth of them were
 carrying dead weight instead. Those are different questions and only the second one has a
 cheap test.
-
-## Your decisions in the morning
-
-- Merge `loop/2026-08-30-track3-convergence` into develop?
-- PL-22 — what the 59% mutation score means for policy (not loopable).
-- The rewrite of `tests/README.md` and the splitting playbook, which Track 3 unblocks.
