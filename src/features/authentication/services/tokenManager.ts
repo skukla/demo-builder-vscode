@@ -1,7 +1,7 @@
 import * as aioConfig from '@adobe/aio-lib-core-config';
 import type { AuthCacheManager } from './authCacheManager';
 import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { formatMinutes } from '@/core/utils/timeFormatting';
 import { withTimeout } from '@/core/utils/promiseUtils';

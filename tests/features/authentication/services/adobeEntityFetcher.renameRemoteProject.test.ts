@@ -13,11 +13,11 @@
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import type { Logger } from '@/types/logger';
 jest.mock('@/types/typeGuards');
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 

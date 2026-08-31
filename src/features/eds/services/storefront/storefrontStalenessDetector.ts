@@ -7,7 +7,7 @@
  * @module features/eds/services/storefront/storefrontStalenessDetector
  */
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import {
     PAAS_GRAPHQL_ENDPOINT,
     PAAS_CATALOG_SERVICE_ENDPOINT,

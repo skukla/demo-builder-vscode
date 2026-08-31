@@ -6,7 +6,7 @@
  * Backward-compatible function exports use a lazy-loaded default logger.
  */
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

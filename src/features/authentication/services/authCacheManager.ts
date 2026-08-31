@@ -1,5 +1,5 @@
 import { getCacheTTLWithJitter } from '@/core/cache/cacheUtils';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 import type {
     AdobeOrg,

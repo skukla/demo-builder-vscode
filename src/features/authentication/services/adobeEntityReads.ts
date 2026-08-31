@@ -27,7 +27,8 @@ import type {
     RawAdobeWorkspace,
     SDKResponse,
 } from './types';
-import { getLogger, StepLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
+import { StepLogger } from '@/core/logging/stepLogger';
 import { withOrgContext } from '@/core/shell';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { formatDuration } from '@/core/utils/timeFormatting';

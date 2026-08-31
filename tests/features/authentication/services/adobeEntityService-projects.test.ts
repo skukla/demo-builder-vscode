@@ -12,7 +12,7 @@ jest.mock('@/core/validation/SensitiveDataRedactor');
 jest.mock('@/core/validation/validators/AdobeResourceValidator');
 jest.mock('@/types/typeGuards');
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
 import { parseJSON } from '@/types/typeGuards';
 import { createMockLogger } from '../../../helpers/loggerFake';

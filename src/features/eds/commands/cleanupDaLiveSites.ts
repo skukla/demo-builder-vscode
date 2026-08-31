@@ -17,7 +17,7 @@ import { DaLiveContentOperations } from '../services/daLive/daLiveContentOperati
 import { DaLiveOrgOperations } from '../services/daLive/daLiveOrgOperations';
 import { getLinkedEdsProjects } from '../services/resourceCleanupHelpers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';

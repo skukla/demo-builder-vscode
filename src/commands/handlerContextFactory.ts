@@ -25,7 +25,8 @@
 
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { getLogger, getStepLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
+import { getStepLogger } from '@/core/logging/stepLogger';
 import { ErrorLogger } from '@/core/logging/errorLogger';
 import { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
 import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';

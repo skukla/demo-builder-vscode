@@ -23,7 +23,7 @@ import {
     type ToolInstallOptions,
     type ToolExecutionOptions,
 } from './types';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';

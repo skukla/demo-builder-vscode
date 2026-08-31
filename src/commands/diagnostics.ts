@@ -35,7 +35,7 @@ import {
 } from './diagnosticsReport';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { getLogger, type DebugLogger } from '@/core/logging';
+import { getLogger, type DebugLogger } from '@/core/logging/debugLogger';
 import type { StateManager } from '@/core/state/stateManager';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';

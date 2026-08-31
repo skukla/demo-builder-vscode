@@ -13,7 +13,8 @@
  *   adobeEntityFetcher.teardown.test.ts
  */
 
-import { StepLogger, getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
+import { StepLogger } from '@/core/logging/stepLogger';
 const MESH = 'GraphQLServiceSDK';
 const MGMT = 'AdobeIOManagementAPISDK';
 

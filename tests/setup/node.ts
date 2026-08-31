@@ -152,11 +152,4 @@ jest.mock('@/core/logging/debugLogger', () => {
     };
 });
 
-jest.mock('@/core/logging', () => {
-    const actual = jest.requireActual('@/core/logging');
-    return {
-        ...actual,
-        getLogger: jest.fn(() => mockSharedLogger),
-        initializeLogger: jest.fn(),
-    };
-});
+

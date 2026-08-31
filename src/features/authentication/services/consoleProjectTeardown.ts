@@ -29,7 +29,7 @@
 import { errorMessage, teardownEventEntities } from './consoleProjectTeardownEvents';
 import type { EventsAuth, IoEventsClient } from './ioEventsClient';
 import type { WorkspaceS2SCredentialIds } from './types';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 
 /** Progress steps reported to `onProgress`. */
 const TOTAL_STEPS = 4;

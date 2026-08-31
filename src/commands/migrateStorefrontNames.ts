@@ -27,7 +27,7 @@
 
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { lostGrantsMessage } from '@/features/eds/services/configService/lostGrantsMessage';
 import {

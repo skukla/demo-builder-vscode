@@ -18,7 +18,7 @@ import { GitHubRepoOperations } from '../services/github/githubRepoOperations';
 import { GitHubTokenService } from '../services/github/githubTokenService';
 import { HelixService } from '../services/helix/helixService';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 
 /**
  * GitHub Services - composed from extracted modules

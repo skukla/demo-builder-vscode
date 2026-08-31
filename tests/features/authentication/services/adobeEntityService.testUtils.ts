@@ -7,7 +7,7 @@ import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
-import type { StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import type { Logger } from '@/types/logger';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authentication/services/types';
 import { createMockLogger } from '../../../helpers/loggerFake';

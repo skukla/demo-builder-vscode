@@ -14,7 +14,7 @@
  * @module features/authentication/services/adobeCliFallback
  */
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { ErrorCode } from '@/types/errorCodes';

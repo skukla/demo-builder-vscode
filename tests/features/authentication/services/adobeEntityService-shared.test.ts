@@ -9,7 +9,7 @@ import { setupMocks, mockOrgs, mockProjects, type TestMocks } from './adobeEntit
 
 // Mock external dependencies only
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('AdobeEntityService - Shared Operations', () => {

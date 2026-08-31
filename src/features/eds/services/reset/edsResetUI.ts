@@ -322,7 +322,7 @@ async function showResetResultNotifications(
         }
     } else if (result.error) {
         if (showLogsOnError) {
-            const { getLogger } = await import('@/core/logging');
+            const { getLogger } = await import('@/core/logging/debugLogger');
             vscode.window
                 .showErrorMessage(`Failed to reset EDS project: ${result.error}`, 'Show Logs')
                 .then((sel) => {

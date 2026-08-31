@@ -10,13 +10,13 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import type { Logger } from '@/types/logger';
 
 // Mock external dependencies
 jest.mock('@/types/typeGuards');
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { parseJSON } from '@/types/typeGuards';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';

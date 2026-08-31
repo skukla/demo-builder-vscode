@@ -26,19 +26,7 @@ jest.mock('@/core/logging/debugLogger', () => {
     };
 });
 
-jest.mock('@/core/logging', () => {
-    const { createMockLogger } = require('./helpers/loggerFake');
-    return {
-        Logger: jest.fn().mockImplementation(() => createMockLogger()),
-        initializeLogger: jest.fn(() => ({
-            ...createMockLogger(),
-        replayLogsFromFile: jest.fn().mockResolvedValue(undefined),
-        show: jest.fn(),
-        showDebug: jest.fn(),
-        })),
-        getLogger: jest.fn(() => createMockLogger()),
-    };
-});
+
 
 // StateManager knobs the specs steer per test.
 export const mockHasProject = jest.fn();

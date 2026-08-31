@@ -31,7 +31,7 @@ import { EventEmitter } from 'events';
 // handed in. The module mock stays only because this suite builds its fake via
 // `new PollingService()` and relies on the automock for the method surface.
 
-// Mock logging - must match the import path in fileWatcher.ts: '@/core/logging'
+// Mock logging - must match the import path in fileWatcher.ts: '@/core/logging/debugLogger'
 
 /**
  * Helper to create a mock VS Code FileSystemWatcher

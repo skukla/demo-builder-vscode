@@ -1,6 +1,6 @@
 import { RateLimiter } from './rateLimiter';
 import type { PollOptions } from './types';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 

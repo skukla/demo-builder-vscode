@@ -13,7 +13,7 @@ import type { AuthCacheManager } from '@/features/authentication/services/authCa
 
 // Mock external dependencies
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 

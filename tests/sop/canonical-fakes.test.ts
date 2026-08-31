@@ -175,7 +175,9 @@ describe('a fake with a canonical builder is not hand-rolled again', () => {
     it('CONTROL: exempts a logger literal inside a jest.mock factory', () => {
         expect(
             handRolledFakes(
-                `jest.mock('@/core/logging', () => ({ getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }) }));`
+                `jest.mock('@/core/logging/debugLogger', () => ({
+    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+}));`
             )
         ).toEqual([]);
         // ...but a literal AFTER the factory closes is still caught.
@@ -305,10 +307,7 @@ describe('a jest.mock factory reaches the builder too', () => {
      * the imports, so it cannot reference an imported builder. The factory BODY,
      * however, runs lazily — so `require()` inside it reaches the builder fine:
      *
-     *     jest.mock('@/core/logging', () => {
-     *         const { createMockLogger } = require('../../helpers/loggerFake');
-     *         return { getLogger: () => createMockLogger() };
-     *     });
+     *     
      *
      * One trap, which cost a suite-load failure on 2026-08-31: if the factory
      * captures a `mockX` from module scope, read it LAZILY (inside `getLogger`,

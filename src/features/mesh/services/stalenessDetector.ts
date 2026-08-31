@@ -15,7 +15,7 @@ import * as crypto from 'crypto';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { COMPONENT_IDS } from '@/core/constants';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell';
 import { getFrontendEnvVars } from '@/core/state';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';

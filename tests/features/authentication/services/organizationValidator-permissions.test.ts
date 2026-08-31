@@ -19,7 +19,7 @@ import { OrganizationValidator } from '@/features/authentication/services/organi
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { CommandExecutor } from '@/core/shell';
 import type { Logger } from '@/types/logger';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { parseJSON, toError } from '@/types/typeGuards';
 import {
     createMockCommandExecutor,

@@ -13,7 +13,7 @@
 
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { OrgServiceInfo, SDKResponse, ServiceSubscriptionInfo } from './types';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { SingleFlight } from '@/core/utils/singleFlight';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';

@@ -13,7 +13,7 @@ import { createMockLogger } from '../../helpers/loggerFake';
 const mockLogger = createMockLogger();
 
 // Mock logger to return the same instance
-jest.mock('@/core/logging', () => ({
+jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => mockLogger,
 }));
 

@@ -32,13 +32,15 @@
 // `mock` for jest to allow the reference inside a hoisted factory.)
 const mockDebugLogger = createMockLogger();
 
-jest.mock('@/core/logging', () => ({ getLogger: () => mockDebugLogger }));
+jest.mock('@/core/logging/debugLogger', () => ({
+    getLogger: () => mockDebugLogger,
+}));
 
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
 import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';

@@ -19,7 +19,7 @@ import { AdobeEntityFetcher } from './adobeEntityFetcher';
 import { AdobeEntitySelector } from './adobeEntitySelector';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
-import type { StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import type { CommandExecutor } from '@/core/shell';
 import type { Logger } from '@/types/logger';
 

@@ -25,7 +25,7 @@ import type {
     AdobeContext,
     AdobeConsoleWhereResponse,
 } from './types';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';

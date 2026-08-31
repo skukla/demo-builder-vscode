@@ -1,4 +1,4 @@
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { formatDuration } from '@/core/utils/timeFormatting';
 
 /**

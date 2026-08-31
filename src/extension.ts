@@ -7,7 +7,7 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { describeBuildInfo, readBuildInfo } from '@/core/build/buildInfo';
 import { registerBuildStamp } from '@/core/build/buildStampUi';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { initializeLogger, getLogger } from '@/core/logging';
+import { getLogger, initializeLogger } from '@/core/logging/debugLogger';
 import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';

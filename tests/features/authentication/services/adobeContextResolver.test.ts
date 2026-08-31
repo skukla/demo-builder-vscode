@@ -13,7 +13,7 @@ import type { AdobeEntityFetcher } from '@/features/authentication/services/adob
 // Mock external dependencies
 jest.mock('@/types/typeGuards');
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { parseJSON } from '@/types/typeGuards';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';

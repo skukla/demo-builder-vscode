@@ -25,15 +25,7 @@
  */
 
 const mockWarn = jest.fn();
-jest.mock('@/core/logging', () => {
-    const { createMockLogger } = require('../../helpers/loggerFake');
-    // The captured mock is read on the FIRST getLogger() call, not when this
-    // factory runs — jest hoists the factory above `const mockX = jest.fn()`, so
-    // reading it eagerly here throws "cannot access before initialization".
-    // Memoised, so every caller still shares one logger.
-    let logger;
-    return { getLogger: () => (logger ??= createMockLogger({ warn: mockWarn })) };
-});
+
 jest.mock('@/core/logging/debugLogger', () => {
     const { createMockLogger } = require('../../helpers/loggerFake');
     // The captured mock is read on the FIRST getLogger() call, not when this
