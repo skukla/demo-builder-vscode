@@ -35,7 +35,7 @@ it means the rule rests on somebody noticing.
 |---|---|---|---|
 | Nothing under `src/core/` imports `@/features` or `@/commands`. Enforced by the `layerDirection` ledger in `tests/sop/architecture-rules.exemptions.json` — seven predate the rule and the set may only shrink. |  |  | *named in prose* |
 | Features do not import other features; commands may. enforced by eslint. |  |  | `eslint.config.mjs` |
-| `@/core/*` and `@/types` are imported through their barrel file. Features are imported directly, and get no barrel. Enforced by the `featureBarrels` ledger in `tests/sop/architecture-rules.exemptions.json` — five predate the rule and the set may only shrink. | [ADR](../architecture/adr/022-barrel-files.md) |  | *named in prose* |
+| A module is imported by the path that DEFINES the symbol. No new re-export-only `index.ts` — not in `core/`, not in a feature. The 43 that predate the rule are a ledger that may only shrink. Enforced by the `reExportIndex` ledger in `tests/sop/architecture-rules.exemptions.json`, with the `featureBarrels` ledger — now empty — banning feature-level barrels outright. | [ADR](../architecture/adr/022-barrel-files.md) |  | *named in prose* |
 | Commands are `camelCase`, React components `PascalCase`, constants `UPPER_SNAKE_CASE`, and a file is named for what it exports — `WizardContainer.tsx`, `loadingHTML.ts`. |  |  | **—** |
 
 ## 3. Code gets what it needs handed to it

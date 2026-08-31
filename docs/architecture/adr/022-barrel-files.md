@@ -83,3 +83,52 @@ converted opportunistically, so the codebase stays inconsistent for a while.
 **Neutral.** Not enforced. A dead-barrel check is possible but needs real module
 resolution — a first attempt using a regex produced false matches by treating any
 `from './hooks'` as a reference to one particular directory.
+
+## Amendment 2026-08-31 — the reasoning was wrong, and the rule now covers core too
+
+This ADR justified core barrels as "a shared surface worth curating" and banned
+feature barrels. The ban was right. The justification was not, and the split it
+implied does not describe this codebase.
+
+**Measured on 2026-08-31.** 103 of 165 named exports across the core barrels are
+never imported through their barrel — 62%. `@/core/shell` exports 22 names and 5
+are used through it; the `eds` FEATURE barrel was retired the same day for
+exporting 41 lines with 5 in use. Same shape, opposite verdict, and the only thing
+separating them was which half of this ADR they fell under.
+
+**Research changed the shape of the rule.** The accepted industry principle is
+about PLACEMENT, not layer: a barrel is the public API of a unit, and files inside
+that unit import each other directly rather than through it. Measured against that
+rule, this codebase is not split between two conventions — it is already on the
+far side of the line. **1,935 imports reach into a module from outside it against
+162 from within.** The barrels are the minority report.
+
+**So the rule is now one rule, and it covers core.** A module is imported by the
+path that defines the symbol. No new re-export-only `index.ts` anywhere. The 43
+that predate this are a shrink-only ledger (`reExportIndex`); `featureBarrels` is
+empty and is now an outright ban.
+
+**What was checked and deliberately NOT used as a reason.** The published case
+against barrels is mostly performance, and it does not transfer here. Atlassian
+measured -75% build minutes across ~90,000 files; Angular removed barrels from its
+linker for a 500ms-1s compile saving; Next.js ships `optimizePackageImports` for
+package barrels. Our whole typecheck is 3.95s across 2,202 files, and the suite
+runs in FULL rather than selecting affected tests — so both mechanisms behind those
+wins (dev-server graph resolution, affected-test selection) have nothing to bite
+on here. Webpack's own guidance also makes the tree-shaking loss conditional on
+side effects, not on barrels as such.
+
+The rule is adopted for ONE reason: a symbol reachable by two paths is a symbol
+whose home nobody can name. LedgerHQ, enforcing the same convention, called it
+"dual import paths for the same symbol, hiding true providers".
+
+**The cost is real and is accepted knowingly.** Refactoring gets more fragile:
+move a file inside a module and every importer changes rather than one barrel
+line. That is Atlassian's stated trade-off, and it is a cost this codebase has
+already paid for 1,935 of its imports.
+
+Sources: [Atlassian](https://www.atlassian.com/blog/atlassian-engineering/faster-builds-when-removing-barrel-files) ·
+[Angular #61618](https://github.com/angular/angular/pull/61618) ·
+[Next.js optimizePackageImports](https://nextjs.org/docs/app/api-reference/config/next-config-js/optimizePackageImports) ·
+[LedgerHQ #20595](https://github.com/LedgerHQ/ledger-live/pull/20595) ·
+[webpack tree-shaking guide](https://docs.webpack.js.org/guides/tree-shaking)

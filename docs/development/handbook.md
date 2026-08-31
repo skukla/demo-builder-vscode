@@ -86,12 +86,33 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > [src/features/CLAUDE.md](../../src/features/CLAUDE.md) · enforced by eslint.
 > *Why:* it keeps a feature replaceable. Cross-feature imports are how two features quietly become one.
 
-> **Convention.** `@/core/*` and `@/types` are imported through their barrel file.
-> Features are imported directly, and get no barrel.
-> [ADR-022](../architecture/adr/022-barrel-files.md) · Enforced by the `featureBarrels`
-> ledger in `tests/sop/architecture-rules.exemptions.json` — five predate the rule and the
-> set may only shrink.
-> *Why:* core is a shared surface worth curating; a feature barrel mostly makes cross-feature imports easy, which is the thing to discourage.
+> **Convention.** A module is imported by the path that DEFINES the symbol. No new
+> re-export-only `index.ts` — not in `core/`, not in a feature. The 43 that predate the
+> rule are a ledger that may only shrink.
+> [ADR-022](../architecture/adr/022-barrel-files.md) · Enforced by the `reExportIndex`
+> ledger in `tests/sop/architecture-rules.exemptions.json`, with the `featureBarrels`
+> ledger — now empty — banning feature-level barrels outright.
+> *Why:* a symbol reachable by two paths is a symbol whose home nobody can name. It is
+> also the rule this codebase already follows: **1,935 imports reach into a module from
+> outside it, against 162 from within**, so the barrels were the minority report, not the
+> convention. The eight webview bundle entries are `index.tsx` by necessity and are read
+> from `WEBVIEW_ENTRIES` so the check cannot drift from the build.
+>
+> **This replaced an earlier convention that said the opposite for `core/`, and the
+> correction is worth keeping.** The old rule — core is "a shared surface worth curating",
+> features get nothing — was measured on 2026-08-31 and the curation was not happening:
+> 103 of 165 named exports were never imported through their barrel. Research then found
+> the accepted industry rule is about PLACEMENT, not layer: a barrel is the public API of
+> a unit, and files inside it import each other directly. Against that rule this codebase
+> was not split between two conventions; it was already on the far side of the line, with
+> a dozen barrels that a minority of callers used.
+>
+> **The published performance case was checked and does NOT apply here** — that check is
+> the reason the rule is scoped to legibility. Atlassian measured -75% build minutes
+> removing barrels across 90,000 files; Angular removed them from its linker for 500ms-1s.
+> Our whole typecheck is 3.95s over 2,202 files, and the suite runs in full rather than
+> selecting affected tests, so the mechanism behind those wins has nothing to bite on.
+> Adopted for one reason, not three.
 
 > **Convention.** Commands are `camelCase`, React components `PascalCase`, constants
 > `UPPER_SNAKE_CASE`, and a file is named for what it exports —
