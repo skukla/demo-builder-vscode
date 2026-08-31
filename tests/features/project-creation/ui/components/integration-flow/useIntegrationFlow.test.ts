@@ -30,13 +30,6 @@ import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
  * (no `ensure-mesh-api-subscribed` request) — all provisioning moved to the rebuild.
  */
 const mockRequest = jest.fn();
-jest.mock('@/core/ui/utils/vscode-api', () => ({
-    webviewClient: {
-        request: (...args: unknown[]) => mockRequest(...args),
-        postMessage: jest.fn(),
-        onMessage: jest.fn(() => () => {}),
-    },
-}));
 
 beforeEach(() => {
     mockRequest.mockReset();

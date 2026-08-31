@@ -24,9 +24,6 @@ import '@testing-library/jest-dom';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import { WizardState } from '@/types/webview';
 
-jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
-    useSelectableDefault: () => ({}),
-}));
 
 const mockUpdateState = jest.fn();
 
