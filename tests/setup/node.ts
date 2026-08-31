@@ -91,3 +91,46 @@ afterEach(() => {
     // to handle edge cases where spies may not be properly cleaned up
     jest.restoreAllMocks();
 });
+
+/**
+ * Every suite gets a working `getLogger()`, so none has to mock one to survive.
+ *
+ * The real `getLogger()` THROWS when no logger has been initialised, and nothing
+ * in a test initialises one. So 174 suites carried a `jest.mock` of the logging
+ * module for no reason of their own — 105 of the barrel and 69 of `debugLogger` —
+ * and three unrelated suites broke on 2026-08-31 the moment a construction moved
+ * and reached the real accessor.
+ *
+ * `...actual` is deliberate: only the ACCESSORS are replaced. `DebugLogger`,
+ * `ErrorLogger` and `StepLogger` stay real, which is why the eleven suites in
+ * tests/core/logging that test those classes directly are unaffected.
+ *
+ * A suite that wants to ASSERT on logging still mocks the module itself — a
+ * per-file `jest.mock` is registered after this one and wins. Mock `@/core/logging`
+ * when you do, because that is what production imports: 53 source files take the
+ * core barrel and exactly ONE takes `@/core/logging/debugLogger`. (Core barrels are
+ * the sanctioned import path — ADR-022 bans FEATURE barrels, not these.) Mocking
+ * the deep module underneath this one leaves the accessor here in place, so the
+ * suite asserts against a logger the code never received. That is precisely how the
+ * two suites this change touched failed, and both were mocking the deep module.
+ *
+ * Measured before adopting: with this in place, 976 of 978 node suites passed
+ * untouched.
+ */
+jest.mock('@/core/logging', () => {
+    const actual = jest.requireActual('@/core/logging');
+    const shared = {
+        trace: jest.fn(),
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        show: jest.fn(),
+        clear: jest.fn(),
+    };
+    return {
+        ...actual,
+        getLogger: jest.fn(() => shared),
+        initializeLogger: jest.fn(),
+    };
+});

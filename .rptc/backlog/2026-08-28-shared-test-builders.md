@@ -209,3 +209,4 @@ table above is the baseline a later run is compared against.
 - 2026-08-31  test(sop): stop the hand-rolled-fake bleeding, rather than draining the pool (`24827cd9a`)
 - 2026-08-31  docs(loop): the wall conversion, written for someone who was not here (`c17385ed7`)
 - 2026-08-31  Slice done overnight 2026-08-31: rule 1 (one home per builder) verified already complete; canonical-fakes ratchet added and honestly re-measured (301 real, after excluding 107 jest.mock-factory literals the runtime forbids converting); logger ledger now 296. Remaining: the other fixture kinds PL-16 names (state manager, project, token provider), still convert-on-touch.
+- 2026-08-31  test(helpers): 121 logger fakes become calls to the builder that already existed (`9942fb1c6`)

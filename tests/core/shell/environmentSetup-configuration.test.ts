@@ -26,7 +26,7 @@ jest.mock('os', () => ({
 jest.mock('child_process', () => ({
     execSync: jest.fn()
 }));
-jest.mock('@/core/logging/debugLogger', () => ({
+jest.mock('@/core/logging', () => ({
     getLogger: () => mockLogger
 }));
 
