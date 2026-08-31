@@ -19,7 +19,7 @@ import { ServiceLocator } from '@/core/di';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { getComponentInstancesByType } from '@/types/typeGuards';
 import type { DemoStateChangedPayload } from '@/types/webviewPayloads';
 

@@ -38,7 +38,7 @@ import {
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { McpInventoryEntry, McpToolEntry } from '@/types/ai';
-import { isTimeout } from '@/types/errors';
+import { isTimeout } from '@/core/errors';
 import { parseJSON } from '@/types/typeGuards';
 
 /** Per-server inspection budget. Re-exported for tests; pulls from TIMEOUTS.MCP_INSPECT. */

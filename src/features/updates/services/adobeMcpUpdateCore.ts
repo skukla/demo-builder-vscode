@@ -29,7 +29,7 @@ import { TIMEOUTS } from '@/core/utils';
 import { generateAIContextFiles, resolveMcpToolsDir } from '@/features/project-creation/services';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 
 /** The slice of the callers' UpdateContext the core actually needs. */
 export interface AdobeMcpUpdateCoreContext {

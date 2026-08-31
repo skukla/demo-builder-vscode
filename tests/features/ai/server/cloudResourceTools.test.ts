@@ -35,7 +35,7 @@ import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTo
 import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { ErrorCode } from '@/types/errorCodes';
-import { AuthError } from '@/types/errors';
+import { AuthError } from '@/core/errors';
 import type { HandlerContext } from '@/types/handlers';
 import { expectWithinCeiling } from './responseCeilings';
 

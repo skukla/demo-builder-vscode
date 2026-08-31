@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import type { CommandResult, ExecuteOptions } from './types';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 
 /**
  * Components data structure from components.json

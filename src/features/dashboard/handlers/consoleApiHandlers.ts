@@ -37,7 +37,10 @@ import {
 } from '@/features/app-builder/services/apiSubscriber';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
 import { subscriberTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
-import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
+import {
+    getAppBuilderComponentEntry,
+    getAvailableAppBuilderComponents,
+} from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
@@ -103,7 +106,9 @@ export const handleListConsoleApis: MessageHandler<{ componentId?: string }> = a
         const states = componentId
             ? resolveApiRowStates({
                   componentId,
-                  owners: resolveApiOwners(project),
+                  // The catalog lookup is resolved HERE, at the boundary: apiOwners lives in
+            // core and may not name a feature.
+            owners: resolveApiOwners(project, getAppBuilderComponentEntry),
                   picks: project.componentApiPicks ?? {},
                   baseline: [...managed],
               })

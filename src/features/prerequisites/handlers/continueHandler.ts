@@ -13,7 +13,7 @@ import { getNodeVersionMapping, areDependenciesInstalled, handlePrerequisiteChec
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
 import { SimpleResult } from '@/types/results';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { PrerequisiteStatusPayload, PrerequisitesCompletePayload } from '@/types/webviewPayloads';
 import type { ContinuePrerequisitesRequestPayload } from '@/types/webviewRequests';
 

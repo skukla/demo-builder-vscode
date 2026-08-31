@@ -21,9 +21,9 @@ import {
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
-import { isTimeout, toAppError } from '@/types/errors';
+import { isTimeout, toAppError } from '@/core/errors';
 import { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { toError } from '@/types/typeGuards';
 
 // Extracted modules

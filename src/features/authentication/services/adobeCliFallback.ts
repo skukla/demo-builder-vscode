@@ -18,7 +18,7 @@ import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { formatDuration } from '@/core/utils';
 import { ErrorCode } from '@/types/errorCodes';
-import { AuthError } from '@/types/errors';
+import { AuthError } from '@/core/errors';
 import { parseJSON } from '@/types/typeGuards';
 
 /** The slice of the fetcher config the CLI fallback consults. */

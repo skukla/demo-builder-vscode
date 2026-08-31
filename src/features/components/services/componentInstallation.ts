@@ -20,7 +20,7 @@ import type {
 } from '@/features/components/services/types';
 import { ComponentInstance, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 
 /**
  * Handles Git-based component installation

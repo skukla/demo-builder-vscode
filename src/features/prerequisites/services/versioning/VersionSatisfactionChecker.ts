@@ -9,7 +9,7 @@ import { parseInstalledVersions, isValidVersionFamily } from './NodeVersionParse
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 
 interface VersionSatisfactionResult {
     satisfied: boolean;

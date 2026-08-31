@@ -20,7 +20,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectNameSecurity as validateProjectName } from '@/core/validation';
 import { GitHubAppNotInstalledError } from '@/features/eds/services/types';
 import { ErrorCode } from '@/types/errorCodes';
-import { toAppError, isTimeout } from '@/types/errors';
+import { toAppError, isTimeout } from '@/core/errors';
 import { HandlerContext } from '@/types/handlers';
 import { toError } from '@/types/typeGuards';
 import type { CreationFailedPayload, CreationProgressPayload } from '@/types/webviewPayloads';

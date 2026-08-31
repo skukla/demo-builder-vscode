@@ -27,7 +27,7 @@ import {
     resolveCurrentImsUserId,
 } from '@/features/authentication/services/projectOwnership';
 import { ErrorCode } from '@/types/errorCodes';
-import { hasErrorCode } from '@/types/errors';
+import { hasErrorCode } from '@/core/errors';
 import type { HandlerContext } from '@/types/handlers';
 
 

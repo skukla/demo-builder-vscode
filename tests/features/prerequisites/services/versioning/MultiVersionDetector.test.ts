@@ -28,7 +28,7 @@ import {
     getLatestInFamily,
 } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { Logger } from '@/types/logger';
 
 /** Real `fnm list` output, captured 2026-08-28. */

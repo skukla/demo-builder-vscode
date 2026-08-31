@@ -28,7 +28,7 @@ import type { CommandExecutor } from '@/core/shell';
 import { buildComponent } from '@/core/shell/buildComponent';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { parseJSON, toError } from '@/types/typeGuards';
 
 export type { AppDeploymentResult };

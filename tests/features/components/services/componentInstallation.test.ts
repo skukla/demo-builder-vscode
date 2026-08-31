@@ -42,7 +42,7 @@ jest.mock(
 
 import { ComponentInstallation } from '@/features/components/services/componentInstallation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { ComponentInstance, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
 

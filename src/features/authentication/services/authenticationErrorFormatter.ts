@@ -30,7 +30,7 @@
  */
 
 import { ErrorCode, getErrorTitle, getErrorCategory } from '@/types/errorCodes';
-import { toAppError } from '@/types/errors';
+import { toAppError } from '@/core/errors';
 
 export class AuthenticationErrorFormatter {
     /**

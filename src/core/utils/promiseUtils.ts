@@ -3,7 +3,7 @@
  */
 
 import { ErrorCode } from '@/types/errorCodes';
-import { TimeoutError, toAppError, isTimeout } from '@/types/errors';
+import { TimeoutError, toAppError, isTimeout } from '@/core/errors';
 
 export interface TimeoutOptions {
     timeoutMs: number;

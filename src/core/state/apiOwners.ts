@@ -10,7 +10,25 @@
  */
 
 import type { ApiOwner } from './apiRowState';
-import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
+
+/**
+ * Reads one App Builder catalog entry by id.
+ *
+ * Declared here and HANDED IN, rather than imported: this module lives in
+ * `core/`, and the catalog loader lives in a feature. Core is what features are
+ * built on, so core naming a feature is the direction that closes the dependency
+ * graph into a cycle.
+ *
+ * Both callers are dashboard handlers — boundary files, which the dependency
+ * rules explicitly allow to fetch — so passing `getAppBuilderComponentEntry` in
+ * costs them one argument and costs this module its only feature import.
+ *
+ * Structural rather than a reference to the loader's own type, so a caller can
+ * hand in a lookup without importing the loader either.
+ */
+export type CatalogEntryLookup = (
+    id: string,
+) => { name?: string; requiredApis?: string[] } | undefined;
 import type { Project } from '@/types/base';
 
 /**
@@ -28,9 +46,12 @@ import type { Project } from '@/types/base';
  * @param project - the project to read
  * @returns one owner per keyed integration; empty when there are none
  */
-export function resolveApiOwners(project: Project): ApiOwner[] {
+export function resolveApiOwners(
+    project: Project,
+    lookupCatalogEntry: CatalogEntryLookup,
+): ApiOwner[] {
     return Object.entries(project.appBuilderComponents ?? {}).map(([id, component]) => {
-        const entry = getAppBuilderComponentEntry(id);
+        const entry = lookupCatalogEntry(id);
         return {
             id,
             name: component.name || entry?.name || id,

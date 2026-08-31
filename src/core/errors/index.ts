@@ -18,7 +18,7 @@
  * ```
  */
 
-import { ErrorCode, getErrorTitle, isRecoverableError } from './errorCodes';
+import { ErrorCode, getErrorTitle, isRecoverableError } from '@/types/errorCodes';
 
 /**
  * Base application error with structured error data

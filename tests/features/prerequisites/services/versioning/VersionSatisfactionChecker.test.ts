@@ -20,7 +20,7 @@ const executor = { execute: mockExecute } as never;
 
 import { checkVersionSatisfaction } from '@/features/prerequisites/services/versioning/VersionSatisfactionChecker';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { Logger } from '@/types/logger';
 
 const FNM_LIST = ['* v18.20.8', '* v20.19.6 default', '* v22.21.1', '* v24.20.0', '* system'].join(

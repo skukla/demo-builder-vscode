@@ -82,7 +82,7 @@ export {
     isAuth,
     hasErrorCode,
     toAppError,
-} from './errors';
+} from '@/core/errors';
 
 // Stack types (frontend + backend architecture combinations)
 export * from './stacks';

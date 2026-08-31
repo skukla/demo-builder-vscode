@@ -11,7 +11,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation';
 import { isConsoleOpFailure, type AdobeWorkspace } from '@/features/authentication/services/types';
 import { ErrorCode } from '@/types/errorCodes';
-import { toAppError, isTimeout } from '@/types/errors';
+import { toAppError, isTimeout } from '@/core/errors';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import { DataResult, SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';

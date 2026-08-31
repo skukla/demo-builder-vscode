@@ -29,7 +29,7 @@ import {
     ComponentSelection,
     type ComponentConfigs as ComponentConfigsData,
 } from '@/types/components';
-import { toAppError } from '@/types/errors';
+import { toAppError } from '@/core/errors';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
 import { getEntryCount } from '@/types/typeGuards';
 import type { ComponentsDataPayload, GetComponentsDataResponse } from '@/types/webviewRequests';

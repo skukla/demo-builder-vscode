@@ -15,7 +15,7 @@ The full rule, including why cancellation is a *success* carrying a failure, is 
 
 ## Typed errors, for code that must branch
 
-`src/types/errors.ts` defines the hierarchy — `AppError` and the domain errors under
+`src/core/errors/index.ts` defines the hierarchy — `AppError` and the domain errors under
 it (`AuthError`, `CodeSyncError`, `CodePatchCriticalError`, and the rest). Use a type
 when something downstream must *distinguish* failures; use a message when it only has
 to show one.

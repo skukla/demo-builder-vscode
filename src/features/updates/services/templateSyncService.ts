@@ -19,7 +19,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { injectTokenIntoUrl } from '@/features/eds/services/github/githubHelpers';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 
 /**

@@ -7,7 +7,7 @@
 
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
 import { ErrorCode } from '@/types/errorCodes';
-import { AppError } from '@/types/errors';
+import { AppError } from '@/core/errors';
 import type { CommandExecutor } from '@/core/shell';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';

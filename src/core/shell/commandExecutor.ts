@@ -14,7 +14,7 @@ import type { CommandResult, ExecuteOptions, CommandConfig, PollOptions } from '
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateNodeVersion } from '@/core/validation';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 
 /** The machinery a CommandExecutor runs on; assembled by createCommandExecutorDeps. */
 export interface CommandExecutorDeps {

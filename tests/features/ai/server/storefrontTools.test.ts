@@ -30,7 +30,7 @@ import {
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject } from '@/types/typeGuards';
 import { ErrorCode } from '@/types/errorCodes';
-import { AuthError } from '@/types/errors';
+import { AuthError } from '@/core/errors';
 import type { HandlerContext } from '@/types/handlers';
 import { expectWithinCeiling } from './responseCeilings';
 

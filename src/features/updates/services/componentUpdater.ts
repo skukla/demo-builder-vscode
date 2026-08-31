@@ -5,9 +5,9 @@ import { isMeshComponentId } from '@/core/constants';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project } from '@/types';
-import { toAppError, isTimeout, isNetwork } from '@/types/errors';
+import { toAppError, isTimeout, isNetwork } from '@/core/errors';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { parseJSON } from '@/types/typeGuards';
 import { mergeEnvContent, parseEnvFile } from './envMerge';
 

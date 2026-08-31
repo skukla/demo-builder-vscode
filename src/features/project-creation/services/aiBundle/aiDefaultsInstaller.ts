@@ -35,7 +35,7 @@ import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 
 const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
 

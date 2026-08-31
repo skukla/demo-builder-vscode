@@ -15,7 +15,7 @@ import {
 } from '@/features/ai/server/adobeTargetStore';
 import { getActiveOrgContext } from '@/core/shell';
 import { ErrorCode } from '@/types/errorCodes';
-import { AuthError } from '@/types/errors';
+import { AuthError } from '@/core/errors';
 import type { HandlerContext } from '@/types/handlers';
 import { expectWithinCeiling } from './responseCeilings';
 

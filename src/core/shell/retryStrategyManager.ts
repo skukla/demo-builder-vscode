@@ -3,7 +3,7 @@ import type { RetryStrategy, CommandResult } from './types';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { sleep } from '@/core/utils/sleep';
-import { toAppError, isTimeout, isNetwork } from '@/types/errors';
+import { toAppError, isTimeout, isNetwork } from '@/core/errors';
 
 /**
  * Manages retry strategies for failed commands
