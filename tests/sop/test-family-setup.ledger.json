@@ -48,7 +48,6 @@
         "tests/features/project-creation/handlers/executor",
         "tests/features/project-creation/services/aiBundle/aiBundleActivationRefresh",
         "tests/features/project-creation/services/aiBundle/aiBundleService",
-        "tests/features/project-creation/services/aiBundle/aiContextWriter",
         "tests/features/project-creation/services/projectFinalizationService",
         "tests/features/project-creation/ui/components/BrandGallery",
         "tests/features/project-creation/ui/components/ConfigurationSummary",

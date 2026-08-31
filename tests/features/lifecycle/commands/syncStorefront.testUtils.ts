@@ -105,7 +105,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 
 // Safe: the mocks above hoist over these imports (same module).
+import { createMockProject } from '../../../helpers/projectFake';
 import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
+import type { Project } from '@/types';
 import { PushRejectedError, syncAndPublish } from '@/features/eds/services/storefront/storefrontSyncService';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
 import { ServiceLocator } from '@/core/di';
@@ -143,8 +145,21 @@ export { makeStateManager } from '../../../helpers/stateManagerFake';
 /** Canonical logger fake (ADR-016); local name kept so consumers are unchanged. */
 export { createMockLogger as makeLogger } from '../../../helpers/loggerFake';
 
-export function makeEdsProject(): Record<string, unknown> {
-    return {
+/**
+ * A project with one ready EDS storefront, built on the canonical fixture.
+ *
+ * This used to be a hand-written `Record<string, unknown>` — a second thing named
+ * `makeEdsProject`, the other being a fully-typed `Project` in the aiContextWriter
+ * family. Two different shapes wearing one name is exactly what
+ * `builder-uniqueness` exists to stop, and it only became visible once the other
+ * one was exported rather than living inside a spec.
+ *
+ * Resolved by DELETING this one rather than renaming it: the canonical fixture
+ * already supplies the shape, and `Record<string, unknown>` had switched the
+ * compiler off for a Project fixture (ADR-016 rule 2).
+ */
+export function makeSyncTargetProject(): Project {
+    return createMockProject({
         name: 'demo',
         path: '/projects/demo',
         componentInstances: {
@@ -156,7 +171,7 @@ export function makeEdsProject(): Record<string, unknown> {
                 metadata: { githubRepo: 'demo-org/demo-repo', liveUrl: 'https://live.example' },
             },
         },
-    };
+    } as Partial<Project>);
 }
 
 export function setGitHubTokenServiceReturns(token: string | undefined): void {

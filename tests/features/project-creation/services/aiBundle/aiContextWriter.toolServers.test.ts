@@ -22,89 +22,14 @@
  */
 
 import { generateAgentsMd } from '@/features/project-creation/services/aiBundle/aiContextWriter';
-import type { Project, ComponentInstance } from '@/types/base';
-import type { Stack } from '@/types/stacks';
+
+import {
+    STACKS,
+    makeEdsProject,
+    makeHeadlessProject,
+} from './aiContextWriter.testUtils';
 
 // ─── Helpers (the parent suite's, copied so each spec stands alone) ──────────
-
-function makeStack(overrides: Partial<Stack> = {}): Stack {
-    return {
-        id: 'eds-paas',
-        name: 'Edge Delivery + PaaS',
-        description: 'EDS storefront with Commerce Drop-ins and PaaS',
-        frontend: 'eds-storefront',
-        backend: 'adobe-commerce-paas',
-        dependencies: [],
-        ...overrides,
-    };
-}
-
-function makeEdsStorefrontInstance(metaOverrides: Record<string, unknown> = {}): ComponentInstance {
-    return {
-        id: 'eds-storefront',
-        name: 'EDS Storefront',
-        status: 'ready',
-        path: '/projects/test-project/components/eds-storefront',
-        metadata: {
-            githubRepo: 'owner/my-repo',
-            liveUrl: 'https://main--my-repo--owner.aem.live',
-            previewUrl: 'https://main--my-repo--owner.aem.page',
-            daLiveOrg: 'my-org',
-            daLiveSite: 'my-site',
-            ...metaOverrides,
-        },
-    };
-}
-
-function makeEdsProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/test-project',
-        status: 'ready',
-        selectedStack: 'eds-paas',
-        selectedPackage: 'isle5',
-        componentInstances: {
-            'eds-storefront': makeEdsStorefrontInstance(),
-        },
-        ...overrides,
-    };
-}
-
-function makeHeadlessProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'headless-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/headless-project',
-        status: 'ready',
-        selectedStack: 'headless-paas',
-        selectedPackage: 'citisignal',
-        commerce: {
-            type: 'platform-as-a-service',
-            instance: {
-                url: 'https://commerce.example.com',
-                environmentId: 'env-123',
-                storeView: 'default',
-                websiteCode: 'base',
-                storeCode: 'main_website_store',
-            },
-        },
-        componentInstances: {},
-        ...overrides,
-    };
-}
-
-const STACKS: Stack[] = [
-    makeStack({ id: 'eds-paas', name: 'Edge Delivery + PaaS' }),
-    makeStack({
-        id: 'headless-paas',
-        name: 'Headless + PaaS',
-        frontend: 'headless',
-        backend: 'adobe-commerce-paas',
-    }),
-];
 
 describe('Your MCP Servers — the agent is told what it has', () => {
     it('names every server an EDS project actually gets', async () => {
