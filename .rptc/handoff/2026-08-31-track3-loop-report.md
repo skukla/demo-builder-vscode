@@ -344,6 +344,41 @@ need.
 target on the worklist is done; what remains on that list are the small ones its own
 author marked as probably-legitimate splits.
 
+## The throwaway script is now a real tool — and it paid for itself immediately
+
+**In one paragraph:** the check I kept using by hand all night — delete a fake and see
+whether any test notices — is now a proper part of the toolkit, listed alongside the
+other periodic checks and run automatically by the sweep. Its first real run found 43
+more redundant lines across the test suite, which I deleted and verified in one go.
+
+**Why it was worth building rather than just writing down.** The same question got the
+same answer twice this week: of 28 test files that faked out a shared service, 22 just
+needed the fake deleted; of the shared setup across 11 groups of test files, 79 fakes
+were dead. Both were found with a script I threw away afterwards. There are 63 more
+groups of files nobody has looked at, and no repeatable way to look.
+
+**It has two halves because the question has two costs.** One is instant and exact: it
+knows one rule — a fake of something the project's test configuration already replaces
+does nothing — and it applies that rule perfectly. The other is the general answer, which
+means actually deleting and re-running, so it costs a test run per fake and has to be
+pointed at a specific area rather than swept over everything.
+
+**It refuses to guess, and that is deliberate.** Three of my own verdicts tonight were
+garbage because a run never happened and I read the failure as "the fake is needed". The
+tool now insists on seeing a results line before believing anything, refuses to start if
+the tests are already failing, and shouts when the test count DROPS — because "6 passed"
+against a baseline of 34 is not a small failure, it is three files not loading at all.
+
+**Its own first run found a bug in itself**, which the team here expects and I have come
+to as well: it flagged a file for a fake written inside a comment — a sentence explaining
+the rule, not an actual line of code. Fixed, and tested four ways: a planted real one is
+found, a deliberate override is not flagged, one in a comment is not flagged, and running
+it against an empty folder makes it say so rather than reporting "all clean".
+
+**Then it earned its keep.** 43 findings, all deleted, all verified by one full test run.
+The scan now reports zero — which matters as much as the finding did, because a tool that
+cannot show its own result resolved is hard to trust the next time it reports something.
+
 ## Your decisions in the morning
 
 - Merge `loop/2026-08-30-track3-convergence` into develop?
