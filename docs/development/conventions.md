@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **68** conventions, **59** enforced
+- **71** conventions, **60** enforced
 - **19** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -101,6 +101,7 @@ it means the rule rests on somebody noticing.
 | Utility classes live in the overrides layer, not scattered through component sheets. | [ADR](../architecture/adr/018-css-architecture.md) |  | `inline-styles.test.ts` |
 | Styling reaches Spectrum through `UNSAFE_className` and the `cn()` helper, not through style objects. |  |  | `inline-styles.test.ts` |
 | Class names are not assembled dynamically beyond a small ceiling. |  |  | `dynamicClassSiteCeiling` ledger |
+| When a parent selection changes, clear the state that depends on it. Change the Adobe project and the workspace selection goes with it. |  |  | **—** |
 
 ## 8. Agents are a second door, never the only one
 
@@ -108,6 +109,8 @@ it means the rule rests on somebody noticing.
 |---|---|---|---|
 | Every capability has a human surface. MCP tools are additional. Enforced by measurement — `.claude/skills/ai-coverage-scan` reports the gap at release cuts. | [ADR](../architecture/adr/012-diagnostic-surfaces.md) | [procedure](../../.claude/skills/ai-coverage-scan/SKILL.md) | *named in prose* |
 | A tool response is built by `mcpToolResult.ts`'s `asText`/`asRawText`, never by hand. Enforced by `tests/features/ai/server/responseEnvelope.test.ts`, which checks descriptor rows at runtime and every registrar module at the source, in both halves of the server. |  |  | `responseEnvelope.test.ts` |
+| A tool requires an explicit `confirm: true` when its effect is hard to walk back: it DELETES something, or it PUSHES to a live site. Merely mutating is deliberately not the bar — deploys, lifecycle and config writes stay ungated, because they are reversible and gating them would make the agent surface useless for routine work. Three irreversible tools go further and require the resource's name echoed back. |  |  | `tool-catalog-gating.test.ts` |
+| A tool needing credentials pre-flights and returns a structured `needsAuth` handoff rather than erroring, so the agent can drive sign-in and retry. |  |  | **—** |
 
 ## 9. Tests
 

@@ -43,6 +43,30 @@ keyword) · **Obeyed?** (does the code follow it today).
 The fourth is the one nobody checks and the one that most often changes the answer.
 **A rule the code already violates is not a rule.**
 
+### The FIRST fact is checked by READING the handbook, not by assuming
+
+Added 2026-08-30, after the owner asked why an already-ratified rule was being put to
+them as a decision. Every row's Ratified column had been filled in by assumption, and
+two were wrong:
+
+- **Row 10 was already law.** ADR-021 ratifies *"plain data — configuration,
+  identifiers, callbacks — arrives as ordinary arguments"*, and `daLiveOrg`/`daLiveSite`
+  are identifiers. The row restated a live convention for one specific pair, and
+  ratifying it would have put a narrower duplicate into the handbook — the exact drift
+  this whole programme exists to remove.
+- **Row 2 was HALF law.** The plain Rule of Three is ratified AND enforced
+  (`component-extraction.test.ts`). Only the override is open. The register had
+  presented the whole row as unratified.
+
+So: before a row reaches the owner, grep the handbook and the generated conventions
+index for the rule's substance, **and read every hit**. A keyword match is a lead — on
+the same pass, row 7 matched "downstream" in a CSS cascade convention and row 3 matched
+"confirm" in prose, and neither was the rule. Two of the four hits were false.
+
+The cost of skipping this is not wasted time. It is asking the owner to ratify
+something already ratified, which manufactures duplication under the appearance of
+diligence.
+
 ## Outcomes
 
 Exactly two. "Leave it as prose" is the state this register exists to end.
@@ -56,15 +80,15 @@ Exactly two. "Leave it as prose" is the state this register exists to end.
 | # | Rule | Stated where | Ratified | Enforced | Obeyed | Outcome |
 |---|---|---|---|---|---|---|
 | 1 | Nothing under `src/core/` imports `@/features` or `@/commands` | `src/core/CLAUDE.md` | now **yes** | now **yes** | no — 7 crossings | **Ratified** 2026-08-30 · `layerDirection` ledger, shrink-only |
-| 2 | Extract shared UI at the third instance — **but at the second** when the same behaviour was already fixed separately on two surfaces | `src/core/ui/components/CLAUDE.md` | no | no | unmeasured | Pending |
-| 3 | A destructive tool requires `confirm: true` — deletes, or pushes to a live site. Merely mutating is deliberately not the bar | `docs/systems/mcp-server.md` §10 | no | partly — the registrar checks the flag, nothing checks the right tools carry it | unmeasured | Pending |
+| 2 | Extract shared UI at the third instance — **but at the second** when the same behaviour was already fixed separately on two surfaces | `src/core/ui/components/CLAUDE.md` | **base rule YES** — "markup repeated in three or more places becomes a component", enforced by `component-extraction.test.ts`. The OVERRIDE, no | base yes / override no | unmeasured | **Open** — only the override is in question |
+| 3 | A destructive tool requires `confirm: true` — deletes, or pushes to a live site. Merely mutating is deliberately not the bar | `docs/systems/mcp-server.md` §10 | now **yes** | partly — `tool-catalog-gating.test.ts` stops the catalog understating a gate; nothing checks the right tools carry it | 28 tools gated | **Ratified** 2026-08-30 (owner) |
 | 4 | Every tool returns one envelope, built by `mcpToolResult.ts` and never by hand | `docs/systems/mcp-server.md` §10 | no | **yes** — `responseEnvelope.test.ts` | yes | **RATIFY** — measured: catalogue only, no rule changes force |
-| 5 | A tool needing credentials pre-flights and returns a `needsAuth` handoff rather than erroring | `docs/systems/mcp-server.md` §10 | no | no | **yes** — 39 sites in `src/`, 11 test files assert it | **Owner call** |
+| 5 | A tool needing credentials pre-flights and returns a `needsAuth` handoff rather than erroring | `docs/systems/mcp-server.md` §10 | now **yes** | no | **yes** — 39 sites, 11 suites | **Ratified** 2026-08-30 (owner), unenforced |
 | 6 | Naming: commands `camelCase`, components `PascalCase`, constants `UPPER_SNAKE_CASE`, filenames matching the export | `docs/CLAUDE.md` | no | no | visibly followed | **Owner call** — low stakes either way |
-| 7 | When a parent selection changes, clear all state downstream of it | `docs/CLAUDE.md`, `hooks/CLAUDE.md`, `patterns/state-management.md` | no | no | **yes where it applies** — 7 sites clear `adobeWorkspace` on a project change | **Owner call** — real, but see below: not enforceable as stated |
+| 7 | When a parent selection changes, clear all state downstream of it | `docs/CLAUDE.md`, `hooks/CLAUDE.md`, `patterns/state-management.md` | now **yes** | no — and cannot be, see below | **yes where it applies** — 7 sites clear `adobeWorkspace` on a project change | **Ratified** 2026-08-30 (owner), unenforced |
 | 8 | Feature configuration loads through `ConfigurationLoader`, not direct reads | `where-code-goes.md` row 9 | no | **no** — the named enforcer never existed | **no — the rule was wrong** | **DELETED** 2026-08-30 · the claim was false; row 9 now states the real split |
-| 9 | New project-state metadata defaults to the "main" environment rather than the project root | ADR-003 | no | no | 19 sites do | **Owner call** |
-| 10 | A new function depending on `daLiveOrg`/`daLiveSite`/workspace takes them as PARAMETERS, not from project state | ADR-003 | no | no | unmeasured | **Owner call** |
+| 9 | New project-state metadata defaults to the "main" environment rather than the project root | ADR-003 | no | no | 19 sites do | **DEFERRED** — waits on multisite research |
+| 10 | A new function depending on `daLiveOrg`/`daLiveSite`/workspace takes them as PARAMETERS, not from project state | ADR-003 | **YES — ADR-021** | via ADR-021 | — | **DELETED** as a duplicate |
 
 ### Which of these are cheap, and which need a measurement
 

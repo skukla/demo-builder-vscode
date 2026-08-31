@@ -445,6 +445,18 @@ check says so and names the file.
 > Enforced by the `dynamicClassSiteCeiling` ledger in
 > `tests/sop/webview-architecture-rules.exemptions.json`.
 
+> **Convention.** When a parent selection changes, clear the state that depends on it.
+> Change the Adobe project and the workspace selection goes with it.
+> *Why:* a stale child selection is how an operation targets a resource nobody chose —
+> the failure `withOrgContext` and the org-mismatch guard exist to catch downstream. The
+> place it belongs is the selection handler's `onSelect`, where `useSelectionStep` puts
+> it. Obeyed at 7 sites today.
+> **Not enforced**, and this one cannot be: 14 sites assign the parent field and reading
+> them shows most are not selections at all — one preserves a previous value, one builds
+> a display object, one assembles a payload from already-resolved context. A detector
+> written from the field name would report eight violations of which roughly none are
+> real, and a check that cries wolf gets switched off.
+
 ## 8. Agents are a second door, never the only one
 
 **Position.** Agents call the same functions the buttons call. Every capability has a human
@@ -478,6 +490,25 @@ promising an agent that every response parses.
 > halves of the server.
 > *Why:* one envelope is what lets an agent parse any tool's answer the same way — and the
 > helper has already been re-duplicated once after being extracted.
+
+> **Convention.** A tool requires an explicit `confirm: true` when its effect is hard to
+> walk back: it DELETES something, or it PUSHES to a live site. Merely mutating is
+> deliberately not the bar — deploys, lifecycle and config writes stay ungated, because
+> they are reversible and gating them would make the agent surface useless for routine
+> work. Three irreversible tools go further and require the resource's name echoed back.
+> *Why:* reach decides, not the verb. `promote_block_to_library` was ungated because it
+> only *adds* things and `refresh_block_library` because "rebuild" sounds local; both push
+> to a live site. `set_console_apis` says "set" and removes — a delete wearing a setter's
+> name. Judge against the rule, never against how the name reads.
+> Enforced in part by `tests/sop/tool-catalog-gating.test.ts`, which stops the published
+> catalog understating a gate. **Nothing checks that the RIGHT tools carry the flag** —
+> that is the judgement above, made per tool.
+
+> **Convention.** A tool needing credentials pre-flights and returns a structured
+> `needsAuth` handoff rather than erroring, so the agent can drive sign-in and retry.
+> *Why:* interactive browser sign-in cannot be refreshed silently, and an error tells the
+> agent nothing about what to do next. Obeyed at 39 sites, asserted by 11 suites.
+> **Not enforced** — a new tool that skips it fails no check.
 
 > **How to add one.** [mcp-tool-authoring](../../.claude/skills/mcp-tool-authoring/SKILL.md) ·
 > registration is pinned by `tests/features/ai/server/realSdkRegistration.test.ts`.
@@ -575,7 +606,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 68 conventions. 59 of them are enforced; 9 are not.**
+**This handbook states 71 conventions. 60 of them are enforced; 11 are not.**
 
 The nine that remain are not one thing, and treating them as one is what kept them open:
 
