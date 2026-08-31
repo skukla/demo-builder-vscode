@@ -20,7 +20,7 @@
  */
 import { existsSync, readFileSync, readdirSync } from 'fs';
 import { execSync } from 'child_process';
-import { dirname, join } from 'path';
+import { dirname, join, relative } from 'path';
 
 const ROOT = join(__dirname, '..', '..');
 
@@ -333,6 +333,49 @@ describe('the inventories that claim to be complete, are', () => {
     it('src/core/ui/hooks/CLAUDE.md names every hook in that directory', () => {
         const body = readFileSync(join(ROOT, 'src/core/ui/hooks/CLAUDE.md'), 'utf8');
         expect(hookNames().filter((h) => !body.includes(`\`${h}\``))).toEqual([]);
+    });
+});
+
+describe('every area of the codebase has exactly one front door', () => {
+    // The nine kinds say where a STATEMENT lives; they cannot say where to START,
+    // because they scatter every substantial subject by design — measured 2026-08-30,
+    // each area below spans four to seven of them. What makes an area findable is one
+    // document that orients you and routes onward.
+    //
+    // Four of these existed already; the frontend's did not, and the gap had survived
+    // precisely because the frontend is WELL documented — 16 conventions, 14 enforced,
+    // two ratified ADRs, four skills — just unreachable, since `src/core/ui/` held
+    // components/, hooks/, styles/ and utils/ with nothing above them. Coverage and
+    // findability are different properties and only one was being checked.
+    const FRONT_DOORS: Record<string, string> = {
+        testing: 'tests/README.md',
+        'extension host': 'src/CLAUDE.md',
+        'agents / MCP': 'docs/systems/mcp-server.md',
+        'EDS / storefront': 'src/features/eds/README.md',
+        'frontend / webviews': 'src/core/ui/CLAUDE.md',
+    };
+
+    it.each(Object.entries(FRONT_DOORS))('%s has its front door', (_area, file) => {
+        expect(existsSync(join(ROOT, file))).toBe(true);
+    });
+
+    it('the documentation index lists the same front doors, and no others', () => {
+        const readme = readFileSync(join(ROOT, 'docs/README.md'), 'utf8');
+        const table = readme.split('## Every area has ONE front door')[1]?.split('\n##')[0] ?? '';
+        expect(table).not.toBe('');
+        // Compare the path AS THE INDEX EXPRESSES IT — relative to `docs/`, since that
+        // is where the index lives. Two earlier versions of this line were wrong in
+        // opposite directions and both were caught by planting rather than by reading:
+        // matching the basename passed with the row deleted (`CLAUDE.md` survives in the
+        // extension-host row), and matching the repo-relative path failed on the one
+        // door that lives under `docs/`.
+        const asIndexed = (f: string): string => relative('docs', f);
+        const missing = Object.values(FRONT_DOORS).filter((f) => !table.includes(asIndexed(f)));
+        expect(missing).toEqual([]);
+    });
+
+    it('CONTROL: a path that should not resolve, does not', () => {
+        expect(existsSync(join(ROOT, 'src/core/ui/NOT_A_FRONT_DOOR.md'))).toBe(false);
     });
 });
 

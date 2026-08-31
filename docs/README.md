@@ -26,6 +26,40 @@ Two of those distinctions are load-bearing and easy to lose:
   day and is allowed to be wrong now. Anything in the top eight rows describes the
   world *today* and is not.
 
+## Every area has ONE front door
+
+The nine kinds answer *where does this statement live*. They do not answer *I am
+about to work on X — where do I start*, and they cannot: this table scatters every
+substantial subject by design. Measured 2026-08-30, each major area of this codebase
+spans **four to seven** of the nine kinds. Being scattered is the normal condition
+here, not a defect to route around.
+
+What makes an area findable anyway is a **front door**: one document you land on that
+says what the area is and sends you to the kinds. Four of the five areas already have
+one, which is why this is a rule discovered rather than invented:
+
+| Area | Front door |
+|---|---|
+| Testing | [`../tests/README.md`](../tests/README.md) |
+| Extension host | [`../src/CLAUDE.md`](../src/CLAUDE.md) |
+| Agents / MCP | [`systems/mcp-server.md`](systems/mcp-server.md) |
+| EDS / storefront | [`../src/features/eds/README.md`](../src/features/eds/README.md) |
+| Frontend / webviews | [`../src/core/ui/CLAUDE.md`](../src/core/ui/CLAUDE.md) |
+
+**One, and exactly one.** A second front door for an area is two things to keep
+correct, which is the drift this whole structure exists to prevent. A front door
+ROUTES and does not restate — the moment it explains a rule instead of pointing at
+the handbook entry, it has become a duplicate copy with nothing keeping it honest.
+
+The frontend row was **missing until 2026-08-30**, and it is worth saying why the gap
+survived: the frontend is not under-documented — 16 conventions in the handbook, 14 of
+them enforced, two ratified ADRs and four skills. It was the best-covered area in the
+repo and the only one you could not find your way into, because `src/core/ui/` held
+`components/`, `hooks/`, `styles/` and `utils/` with nothing above them. Coverage and
+findability are different properties, and only one of them was being checked.
+
+Enforced by `tests/sop/doc-module-refs.test.ts` — each area's front door must exist.
+
 ## The law
 
 - **[development/handbook.md](development/handbook.md)** — every convention, with
