@@ -182,3 +182,4 @@ register rather than estimating.
 - 2026-08-30  docs(sidebar): rewrite src/features/sidebar/CLAUDE.md, 334 -> 136 lines (`f662a358b`)
 - 2026-08-30  docs(features): rewrite src/features/CLAUDE.md, 485 -> 173 lines (`c33ec1d26`)
 - 2026-08-30  docs(backlog): open PL-28, the register for unratified rules (`7923bcba1`)
+- 2026-08-30  docs: adjudicate the unratified-rules register now the reading is done (`caae75b30`)

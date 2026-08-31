@@ -128,3 +128,6 @@ the point of Phase C existing.
 - 2026-08-30  fix(tests): repair the two reference failures my own rewrite introduced (`5f7972519`)
 - 2026-08-30  docs(tests): rewrite tests/README.md, 461 -> 154 lines (`188fe9061`)
 - 2026-08-30  docs(backlog): open PL-29 -- track 2, with enforcement as its closing phase (`46705d171`)
+- 2026-08-30  fix(skills): the shipped mesh command does not exist; bump AI_CONTEXT_VERSION (`d1316e832`)
+- 2026-08-30  docs: read every module README + product template; pin the skill counts (`53d6505fd`)
+- 2026-08-30  docs(skills): read all 37; fix a skill that defended a deleted mechanism (`1532f4805`)
