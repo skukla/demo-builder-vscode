@@ -336,6 +336,94 @@ describe('the inventories that claim to be complete, are', () => {
     });
 });
 
+describe('the counts a directory guide states match its own source', () => {
+    /**
+     * Phase C of the documentation synthesis. The per-directory guides were rewritten in
+     * Phase A and state numbers nothing pinned — the same numbers that had rotted in the
+     * originals they replaced. Five of them, across two files.
+     *
+     * NOT pinned, deliberately: `src/features/sidebar/CLAUDE.md` says an earlier reading
+     * called a seventh tile impossible on "four pixels, too thin". That is a NARRATIVE
+     * about a miscalculation the file goes on to correct, not a claim about the code
+     * today, and pinning it would freeze a story rather than a fact.
+     */
+    const read = (f: string): string => readFileSync(join(ROOT, f), 'utf8');
+
+    /** Distinct tile labels — `tileFor('Chat', …)` appears twice for one tile's two variants. */
+    const distinctTiles = (file: string, pattern: RegExp): number =>
+        new Set([...read(file).matchAll(pattern)].map((m) => m[1])).size;
+
+    const aiZoneTiles = (): number =>
+        distinctTiles('src/features/sidebar/ui/components/AiZone.tsx', /tileFor\('(\w+)'/g);
+    /**
+     * Counted by `aria-label`, which every tile carries — NOT by a list of the labels
+     * that exist today. The first version matched `>(Tools|Help|Settings|Logs)<`, an
+     * allowlist of the four current tiles, so adding a fifth left the count at four and
+     * the check passed. A counter that enumerates what it expects to find cannot detect
+     * anything new, which is the whole job here.
+     */
+    const utilityTiles = (): number =>
+        distinctTiles('src/features/sidebar/ui/views/UtilityBar.tsx', /aria-label="([^"]+)"/g);
+
+    const handlerKeys = (): number => {
+        const src = read('src/features/projects-dashboard/handlers/projectsListHandlers.ts');
+        const body = /defineHandlers\(\{([\s\S]*?)\n\}\)/.exec(src)?.[1] ?? '';
+        return [...body.matchAll(/^ {4}'?[\w-]+'?:/gm)].length;
+    };
+
+    it('CONTROL: every source parses and yields a non-zero count', () => {
+        expect(aiZoneTiles()).toBeGreaterThan(0);
+        expect(utilityTiles()).toBeGreaterThan(0);
+        expect(handlerKeys()).toBeGreaterThan(0);
+    });
+
+    it('sidebar: states the tile counts its components render', () => {
+        const doc = read('src/features/sidebar/CLAUDE.md');
+        const total = aiZoneTiles() + utilityTiles();
+        const word = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'][
+            total
+        ];
+        expect(doc).toContain(`${word[0].toUpperCase()}${word.slice(1)} tiles total`);
+        expect(doc).toContain(
+            `${['zero', 'one', 'two', 'three', 'four'][aiZoneTiles()]} in \`AiZone\``
+        );
+        expect(doc).toContain(
+            `${['zero', 'one', 'two', 'three', 'four'][utilityTiles()]} in \`UtilityBar\``
+        );
+    });
+
+    it('sidebar: its arithmetic table is headed by the CURRENT tile count', () => {
+        // The table gives 1-up/2-up heights per tile count and marks one row "<- TODAY".
+        // If a tile is added and the marker is not moved, the derivation is being read
+        // against the wrong row — which is how the breakpoint went stale by one tile.
+        const doc = read('src/features/sidebar/CLAUDE.md');
+        const today = /(\d+) tiles ->[^\n]*<- TODAY/.exec(doc)?.[1];
+        expect(today).toBe(String(aiZoneTiles() + utilityTiles()));
+    });
+
+    it('sidebar: the 640px breakpoint it explains is the one the stylesheet uses', () => {
+        const doc = read('src/features/sidebar/CLAUDE.md');
+        const css = read('src/core/ui/styles/custom-spectrum.css');
+        const px = /@media \(max-height: (\d+)px\)/.exec(css)?.[1];
+        expect(px).toBeTruthy();
+        expect(doc).toContain(`The ${px}px threshold is DERIVED`);
+    });
+
+    it('projects-dashboard: states the handler-map key count', () => {
+        expect(read('src/features/projects-dashboard/CLAUDE.md')).toContain(
+            `${handlerKeys()} keys — the source of truth`
+        );
+    });
+
+    it("projects-dashboard: states SearchHeader's real default threshold", () => {
+        const dflt = /searchThreshold = props\.searchThreshold \?\? (\d+)/.exec(
+            read('src/core/ui/components/navigation/SearchHeader.tsx')
+        )?.[1];
+        expect(dflt).toBeTruthy();
+        expect(read('src/features/projects-dashboard/CLAUDE.md')).toContain(`past ${dflt} items`);
+    });
+});
+
 describe('every area of the codebase has exactly one front door', () => {
     // The nine kinds say where a STATEMENT lives; they cannot say where to START,
     // because they scatter every substantial subject by design — measured 2026-08-30,

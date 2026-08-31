@@ -118,7 +118,10 @@ they are **provisional**, and this is the list so nobody assumes otherwise.
 | `tests/README.md` | **Track 3** (test strategy) | It describes how the suite is organised and run. Track 3 canonises the strategy itself — tiers, mock policy, what a test must constrain — and the README has to follow that rather than lead it. Owner flagged this 2026-08-30 |
 | `docs/testing/test-file-splitting-playbook.md` | **Track 3** | Same reason, narrower: splitting rules are a consequence of the strategy |
 | ~~`src/core/ui/hooks/CLAUDE.md`~~ | ~~Phase B~~ | **Settled 2026-08-30** — rewritten, inventory pinned. The gotchas stay; the generic React around them went |
-| `src/core/ui/components/CLAUDE.md` | [[PL-28]] row 2 only | Phase B passed it. The pick-by-job table stays; the Rule of Three override is still the owner's |
+| ~~`src/core/ui/components/CLAUDE.md`~~ | ~~[[PL-28]] row 2~~ | **Settled 2026-08-30** — the base threshold was already law, so its restatement here was DELETED and the file points at the handbook. Only the override stays, as judgement |
+
+**Both second-pass rows that belonged to this track are now closed.** What remains in
+this table is Track 3's, and only Track 3 can close it.
 
 The rule this implies: **a track-2 rewrite fixes what is FALSE, and does not try to
 settle what a later track owns.** The tests README lost nine dead or wrong claims and
@@ -157,8 +160,27 @@ What the four files actually claim today, and none of it is pinned:
 | `src/core/ui/hooks/CLAUDE.md` | none — its counts are prose ("two steps") |
 | `src/core/ui/components/CLAUDE.md` | none — same |
 
-So the phase is smaller than it looked: two files, five numbers. Each is exactly the
-kind that rotted in the originals.
+**DONE 2026-08-30.** Six pins in `doc-module-refs.test.ts`, each verified by planting.
+
+| Pinned | Against |
+|---|---|
+| sidebar's tile counts (2 + 4 = six) | the labels `AiZone` and `UtilityBar` actually render |
+| the arithmetic table's `<- TODAY` row | the current tile count — so adding a tile without moving the marker fails |
+| the 640px breakpoint it explains | `@media (max-height: …)` in `custom-spectrum.css` |
+| projects-dashboard's 21 handler keys | the `defineHandlers` map |
+| `SearchHeader`'s default of 5 | `props.searchThreshold ?? 5` |
+
+NOT pinned, deliberately: the sidebar's "four pixels, too thin" is a NARRATIVE about a
+miscalculation the file goes on to correct, not a claim about today's code. Pinning it
+would freeze a story.
+
+**Two of the four plants passed the first time, and neither was a fluke.** The tile
+counter matched `>(Tools|Help|Settings|Logs)<` — an allowlist of the four tiles that
+exist — so a fifth tile left the count at four and the check could not fail. It counts
+`aria-label` now, which every tile carries. And the handler-key plant never landed at
+all (`grep -c` said 0), which reads exactly like a passing check. Both were caught by
+checking that the plant took effect before believing the result — the same trap this
+programme hit twice earlier the same day.
 
 Do not pin a number that churns. `AI_CONTEXT_VERSION` was removed from CLAUDE.md
 rather than pinned, because it bumps on every bundle change and a pin would buy churn
