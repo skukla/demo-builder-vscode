@@ -626,6 +626,30 @@ remedy differs for each:
 Where a seam is the answer, type it to the methods the code actually calls rather than to
 the class. A parameter wider than the need is usually why the mock existed.
 
+**And it is usually why the DUPLICATION existed, which is the same finding pointed at
+production code.** When several files each build their own copy of something a shared
+accessor already provides, the question to ask first is not "how do I hand this to each
+of them?" but "why can none of them call the accessor?" Twice now the answer has been
+that the accessor asked for more than it reads:
+
+| Accessor | Asked for | Actually read | Files that built their own instead |
+|---|---|---|---|
+| `getGitHubServices` | a whole `HandlerContext` | `context.context.secrets` | 5 |
+| `componentRegistryFrom` | a whole `HandlerContext` | `.componentRegistry` | *(7 constructions exist; not yet adjudicated)* |
+
+In the first case the width was the whole cause: four of the five callers hold a
+`SecretStorage` and no context, so they *could not* call it. Narrowing the accessor
+turned four separate threading jobs into four one-line calls, and left exactly one
+construction in the codebase — inside the cache, where it belongs.
+
+This is a diagnostic, not a law, and deliberately so — at two instances it has not
+earned one. **Do not turn "reads one field of its parameter" into a check.** Ten
+functions here do that and most are correct: `MessageHandler` fixes the handler
+signature by contract, so a handler that reads one field cannot narrow without
+breaking the dispatch map. The signal worth acting on is the conjunction — a shared
+accessor exists AND files construct the thing anyway — which is what the architecture
+ledger already records.
+
 ---
 
 #### Also checked here
