@@ -79,7 +79,7 @@ import {
     refreshHomeAgentsMd,
 } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener';
-import { SidebarProvider } from '@/features/sidebar';
+import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 import type { McpCredentialProvider } from '@/mcp-server';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';

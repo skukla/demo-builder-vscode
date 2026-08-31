@@ -18,7 +18,7 @@
 
 import * as vscode from 'vscode';
 import { validateURL } from '@/core/validation';
-import { handleCheckCredentialService, handleDiscoverStoreStructure } from '@/features/eds';
+import { handleCheckCredentialService, handleDiscoverStoreStructure } from '@/features/eds/handlers';
 import type { CommerceStoreStructure } from '@/types/commerceStore';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';
 

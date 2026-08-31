@@ -34,9 +34,17 @@ jest.mock('@/features/components/services/commerceSecretMigration', () => ({
     migrateDeclaredSecrets: jest.fn(),
     reKeyProjectSecrets: jest.fn(),
 }));
-jest.mock('@/features/eds', () => ({
-    detectStorefrontChanges: jest.fn(),
+// The '@/features/eds' barrel was retired under ADR-022, so these names are mocked
+// at the modules that declare them. isEdsProject is a type guard and lives in
+// @/types/typeGuards, whose other guards stay real.
+jest.mock('@/types/typeGuards', () => ({
+    ...jest.requireActual('@/types/typeGuards'),
     isEdsProject: jest.fn(() => false),
+}));
+jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
+    detectStorefrontChanges: jest.fn(),
+}));
+jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     republishStorefrontConfig: jest.fn(),
 }));
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({

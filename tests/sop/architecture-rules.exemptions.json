@@ -28,15 +28,11 @@
     "patternBSendMessageCeiling": 142,
     "compositionPointLifetime": {},
     "featureBarrels": {
-        "src/features/authentication/index.ts": "Pre-ruling. 7 importers across 17 export lines \u2014 the largest survivor, and the one whose removal touches the most callers. Measured 2026-08-30.",
-        "src/features/ai/index.ts": "Pre-ruling. 3 importers, 5 export lines. Measured 2026-08-30.",
-        "src/features/eds/index.ts": "Pre-ruling. Only 2 importers but 42 export lines \u2014 the widest surface of the five, so the barrel hides the most. Measured 2026-08-30.",
-        "src/features/sidebar/index.ts": "Pre-ruling. 2 importers, 3 export lines. Measured 2026-08-30.",
-        "src/features/data-installer/index.ts": "Pre-ruling. 1 importer, 12 export lines \u2014 the cheapest to retire. Measured 2026-08-30."
+        "src/features/authentication/index.ts": "Pre-ruling. 7 importers across 17 export lines \u2014 the largest survivor, and the one whose removal touches the most callers. Measured 2026-08-30."
     },
     "_featureBarrels_note": "ADR-022 forbids NEW feature barrels; these five predate it. The ledger only shrinks, so retiring one means deleting its row in the same commit. Counts are importers of the bare `@/features/<name>` specifier, measured 2026-08-30.",
     "layerDirection": {
-        "src/core/di/serviceLocator.ts": "`import type` only (AuthenticationService, SidebarProvider): no runtime coupling and no cycle, so this is the benign one. Fix by moving both interfaces to @/types, or ratify it as permanent \u2014 a locator has to name what it locates.",
+        "src/core/di/serviceLocator.ts": "`import type` only (AuthenticationService, SidebarProvider): no runtime coupling, no cycle. MEASURED 2026-08-31 and the previously suggested fix \u2014 'move both interfaces to @/types' \u2014 DOES NOT WORK: both are CLASSES, not interfaces. SidebarProvider would extract cheaply (4 public methods) but AuthenticationService has 44 across 855 lines, and a 44-method interface in @/types that nothing keeps in sync is worse than the type-only import it replaces. Nor is converting the callers the answer: getAuthenticationService has 48 call sites and every one is a handler, command or MCP tool \u2014 files ADR-015 explicitly permits to fetch. The only fixes that genuinely remove the crossing are (a) RATIFY, on the grounds that a locator must name what it locates, or (b) a typed-token registry (ServiceLocator.get(AUTH) where the token is declared by the owning feature), which removes the naming entirely but rewrites the DI shape and 50+ call sites. Both amend ADR-015, so both are the owner's call. RECOMMENDATION: ratify. OWNER DECISION PENDING.",
         "src/core/state/apiOwners.ts": "runtime: reaches into a feature's catalog loader (getAppBuilderComponentEntry) from core/state.",
         "src/core/state/projectFileLoader.ts": "runtime: stripDuplicateBackendOwnedScope from features/components/config.",
         "src/core/state/projectStateSync.ts": "runtime: envVarKeys constants from features/components/config. Config constants a feature owns, read by core."

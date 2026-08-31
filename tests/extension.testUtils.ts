@@ -81,7 +81,7 @@ jest.mock('@/core/di', () => ({
     },
 }));
 
-jest.mock('@/features/sidebar', () => ({
+jest.mock('@/features/sidebar/providers/sidebarProvider', () => ({
     SidebarProvider: jest.fn().mockImplementation(() => ({
         viewId: 'demoBuilder.sidebar',
     })),

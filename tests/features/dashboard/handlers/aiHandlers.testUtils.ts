@@ -42,8 +42,12 @@ jest.mock('@/core/validation', () => ({
 }));
 
 // Mock AI feature barrel
-jest.mock('@/features/ai', () => ({
+// Two mocks where there was one: the barrel these names came through was retired
+// under ADR-022, and they live in two different modules.
+jest.mock('@/features/ai/aiSetupVerifier', () => ({
     verifyAiSetup: jest.fn(),
+}));
+jest.mock('@/features/ai/mcpInspector', () => ({
     inspectAllServers: jest.fn().mockResolvedValue([]),
     clearMcpCache: jest.fn(),
 }));
@@ -119,7 +123,8 @@ export {
     readMergedAiPrompts,
 } from '@/features/dashboard/handlers/aiPromptHandlers';
 export { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-export { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
+export { verifyAiSetup } from '@/features/ai/aiSetupVerifier';
+export { clearMcpCache, inspectAllServers } from '@/features/ai/mcpInspector';
 export {
     generateAIContextFiles,
     installAiDefaultsMcpTools,

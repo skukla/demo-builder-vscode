@@ -19,7 +19,7 @@
 
 import { CommandExecutor } from '@/core/shell';
 import type { AuthenticationService } from '@/features/authentication';
-import type { SidebarProvider } from '@/features/sidebar';
+import type { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 import type { StateManager as IStateManager } from '@/types/state';
 
 /**

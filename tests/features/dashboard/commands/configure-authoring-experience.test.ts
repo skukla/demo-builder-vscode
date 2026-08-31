@@ -27,9 +27,17 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 // republishStorefrontConfig — that's what lands the quick-edit Sidekick plugin
 // (the EW canvas reads plugins from config.json).
 const mockRepublishStorefrontConfig = jest.fn().mockResolvedValue({ success: true });
-jest.mock('@/features/eds', () => ({
+// The '@/features/eds' barrel was retired under ADR-022, so these names are mocked
+// at the modules that declare them. isEdsProject is a type guard and lives in
+// @/types/typeGuards, whose other guards stay real.
+jest.mock('@/types/typeGuards', () => ({
+    ...jest.requireActual('@/types/typeGuards'),
     isEdsProject: jest.fn(() => true),
+}));
+jest.mock('@/features/eds/services/storefront/storefrontStalenessDetector', () => ({
     detectStorefrontChanges: jest.fn(() => ({ hasChanges: false })),
+}));
+jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     republishStorefrontConfig: (...args: unknown[]) => mockRepublishStorefrontConfig(...args),
 }));
 

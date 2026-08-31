@@ -20,11 +20,8 @@ import {
 } from './aiPromptHandlers';
 import { ServiceLocator } from '@/core/di';
 import { sanitizeErrorForLogging } from '@/core/validation';
-import {
-    clearMcpCache,
-    verifyAiSetup,
-    type AiVerificationResult,
-} from '@/features/ai';
+import { verifyAiSetup, type AiVerificationResult } from '@/features/ai/aiSetupVerifier';
+import { clearMcpCache } from '@/features/ai/mcpInspector';
 import {
     applicableMcpPackages,
     generateAIContextFiles,

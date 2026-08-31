@@ -28,7 +28,8 @@ import {
 } from '@/features/components/services/commerceSecretMigration';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
-import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
+import { detectStorefrontChanges } from '@/features/eds/services/storefront/storefrontStalenessDetector';
+import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
@@ -45,7 +46,7 @@ import { Project } from '@/types';
 import type { AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
-import { getComponentInstanceEntries, getEdsDaLiveUrl } from '@/types/typeGuards';
+import { getComponentInstanceEntries, getEdsDaLiveUrl, isEdsProject } from '@/types/typeGuards';
 import type { DeploymentStatusPayload, ConfigureInitialData } from '@/types/webviewPayloads';
 
 const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
