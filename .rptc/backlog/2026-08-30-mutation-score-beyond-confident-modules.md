@@ -91,3 +91,4 @@ beside the existing baseline table, so the next run has something to compare aga
 - 2026-08-30  test(prerequisites): cover the plugin install path, untested until now (`385d7d6ff`)
 - 2026-08-30  test(prerequisites): assert what installHandler's mocks already record (`8568d532e`)
 - 2026-08-30  test(mutation): ratchet the score before improving it, and guard against gaming it (`0fd0974ce`)
+- 2026-08-31  feat(tooling): widen the mutation sample to the UI layer, and split duplication into two floors (`3ab1d0328`)

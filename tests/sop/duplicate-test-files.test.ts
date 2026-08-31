@@ -48,10 +48,68 @@ import { basename, dirname, join } from 'path';
 const ROOT = join(__dirname, '..', '..');
 
 /**
- * Extract each `it(...)` body from a test file, keyed by test name and normalized
- * on whitespace so reindentation during a split does not hide a copy.
+ * Blank out `//` and block comments, preserving offsets so brace matching still
+ * works, and never treating a `//` inside a string literal as one.
+ *
+ * Comments are stripped because the first version of this check compared them and
+ * missed a real duplicate: `ComponentRegistryManager-configuration.test.ts` held
+ * eight tests all present in `-nodeVersions.test.ts`, whose bodies differed ONLY by
+ * the presence of `// Given:` / `// When:` / `// Then:` lines. Identical assertions,
+ * identical calls, different narration — and by any measure that matters, the same
+ * test twice.
  */
-function testBodies(source: string): Map<string, string> {
+function stripComments(src: string): string {
+    let out = '';
+    let i = 0;
+    while (i < src.length) {
+        const c = src[i];
+        const next = src[i + 1];
+        if (c === '"' || c === "'" || c === '`') {
+            const quote = c;
+            out += c;
+            i++;
+            while (i < src.length && src[i] !== quote) {
+                if (src[i] === '\\') {
+                    out += src.slice(i, i + 2);
+                    i += 2;
+                    continue;
+                }
+                out += src[i];
+                i++;
+            }
+            out += src[i] ?? '';
+            i++;
+            continue;
+        }
+        if (c === '/' && next === '/') {
+            while (i < src.length && src[i] !== '\n') {
+                out += ' ';
+                i++;
+            }
+            continue;
+        }
+        if (c === '/' && next === '*') {
+            while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) {
+                out += src[i] === '\n' ? '\n' : ' ';
+                i++;
+            }
+            out += '  ';
+            i += 2;
+            continue;
+        }
+        out += c;
+        i++;
+    }
+    return out;
+}
+
+/**
+ * Extract each `it(...)` body from a test file, keyed by test name and normalized
+ * on whitespace and comments so reindentation or re-narration during a split does
+ * not hide a copy.
+ */
+function testBodies(raw: string): Map<string, string> {
+    const source = stripComments(raw);
     const out = new Map<string, string>();
     const opener = /\bit\(\s*'([^']+)'\s*,\s*(?:async\s*)?\(\s*\)\s*=>\s*\{/g;
     let m: RegExpExecArray | null;
@@ -153,5 +211,17 @@ describe('SOP: no test file duplicates another', () => {
         expect([...A].every(([n, b]) => B.get(n) === b)).toBe(true);
         // Same test NAME, different body — must NOT count as contained.
         expect([...A].every(([n, b]) => C.get(n) === b)).toBe(false);
+
+        // Narration must not hide a copy. This is the case the first version of the
+        // check missed: -configuration and -nodeVersions differed only by Given/When/
+        // Then comments.
+        const narrated = `it('a', async () => {\n    // Given: one\n    expect(1).toBe(1); // Then: still one\n});`;
+        expect([...A].every(([n, b]) => testBodies(narrated).get(n) === b)).toBe(true);
+
+        // ...but a `//` inside a string is not a comment, and blanking it would make
+        // two genuinely different tests look identical.
+        const urlA = `it('a', async () => { expect(u).toBe('http://x/1'); });`;
+        const urlB = `it('a', async () => { expect(u).toBe('http://x/2'); });`;
+        expect(testBodies(urlA).get('a')).not.toEqual(testBodies(urlB).get('a'));
     });
 });

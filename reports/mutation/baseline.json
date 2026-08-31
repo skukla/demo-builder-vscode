@@ -1,6 +1,6 @@
 {
-    "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "widened to 12: adds four UI-layer modules. The pinned eight are byte-identical, control envMerge reproduced at 100%, so this accepts no regression.",
+    "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher \u2014 that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
+    "_note": "12 modules. installHandler and integrationCardModel were RE-MEASURED on 2026-08-31 after jest.pl22.config.js was found naming 12 of installHandler's 13 suites and 1 of integrationCardModel's 5. Their previous numbers described the tests the runner loaded, not the tests that exist; each carries a _supersedes block holding them. The other ten reproduced to 0.00 in the same run, which is what makes the two moves attributable to the config rather than to run variance.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -29,19 +29,25 @@
             "highValueSurvivors": 16
         },
         "src/features/dashboard/ui/components/integrations/integrationCardModel.ts": {
-            "score": 42.96,
-            "killed": 122,
-            "survived": 89,
-            "noCoverage": 73,
+            "score": 91.9,
+            "killed": 261,
+            "survived": 19,
+            "noCoverage": 4,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 37,
-                "string": 25,
-                "block": 4,
-                "optionalChain": 9,
-                "other": 14
+                "branch": 7,
+                "optionalChain": 5,
+                "other": 2,
+                "string": 5
             },
-            "highValueSurvivors": 41
+            "highValueSurvivors": 7,
+            "_supersedes": {
+                "score": 42.96,
+                "survived": 89,
+                "noCoverage": 73,
+                "highValueSurvivors": 41,
+                "why": "measured against an incomplete test set"
+            }
         },
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts": {
             "score": 67.04,
@@ -73,20 +79,25 @@
             "highValueSurvivors": 6
         },
         "src/features/prerequisites/handlers/installHandler.ts": {
-            "score": 49.17,
-            "killed": 266,
-            "survived": 163,
-            "noCoverage": 112,
+            "score": 57.12,
+            "killed": 309,
+            "survived": 196,
+            "noCoverage": 36,
             "timeout": 0,
             "survivorCategories": {
-                "block": 8,
-                "branch": 65,
-                "other": 22,
-                "string": 10,
-                "logPresentation": 44,
-                "optionalChain": 14
+                "branch": 99,
+                "other": 24,
+                "string": 53,
+                "optionalChain": 20
             },
-            "highValueSurvivors": 73
+            "highValueSurvivors": 99,
+            "_supersedes": {
+                "score": 49.17,
+                "survived": 163,
+                "noCoverage": 112,
+                "highValueSurvivors": 73,
+                "why": "measured against an incomplete test set"
+            }
         },
         "src/core/ui/utils/spectrumTokens.ts": {
             "score": 88.24,
@@ -154,5 +165,6 @@
             "survivorCategories": {},
             "highValueSurvivors": 0
         }
-    }
+    },
+    "_correction": "NEITHER MOVE IS AN IMPROVEMENT AND NEITHER MAY BE COUNTED AS ONE. No test was written. integrationCardModel 42.96 -> 91.90 is four suites that were always there; it is not a badly-tested module and comes off the target list. installHandler 49.17 -> 57.12 is one suite, and its high-value survivors ROSE 73 -> 99 while its score rose, which is normally the signature the anti-gaming rule exists to catch. It is not gaming here: adding the missing suite converted mutants from NoCoverage (112 -> 36) into Survived, i.e. from 'no test reaches this' to 'a test reaches it and does not check it'. That is a truer and worse signal, and installHandler remains the real worst module of the twelve."
 }

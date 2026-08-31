@@ -1,3 +1,12 @@
+/**
+ * ComponentRegistryManager - Node Version Resolution and Compatibility Tests
+ *
+ * Absorbs `ComponentRegistryManager-configuration.test.ts`, deleted on 2026-08-31:
+ * all eight of its tests were already here by name, five byte-identical and three
+ * differing only by their `// Given:` / `// When:` / `// Then:` narration. That
+ * comment-only difference is why the duplicate-file check now strips comments.
+ */
+
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { mockRawRegistry, getMockLoader } from './ComponentRegistryManager.testUtils';
 

@@ -1,3 +1,12 @@
+/**
+ * ComponentRegistryManager - Registry Loading and Caching Tests
+ *
+ * Absorbs `ComponentRegistryManager-initialization.test.ts`, deleted on 2026-08-31:
+ * four of its five tests were byte-identical to these, and the fifth was this file's
+ * env-var test under a different name, asserting the same thing with
+ * `arrayContaining` instead of two `toContain` calls.
+ */
+
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { mockRawRegistry, getMockLoader } from './ComponentRegistryManager.testUtils';
 

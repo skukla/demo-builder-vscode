@@ -116,3 +116,5 @@ the state table above is the record until there is real work to hold.
 - 2026-08-30  docs(backlog): the four-track program existed nowhere (`acc687f94`)
 - 2026-08-30  chore(backlog): pre-loop reconciliation for track 3 (`8e48d66e6`)
 - 2026-08-31  Track 3 (test strategy) COMPLETE, overnight 2026-08-31. All 28 module-mock walls converted; PL-14's seven artifacts done; family-extraction worklist 11/11; dead-mock-scan shipped and registered; the 63-family ledger swept. 159 dead mocks removed across the night. Tracks 1 and 2 were already complete; Track 4 (architecture programme) is the remaining one.
+- 2026-08-31  feat(tooling): one reading of codebase health, appended to a time series (`309b2e69b`)
+- 2026-08-31  Merge the Track 3 convergence loop into develop (`b5b610003`)

@@ -1,3 +1,13 @@
+/**
+ * ComponentRegistryManager - Version Validation and Injection Tests
+ *
+ * Every one of these thirteen tests also existed in
+ * `ComponentRegistryManager-validation.test.ts`, which was deleted on 2026-08-31.
+ * Nine bodies were byte-identical; the other four differed only in that this file
+ * uses the shared `createMaliciousRegistry` helper where the twin inlined the same
+ * construction. Both drove the identical ten-payload list, checked before deleting.
+ */
+
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import {
     mockRawRegistry,

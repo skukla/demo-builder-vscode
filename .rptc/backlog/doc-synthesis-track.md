@@ -220,3 +220,4 @@ the point of Phase C existing.
 - 2026-08-30  docs: standardize the front door — one per area, and the frontend had none (`e5fe59592`)
 - 2026-08-30  docs(backlog): the second-pass table still listed Phase B as pending (`87b7456a6`)
 - 2026-08-31  docs(handbook): pair ADR-016's three unstated builder rules (`0420e2fe9`)
+- 2026-08-31  docs: React's own conventions, written where they are needed (`fe7e8e37e`)
