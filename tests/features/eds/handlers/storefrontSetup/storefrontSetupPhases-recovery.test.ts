@@ -94,11 +94,6 @@ jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     })),
 }));
 
-jest.mock('@/features/eds/services/github/githubAppService', () => ({
-    GitHubAppService: jest.fn().mockImplementation(() => ({
-        isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
-    })),
-}));
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
@@ -134,6 +129,7 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhases';
+import type { SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import { ensureDaLiveAuth, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
 import { ServiceLocator } from '@/core/di';
@@ -216,6 +212,20 @@ beforeEach(() => {
     ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
 });
 
+/**
+ * The GitHub App service, handed in through the phases' `servicesOverride`.
+ *
+ * There used to be a `jest.mock` of the CLASS here. It was load-bearing: the real
+ * `isAppInstalled` reaches the network, and `resolveAppInstallation` runs it on this
+ * path. Typed to `SetupGitHubAppService`, the two-call view the phases actually use.
+ */
+const SERVICES: Partial<SetupServices> = {
+    githubAppService: {
+        getInstallUrl: () => 'https://github.com/apps/aem-code-sync/installations/select_target',
+        isAppInstalled: jest.fn().mockResolvedValue({ isInstalled: true }),
+    },
+};
+
 describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
     let mockContext: HandlerContext;
 
@@ -242,6 +252,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: ensureDaLiveAuth should have been called
@@ -266,6 +278,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Pipeline should have been called twice
@@ -287,6 +301,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should return error (caught by outer try-catch)
@@ -311,6 +327,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should return error
@@ -333,6 +351,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should have attempted pipeline 3 times (initial + 2 retries)
@@ -356,6 +376,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should NOT call ensureDaLiveAuth
@@ -382,6 +404,8 @@ describe('executeStorefrontSetupPhases - Mid-pipeline Recovery', () => {
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should send auth-recovery progress
@@ -456,6 +480,8 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should succeed after recovery
@@ -477,6 +503,8 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should send auth-recovery progress for phase 2-3
@@ -507,6 +535,8 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: Should return error
@@ -525,6 +555,8 @@ describe('executeStorefrontSetupPhases - Phase 2-3 Configuration Recovery', () =
             mockContext,
             createEdsConfig(),
             new AbortController().signal,
+            undefined,
+            SERVICES,
         );
 
         // Then: configureDaLivePermissions called 3 times (initial + 2 retries)

@@ -350,7 +350,7 @@ export async function executeStorefrontSetupPhases(
     edsConfig: StorefrontSetupStartPayload['edsConfig'],
     signal: AbortSignal,
     options?: BlockLibraryOptions,
-    servicesOverride?: SetupServices,
+    servicesOverride?: Partial<SetupServices>,
 ): Promise<StorefrontSetupResult> {
     const logger = context.logger;
     /**
@@ -363,7 +363,10 @@ export async function executeStorefrontSetupPhases(
      * each member means one optional parameter retires all three walls at once, and a
      * suite hands in exactly the members it asserts on.
      */
-    const services = servicesOverride ?? createSetupServices(context);
+    // Merged, not replaced: a caller (in practice a suite) supplies only the
+    // collaborators it cares about and the rest are built as usual. An all-or-nothing
+    // override forced every caller to stand in for eight services to steer one.
+    const services: SetupServices = { ...createSetupServices(context), ...servicesOverride };
 
     const wantsToResetContent = Boolean(edsConfig.resetSiteContent);
     const skipContent =

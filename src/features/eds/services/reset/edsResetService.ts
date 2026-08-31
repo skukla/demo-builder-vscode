@@ -40,7 +40,10 @@ import { createPatchReport, addCodeResult, reportUnapplied } from '../patches/pa
 import { migrateStorefrontNamingIfNeeded } from '../storefront/storefrontNameMigration';
 import { updateStorefrontState } from '../storefront/storefrontStalenessDetector';
 import { GitHubAppNotInstalledError } from '../types';
-import { publishConfigAndRegisterSite } from './edsResetConfigStep';
+import {
+    publishConfigAndRegisterSite,
+    type ConfigStepServices,
+} from './edsResetConfigStep';
 import { redeployApiMesh, type MeshRedeployDeps } from './edsResetMeshHelper';
 import {
     extractResetParams,
@@ -358,6 +361,12 @@ export async function executeEdsReset(
     tokenProvider: TokenProvider,
     deps: MeshRedeployDeps,
     onProgress?: (progress: EdsResetProgress) => void,
+    /**
+     * Service seam for the config step, forwarded verbatim to
+     * {@link publishConfigAndRegisterSite}. Production never passes it — see
+     * {@link ConfigStepServices} for why it exists.
+     */
+    services?: ConfigStepServices,
 ): Promise<EdsResetResult> {
     const { redeployMesh = false } = params;
 
@@ -380,7 +389,11 @@ export async function executeEdsReset(
         // GitHub repo name. No-op when they already match. Mutates
         // params.daLiveSite and project metadata in place when it runs so
         // the rest of the pipeline uses the new (matching) name.
-        const configServiceForMigration = new ConfigurationService(tokenProvider, context.logger);
+        // Same seam as the config step below: one Config Service, one place to
+        // supply it. `RegistrarConfigService` declares both methods, so it satisfies
+        // the migration's narrower `MigrationConfigService` too.
+        const configServiceForMigration =
+            services?.configService ?? new ConfigurationService(tokenProvider, context.logger);
         const migrationResult = await migrateStorefrontNamingIfNeeded(
             params,
             params.project,
@@ -414,6 +427,7 @@ export async function executeEdsReset(
             tokenProvider,
             context.logger,
             report,
+            services,
         );
 
         // Steps 8-11: Content Pipeline (with DA.live re-auth retry)
