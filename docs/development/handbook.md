@@ -697,6 +697,29 @@ check says so and names the file.
 > `tests/sop/duplicate-test-files.test.ts`, which compares whole test sets within a
 > directory.
 
+> **Convention.** A fake standing in for a real type comes from the builder for that
+> type. `{...} as unknown as Project` is a fake with the type check switched off.
+> Enforced by the `castCeilings` pins in `tests/sop/canonical-fakes.ledger.json` —
+> nine types that already have a builder, and the count for each may only fall.
+> *Why:* every fixture defect found on 2026-08-31 was hiding behind one of these
+> casts, and none of them was visible to any check. Twenty-six StateManager members
+> faked for methods that DO NOT EXIST — three called nowhere in `src/`, one belonging
+> to the authentication service. A whole HandlerContext that was `{}`. An argument
+> passed `as never`. `{ status: 'running' }` standing in for a Project. Each one
+> typechecked, each one passed, because a cast is an instruction to stop checking.
+>
+> **The target is zero for these nine, and only these nine.** They are not the
+> reasonable-looking casts — they are the ones with a builder sitting next to them:
+> `Project` (198), `HandlerContext` (59), `Logger`, `StateManager`, and friends, 410
+> in total. A cast to a type with NO builder is not counted and is often right: a
+> fetch `Response` stub carrying three of its twenty members is correct when the code
+> reads three. The rule is *use the builder that exists*, not *never cast*.
+>
+> A ceiling rather than a file ledger, because 324 files carry one of these and that
+> is too many rows to keep honest, while nine numbers maintain themselves. The pin
+> demands EXACT equality: lowering a count means lowering the pin in the same commit,
+> so the ratchet cannot slacken and a regression cannot hide beneath a stale number.
+
 > **Convention.** A test file lives at the path mirroring the source file it covers.
 > *Why:* it is how you find the tests for a file without searching, and how a missing suite
 > becomes visible. Enforced by `tests/sop/mirror-placement.test.ts`.
@@ -786,7 +809,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 79 conventions. 62 of them are enforced; 17 are not.**
+**This handbook states 80 conventions. 63 of them are enforced; 17 are not.**
 
 The fifteen that remain are not one thing, and treating them as one is what kept them
 open:

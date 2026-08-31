@@ -227,3 +227,68 @@ describe('a fake with a canonical builder is not hand-rolled again', () => {
         });
     });
 });
+
+describe('a fake of a real type is not a literal the compiler was told to ignore', () => {
+    /**
+     * `{...} as unknown as Project` is a fake with the type check switched off. It
+     * is also where every defect this suite's siblings found on 2026-08-31 was
+     * hiding: 26 StateManager members faked for methods that do not exist, a whole
+     * HandlerContext that was `{}`, an argument passed `as never`, and
+     * `{ status: 'running' }` standing in for a Project.
+     *
+     * These nine types each have a builder in tests/helpers already, so the target
+     * for every one is ZERO — not a judgement about whether a fake is reasonable,
+     * just a count of places a builder exists and was not used.
+     *
+     * A CEILING rather than a file ledger, deliberately. 324 files carry one of
+     * these; that is too many rows for anyone to keep honest, while nine numbers
+     * maintain themselves. The assertion demands EXACT equality, so a conversion
+     * that lowers a count must lower the pin in the same commit — the ratchet
+     * cannot silently slacken, and a regression cannot hide under a stale pin.
+     *
+     * Casts to types with NO builder are deliberately not counted. Some are
+     * legitimate: a fetch `Response` stub carrying three of its twenty members is
+     * right when the code reads three. The rule is "use the builder that exists",
+     * not "never cast".
+     */
+    const CEILINGS = (LEDGER as unknown as { castCeilings: Record<string, number> })
+        .castCeilings;
+    const CAST = /\}\s*as\s+(?:unknown\s+as\s+)?([A-Za-z_][\w.]*(?:\[[^\]]*\])?(?:<[^>]*>)?)/g;
+
+    const counts: Record<string, number> = (() => {
+        const out: Record<string, number> = {};
+        for (const key of Object.keys(CEILINGS)) out[key] = 0;
+        for (const f of collectTestFiles(testsDir)) {
+            if (f.startsWith('tests/helpers/')) continue;
+            const body = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+            for (const m of body.matchAll(CAST)) {
+                if (m[1] in out) out[m[1]] += 1;
+            }
+        }
+        return out;
+    })();
+
+    it('CONTROL: the detector sees a cast and not a plain literal', () => {
+        const re = /\}\s*as\s+(?:unknown\s+as\s+)?([A-Za-z_][\w.]*)/;
+        expect(re.test('const p = {} as unknown as Project;')).toBe(true);
+        expect(re.test('const p = {} as Project;')).toBe(true);
+        expect(re.test('const p = { a: 1 };')).toBe(false);
+        // And the corpus was read, so a zero means "none left", not "never looked".
+        expect(collectTestFiles(testsDir).length).toBeGreaterThan(500);
+    });
+
+    it.each(Object.keys(CEILINGS))('%s: casts to it only ever fall', (type) => {
+        const ceiling = CEILINGS[type];
+        const count = counts[type];
+        expect({
+            type,
+            count,
+            verdict:
+                count > ceiling
+                    ? 'GREW — a new fake bypassed the builder'
+                    : count < ceiling
+                      ? 'LOWER THE PIN in canonical-fakes.ledger.json'
+                      : 'at',
+        }).toEqual({ type, count, verdict: 'at' });
+    });
+});

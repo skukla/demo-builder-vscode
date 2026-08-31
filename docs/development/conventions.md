@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **79** conventions, **62** enforced
+- **80** conventions, **63** enforced
 - **22** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -124,6 +124,7 @@ it means the rule rests on somebody noticing.
 | Before designing a way to hand a mocked collaborator in — or to share one between suites — delete the mock and run the suite. If it still passes, the mock was the whole problem. |  |  | **—** |
 | No test file over 750 lines. enforced by `npm run validate:test-file-sizes`. |  |  | *named in prose* |
 | No test file repeats another file's tests wholesale. |  |  | `duplicate-test-files.test.ts` |
+| A fake standing in for a real type comes from the builder for that type. `{...} as unknown as Project` is a fake with the type check switched off. Enforced by the `castCeilings` pins in `tests/sop/canonical-fakes.ledger.json` — nine types that already have a builder, and the count for each may only fall. |  |  | *named in prose* |
 | A test file lives at the path mirroring the source file it covers. |  |  | `mirror-placement.test.ts` |
 | A fixture builder name has exactly one definition. |  |  | `builder-uniqueness.test.ts` |
 | A fake that has a builder in `tests/helpers/` is imported, not written again inline. Enforced by `tests/sop/canonical-fakes.test.ts` — a shrink-only ledger grandfathers the files that already do, so it stops new copies rather than demanding a sweep. |  |  | `canonical-fakes.test.ts` |

@@ -179,5 +179,17 @@
         "tests/features/updates/services/templateSyncService-safety.test.ts",
         "tests/features/updates/services/updateApplyService.test.ts",
         "tests/security/csp-nonce-security.test.ts"
-    ]
+    ],
+    "_castCeilings_what": "A literal cast to a real type is a fake the compiler has been told not to check. Every one of these types ALREADY has a builder in tests/helpers, so the target for each is ZERO and the number may only fall. Seeded 2026-08-31 from a measurement of 1,735 literal-casts across the test tree; these nine are the ones with a builder standing right next to them.",
+    "castCeilings": {
+        "Project": 198,
+        "HandlerContext": 59,
+        "Partial<Project>": 38,
+        "vscode.ExtensionContext": 36,
+        "Logger": 28,
+        "HandlerContext['stateManager']": 26,
+        "StateManager": 13,
+        "CommandExecutor": 6,
+        "ExtensionContext": 6
+    }
 }
