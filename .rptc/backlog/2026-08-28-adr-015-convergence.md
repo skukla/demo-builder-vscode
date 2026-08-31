@@ -86,3 +86,4 @@ RATIFIED permanent exception recorded in ADR-015.
 - 2026-08-31  fix(data-installer): the shape-drift warning fires once again, as its contract says (`9405366f4`)
 - 2026-08-31  refactor(prerequisites): the manager stops building its own cache, and the command stops building its own manager (`155183f98`)
 - 2026-08-31  refactor(core): the backend-owned-scope helper follows its only caller into core (`1bb896c9d`)
+- 2026-08-31  2026-08-31  Loop closed: ledger 30 -> 6, and every remaining row is ratified or an owner decision — no mechanical work left. constructionBoundary and featureBarrels are both EMPTY (39 and 5 at their first measurement). Owner decisions: serviceLocator (recommend ratify), errors.ts (recommend move to @/core/errors), shell.ts (decide on sight), typeGuards.ts (recommend ratify), apiOwners (modelling question: should core/state resolve a catalog entry). CommandManager ratified in place. Full detail in .rptc/handoff/2026-08-31-loop-report.md

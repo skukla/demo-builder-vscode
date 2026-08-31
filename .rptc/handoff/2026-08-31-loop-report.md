@@ -1,113 +1,118 @@
 # Loop report — 2026-08-31, Track 4
 
-Branch `loop/2026-08-31-track4`, pushed. Everything below is gated: 1200 suites,
-15534 tests green at every commit.
+Branch `loop/2026-08-31-track4`, pushed. Gated at every commit: 1199 suites,
+15525 tests.
 
 ## The short version
 
-The bug I recommended starting with was already fixed three days ago — I had read
-the item's title and not its body. Correcting that record turned up three more
-items claiming "not started" over work that had happened.
+Track 4 was the last open track of the four-track programme. Its work is the
+architecture exemption ledger — every file that breaks a rule the codebase now
+enforces, each with a written reason.
 
-The real work was Track 4, the last open track of the four-track programme: the
-architecture exemption ledger, which holds every file that breaks a rule the
-codebase now enforces. **It went from 30 rows to 19.** The rules those files break
-are real, and each row now either has no file left to name, or carries a
-measurement saying what it would actually take.
+**It went from 30 rows to 6, and every one of the 6 that remains is either
+already ratified or a decision only you can make.** There is no mechanical work
+left in it.
 
-Two of the eleven cleared were not what their ledger entries claimed, and finding
-that out was most of the work.
+Two whole categories are now empty. `constructionBoundary` held 39 rows when the
+bucket was first measured; `featureBarrels` held five. The barrel rule changes
+character with that: it was a shrink-only ledger, and with nothing left to record
+it is now a ban — a new feature barrel fails the build with nowhere to write it
+down.
 
-## Shipped
+## What was fixed, and what it turned out to be
 
-| Rows | What |
+Very little of this was the tidy-up the rows described. In most cases the rule
+pointed at a file and the actual defect was somewhere adjacent.
+
+| The row said | What it was |
 |---|---|
-| 1 | `ProgressUnifier` — core's progress engine named a prerequisites type. The type moved to shared vocabulary |
-| 2 | `ResetAllCommand`, `ResetAiOnboardingCommand` — filed under `core/`, always commands. Moved |
-| 4 | Feature barrels retired — `data-installer`, `sidebar`, `eds`, `ai` |
-| 3 | Types files that only needed type-only imports — `handlers.ts`, `state.ts`, `webview.ts` |
-| 1 | `DiagnosticsCommand` converged to `BaseCommand`, removing four service-locator fetches |
+| `ProgressUnifier` constructs across a layer | Core's progress engine named a feature's type; the type belonged in shared vocabulary |
+| Two commands live in `core/` | They were never core code — filed in the wrong directory for years |
+| Five feature barrels | ADR-022 already ruled; `eds` had 41 export lines and five were ever used |
+| Six types-purity rows | Three only needed type-only imports. The other three are RUNTIME CODE living in `src/types/` — a different problem than the row described |
+| `DiagnosticsCommand` doesn't extend the base | It had no state manager handed in, so it fetched one from the global locator **four times** |
+| Five files build their own GitHub token service | The shared accessor demanded a whole context to read a secrets store, so four of them *could not call it* |
+| Handler builds a data-installer client | Its "warn once per endpoint" contract was silently broken — the dedupe lived on an object rebuilt every call |
+| Manager builds its own cache | True, and the command above it was building a whole second manager with a second empty cache |
+| Three `core/state` files reach into a feature | Two were modules misfiled in a feature directory; one is a real modelling question |
+| Authentication barrel | **13 of its 14 test mocks were dead** |
 
-Two findings inside that work worth keeping:
+## Your decisions — 6 open
 
-**The `eds` barrel had 41 export lines and five were ever imported.** It was
-hiding 36 lines of surface nobody used.
-
-**Six test mocks pointed at the deleted barrels and the compiler saw none of
-them.** `tsc --noEmit` passed clean while seven suites could not load. The
-standing warning in this repo — a hand-written mock is invisible to the compiler
-and to the callers — demonstrated again.
-
-## Your decisions
-
-Six things I stopped on rather than force. Each has a recommendation.
+Nothing here is blocked on effort. Each needs a call.
 
 ### 1. AB-7 — live proof of the integration-removal fix
-The code shipped 2026-08-28 (`2b5be4ce0`) with its own test suite. Proving it
-actually undeploys needs a working Adobe Console and a real project, which the
-loop will not touch. Blocked on 2026-08-28 by a Console outage that only
-manifested from inside the extension host.
-**Recommendation:** retry it on the next real add/remove. If it still fails only
-from the host, the next probe is logging the exact request the SDK sends and
-diffing it against the working outside call.
+Code shipped 2026-08-28 (`2b5be4ce0`) with its own suite. Proving it undeploys
+touches live Adobe resources. Blocked once by a Console outage that only appeared
+from inside the extension host.
+**Do:** retry on your next real add/remove. If it fails only from the host, log
+the request the SDK sends and diff it against a working call from outside.
 
-### 2. `serviceLocator` names two classes — ratify or rebuild
-It imports `AuthenticationService` and `SidebarProvider` as types only. The
-ledger said to fix it by moving the interfaces to `@/types`; **they are classes,
-not interfaces**, and `AuthenticationService` has 44 public methods across 855
-lines. An interface copy nothing keeps in sync is worse than the import. Nor is
-converting callers the answer — all 48 are files the rule explicitly permits to
-fetch.
-Real options: ratify, or move to typed tokens (`ServiceLocator.get(AUTH)`, token
-declared by the owning feature) which removes the naming but rewrites the DI
-shape and 50+ call sites.
-**Recommendation: ratify.** A locator has to name what it locates.
+### 2. `serviceLocator` names two classes it stores
+Type-only imports of `AuthenticationService` and `SidebarProvider`. The ledger
+said to extract interfaces — they are classes, and one has 44 public methods
+across 855 lines, so the copy would be worse than the import. Converting callers
+is not it either: all 48 are files the rule explicitly lets fetch.
+**Recommend: ratify.** A locator has to name what it locates. The alternative is
+typed tokens, which removes the naming but rewrites the DI shape and 50+ sites.
 
-### 3. `errors.ts` and `shell.ts` are not types files
-Measured by converting every import to type-only and reading tsc: 17 errors and 1
-respectively, all "cannot be used as a value". `errors.ts` declares error classes
-and the functions that build them; `shell.ts` uses `os`. They are runtime modules
-that happen to live in `src/types/`.
-**Recommendation:** move `errors.ts` to `@/core/errors`; decide `shell.ts` on
-sight — it may be one function away from being pure.
+### 3. `errors.ts` is not a types file
+Measured: converting every import to type-only produces 17 "cannot be used as a
+value" errors. It declares error classes and the functions that build them.
+**Recommend: move it** to `@/core/errors`.
 
-### 4. `typeGuards.ts` — the strongest ratify candidate
-Genuinely runtime: needs six values including `COMPONENT_IDS` and
-`getMeshAppBuilderComponent`.
-**Recommendation: ratify.** A type guard is the one kind of runtime code that
-belongs beside the types it narrows.
+### 4. `shell.ts` is not either
+Same measurement, 1 error: it uses `os`.
+**Recommend: decide on sight** — it may be one function away from being pure.
 
-### 5. PR-1 — status left alone deliberately
-Its research and your direction shipped, but whether that makes it `planned` is a
-judgement about intent, not a fact I can read off disk. Everything else in that
-sweep I corrected.
+### 5. `typeGuards.ts`
+Genuinely runtime: needs six values including `COMPONENT_IDS`.
+**Recommend: ratify.** A type guard is the one kind of runtime code that belongs
+beside the types it narrows.
 
-### 6. A flaky test, found not fixed
-`inExtensionMcpServer.test.ts` → "reports the build label when one is supplied"
-timed out once in a full-suite run, passed 3/3 alone, and passed with my changes
-stashed. It is a socket-binding race the suite's own comment says it "makes
-visible" rather than fixes. Unrelated to this work; worth its own item if it
-recurs.
+### 6. `apiOwners` calls a feature's catalog loader
+`core/state` resolves an App Builder catalog entry by calling into
+`features/components`. Unlike its two siblings this is NOT a misfiled module: the
+loader reads a catalog JSON shipped inside the feature and four features use it.
+**The question is whether core/state should resolve a catalog entry at all, or be
+handed the answer.** A modelling decision, not a move.
 
-## What is left in the ledger — 19 rows
+`CommandManager` is the seventh row and needs nothing: it is the registrar that
+builds all 25 commands, so it cannot be one of them. Ratified in place.
 
-- **`constructionBoundary` (10)** — the biggest remaining bucket. Six are the same
-  shape: a service constructing its own `GitHubTokenService` instead of asking the
-  cache whose instance carries a token-validation cache. That looks like one batch,
-  not ten decisions.
-- **`layerDirection` (4)** — `serviceLocator` (decision 2 above) plus three real
-  runtime crossings in `core/state` reaching into a feature's config.
-- **`typesPurity` (3)** — decisions 3 and 4 above.
-- **`featureBarrels` (1)** — `authentication`, the largest: 7 source importers, 15
-  export lines, and 16 test files with a bare automock of the barrel. Started and
-  parked; the automocks want the dead-mock probe rather than mechanical repointing.
-- **`commandBase` (1)** — `CommandManager`, now RATIFIED rather than pending. It
-  builds all 25 commands so it cannot be one of them. Not debt.
+## Found and not fixed
 
-## Record corrections made
+- **A flaky test.** `inExtensionMcpServer` → "reports the build label" timed out
+  once under full-suite load, passed 3/3 alone, and passed with my changes
+  stashed. A socket-binding race the suite's own comment says it makes visible
+  rather than fixes.
+- **`PR-1`'s status.** Its research and your direction shipped, but whether that
+  makes it `planned` is a judgement about intent, not a fact on disk.
 
-- `AB-7` backlog → built
-- `AB-2` backlog → spiked (feasibility settled 2026-08-27, build not decided)
-- `EDS-6` backlog → gated, with `waiting-on` naming both blockers
-- `PL-13`'s prose said 75 ledger rows and 23 fetch-boundary files; the disk said
-  30 and 0
+## Things worth keeping from how this went
+
+**Two no-op edits.** Twice an edit was built on indentation reconstructed from
+memory rather than read. The match failed, the file was never written — and the
+checks then passed, on unchanged code. A green check after a no-op edit is
+indistinguishable from a green check after a real one.
+
+**A control that depended on a violation.** Retiring the last feature barrel
+broke the rule's own positive control, which ended with "at least one barrel
+exists". Cleaning the codebase broke the check that proved the rule worked. It
+now asserts against literals plus a corpus-size floor.
+
+**A test that went hollow.** Moving a dedupe to module scope made a
+"the warning never contains a token value" assertion pass against an EMPTY call
+list. It now asserts the callback fired before asserting what it did not contain.
+
+**Two fixtures that were lying.** `{} as unknown as HandlerContext` and
+`ctx as never` — both typechecked, both passed, because everything touching the
+context was mocked. Narrowing one accessor exposed both.
+
+## Record corrections
+
+- `AB-7` backlog → built (its fix had shipped three days earlier; I recommended
+  it as work off its title without reading its body)
+- `AB-2` backlog → spiked · `EDS-6` backlog → gated, with `waiting-on` named
+- `PL-13`'s prose claimed 75 ledger rows and 23 fetch-boundary files; the disk
+  said 30 and 0
