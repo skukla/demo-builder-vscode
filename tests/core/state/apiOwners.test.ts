@@ -12,6 +12,7 @@
 
 import { resolveApiOwners } from '@/core/state/apiOwners';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../helpers/projectFake';
 
 /**
  * The catalog lookup, handed in rather than module-mocked.
@@ -33,7 +34,7 @@ const lookup = (id: string) =>
 
 
 function projectWith(components: Project['appBuilderComponents']): Project {
-    return { appBuilderComponents: components } as Project;
+    return createMockProject({ appBuilderComponents: components });
 }
 
 describe('resolveApiOwners', () => {
@@ -111,6 +112,6 @@ describe('resolveApiOwners', () => {
     });
 
     it('returns an empty list for a project with no integrations', () => {
-        expect(resolveApiOwners({} as Project, lookup)).toEqual([]);
+        expect(resolveApiOwners(createMockProject(), lookup)).toEqual([]);
     });
 });

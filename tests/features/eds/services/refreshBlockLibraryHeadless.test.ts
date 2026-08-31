@@ -56,8 +56,8 @@ import { ensureDaLiveAuth, getGitHubServices } from '@/features/eds/handlers/eds
 import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const pipelineMock = executeEdsPipeline as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
@@ -68,7 +68,7 @@ function makeLogger(): Logger {
     return createMockLogger() as unknown as Logger;
 }
 
-const PROJECT = { name: 'Demo', path: '/p' } as unknown as Project;
+const PROJECT = createMockProject({ name: 'Demo', path: '/p' });
 
 /**
  * Helix arrives through the deps object rather than by mocking the module. The old

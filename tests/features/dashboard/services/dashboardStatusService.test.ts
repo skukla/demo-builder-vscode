@@ -17,6 +17,7 @@ import {
     buildStatusPayload,
     deriveMeshStatus,
 } from '@/features/dashboard/services/dashboardStatusService';
+import { createMockProject } from '../../../helpers/projectFake';
 
 describe('dashboardStatusService', () => {
     describe('buildStatusPayload', () => {
@@ -519,7 +520,7 @@ describe('dashboardStatusService', () => {
         it('returns undefined when the project has no mesh component', () => {
             // Undefined, not 'not-deployed' — callers pass this through as an
             // ABSENT mesh field, which is a different statement.
-            expect(deriveMeshStatus({} as Project, true)).toBeUndefined();
+            expect(deriveMeshStatus(createMockProject(), true)).toBeUndefined();
         });
 
         it.each([

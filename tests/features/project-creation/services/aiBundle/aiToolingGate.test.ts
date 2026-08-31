@@ -13,14 +13,16 @@ import {
 import { COMPONENT_IDS } from '@/core/constants';
 import type { AiDefaultsMcpServer } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 function makeProject(overrides: Partial<Project> = {}): Project {
-    return {
+    return createMockProject({
         name: 'demo',
         path: '/projects/demo',
-        created: new Date().toISOString(),
+        // Project.created is a Date in memory; the ISO string is the manifest form.
+        created: new Date(),
         ...overrides,
-    } as Project;
+    });
 }
 
 function makeEntry(overrides: Partial<AiDefaultsMcpServer> = {}): AiDefaultsMcpServer {

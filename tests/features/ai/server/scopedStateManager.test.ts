@@ -10,16 +10,16 @@
 
 import { createScopedStateManager } from '@/features/ai/server/scopedStateManager';
 import type { StateManager } from '@/core/state/stateManager';
-import type { Project } from '@/types/base';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const SCOPED_DIR = '/projects/battery-scratch';
 
 function makeReal() {
     return {
-        loadProjectFromPath: jest.fn().mockResolvedValue({ name: 'scratch' } as Project),
+        loadProjectFromPath: jest.fn().mockResolvedValue(createMockProject({ name: 'scratch' })),
         saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
         saveProject: jest.fn().mockResolvedValue(undefined),
-        getCurrentProject: jest.fn().mockResolvedValue({ name: 'pointer-project' } as Project),
+        getCurrentProject: jest.fn().mockResolvedValue(createMockProject({ name: 'pointer-project' })),
         hasProject: jest.fn().mockReturnValue(true),
     } as unknown as StateManager;
 }
@@ -31,7 +31,7 @@ describe('createScopedStateManager', () => {
 
         const p = await scoped.getCurrentProject();
 
-        expect(p).toEqual({ name: 'scratch' });
+        expect(p).toEqual(createMockProject({ name: 'scratch' }));
         expect(real.loadProjectFromPath).toHaveBeenCalledWith(SCOPED_DIR, undefined, {
             persistAfterLoad: false,
         });
@@ -52,7 +52,7 @@ describe('createScopedStateManager', () => {
     it('saveProject routes to saveProjectConfigOnly — the pointer NEVER flips', async () => {
         const real = makeReal();
         const scoped = createScopedStateManager(real, SCOPED_DIR);
-        const project = { name: 'scratch', path: SCOPED_DIR } as Project;
+        const project = createMockProject({ name: 'scratch', path: SCOPED_DIR });
 
         await scoped.saveProject(project);
 

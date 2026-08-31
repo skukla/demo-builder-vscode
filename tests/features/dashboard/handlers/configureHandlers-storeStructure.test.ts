@@ -22,6 +22,7 @@ import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const STRUCTURE = {
     websites: [{ id: 2, code: 'citisignal', name: 'CitiSignal' }],
@@ -52,7 +53,7 @@ function makeContext(project: Project | null) {
 }
 
 function projectFixture(): Project {
-    return { name: 'p', path: '/p' } as Project;
+    return createMockProject({ name: 'p', path: '/p' });
 }
 
 beforeEach(() => {

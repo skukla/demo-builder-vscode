@@ -12,6 +12,7 @@ import { StateManager } from '@/core/state';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // Mock VS Code API
 
@@ -71,10 +72,10 @@ describe('ShowAiCommand', () => {
         } as unknown as vscode.ExtensionContext;
 
         mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({
+            getCurrentProject: jest.fn().mockResolvedValue(createMockProject({
                 name: 'Test Project',
                 path: '/test/project',
-            } as Project),
+            })),
         } as unknown as jest.Mocked<StateManager>;
 
         mockLogger = createMockLogger() as unknown as Logger;

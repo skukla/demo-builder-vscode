@@ -24,10 +24,10 @@ import { generateAIContextFiles } from '@/features/project-creation/services/aiB
 import { writeAgentsMd } from '@/features/project-creation/services/aiBundle/aiContextWriter';
 import { writeMcpConfigs } from '@/features/project-creation/services/aiBundle/mcpConfigWriter';
 import { writeSkillFiles } from '@/features/project-creation/services/aiBundle/skillsWriter';
-import type { Project } from '@/types/base';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 describe('generateAIContextFiles — progress + serialization', () => {
-    const project = { name: 'demo', path: '/projects/demo' } as Project;
+    const project = createMockProject({ name: 'demo', path: '/projects/demo' });
     const extensionPath = '/ext';
 
     beforeEach(() => {

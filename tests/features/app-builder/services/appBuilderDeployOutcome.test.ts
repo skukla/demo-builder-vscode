@@ -13,6 +13,7 @@
 
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../../helpers/projectFake';
 
 function project(): Project {
     return {
@@ -121,7 +122,7 @@ describe('recordDeployOutcome — create', () => {
     });
 
     it('takes identity from the outcome when there is no entry to inherit it from', () => {
-        const p = { name: 'p', path: '/p' } as unknown as Project;
+        const p = createMockProject({ name: 'p', path: '/p' });
 
         recordDeployOutcome(
             p,

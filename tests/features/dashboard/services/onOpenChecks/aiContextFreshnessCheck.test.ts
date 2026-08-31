@@ -22,6 +22,7 @@ import type { OnOpenCheckContext } from '@/features/dashboard/services/onOpenChe
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 const mockLogger: Logger = createMockLogger();
 
@@ -46,7 +47,7 @@ function makeCtx(aiContextVersion?: number): { ctx: OnOpenCheckContext; post: je
     const post = jest.fn();
     return {
         ctx: {
-            project: { path: '/proj', aiContextVersion } as Project,
+            project: createMockProject({ path: '/proj', aiContextVersion }),
             logger: mockLogger,
             post,
         },

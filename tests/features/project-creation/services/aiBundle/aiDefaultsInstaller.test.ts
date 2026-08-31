@@ -24,6 +24,7 @@ import {
 } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 jest.mock('fs/promises', () => ({
     mkdir: jest.fn().mockResolvedValue(undefined),
@@ -57,7 +58,7 @@ const MESH_PROJECT = {
     },
 } as unknown as Project;
 // Bare project — nothing applies; the installer no-ops.
-const BARE_PROJECT = { name: 'Test', path: PROJECT_PATH } as unknown as Project;
+const BARE_PROJECT = createMockProject({ name: 'Test', path: PROJECT_PATH });
 const TOOLS_DIR = `${PROJECT_PATH}/.demo-builder-mcp`;
 const TOOLS_PACKAGE_JSON_PATH = `${TOOLS_DIR}/package.json`;
 

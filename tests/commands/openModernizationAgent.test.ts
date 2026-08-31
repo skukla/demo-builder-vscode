@@ -26,6 +26,7 @@ import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../helpers/loggerFake';
 import { createMockStateManager } from '../helpers/stateManagerFake';
+import { createMockProject } from '../helpers/projectFake';
 
 function makeLogger(): Logger {
     return createMockLogger() as unknown as Logger;
@@ -47,7 +48,7 @@ function makeContext(): vscode.ExtensionContext {
     } as unknown as vscode.ExtensionContext;
 }
 
-const PROJECT = { name: 'My Demo', path: '/projects/demo' } as unknown as Project;
+const PROJECT = createMockProject({ name: 'My Demo', path: '/projects/demo' });
 
 describe('OpenModernizationAgentCommand', () => {
     beforeEach(() => {

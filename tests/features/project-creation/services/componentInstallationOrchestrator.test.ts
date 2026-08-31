@@ -14,8 +14,9 @@ import {
 } from '@/features/project-creation/services/componentInstallationOrchestrator';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import type { ComponentInstance } from '@/types';
 
 const mockInstallNpmDependencies = jest.fn();
 jest.mock('@/features/components/services/componentManager', () => ({
@@ -30,7 +31,12 @@ jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', (
     resolveMcpToolsDir: (projectPath: string) => `${projectPath}/.demo-builder-mcp`,
 }));
 
-function makeContext(componentInstances: Record<string, { path: string }>): InstallationContext {
+function makeContext(
+    // `{ path }` alone is not a ComponentInstance — the real one carries id, type,
+    // status and more. Typed loosely here, it reached the Project fixture as a
+    // component-instance record and only the builder's typing objected.
+    componentInstances: Record<string, Partial<ComponentInstance>>,
+): InstallationContext {
     const logger = createMockLogger() as unknown as Logger;
     // Only the definition MAP is narrowed — the context itself is built to its
     // real shape. A whole-object cast here used to hide missing fields (it was
@@ -40,7 +46,11 @@ function makeContext(componentInstances: Record<string, { path: string }>): Inst
         Object.keys(componentInstances).map((compId) => [compId, { definition: { name: compId } }])
     ) as unknown as InstallationContext['componentDefinitions'];
     return {
-        project: { name: 'Test', path: '/proj', componentInstances } as unknown as Project,
+        project: createMockProject({
+            name: 'Test',
+            path: '/proj',
+            componentInstances: componentInstances as Record<string, ComponentInstance>,
+        }),
         componentDefinitions,
         progressTracker: jest.fn(),
         logger,

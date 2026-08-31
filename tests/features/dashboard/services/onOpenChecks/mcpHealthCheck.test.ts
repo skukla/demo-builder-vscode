@@ -12,15 +12,15 @@
 import { createMcpHealthCheck } from '@/features/dashboard/services/onOpenChecks/mcpHealthCheck';
 import { CHECK_IDS } from '@/types/messages';
 import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
-import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 const mockLogger: Logger = createMockLogger();
 
 function makeCtx(): { ctx: OnOpenCheckContext; post: jest.Mock } {
     const post = jest.fn();
-    return { ctx: { project: { path: '/proj' } as Project, logger: mockLogger, post }, post };
+    return { ctx: { project: createMockProject({ path: '/proj' }), logger: mockLogger, post }, post };
 }
 
 it('is the mcp-health check: edsOnly, guarded (not reRunnable)', () => {

@@ -43,12 +43,12 @@ import * as path from 'path';
 import { exportProjectSettingsToFile } from '@/features/projects-dashboard/services/settingsTransferService';
 import { createExportSettings } from '@/features/projects-dashboard/services/settingsSerializer';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
-import type { Project } from '@/types/base';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const writeMock = writeFileAtomic as jest.Mock;
 const createMock = createExportSettings as jest.Mock;
 
-const PROJECT = { name: 'My Demo', path: '/projects/my-demo' } as unknown as Project;
+const PROJECT = createMockProject({ name: 'My Demo', path: '/projects/my-demo' });
 
 describe('exportProjectSettingsToFile', () => {
     beforeEach(() => {

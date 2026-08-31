@@ -43,13 +43,13 @@ import { ConfigurationService } from '@/features/eds/services/configService/conf
 import { createDaLiveServiceTokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { repairSiteConfigForProject } from '@/features/eds/services/configService/repairSiteConfigForProject';
 import type * as vscode from 'vscode';
-import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 const logger = createMockLogger() as unknown as Logger;
 
-const project = { name: 'demo', selectedPackage: 'citisignal' } as unknown as Project;
+const project = createMockProject({ name: 'demo', selectedPackage: 'citisignal' });
 const context = { secrets: {}, globalState: {} } as unknown as vscode.ExtensionContext;
 
 /** The single argument object `repairSiteConfig` was called with. */

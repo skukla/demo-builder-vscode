@@ -15,11 +15,12 @@ import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/servi
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 const mockLogger: Logger = createMockLogger();
 
 function makeCtx(): OnOpenCheckContext {
-    return { project: { path: '/proj' } as Project, logger: mockLogger, post: jest.fn() };
+    return { project: createMockProject({ path: '/proj' }), logger: mockLogger, post: jest.fn() };
 }
 
 const okChecks = [

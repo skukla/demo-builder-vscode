@@ -39,6 +39,7 @@ import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 function makeContext(project: Project | undefined): HandlerContext {
     return {
@@ -49,7 +50,7 @@ function makeContext(project: Project | undefined): HandlerContext {
     } as unknown as HandlerContext;
 }
 
-const PROJECT = { name: 'My Demo', path: '/projects/my-demo' } as unknown as Project;
+const PROJECT = createMockProject({ name: 'My Demo', path: '/projects/my-demo' });
 
 describe('handleExportProjectSettings', () => {
     beforeEach(() => jest.clearAllMocks());

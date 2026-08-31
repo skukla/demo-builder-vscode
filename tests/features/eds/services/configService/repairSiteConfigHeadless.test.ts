@@ -17,6 +17,7 @@ import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 const mockRegisterSiteConfig = jest.fn();
 const mockPinSiteAdmin = jest.fn();
@@ -174,7 +175,7 @@ describe('repairSiteConfig', () => {
     });
 
     it('refuses a project with no EDS storefront', async () => {
-        const result = await run({ project: { name: 'bare' } as unknown as Project });
+        const result = await run({ project: createMockProject({ name: 'bare' }) });
 
         expect(result.status).toBe('invalid');
         expect(mockRegisterSiteConfig).not.toHaveBeenCalled();
