@@ -147,9 +147,16 @@ what?" had no answer any command could reach. The real reason — field feedback
 was one sentence buried mid-file. A status that claims a blocker must produce
 one.
 
-`--check` fails if a kind, area or value is unknown, or if a `parent` or `needs`
-id does not resolve. **A dangling reference is the failure mode that hid three
-items**; the check exists for exactly that.
+`--check` fails if a kind, area or value is unknown, or if a `parent`, `needs`,
+`superseded-by` or body `[[PL-12]]` link does not resolve. **A dangling reference is
+the failure mode that hid three items**; the check exists for exactly that.
+
+Body links were added 2026-08-30, after `check` was caught printing *"all references
+resolve"* while a planted `[[PL-999]]` passed — the message was true of two
+frontmatter fields and of nothing a reader writes in prose. The corpus was clean when
+the check landed (27 links, 0 dead), which is the moment to add one rather than the
+moment to skip it. Only id-SHAPED targets are validated: `[[some-note]]` stays a free
+link, because a link to something not yet written marks work rather than an error.
 
 ## The five kinds, and the one that is easy to miss
 

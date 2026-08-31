@@ -101,7 +101,11 @@ export function loadItems() {
         if (!parts) { problems.push(`${rel}: no frontmatter`); continue; }
         const fm = parseFrontmatter(parts[0]);
         const title = (text.split('\n').find((l) => l.startsWith('# ')) || '# (untitled)').slice(2);
-        items.push({ ...fm, rel, path, title });
+        // `body` carries the prose after the frontmatter, so validation can reach the
+        // `[[PL-12]]` links items use to point at each other. Without it the wiki-link
+        // check below is inert — which it was when first written, and which the plant
+        // caught rather than the reading.
+        items.push({ ...fm, rel, path, title, body: parts[1] });
     }
     return { items, problems };
 }
@@ -144,6 +148,19 @@ export function validate(items, problems = []) {
             p.push(`${i.rel}: superseded-by "${i['superseded-by']}" does not exist`);
         }
         if (i.needs.includes(i.id)) p.push(`${i.rel}: needs itself`);
+        // Body `[[PL-12]]` links, which items use to point at each other in prose.
+        // These went UNCHECKED while `check` printed "all references resolve" — a
+        // message true of two frontmatter fields and of nothing a reader writes.
+        // Found 2026-08-30 by planting `[[PL-999]]` and watching it pass. The corpus
+        // was clean at the time (27 links, 0 dead), which is the moment to add a
+        // check rather than the moment to skip it.
+        //
+        // Only id-SHAPED targets are validated. `[[some-note]]` is a free link, and
+        // the memory corpus deliberately allows one that does not exist yet — it
+        // marks something worth writing, not an error.
+        for (const m of (i.body ?? '').matchAll(/\[\[([A-Z]+-\d+[a-z]?)\]\]/g)) {
+            if (!ids.has(m[1])) p.push(`${i.rel}: [[${m[1]}]] does not exist`);
+        }
     }
     // RULE: an epic is not done while a child is unfinished. This is the AB-1
     // failure made impossible — its spine shipped, the file moved to complete/, and
