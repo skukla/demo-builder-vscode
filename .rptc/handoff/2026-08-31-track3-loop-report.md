@@ -270,6 +270,44 @@ case on the worklist is done. The remaining ones are bigger (four to seven files
 and share a root I have not fixed — a function signature that asks for three entire
 service classes when it uses about a dozen methods of them.
 
+## Four more families — and the pattern finally has a counter-example
+
+**In one paragraph:** four more sets of test files that repeated each other's setup, now
+sharing it. Three followed the pattern from earlier tonight — most of the "shared" setup
+was doing nothing and got deleted rather than moved. One did not, and that is the useful
+part: it was genuine duplication of the kind sharing was invented for, which means the
+earlier finding is a common case rather than a rule.
+
+**The counter-example.** Four files testing the same text-generating function each
+carried an identical 74-line block of test data — two project shapes, a component, and
+the list every test passes in. Nothing was dead; four suites simply needed the same
+input. That is what extraction is for, and it saved 293 lines.
+
+**Everything else was the usual story.** Two more families gave up seventeen and eight
+dead mock declarations respectively. One of them repeated the exact pattern I found
+earlier in the night, at seven times the scale: seven files each disabled a service
+locator, and a line in each then wired their fake into it. The code under test takes that
+fake directly as a constructor argument, so the wiring did nothing — and once it went,
+the seven mocks had no caller either. Seven declarations and one line, propping each
+other up, invisible to any probe that removes one thing at a time.
+
+**A rule I learned by breaking it.** Moving a mock into a shared file failed all 23 tests
+in one family. The reason is a hard constraint, not a preference: the mechanism that
+makes mocks work only reaches the imports of the file the mock is written in. If the
+*test* file imports the thing being faked — rather than only the code under test — the
+mock has to stay in that test file. It is now written into both harnesses it applies to,
+so nobody re-discovers it the way I did.
+
+**A duplicate that only became visible by fixing something else.** Sharing one family's
+fixture meant exporting it, and the moment it was exported the repo's duplicate-name
+check failed: a second thing with the same name existed in an unrelated family, with a
+different shape. Both had been local, so nothing could see the clash. Resolved by
+deleting the weaker one — it was untyped, which had switched the compiler off for it —
+and pointing its eighteen uses at the standard fixture.
+
+Counts: families with unshared setup are down from 74 to 65. Every target on the list is
+now done except the two hardest, which share a root I have not fixed.
+
 ## Your decisions in the morning
 
 - Merge `loop/2026-08-30-track3-convergence` into develop?
