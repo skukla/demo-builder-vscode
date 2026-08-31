@@ -13,6 +13,7 @@ import {
     byomRegistrationFailureMessage,
 } from '../../handlers/edsHelpers';
 import { logConfigAccessState } from '../configService/configAccessRecovery';
+import type { HelixCodePreview } from '../helix/helixCapabilities';
 import { buildSiteConfigParams, ConfigurationService } from '../configService/configurationService';
 import { lostGrantsMessage } from '../configService/lostGrantsMessage';
 import {
@@ -25,11 +26,6 @@ import { HelixService } from '../helix/helixService';
 import { DaLiveAuthError } from '../types';
 import type { EdsResetParams } from './edsResetParams';
 import type { Logger } from '@/types/logger';
-
-/** The one Helix call this step makes, out of a class with dozens. */
-export interface ConfigStepHelix {
-    previewCode(org: string, site: string, path?: string, branch?: string): Promise<void>;
-}
 
 /**
  * Service seam. Defaults to the two services this step builds from the credentials
@@ -52,7 +48,7 @@ export interface ConfigStepServices {
         logger: Logger,
         githubTokenService: GitHubTokenService,
         tokenProvider: TokenProvider
-    ) => ConfigStepHelix;
+    ) => HelixCodePreview;
     configService?: RegistrarConfigService;
 }
 

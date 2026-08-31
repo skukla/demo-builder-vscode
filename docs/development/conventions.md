@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **75** conventions, **60** enforced
+- **76** conventions, **60** enforced
 - **22** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -120,6 +120,7 @@ it means the rule rests on somebody noticing.
 | The three tiers, and which applies. **Not enforced** — which tier fits is a judgement about what you are testing. | [ADR](../architecture/adr/016-test-strategy.md) |  | **—** |
 | A split test family shares one `.testUtils` file, which owns the mocks and the subject import. enforced by `tests/sop/test-family-setup.test.ts`. |  | [procedure](../../.claude/skills/webview-test-authoring/SKILL.md) | `test-family-setup.test.ts` |
 | When you change a test's structure, diff the set of things it asserts before and after — and prove shared setup is load-bearing by breaking it on purpose and checking the right suites fail. |  |  | **—** |
+| Before designing a way to hand a mocked collaborator in, delete the mock and run the suite. If it still passes, the mock was the whole problem. |  |  | **—** |
 | No test file over 750 lines. enforced by `npm run validate:test-file-sizes`. |  |  | *named in prose* |
 | A test file lives at the path mirroring the source file it covers. |  |  | `mirror-placement.test.ts` |
 | A fixture builder name has exactly one definition. |  |  | `builder-uniqueness.test.ts` |

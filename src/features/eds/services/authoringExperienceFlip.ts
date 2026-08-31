@@ -17,6 +17,7 @@
  */
 
 import * as vscode from 'vscode';
+import type { HelixCodePreview } from './helix/helixCapabilities';
 import { applyDaLiveOrgConfigSettings, getDaLiveAuthService } from '../handlers/edsHelpers';
 import {
     DaLiveContentOperations,
@@ -66,12 +67,7 @@ export interface AuthoringExperienceFlipDeps {
      * module (ADR-016's wall), which also meant it could not say WHICH service the
      * publish went through.
      */
-    helixService?: AuthoringFlipHelix;
-}
-
-/** The one Helix call the Quick Edit vendoring makes, out of a class with dozens. */
-export interface AuthoringFlipHelix {
-    previewCode(org: string, site: string, path?: string, branch?: string): Promise<void>;
+    helixService?: HelixCodePreview;
 }
 
 /**

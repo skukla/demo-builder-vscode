@@ -18,6 +18,7 @@
  */
 
 import { getGitHubServices, tryCreateDaLiveTokenProvider } from '@/features/eds/handlers/edsHelpers';
+import type { HelixCodePreview } from '@/features/eds/services/helix/helixCapabilities';
 import { buildUndeterminedAppCheckError } from '@/features/eds/services/appInstallationResolver';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
@@ -101,11 +102,6 @@ interface CheckGitHubAppResponse {
  * @param logger - Logger instance
  * @returns True if Helix accepted the request
  */
-/** The one Helix call {@link triggerCodeSync} makes, out of a class with dozens. */
-export interface CheckGitHubAppHelix {
-    previewCode(org: string, site: string, path?: string, branch?: string): Promise<void>;
-}
-
 /** The two GitHubAppService calls this handler makes. */
 export interface CheckGitHubAppService {
     isAppInstalled(
@@ -135,7 +131,7 @@ export interface CheckGitHubAppService {
  * optional parameter — extra optional parameters stay assignable to `MessageHandler`.
  */
 export interface CheckGitHubAppServices {
-    makeHelix?: (logger: Logger, tokenService: GitHubTokenService) => CheckGitHubAppHelix;
+    makeHelix?: (logger: Logger, tokenService: GitHubTokenService) => HelixCodePreview;
     makeGitHubAppService?: (
         tokenService: GitHubTokenService,
         logger: Logger,
@@ -148,7 +144,7 @@ async function triggerCodeSync(
     repo: string,
     tokenService: GitHubTokenService,
     logger: Logger,
-    makeHelix: (l: Logger, gh: GitHubTokenService) => CheckGitHubAppHelix = (l, gh) =>
+    makeHelix: (l: Logger, gh: GitHubTokenService) => HelixCodePreview = (l, gh) =>
         new HelixService(l, gh),
 ): Promise<boolean> {
     logger.info(`[GitHub App Check] Triggering code sync for ${owner}/${repo}`);

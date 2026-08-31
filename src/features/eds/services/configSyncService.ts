@@ -11,6 +11,7 @@
  */
 
 import { promises as fsPromises } from 'fs';
+import type { HelixCodePreview } from './helix/helixCapabilities';
 import * as path from 'path';
 import type * as vscode from 'vscode';
 import { GitHubFileOperations } from './github/githubFileOperations';
@@ -57,12 +58,7 @@ export interface ConfigSyncParams {
      * function calls, so a test hands in one function rather than a stand-in for
      * the whole class.
      */
-    makeHelix?: (logger: Logger, githubTokenService: GitHubTokenService) => ConfigSyncHelix;
-}
-
-/** The one Helix call {@link syncConfigToRemote} makes, out of a class with dozens. */
-export interface ConfigSyncHelix {
-    previewCode(org: string, site: string, path?: string, branch?: string): Promise<void>;
+    makeHelix?: (logger: Logger, githubTokenService: GitHubTokenService) => HelixCodePreview;
 }
 
 /**
