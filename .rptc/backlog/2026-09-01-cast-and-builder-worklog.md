@@ -291,3 +291,8 @@ conversion, which the enforcer requires anyway.
 - 2026-09-01  refactor(app-builder): the runner needs two methods, so it now asks for two (`d21372ae2`)
 - 2026-09-01  test(dashboard): delete a hand-written context type, and 45 casts go with it (`8130c1fe0`)
 - 2026-09-01  test(auth): remove one `as any` and the compiler finds an untested failure path (`4b089462b`)
+- 2026-09-01  fix(helpers): the canonical Project fixture invented three fields, and its own cast hid them (`eebcd28ac`)
+- 2026-09-01  test(project): the Project sweep, and the warning about it was overstated (`105cd2925`)
+- 2026-09-01  test: sweep AuthenticationService and WebviewPanel — the safe types are done (`c6e78eb06`)
+- 2026-09-01  test: sweep Logger and StateManager — and one mistake the suite caught, not the compiler (`cb5375a2a`)
+- 2026-09-01  test: sweep by TYPE, not by file — SecretStorage and ExtensionContext (`887422cd1`)
