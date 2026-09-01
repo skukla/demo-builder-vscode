@@ -643,22 +643,24 @@ promising an agent that every response parses.
 > So the rule is really *return a structured handoff naming what will fix it*, and
 > `needsAuth` is one of its shapes.
 >
-> **A SYSTEMIC BREACH, found by the review on 2026-08-31 and not yet fixed.** Every
-> DESCRIPTOR-registered tool behind `runGuards` fails the rule, and it is one line that
-> does it. `runGuards` returns `{error, code: ErrorCode.AUTH_REQUIRED}` — typed on
-> purpose, so a UI can offer a sign-in button. `defaultShape` in `toolDescriptors.ts`
-> then renders any failure as the STRING `Error: <message> [CODE]`. So an agent calling
-> `add_console_apis` without Adobe auth receives prose to parse, never a handoff.
+> **A SYSTEMIC BREACH, found by the review on 2026-08-31 and FIXED on 2026-09-01.**
+> Every DESCRIPTOR-registered tool failed the rule, and one function did it.
+> `defaultShape` in `toolDescriptors.ts` rendered any failure as the string
+> `Error: <message> [CODE]` and discarded every other field on the response.
 >
-> `ErrorCode.AUTH_REQUIRED` appears **zero times** in `src/features/ai`. The webview
-> half translates it (`dataInstallerFailure.tsx` branches on it); the agent half does
-> not. The directly-registered tools — adobeTools, cloudResourceTools,
-> contentAuthoringTools, storefrontTools — all return proper handoffs, which is why the
-> gap is invisible unless you ask the question of every tool.
+> The sharp part: `dataInstallerHandlers` was already doing it right. Its headless
+> branch returns `{success:false, error, code, needsAuth:'adobe'}` deliberately, with a
+> docblock explaining that an agent must be TOLD rather than prompted. That marker never
+> reached the agent — the projector threw it away one layer up. The best auth handoff in
+> the repo was invisible, and `ErrorCode.AUTH_REQUIRED` appears nowhere in
+> `src/features/ai` to translate it.
 >
-> The fix is small and belongs to whoever picks it up: teach `defaultShape` (or the
-> registrar) to turn `AUTH_REQUIRED` / `AUTH_EXPIRED` into the `needsAuth` shape. That
-> is a behaviour change to every descriptor tool at once, so it is not made here.
+> `defaultShape` now returns a failure WHOLE when it carries more than `error`/`code`.
+> The terse string stays for the common case, because it is deliberate — this output is
+> billed as context tokens on every call. All three custom shapes delegate to it on
+> failure, so the one change reaches every descriptor tool. Guarded by a regression test
+> that asserts the `needsAuth` marker survives, and a control that a plain failure still
+> gets the terse string.
 >
 > Two more breach it differently: `promote_block_to_library` and
 > `remove_block_from_library` THROW when the DA.live token is missing. The message names

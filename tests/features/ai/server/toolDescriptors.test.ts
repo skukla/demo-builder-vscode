@@ -44,6 +44,36 @@ describe('defaultShape', () => {
         expect(defaultShape(res)).toBe('Error: nope [X1]');
     });
 
+    it('keeps a failure that carries structured data — the needsAuth handoff survives', () => {
+        /**
+         * The regression this guards is not hypothetical. `dataInstallerHandlers`
+         * returns exactly this shape from its headless branch, deliberately, so an
+         * AGENT is told to sign in rather than prompted with a modal. Until
+         * 2026-08-31 defaultShape rendered it as `Error: … [AUTH_REQUIRED]` and
+         * dropped the marker, so the best auth handoff in the repo never reached
+         * the agent that needed it.
+         */
+        const res = {
+            success: false,
+            error: 'Adobe sign-in required.',
+            code: 'AUTH_REQUIRED',
+            needsAuth: 'adobe',
+        } as unknown as HandlerResponse;
+        const out = JSON.parse(defaultShape(res));
+        expect(out).toEqual({
+            error: 'Adobe sign-in required.',
+            code: 'AUTH_REQUIRED',
+            needsAuth: 'adobe',
+        });
+    });
+
+    it('CONTROL: a plain failure still gets the terse string, not JSON', () => {
+        // The terse form is deliberate — this output is billed as context tokens
+        // on every call. Only a failure carrying MORE than error/code earns JSON.
+        const res = { success: false, error: 'plain' } as unknown as HandlerResponse;
+        expect(defaultShape(res)).toBe('Error: plain');
+    });
+
     it('never pretty-prints (no newlines)', () => {
         const res = { success: true, data: { a: { b: [1, 2, 3] } } } as HandlerResponse;
         expect(defaultShape(res)).not.toContain('\n');
