@@ -80,18 +80,49 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
         (vscode.window.createWebviewPanel as jest.Mock) = jest.fn().mockReturnValue(mockPanel);
 
         // Mock color theme
-        (vscode.window.activeColorTheme as any) = {
+        // `activeColorTheme` is readonly on the real API; the vscode module is
+        // mocked here, so overwriting it is how the theme is set. Naming the target
+        // keeps the assigned VALUE checked — under `as any` a misspelt `kind` would
+        // have been accepted silently.
+        (vscode.window as { activeColorTheme: vscode.ColorTheme }).activeColorTheme = {
             kind: vscode.ColorThemeKind.Dark,
         };
     });
 
-    describe('esbuild Bundle Loading', () => {
+    /**
+ * The five members this suite reaches on the command under test.
+ *
+ * `panel` is protected on `BaseWebviewCommand`; `getWebviewContent`,
+ * `getWebviewId`, `getWebviewTitle` and `getLoadingMessage` are the protected
+ * template methods a subclass implements. Exercising them directly is the point of
+ * this suite — it tests what the Configure command PUTS in the webview — so the
+ * reach is deliberate and TypeScript is right to object.
+ *
+ * Named once here instead of `as any` twenty-four times. `as any` disabled checking
+ * of the whole statement at every site; this names exactly what is being reached
+ * for, so a typo in one of the five still fails the build rather than silently
+ * creating a property and passing.
+ */
+interface WebviewCommandInternals {
+    panel: unknown;
+    getWebviewContent(): Promise<string>;
+    getWebviewId(): string;
+    getWebviewTitle(): string;
+    getLoadingMessage(): string;
+}
+
+/** Reach the protected surface of a webview command under test. */
+function internals(command: object): WebviewCommandInternals {
+    return command as unknown as WebviewCommandInternals;
+}
+
+describe('esbuild Bundle Loading', () => {
         it('should load the single feature bundle', async () => {
             // Set up panel so getWebviewContent can access it
-            (command as any).panel = mockPanel;
+            internals(command).panel = mockPanel;
 
             // Get the HTML content
-            const html = await (command as any).getWebviewContent();
+            const html = await internals(command).getWebviewContent();
 
             // Extract script src attributes
             const scriptRegex = /<script[^>]*src="([^"]+)"[^>]*>/g;
@@ -105,8 +136,8 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
 
         it('should include nonce attribute on all script tags', async () => {
             // Set up panel so getWebviewContent can access it
-            (command as any).panel = mockPanel;
-            const html = await (command as any).getWebviewContent();
+            internals(command).panel = mockPanel;
+            const html = await internals(command).getWebviewContent();
 
             // Extract script tags
             const scriptRegex = /<script[^>]*>/g;
@@ -123,8 +154,8 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
 
         it('should include CSP header with correct nonce', async () => {
             // Set up panel so getWebviewContent can access it
-            (command as any).panel = mockPanel;
-            const html = await (command as any).getWebviewContent();
+            internals(command).panel = mockPanel;
+            const html = await internals(command).getWebviewContent();
 
             // Verify CSP meta tag exists
             expect(html).toMatch(/<meta http-equiv="Content-Security-Policy"/);
@@ -135,8 +166,8 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
 
         it('should use asWebviewUri for the bundle and baseUri paths', async () => {
             // Set up panel so getWebviewContent can access it
-            (command as any).panel = mockPanel;
-            await (command as any).getWebviewContent();
+            internals(command).panel = mockPanel;
+            await internals(command).getWebviewContent();
 
             // asWebviewUri called twice: feature bundle + baseUri
             expect(mockWebview.asWebviewUri).toHaveBeenCalledTimes(2);
@@ -148,8 +179,8 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
 
         it('should include root div for React mounting', async () => {
             // Set up panel so getWebviewContent can access it
-            (command as any).panel = mockPanel;
-            const html = await (command as any).getWebviewContent();
+            internals(command).panel = mockPanel;
+            const html = await internals(command).getWebviewContent();
 
             // Verify root div exists
             expect(html).toContain('<div id="root"></div>');
@@ -157,16 +188,16 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
 
         it('should set correct document title', async () => {
             // Set up panel so getWebviewContent can access it
-            (command as any).panel = mockPanel;
-            const html = await (command as any).getWebviewContent();
+            internals(command).panel = mockPanel;
+            const html = await internals(command).getWebviewContent();
 
             expect(html).toContain('<title>Configure Project</title>');
         });
 
         it('should include proper CSP directives', async () => {
             // Set up panel so getWebviewContent can access it
-            (command as any).panel = mockPanel;
-            const html = await (command as any).getWebviewContent();
+            internals(command).panel = mockPanel;
+            const html = await internals(command).getWebviewContent();
 
             // Verify key CSP directives
             expect(html).toMatch(/default-src 'none'/);
@@ -179,17 +210,17 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
 
     describe('WebviewCommand Methods', () => {
         it('should return correct webview ID', () => {
-            const webviewId = (command as any).getWebviewId();
+            const webviewId = internals(command).getWebviewId();
             expect(webviewId).toBe('demoBuilder.configureProject');
         });
 
         it('should return correct webview title', () => {
-            const title = (command as any).getWebviewTitle();
+            const title = internals(command).getWebviewTitle();
             expect(title).toBe('Configure Project');
         });
 
         it('should return correct loading message', () => {
-            const loadingMessage = (command as any).getLoadingMessage();
+            const loadingMessage = internals(command).getLoadingMessage();
             expect(loadingMessage).toBe('Loading project configuration...');
         });
     });
@@ -197,8 +228,8 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
     describe('Nonce Generation', () => {
         it('should generate unique nonce for each webview creation', async () => {
             // Set up panel for first command
-            (command as any).panel = mockPanel;
-            const html1 = await (command as any).getWebviewContent();
+            internals(command).panel = mockPanel;
+            const html1 = await internals(command).getWebviewContent();
 
             // Create second command with its own panel
             const command2 = new ConfigureProjectWebviewCommand(
@@ -206,8 +237,8 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
                 mockStateManager as unknown as StateManager,
                 mockLogger
             );
-            (command2 as any).panel = mockPanel;
-            const html2 = await (command2 as any).getWebviewContent();
+            internals(command2).panel = mockPanel;
+            const html2 = await internals(command2).getWebviewContent();
 
             // Extract nonces
             const nonceRegex = /nonce="([^"]+)"/;
@@ -222,8 +253,8 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
 
         it('should use same nonce for all script tags in same webview', async () => {
             // Set up panel so getWebviewContent can access it
-            (command as any).panel = mockPanel;
-            const html = await (command as any).getWebviewContent();
+            internals(command).panel = mockPanel;
+            const html = await internals(command).getWebviewContent();
 
             // Extract all nonces
             const nonceRegex = /nonce="([^"]+)"/g;

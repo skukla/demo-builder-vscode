@@ -28,6 +28,7 @@ import {
     CONFIG_SERVICE_PROPAGATION_DELAYS_MS,
 } from '@/features/eds/services/configService/siteConfigRegistrar';
 import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
+import type { RegistrarConfigService } from '@/features/eds/services/configService/siteConfigRegistrar';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -46,11 +47,24 @@ const siteParams = {
     contentSourceUrl: 'https://content.da.live/owner/repo/',
 };
 
-function service(registerSite: jest.Mock, updateSiteConfig = jest.fn()) {
-    return { registerSite, updateSiteConfig } as never;
+/**
+ * `RegistrarConfigService` is the two-method interface the registrar declares — the
+ * production side was already narrow. The `as never` here was gratuitous, and it
+ * cost 23 checks: with the return type erased, the helper below had to take `never`
+ * too, so nothing about either call was verified against the real signatures.
+ */
+function service(
+    registerSite: jest.Mock,
+    updateSiteConfig = jest.fn()
+): RegistrarConfigService {
+    return { registerSite, updateSiteConfig };
 }
 
-const run = (svc: never, retryOn403 = false, onProgress?: (m: string) => void | Promise<void>) =>
+const run = (
+    svc: RegistrarConfigService,
+    retryOn403 = false,
+    onProgress?: (m: string) => void | Promise<void>
+) =>
     registerSiteConfig({
         configurationService: svc,
         siteParams,

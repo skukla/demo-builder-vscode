@@ -50,6 +50,10 @@ import { deployMeshHeadless } from '@/features/mesh/services/deployMeshHeadless'
 import type { AppBuilderComponentState, Project, ComponentInstance } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import type { DeployMeshHeadlessDeps } from '@/features/mesh/services/deployMeshHeadless';
 
 const mockPreflight = ensureProjectAdobeContext as jest.Mock;
 const mockDeploy = deployMeshComponent as jest.MockedFunction<typeof deployMeshComponent>;
@@ -86,15 +90,22 @@ function project(withMesh = true): Project {
  * through this bag now, so the suite mocks the service registry NOT AT ALL.
  * `currentAuthManager` is what the old registry stub used to return.
  */
-let currentAuthManager: unknown;
+/**
+ * Typed `unknown` until 2026-09-01, which is why every member below needed
+ * `as never`: one untyped variable in an object literal erases the whole argument
+ * at the call site, and `deployMeshHeadless` then accepted anything. It holds the
+ * canonical `AuthenticationService` fake now, so an override naming a method the
+ * real service does not have fails `typecheck:tests`.
+ */
+let currentAuthManager: ReturnType<typeof createMockAuthenticationService>;
 
-function deps(overrides: Record<string, unknown> = {}) {
+function deps(overrides: Partial<DeployMeshHeadlessDeps> = {}): DeployMeshHeadlessDeps {
     return {
         project: project(),
-        authManager: currentAuthManager as never,
+        authManager: currentAuthManager,
         commandManager: createMockCommandExecutor(),
-        secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn() } as never,
-        stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) } as never,
+        secrets: createMockSecretStorage().secrets,
+        stateManager: createMockStateManager(),
         logger: createMockLogger(),
         extensionPath: '/ext',
         ...overrides,
@@ -108,7 +119,7 @@ describe('deployMeshHeadless', () => {
         // test's instance (and its memoised registry) leaks into every later one.
         resetComponentRegistryManager();
         mockRegenerateComponentEnvFile.mockResolvedValue(undefined);
-        const authManager = {
+        currentAuthManager = createMockAuthenticationService({
             testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
             // Enriches the org target with code/name when the id matches
             // (buildOrgTargetFromProjectAdobe).
@@ -117,8 +128,7 @@ describe('deployMeshHeadless', () => {
                 code: 'ORG@AdobeOrg',
                 name: 'Adobe Demo System',
             })),
-        };
-        currentAuthManager = authManager;
+        });
         mockPreflight.mockResolvedValue({ ready: true });
         mockFetchInfo.mockResolvedValue({ meshId: 'existing-1', endpoint: 'https://old/graphql' });
         mockDeploy.mockResolvedValue({
@@ -251,7 +261,7 @@ describe('deployMeshHeadless', () => {
             'existing-1'
         );
         expect(mockUpdateMeshState).toHaveBeenCalledWith(expect.any(Object), 'https://new/graphql');
-        expect((d.stateManager as { saveProject: jest.Mock }).saveProject).toHaveBeenCalled();
+        expect(d.stateManager.saveProject).toHaveBeenCalled();
         expect(result).toEqual({
             success: true,
             meshId: 'mesh-1',
@@ -292,11 +302,11 @@ describe('deployMeshHeadless', () => {
             projectRequiresAppBuilder,
         } = require('@/features/components/services/projectAppBuilderPredicate');
         projectRequiresAppBuilder.mockReturnValue(true);
-        currentAuthManager = {
+        currentAuthManager = createMockAuthenticationService({
             testDeveloperPermissions: jest
                 .fn()
                 .mockResolvedValue({ hasPermissions: false, error: 'no role' }),
-        };
+        });
 
         const result = await deployMeshHeadless(deps());
         expect(result.success).toBe(false);
