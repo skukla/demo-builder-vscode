@@ -42,7 +42,10 @@ import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
-import type { ComponentManager } from '@/features/components/services/componentManager';
+import type {
+    ComponentInstallOptions,
+    ComponentInstallResult,
+} from '@/features/components/services/types';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { Project , AppBuilderComponentState } from '@/types/base';
@@ -86,8 +89,30 @@ interface RepublishInput {
  * Injected collaborators. Production wires the real implementations
  * (see {@link buildDefaultRunnerDeps}); unit tests pass mocks.
  */
+/**
+ * What this runner needs from the component manager: TWO methods.
+ *
+ * The dependency named the concrete `ComponentManager` class until 2026-09-01, and
+ * the class has sixteen members — so every caller had to supply, or pretend to
+ * supply, fourteen it never touches. In the suite that meant 29 `as never` casts on
+ * the deps argument, which is the position where a wrong shape is a silenced type
+ * error rather than a style choice.
+ *
+ * This is the same correction already made for `StateManager`: a consumer depends on
+ * the INTERFACE it uses, not on the class that happens to implement it (ADR-015).
+ * `ComponentManager` satisfies this structurally, so production wiring is unchanged.
+ */
+export interface ComponentInstaller {
+    installComponent(
+        project: Project,
+        componentDef: TransformedComponentDefinition,
+        options?: ComponentInstallOptions,
+    ): Promise<ComponentInstallResult>;
+    removeComponent(project: Project, componentId: string, deleteFiles?: boolean): Promise<void>;
+}
+
 export interface AppBuilderComponentRunnerDeps {
-    componentManager: ComponentManager;
+    componentManager: ComponentInstaller;
     commandManager: CommandExecutor;
     logger: Logger;
     saveProject: (project: Project) => Promise<void>;

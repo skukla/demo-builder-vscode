@@ -71,7 +71,7 @@ describe('addAppBuilderComponent (mesh)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(result.success).toBe(true);
         expect(deps.subscribeRequiredApis).toHaveBeenCalledTimes(1);
@@ -99,7 +99,7 @@ describe('addAppBuilderComponent (mesh)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(deps.refreshAiBundle).toHaveBeenCalledTimes(1);
         const refreshed = deps.refreshAiBundle.mock.calls[0][0] as Project;
@@ -120,7 +120,7 @@ describe('addAppBuilderComponent (mesh)', () => {
             }),
         });
 
-        await addAppBuilderComponent(createProject(), MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(createProject(), MESH_ENTRY, deps);
 
         // Two saves since the in-flight 'deploying' marker (2026-08-27):
         // marker save -> outcome save -> bundle refresh. The pin's point is
@@ -132,7 +132,7 @@ describe('addAppBuilderComponent (mesh)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(deps.deployApp).not.toHaveBeenCalled();
     });
@@ -141,7 +141,7 @@ describe('addAppBuilderComponent (mesh)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(mockWithOrgContext).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -161,7 +161,7 @@ describe('addAppBuilderComponent (mesh)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(deps.republishStorefront).toHaveBeenCalledTimes(1);
         const republishArg = deps.republishStorefront.mock.calls[0][0] as { project: Project };
@@ -174,7 +174,7 @@ describe('addAppBuilderComponent (mesh)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         const subscribedAppBuilderComponents = deps.subscribeRequiredApis.mock
             .calls[0][0] as AppBuilderComponentCatalogEntry[];
@@ -193,7 +193,7 @@ describe('addAppBuilderComponent (integration)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         expect(result.success).toBe(true);
         expect(deps.deployApp).toHaveBeenCalledTimes(1);
@@ -213,7 +213,7 @@ describe('addAppBuilderComponent (integration)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         // The app deploy tail is handed the resolved ow.package distinct from defaults.
         const owPackage = deps.deployApp.mock.calls[0][1] as string;
@@ -226,7 +226,7 @@ describe('addAppBuilderComponent (integration)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         expect(deps.republishStorefront).not.toHaveBeenCalled();
     });
@@ -236,7 +236,7 @@ describe('addAppBuilderComponent (integration)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/not a standalone App Builder app/);
@@ -250,7 +250,7 @@ describe('addAppBuilderComponent (integration)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/not a standalone App Builder app.*extension-shaped/);
@@ -263,7 +263,7 @@ describe('addAppBuilderComponent (integration)', () => {
         const deps = createDeps();
         const extensionEntry = { ...INTEGRATION_ENTRY, layout: 'extension' as const };
 
-        const result = await addAppBuilderComponent(project, extensionEntry, deps as never);
+        const result = await addAppBuilderComponent(project, extensionEntry, deps);
 
         expect(result.success).toBe(true);
         expect(deps.deployApp).toHaveBeenCalledTimes(1);
@@ -275,7 +275,7 @@ describe('addAppBuilderComponent (integration)', () => {
         const deps = createDeps();
         const extensionEntry = { ...INTEGRATION_ENTRY, layout: 'extension' as const };
 
-        const result = await addAppBuilderComponent(project, extensionEntry, deps as never);
+        const result = await addAppBuilderComponent(project, extensionEntry, deps);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/not an extension-layout App Builder app.*standalone-shaped/);
@@ -287,7 +287,7 @@ describe('addAppBuilderComponent (integration)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(result.success).toBe(true);
         expect(deps.deployMesh).toHaveBeenCalledTimes(1);
@@ -305,7 +305,7 @@ describe('addAppBuilderComponent (integration)', () => {
             ],
         };
 
-        const result = await addAppBuilderComponent(project, consumer, deps as never);
+        const result = await addAppBuilderComponent(project, consumer, deps);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/provider|mesh/i);
@@ -324,7 +324,7 @@ describe('addAppBuilderComponent partial-failure', () => {
             deployMesh: jest.fn().mockResolvedValue({ success: false, error: 'deploy boom' }),
         });
 
-        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/deploy boom/);
@@ -366,7 +366,7 @@ describe('addAppBuilderComponent partial-failure', () => {
         });
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
         // The newcomer under its OWN key...
@@ -399,8 +399,10 @@ describe('addAppBuilderComponent partial-failure', () => {
 
         await addAppBuilderComponent(project, MESH_ENTRY, {
             ...deps,
-            onProgress: (m: string) => seen.push(m),
-        } as never);
+            onProgress: (m: string) => {
+                seen.push(m);
+            },
+        });
 
         // The env-file write reports its own step ahead of the tail's — it runs
         // before the deploy and is otherwise silent time.
@@ -432,8 +434,10 @@ describe('addAppBuilderComponent partial-failure', () => {
 
         await addAppBuilderComponent(project, INTEGRATION_ENTRY, {
             ...deps,
-            onProgress: (m: string) => seen.push(m),
-        } as never);
+            onProgress: (m: string) => {
+                seen.push(m);
+            },
+        });
 
         expect(seen).toEqual(['Subscribing Adobe APIs…', 'Building…']);
     });
@@ -466,7 +470,7 @@ describe('addAppBuilderComponent partial-failure', () => {
         });
         const deps = createDeps();
 
-        await deployAppBuilderComponent(project, 'erp-bridge', deps as never);
+        await deployAppBuilderComponent(project, 'erp-bridge', deps);
 
         const saved = deps.saveProject.mock.calls.at(-1)![0] as Project;
         const entry = saved.appBuilderComponents?.['erp-bridge'];
@@ -483,7 +487,7 @@ describe('addAppBuilderComponent partial-failure', () => {
                 .mockResolvedValue({ success: false, error: 'runtime rejected it' }),
         });
 
-        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
         expect(persisted.appBuilderComponents?.[INTEGRATION_ENTRY.id]?.error).toMatch(
@@ -500,7 +504,7 @@ describe('addAppBuilderComponent partial-failure', () => {
         });
         const deps = createDeps({ componentManager });
 
-        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(result.success).toBe(false);
         expect(deps.deployMesh).not.toHaveBeenCalled();
@@ -541,7 +545,7 @@ describe('deployAppBuilderComponent (redeploy)', () => {
         const project = meshDeployedProject();
         const deps = createDeps();
 
-        const result = await deployAppBuilderComponent(project, 'commerce-mesh', deps as never);
+        const result = await deployAppBuilderComponent(project, 'commerce-mesh', deps);
 
         expect(result.success).toBe(true);
         expect(deps.deployMesh).toHaveBeenCalledTimes(1);
@@ -554,7 +558,7 @@ describe('deployAppBuilderComponent (redeploy)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        const result = await deployAppBuilderComponent(project, 'nope', deps as never);
+        const result = await deployAppBuilderComponent(project, 'nope', deps);
 
         expect(result.success).toBe(false);
         expect(deps.deployMesh).not.toHaveBeenCalled();
@@ -582,7 +586,7 @@ describe('deployAppBuilderComponent (redeploy)', () => {
         });
         const deps = createDeps();
 
-        await deployAppBuilderComponent(project, 'erp-bridge', deps as never);
+        await deployAppBuilderComponent(project, 'erp-bridge', deps);
 
         expect(deps.deployApp).toHaveBeenCalledTimes(1);
         expect(deps.deployMesh).not.toHaveBeenCalled();
@@ -606,7 +610,7 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
             return { success: true, data: { url: 'https://app' } };
         });
 
-        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         // A poller reading mid-run sees deploying, not a stale prior outcome.
         expect(statusDuringDeploy).toBe('deploying');
@@ -644,7 +648,7 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
             return { success: true, data: { url: 'https://app' } };
         });
 
-        await deployAppBuilderComponent(project, INTEGRATION_ENTRY.id, deps as never);
+        await deployAppBuilderComponent(project, INTEGRATION_ENTRY.id, deps);
 
         expect(statusDuringDeploy).toBe('deploying');
         expect(errorDuringDeploy).toBeUndefined();
@@ -678,7 +682,7 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
         const result = await deployAppBuilderComponent(
             project,
             INTEGRATION_ENTRY.id,
-            deps as never
+            deps
         );
 
         expect(result.success).toBe(false);
@@ -692,7 +696,7 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
         const deps = createDeps();
         const entry = { ...INTEGRATION_ENTRY, nodeVersion: '24' };
 
-        await addAppBuilderComponent(project, entry, deps as never);
+        await addAppBuilderComponent(project, entry, deps);
 
         expect(deps.deployApp).toHaveBeenCalledWith(
             expect.any(String),
@@ -710,7 +714,7 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
         });
         const entry = { ...INTEGRATION_ENTRY, nodeVersion: '24' };
 
-        const result = await addAppBuilderComponent(project, entry, deps as never);
+        const result = await addAppBuilderComponent(project, entry, deps);
 
         expect(result).toEqual({ success: false, error: 'Node 24 could not be installed' });
         expect(deps.componentManager.installComponent).not.toHaveBeenCalled();
