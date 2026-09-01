@@ -21,11 +21,11 @@ import {
     overlayUrl,
     repoName,
     repoOwner,
-    type MockGithub,
+    type GithubFake,
 } from './pdp404HandlerPublisher.testUtils';
 
 describe('installSmart404Handler — eager redirect vendoring', () => {
-    let mockGithub: MockGithub;
+    let mockGithub: GithubFake;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -39,7 +39,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         // redirect. With it, the redirect happens synchronously
         // before any 404 paint.
         await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -98,7 +98,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         });
 
         await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -140,7 +140,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         });
 
         await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -189,7 +189,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         });
 
         await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -214,7 +214,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         });
 
         const result = await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -243,7 +243,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         });
 
         const result = await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -276,7 +276,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         });
 
         await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -303,7 +303,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         });
 
         const result = await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -324,7 +324,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         });
 
         const result = await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,

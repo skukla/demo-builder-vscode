@@ -11,9 +11,9 @@
  */
 
 export const repoOwner = 'skukla';
-import type { MockGithub } from '../../../../helpers/githubFake';
+import type { GithubFake } from '../../../../helpers/githubFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
-export type { MockGithub } from '../../../../helpers/githubFake';
+export type { GithubFake, MockGithub } from '../../../../helpers/githubFake';
 export const repoName = 'citisignal-b2b';
 export const daLiveOrg = 'skukla';
 export const daLiveSite = 'citisignal-b2b';
@@ -25,7 +25,7 @@ export const overlayUrl =
  * `<script>`; anything else resolves as an existing `delayed.js`. Suites that
  * exercise the "no nonce" / "file missing" paths override per-test.
  */
-export function makePdp404Github(): MockGithub {
+export function makePdp404Github(): GithubFake {
     return {
         getFileContent: jest.fn().mockImplementation((_o, _r, path) => {
             if (path === 'head.html') {
@@ -51,7 +51,7 @@ export function makePdp404Github(): MockGithub {
             sha: 'new-file-sha',
             commitSha: 'commit-sha',
         }),
-    };
+    } as GithubFake;
 }
 
 export const mockLogger = createMockLogger();
