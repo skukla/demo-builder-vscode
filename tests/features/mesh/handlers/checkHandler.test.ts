@@ -10,6 +10,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as _vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 // withOrgContext records the target then runs the callback (no global mutation).
 // buildOrgTargetFromProjectAdobe is pure — use the real implementation.
 const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
@@ -68,11 +69,8 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                 },
             },
             logger: createMockLogger(),
-            debugLogger: {
-                trace: jest.fn(),
-                debug: jest.fn(),
-            },
-            stateManager: {
+            debugLogger: createMockLogger(),
+            stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue({
                     adobe: {
                         organization: 'test-org-id',
@@ -80,7 +78,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                         workspaceId: 'test-workspace-id',
                     },
                 }),
-            },
+            }),
             authManager: {},
             sharedState: {
                 apiServicesConfig: {

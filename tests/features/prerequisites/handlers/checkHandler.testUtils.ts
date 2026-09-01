@@ -100,9 +100,7 @@ export function createCheckHandlerContext(
             log: jest.fn(),
         },
         logger: createMockLogger(),
-        debugLogger: {
-            debug: jest.fn(),
-        },
+        debugLogger: createMockLogger(),
         context: createMockExtensionContext(),
         panel: undefined,
         stateManager: {},

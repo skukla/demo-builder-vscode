@@ -220,10 +220,7 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
         } as any,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         logger: createMockLogger(),
-        debugLogger: {
-            debug: jest.fn(),
-            trace: jest.fn(),
-        } as any,
+        debugLogger: createMockLogger() as any,
         stepLogger: {
             log: jest.fn(),
         } as any,
