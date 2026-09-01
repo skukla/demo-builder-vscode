@@ -38,7 +38,7 @@ export interface TestSetup {
 export function createProjectCreationContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
     return {
         sendMessage: jest.fn().mockResolvedValue(undefined),
-        logger: createMockLogger() as any,
+        logger: createMockLogger(),
         context: {
             globalState: {
                 get: jest.fn().mockReturnValue(false),

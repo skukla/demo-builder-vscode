@@ -142,7 +142,7 @@ describe('Executor - App Builder Component Loading', () => {
 
     const createMockContext = (): Partial<HandlerContext> => ({
         context: { extensionPath: '/test/extension' } as any,
-        logger: createMockLogger() as any,
+        logger: createMockLogger(),
         stateManager: {
             getCurrentProject: jest.fn().mockResolvedValue(null),
             saveProject: jest.fn().mockResolvedValue(undefined),

@@ -79,7 +79,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(null),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        }) as any,
+        }),
         sharedState: { isAuthenticating: false },
         sendMessage: jest.fn(),
         panel: { visible: false, dispose: jest.fn() } as any,

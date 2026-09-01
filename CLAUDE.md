@@ -434,7 +434,7 @@ read.
 `demoBuilder.daLive.defaultOrg`" in the present tense long after that setting was DROPPED
 (`6e14114b9`, when the DA.live org became a GitHub-namespace picker with no setting at
 all). A correction that names a second dead identifier is the same defect wearing the
-fix's clothes. Found 2026-08-31 by `tests/sop/doc-identifiers.test.ts`, which is the
+fix's clothes. Found 2026-08-31 by `tests/sop/cited-identifiers.test.ts`, which is the
 enforced version of this rule.
 
 **A comment describing what ANOTHER module does is a claim, not documentation.** Nothing

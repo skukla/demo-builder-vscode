@@ -23,8 +23,8 @@ export function createEnvFileGeneratorContext(
     overrides?: Partial<HandlerContext>
 ): jest.Mocked<HandlerContext> {
     return createMockHandlerContextBase({
-        logger: createMockLogger() as any,
-        debugLogger: createMockLogger() as any,
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         context: {
             extensionPath: '/test/extension/path',
             secrets: {} as any,

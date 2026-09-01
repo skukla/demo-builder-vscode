@@ -31,7 +31,7 @@ export function createComponentHandlerContext(): HandlerContext {
         context: {
             extensionPath: '/mock/extension/path',
         } as any,
-        logger: createMockLogger() as any,
+        logger: createMockLogger(),
         sharedState: {
             isAuthenticating: false,
         } as any,

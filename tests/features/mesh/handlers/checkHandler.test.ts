@@ -67,7 +67,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                     fsPath: '/tmp/test-storage',
                 },
             } as any,
-            logger: createMockLogger() as any,
+            logger: createMockLogger(),
             debugLogger: {
                 trace: jest.fn(),
                 debug: jest.fn(),

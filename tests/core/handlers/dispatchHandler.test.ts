@@ -14,8 +14,8 @@ import { createMockLogger } from '../../helpers/loggerFake';
 // Mock handler context factory
 function createMockContext(): HandlerContext {
     return {
-        logger: createMockLogger() as any,
-        debugLogger: createMockLogger() as any,
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         context: {} as any,
         panel: undefined,
         stateManager: {} as any,

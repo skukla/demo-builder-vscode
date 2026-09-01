@@ -67,7 +67,7 @@ describe('DeleteProjectCommand - Navigation', () => {
         } as any;
 
         // Mock logger
-        mockLogger = createMockLogger() as any;
+        mockLogger = createMockLogger();
 
         // Mock vscode.window.showInformationMessage for confirmation (returns 'Yes')
         (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Yes');

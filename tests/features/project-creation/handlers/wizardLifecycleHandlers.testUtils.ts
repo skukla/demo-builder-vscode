@@ -58,7 +58,7 @@ export function createWizardLifecycleContext() {
         stateManager: mockStateManager,
         communicationManager: mockCommunicationManager,
         extensionPath: '/mock/extension/path',
-        logger: createMockLogger() as any,
+        logger: createMockLogger(),
         debugLogger: {
             debug: jest.fn()
         } as any,

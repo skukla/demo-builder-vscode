@@ -964,7 +964,7 @@ not.
 > setting at all). A correction naming a second dead identifier is the original defect
 > wearing the fix's clothes.
 >
-> Enforced by `tests/sop/doc-identifiers.test.ts`: every `demoBuilder.*` key a
+> Enforced by `tests/sop/cited-identifiers.test.ts`: every `demoBuilder.*` key a
 > CURRENT-TENSE document names must exist in `package.json` or be registered in `src/`.
 > Historical genres (CHANGELOG, research, ADRs) are excluded, and a deliberate mention of
 > a removed identifier goes in the ledger with its reason.

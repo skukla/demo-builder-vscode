@@ -105,7 +105,7 @@ Clicking launches `claude --continue` in a VS Code integrated terminal rooted at
 >
 > This section documented both settings, a two-row surface table and an
 > "Extension surface" walkthrough for months after they stopped existing. It is what
-> `tests/sop/doc-identifiers.test.ts` now exists to catch.
+> `tests/sop/cited-identifiers.test.ts` now exists to catch.
 
 ### Recommended layout for AI workflows
 

@@ -54,7 +54,7 @@ describe('ResetAllCommand - Security Tests', () => {
         };
 
         // Mock Logger (must match Logger interface: info, warn, error, debug)
-        mockLogger = createMockLogger() as any;
+        mockLogger = createMockLogger();
 
         // Mock VS Code window methods
         (vscode.window.showWarningMessage as jest.Mock) = jest

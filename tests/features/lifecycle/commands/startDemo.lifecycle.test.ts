@@ -91,7 +91,7 @@ describe('StartDemoCommand - Lifecycle', () => {
         } as any;
 
         // Mock logger
-        mockLogger = createMockLogger() as any;
+        mockLogger = createMockLogger();
 
         // Mock vscode.window.withProgress to execute task immediately
         (vscode.window as any).withProgress = jest.fn().mockImplementation(

@@ -70,7 +70,7 @@ describe('OpenInClaudeCommand', () => {
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 logger as never
             );
 
@@ -88,7 +88,7 @@ describe('OpenInClaudeCommand', () => {
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 logger as never
             );
 
@@ -113,7 +113,7 @@ describe('OpenInClaudeCommand', () => {
             const logger = makeLogger();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 logger as never
             );
 

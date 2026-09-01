@@ -156,11 +156,11 @@ describe('Executor - EDS Standard Flow', () => {
     const createMockContext = (): Partial<HandlerContext> => {
         return {
             context: { extensionPath: '/test/extension' } as any,
-            logger: createMockLogger() as any,
+            logger: createMockLogger(),
             stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(null),
                 saveProject: jest.fn().mockResolvedValue(undefined),
-            }) as any,
+            }),
             sharedState: { isAuthenticating: false },
             sendMessage: jest.fn(),
             panel: { visible: false, dispose: jest.fn() } as any,

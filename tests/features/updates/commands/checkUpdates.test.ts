@@ -74,7 +74,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
         } as any;
 
         // Create mock logger
-        mockLogger = createMockLogger() as any;
+        mockLogger = createMockLogger();
 
         // Create mock progress reporter
         mockProgress = {

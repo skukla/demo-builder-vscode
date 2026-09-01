@@ -17,6 +17,11 @@ import {
     makeOpenInClaudeContext,
     makeOpenInClaudeProject,
 } from './openInClaude.testkit';
+// The CLASS, not the interface of the same name in `@/types/state`. This
+// consumer declares the class (private fields and all), which is exactly what
+// the `as never` here was hiding: the cast named nothing, so nothing said which
+// of the two StateManagers was meant.
+import type { StateManager } from '@/core/state/stateManager';
 
 /**
  * The preamble these tests expect. The command resolves it from the
@@ -40,7 +45,7 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 
@@ -53,7 +58,7 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 
@@ -70,7 +75,7 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 
@@ -92,7 +97,7 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 
@@ -108,7 +113,7 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: false });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 
@@ -123,7 +128,7 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 
@@ -141,7 +146,7 @@ describe('OpenInClaudeCommand', () => {
             const multiLine = 'line one\nline two';
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 
@@ -159,7 +164,7 @@ describe('OpenInClaudeCommand', () => {
             executeCommandMock.mockResolvedValue(undefined);
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 
@@ -175,7 +180,7 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: false });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 
@@ -188,7 +193,7 @@ describe('OpenInClaudeCommand', () => {
             const mocks = setupVscodeMocks({ hasClaudeConversation: true });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 
@@ -218,7 +223,7 @@ describe('OpenInClaudeCommand', () => {
             executeCommandMock.mockResolvedValue(undefined);
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 
@@ -245,7 +250,7 @@ describe('OpenInClaudeCommand', () => {
             const multiLine = 'line one\nline two\nline three';
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 
@@ -269,7 +274,7 @@ describe('OpenInClaudeCommand', () => {
             const globalState = makeGlobalState();
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(globalState),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 
@@ -304,7 +309,7 @@ describe('OpenInClaudeCommand', () => {
             executeCommandMock.mockResolvedValue(undefined);
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(makeOpenInClaudeProject()) as never,
+                makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
                 makeLogger()
             );
 

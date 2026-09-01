@@ -78,7 +78,7 @@ describe('CheckUpdatesCommand - Graduation Off-Ramp', () => {
             getAllProjects: jest.fn().mockResolvedValue([]),
             loadProjectFromPath: jest.fn().mockResolvedValue(null),
         } as any;
-        mockLogger = createMockLogger() as any;
+        mockLogger = createMockLogger();
 
         (vscode.window.withProgress as jest.Mock).mockImplementation((_o, cb) => cb({ report: jest.fn() }));
 

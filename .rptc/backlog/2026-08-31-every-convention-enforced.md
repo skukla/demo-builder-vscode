@@ -156,3 +156,4 @@ is the current reference for the four-control pattern.
 - 2026-08-31  test(sop): the naming convention is enforced — after finding it contradicted itself (`d6e95a6e4`)
 - 2026-08-31  test(sop): fake placement is enforced, and row 6 is not Lane A after all (`e110ff934`)
 - 2026-08-31  test(sop): the hook-stability footgun is half-enforced, and Lane A is three not five (`3c74453fc`)
+- 2026-08-31  test(sop): identifiers in current-tense docs must exist — and README was lying (`12d5dbb7a`)
