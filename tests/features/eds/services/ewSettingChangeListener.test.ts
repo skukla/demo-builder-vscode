@@ -13,10 +13,11 @@ import { registerEwSettingChangeListener } from '@/features/eds/services/ewSetti
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
-import type { StateManager } from '@/core/state/stateManager';
+import type { StateManager } from '@/types/state';
 import type { Project } from '@/types/base';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 
 const mockApplyAuthoringExperienceFlip = jest.fn().mockResolvedValue({
@@ -79,7 +80,7 @@ function makeProject(spec: ProjectSpec): Project {
 
 function buildStateManager(specs: ProjectSpec[]): StateManager {
     const projects = specs.map(makeProject);
-    return {
+    return createMockStateManager({
         getAllProjects: jest
             .fn()
             .mockResolvedValue(projects.map((p) => ({ name: p.name, path: p.path }))),
@@ -88,7 +89,7 @@ function buildStateManager(specs: ProjectSpec[]): StateManager {
             .mockImplementation((path: string) =>
                 Promise.resolve(projects.find((p) => p.path === path) ?? null)
             ),
-    } as unknown as StateManager;
+    });
 }
 
 describe('registerEwSettingChangeListener', () => {

@@ -37,7 +37,7 @@
  */
 
 import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
-import type { StateManager } from '@/core/state/stateManager';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 function fakeServer() {
      
@@ -55,7 +55,7 @@ function fakeServer() {
 }
 
 const getCurrentProject = jest.fn();
-const stateManager = { getCurrentProject } as unknown as StateManager;
+const stateManager = createMockStateManager({ getCurrentProject });
 
 const ACCS_PROJECT = {
     name: 'bodea',

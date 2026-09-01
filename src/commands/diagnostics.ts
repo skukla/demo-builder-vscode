@@ -36,7 +36,6 @@ import {
 import { BaseCommand } from '@/core/base/baseCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getLogger, type DebugLogger } from '@/core/logging/debugLogger';
-import type { StateManager } from '@/core/state/stateManager';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
@@ -62,6 +61,7 @@ import {
     type StorefrontProbeResult,
 } from '@/features/eds/services/storefront/storefrontProbe';
 import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 import { getEdsGithubRepo } from '@/types/typeGuards';
 
 export { browserProbeCommand, buildSummaryLines } from './diagnosticsReport';

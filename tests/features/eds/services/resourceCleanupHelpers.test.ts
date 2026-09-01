@@ -16,6 +16,7 @@ import {
     type CleanupResultItem,
 } from '@/features/eds/services/resourceCleanupHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // ==========================================================
 // Test Helpers
@@ -200,8 +201,11 @@ describe('extractEdsMetadata', () => {
 // ==========================================================
 
 describe('getLinkedEdsProjects', () => {
-    function createMockStateManager(projects: Project[]): StateManager {
-        return {
+    // Renamed from `createMockStateManager` on 2026-09-01: it shadowed the
+    // canonical builder it now delegates to, and its real subject is the project
+    // list, not the state manager.
+    function stateManagerWithProjects(projects: Project[]): StateManager {
+        return createMockStateManager({
             getAllProjects: jest.fn().mockResolvedValue(
                 projects.map(p => ({ name: p.name, path: p.path, lastModified: new Date() }))
             ),
@@ -209,7 +213,7 @@ describe('getLinkedEdsProjects', () => {
                 const project = projects.find(p => p.path === path);
                 return Promise.resolve(project || null);
             }),
-        } as unknown as StateManager;
+        });
     }
 
     it('should return all EDS projects with metadata', async () => {
@@ -237,7 +241,7 @@ describe('getLinkedEdsProjects', () => {
             },
         });
 
-        const stateManager = createMockStateManager([edsProject1, edsProject2]);
+        const stateManager = stateManagerWithProjects([edsProject1, edsProject2]);
 
         const result = await getLinkedEdsProjects(stateManager);
 
@@ -277,7 +281,7 @@ describe('getLinkedEdsProjects', () => {
             },
         });
 
-        const stateManager = createMockStateManager([edsProject, nonEdsProject]);
+        const stateManager = stateManagerWithProjects([edsProject, nonEdsProject]);
 
         const result = await getLinkedEdsProjects(stateManager);
 
@@ -286,7 +290,7 @@ describe('getLinkedEdsProjects', () => {
     });
 
     it('should return empty array when no projects exist', async () => {
-        const stateManager = createMockStateManager([]);
+        const stateManager = stateManagerWithProjects([]);
 
         const result = await getLinkedEdsProjects(stateManager);
 
@@ -304,7 +308,7 @@ describe('getLinkedEdsProjects', () => {
             },
         });
 
-        const stateManager = {
+        const stateManager = createMockStateManager({
             getAllProjects: jest.fn().mockResolvedValue([
                 { name: 'eds-project', path: '/path/to/eds', lastModified: new Date() },
                 { name: 'broken-project', path: '/path/to/broken', lastModified: new Date() },
@@ -313,7 +317,7 @@ describe('getLinkedEdsProjects', () => {
                 if (path === '/path/to/eds') return Promise.resolve(edsProject);
                 return Promise.resolve(null); // Broken project fails to load
             }),
-        } as unknown as StateManager;
+        });
 
         const result = await getLinkedEdsProjects(stateManager);
 

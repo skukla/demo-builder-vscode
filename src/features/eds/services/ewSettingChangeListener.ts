@@ -21,9 +21,9 @@ import { resolveProjectAuthoringExperience } from '../handlers/edsHelpers';
 import { applyAuthoringExperienceFlip } from './authoringExperienceFlip';
 import type { GitHubTokenService } from './github/githubTokenService';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { StateManager } from '@/core/state/stateManager';
 import type { AuthoringExperience, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 import { isEdsProject } from '@/types/typeGuards';
 
 /** Coalesce rapid settings edits (e.g. multi-keystroke value changes). */

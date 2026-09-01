@@ -217,3 +217,5 @@ is the current reference for the four-control pattern.
 - 2026-09-01  fix(mesh): check_mesh and delete_mesh no longer block on a notification an agent cannot click (`909efe445`)
 - 2026-09-01  test(sop): the dead-mock rule was half a state in the tree, and nobody had built that half (`a38a6c93e`)
 - 2026-09-01  docs(handbook): the nine rules no check can make leave the conventions list (`3884bf0f9`)
+- 2026-09-01  Merge loop/2026-08-31-pl33: every convention is enforced, or names what it waits on (`fd56f7e4f`)
+- 2026-09-01  docs(backlog): PL-33 closes — 71 conventions, 70 enforced, and the criterion needed a third state (`d7b287915`)

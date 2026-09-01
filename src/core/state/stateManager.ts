@@ -20,9 +20,18 @@ import { getLogger } from '@/core/logging/debugLogger';
 import { ExecutionLock } from '@/core/utils/executionLock';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
 import { ProcessInfo, Project, StateData } from '@/types/base';
+import type { StateManager as StateManagerInterface } from '@/types/state';
 import { parseJSON } from '@/types/typeGuards';
 
-export class StateManager {
+/**
+ * Declared `implements` on 2026-09-01. The class already satisfied the interface
+ * exactly — tsc reported zero errors the moment the clause was added — but nothing
+ * said so, so nothing kept it true. Two types share this name (this class and the
+ * interface in `@/types/state`) and consumers pick one; without the clause, a
+ * method added here and not there, or vice versa, would only surface as a cast at
+ * some call site.
+ */
+export class StateManager implements StateManagerInterface {
     // Serialize save operations to prevent concurrent writes racing on temp file
     // (Multiple concurrent saveProject calls would all write to same .tmp file,
     // causing ENOENT when first rename succeeds and deletes it before others complete)

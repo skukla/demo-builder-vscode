@@ -60,11 +60,12 @@ import { MigrateStorefrontNamesCommand } from '@/commands/migrateStorefrontNames
 import { migrateStorefrontNamingIfNeeded } from '@/features/eds/services/storefront/storefrontNameMigration';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
-import type { StateManager } from '@/core/state/stateManager';
+import type { StateManager } from '@/types/state';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { COMPONENT_IDS } from '@/core/constants';
 import { createMockLogger } from '../helpers/loggerFake';
+import { createMockStateManager } from '../helpers/stateManagerFake';
 
 const migrateMock = migrateStorefrontNamingIfNeeded as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
@@ -94,7 +95,7 @@ function makeProject(
 }
 
 function makeStateManager(projectsByPath: Record<string, Project>): StateManager {
-    return {
+    return createMockStateManager({
         getAllProjects: jest.fn().mockResolvedValue(
             Object.keys(projectsByPath).map((path) => ({
                 name: projectsByPath[path].name,
@@ -105,8 +106,7 @@ function makeStateManager(projectsByPath: Record<string, Project>): StateManager
         loadProjectFromPath: jest.fn((path: string) =>
             Promise.resolve(projectsByPath[path] ?? null)
         ),
-        saveProject: jest.fn().mockResolvedValue(undefined),
-    } as unknown as StateManager;
+    });
 }
 
 function makeCommand(stateManager: StateManager) {

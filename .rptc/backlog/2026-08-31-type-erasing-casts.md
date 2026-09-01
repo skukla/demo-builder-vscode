@@ -107,3 +107,4 @@ is currently `off` for `tests/` in `eslint.config.mjs`; that line goes too.
   across 37 files, `as never` 880 → 803 (`10d77eb3b`)
 - 2026-08-31  test(sop): a test never erases a type — as any and as never become a rule (`0c934462e`)
 - 2026-08-31  test: 88 type-erasing casts removed — 1916 to 1828 (`d0d5ab492`)
+- 2026-09-01  test(helpers): two more cast families reach zero — and both hid an invented shape (`83a4468b7`)

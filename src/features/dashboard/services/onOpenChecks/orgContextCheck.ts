@@ -24,7 +24,6 @@
  */
 
 import type { CheckResult, OnOpenCheck, OnOpenCheckContext } from './types';
-import type { StateManager } from '@/core/state/stateManager';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type {
     OrgContextResult,
@@ -33,6 +32,7 @@ import type {
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { CHECK_IDS } from '@/types/messages';
+import type { StateManager } from '@/types/state';
 
 /** Banner/badge payload the webview routes from a `checkResult{org-context}`. */
 export interface OrgContextCheckData {

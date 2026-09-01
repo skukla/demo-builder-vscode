@@ -50,9 +50,9 @@ import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
-import type { StateManager } from '@/core/state/stateManager';
 import type { HandlerContext } from '@/types/handlers';
 import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 /**
  * A REAL SDK server, handed over as our narrowed `McpToolServer`.
@@ -67,7 +67,8 @@ import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
 const server = () =>
     new McpServer({ name: 'test', version: '0.0.0' }) as unknown as McpToolServer;
 const ctxFactory = () => ({ sendMessage: async () => {} }) as unknown as HandlerContext;
-const stateManager = { getCurrentProject: async () => null } as unknown as StateManager;
+// The builder's `getCurrentProject` already resolves null, so there is nothing to override.
+const stateManager = createMockStateManager();
 
 describe('registration against the real MCP SDK', () => {
     it('accepts every descriptor row', () => {

@@ -19,11 +19,11 @@
 
 import type * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import type { StateManager } from '@/core/state/stateManager';
 import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import type { HandlerContext, SharedState } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 
 export function createHeadlessHandlerContext(
     context: vscode.ExtensionContext,

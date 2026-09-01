@@ -6,8 +6,8 @@
  */
 
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
-import type { StateManager } from '@/core/state/stateManager';
 import { expectWithinCeiling } from './responseCeilings';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const isAuthenticated = jest.fn();
 jest.mock('@/core/di/serviceLocator', () => ({
@@ -33,7 +33,7 @@ function fakeServer() {
 }
 
 const getCurrentProject = jest.fn();
-const stateManager = { getCurrentProject } as unknown as StateManager;
+const stateManager = createMockStateManager({ getCurrentProject });
 
 function serve() {
     const s = fakeServer();

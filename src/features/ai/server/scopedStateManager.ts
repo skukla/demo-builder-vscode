@@ -20,8 +20,8 @@
  * @module features/ai/server/scopedStateManager
  */
 
-import type { StateManager } from '@/core/state/stateManager';
 import type { Project } from '@/types/base';
+import type { StateManager } from '@/types/state';
 
 /**
  * Build the scoped facade.

@@ -99,7 +99,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
 
     constructor(
         context: vscode.ExtensionContext,
-        stateManager: import('@/core/state/stateManager').StateManager,
+        stateManager: import('@/types/state').StateManager,
         logger: import('@/types/logger').Logger,
     ) {
         super(context, stateManager, logger);

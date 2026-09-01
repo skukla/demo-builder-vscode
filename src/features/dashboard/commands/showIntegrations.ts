@@ -30,7 +30,6 @@ import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { StateManager } from '@/core/state/stateManager';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';
@@ -41,6 +40,7 @@ import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponen
 import type { Project } from '@/types/base';
 import { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';
 
 export class ShowIntegrationsCommand extends BaseWebviewCommand<IntegrationsInitialData> {
