@@ -120,9 +120,34 @@ import * as vscode from 'vscode';     import type * as vscode from 'vscode';
 
 ## Codemods — `ts-morph`
 
-**Not currently a declared dependency.** It sits in `node_modules` transitively and
-nothing here imports it. Adopting it is a deliberate `npm i -D ts-morph`, not a
-freebie.
+**Adopted 2026-09-01** as a devDependency, with a tuned harness at
+`scripts/codemod/project.mjs`. Use the harness, not a bare `new Project()` — it
+carries the safety rules so no individual codemod has to remember them.
+
+```js
+import { createProject, addFiles, saveTouched, formatTouched } from './scripts/codemod/project.mjs';
+
+const project = createProject();                     // structural: fast, no checker
+const files = addFiles(project, ['tests/features/**/*.test.ts']);
+// …edit nodes…
+const touched = saveTouched(project, { dryRun: false });
+formatTouched(touched);                              // prettier gets the last word
+```
+
+**What the harness tunes, and why:**
+
+| Choice | Reason |
+|---|---|
+| `tsconfig.test.json` | includes BOTH `src*` and `tests*`; `tsconfig.json` excludes tests entirely, so a codemod built on it silently skips every test file |
+| `structural` mode by default | skips the tsconfig file list and dependency resolution — enough for "what kind of node is this", and far faster |
+| `typed` mode on request | loads the whole program; the only mode where the CHECKER works, and the only way to ask whether a cast is load-bearing |
+| `manipulationSettings` mirroring `.prettierrc` | four spaces, single quotes, LF — emitted text does not fight the formatter |
+| `NEVER_TOUCH` refuses `tests/helpers/` and `tests/sop/` | a converter in the builders' home rewrites a builder into a call to ITSELF (twice here, a hundred suites down); the enforcers are the backstop and must not be rewritten by the thing they back |
+| `saveTouched` defaults to a DRY RUN | writing has to be asked for |
+
+`npm run codemod:selftest` proves it still works — twelve checks plus a deliberately
+false one, so a run reporting zero failures means the checker is broken.
+`tests/sop/codemod-harness.test.ts` runs it on every build.
 
 It is the right tool for any transformation the lint rules do not cover, because it
 is the TypeScript compiler API with a usable wrapper. Verified against the installed

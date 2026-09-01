@@ -934,7 +934,7 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 30 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 31 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
@@ -999,9 +999,15 @@ not.
 > *Why:* a first sweep printed "clean" over a scan that had just measured a 34% gap.
 > Enforced by `tests/sop/every-scan-declares-a-control.test.ts`, and — for the
 > instruments that live OUTSIDE the scan directory — by
-> `tests/hooks/rule-proofs.test.ts` and `tests/sop/type-aware-lint.test.ts`.
+> `tests/hooks/rule-proofs.test.ts` and `tests/sop/eslint-type-aware.test.ts`.
 >
-> Those two were added on 2026-09-01, after the same failure appeared three times in
+> `tests/sop/codemod-harness.test.ts` is the same rule applied to the tool that
+> REWRITES the code: it runs `scripts/codemod/selftest.mjs`, which ends in a
+> deliberately false assertion, and asserts the exact failure count — so a self-test
+> reporting zero failures fails the build, because a checker that cannot fail is not
+> a checker.
+>
+> Those three were added on 2026-09-01, after the same failure appeared three times in
 > one day: a hook rule that never reached its own guard, a blocking rule with no proof
 > harness at all, and a bracket expression that had silently stopped matching. All
 > three exited 0 and looked fine. An instrument whose dependencies live elsewhere —

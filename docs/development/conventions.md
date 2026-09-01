@@ -135,7 +135,7 @@ it means the rule rests on somebody noticing.
 
 | Rule | Why | How | Enforced by |
 |---|---|---|---|
-| Every scan declares a control: something it is known to find. A detector that has silently stopped detecting reports "all clear" in exactly the same words as one that verified. |  |  | `every-scan-declares-a-control.test.ts`<br>`rule-proofs.test.ts`<br>`type-aware-lint.test.ts` |
+| Every scan declares a control: something it is known to find. A detector that has silently stopped detecting reports "all clear" in exactly the same words as one that verified. |  |  | `every-scan-declares-a-control.test.ts`<br>`rule-proofs.test.ts`<br>`eslint-type-aware.test.ts`<br>`codemod-harness.test.ts`<br>`eslint.config.mjs` |
 | Never publish an identifier you have not read from the source. Setting keys, env vars, command ids, file paths and function names are cheap to grep and expensive to get wrong in something a user reads. |  |  | `cited-identifiers.test.ts`<br>`doc-module-refs.test.ts` |
 | Capture an exit code in a variable. Never read one through a pipe. |  |  | `13-piped-exit-code.rule` |
 | A list of paths reaches a command through `xargs`, never as a bare `$VAR`. Quote the variable when one argument is what you meant. |  |  | `16-unsplit-var.rule`<br>`eslint.config.mjs` |
