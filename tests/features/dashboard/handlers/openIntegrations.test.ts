@@ -71,6 +71,10 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { handleOpenIntegrations } from '@/features/dashboard/handlers/dashboardHandlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
+import type { Project } from '@/types/base';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 const mockExecuteCommand = vscode.commands.executeCommand as jest.Mock;
 const mockTransition = BaseWebviewCommand as unknown as {
     startWebviewTransition: jest.Mock;
@@ -81,23 +85,28 @@ const mockTransition = BaseWebviewCommand as unknown as {
 const mockGetTokenStatus = jest.fn().mockResolvedValue({ isAuthenticated: true });
 const mockGetServicesForOrg = jest.fn().mockResolvedValue([]);
 
-function createMockContext(project: unknown = PROJECT) {
+function createMockContext(project: Project = PROJECT) {
     (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue({
         getTokenStatus: mockGetTokenStatus,
         getServicesForOrg: mockGetServicesForOrg,
     });
-    return {
-        logger: { info: jest.fn(), debug: jest.fn(), error: jest.fn() },
+    // The canonical HandlerContext, with the three members this suite varies. The
+    // literal it replaces named those three and reached the handler through
+    // `as never` at ten call sites — so the handler was free to read anything.
+    return createMockHandlerContext({
+        logger: createMockLogger(),
         sendMessage: jest.fn(),
-        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
-    };
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(project),
+        }),
+    });
 }
 
-const PROJECT = {
+const PROJECT = createMockProject({
     name: 'demo',
     path: '/p',
     adobe: { organization: 'org-A', projectId: 'p1', workspace: 'w1' },
-};
+});
 
 /** The prefetch is fire-and-forget, so let its promise chain settle. */
 const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
@@ -124,7 +133,7 @@ describe('handleOpenIntegrations', () => {
         it('warms the org services catalog, org-targeted', async () => {
             const context = createMockContext();
 
-            await handleOpenIntegrations(context as never);
+            await handleOpenIntegrations(context);
             await settle();
 
             expect(mockGetServicesForOrg).toHaveBeenCalledWith('org-A');
@@ -137,7 +146,7 @@ describe('handleOpenIntegrations', () => {
             const context = createMockContext();
             mockGetServicesForOrg.mockReturnValue(new Promise(() => undefined));
 
-            const result = await handleOpenIntegrations(context as never);
+            const result = await handleOpenIntegrations(context);
 
             expect(result).toEqual({ success: true });
             expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showIntegrations');
@@ -150,16 +159,23 @@ describe('handleOpenIntegrations', () => {
             const context = createMockContext();
             mockGetTokenStatus.mockResolvedValue({ isAuthenticated: false });
 
-            await handleOpenIntegrations(context as never);
+            await handleOpenIntegrations(context);
             await settle();
 
             expect(mockGetServicesForOrg).not.toHaveBeenCalled();
         });
 
         it('does NOT run without an org to target', async () => {
-            const context = createMockContext({ name: 'demo', path: '/p' });
+            // `adobe: undefined` is the POINT of this test, and it has to be said
+            // explicitly: the canonical fixture defaults a real `adobe` block, so a
+            // project built without one still HAS an org to target. The bare
+            // literal this replaces expressed absence by omission, which the
+            // builder cannot preserve.
+            const context = createMockContext(
+                createMockProject({ name: 'demo', path: '/p', adobe: undefined })
+            );
 
-            await handleOpenIntegrations(context as never);
+            await handleOpenIntegrations(context);
             await settle();
 
             expect(mockGetServicesForOrg).not.toHaveBeenCalled();
@@ -169,7 +185,7 @@ describe('handleOpenIntegrations', () => {
             const context = createMockContext();
             mockGetServicesForOrg.mockRejectedValue(new Error('catalog down'));
 
-            const result = await handleOpenIntegrations(context as never);
+            const result = await handleOpenIntegrations(context);
             await settle();
 
             expect(result).toEqual({ success: true });
@@ -179,7 +195,7 @@ describe('handleOpenIntegrations', () => {
     it('dispatches the integrations surface command', async () => {
         const context = createMockContext();
 
-        const result = await handleOpenIntegrations(context as never);
+        const result = await handleOpenIntegrations(context);
 
         expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showIntegrations');
         expect(result).toEqual({ success: true });
@@ -195,7 +211,7 @@ describe('handleOpenIntegrations', () => {
             order.push(`command:${cmd}`);
         });
 
-        await handleOpenIntegrations(context as never);
+        await handleOpenIntegrations(context);
 
         expect(order).toEqual(['dispose', 'command:demoBuilder.showIntegrations']);
     });
@@ -203,7 +219,7 @@ describe('handleOpenIntegrations', () => {
     it('wraps the swap in a webview transition so disposal side-effects are suppressed', async () => {
         const context = createMockContext();
 
-        await handleOpenIntegrations(context as never);
+        await handleOpenIntegrations(context);
 
         expect(mockTransition.startWebviewTransition).toHaveBeenCalled();
         expect(mockTransition.endWebviewTransition).toHaveBeenCalled();
@@ -213,7 +229,7 @@ describe('handleOpenIntegrations', () => {
         const context = createMockContext();
         mockExecuteCommand.mockRejectedValue(new Error('boom'));
 
-        const result = await handleOpenIntegrations(context as never);
+        const result = await handleOpenIntegrations(context);
 
         expect(mockTransition.endWebviewTransition).toHaveBeenCalled();
         expect(result.success).toBe(false);
@@ -227,7 +243,7 @@ describe('handleOpenIntegrations', () => {
             }),
         });
 
-        const result = await handleOpenIntegrations(context as never);
+        const result = await handleOpenIntegrations(context);
 
         expect(result).toEqual({ success: true });
         expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showIntegrations');

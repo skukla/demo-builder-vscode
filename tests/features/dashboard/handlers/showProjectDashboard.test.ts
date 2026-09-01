@@ -51,6 +51,9 @@ import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { handleShowProjectDashboard } from '@/features/dashboard/handlers/dashboardHandlers';
 
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 const mockExecuteCommand = vscode.commands.executeCommand as jest.Mock;
 const mockTransition = BaseWebviewCommand as unknown as {
     startWebviewTransition: jest.Mock;
@@ -59,11 +62,19 @@ const mockTransition = BaseWebviewCommand as unknown as {
 };
 
 function createMockContext() {
-    return {
-        logger: { info: jest.fn(), debug: jest.fn(), error: jest.fn() },
-        stateManager: { clearProject: jest.fn() },
+    // The canonical HandlerContext, carrying only what this suite varies.
+    // The literal it replaces named three members and reached the handler
+    // through a cast at every call site.
+    const stateManager = createMockStateManager({ clearProject: jest.fn() });
+    const base = createMockHandlerContext({
+        logger: createMockLogger(),
+        stateManager,
         sendMessage: jest.fn(),
-    };
+    });
+    // `stateManager` is re-attached so its MOCK type survives: read back
+    // through `HandlerContext` its members are plain functions, and this
+    // suite calls `.mockImplementation` on them.
+    return { ...base, stateManager };
 }
 
 describe('handleShowProjectDashboard', () => {
@@ -76,7 +87,7 @@ describe('handleShowProjectDashboard', () => {
     it('dispatches the project dashboard command', async () => {
         const context = createMockContext();
 
-        const result = await handleShowProjectDashboard(context as never);
+        const result = await handleShowProjectDashboard(context);
 
         expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showProjectDashboard');
         expect(result).toEqual({ success: true });
@@ -92,7 +103,7 @@ describe('handleShowProjectDashboard', () => {
             order.push(`command:${cmd}`);
         });
 
-        await handleShowProjectDashboard(context as never);
+        await handleShowProjectDashboard(context);
 
         expect(mockTransition.getActivePanel).toHaveBeenCalledWith('demoBuilder.integrations');
         expect(order).toEqual(['dispose', 'command:demoBuilder.showProjectDashboard']);
@@ -101,7 +112,7 @@ describe('handleShowProjectDashboard', () => {
     it('wraps the swap in a webview transition', async () => {
         const context = createMockContext();
 
-        await handleShowProjectDashboard(context as never);
+        await handleShowProjectDashboard(context);
 
         expect(mockTransition.startWebviewTransition).toHaveBeenCalled();
         expect(mockTransition.endWebviewTransition).toHaveBeenCalled();
@@ -110,7 +121,7 @@ describe('handleShowProjectDashboard', () => {
     it('does NOT clear the current project (that is navigateBack, not this)', async () => {
         const context = createMockContext();
 
-        await handleShowProjectDashboard(context as never);
+        await handleShowProjectDashboard(context);
 
         expect(context.stateManager.clearProject).not.toHaveBeenCalled();
     });
@@ -119,7 +130,7 @@ describe('handleShowProjectDashboard', () => {
         const context = createMockContext();
         mockExecuteCommand.mockRejectedValue(new Error('boom'));
 
-        const result = await handleShowProjectDashboard(context as never);
+        const result = await handleShowProjectDashboard(context);
 
         expect(mockTransition.endWebviewTransition).toHaveBeenCalled();
         expect(result.success).toBe(false);
@@ -133,7 +144,7 @@ describe('handleShowProjectDashboard', () => {
             }),
         });
 
-        const result = await handleShowProjectDashboard(context as never);
+        const result = await handleShowProjectDashboard(context);
 
         expect(result).toEqual({ success: true });
         expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showProjectDashboard');

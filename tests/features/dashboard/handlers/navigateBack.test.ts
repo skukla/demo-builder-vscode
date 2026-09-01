@@ -56,6 +56,9 @@ jest.mock('@/core/base/baseWebviewCommand', () => ({
 import * as vscode from 'vscode';
 import { handleNavigateBack } from '@/features/dashboard/handlers/dashboardHandlers';
 
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 const mockExecuteCommand = vscode.commands.executeCommand as jest.Mock;
 
 describe('handleNavigateBack', () => {
@@ -67,17 +70,21 @@ describe('handleNavigateBack', () => {
      * Creates a mock handler context for navigateBack handler tests
      */
     function createMockContext() {
-        return {
-            stateManager: {
+        // The canonical HandlerContext, carrying only what this suite varies.
+        // The literal it replaces named three members and reached the handler
+        // through a cast at every call site.
+        const stateManager = createMockStateManager({
                 clearProject: jest.fn().mockResolvedValue(undefined),
-            },
-            logger: {
-                info: jest.fn(),
-                debug: jest.fn(),
-                error: jest.fn(),
-            },
+            });
+        const base = createMockHandlerContext({
+            logger: createMockLogger(),
+            stateManager,
             sendMessage: jest.fn(),
-        };
+        });
+        // `stateManager` is re-attached so its MOCK type survives: read back
+        // through `HandlerContext` its members are plain functions, and this
+        // suite calls `.mockImplementation` on them.
+        return { ...base, stateManager };
     }
 
     describe('project clearing', () => {
@@ -86,7 +93,7 @@ describe('handleNavigateBack', () => {
             const context = createMockContext();
 
             // When: navigateBack is called
-            await handleNavigateBack(context as any);
+            await handleNavigateBack(context);
 
             // Then: clearProject should be called
             expect(context.stateManager.clearProject).toHaveBeenCalled();
@@ -105,7 +112,7 @@ describe('handleNavigateBack', () => {
             });
 
             // When: navigateBack is called
-            await handleNavigateBack(context as any);
+            await handleNavigateBack(context);
 
             // Then: clearProject runs first, then showProjectsList
             // (the logs toggle now lives in the always-present sidebar, so the
@@ -123,7 +130,7 @@ describe('handleNavigateBack', () => {
             const context = createMockContext();
 
             // When: navigateBack is called
-            await handleNavigateBack(context as any);
+            await handleNavigateBack(context);
 
             // Then: showProjectsList command should be executed
             expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showProjectsList');
@@ -134,7 +141,7 @@ describe('handleNavigateBack', () => {
             const context = createMockContext();
 
             // When: navigateBack is called
-            const result = await handleNavigateBack(context as any);
+            const result = await handleNavigateBack(context);
 
             // Then: Should return success
             expect(result).toEqual({ success: true });
@@ -145,7 +152,7 @@ describe('handleNavigateBack', () => {
             const context = createMockContext();
 
             // When: navigateBack is called
-            await handleNavigateBack(context as any);
+            await handleNavigateBack(context);
 
             // Then: Should log the navigation
             expect(context.logger.info).toHaveBeenCalledWith(
@@ -160,7 +167,7 @@ describe('handleNavigateBack', () => {
             const context = createMockContext();
 
             // When: navigateBack is called
-            await handleNavigateBack(context as any);
+            await handleNavigateBack(context);
 
             // Then: sendMessage should not be called
             expect(context.sendMessage).not.toHaveBeenCalled();
