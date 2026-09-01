@@ -58,7 +58,7 @@ describe('handleSelectProject - Navigation', () => {
             setMockWorkspaceFolder(project.path);
 
             // When: selectProject is called
-            await handleSelectProject(context as any, {
+            await handleSelectProject(context, {
                 projectPath: project.path,
             });
 
@@ -86,7 +86,7 @@ describe('handleSelectProject - Navigation', () => {
             });
 
             // When: selectProject is called
-            await handleSelectProject(context as any, {
+            await handleSelectProject(context, {
                 projectPath: project.path,
             });
 
@@ -105,7 +105,7 @@ describe('handleSelectProject - Navigation', () => {
             const validPath = path.join(os.homedir(), '.demo-builder', 'projects', 'missing');
 
             // When: selectProject is called with valid but empty path
-            const result = await handleSelectProject(context as any, {
+            const result = await handleSelectProject(context, {
                 projectPath: validPath,
             });
 
@@ -119,7 +119,7 @@ describe('handleSelectProject - Navigation', () => {
             const context = createProjectsDashboardContext([]);
 
             // When: selectProject is called with invalid path
-            const result = await handleSelectProject(context as any, {
+            const result = await handleSelectProject(context, {
                 projectPath: '/etc/passwd',
             });
 
@@ -136,7 +136,7 @@ describe('handleSelectProject - Navigation', () => {
             mockExecuteCommand.mockRejectedValue(new Error('Command failed'));
 
             // When: selectProject is called
-            const result = await handleSelectProject(context as any, {
+            const result = await handleSelectProject(context, {
                 projectPath: project.path,
             });
 
@@ -155,7 +155,7 @@ describe('handleSelectProject - Navigation', () => {
             setMockWorkspaceFolder(null);
 
             // When: selectProject is called (plain, no forceNewWindow)
-            await handleSelectProject(context as any, {
+            await handleSelectProject(context, {
                 projectPath: project.path,
             });
 
@@ -174,7 +174,7 @@ describe('handleSelectProject - Navigation', () => {
             const context = createProjectsDashboardContext([project]);
             setMockWorkspaceFolder('/some/other/folder');
 
-            await handleSelectProject(context as any, {
+            await handleSelectProject(context, {
                 projectPath: project.path,
             });
 
@@ -192,7 +192,7 @@ describe('handleSelectProject - Navigation', () => {
             const context = createProjectsDashboardContext([project]);
             setMockWorkspaceFolder('/some/other/folder');
 
-            await handleSelectProject(context as any, {
+            await handleSelectProject(context, {
                 projectPath: project.path,
                 forceNewWindow: true,
             } as any);
@@ -211,7 +211,7 @@ describe('handleSelectProject - Navigation', () => {
             const context = createProjectsDashboardContext([project]);
             setMockWorkspaceFolder(project.path);
 
-            await handleSelectProject(context as any, {
+            await handleSelectProject(context, {
                 projectPath: project.path,
                 forceNewWindow: true,
             } as any);
@@ -228,7 +228,7 @@ describe('handleSelectProject - Navigation', () => {
             const context = createProjectsDashboardContext([project]);
             setMockWorkspaceFolder(project.path);
 
-            await handleSelectProject(context as any, {
+            await handleSelectProject(context, {
                 projectPath: project.path,
             });
 

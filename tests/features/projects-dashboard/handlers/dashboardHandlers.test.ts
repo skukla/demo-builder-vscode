@@ -101,7 +101,7 @@ describe('dashboardHandlers', () => {
             const projects = createMockProjects(3);
             const context = createProjectsDashboardContext(projects);
 
-            const result = await handleGetProjects(context as any);
+            const result = await handleGetProjects(context);
 
             expect(context.stateManager.getAllProjects).toHaveBeenCalled();
             // loadProjectFromPath should be called for each project
@@ -117,7 +117,7 @@ describe('dashboardHandlers', () => {
             });
             const context = createProjectsDashboardContext([]);
 
-            const result = await handleGetProjects(context as any);
+            const result = await handleGetProjects(context);
 
             expect(result.success).toBe(true);
             expect((result.data as any).projectsViewMode).toBe('rows');
@@ -126,7 +126,7 @@ describe('dashboardHandlers', () => {
         it('should return empty array when no projects exist', async () => {
             const context = createProjectsDashboardContext([]);
 
-            const result = await handleGetProjects(context as any);
+            const result = await handleGetProjects(context);
 
             expect(result).toEqual({
                 success: true,
@@ -138,7 +138,7 @@ describe('dashboardHandlers', () => {
             const context = createProjectsDashboardContext([]);
             context.stateManager.getAllProjects.mockRejectedValue(new Error('Database error'));
 
-            const result = await handleGetProjects(context as any);
+            const result = await handleGetProjects(context);
 
             expect(result).toEqual({
                 success: false,
@@ -151,7 +151,7 @@ describe('dashboardHandlers', () => {
             const projects = createMockProjects(2);
             const context = createProjectsDashboardContext(projects);
 
-            await handleGetProjects(context as any);
+            await handleGetProjects(context);
 
             expect(context.sendMessage).not.toHaveBeenCalled();
         });
@@ -179,7 +179,7 @@ describe('dashboardHandlers', () => {
             ];
             const context = createProjectsDashboardContext(projects);
 
-            const result = await handleGetProjects(context as any);
+            const result = await handleGetProjects(context);
 
             expect(result.success).toBe(true);
             const returnedNames = (result.data as any).projects.map((p: any) => p.name);
@@ -214,7 +214,7 @@ describe('dashboardHandlers', () => {
             detectMeshChanges.mockResolvedValue({ hasChanges: true });
             determineMeshStatus.mockResolvedValue('config-changed');
 
-            const result = await handleGetProjects(context as any);
+            const result = await handleGetProjects(context);
 
             expect(result.success).toBe(true);
             const projects = (result.data as any).projects;
@@ -246,7 +246,7 @@ describe('dashboardHandlers', () => {
             detectMeshChanges.mockResolvedValue({ hasChanges: false });
             determineMeshStatus.mockResolvedValue('deployed');
 
-            const result = await handleGetProjects(context as any);
+            const result = await handleGetProjects(context);
 
             const projects = (result.data as any).projects;
             expect(projects[0].meshStatusSummary).toBe('deployed');
@@ -276,7 +276,7 @@ describe('dashboardHandlers', () => {
             hasMeshDeploymentRecord.mockReturnValue(true);
             detectMeshChanges.mockRejectedValue(new Error('Detection failed'));
 
-            const result = await handleGetProjects(context as any);
+            const result = await handleGetProjects(context);
 
             const projects = (result.data as any).projects;
             expect(projects[0].meshStatusSummary).toBe('unknown');
@@ -294,7 +294,7 @@ describe('dashboardHandlers', () => {
 
             hasMeshDeploymentRecord.mockReturnValue(false);
 
-            const result = await handleGetProjects(context as any);
+            const result = await handleGetProjects(context);
 
             const projects = (result.data as any).projects;
             expect(projects[0].meshStatusSummary).toBe('not-deployed');
@@ -306,7 +306,7 @@ describe('dashboardHandlers', () => {
             const project = createProjectsDashboardProject({ name: 'Selected Project' });
             const context = createProjectsDashboardContext([project]);
 
-            const result = await handleSelectProject(context as any, {
+            const result = await handleSelectProject(context, {
                 projectPath: project.path,
             });
 
@@ -319,7 +319,7 @@ describe('dashboardHandlers', () => {
         it('should return error if project path is outside demo-builder directory', async () => {
             const context = createProjectsDashboardContext([]);
 
-            const result = await handleSelectProject(context as any, {
+            const result = await handleSelectProject(context, {
                 projectPath: '/nonexistent/path',
             });
 
@@ -342,7 +342,7 @@ describe('dashboardHandlers', () => {
                 'nonexistent'
             );
 
-            const result = await handleSelectProject(context as any, {
+            const result = await handleSelectProject(context, {
                 projectPath: validButEmptyPath,
             });
 
@@ -355,7 +355,7 @@ describe('dashboardHandlers', () => {
         it('should return error if project path not provided', async () => {
             const context = createProjectsDashboardContext([]);
 
-            const result = await handleSelectProject(context as any, undefined);
+            const result = await handleSelectProject(context, undefined);
 
             expect(result).toEqual({
                 success: false,
@@ -367,7 +367,7 @@ describe('dashboardHandlers', () => {
             const project = createProjectsDashboardProject({ name: 'Logged Project' });
             const context = createProjectsDashboardContext([project]);
 
-            await handleSelectProject(context as any, {
+            await handleSelectProject(context, {
                 projectPath: project.path,
             });
 
@@ -380,7 +380,7 @@ describe('dashboardHandlers', () => {
             const project = createProjectsDashboardProject();
             const context = createProjectsDashboardContext([project]);
 
-            await handleSelectProject(context as any, {
+            await handleSelectProject(context, {
                 projectPath: project.path,
             });
 
@@ -401,7 +401,7 @@ describe('dashboardHandlers', () => {
                 it(`should block path traversal attempt: ${payload}`, async () => {
                     const context = createProjectsDashboardContext([]);
 
-                    const result = await handleSelectProject(context as any, {
+                    const result = await handleSelectProject(context, {
                         projectPath: payload,
                     });
 
@@ -419,7 +419,7 @@ describe('dashboardHandlers', () => {
             const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
 
-            const result = await handleCreateProject(context as any);
+            const result = await handleCreateProject(context);
 
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
                 'demoBuilder.createProject'
@@ -432,7 +432,7 @@ describe('dashboardHandlers', () => {
         it('should log create event', async () => {
             const context = createProjectsDashboardContext([]);
 
-            await handleCreateProject(context as any);
+            await handleCreateProject(context);
 
             expect(context.logger.info).toHaveBeenCalledWith(
                 expect.stringContaining('Creating new project')
@@ -444,7 +444,7 @@ describe('dashboardHandlers', () => {
             const vscode = require('vscode');
             vscode.commands.executeCommand.mockRejectedValue(new Error('Command failed'));
 
-            const result = await handleCreateProject(context as any);
+            const result = await handleCreateProject(context);
 
             expect(result).toEqual({
                 success: false,
@@ -455,23 +455,26 @@ describe('dashboardHandlers', () => {
         it('should NOT use sendMessage (Pattern B)', async () => {
             const context = createProjectsDashboardContext([]);
 
-            await handleCreateProject(context as any);
+            await handleCreateProject(context);
 
             expect(context.sendMessage).not.toHaveBeenCalled();
         });
     });
 
     describe('handleOpenAiForProject', () => {
-        // The handler reads context.context.globalState + vscode.workspace.workspaceFolders;
-        // augment the mock context inline (createProjectsDashboardContext doesn't include them).
-        function makeContext(projects: Project[]): any {
-            const ctx = createProjectsDashboardContext(projects) as any;
-            ctx.context = {
-                globalState: {
-                    get: jest.fn(),
-                    update: jest.fn().mockResolvedValue(undefined),
-                },
-            };
+        /**
+         * The handler reads `context.context.globalState`, which the shared builder
+         * ALREADY provides — the comment that used to sit here said it did not, and
+         * the two-method object written to replace it was missing `keys` and
+         * `setKeysForSync`. Nothing noticed because the function returned `any`.
+         *
+         * Only the behaviour this suite needs is overridden: the shared default
+         * returns `true` so one-time tips stay out of the way, and these tests want
+         * the not-yet-seen path.
+         */
+        function makeContext(projects: Project[]) {
+            const ctx = createProjectsDashboardContext(projects);
+            (ctx.context.globalState.get as jest.Mock).mockReturnValue(undefined);
             return ctx;
         }
 
@@ -531,7 +534,11 @@ describe('dashboardHandlers', () => {
             const context = makeContext([]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAiForProject(context, {} as any);
+            // NAMES its target rather than erasing it. The payload arrives from a
+            // webview and is untyped at runtime, so a message with no `projectPath`
+            // is genuinely reachable and this guard is real — but `as any` would
+            // stop the compiler checking the rest of the call too.
+            const result = await handleOpenAiForProject(context, {} as { projectPath: string });
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/path is required/i);
@@ -571,7 +578,7 @@ describe('dashboardHandlers', () => {
             const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
 
-            const result = await handleOpenLiveSite(context as any, {
+            const result = await handleOpenLiveSite(context, {
                 projectPath: '/nonexistent/path',
             });
 
@@ -585,7 +592,7 @@ describe('dashboardHandlers', () => {
             const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
 
-            const result = await handleOpenDaLive(context as any, {
+            const result = await handleOpenDaLive(context, {
                 projectPath: '/nonexistent/path',
             });
 
