@@ -8,7 +8,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Mock global fetch
-global.fetch = jest.fn() as jest.Mock;
+global.fetch = jest.fn();
 
 import {
     buildGitHubHeaders,
@@ -65,7 +65,7 @@ describe('githubApiClient', () => {
                 expect.objectContaining({
                     headers: { 'X-Custom': 'value' },
                     signal: expect.any(AbortSignal),
-                }),
+                })
             );
         });
 
@@ -74,9 +74,9 @@ describe('githubApiClient', () => {
             abortError.name = 'AbortError';
             mockFetch.mockRejectedValueOnce(abortError);
 
-            await expect(
-                fetchWithTimeout('https://api.github.com/test'),
-            ).rejects.toThrow('The operation was aborted');
+            await expect(fetchWithTimeout('https://api.github.com/test')).rejects.toThrow(
+                'The operation was aborted'
+            );
         });
     });
 
@@ -94,7 +94,7 @@ describe('githubApiClient', () => {
             expect(sha).toBe('abc123');
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://api.github.com/repos/owner/repo/branches/main',
-                expect.objectContaining({ headers: expect.any(Object) }),
+                expect.objectContaining({ headers: expect.any(Object) })
             );
         });
 
@@ -124,12 +124,16 @@ describe('githubApiClient', () => {
                 json: async () => ({ tag_name: 'v3.5.0', name: 'Release 3.5.0' }),
             });
 
-            const result = await getLatestRelease(mockSecrets, 'adobe-commerce', 'commerce-extensibility-tools');
+            const result = await getLatestRelease(
+                mockSecrets,
+                'adobe-commerce',
+                'commerce-extensibility-tools'
+            );
 
             expect(result).toEqual({ tag: 'v3.5.0', version: '3.5.0' });
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://api.github.com/repos/adobe-commerce/commerce-extensibility-tools/releases/latest',
-                expect.objectContaining({ headers: expect.any(Object) }),
+                expect.objectContaining({ headers: expect.any(Object) })
             );
         });
 
@@ -193,7 +197,7 @@ describe('githubApiClient', () => {
             });
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://api.github.com/repos/owner/repo/compare/aaa...bbb',
-                expect.objectContaining({ headers: expect.any(Object) }),
+                expect.objectContaining({ headers: expect.any(Object) })
             );
         });
 
@@ -213,5 +217,4 @@ describe('githubApiClient', () => {
             expect(result).toBeNull();
         });
     });
-
 });

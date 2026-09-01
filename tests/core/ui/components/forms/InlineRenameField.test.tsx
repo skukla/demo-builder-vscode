@@ -57,7 +57,7 @@ function pencil(): HTMLElement {
 
 function enterEditMode(): HTMLInputElement {
     fireEvent.click(pencil());
-    return screen.getByRole('textbox') as HTMLInputElement;
+    return screen.getByRole('textbox');
 }
 
 describe('InlineRenameField', () => {

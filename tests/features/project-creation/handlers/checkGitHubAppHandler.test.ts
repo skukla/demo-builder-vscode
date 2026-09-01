@@ -358,7 +358,7 @@ describe('checkGitHubApp handler — DA.live session wiring', () => {
     it('constructs the service WITH the DA.live token provider', async () => {
         const { tryCreateDaLiveTokenProvider } = jest.requireMock(
             '@/features/eds/handlers/edsHelpers'
-        ) as { tryCreateDaLiveTokenProvider: jest.Mock };
+        );
         const provider = { getAccessToken: jest.fn() };
         tryCreateDaLiveTokenProvider.mockReturnValue(provider);
         mockIsAppInstalled.mockResolvedValue({ isInstalled: true, codeStatus: 200 });

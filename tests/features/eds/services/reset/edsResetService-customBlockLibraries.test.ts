@@ -14,11 +14,9 @@ import type { CustomBlockLibrary } from '@/types/blockLibraries';
 // Mocks - jest.mock calls are hoisted
 // =============================================================================
 
-
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
 }));
-
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -29,7 +27,6 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
 
 // Mock dynamic imports used by resetRepoToTemplate
 
-
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollections: jest.fn(),
 }));
@@ -38,7 +35,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn().mockReturnValue({
         tokenService: {},
         fileOperations: {
-            resetRepoToTemplate: jest.fn().mockResolvedValue({ fileCount: 10, commitSha: 'abc1234567' }),
+            resetRepoToTemplate: jest
+                .fn()
+                .mockResolvedValue({ fileCount: 10, commitSha: 'abc1234567' }),
             getFileContent: jest.fn().mockResolvedValue(null),
             createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
         },
@@ -51,11 +50,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: jest.fn().mockResolvedValue({ authenticated: true }),
 }));
 
-
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
-
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
@@ -63,33 +60,37 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 
 jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: jest.fn().mockResolvedValue({
-        success: true, contentFilesCopied: 5, libraryPaths: [],
+        success: true,
+        contentFilesCopied: 5,
+        libraryPaths: [],
     }),
 }));
 
-
-
 // Mock fetch for placeholder files
-global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
+global.fetch = jest.fn().mockResolvedValue({ ok: false });
 
 // =============================================================================
 // Imports (after mocks)
 // =============================================================================
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
-import {
-    createResetContext,
-    meshDeps,
-} from './edsResetService.testUtils';
+import { createResetContext, meshDeps } from './edsResetService.testUtils';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
-import { getBlockLibrarySource, getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
-
-
+import {
+    getBlockLibrarySource,
+    getBlockLibraryName,
+} from '@/features/components/services/blockLibraryLoader';
 
 // Cast imported mocks
-const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<typeof installBlockCollections>;
-const mockGetBlockLibrarySource = getBlockLibrarySource as jest.MockedFunction<typeof getBlockLibrarySource>;
-const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<typeof getBlockLibraryName>;
+const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<
+    typeof installBlockCollections
+>;
+const mockGetBlockLibrarySource = getBlockLibrarySource as jest.MockedFunction<
+    typeof getBlockLibrarySource
+>;
+const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<
+    typeof getBlockLibraryName
+>;
 
 // =============================================================================
 // Helpers
@@ -130,7 +131,10 @@ const mockTokenProvider = { getAccessToken: jest.fn().mockResolvedValue('mock-to
 
 describe('EDS Reset Service - Custom Block Libraries', () => {
     const CUSTOM_LIBS: CustomBlockLibrary[] = [
-        { name: 'My Custom Blocks', source: { owner: 'user', repo: 'custom-blocks', branch: 'main' } },
+        {
+            name: 'My Custom Blocks',
+            source: { owner: 'user', repo: 'custom-blocks', branch: 'main' },
+        },
         { name: 'Partner Blocks', source: { owner: 'partner', repo: 'blocks-lib', branch: 'v2' } },
     ];
 
@@ -143,7 +147,9 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
         });
         mockGetBlockLibraryName.mockImplementation((id: string) => id);
         mockInstallBlockCollections.mockResolvedValue({
-            success: true, blocksCount: 5, blockIds: ['block-1', 'block-2', 'block-3', 'block-4', 'block-5'],
+            success: true,
+            blocksCount: 5,
+            blockIds: ['block-1', 'block-2', 'block-3', 'block-4', 'block-5'],
         });
     });
 
@@ -168,22 +174,29 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
             },
             context,
             mockTokenProvider,
-            meshDeps,
+            meshDeps
         );
 
         // Then: installBlockCollections (plural) called ONCE with all sources combined
         expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
         expect(mockInstallBlockCollections).toHaveBeenCalledWith(
-            expect.anything(), 'test-owner', 'test-repo',
+            expect.anything(),
+            'test-owner',
+            'test-repo',
             [
                 { source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' },
-                { source: { owner: 'user', repo: 'custom-blocks', branch: 'main' }, name: 'My Custom Blocks' },
-                { source: { owner: 'partner', repo: 'blocks-lib', branch: 'v2' }, name: 'Partner Blocks' },
+                {
+                    source: { owner: 'user', repo: 'custom-blocks', branch: 'main' },
+                    name: 'My Custom Blocks',
+                },
+                {
+                    source: { owner: 'partner', repo: 'blocks-lib', branch: 'v2' },
+                    name: 'Partner Blocks',
+                },
             ],
             expect.anything(), // logger
-            expect.anything(), // inspectorEntries
+            expect.anything() // inspectorEntries
         );
-
     });
 
     it('should call installBlockCollections with only built-in sources when customBlockLibraries is undefined', async () => {
@@ -207,16 +220,18 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
             },
             context,
             mockTokenProvider,
-            meshDeps,
+            meshDeps
         );
 
         // Then: installBlockCollections (plural) called with only built-in source
         expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
         expect(mockInstallBlockCollections).toHaveBeenCalledWith(
-            expect.anything(), 'test-owner', 'test-repo',
+            expect.anything(),
+            'test-owner',
+            'test-repo',
             [{ source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' }],
             expect.anything(),
-            expect.anything(), // inspectorEntries
+            expect.anything() // inspectorEntries
         );
     });
 });

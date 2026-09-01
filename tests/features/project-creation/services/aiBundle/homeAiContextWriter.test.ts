@@ -44,7 +44,7 @@ const TEST_NODE_PATH = '/usr/local/bin/node';
  */
 function captureWrite(suffix: string): string {
     const writeFileMock = fsPromises.writeFile as jest.Mock;
-    const call = writeFileMock.mock.calls.find(([p]: [string]) => (p as string).endsWith(suffix));
+    const call = writeFileMock.mock.calls.find(([p]: [string]) => p.endsWith(suffix));
     if (!call) {
         throw new Error(`No writeFile call found for path ending with: ${suffix}`);
     }
@@ -53,7 +53,7 @@ function captureWrite(suffix: string): string {
 
 function wasWritten(suffix: string): boolean {
     const writeFileMock = fsPromises.writeFile as jest.Mock;
-    return writeFileMock.mock.calls.some(([p]: [string]) => (p as string).endsWith(suffix));
+    return writeFileMock.mock.calls.some(([p]: [string]) => p.endsWith(suffix));
 }
 
 // ─── MCP config ──────────────────────────────────────────────────────────────

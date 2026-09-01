@@ -27,7 +27,7 @@ beforeEach(() => {
 describe('inspectAllServers', () => {
     describe('caching', () => {
         it('returns cached result on second call without spawning again', async () => {
-            setMcpJson({ mcpServers: { 'srv': { command: 'node', args: [] } } });
+            setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
 
             await inspectAllServers(PROJECT_PATH);
             await inspectAllServers(PROJECT_PATH);
@@ -37,7 +37,7 @@ describe('inspectAllServers', () => {
         });
 
         it('re-spawns after clearMcpCache() clears all entries', async () => {
-            setMcpJson({ mcpServers: { 'srv': { command: 'node', args: [] } } });
+            setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
 
             await inspectAllServers(PROJECT_PATH);
             clearMcpCache();
@@ -62,9 +62,9 @@ describe('inspectAllServers', () => {
         });
 
         it('does not cache timeout or error results (always retried next call)', async () => {
-            setMcpJson({ mcpServers: { 'bad': { command: 'node', args: [] } } });
+            setMcpJson({ mcpServers: { bad: { command: 'node', args: [] } } });
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
             ClientModule.Client.mockImplementation(() => {
                 const instance = {
                     connect: jest.fn().mockRejectedValue(new Error('crash')),
@@ -87,12 +87,13 @@ describe('inspectAllServers', () => {
             const ORIGINAL = process.env.PLAYWRIGHT_BROWSERS_PATH;
             process.env.PLAYWRIGHT_BROWSERS_PATH = '/Users/test/Library/Caches/ms-playwright';
             try {
-                setMcpJson({ mcpServers: { 'srv': { command: 'node', args: [] } } });
+                setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
 
                 await inspectAllServers(PROJECT_PATH);
 
-                expect(transportInstances[0].env?.PLAYWRIGHT_BROWSERS_PATH)
-                    .toBe('/Users/test/Library/Caches/ms-playwright');
+                expect(transportInstances[0].env?.PLAYWRIGHT_BROWSERS_PATH).toBe(
+                    '/Users/test/Library/Caches/ms-playwright'
+                );
             } finally {
                 restoreEnv('PLAYWRIGHT_BROWSERS_PATH', ORIGINAL);
             }
@@ -102,7 +103,7 @@ describe('inspectAllServers', () => {
             const ORIGINAL = process.env.NODE_OPTIONS;
             process.env.NODE_OPTIONS = '--max-old-space-size=4096';
             try {
-                setMcpJson({ mcpServers: { 'srv': { command: 'node', args: [] } } });
+                setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
 
                 await inspectAllServers(PROJECT_PATH);
 
@@ -116,7 +117,7 @@ describe('inspectAllServers', () => {
             const ORIGINAL = process.env.XDG_CACHE_HOME;
             process.env.XDG_CACHE_HOME = '/home/test/.cache';
             try {
-                setMcpJson({ mcpServers: { 'srv': { command: 'node', args: [] } } });
+                setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
 
                 await inspectAllServers(PROJECT_PATH);
 
@@ -130,7 +131,7 @@ describe('inspectAllServers', () => {
             const ORIGINAL = process.env.PLAYWRIGHT_BROWSERS_PATH;
             delete process.env.PLAYWRIGHT_BROWSERS_PATH;
             try {
-                setMcpJson({ mcpServers: { 'srv': { command: 'node', args: [] } } });
+                setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
 
                 await inspectAllServers(PROJECT_PATH);
 
@@ -144,7 +145,7 @@ describe('inspectAllServers', () => {
             const ORIGINAL = process.env.SOME_RANDOM_VAR;
             process.env.SOME_RANDOM_VAR = 'should not leak';
             try {
-                setMcpJson({ mcpServers: { 'srv': { command: 'node', args: [] } } });
+                setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
 
                 await inspectAllServers(PROJECT_PATH);
 
@@ -157,13 +158,15 @@ describe('inspectAllServers', () => {
 
     describe('stderr diagnostics on failure', () => {
         it('appends captured stderr tail to error message when child wrote stderr before failing', async () => {
-            setMcpJson({ mcpServers: { 'crashed': { command: 'node', args: [] } } });
+            setMcpJson({ mcpServers: { crashed: { command: 'node', args: [] } } });
             queueStderr(0, ['Error: cannot find module @playwright/mcp\n']);
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
             ClientModule.Client.mockImplementationOnce(() => {
                 const instance = {
-                    connect: jest.fn().mockRejectedValue(new Error('MCP error -32000: Connection closed')),
+                    connect: jest
+                        .fn()
+                        .mockRejectedValue(new Error('MCP error -32000: Connection closed')),
                     listTools: jest.fn(),
                     close: jest.fn().mockResolvedValue(undefined),
                 };
@@ -180,10 +183,10 @@ describe('inspectAllServers', () => {
         });
 
         it('omits the stderr tail section entirely when child wrote no stderr', async () => {
-            setMcpJson({ mcpServers: { 'silent': { command: 'node', args: [] } } });
+            setMcpJson({ mcpServers: { silent: { command: 'node', args: [] } } });
             // No queueStderr — empty queue means read() returns null immediately.
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
             ClientModule.Client.mockImplementationOnce(() => {
                 const instance = {
                     connect: jest.fn().mockRejectedValue(new Error('Connection closed')),
@@ -202,13 +205,13 @@ describe('inspectAllServers', () => {
         });
 
         it('truncates stderr to roughly the last 4 KB when child wrote a long error', async () => {
-            setMcpJson({ mcpServers: { 'verbose': { command: 'node', args: [] } } });
+            setMcpJson({ mcpServers: { verbose: { command: 'node', args: [] } } });
             // 8 KB of filler followed by a tail marker. After truncation the marker
             // must survive but the bulk of the filler must be gone.
             const filler = 'A'.repeat(8 * 1024);
             queueStderr(0, [`${filler}TAIL_MARKER\n`]);
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
             ClientModule.Client.mockImplementationOnce(() => {
                 const instance = {
                     connect: jest.fn().mockRejectedValue(new Error('Connection closed')),
@@ -229,13 +232,18 @@ describe('inspectAllServers', () => {
 
         it('appends stderr tail on the timeout path too', async () => {
             jest.useFakeTimers();
-            setMcpJson({ mcpServers: { 'hung': { command: 'node', args: [] } } });
+            setMcpJson({ mcpServers: { hung: { command: 'node', args: [] } } });
             queueStderr(0, ['waiting for browser binary…\n']);
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
             ClientModule.Client.mockImplementationOnce(() => {
                 const instance = {
-                    connect: jest.fn().mockImplementation(() => new Promise(() => { /* never */ })),
+                    connect: jest.fn().mockImplementation(
+                        () =>
+                            new Promise(() => {
+                                /* never */
+                            })
+                    ),
                     listTools: jest.fn(),
                     close: jest.fn().mockResolvedValue(undefined),
                 };

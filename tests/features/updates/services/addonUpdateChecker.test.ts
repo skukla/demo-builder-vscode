@@ -29,7 +29,7 @@ jest.mock('@/features/eds/services/inspectorHelpers', () => ({
 }));
 
 // Mock fetch globally
-global.fetch = jest.fn() as jest.Mock;
+global.fetch = jest.fn();
 
 describe('AddonUpdateChecker', () => {
     let checker: AddonUpdateChecker;

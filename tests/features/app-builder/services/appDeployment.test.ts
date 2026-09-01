@@ -169,9 +169,12 @@ describe('deployAppComponent', () => {
 
     describe('deploy failure', () => {
         it('should return a failure result when deploy exits non-zero', async () => {
-            cm.execute.mockResolvedValue({ code: 1, stdout: '', stderr: 'deploy boom',
-    duration: 0,
-});
+            cm.execute.mockResolvedValue({
+                code: 1,
+                stdout: '',
+                stderr: 'deploy boom',
+                duration: 0,
+            });
 
             const result = await deployAppComponent('/app', cm as any, logger as any);
 
@@ -181,23 +184,28 @@ describe('deployAppComponent', () => {
         });
 
         it('should NOT call get-url when deploy fails', async () => {
-            cm.execute.mockResolvedValue({ code: 1, stdout: '', stderr: 'deploy boom',
-    duration: 0,
-});
+            cm.execute.mockResolvedValue({
+                code: 1,
+                stdout: '',
+                stderr: 'deploy boom',
+                duration: 0,
+            });
 
             await deployAppComponent('/app', cm as any, logger as any);
 
             const getUrlCalls = cm.execute.mock.calls.filter(
-                (args: unknown[]) =>
-                    typeof args[0] === 'string' && (args[0] as string).includes('get-url')
+                (args: unknown[]) => typeof args[0] === 'string' && args[0].includes('get-url')
             );
             expect(getUrlCalls).toHaveLength(0);
         });
 
         it('should fall back to stdout when stderr is empty on deploy failure', async () => {
-            cm.execute.mockResolvedValue({ code: 1, stdout: 'stdout boom', stderr: '',
-    duration: 0,
-});
+            cm.execute.mockResolvedValue({
+                code: 1,
+                stdout: 'stdout boom',
+                stderr: '',
+                duration: 0,
+            });
 
             const result = await deployAppComponent('/app', cm as any, logger as any);
 
@@ -210,9 +218,7 @@ describe('deployAppComponent', () => {
         it('should return best-effort success when get-url exits non-zero', async () => {
             cm.execute.mockImplementation((command: string) => {
                 if (command.includes('get-url')) {
-                    return Promise.resolve({ code: 1, stdout: '', stderr: 'no url',
-    duration: 0,
-});
+                    return Promise.resolve({ code: 1, stdout: '', stderr: 'no url', duration: 0 });
                 }
                 return Promise.resolve(ok('Deploy successful'));
             });
@@ -292,7 +298,7 @@ describe('extension layout: workspace config import', () => {
 
         const commands = cm.execute.mock.calls.map((c: unknown[]) => c[0] as string);
         const downloadIdx = commands.findIndex((c: string) =>
-            c.startsWith('aio console workspace download'),
+            c.startsWith('aio console workspace download')
         );
         const useIdx = commands.findIndex((c: string) => c.startsWith('aio app use'));
         expect(downloadIdx).toBeGreaterThanOrEqual(0);

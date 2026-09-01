@@ -145,9 +145,7 @@ export async function renderScreen(
         requestOverrides?: Record<string, unknown>;
     } = {}
 ) {
-    const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
-        webviewClient: { request: jest.Mock; postMessage: jest.Mock; onMessage: jest.Mock };
-    };
+    const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient');
     const project = makeAiOverviewProject(opts.projectOverrides);
     const defaultVerifyResponse = {
         success: true,

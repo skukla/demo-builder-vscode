@@ -12,12 +12,7 @@
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 
-import {
-    CommandExecutor,
-    ComponentUpdater,
-    fs,
-    vscode,
-} from './componentUpdater.testUtils';
+import { CommandExecutor, ComponentUpdater, fs, vscode } from './componentUpdater.testUtils';
 import { createMockLogger } from '../../../helpers/loggerFake';
 jest.mock('@/core/validation/URLValidator');
 import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
@@ -68,7 +63,11 @@ describe('ComponentUpdater - Extended Coverage', () => {
             arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1024)),
         }) as unknown as typeof fetch;
 
-        updater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
+        updater = new ComponentUpdater(
+            mockLogger,
+            '/mock/extension/path',
+            mockExecutor as unknown as CommandExecutor
+        );
 
         mockProject = {
             path: '/path/to/project',
@@ -156,8 +155,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
             // Find the writeFile call for .env
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
             const envWriteCall = writeFileCalls.find(
-                (call: unknown[]) =>
-                    typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
+                (call: unknown[]) => typeof call[0] === 'string' && call[0].endsWith('.env')
             );
 
             expect(envWriteCall).toBeDefined();
@@ -364,7 +362,11 @@ describe('ComponentUpdater - Extended Coverage', () => {
                 },
             } as unknown as Project;
 
-            const meshUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path', mockExecutor as unknown as CommandExecutor);
+            const meshUpdater = new ComponentUpdater(
+                mockLogger,
+                '/mock/extension/path',
+                mockExecutor as unknown as CommandExecutor
+            );
 
             await meshUpdater.updateComponent(
                 meshProject,
@@ -466,8 +468,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
             const envWriteCall = writeFileCalls.find(
-                (call: unknown[]) =>
-                    typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
+                (call: unknown[]) => typeof call[0] === 'string' && call[0].endsWith('.env')
             );
 
             expect(envWriteCall).toBeDefined();
@@ -501,8 +502,7 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
             const writeFileCalls = (fs.writeFile as jest.Mock).mock.calls;
             const envWriteCall = writeFileCalls.find(
-                (call: unknown[]) =>
-                    typeof call[0] === 'string' && (call[0] as string).endsWith('.env')
+                (call: unknown[]) => typeof call[0] === 'string' && call[0].endsWith('.env')
             );
 
             expect(envWriteCall).toBeDefined();

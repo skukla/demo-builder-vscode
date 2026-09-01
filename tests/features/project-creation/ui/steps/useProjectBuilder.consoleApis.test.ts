@@ -96,7 +96,7 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
         act(() => {
             result.current.onRemoveAppBuilderComponent('erp-sync');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedConsoleApis).toEqual({});
     });
 
@@ -111,7 +111,7 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
         act(() => {
             result.current.onRemoveAppBuilderComponent('erp-sync');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedConsoleApis).toEqual({ 'other-app': ['AssetsSDK'] });
     });
 
@@ -122,7 +122,7 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
         act(() => {
             result.current.onRemoveAppBuilderComponent('erp-sync');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect('selectedConsoleApis' in call).toBe(false);
     });
 
@@ -134,7 +134,7 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
         act(() => {
             result.current.onAppBuilderComponentToggle('erp-sync', false);
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedConsoleApis).toEqual({});
     });
 
@@ -149,7 +149,7 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
         act(() => {
             result.current.onAppBuilderComponentToggle('erp-sync', false);
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedConsoleApis).toEqual({ 'other-app': ['AssetsSDK'] });
     });
 
@@ -160,7 +160,7 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
         act(() => {
             result.current.onAppBuilderComponentToggle('erp-sync', true);
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect('selectedConsoleApis' in call).toBe(false);
     });
 
@@ -171,7 +171,7 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
         act(() => {
             result.current.onAppBuilderComponentToggle('erp-sync', false);
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect('selectedConsoleApis' in call).toBe(false);
     });
 
@@ -183,7 +183,7 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
         act(() => {
             result.current.onAppBuilderComponentToggle('headless-commerce-mesh', false);
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedAppBuilderComponents).toEqual([]);
         expect(call.selectedConsoleApis).toEqual({});
     });

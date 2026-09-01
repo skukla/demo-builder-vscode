@@ -97,7 +97,7 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
     }),
 }));
 
-global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
+global.fetch = jest.fn().mockResolvedValue({ ok: false });
 
 // =============================================================================
 // Imports (after mocks)

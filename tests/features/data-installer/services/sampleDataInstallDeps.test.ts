@@ -131,12 +131,12 @@ describe('buildSampleDataDeps — the credential dispatch, unmocked', () => {
  * handed over rather than on any outcome.
  */
 describe('buildSampleDataDeps — watch', () => {
-    const { watchImportJob } = jest.requireMock('@/features/data-installer/services/importJobRunner') as {
-        watchImportJob: jest.Mock;
-    };
+    const { watchImportJob } = jest.requireMock(
+        '@/features/data-installer/services/importJobRunner'
+    );
     const { resolveDataInstallerAccess } = jest.requireMock(
-        '@/features/data-installer/handlers/dataInstallerHandlers',
-    ) as { resolveDataInstallerAccess: jest.Mock };
+        '@/features/data-installer/handlers/dataInstallerHandlers'
+    );
 
     /** A read client: the two methods the poller calls, and nothing else. */
     const readClient = {
@@ -255,7 +255,7 @@ describe('buildSampleDataDeps — progress wording', () => {
         buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'install').onProgress?.(live);
 
         expect(report).toHaveBeenCalledWith(
-            expect.objectContaining({ processing: ['Customer groups'] }),
+            expect.objectContaining({ processing: ['Customer groups'] })
         );
     });
 });
@@ -267,7 +267,7 @@ describe('buildSampleDataDeps — credentials', () => {
         await deps.credentials(PROJECT as never);
 
         expect(mockedResolve).toHaveBeenCalledWith(
-            expect.objectContaining({ broker: expect.any(Function) }),
+            expect.objectContaining({ broker: expect.any(Function) })
         );
     });
 

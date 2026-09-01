@@ -20,7 +20,7 @@ jest.mock('@/features/updates/services/componentRepositoryResolver', () => ({
     ComponentRepositoryResolver: jest.fn().mockImplementation(() => ({
         getRepositoryInfo: jest.fn((componentId: string) => {
             const knownComponents: Record<string, any> = {
-                'headless': {
+                headless: {
                     id: 'headless',
                     repository: 'skukla/citisignal-nextjs',
                     name: 'Headless Commerce',
@@ -44,12 +44,9 @@ jest.mock('@/features/updates/services/componentRepositoryResolver', () => ({
 }));
 
 // Mock global fetch
-global.fetch = jest.fn() as jest.Mock;
+global.fetch = jest.fn();
 
-import {
-    UpdateManager,
-    vscode,
-} from './updateManager.testUtils';
+import { UpdateManager, vscode } from './updateManager.testUtils';
 import {
     createUpdateManagerContext,
     createMockLogger,
@@ -84,13 +81,23 @@ describe('UpdateManager - Component Updates', () => {
             const project1 = {
                 name: 'Project 1',
                 ...createUpdateManagerProject([
-                    { id: 'eds-storefront', version: '1.0.0', repoUrl: 'https://github.com/skukla/citisignal-eds', path: '/mock/path/eds' },
+                    {
+                        id: 'eds-storefront',
+                        version: '1.0.0',
+                        repoUrl: 'https://github.com/skukla/citisignal-eds',
+                        path: '/mock/path/eds',
+                    },
                 ]),
             };
             const project2 = {
                 name: 'Project 2',
                 ...createUpdateManagerProject([
-                    { id: 'eds-storefront', version: '0.9.0', repoUrl: 'https://github.com/skukla/citisignal-eds', path: '/mock/path/eds2' },
+                    {
+                        id: 'eds-storefront',
+                        version: '0.9.0',
+                        repoUrl: 'https://github.com/skukla/citisignal-eds',
+                        path: '/mock/path/eds2',
+                    },
                 ]),
             };
 
@@ -107,7 +114,10 @@ describe('UpdateManager - Component Updates', () => {
             mockSecurityValidationPass();
 
             // When: checking all projects for updates
-            const results = await updateManager.checkAllProjectsForUpdates([project1, project2] as any);
+            const results = await updateManager.checkAllProjectsForUpdates([
+                project1,
+                project2,
+            ] as any);
 
             // Then: should detect update for the repoUrl-only component
             expect(results).toHaveLength(1);
@@ -121,7 +131,11 @@ describe('UpdateManager - Component Updates', () => {
             const project = {
                 name: 'Project 1',
                 ...createUpdateManagerProject([
-                    { id: 'eds-storefront', version: '1.0.0', repoUrl: 'https://github.com/skukla/citisignal-eds' },
+                    {
+                        id: 'eds-storefront',
+                        version: '1.0.0',
+                        repoUrl: 'https://github.com/skukla/citisignal-eds',
+                    },
                 ]),
             };
 
@@ -137,7 +151,12 @@ describe('UpdateManager - Component Updates', () => {
                 name: 'Project 1',
                 ...createUpdateManagerProject([
                     { id: 'commerce-mesh', version: '1.0.0', path: '/mock/path/mesh' },
-                    { id: 'eds-storefront', version: '1.0.0', repoUrl: 'https://github.com/skukla/citisignal-eds', path: '/mock/path/eds' },
+                    {
+                        id: 'eds-storefront',
+                        version: '1.0.0',
+                        repoUrl: 'https://github.com/skukla/citisignal-eds',
+                        path: '/mock/path/eds',
+                    },
                 ]),
             };
 
@@ -157,7 +176,7 @@ describe('UpdateManager - Component Updates', () => {
 
             // Then: both components should have updates detected
             expect(results).toHaveLength(2);
-            const componentIds = results.map(r => r.componentId);
+            const componentIds = results.map((r) => r.componentId);
             expect(componentIds).toContain('commerce-mesh');
             expect(componentIds).toContain('eds-storefront');
         });

@@ -15,7 +15,6 @@ import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureM
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
-
 // Catalog loader — control the rows returned per project selection.
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAvailableAppBuilderComponents: jest.fn(),
@@ -89,7 +88,7 @@ describe('ensureMeshApiSubscribed', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        logger = createMockLogger() as jest.Mocked<Logger>;
+        logger = createMockLogger();
         (withOrgContext as jest.Mock).mockImplementation(
             (_t: unknown, fn: () => Promise<unknown>) => fn()
         );

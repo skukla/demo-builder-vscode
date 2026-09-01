@@ -26,7 +26,6 @@ import { ToolManager } from '@/features/eds/services/toolManager';
 import { createMockCommandExecutor } from '../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../helpers/loggerFake';
 
-
 // Track calls to getLogger to verify DI is working
 const mockModuleLogger = {
     trace: jest.fn(),
@@ -100,14 +99,16 @@ describe('Service Logger Injection', () => {
         // Clear module-level mock logs
         Object.values(mockModuleLogger).forEach((fn) => {
             if (typeof fn === 'function' && 'mockClear' in fn) {
-                (fn as jest.Mock).mockClear();
+                fn.mockClear();
             }
         });
     });
 
     describe('AuthCacheManager', () => {
         it('should accept optional logger in constructor', () => {
-            const { AuthCacheManager } = require('@/features/authentication/services/authCacheManager');
+            const {
+                AuthCacheManager,
+            } = require('@/features/authentication/services/authCacheManager');
 
             // Should work without logger (backward compatible)
             const cacheManager1 = new AuthCacheManager();
@@ -121,7 +122,9 @@ describe('Service Logger Injection', () => {
 
     describe('PrerequisitesCacheManager', () => {
         it('should accept optional logger in constructor and use injected logger', () => {
-            const { PrerequisitesCacheManager } = require('@/features/prerequisites/services/prerequisitesCacheManager');
+            const {
+                PrerequisitesCacheManager,
+            } = require('@/features/prerequisites/services/prerequisitesCacheManager');
 
             // Should work without logger (backward compatible)
             const cacheManager1 = new PrerequisitesCacheManager();
@@ -183,7 +186,9 @@ describe('Service Logger Injection', () => {
                 getToken: jest.fn().mockResolvedValue('test-token'),
             };
 
-            const { DaLiveOrgOperations } = require('@/features/eds/services/daLive/daLiveOrgOperations');
+            const {
+                DaLiveOrgOperations,
+            } = require('@/features/eds/services/daLive/daLiveOrgOperations');
 
             // Should work without logger (backward compatible)
             const service1 = new DaLiveOrgOperations(mockTokenProvider);
@@ -204,7 +209,9 @@ describe('Service Logger Injection', () => {
                 delete: jest.fn(),
             };
 
-            const { GitHubTokenService } = require('@/features/eds/services/github/githubTokenService');
+            const {
+                GitHubTokenService,
+            } = require('@/features/eds/services/github/githubTokenService');
 
             // Should work without logger (backward compatible)
             const service1 = new GitHubTokenService(mockSecretStorage);
@@ -252,7 +259,9 @@ describe('Service Logger Injection', () => {
             expect(service2).toBeDefined();
 
             // Should work with logger and GitHub token service (Helix Admin API auth)
-            const mockGithubTokenService = { getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }) };
+            const mockGithubTokenService = {
+                getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }),
+            };
             const service3 = new HelixService(mockLogger, mockGithubTokenService);
             expect(service3).toBeDefined();
         });
@@ -271,7 +280,7 @@ describe('Service Logger Injection', () => {
             const service1 = new CleanupService(
                 mockGithubService,
                 mockDaLiveService,
-                mockToolManager,
+                mockToolManager
             );
             expect(service1).toBeDefined();
 
@@ -280,7 +289,7 @@ describe('Service Logger Injection', () => {
                 mockGithubService,
                 mockDaLiveService,
                 mockToolManager,
-                mockLogger,
+                mockLogger
             );
             expect(service2).toBeDefined();
         });

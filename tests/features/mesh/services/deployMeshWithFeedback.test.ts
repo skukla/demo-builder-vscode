@@ -118,7 +118,7 @@ describe('progress register', () => {
         await deployMeshWithFeedback(deps());
 
         const stepPushes = mockSendMeshStatusUpdate.mock.calls.filter(
-            (c) => typeof c[1] === 'string' && /Reading mesh configuration/.test(c[1] as string)
+            (c) => typeof c[1] === 'string' && /Reading mesh configuration/.test(c[1])
         );
         expect(stepPushes).toEqual([]);
     });

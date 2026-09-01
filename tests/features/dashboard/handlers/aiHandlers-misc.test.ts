@@ -23,10 +23,7 @@ describe('aiHandlers — copy & module helpers', () => {
 
     describe('handleCopyAiPrompt', () => {
         it('writes the prompt body to the system clipboard and shows a confirmation toast', async () => {
-            const vscode = jest.requireMock('vscode') as {
-                env: { clipboard: { writeText: jest.Mock } };
-                window: { showInformationMessage: jest.Mock };
-            };
+            const vscode = jest.requireMock('vscode');
             const context = createAiHandlerContext();
 
             const result = await handleCopyAiPrompt(context, {
@@ -36,7 +33,7 @@ describe('aiHandlers — copy & module helpers', () => {
 
             expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith('Build a hero block');
             expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-                expect.stringContaining('Prompt copied to clipboard'),
+                expect.stringContaining('Prompt copied to clipboard')
             );
             expect(result).toEqual({ success: true });
         });
@@ -51,7 +48,7 @@ describe('aiHandlers — copy & module helpers', () => {
             });
 
             expect(loggerInfo).toHaveBeenCalledWith(
-                expect.stringContaining('[handleCopyAiPrompt] prompt copied'),
+                expect.stringContaining('[handleCopyAiPrompt] prompt copied')
             );
             const logged = loggerInfo.mock.calls.map((c) => String(c[0])).join('\n');
             expect(logged).toContain('Hero Block Generator');
@@ -59,9 +56,7 @@ describe('aiHandlers — copy & module helpers', () => {
         });
 
         it('still copies and reports success when name is omitted', async () => {
-            const vscode = jest.requireMock('vscode') as {
-                env: { clipboard: { writeText: jest.Mock } };
-            };
+            const vscode = jest.requireMock('vscode');
             const context = createAiHandlerContext();
 
             const result = await handleCopyAiPrompt(context, { prompt: 'Quick prompt' });
@@ -85,7 +80,7 @@ describe('aiHandlers — copy & module helpers', () => {
         it('returns globals first, then project prompts', () => {
             const merged = mergePromptsForRead(
                 [{ id: 'g', title: 'G', prompt: 'g', pinned: true }],
-                [{ id: 'p', title: 'P', prompt: 'p' }],
+                [{ id: 'p', title: 'P', prompt: 'p' }]
             );
             expect(merged).toEqual([
                 { id: 'g', title: 'G', prompt: 'g', pinned: true },
@@ -96,11 +91,9 @@ describe('aiHandlers — copy & module helpers', () => {
         it('dedups by id, with the global copy winning on collision', () => {
             const merged = mergePromptsForRead(
                 [{ id: 'dup', title: 'Fresh', prompt: 'fresh', pinned: true }],
-                [{ id: 'dup', title: 'Stale', prompt: 'stale' }],
+                [{ id: 'dup', title: 'Stale', prompt: 'stale' }]
             );
-            expect(merged).toEqual([
-                { id: 'dup', title: 'Fresh', prompt: 'fresh', pinned: true },
-            ]);
+            expect(merged).toEqual([{ id: 'dup', title: 'Fresh', prompt: 'fresh', pinned: true }]);
         });
 
         it('returns an empty array when both stores are empty', () => {
@@ -126,9 +119,7 @@ describe('aiHandlers — copy & module helpers', () => {
                 globalPrompts: [{ id: 'g1', title: 'G1', prompt: 'g1', pinned: true }],
             });
             const merged = readMergedAiPrompts(context, undefined);
-            expect(merged).toEqual([
-                { id: 'g1', title: 'G1', prompt: 'g1', pinned: true },
-            ]);
+            expect(merged).toEqual([{ id: 'g1', title: 'G1', prompt: 'g1', pinned: true }]);
         });
 
         it('does not throw and returns [] when there are no prompts and no project', () => {
@@ -198,10 +189,7 @@ describe('aiHandlers — copy & module helpers', () => {
             expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([
                 { id: 'g2', title: 'G2', prompt: 'g2', pinned: true },
             ]);
-            expect(remaining).toEqual([
-                { id: 'g2', title: 'G2', prompt: 'g2', pinned: true },
-            ]);
+            expect(remaining).toEqual([{ id: 'g2', title: 'G2', prompt: 'g2', pinned: true }]);
         });
     });
-
 });

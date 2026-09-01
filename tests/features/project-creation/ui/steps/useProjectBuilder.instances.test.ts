@@ -12,7 +12,6 @@
  */
 
 import { act } from '@testing-library/react';
-import type { WizardState } from '@/types/webview';
 
 // Same deterministic service mocks as the sibling useProjectBuilder files.
 jest.mock('@/features/components/services/demoPackageLoader', () => ({
@@ -73,7 +72,7 @@ describe('useProjectBuilder — onAddCustomAppBuilderComponent (instance identit
                 name: 'Firefly Image Gen',
             });
         });
-        const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
+        const call = updateState.mock.calls.at(-1)![0];
         expect(call.selectedAppBuilderComponents).toEqual(['order-sync', 'firefly-image-gen']);
         expect(call.appBuilderComponentSources).toEqual({
             'order-sync': { ...SHELL_SOURCE, name: 'Order Sync' },
@@ -92,7 +91,7 @@ describe('useProjectBuilder — onAddCustomAppBuilderComponent (instance identit
                 'acme-widget': { owner: 'acme', repo: 'widget', branch: undefined },
             },
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.appBuilderComponentSources!['acme-widget']).not.toHaveProperty('name');
     });
 });

@@ -18,11 +18,9 @@ jest.setTimeout(5000);
 
 const mockEnsureDaLiveAuth = jest.fn();
 
-
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
 }));
-
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -35,7 +33,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn().mockReturnValue({
         tokenService: {},
         fileOperations: {
-            resetRepoToTemplate: jest.fn().mockResolvedValue({ fileCount: 10, commitSha: 'abc1234567' }),
+            resetRepoToTemplate: jest
+                .fn()
+                .mockResolvedValue({ fileCount: 10, commitSha: 'abc1234567' }),
             getFileContent: jest.fn().mockResolvedValue(null),
             createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
         },
@@ -48,19 +48,14 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: (...args: unknown[]) => mockEnsureDaLiveAuth(...args),
 }));
 
-
-
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
-
 
 const mockExecuteEdsPipeline = jest.fn();
 jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: (...args: unknown[]) => mockExecuteEdsPipeline(...args),
 }));
-
-
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
@@ -70,10 +65,8 @@ jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollections: jest.fn(),
 }));
 
-
-
 // Mock fetch for code sync verification
-global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 }) as jest.Mock;
+global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 
 // =============================================================================
 // Imports (after mocks)
@@ -81,12 +74,7 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 }) as jest.Mo
 
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
-import {
-    createResetContext,
-    meshDeps,
-} from './edsResetService.testUtils';
-
-
+import { createResetContext, meshDeps } from './edsResetService.testUtils';
 
 // =============================================================================
 // Helpers
@@ -146,7 +134,9 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
         jest.clearAllMocks();
         mockContext = createResetContext();
         mockExecuteEdsPipeline.mockResolvedValue({
-            success: true, contentFilesCopied: 5, libraryPaths: [],
+            success: true,
+            contentFilesCopied: 5,
+            libraryPaths: [],
         });
     });
 
@@ -160,8 +150,10 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
         // When
         const result = await executeEdsReset(
-            createResetParams(), mockContext, mockTokenProvider,
-            meshDeps,
+            createResetParams(),
+            mockContext,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: ensureDaLiveAuth should have been called
@@ -179,8 +171,10 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
         // When
         const result = await executeEdsReset(
-            createResetParams(), mockContext, mockTokenProvider,
-            meshDeps,
+            createResetParams(),
+            mockContext,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: Pipeline should have been called twice
@@ -195,8 +189,10 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
         // When
         const result = await executeEdsReset(
-            createResetParams(), mockContext, mockTokenProvider,
-            meshDeps,
+            createResetParams(),
+            mockContext,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: Should return failure (not crash)
@@ -211,8 +207,10 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
         // When
         const result = await executeEdsReset(
-            createResetParams(), mockContext, mockTokenProvider,
-            meshDeps,
+            createResetParams(),
+            mockContext,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then
@@ -227,8 +225,10 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
         // When
         const result = await executeEdsReset(
-            createResetParams(), mockContext, mockTokenProvider,
-            meshDeps,
+            createResetParams(),
+            mockContext,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: Should have attempted re-auth twice, then failed
@@ -242,8 +242,10 @@ describe('executeEdsReset - DA.live Mid-Pipeline Re-Auth', () => {
 
         // When
         const result = await executeEdsReset(
-            createResetParams(), mockContext, mockTokenProvider,
-            meshDeps,
+            createResetParams(),
+            mockContext,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: Should not call ensureDaLiveAuth

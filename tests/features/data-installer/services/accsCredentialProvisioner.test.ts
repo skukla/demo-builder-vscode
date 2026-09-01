@@ -60,7 +60,9 @@ function makeDeps(overrides: Record<string, unknown> = {}) {
                 .fn()
                 .mockResolvedValue({ clientId: 'cid-1', idIntegration: 'int-1' }),
             getSubscribedServiceCodes: jest.fn().mockResolvedValue(['GraphQLServiceSDK']),
-            subscribeOAuthServerToServerIntegrationToServices: jest.fn().mockResolvedValue(undefined),
+            subscribeOAuthServerToServerIntegrationToServices: jest
+                .fn()
+                .mockResolvedValue(undefined),
         },
         downloadWorkspaceJson: jest
             .fn()
@@ -88,14 +90,14 @@ describe('provisionAccsCredentials', () => {
 
     it('creates the credential only when none exists', async () => {
         const { deps } = makeDeps();
-        (deps.auth.getWorkspaceS2SCredential as jest.Mock).mockResolvedValue(undefined);
+        deps.auth.getWorkspaceS2SCredential.mockResolvedValue(undefined);
 
         await provisionAccsCredentials(deps, TARGET);
 
         expect(deps.auth.createWorkspaceS2SCredentialFor).toHaveBeenCalledWith(
             TARGET.orgId,
             TARGET.projectId,
-            TARGET.workspaceId,
+            TARGET.workspaceId
         );
     });
 
@@ -120,13 +122,13 @@ describe('provisionAccsCredentials', () => {
             [
                 { sdkCode: 'GraphQLServiceSDK', licenseConfigs: null, roles: null },
                 { sdkCode: 'ACCS-REST-API', licenseConfigs: null, roles: null },
-            ],
+            ]
         );
     });
 
     it('skips the subscribe entirely when ACCS-REST-API is already there', async () => {
         const { deps } = makeDeps();
-        (deps.auth.getSubscribedServiceCodes as jest.Mock).mockResolvedValue([
+        deps.auth.getSubscribedServiceCodes.mockResolvedValue([
             'GraphQLServiceSDK',
             'ACCS-REST-API',
         ]);
@@ -138,8 +140,8 @@ describe('provisionAccsCredentials', () => {
 
     it('reports a workspace whose download carries no secret', async () => {
         const { deps } = makeDeps();
-        (deps.downloadWorkspaceJson as jest.Mock).mockResolvedValue(
-            JSON.stringify({ project: { workspace: { details: { credentials: [] } } } }),
+        deps.downloadWorkspaceJson.mockResolvedValue(
+            JSON.stringify({ project: { workspace: { details: { credentials: [] } } } })
         );
 
         const result = await provisionAccsCredentials(deps, TARGET);
@@ -162,11 +164,9 @@ describe('provisionAccsCredentials', () => {
 
     it('reports a failed step as a reason, never a throw', async () => {
         const { deps } = makeDeps();
-        (deps.auth.getWorkspaceS2SCredential as jest.Mock).mockRejectedValue(
-            new Error('SDK not initialized'),
-        );
-        (deps.auth.createWorkspaceS2SCredentialFor as jest.Mock).mockRejectedValue(
-            new Error('SDK not initialized'),
+        deps.auth.getWorkspaceS2SCredential.mockRejectedValue(new Error('SDK not initialized'));
+        deps.auth.createWorkspaceS2SCredentialFor.mockRejectedValue(
+            new Error('SDK not initialized')
         );
 
         const result = await provisionAccsCredentials(deps, TARGET);
@@ -187,9 +187,11 @@ describe('a malformed workspace download', () => {
         const secret = 'fake-test-secret-not-a-secret';
         const lines: string[] = [];
         const { deps } = makeDeps({
-            downloadWorkspaceJson: jest.fn().mockResolvedValue(
-                `{"project":{"workspace":{"details":{"credentials":[{"client_secrets":["${secret}"`,
-            ),
+            downloadWorkspaceJson: jest
+                .fn()
+                .mockResolvedValue(
+                    `{"project":{"workspace":{"details":{"credentials":[{"client_secrets":["${secret}"`
+                ),
             log: (line: string) => lines.push(line),
         });
 

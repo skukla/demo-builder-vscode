@@ -49,7 +49,10 @@ describe('OpenInClaudeCommand', () => {
                 makeLogger()
             );
 
-            await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'do the thing' });
+            await command.execute({
+                project: makeOpenInClaudeProject() as Project,
+                prompt: 'do the thing',
+            });
 
             expect(mocks.clipboardWriteMock).toHaveBeenCalledWith('do the thing');
         });
@@ -62,7 +65,10 @@ describe('OpenInClaudeCommand', () => {
                 makeLogger()
             );
 
-            await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'do the thing' });
+            await command.execute({
+                project: makeOpenInClaudeProject() as Project,
+                prompt: 'do the thing',
+            });
 
             // Find the clipboard-fallback tip — references sending to Claude AND mentions clipboard fallback
             const tipCall = mocks.showInformationMessageMock.mock.calls.find(
@@ -101,7 +107,10 @@ describe('OpenInClaudeCommand', () => {
                 makeLogger()
             );
 
-            await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'do the thing' });
+            await command.execute({
+                project: makeOpenInClaudeProject() as Project,
+                prompt: 'do the thing',
+            });
 
             // Continued conversation → carries the re-home preamble before the prompt.
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith(
@@ -117,7 +126,10 @@ describe('OpenInClaudeCommand', () => {
                 makeLogger()
             );
 
-            await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'do the thing' });
+            await command.execute({
+                project: makeOpenInClaudeProject() as Project,
+                prompt: 'do the thing',
+            });
 
             // Cold start self-homes from AGENTS.md → NO re-home preamble.
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith("claude -- 'do the thing'");
@@ -132,7 +144,10 @@ describe('OpenInClaudeCommand', () => {
                 makeLogger()
             );
 
-            await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: "it's a test" });
+            await command.execute({
+                project: makeOpenInClaudeProject() as Project,
+                prompt: "it's a test",
+            });
 
             // POSIX single-quote escaping: ' becomes '\'' (close, escaped quote, reopen).
             // The re-home preamble (no quotes) precedes the prompt inside the same arg.
@@ -150,7 +165,10 @@ describe('OpenInClaudeCommand', () => {
                 makeLogger()
             );
 
-            await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: multiLine });
+            await command.execute({
+                project: makeOpenInClaudeProject() as Project,
+                prompt: multiLine,
+            });
 
             expect(mocks.terminalSendTextMock).toHaveBeenCalledWith(
                 `claude --continue -- '${REHOME}${multiLine}'`
@@ -168,7 +186,10 @@ describe('OpenInClaudeCommand', () => {
                 makeLogger()
             );
 
-            await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'do the thing' });
+            await command.execute({
+                project: makeOpenInClaudeProject() as Project,
+                prompt: 'do the thing',
+            });
 
             const sendSequenceCall = executeCommandMock.mock.calls.find(
                 (c) => c[0] === 'workbench.action.terminal.sendSequence'
@@ -227,7 +248,10 @@ describe('OpenInClaudeCommand', () => {
                 makeLogger()
             );
 
-            await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'hello world' });
+            await command.execute({
+                project: makeOpenInClaudeProject() as Project,
+                prompt: 'hello world',
+            });
 
             const sendSequenceCall = executeCommandMock.mock.calls.find(
                 (c) => c[0] === 'workbench.action.terminal.sendSequence'
@@ -254,7 +278,10 @@ describe('OpenInClaudeCommand', () => {
                 makeLogger()
             );
 
-            await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: multiLine });
+            await command.execute({
+                project: makeOpenInClaudeProject() as Project,
+                prompt: multiLine,
+            });
 
             const sendSequenceCall = executeCommandMock.mock.calls.find(
                 (c) => c[0] === 'workbench.action.terminal.sendSequence'
@@ -278,7 +305,10 @@ describe('OpenInClaudeCommand', () => {
                 makeLogger()
             );
 
-            await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'first' });
+            await command.execute({
+                project: makeOpenInClaudeProject() as Project,
+                prompt: 'first',
+            });
 
             // First click — tip shown, flag set
             const firstTipCalls = mocks.showInformationMessageMock.mock.calls.filter((c) =>
@@ -289,11 +319,14 @@ describe('OpenInClaudeCommand', () => {
 
             // Second click — flag already set, tip should NOT fire again
             mocks.showInformationMessageMock.mockClear();
-            (globalState.get as jest.Mock).mockImplementation((key: string, fallback?: unknown) => {
+            globalState.get.mockImplementation((key: string, fallback?: unknown) => {
                 if (key === CLIPBOARD_TIP_KEY) return true;
                 return fallback;
             });
-            await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'second' });
+            await command.execute({
+                project: makeOpenInClaudeProject() as Project,
+                prompt: 'second',
+            });
             const secondTipCalls = mocks.showInformationMessageMock.mock.calls.filter((c) =>
                 /sent to claude/i.test(String(c[0]))
             );

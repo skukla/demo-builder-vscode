@@ -168,3 +168,6 @@ conversion, which the enforcer requires anyway.
 - 2026-09-01  refactor(tests): the codemod converts MEMBERS too — HandlerContext 38 -> 29 (`ddbd91347`)
 - 2026-09-01  refactor(tests): HandlerContext 29 -> 13, and most of the "reading work" was my own bug (`fe45c5d38`)
 - 2026-09-01  test(helpers): a WebviewPanel fake and ternary members — and the mechanical seam ends here (`6859d5589`)
+- 2026-09-01  docs(backlog): correct the warning count, and record the debt this work created (`5332f4acd`)
+- 2026-09-01  refactor(tests): declaration-position `as any` — 1,065 to 1,000, and the yield is the finding (`4ae1bc20d`)
+- 2026-09-01  refactor(tests): declaration-position `as never` — 84% of them were load-bearing (`632df89d1`)

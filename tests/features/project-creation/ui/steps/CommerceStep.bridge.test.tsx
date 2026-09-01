@@ -160,7 +160,7 @@ describe('CommerceStep — Backend→stack bridge (v7)', () => {
             // The ambiguous branch may CLEAR selectedStack (defense-in-depth) but must
             // never COMMIT a real stack id while the frontend is still pending.
             const committedRealStack = updateState.mock.calls.some(([partial]) =>
-                Boolean((partial as Partial<WizardState>).selectedStack)
+                Boolean(partial.selectedStack)
             );
             expect(committedRealStack).toBe(false);
         });

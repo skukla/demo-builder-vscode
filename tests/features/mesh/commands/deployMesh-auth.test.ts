@@ -22,7 +22,6 @@ import type { Project, ComponentInstance } from '@/types/base';
 // Mocks
 // =============================================================================
 
-
 // Mock the shared auth guard
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn(),
@@ -111,15 +110,15 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
             saveProject: jest.fn(),
         }) as unknown as jest.Mocked<StateManager>;
 
-        mockLogger = createMockLogger() as jest.Mocked<Logger>;
+        mockLogger = createMockLogger();
 
         mockAuthManager = {
             isAuthenticated: jest.fn().mockResolvedValue(true),
             // Canonical org-reachability check (detectProjectOrgMismatch) lists the
             // token's reachable orgs; org-123 matches the project → no mismatch.
-            getOrganizations: jest.fn().mockResolvedValue([
-                { id: 'org-123', code: 'ORG123@AdobeOrg', name: 'Org 123' },
-            ]),
+            getOrganizations: jest
+                .fn()
+                .mockResolvedValue([{ id: 'org-123', code: 'ORG123@AdobeOrg', name: 'Org 123' }]),
             getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org-123', name: 'Org 123' }),
         };
 
@@ -146,9 +145,11 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
         (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
 
         (fs.access as jest.Mock).mockResolvedValue(undefined);
-        (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify({
-            meshConfig: { sources: [] },
-        }));
+        (fs.readFile as jest.Mock).mockResolvedValue(
+            JSON.stringify({
+                meshConfig: { sources: [] },
+            })
+        );
     });
 
     // =========================================================================
@@ -177,7 +178,7 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
                     projectId: 'proj-123',
                     workspace: 'ws-123',
                 }),
-            }),
+            })
         );
 
         // And: org reachability check should have run (means we proceeded past auth)
@@ -224,7 +225,7 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
         // And: Should NOT show error message (cancelled, not failed)
         expect(vscode.window.showErrorMessage).not.toHaveBeenCalledWith(
             expect.stringContaining('Sign-in failed'),
-            expect.anything(),
+            expect.anything()
         );
 
         // And: Should NOT proceed to org reachability check
@@ -250,7 +251,7 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
 
         // And: Error message should be shown
         expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-            'Sign-in failed or was cancelled. Please try again.',
+            'Sign-in failed or was cancelled. Please try again.'
         );
 
         // And: Should NOT proceed to org reachability check
@@ -286,7 +287,7 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
                     projectId: 'custom-proj',
                     workspace: 'custom-ws',
                 },
-            }),
+            })
         );
     });
 });

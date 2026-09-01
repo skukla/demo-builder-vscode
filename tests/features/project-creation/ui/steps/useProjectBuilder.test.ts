@@ -17,7 +17,6 @@
 
 import { act } from '@testing-library/react';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { WizardState } from '@/types/webview';
 
 // The mesh seeding depends on getResolvedMeshRequirement for the reset path.
 // Default each test to 'optional' (no auto-include) unless overridden.
@@ -142,7 +141,7 @@ describe('useProjectBuilder — mesh selection (single authority, D3)', () => {
         act(() => {
             result.current.onAppBuilderComponentToggle('headless-commerce-mesh', true);
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedAppBuilderComponents).toEqual(
             expect.arrayContaining(['some-non-mesh-component', 'headless-commerce-mesh'])
         );
@@ -178,7 +177,7 @@ describe('useProjectBuilder — onStackSelect seeds the mesh into selectedAppBui
         act(() => {
             result.current.onStackSelect('headless-paas');
         });
-        const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
+        const call = updateState.mock.calls.at(-1)![0];
         expect(call.selectedAppBuilderComponents).toEqual([COMPONENT_IDS.HEADLESS_COMMERCE_MESH]);
     });
 
@@ -191,7 +190,7 @@ describe('useProjectBuilder — onStackSelect seeds the mesh into selectedAppBui
         act(() => {
             result.current.onStackSelect('headless-paas');
         });
-        const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
+        const call = updateState.mock.calls.at(-1)![0];
         expect(call.selectedAppBuilderComponents).toEqual([
             'acme-widget',
             COMPONENT_IDS.HEADLESS_COMMERCE_MESH,
@@ -207,7 +206,7 @@ describe('useProjectBuilder — onStackSelect seeds the mesh into selectedAppBui
         act(() => {
             result.current.onStackSelect('headless-paas');
         });
-        const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
+        const call = updateState.mock.calls.at(-1)![0];
         expect(call.selectedAppBuilderComponents).toEqual(['acme-widget']);
     });
 
@@ -221,7 +220,7 @@ describe('useProjectBuilder — onStackSelect seeds the mesh into selectedAppBui
         act(() => {
             result.current.onStackSelect('headless-paas');
         });
-        const call = updateState.mock.calls.at(-1)![0] as Partial<WizardState>;
+        const call = updateState.mock.calls.at(-1)![0];
         expect(call.selectedAppBuilderComponents).toBeUndefined();
     });
 });
@@ -271,7 +270,7 @@ describe('useProjectBuilder — edsConfig derivation on stack select', () => {
         act(() => {
             result.current.onStackSelect('eds-accs');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.edsConfig).toEqual(
             expect.objectContaining({
                 templateOwner: 'skukla',
@@ -288,7 +287,7 @@ describe('useProjectBuilder — edsConfig derivation on stack select', () => {
         act(() => {
             result.current.onStackSelect('headless-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.edsConfig).toBeUndefined();
     });
 });
@@ -318,7 +317,7 @@ describe('useProjectBuilder — onAddCustomAppBuilderComponent (custom URL door)
                 branch: 'dev',
             });
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.appBuilderComponentSources).toEqual({
             'acme-widget': { owner: 'acme', repo: 'widget', branch: 'dev' },
         });
@@ -333,7 +332,7 @@ describe('useProjectBuilder — onAddCustomAppBuilderComponent (custom URL door)
         act(() => {
             result.current.onAddCustomAppBuilderComponent({ owner: 'acme', repo: 'widget' });
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedAppBuilderComponents).toEqual(
             expect.arrayContaining(['prior-repo', 'acme-widget'])
         );
@@ -377,7 +376,7 @@ describe('required mesh cannot be toggled off', () => {
             result.current.onAppBuilderComponentToggle('eds-commerce-mesh', false);
         });
 
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedAppBuilderComponents).toEqual([]);
     });
 
@@ -402,10 +401,10 @@ describe('required NON-mesh components cannot be removed (generic guard)', () =>
     // doors (the toggle and the remove callback) must refuse it.
     const { getAvailableAppBuilderComponents } = jest.requireMock(
         '@/features/components/services/appBuilderComponentCatalogLoader'
-    ) as { getAvailableAppBuilderComponents: jest.Mock };
+    );
     const actualLoader = jest.requireActual(
         '@/features/components/services/appBuilderComponentCatalogLoader'
-    ) as { getAvailableAppBuilderComponents: (b: string, f: string) => unknown[] };
+    );
 
     const nativeEntry = {
         id: 'native-thing',

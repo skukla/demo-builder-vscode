@@ -121,8 +121,8 @@ describe('Extension Activation - Navigation', () => {
     });
 
     describe('Given the window is anchored to a Demo Builder project on cold start', () => {
-        const os = jest.requireActual('os') as typeof import('os');
-        const path = jest.requireActual('path') as typeof import('path');
+        const os = jest.requireActual('os');
+        const path = jest.requireActual('path');
         const PROJECT_PATH = path.join(os.homedir(), '.demo-builder', 'projects', 'my-demo');
 
         beforeEach(() => {

@@ -6,9 +6,13 @@
  * its own behavior is covered by collaboratorGate.test.ts.
  */
 
-jest.mock('vscode', () => ({
-    workspace: { getConfiguration: jest.fn() },
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        workspace: { getConfiguration: jest.fn() },
+    }),
+    { virtual: true }
+);
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000 },
@@ -28,7 +32,7 @@ jest.mock('@/features/updates/services/collaboratorGate', () => ({
     clearCollaboratorCache: jest.fn(),
 }));
 
-global.fetch = jest.fn() as jest.Mock;
+global.fetch = jest.fn();
 
 import { UpdateManager } from '@/features/updates/services/updateManager';
 import { isRepoCollaborator } from '@/features/updates/services/collaboratorGate';
@@ -109,7 +113,8 @@ describe('UpdateManager - Early-Access Gate', () => {
                     assets: [
                         {
                             name: 'extension.vsix',
-                            browser_download_url: 'https://github.com/test/repo/releases/download/v1.1.0/extension.vsix',
+                            browser_download_url:
+                                'https://github.com/test/repo/releases/download/v1.1.0/extension.vsix',
                         },
                     ],
                 }),

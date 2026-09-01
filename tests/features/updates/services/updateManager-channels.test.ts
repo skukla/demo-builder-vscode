@@ -12,12 +12,9 @@
  */
 
 // Mock global fetch
-global.fetch = jest.fn() as jest.Mock;
+global.fetch = jest.fn();
 
-import {
-    UpdateManager,
-    vscode,
-} from './updateManager.testUtils';
+import { UpdateManager, vscode } from './updateManager.testUtils';
 import {
     createUpdateManagerContext,
     createMockLogger,
@@ -79,7 +76,8 @@ describe('UpdateManager - Update Channels', () => {
                     assets: [
                         {
                             name: 'extension.vsix',
-                            browser_download_url: 'https://github.com/test/repo/releases/download/v1.2.0-beta.1/extension.vsix',
+                            browser_download_url:
+                                'https://github.com/test/repo/releases/download/v1.2.0-beta.1/extension.vsix',
                         },
                     ],
                 },
@@ -92,7 +90,8 @@ describe('UpdateManager - Update Channels', () => {
                     assets: [
                         {
                             name: 'extension.vsix',
-                            browser_download_url: 'https://github.com/test/repo/releases/download/v1.1.0/extension.vsix',
+                            browser_download_url:
+                                'https://github.com/test/repo/releases/download/v1.1.0/extension.vsix',
                         },
                     ],
                 },
@@ -133,7 +132,8 @@ describe('UpdateManager - Update Channels', () => {
                     assets: [
                         {
                             name: 'extension.vsix',
-                            browser_download_url: 'https://github.com/test/repo/releases/download/v1.2.0-beta.1/extension.vsix',
+                            browser_download_url:
+                                'https://github.com/test/repo/releases/download/v1.2.0-beta.1/extension.vsix',
                         },
                     ],
                 },

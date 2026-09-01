@@ -30,12 +30,9 @@ describe('aiHandlers — launch & save', () => {
 
         /** Set the mocked workspaceFolders for a single test. */
         function setWorkspaceFolder(path: string | null): void {
-            const vscode = jest.requireMock('vscode') as {
-                workspace: { workspaceFolders: { uri: { fsPath: string } }[] | undefined };
-            };
-            vscode.workspace.workspaceFolders = path === null
-                ? undefined
-                : [{ uri: { fsPath: path } }];
+            const vscode = jest.requireMock('vscode');
+            vscode.workspace.workspaceFolders =
+                path === null ? undefined : [{ uri: { fsPath: path } }];
         }
 
         beforeEach(() => {
@@ -43,9 +40,7 @@ describe('aiHandlers — launch & save', () => {
         });
 
         it('forwards a prompt payload to demoBuilder.openInClaude', async () => {
-            const vscode = jest.requireMock('vscode') as {
-                commands: { executeCommand: jest.Mock };
-            };
+            const vscode = jest.requireMock('vscode');
             const context = createAiHandlerContext();
 
             const result = await handleOpenInClaude(context, {
@@ -55,14 +50,12 @@ describe('aiHandlers — launch & save', () => {
             expect(result).toEqual({ success: true });
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
                 'demoBuilder.openInClaude',
-                { prompt: 'Add a hero block' },
+                { prompt: 'Add a hero block' }
             );
         });
 
         it('calls demoBuilder.openInClaude with no second argument when no payload is provided', async () => {
-            const vscode = jest.requireMock('vscode') as {
-                commands: { executeCommand: jest.Mock };
-            };
+            const vscode = jest.requireMock('vscode');
             const context = createAiHandlerContext();
 
             const result = await handleOpenInClaude(context);
@@ -74,9 +67,7 @@ describe('aiHandlers — launch & save', () => {
         });
 
         it('calls demoBuilder.openInClaude with no second argument when payload omits prompt', async () => {
-            const vscode = jest.requireMock('vscode') as {
-                commands: { executeCommand: jest.Mock };
-            };
+            const vscode = jest.requireMock('vscode');
             const context = createAiHandlerContext();
 
             const result = await handleOpenInClaude(context, {} as never);
@@ -90,16 +81,23 @@ describe('aiHandlers — launch & save', () => {
         // ----- No anchoring in the handler (moved to the command) -----
 
         it('does NOT anchor (no pending record, no openFolder) even when workspace ≠ project — the command handles that', async () => {
-            const vscode = jest.requireMock('vscode') as {
-                commands: { executeCommand: jest.Mock };
-            };
+            const vscode = jest.requireMock('vscode');
             setWorkspaceFolder('/some/other/repo');
             const globalStateUpdateMock = jest.fn().mockResolvedValue(undefined);
             const context = createAiHandlerContext({
                 context: {
                     extensionPath: '/mock/extension/path',
-                    secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-                    globalState: { get: jest.fn(), update: globalStateUpdateMock, keys: jest.fn().mockReturnValue([]) },
+                    secrets: {
+                        get: jest.fn(),
+                        store: jest.fn(),
+                        delete: jest.fn(),
+                        onDidChange: jest.fn(),
+                    },
+                    globalState: {
+                        get: jest.fn(),
+                        update: globalStateUpdateMock,
+                        keys: jest.fn().mockReturnValue([]),
+                    },
                     subscriptions: [],
                 } as unknown as HandlerContext['context'],
             });
@@ -113,12 +111,12 @@ describe('aiHandlers — launch & save', () => {
             expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
                 'vscode.openFolder',
                 expect.anything(),
-                expect.anything(),
+                expect.anything()
             );
             // Just forwards the prompt — the command anchors on-demand
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
                 'demoBuilder.openInClaude',
-                { prompt: 'Add a hero block' },
+                { prompt: 'Add a hero block' }
             );
         });
     });
@@ -180,7 +178,7 @@ describe('aiHandlers — launch & save', () => {
                 { id: 'b', title: 'B', prompt: 'b' },
             ]);
             expect(result.success).toBe(true);
-            expect((result.aiPrompts as unknown[])).toHaveLength(2);
+            expect(result.aiPrompts as unknown[]).toHaveLength(2);
         });
 
         it('returns success: false when prompt payload is missing', async () => {
@@ -249,9 +247,7 @@ describe('aiHandlers — launch & save', () => {
             await handleSaveAiPrompt(context, {
                 prompt: { id: 'p1', title: 'Unpinned', prompt: 'p' },
             });
-            expect(project.aiPrompts).toEqual([
-                { id: 'p1', title: 'Unpinned', prompt: 'p' },
-            ]);
+            expect(project.aiPrompts).toEqual([{ id: 'p1', title: 'Unpinned', prompt: 'p' }]);
             expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
         });
 
@@ -298,7 +294,7 @@ describe('aiHandlers — launch & save', () => {
                 prompt: { id: 'x', title: 'X', prompt: 'x', pinned: true },
             });
             const result = await handleListAiPrompts(context);
-            const matches = (result.aiPrompts as { id: string }[]).filter(p => p.id === 'x');
+            const matches = (result.aiPrompts as { id: string }[]).filter((p) => p.id === 'x');
             expect(matches).toHaveLength(1);
             expect(matches[0]).toMatchObject({ pinned: true });
         });
@@ -316,5 +312,4 @@ describe('aiHandlers — launch & save', () => {
             expect(project.aiPrompts).toEqual([]);
         });
     });
-
 });
