@@ -31,6 +31,7 @@ import { z } from 'zod';
 import { getAdobeTarget, runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import {
     lastCompleteData,
     toPhaseTimeline,
@@ -365,8 +366,7 @@ async function createEds(
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
  * @param ctxFactory Builds a headless HandlerContext per call.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function registerCreateProjectTool(server: any, ctxFactory: () => HandlerContext): void {
+export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () => HandlerContext): void {
     server.registerTool(
         'create_project',
         {

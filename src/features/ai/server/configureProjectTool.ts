@@ -50,6 +50,7 @@
 import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import type { StateManager } from '@/core/state/stateManager';
 import componentsConfig from '@/features/components/config/components.json';
 import type { Project } from '@/types/base';
@@ -193,8 +194,7 @@ function applyToProject(
 }
 
 export function registerConfigureProjectTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     stateManager: StateManager,
 ): void {
     server.registerTool(

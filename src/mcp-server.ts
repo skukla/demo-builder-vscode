@@ -41,6 +41,7 @@ import type { McpCredentialProvider, McpToolCredentials } from './mcp/credential
 import { projectToolHandlers } from './mcp/projectToolHandlers';
 import { storefrontSyncHandler } from './mcp/storefrontSyncHandler';
 import { asRawText, asText } from '@/features/ai/server/mcpToolResult';
+import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
 
 // Re-exported so the public identity of this module is unchanged by the split.
 export type { McpCredentialProvider, McpToolCredentials } from './mcp/credentials';
@@ -77,7 +78,7 @@ export const toolHandlers = {
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function registerProjectTools(
-    server: any,
+    server: McpToolServer,
     projectsDir: string,
     credentials?: McpCredentialProvider,
 ): void {

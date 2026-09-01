@@ -16,7 +16,7 @@ function fakeServer() {
     const tools = new Map<string, { inputSchema: any; handler: (args: any) => Promise<any> }>();
     return {
          
-        registerTool(name: string, def: { inputSchema: any }, handler: (args: any) => Promise<any>) {
+        registerTool(name: string, def: { inputSchema?: unknown }, handler: (args: any) => Promise<any>) {
             tools.set(name, { inputSchema: def.inputSchema, handler });
         },
         tools,

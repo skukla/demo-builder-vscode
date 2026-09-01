@@ -194,7 +194,18 @@ registerTool(name: string, _def: unknown, handler) { tools.set(name, handler); }
 
 That is correct for what those tests do — drive a handler and assert its output. It is also
 completely blind to the argument it discards, which is where the SDK contract lives: the input
-schema. `tsc` cannot cover the gap either, because `server` is typed `any`.
+schema.
+
+**`tsc` NOW COVERS HALF OF THAT GAP, as of 2026-08-31.** This section used to end "`tsc`
+cannot cover the gap either, because `server` is typed `any`" — and that was true of all 30
+registrar sites. They now take `McpToolServer`
+(`src/features/ai/server/mcpToolServer.ts`), a narrowed surface that types `description` and
+`inputSchema` exactly. Both defects below are now COMPILE ERRORS: a raw JSON Schema is
+rejected with "'type' does not exist in type 'ZodType'", and a missing `description` is
+rejected outright. Verified by planting each one against the interface.
+
+What the type still cannot see: whether a shape should have been `.strict()`. That remains
+`realSdkRegistration.test.ts`'s job, and the stub's job is unchanged — behaviour.
 
 Two defects shipped through that hole on 2026-08-17, both with green suites:
 

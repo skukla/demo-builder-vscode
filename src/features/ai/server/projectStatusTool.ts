@@ -26,6 +26,7 @@
  */
 
 import { asRawText, asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import type { StateManager } from '@/core/state/stateManager';
@@ -88,8 +89,7 @@ export async function resolveProjectStatus(project: Project): Promise<unknown> {
 
 /** Registers `get_project_status` on the MCP server. */
 export function registerProjectStatusTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     stateManager: StateManager,
 ): void {
     server.registerTool(

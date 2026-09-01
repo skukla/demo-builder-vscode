@@ -31,6 +31,7 @@
 import { z } from 'zod';
 import { getAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { createTeardownDeps } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
@@ -88,8 +89,7 @@ function requireProject(): { orgId: string; projectId: string } | { error: strin
 }
 
 export function registerAdobeResourceTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
 ): void {
     server.registerTool(

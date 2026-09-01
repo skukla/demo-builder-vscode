@@ -52,8 +52,20 @@ import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
 import type { StateManager } from '@/core/state/stateManager';
 import type { HandlerContext } from '@/types/handlers';
+import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
 
-const server = () => new McpServer({ name: 'test', version: '0.0.0' });
+/**
+ * A REAL SDK server, handed over as our narrowed `McpToolServer`.
+ *
+ * The cast is unavoidable and is the sanctioned form — it NAMES the target. The
+ * SDK's own `registerTool` is generic over its zod schema, and asking tsc to
+ * structurally match that against our surface makes it give up with "type
+ * instantiation is excessively deep". Casting once here keeps the point of this
+ * file intact: every registration below still runs against the REAL SDK, which is
+ * the only thing that catches a bad inputSchema at all.
+ */
+const server = () =>
+    new McpServer({ name: 'test', version: '0.0.0' }) as unknown as McpToolServer;
 const ctxFactory = () => ({ sendMessage: async () => {} }) as unknown as HandlerContext;
 const stateManager = { getCurrentProject: async () => null } as unknown as StateManager;
 
@@ -69,24 +81,24 @@ describe('registration against the real MCP SDK', () => {
     });
 
     it.each([
-        ['get_component_requirements', (s: McpServer) => registerComponentRequirementsTool(s)],
+        ['get_component_requirements', (s: McpToolServer) => registerComponentRequirementsTool(s)],
         [
             'validate_component_selection',
-            (s: McpServer) => registerValidateSelectionTool(s, ctxFactory),
+            (s: McpToolServer) => registerValidateSelectionTool(s, ctxFactory),
         ],
-        ['get_project_status', (s: McpServer) => registerProjectStatusTool(s, stateManager)],
+        ['get_project_status', (s: McpToolServer) => registerProjectStatusTool(s, stateManager)],
         [
             'get_commerce_endpoints',
-            (s: McpServer) => registerCommerceEndpointsTool(s, stateManager),
+            (s: McpToolServer) => registerCommerceEndpointsTool(s, stateManager),
         ],
-        ['discovery tools', (s: McpServer) => registerDiscoveryTools(s)],
-        ['adobe resource tools', (s: McpServer) => registerAdobeResourceTools(s, ctxFactory)],
+        ['discovery tools', (s: McpToolServer) => registerDiscoveryTools(s)],
+        ['adobe resource tools', (s: McpToolServer) => registerAdobeResourceTools(s, ctxFactory)],
         [
             'event provider tools',
-            (s: McpServer) => registerEventProviderTools(s, ctxFactory, () => ({}) as never),
+            (s: McpToolServer) => registerEventProviderTools(s, ctxFactory, () => ({}) as never),
         ],
-        ['configure_project', (s: McpServer) => registerConfigureProjectTool(s, stateManager)],
-        ['cloud resource tools', (s: McpServer) => registerCloudResourceTools(s, ctxFactory)],
+        ['configure_project', (s: McpToolServer) => registerConfigureProjectTool(s, stateManager)],
+        ['cloud resource tools', (s: McpToolServer) => registerCloudResourceTools(s, ctxFactory)],
     ])('accepts %s', (_name, register) => {
         expect(() => register(server())).not.toThrow();
     });

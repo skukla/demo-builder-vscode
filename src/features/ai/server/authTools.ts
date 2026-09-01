@@ -15,6 +15,7 @@ import * as vscode from 'vscode';
 import { z } from 'zod';
 import { clearAdobeTarget } from './adobeTargetStore';
 import { asRawText, asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
@@ -156,8 +157,7 @@ async function safeStatus(fn: () => Promise<ProviderStatus>): Promise<ProviderSt
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
  * @param ctxFactory Builds a headless HandlerContext per call.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function registerAuthTools(server: any, ctxFactory: () => HandlerContext): void {
+export function registerAuthTools(server: McpToolServer, ctxFactory: () => HandlerContext): void {
     server.registerTool(
         'get_auth_status',
         {

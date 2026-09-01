@@ -21,6 +21,7 @@
 import { z } from 'zod';
 import { getAdobeTarget, runWithAdobeTarget, setAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { hasErrorCode } from '@/core/errors';
 import { withOrgContext } from '@/core/shell/orgContextEnv';
 import {
@@ -132,8 +133,7 @@ function matchesSearch(e: { id: string; name: string; title?: string }, term: st
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
  * @param ctxFactory Builds a headless HandlerContext per call.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext): void {
+export function registerAdobeTools(server: McpToolServer, ctxFactory: () => HandlerContext): void {
     // ── Listing ────────────────────────────────────────────────────────────────
     server.registerTool(
         'list_orgs',

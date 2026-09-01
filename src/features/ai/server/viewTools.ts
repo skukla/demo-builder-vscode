@@ -17,6 +17,7 @@
 
 import { z } from 'zod';
 import { asRawText, asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 
 /**
  * How long to wait before restarting the host.
@@ -46,11 +47,12 @@ const VIEW_NAMES = Object.keys(VIEW_COMMANDS) as [string, ...string[]];
  * @param runCommand Executes a VS Code command by id (injected; e.g.
  *   `(id) => vscode.commands.executeCommand(id)`).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function registerViewTools(server: any, runCommand: (commandId: string) => Promise<unknown>): void {
+export function registerViewTools(server: McpToolServer, runCommand: (commandId: string) => Promise<unknown>): void {
     server.registerTool(
         'open_view',
         {
+            // Reviewed 2026-08-31: no service and no token on any path.
+            needsAuth: false,
             // NOT read-only: it opens a panel in the user's window — same as open_url.
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Open View',
@@ -76,6 +78,8 @@ export function registerViewTools(server: any, runCommand: (commandId: string) =
     server.registerTool(
         'reload_window',
         {
+            // Reviewed 2026-08-31: no service and no token on any path.
+            needsAuth: false,
             // Destructive in the sense that matters: it restarts the extension
             // host and discards whatever was in flight in that window.
             annotations: { readOnlyHint: false, destructiveHint: true },

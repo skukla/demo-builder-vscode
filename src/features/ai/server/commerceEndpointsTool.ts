@@ -64,6 +64,7 @@
  */
 
 import { asRawText, asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import type { StateManager } from '@/core/state/stateManager';
 import {
@@ -177,8 +178,7 @@ export function buildCommerceEndpoints(
 
 /** Registers `get_commerce_endpoints` on the MCP server. */
 export function registerCommerceEndpointsTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     stateManager: StateManager,
 ): void {
     server.registerTool(

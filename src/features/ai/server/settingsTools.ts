@@ -38,6 +38,7 @@
 import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 
 /**
  * Every `demoBuilder.*` key, as declared in `package.json` `contributes.configuration`.
@@ -109,8 +110,7 @@ function project(key: string, value: unknown): unknown {
  *   so this module carries no vscode import, matching viewTools and lifecycleTools.
  */
 export function registerSettingsTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     readSetting: (key: string) => unknown,
 ): void {
     server.registerTool(

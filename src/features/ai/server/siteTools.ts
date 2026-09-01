@@ -52,6 +52,7 @@
 import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { AGENT_PAGE_SIZE } from './projectors';
 import { phaseReporter } from '@/core/utils/agentPhaseChannel';
 import { repairSiteConfigForProject } from '@/features/eds/services/configService/repairSiteConfigForProject';
@@ -96,8 +97,7 @@ function refuseIfNotEds(project: Project, tool: string): { error: string } | und
 }
 
 export function registerSiteTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
 ): void {
     server.registerTool(

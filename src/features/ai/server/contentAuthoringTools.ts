@@ -38,6 +38,7 @@
 import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { buildSourceUrl, resolveDaPath } from '@/features/eds/services/daLive/daLiveContentHelpers';
@@ -321,8 +322,7 @@ const pathField = z
  * @param ctxFactory Builds a headless HandlerContext for each invocation.
  */
 export function registerContentAuthoringTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
     /**
      * Helix factory seam. Defaults to `helixFor`, which builds a service carrying

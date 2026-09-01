@@ -20,6 +20,7 @@ import { runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import { requireDaLive, requireEdsProject, requireGitHub } from './edsToolGuards';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { COMPONENT_IDS } from '@/core/constants';
 import { phaseReporter } from '@/core/utils/agentPhaseChannel';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
@@ -57,8 +58,7 @@ function edsTargets(
  * @param ctxFactory Builds a headless HandlerContext for each invocation.
  */
 export function registerStorefrontTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
 ): void {
     server.registerTool(

@@ -32,6 +32,7 @@
  */
 
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { resolveProjectStatus } from './projectStatusTool';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -48,14 +49,15 @@ import type { HandlerContext } from '@/types/handlers';
  */
  
 export function registerCurrentProjectTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
     scopedProjectDir?: string,
 ): void {
     server.registerTool(
         'get_current_project',
         {
+            // Reviewed 2026-08-31: no service and no token on any path.
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Current Project',
             description: 'Resolve the active project and its state in one call — name, path, running/stopped, port, Adobe org, whether the frontend config is stale, EDS publish state, mesh. Returns { currentProject: {...} | null }; null means no project is selected — ask the user which one.',

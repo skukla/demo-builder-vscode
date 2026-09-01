@@ -18,6 +18,7 @@
 
 import { z } from 'zod';
 import { asRawText, asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -42,8 +43,7 @@ function payloadOf(res: HandlerResponse): Record<string, unknown> {
 }
 
 export function registerValidateSelectionTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
 ): void {
     server.registerTool(

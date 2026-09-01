@@ -11,6 +11,7 @@
 
 import { z } from 'zod';
 import { asRawText, asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import {
     payloadOfEvent,
     withCapturedProgress,
@@ -189,8 +190,7 @@ async function runHandler(
 }
 
 export function registerDescriptorTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     descriptors: ToolDescriptor[],
     ctxFactory: () => HandlerContext,
 ): void {

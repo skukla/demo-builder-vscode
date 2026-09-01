@@ -19,6 +19,7 @@ import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
@@ -78,8 +79,7 @@ async function buildDaLiveOps(
  * @param ctxFactory Builds a headless HandlerContext for each invocation.
  */
 export function registerCloudResourceTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
 ): void {
     server.registerTool(
