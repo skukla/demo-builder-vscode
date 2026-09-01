@@ -23,7 +23,7 @@ describe('CommandExecutor - Timeout Handling', () => {
     describe('timeout handling', () => {
         it('should handle execa timeout errors', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             // Use streaming mode for cleaner timeout testing (bypasses retry)
             const promise = commandExecutor.execute('sleep 100', {
@@ -44,7 +44,7 @@ describe('CommandExecutor - Timeout Handling', () => {
 
         it('should pass timeout option to execa', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('echo test', {
                 timeout: 5000,
@@ -71,7 +71,7 @@ describe('CommandExecutor - Timeout Handling', () => {
 
         it('should handle canceled commands', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('long-command', {
                 streaming: true,
@@ -90,7 +90,7 @@ describe('CommandExecutor - Timeout Handling', () => {
 
         it('should handle killed commands', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('long-command', {
                 streaming: true,

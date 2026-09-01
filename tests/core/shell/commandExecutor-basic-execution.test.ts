@@ -24,7 +24,7 @@ describe('CommandExecutor - Basic Execution', () => {
     describe('execute', () => {
         it('should execute a basic command successfully', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('echo hello');
 
@@ -41,7 +41,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
         it('should handle command with non-zero exit code', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('false');
 
@@ -56,7 +56,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
         it('should handle command errors (timeout)', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             // Use streaming mode to bypass retry mechanism for cleaner timeout testing
             const promise = commandExecutor.execute('slow-command', {
@@ -76,7 +76,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
         it('should handle streaming output with onOutput callback', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const outputLines: string[] = [];
             const promise = commandExecutor.execute('echo test', {
@@ -102,7 +102,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
         it('should use exclusive execution when exclusive option is set', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.execute('echo test', {
                 exclusive: 'test-resource'
@@ -130,7 +130,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
         it('should allow valid command names', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.commandExists('node');
 
@@ -144,7 +144,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
         it('should return false for non-existent commands', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.commandExists('nonexistent');
 
@@ -171,7 +171,7 @@ describe('CommandExecutor - Basic Execution', () => {
     describe('queueCommand', () => {
         it('should queue and execute commands', async () => {
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const promise = commandExecutor.queueCommand('echo test');
 
@@ -200,7 +200,7 @@ describe('CommandExecutor - Basic Execution', () => {
                     simulateSubprocessComplete(mockSubprocess, `output${currentCall}\n`, '', 0);
                 });
 
-                return mockSubprocess as any;
+                return mockSubprocess;
             });
 
             const promise1 = commandExecutor.queueCommand('echo 1');

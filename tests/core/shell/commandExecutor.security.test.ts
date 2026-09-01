@@ -137,7 +137,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should accept valid numeric version and call execa()', async () => {
             // Given: Valid numeric version
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: '20' };
 
@@ -164,7 +164,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
                 jest.clearAllMocks();
 
                 const mockSubprocess = createMockExecaSubprocess();
-                mockExeca.mockReturnValue(mockSubprocess as any);
+                mockExeca.mockReturnValue(mockSubprocess);
 
                 const options: ExecuteOptions = { useNodeVersion: version };
                 const promise = commandExecutor.execute('npm install', options);
@@ -182,7 +182,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should accept valid semantic version and call execa()', async () => {
             // Given: Valid semantic version
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: '20.11.0' };
 
@@ -204,7 +204,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             mockEnvironmentSetup.findAdobeCLINodeVersion.mockResolvedValue('18');
 
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: 'auto' };
 
@@ -225,7 +225,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should accept "current" keyword and call execa()', async () => {
             // Given: "current" keyword
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: 'current' };
 
@@ -245,7 +245,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should skip validation for null and call execa()', async () => {
             // Given: null (no nodeVersion specified)
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: null };
 
@@ -265,7 +265,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should skip validation for undefined (no useNodeVersion option)', async () => {
             // Given: undefined (useNodeVersion not in options)
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = {}; // useNodeVersion is undefined
 
@@ -293,7 +293,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             mockEnvironmentSetup.findAdobeCLINodeVersion.mockResolvedValue('20');
 
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: 'auto' };
 
@@ -327,7 +327,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should skip validation for "current" keyword (not interpolated)', async () => {
             // Given: "current" keyword (uses fnm env, not interpolated into --using=)
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: 'current' };
 
@@ -375,7 +375,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
         it('should call execa() with validated version in command', async () => {
             // Given: Valid version
             const mockSubprocess = createMockExecaSubprocess();
-            mockExeca.mockReturnValue(mockSubprocess as any);
+            mockExeca.mockReturnValue(mockSubprocess);
 
             const options: ExecuteOptions = { useNodeVersion: '20' };
 
