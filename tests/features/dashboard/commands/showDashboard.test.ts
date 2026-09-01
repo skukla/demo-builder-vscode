@@ -9,8 +9,8 @@
 import * as vscode from 'vscode';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
-import { StateManager } from '@/core/state/stateManager';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // Mock dependencies
 
@@ -48,17 +48,6 @@ function createMockExtensionContext(): vscode.ExtensionContext {
     };
 }
 
-/**
- * Create mock StateManager
- */
-function createMockStateManager(): StateManager {
-    return {
-        getState: jest.fn(),
-        setState: jest.fn(),
-        clearState: jest.fn(),
-        getCurrentProject: jest.fn(),
-    } as any;
-}
 
 /**
  * Create mock Logger

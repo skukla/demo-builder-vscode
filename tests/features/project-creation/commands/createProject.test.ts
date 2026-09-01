@@ -10,8 +10,8 @@ import {
     CreateProjectWebviewCommand,
 } from './createProject.testUtils';
 import * as vscode from 'vscode';
-import { StateManager } from '@/core/state/stateManager';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
@@ -58,17 +58,6 @@ function createMockExtensionContext(): vscode.ExtensionContext {
     };
 }
 
-/**
- * Create mock StateManager
- */
-function createMockStateManager(): StateManager {
-    return {
-        getState: jest.fn(),
-        setState: jest.fn(),
-        clearState: jest.fn(),
-        getCurrentProject: jest.fn(),
-    } as any;
-}
 
 /**
  * Create mock Logger

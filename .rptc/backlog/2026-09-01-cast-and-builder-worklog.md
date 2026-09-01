@@ -253,3 +253,7 @@ conversion, which the enforcer requires anyway.
 - 2026-09-01  refactor(tests): declaration-position `as never` — 84% of them were load-bearing (`632df89d1`)
 - 2026-09-01  refactor(tests): 167 unnecessary assertions removed — and the filter built to prevent a regression caused one (`7ce4764cf`)
 - 2026-09-01  refactor(tests): argument-position `as any` 1,000 -> 852, and I had been avoiding the wrong thing (`7e77c174a`)
+- 2026-09-01  test: delete 41 tests that exercise no production code at all (`73cca5391`)
+- 2026-09-01  feat(codemod): the mechanical cast work is finished — here is what replaces it (`2c5395e83`)
+- 2026-09-01  refactor(tests): every remaining cast position swept — 1,328 to 1,275 (`30373a340`)
+- 2026-09-01  refactor(tests): argument-position `as never` — low yield, and the failures are the finding (`9d5c7944f`)

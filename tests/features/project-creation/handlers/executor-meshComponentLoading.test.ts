@@ -170,7 +170,6 @@ describe('Executor - Mesh Component Loading', () => {
             stateManager: {
                 getCurrentProject: jest.fn().mockResolvedValue(null),
                 saveProject: jest.fn().mockResolvedValue(undefined),
-                addRecentProject: jest.fn().mockResolvedValue(undefined),
             } as any,
             sharedState: { isAuthenticating: false },
             sendMessage: jest.fn(),
