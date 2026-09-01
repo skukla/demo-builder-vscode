@@ -25,8 +25,9 @@ jest.mock('@/core/di/serviceLocator', () => ({
 }));
 
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
-import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 const createProject = jest.fn();
 const createWorkspace = jest.fn();
@@ -36,12 +37,16 @@ function serve(opts: { authed?: boolean; noManager?: boolean } = {}) {
     const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
     isAuthenticated.mockResolvedValue(opts.authed ?? true);
     const ctxFactory = () =>
-        ({
+        createMockHandlerContext({
             authManager: opts.noManager
                 ? undefined
-                : { isAuthenticated, createProject, createWorkspace },
+                : createMockAuthenticationService({
+                      isAuthenticated,
+                      createProject,
+                      createWorkspace,
+                  }),
             logger: createMockLogger(),
-        }) as unknown as HandlerContext;
+        });
 
     registerAdobeResourceTools(
         { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },

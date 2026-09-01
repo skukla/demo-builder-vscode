@@ -83,6 +83,12 @@ const MEMBER_BUILDERS = {
         passLiteral: true,
     },
 
+    panel: {
+        fn: 'createMockWebviewPanel',
+        from: 'tests/helpers/webviewPanelFake',
+        passLiteral: true,
+    },
+
     // NESTED members, inside the `context` literal. Converting `context` alone was
     // NOT enough and the compiler said so: the literal handed to
     // `createMockExtensionContext` as overrides still held a partial `secrets`, and
@@ -118,7 +124,25 @@ function convertMembers(objectLiteral) {
         const spec = MEMBER_BUILDERS[name];
         if (!spec) continue;
         const value = prop.getInitializer();
-        if (!value || value.getKind() !== SyntaxKind.ObjectLiteralExpression) continue;
+        if (!value) continue;
+
+        // A member can be a CONDITIONAL: `authManager: opts.none ? undefined : {...}`.
+        // The literal is in a branch, so a plain kind check skips the whole member —
+        // which is why AuthenticationService stayed at 4 failures after the builder
+        // existed. Convert each branch that IS a literal and leave the rest alone.
+        if (value.getKind() === SyntaxKind.ConditionalExpression) {
+            for (const branch of [value.getWhenFalse(), value.getWhenTrue()]) {
+                if (branch.getKind() !== SyntaxKind.ObjectLiteralExpression) continue;
+                for (const nested of convertMembers(branch)) needed.add(nested);
+                const text = branch.getText().trim();
+                const a = spec.passLiteral && text !== '{}' ? text : '';
+                branch.replaceWithText(spec.suffix ? `${spec.fn}${spec.suffix}` : `${spec.fn}(${a})`);
+                needed.add(spec);
+            }
+            continue;
+        }
+
+        if (value.getKind() !== SyntaxKind.ObjectLiteralExpression) continue;
         // RECURSE FIRST. A member's own literal can hold another known member —
         // `context` holds `secrets` and `globalState` — and the outer builder's
         // overrides are typed, so the inside has to be right before the outside is

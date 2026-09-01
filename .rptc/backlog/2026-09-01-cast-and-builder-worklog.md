@@ -84,6 +84,35 @@ repeat that method. Survey by POSITION first: an ARGUMENT cast is a silenced typ
 error (four production defects here hid behind exactly that) and gets read; a
 DECLARATION cast is usually a fake and is batchable.
 
+## Where the mechanical seam ENDS — measured 2026-09-01
+
+Four passes of the codemod, each adding a transformation and each measured:
+
+| pass | type errors | files failing |
+|---|---|---|
+| outer literal only | 100 | 51 |
+| + logger/stateManager/context/authManager members | 71 | 42 |
+| + secrets/globalState, converted recursively | 51 | 33 |
+| + WebviewPanel builder, + ternary members | 46 | 32 |
+
+The last pass converted **2 more files**. That is the seam ending, and it is worth
+stating plainly rather than grinding: the remaining ~32 are a READING job, not a
+codemod job.
+
+What is left, and why each resists automation:
+
+- **~16 partial `Project` inside a mock resolution.** The cause is a helper whose
+  parameter is typed `unknown` — `makeCtx(project: unknown)` — so
+  `jest.fn(async () => project)` yields `Promise<unknown>`. Fixing it means deciding
+  what that parameter SHOULD be, per file, and then whatever the callers pass has to
+  satisfy it. No tool holds that decision.
+- **ExtensionContext 4, AuthenticationService 4, TokenManager 3, misc.** A long tail
+  with a different reason each.
+
+`TokenManager` is deliberately NOT getting a builder: 3 failures does not justify
+another 40-method fake, and writing one to make a number move is the failure mode
+these builders exist to prevent.
+
 ## Done when
 
 Section A is empty, section B has the two large builders, and section C carries only
@@ -116,3 +145,4 @@ conversion, which the enforcer requires anyway.
 
 - 2026-09-01  test(helpers): the two builders the compiler asked for, and a check that a fake mirrors its subject (`737b13f30`)
 - 2026-09-01  docs(backlog): PL-34 — every open finding from the toolchain day, in one list (`0247cdf43`)
+- 2026-09-01  refactor(tests): the codemod converts MEMBERS too — HandlerContext 38 -> 29 (`ddbd91347`)
