@@ -22,6 +22,30 @@ npm run test:mutation        # ~35s over the pilot scope
 Config: `stryker.config.json` (what to mutate) + `jest.stryker.config.js` (which
 tests to run). Report: `reports/mutation/mutation.json`, gitignored.
 
+## If it takes minutes instead of seconds, check the temp directories
+
+Stryker copies the working tree into a sandbox per test-runner process. Neither
+config set `ignorePatterns`, so each run copied the OTHER run's temp directory —
+and its own leftovers — into all four sandboxes.
+
+Found 2026-09-01: `.stryker-tmp` at 6.5GB and `.stryker-tmp-pl22` at 5.5GB,
+315,000 files between them, from runs that had not cleaned up. The pilot could
+not finish in ten minutes against a 35-second baseline, and the log filled with
+Babel parse warnings about `.d.ts` files inside the OLD sandboxes — which is the
+tell, because a `.d.ts` in a temp dir is not something a pilot over four source
+files should be reading at all.
+
+Both configs now carry `ignorePatterns`. After deleting the two directories the
+pilot ran in **29s and reproduced 93.37% exactly**, module for module — which is
+also what proves the ignore list did not change what gets mutated.
+
+The directories are gitignored, so nothing warns you they are growing. If a run
+feels slow, look there first:
+
+```bash
+du -sh .stryker-tmp .stryker-tmp-pl22 2>/dev/null
+```
+
 ## Baseline — 2026-08-30, first real run
 
 **93.37%**, 166 mutants over 4 modules, 33 seconds, 11 survivors.
