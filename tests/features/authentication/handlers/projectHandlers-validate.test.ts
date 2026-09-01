@@ -47,7 +47,7 @@ describe('projectHandlers - Validation', () => {
         });
 
         it('should return false hasOrg when no organization selected', async () => {
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(null);
+            mockContext.authManager.getCurrentOrganization.mockResolvedValue(undefined);
 
             const result = await handleEnsureOrgSelected(mockContext);
 

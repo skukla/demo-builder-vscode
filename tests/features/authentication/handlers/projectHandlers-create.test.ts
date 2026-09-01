@@ -64,13 +64,29 @@ describe('projectHandlers - Create', () => {
             expect(mockContext.authManager.createProject).not.toHaveBeenCalled();
         });
 
-        it('returns a failure message when createProject returns undefined (quota/failure)', async () => {
-            mockContext.authManager.createProject.mockResolvedValue(undefined);
+        /**
+         * REPLACES a test that fed `undefined` and called it "quota/failure".
+         *
+         * `createProject` returns `AdobeProject | ConsoleOpFailure` and cannot
+         * return undefined, so that test asserted on an input the type forbids —
+         * and it passed for a reason nobody intended: the handler has no undefined
+         * guard, so `project.name` threw a TypeError that the outer catch turned
+         * into a generic failure. It therefore duplicated "returns an error when
+         * createProject throws" while appearing to cover something else.
+         *
+         * Meanwhile the failure path production ACTUALLY implements had no test at
+         * all. Production's own comment says the quota guess was removed in favour
+         * of Console's own reason; this asserts that reason reaches the user.
+         */
+        it('surfaces Console\'s own reason when createProject reports a failure', async () => {
+            mockContext.authManager.createProject.mockResolvedValue({
+                error: 'Quota exceeded for this organization',
+            });
 
             const result = await handleCreateAdobeProject(mockContext, { name: 'My Demo' });
 
             expect(result.success).toBe(false);
-            expect(result.error).toBeTruthy();
+            expect(result.error).toContain('Quota exceeded for this organization');
         });
 
         it('returns the refreshed list ON THE RESPONSE (the caller is unmounted, a push is lost)', async () => {

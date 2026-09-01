@@ -119,7 +119,7 @@ describe('handleGetProjects — org targeting', () => {
             detectMeshChanges.mockResolvedValue({ hasChanges: false });
             determineMeshStatus.mockResolvedValue('deployed');
 
-            await handleGetProjects(context as any);
+            await handleGetProjects(context);
 
             expect(mockWithOrgContext).toHaveBeenCalled();
             expect(mockBuildOrgTarget).toHaveBeenCalledWith(
@@ -153,7 +153,7 @@ describe('handleGetProjects — org targeting', () => {
             detectMeshChanges.mockResolvedValue({ hasChanges: false });
             determineMeshStatus.mockResolvedValue('deployed');
 
-            await handleGetProjects(context as any);
+            await handleGetProjects(context);
 
             const orgs = mockBuildOrgTarget.mock.calls.map(([adobe]) => adobe?.organization);
             expect(orgs).toEqual(expect.arrayContaining(['org-A', 'org-B']));

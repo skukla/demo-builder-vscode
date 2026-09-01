@@ -118,7 +118,10 @@ export function addFiles(project, globs, { readOnly = false, quiet = false } = {
     for (const f of excluded) project.removeSourceFile(f);
 
     if (excluded.length > 0 && !quiet) {
-        console.log(
+        // STDERR, not stdout. `loadbearing-worklist.mjs` prints its report to stdout
+        // for the caller to redirect into a markdown file, so a progress line written
+        // to stdout lands above the report's own H1 and corrupts the artifact.
+        console.error(
             `  excluded ${excluded.length} protected file(s) from writing ` +
                 `(${NEVER_TOUCH.join(', ')})`
         );

@@ -76,7 +76,7 @@ describe('projectHandlers - Selection', () => {
 
         it('should fail if no organization is selected', async () => {
             const projectId = 'proj-123';
-            mockContext.authManager.getCurrentOrganization.mockResolvedValue(null);
+            mockContext.authManager.getCurrentOrganization.mockResolvedValue(undefined);
 
             await expect(handleSelectProject(mockContext, { projectId })).rejects.toThrow(
                 'No organization selected'

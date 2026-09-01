@@ -139,10 +139,33 @@ Both passed alone immediately after, and the next full gate was green. Recorded 
 observations, not diagnoses — this repo's rule is that a proposed cause needs a
 command that would falsify it, and neither has one yet.
 
-**`tests/features/ai/server/inExtensionMcpServer.test.ts`** — one test exceeded the
-10s timeout binding a socket. It passes 23/23 alone. Its own comment already says
-"this does not fix the binding race; it makes it visible", so the race is known and
-this is a second sighting under load rather than news.
+**RESOLVED 2026-09-01 — it was not the binding race, and it was not slowness.**
+
+The failing test is `inExtensionMcpServer.socketOwnership.test.ts` › "leaves the
+successor reachable when disposal interleaves with the successor bind". The failure
+is a jest TIMEOUT of the whole test at 10s, not a failed assertion.
+
+The starvation reading was tested and falsified: under full CPU saturation (32
+spinners on 16 cores) the test body went 381ms -> 645ms, under 2x, because its waits
+are wall-clock `setTimeout`s that do not stretch when the CPU is busy. Nothing was
+slow; something was HANGING.
+
+The hang was in the TEST HELPER. `SocketRpc` in `inExtensionMcpServer.testUtils.ts`
+listened for `data` and nothing else, so a peer that accepted the connection and then
+closed WITHOUT replying left its promise in `pending` unsettled forever. The reload
+race this suite exists to exercise produces exactly that: a client connects to the
+outgoing server, writes `initialize`, and the outgoing server is disposed before it
+answers. The gate mock was ruled out on the way — it gates `fs/promises.stat`, and
+production no longer calls it, so it never fires.
+
+`SocketRpc` now rejects every in-flight request on socket close or error, and bounds
+each request at 4s (below jest's 10s, so the RPC names the failure before jest can
+only name the test). `socketRpc.failure.test.ts` pins it, with a negative control:
+disable the close handler and that test fails.
+
+This does not make a failing thing pass. It converts an unbounded wait into a named
+error, so a genuine reload-race strand now reports "socket closed with 1 request in
+flight" instead of a mystery timeout.
 
 **`tests/hooks/router.test.ts`** — see below.
 

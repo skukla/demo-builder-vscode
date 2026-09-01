@@ -2,7 +2,7 @@
     "_why": "Shrink-only ceilings for the two casts that erase a type outright, measured over tests/ with comments stripped. Exact equality: a conversion that lowers a count lowers the pin in the SAME commit. Target for both is ZERO, at which point the ceiling is replaced by an eslint ban. See type-erasing-casts.test.ts for the rule, and why `as unknown as X` is deliberately NOT counted here.",
     "measured": "2026-08-31",
     "ceilings": {
-        "as any": 794,
-        "as never": 471
+        "as any": 679,
+        "as never": 396
     }
 }

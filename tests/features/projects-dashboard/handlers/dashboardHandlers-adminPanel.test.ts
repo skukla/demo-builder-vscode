@@ -96,7 +96,7 @@ describe('dashboardHandlers', () => {
             const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAdminPanel(context as any, undefined);
+            const result = await handleOpenAdminPanel(context, undefined);
 
             expect(result.success).toBe(false);
             expect(result.error).toMatch(/path is required/i);
@@ -107,7 +107,7 @@ describe('dashboardHandlers', () => {
             const context = createProjectsDashboardContext([]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: '/nonexistent/path',
             });
 
@@ -128,7 +128,7 @@ describe('dashboardHandlers', () => {
                 'nonexistent'
             );
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: validButEmptyPath,
             });
 
@@ -142,7 +142,7 @@ describe('dashboardHandlers', () => {
             const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: project.path,
             });
 
@@ -160,7 +160,7 @@ describe('dashboardHandlers', () => {
             const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: project.path,
             });
 
@@ -175,7 +175,7 @@ describe('dashboardHandlers', () => {
             const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: project.path,
             });
 
@@ -189,7 +189,7 @@ describe('dashboardHandlers', () => {
             const context = createProjectsDashboardContext([project]);
             const vscode = require('vscode');
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: project.path,
             });
             await flushPromises();
@@ -211,7 +211,7 @@ describe('dashboardHandlers', () => {
             const vscode = require('vscode');
             vscode.window.showInformationMessage.mockResolvedValue('Open Configure');
 
-            const result = await handleOpenAdminPanel(context as any, {
+            const result = await handleOpenAdminPanel(context, {
                 projectPath: project.path,
             });
             await flushPromises();

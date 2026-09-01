@@ -10,6 +10,7 @@ import {
     CreateProjectWebviewCommand,
 } from './createProject.testUtils';
 import * as vscode from 'vscode';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
@@ -27,36 +28,11 @@ jest.mock('@/core/di/serviceLocator', () => ({
 /**
  * Create mock ExtensionContext
  */
-function createMockExtensionContext(): vscode.ExtensionContext {
-    return {
-        subscriptions: [],
-        extensionPath: '/mock/extension/path',
-        globalState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-            setKeysForSync: jest.fn(),
-        } as any,
-        workspaceState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-        } as any,
-        extensionUri: vscode.Uri.file('/mock/extension/path'),
-        extensionMode: vscode.ExtensionMode.Test,
-        environmentVariableCollection: {} as any,
-        asAbsolutePath: (relativePath: string) => `/mock/extension/path/${relativePath}`,
-        storageUri: undefined,
-        globalStorageUri: vscode.Uri.file('/mock/storage'),
-        logUri: vscode.Uri.file('/mock/logs'),
-        storagePath: '/mock/storage',
-        globalStoragePath: '/mock/global/storage',
-        logPath: '/mock/logs',
-        secrets: {} as any,
-        extension: {} as any,
-        languageModelAccessInformation: {} as any,
-    };
-}
+/**
+ * The canonical `vscode.ExtensionContext` fake (ADR-016) replaces a local factory
+ * that stood four interfaces up as `{} as any` — `environmentVariableCollection`,
+ * `secrets`, `extension`, `languageModelAccessInformation`.
+ */
 
 
 /**
@@ -74,6 +50,30 @@ function createWizardCommand(): CreateProjectWebviewCommand {
     return new CreateProjectWebviewCommand(mockContext, mockStateManager, mockLogger);
 }
 
+/**
+ * The six members this suite reaches on the command under test — `panel` and the
+ * protected template methods a webview command implements, plus `editProject`,
+ * which is how the suite puts the command into edit mode.
+ *
+ * The reach is deliberate: these tests assert what the wizard command PUTS on screen
+ * in each mode. `as any` was the wrong way to say it — it disabled checking of the
+ * whole statement at nineteen sites to reach six named members, so a typo created a
+ * property and the assertion passed against nothing.
+ */
+interface CreateProjectCommandInternals {
+    panel: unknown;
+    editProject: unknown;
+    getWebviewContent(): Promise<string>;
+    getWebviewTitle(): string;
+    getLoadingMessage(): string;
+    getLoadingHeader(): unknown;
+}
+
+/** Reach the protected surface of the command under test. */
+function internals(command: object): CreateProjectCommandInternals {
+    return command as unknown as CreateProjectCommandInternals;
+}
+
 describe('CreateProjectWebviewCommand - Edit-mode identity', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -82,9 +82,9 @@ describe('CreateProjectWebviewCommand - Edit-mode identity', () => {
     it('titles the panel "Create Demo Project" in create mode', () => {
         const command = createWizardCommand();
 
-        expect((command as any).getWebviewTitle()).toBe('Create Demo Project');
-        expect((command as any).getLoadingMessage()).toBe('Loading Project Creation Wizard...');
-        expect((command as any).getLoadingHeader()).toEqual({
+        expect(internals(command).getWebviewTitle()).toBe('Create Demo Project');
+        expect(internals(command).getLoadingMessage()).toBe('Loading Project Creation Wizard...');
+        expect(internals(command).getLoadingHeader()).toEqual({
             title: 'Create Demo Project',
             subtitle: undefined,
         });
@@ -92,15 +92,15 @@ describe('CreateProjectWebviewCommand - Edit-mode identity', () => {
 
     it('titles the panel "Edit Project" with the project name while editing', () => {
         const command = createWizardCommand();
-        (command as any).editProject = {
+        internals(command).editProject = {
             projectPath: '/p',
             projectName: 'b2b-tester',
             settings: {},
         };
 
-        expect((command as any).getWebviewTitle()).toBe('Edit Project');
-        expect((command as any).getLoadingMessage()).toBe('Loading Project Editor...');
-        expect((command as any).getLoadingHeader()).toEqual({
+        expect(internals(command).getWebviewTitle()).toBe('Edit Project');
+        expect(internals(command).getLoadingMessage()).toBe('Loading Project Editor...');
+        expect(internals(command).getLoadingHeader()).toEqual({
             title: 'Edit Project',
             subtitle: 'b2b-tester',
         });
@@ -121,12 +121,12 @@ describe('CreateProjectWebviewCommand - Bundle Loading', () => {
             cspSource: 'vscode-webview://test',
             asWebviewUri: jest.fn((uri: vscode.Uri) => uri),
         };
-        (command as any).panel = {
+        internals(command).panel = {
             webview: mockWebview,
         };
 
         // Act: Get webview content
-        const html = await (command as any).getWebviewContent();
+        const html = await internals(command).getWebviewContent();
 
         // Assert: esbuild produces one self-contained bundle per feature
         expect(html).toContain('wizard-bundle.js');
@@ -141,12 +141,12 @@ describe('CreateProjectWebviewCommand - Bundle Loading', () => {
             cspSource: 'vscode-webview://test',
             asWebviewUri: jest.fn((uri: vscode.Uri) => uri),
         };
-        (command as any).panel = {
+        internals(command).panel = {
             webview: mockWebview,
         };
 
         // Act
-        const html = await (command as any).getWebviewContent();
+        const html = await internals(command).getWebviewContent();
 
         // Assert: esbuild produces 1 bundle + 1 baseUri script = 2 script tags
         const scriptMatches = html.match(/<script nonce="([^"]+)"/g);
@@ -161,7 +161,13 @@ describe('CreateProjectWebviewCommand - Bundle Loading', () => {
 
         expect(nonces).toBeDefined();
         expect(new Set(nonces).size).toBe(1); // All same nonce
-        expect(nonces![0].length).toBeGreaterThan(16); // Reasonable nonce length (base64-encoded)
+        // The extractor returns `string | null` per match, so assert the nonce is
+        // THERE before measuring it. Under the old cast this expression was `any`,
+        // and an absent nonce would have thrown a TypeError reading `.length` of
+        // null — a crash where the suite should report a failed assertion.
+        const [firstNonce] = nonces ?? [];
+        expect(firstNonce).toBeTruthy();
+        expect(firstNonce?.length ?? 0).toBeGreaterThan(16); // base64-encoded
     });
 
     it('should include proper CSP headers with nonce and cspSource', async () => {
@@ -173,12 +179,12 @@ describe('CreateProjectWebviewCommand - Bundle Loading', () => {
             cspSource: 'vscode-webview://test',
             asWebviewUri: jest.fn((uri: vscode.Uri) => uri),
         };
-        (command as any).panel = {
+        internals(command).panel = {
             webview: mockWebview,
         };
 
         // Act
-        const html = await (command as any).getWebviewContent();
+        const html = await internals(command).getWebviewContent();
 
         // Assert: CSP meta tag present with required directives
         expect(html).toContain('<meta http-equiv="Content-Security-Policy"');

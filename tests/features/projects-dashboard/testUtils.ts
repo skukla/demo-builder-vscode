@@ -5,8 +5,12 @@
 import * as os from 'os';
 import * as path from 'path';
 import type { Project, ComponentInstance, ProjectStatus } from '@/types/base';
+import type { HandlerContext } from '@/types/handlers';
+import type { StateManager } from '@/types/state';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../helpers/loggerFake';
 import { createMockProject as createMockProjectBase } from '../../helpers/projectFake';
+import { createMockStateManager } from '../../helpers/stateManagerFake';
 
 /**
  * Get valid demo-builder projects base path
@@ -107,21 +111,19 @@ export function createMockProjects(count: number): Project[] {
 /**
  * Mock handler context for testing dashboard handlers
  */
-export interface MockHandlerContext {
-    stateManager: {
-        getAllProjects: jest.Mock;
-        getCurrentProject: jest.Mock;
-        loadProjectFromPath: jest.Mock;
-        saveProject: jest.Mock;
-        saveProjectConfigOnly: jest.Mock;
-    };
-    logger: {
-        info: jest.Mock;
-        debug: jest.Mock;
-        error: jest.Mock;
-    };
-    sendMessage: jest.Mock;
-}
+/**
+ * `MockHandlerContext` was DELETED here on 2026-09-01.
+ *
+ * It was a hand-written interface naming three of `HandlerContext`'s members, and
+ * the builder below reached it by way of `as never` and then `as unknown as
+ * MockHandlerContext` — the real type thrown away twice. Every caller then had to
+ * write `handleGetProjects(context as any)` to hand it back, so a context that was
+ * missing a member the handler reads was indistinguishable from a correct one, in
+ * both directions.
+ *
+ * The builder returns `jest.Mocked<HandlerContext>` now, which is what it was
+ * building all along.
+ */
 
 /**
  * Creates a mock handler context for testing
@@ -130,7 +132,9 @@ export interface MockHandlerContext {
  * - getAllProjects() returns { name, path, lastModified }[]
  * - loadProjectFromPath(path) returns full Project
  */
-export function createProjectsDashboardContext(projects: Project[] = []): MockHandlerContext {
+export function createProjectsDashboardContext(
+    projects: Project[] = []
+): jest.Mocked<HandlerContext> & { stateManager: jest.Mocked<StateManager> } {
     // Create simplified project list (what getAllProjects returns)
     const projectList = projects.map((p) => ({
         name: p.name,
@@ -138,24 +142,31 @@ export function createProjectsDashboardContext(projects: Project[] = []): MockHa
         lastModified: p.lastModified,
     }));
 
-    return createMockHandlerContextBase({
-        stateManager: {
-            getAllProjects: jest.fn().mockResolvedValue(projectList),
-            getCurrentProject: jest.fn().mockResolvedValue(projects[0] || null),
-            loadProjectFromPath: jest.fn().mockImplementation((path: string) => {
-                const project = projects.find((p) => p.path === path);
-                return Promise.resolve(project || null);
-            }),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-            saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
-        },
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-        },
+    const stateManager = createMockStateManager({
+        getAllProjects: jest.fn().mockResolvedValue(projectList),
+        getCurrentProject: jest.fn().mockResolvedValue(projects[0] || null),
+        loadProjectFromPath: jest.fn().mockImplementation((path: string) => {
+            const project = projects.find((p) => p.path === path);
+            return Promise.resolve(project || null);
+        }),
+    });
+
+    const base = createMockHandlerContextBase({
+        stateManager,
+        logger: createMockLogger(),
         sendMessage: jest.fn(),
-    } as never) as unknown as MockHandlerContext
+    });
+
+    /**
+     * `stateManager` is re-attached so its MOCK type survives.
+     *
+     * Read back through `HandlerContext`, its members are plain function types, so
+     * a suite writing `context.stateManager.saveProject.mock.calls` gets "Property
+     * 'mock' does not exist". Spreading it back with its concrete mocked type says
+     * so without a cast — which is the point, since a cast here is what hid the
+     * previous 34 errors.
+     */
+    return { ...base, stateManager };
 }
 
 /**

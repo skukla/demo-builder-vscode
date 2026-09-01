@@ -27,6 +27,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
 
 // Import after mock setup
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
@@ -147,41 +148,47 @@ jest.mock('vscode', () => ({
 /**
  * Create mock ExtensionContext
  */
-function createMockExtensionContext(): vscode.ExtensionContext {
-    return {
-        subscriptions: [],
-        extensionPath: '/mock/extension/path',
-        globalState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-            setKeysForSync: jest.fn(),
-        } as any,
-        workspaceState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-        } as any,
-        extensionUri: vscode.Uri.file('/mock/extension/path'),
-        extensionMode: vscode.ExtensionMode.Test,
-        environmentVariableCollection: {} as any,
-        asAbsolutePath: (relativePath: string) => `/mock/extension/path/${relativePath}`,
-        storageUri: undefined,
-        globalStorageUri: vscode.Uri.file('/mock/storage'),
-        logUri: vscode.Uri.file('/mock/logs'),
-        storagePath: '/mock/storage',
-        globalStoragePath: '/mock/global/storage',
-        logPath: '/mock/logs',
-        secrets: {} as any,
-        extension: {} as any,
-        languageModelAccessInformation: {} as any,
-    };
-}
+/**
+ * The canonical `vscode.ExtensionContext` fake (ADR-016).
+ *
+ * This file hand-rolled its own: twenty-one members, four of them `{} as any` for
+ * interfaces it never used (`environmentVariableCollection`, `secrets`,
+ * `extension`, `languageModelAccessInformation`). Each of those casts was a
+ * standing claim that an empty object is a `SecretStorage`, which the shared
+ * builder makes without lying by supplying the methods.
+ */
 
 
 /**
  * Create mock Logger
  */
+
+/**
+ * The five members this suite REPLACES on the command under test.
+ *
+ * `createOrRevealPanel` and `initializeCommunication` are protected on
+ * `BaseWebviewCommand`; `refreshProjectsList` and `refreshConfig` are private on
+ * `ShowProjectsListCommand`. Stubbing them is deliberate — these tests exercise the
+ * sidebar's dispose/refresh wiring, not panel creation — but it means reaching past
+ * the class's own boundary, and TypeScript is right to object.
+ *
+ * The seam is named ONCE here instead of `as any` twenty times at the call sites.
+ * `as any` would also switch off checking of everything else in each of those
+ * statements; this cast says exactly what is being reached for and nothing more, so
+ * a typo in one of the five names still fails the build.
+ */
+interface CommandInternals {
+    createOrRevealPanel: jest.Mock;
+    initializeCommunication: jest.Mock;
+    refreshProjectsList: jest.Mock;
+    refreshConfig: jest.Mock;
+    communicationManager: unknown;
+}
+
+/** Reach the stubbed internals of the command under test. */
+function internals(command: ShowProjectsListCommand): CommandInternals {
+    return command as unknown as CommandInternals;
+}
 
 /**
  * Helper to create ShowProjectsListCommand instance
@@ -215,12 +222,12 @@ describe('ShowProjectsListCommand - Sidebar Integration', () => {
             // Given: A Projects List command instance with mocked internal methods
             const command = createCommand();
 
-            (command as any).createOrRevealPanel = jest.fn().mockResolvedValue(mockPanel);
-            (command as any).initializeCommunication = jest.fn().mockResolvedValue({
+            internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(mockPanel);
+            internals(command).initializeCommunication = jest.fn().mockResolvedValue({
                 on: jest.fn(),
                 sendMessage: jest.fn().mockResolvedValue(undefined),
             });
-            (command as any).refreshProjectsList = jest.fn().mockResolvedValue(undefined);
+            internals(command).refreshProjectsList = jest.fn().mockResolvedValue(undefined);
 
             // When: execute() is called (Projects List opens)
             await command.execute();
@@ -237,12 +244,12 @@ describe('ShowProjectsListCommand - Sidebar Integration', () => {
             // Given: A Projects List command instance with mocked internal methods
             const command = createCommand();
 
-            (command as any).createOrRevealPanel = jest.fn().mockResolvedValue(mockPanel);
-            (command as any).initializeCommunication = jest.fn().mockResolvedValue({
+            internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(mockPanel);
+            internals(command).initializeCommunication = jest.fn().mockResolvedValue({
                 on: jest.fn(),
                 sendMessage: jest.fn().mockResolvedValue(undefined),
             });
-            (command as any).refreshProjectsList = jest.fn().mockResolvedValue(undefined);
+            internals(command).refreshProjectsList = jest.fn().mockResolvedValue(undefined);
 
             // When: execute() is called (Projects List opens)
             await command.execute();
@@ -257,18 +264,18 @@ describe('ShowProjectsListCommand - Sidebar Integration', () => {
             // Given: A Projects List command instance
             const command = createCommand();
 
-            (command as any).createOrRevealPanel = jest.fn().mockResolvedValue(mockPanel);
-            (command as any).initializeCommunication = jest.fn().mockResolvedValue({
+            internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(mockPanel);
+            internals(command).initializeCommunication = jest.fn().mockResolvedValue({
                 on: jest.fn(),
                 sendMessage: jest.fn().mockResolvedValue(undefined),
             });
-            (command as any).refreshProjectsList = jest.fn().mockResolvedValue(undefined);
+            internals(command).refreshProjectsList = jest.fn().mockResolvedValue(undefined);
 
             // When: execute() is called
             await command.execute();
 
             // Then: Panel should be created
-            expect((command as any).createOrRevealPanel).toHaveBeenCalled();
+            expect(internals(command).createOrRevealPanel).toHaveBeenCalled();
         });
 
         it('should refresh projects list when revealing existing panel', async () => {
@@ -281,17 +288,17 @@ describe('ShowProjectsListCommand - Sidebar Integration', () => {
                 on: jest.fn(),
                 sendMessage: jest.fn().mockResolvedValue(undefined),
             };
-            (command as any).communicationManager = mockCommunicationManager;
+            internals(command).communicationManager = mockCommunicationManager;
 
             const callOrder: string[] = [];
-            (command as any).createOrRevealPanel = jest.fn().mockImplementation(async () => {
+            internals(command).createOrRevealPanel = jest.fn().mockImplementation(async () => {
                 callOrder.push('createOrRevealPanel');
                 return mockPanel;
             });
-            (command as any).refreshProjectsList = jest.fn().mockImplementation(async () => {
+            internals(command).refreshProjectsList = jest.fn().mockImplementation(async () => {
                 callOrder.push('refreshProjectsList');
             });
-            (command as any).refreshConfig = jest.fn().mockResolvedValue(undefined);
+            internals(command).refreshConfig = jest.fn().mockResolvedValue(undefined);
 
             // When: execute() is called
             await command.execute();
@@ -310,12 +317,12 @@ describe('ShowProjectsListCommand - Sidebar Integration', () => {
             // Given: A Projects List command instance
             const command = createCommand();
 
-            (command as any).createOrRevealPanel = jest.fn().mockResolvedValue(mockPanel);
-            (command as any).initializeCommunication = jest.fn().mockResolvedValue({
+            internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(mockPanel);
+            internals(command).initializeCommunication = jest.fn().mockResolvedValue({
                 on: jest.fn(),
                 sendMessage: jest.fn().mockResolvedValue(undefined),
             });
-            (command as any).refreshProjectsList = jest.fn().mockResolvedValue(undefined);
+            internals(command).refreshProjectsList = jest.fn().mockResolvedValue(undefined);
 
             // When: execute() is called
             await command.execute();
@@ -330,12 +337,12 @@ describe('ShowProjectsListCommand - Sidebar Integration', () => {
 
             const command = createCommand();
 
-            (command as any).createOrRevealPanel = jest.fn().mockResolvedValue(mockPanel);
-            (command as any).initializeCommunication = jest.fn().mockResolvedValue({
+            internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(mockPanel);
+            internals(command).initializeCommunication = jest.fn().mockResolvedValue({
                 on: jest.fn(),
                 sendMessage: jest.fn().mockResolvedValue(undefined),
             });
-            (command as any).refreshProjectsList = jest.fn().mockResolvedValue(undefined);
+            internals(command).refreshProjectsList = jest.fn().mockResolvedValue(undefined);
 
             // When: execute() is called
             await command.execute();
