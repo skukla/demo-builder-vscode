@@ -75,7 +75,16 @@ function walk(dir: string): string[] {
 function collectBuilders(): Map<string, string[]> {
     const found = new Map<string, string[]>();
     for (const file of walk(TESTS_ROOT)) {
-        const src = fs.readFileSync(file, 'utf8');
+        // Vanished between the walk and the read — a concurrent suite's temp file.
+        // Jest runs suites in parallel, and this is the FOURTH scanner to need the
+        // guard; the others already carry it. Skipping is correct: this counts
+        // COMMITTED builders, and a file that no longer exists is not one.
+        let src: string;
+        try {
+            src = fs.readFileSync(file, 'utf8');
+        } catch {
+            continue;
+        }
         for (const form of BUILDER_FORMS) {
             for (const m of src.matchAll(form)) {
                 const rel = path.relative(TESTS_ROOT, file);
