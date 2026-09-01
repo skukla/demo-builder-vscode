@@ -21,8 +21,8 @@ jest.mock('@/features/app-builder/services/appBuilderComponentRunner', () => ({
 
 import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/services/appBuilderComponentMigration';
 import type { Project } from '@/types/base';
-import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createDeps } from './appBuilderComponentRunner.testUtils';
 const PREVIOUS = { organization: '285361', projectId: 'old-proj', workspace: 'old-ws' };
 
 function makeProject(): Project {
@@ -50,19 +50,27 @@ function makeProject(): Project {
     } as unknown as Project;
 }
 
-const mockRepublish = jest.fn(async () => undefined);
+// Returns the REAL shape. `republishStorefront` resolves `{ success, error? }`;
+// production awaits it best-effort and ignores the value, so `undefined` broke
+// nothing — but the mock was answering in a shape the contract does not have.
+const mockRepublish = jest.fn(async () => ({ success: true }));
 
+/**
+ * Built on the SHARED `createDeps` rather than a local literal.
+ *
+ * The literal named six members of a fourteen-member interface and reached the
+ * callee through `as never`, so nothing checked the other eight — the migration
+ * under test reads several of them. `createDeps` supplies the whole bag; this names
+ * only what this suite actually varies.
+ */
 function makeDeps(calls: string[]) {
-    return {
+    return createDeps({
         catalog: [],
-        logger: createMockLogger(),
         subscribeRequiredApis: jest.fn(async () => {
             calls.push('subscribe');
         }),
-        saveProject: jest.fn(async () => undefined),
-        republishStorefront: (...a: unknown[]) => mockRepublish(...(a as [])),
-        secrets: {},
-    } as never;
+        republishStorefront: jest.fn(async (...a: unknown[]) => mockRepublish(...(a as []))),
+    });
 }
 
 /**

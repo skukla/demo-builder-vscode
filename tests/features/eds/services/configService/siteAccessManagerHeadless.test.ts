@@ -30,6 +30,7 @@ import {
     listSiteAccess,
     removeSiteAdmin,
 } from '@/features/eds/services/configService/siteAccessManagerHeadless';
+import { createMockExtensionContext } from '../../../../helpers/extensionContextFake';
 import {
     ensureSiteAdmin,
     probeConfigWriteAccess,
@@ -48,7 +49,12 @@ const mockProbe = probeConfigWriteAccess as jest.Mock;
 
 const logger = createMockLogger();
 
-const context = {} as never;
+/**
+ * The canonical `ExtensionContext` fake. This was `{} as never` — a claim that an
+ * empty object is an `ExtensionContext`, which cost 16 checks across this suite,
+ * because a `never` argument makes the compiler stop reading the whole call.
+ */
+const context = createMockExtensionContext();
 
 /**
  * An EDS project whose storefront points at skukla/bodea-source.

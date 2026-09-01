@@ -393,7 +393,15 @@ describe('addAppBuilderComponent partial-failure', () => {
             async (_path, _cmd, _log, onProgress?: (m: string, s?: string) => void) => {
                 onProgress?.('Reading mesh configuration...', '');
                 onProgress?.('Deploying...', 'Validating configuration');
-                return { success: true, data: { endpoint: 'https://mesh/graphql' } };
+                // `meshId` is REQUIRED on MeshDeploymentResult and the runner records
+                // it; omitting it here fed `undefined` into the deploy outcome. This
+                // test only asserts progress forwarding, so nothing failed — but a
+                // fake that drops a field production writes is the shape that hid
+                // four defects in this repo.
+                return {
+                    success: true,
+                    data: { meshId: 'mesh-1', endpoint: 'https://mesh/graphql' },
+                };
             }
         );
 

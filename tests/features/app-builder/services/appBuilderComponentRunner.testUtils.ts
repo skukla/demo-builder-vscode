@@ -8,7 +8,10 @@
  */
 
 import type { Project } from '@/types/base';
-import type { ComponentInstaller } from '@/features/app-builder/services/appBuilderComponentRunner';
+import type {
+    AppBuilderComponentRunnerDeps,
+    ComponentInstaller,
+} from '@/features/app-builder/services/appBuilderComponentRunner';
 import type { ComponentInstallResult } from '@/features/components/services/types';
 import type { TransformedComponentDefinition } from '@/types/components';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
@@ -109,8 +112,41 @@ import { createSuccessResult } from '../../../helpers/commandResultFake';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 export { createLogger };
 
-export function createDeps(overrides: Partial<Record<string, unknown>> = {}) {
-    return {
+/**
+ * The collaborators suites read back as MOCKS.
+ *
+ * `jest.Mocked<T>` mocks a type's own function members, but `commandManager` and
+ * `componentManager` are OBJECTS on the deps interface, so their methods come back
+ * as plain functions and `deps.commandManager.execute.mock.calls` does not type.
+ * `refreshAiBundle` is optional on the interface — correctly, since headless callers
+ * have no bundle — but the builder always supplies it, so naming it here saves every
+ * suite an `undefined` check for a value that is never undefined in a test.
+ */
+interface MockedCollaborators {
+    componentManager: jest.Mocked<ComponentInstaller>;
+    commandManager: jest.Mocked<CommandExecutor>;
+    refreshAiBundle: jest.MockedFunction<
+        NonNullable<AppBuilderComponentRunnerDeps['refreshAiBundle']>
+    >;
+}
+
+/**
+ * The runner's dependency bag.
+ *
+ * `overrides` is typed to the REAL deps rather than `Partial<Record<string, unknown>>`:
+ * an untyped bag accepts a misspelt key silently, which is the same hole the `as never`
+ * casts at the call sites were. With this signature a key that is not on
+ * `AppBuilderComponentRunnerDeps` fails `typecheck:tests`.
+ *
+ * The RETURN is `jest.Mocked<…>` rather than the bare interface, so the members keep
+ * their mock types when a suite reads them back — `deps.saveProject.mock.calls` is the
+ * whole reason these tests hold the bag rather than passing it inline. `overrides` is
+ * See the note on `Object.assign` below for why `overrides` stays unmocked.
+ */
+export function createDeps(
+    overrides: Partial<AppBuilderComponentRunnerDeps> = {}
+): jest.Mocked<AppBuilderComponentRunnerDeps> & MockedCollaborators {
+    const deps: jest.Mocked<AppBuilderComponentRunnerDeps> & MockedCollaborators = {
         componentManager: createComponentManager(),
         commandManager: createCommandManager(),
         logger: createLogger(),
@@ -141,8 +177,21 @@ export function createDeps(overrides: Partial<Record<string, unknown>> = {}) {
         // The catalog of all appBuilderComponents (for the union subscribe).
         catalog: [MESH_ENTRY, INTEGRATION_ENTRY],
         secrets: {},
-        ...overrides,
     };
+
+    /**
+     * `Object.assign`, not a spread.
+     *
+     * `overrides` is `Partial<AppBuilderComponentRunnerDeps>` — plain functions —
+     * because that is what suites naturally write: `jest.fn(async () => …)` with the
+     * arguments it does not use omitted, which TypeScript accepts against a wider
+     * signature. Spreading those into the MOCKED return type does not typecheck,
+     * since a plain function is not a `MockInstance`. Assigning them onto the built
+     * object does, and keeps both ends honest: a key that is not on the interface is
+     * still rejected, and the members still read back as mocks.
+     */
+    Object.assign(deps, overrides);
+    return deps;
 }
 
 export function createProject(overrides: Partial<Project> = {}): Project {
