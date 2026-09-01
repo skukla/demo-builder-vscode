@@ -21,8 +21,14 @@
 
 import { executeSampleDataPhase } from '@/features/project-creation/handlers/executor';
 import { installSampleData } from '@/features/data-installer/services/sampleDataInstall';
-import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
     ...jest.requireActual('@/features/data-installer/services/sampleDataInstall'),
@@ -32,13 +38,16 @@ jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
 const mockedInstall = installSampleData as jest.MockedFunction<typeof installSampleData>;
 
 function makeContext() {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
         sendMessage: jest.fn(),
-        stateManager: { saveProject: jest.fn() },
-        context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
-    } as unknown as HandlerContext;
+        stateManager: createMockStateManager({ saveProject: jest.fn() }),
+        context: createMockExtensionContext({
+            globalState: createStatefulGlobalState().globalState,
+            secrets: createMockSecretStorage().secrets,
+        }),
+    });
 }
 
 function makeProject() {
@@ -77,7 +86,7 @@ describe('executeSampleDataPhase', () => {
         expect(progress).toHaveBeenCalledWith(
             expect.stringMatching(/datapack/i),
             expect.any(Number),
-            expect.any(String),
+            expect.any(String)
         );
     });
 
@@ -86,7 +95,7 @@ describe('executeSampleDataPhase', () => {
         mockedInstall.mockResolvedValue({ ran: false, reason: 'the service refused' });
 
         await expect(
-            executeSampleDataPhase(makeContext(), makeProject(), jest.fn()),
+            executeSampleDataPhase(makeContext(), makeProject(), jest.fn())
         ).resolves.toBeUndefined();
     });
 
@@ -94,7 +103,7 @@ describe('executeSampleDataPhase', () => {
         mockedInstall.mockRejectedValue(new Error('unexpected'));
 
         await expect(
-            executeSampleDataPhase(makeContext(), makeProject(), jest.fn()),
+            executeSampleDataPhase(makeContext(), makeProject(), jest.fn())
         ).resolves.toBeUndefined();
     });
 

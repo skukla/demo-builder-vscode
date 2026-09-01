@@ -113,6 +113,20 @@ const MEMBER_BUILDERS = {
     },
 };
 
+/**
+ * Members where an EMPTY literal override is worse than no override at all.
+ *
+ * `sharedState: {}` replaces the builder's real default — which carries
+ * `isAuthenticating`, a selection and a Map — with an object that has none of them,
+ * and `SharedState` requires `isAuthenticating`. Six failures came from exactly
+ * that: the site was not asking for an empty shared state, it was writing the
+ * shortest thing that satisfied a cast which checked nothing.
+ *
+ * Deliberately NOT every `{}` member. `panel: {}` may mean "a panel exists", and
+ * dropping it would change what the test asserts.
+ */
+const DROP_IF_EMPTY = new Set(['sharedState']);
+
 /** Swap each known member's partial literal for its builder. Returns imports needed. */
 function convertMembers(objectLiteral) {
     const needed = new Set();
@@ -121,6 +135,16 @@ function convertMembers(objectLiteral) {
     for (const prop of props) {
         if (prop.getKind() !== SyntaxKind.PropertyAssignment) continue;
         const name = prop.getName?.();
+
+        // Drop an empty override that only destroys a good default.
+        if (DROP_IF_EMPTY.has(name)) {
+            const v = prop.getInitializer();
+            if (v && v.getKind() === SyntaxKind.ObjectLiteralExpression && v.getText().trim() === '{}') {
+                prop.remove();
+                continue;
+            }
+        }
+
         const spec = MEMBER_BUILDERS[name];
         if (!spec) continue;
         const value = prop.getInitializer();
@@ -161,6 +185,9 @@ function convertMembers(objectLiteral) {
     return needed;
 }
 
+/** Builder names this codemod introduces, for the shadowing check. */
+const MEMBER_BUILDER_NAMES = new Set(Object.values(MEMBER_BUILDERS).map((m) => m.fn));
+
 const project = createProject();
 const files = addFiles(project, ['tests/**/*.ts', 'tests/**/*.tsx']);
 
@@ -178,6 +205,18 @@ for (const file of files) {
         .getDescendantsOfKind(SyntaxKind.AsExpression)
         .filter((c) => c.getTypeNode()?.getText() === 'HandlerContext')
         .reverse();
+
+    // A file with its OWN function of the builder's name cannot take the import —
+    // `edsHelpers.test.ts` defines a local `createMockHandlerContext`, and adding the
+    // import produced "Import declaration conflicts with local declaration". Leave it
+    // to a person: renaming someone's local helper is not this codemod's call.
+    const shadows = file
+        .getFunctions()
+        .some((fn) => fn.getName() === BUILDER || MEMBER_BUILDER_NAMES.has(fn.getName()));
+    if (shadows) {
+        skipped.push(`${rel}  defines its own builder of the same name`);
+        continue;
+    }
 
     for (const cast of casts) {
         const target = innermost(cast);
@@ -209,10 +248,19 @@ for (const file of files) {
             file.addImportDeclaration({ moduleSpecifier: spec, namedImports: [BUILDER] });
         }
         for (const m of memberImports) {
-            const has = file
+            // Check for the NAMED import, not the module. Checking the module was a
+            // real bug: a file already importing `createStatefulGlobalState` from
+            // `extensionContextFake` looked satisfied, so `createMockExtensionContext`
+            // was never added — 11 files failed with "Cannot find name", and the
+            // whole cluster read like reading work when it was one wrong predicate.
+            const existing = file
                 .getImportDeclarations()
-                .some((d) => d.getModuleSpecifierValue().includes(path.basename(m.from)));
-            if (has) continue;
+                .find((d) => d.getModuleSpecifierValue().includes(path.basename(m.from)));
+            if (existing) {
+                const names = existing.getNamedImports().map((n) => n.getName());
+                if (!names.includes(m.fn)) existing.addNamedImport(m.fn);
+                continue;
+            }
             let spec = path.relative(path.dirname(rel), m.from);
             if (!spec.startsWith('.')) spec = `./${spec}`;
             file.addImportDeclaration({ moduleSpecifier: spec, namedImports: [m.fn] });

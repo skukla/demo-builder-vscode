@@ -18,10 +18,17 @@ import * as vscode from 'vscode';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
-import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../helpers/extensionContextFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
     resolveCommerceCredentials: jest.fn(),
@@ -48,20 +55,25 @@ function accsProject(): Partial<Project> {
 }
 
 function makeImportHarness(project: unknown = accsProject()) {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
-        authManager: {
+        authManager: createMockAuthenticationService({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest.fn().mockReturnValue({
                 inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }),
             }),
-        },
-        panel: {},
-        context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
-        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
+        }),
+        panel: createMockWebviewPanel(),
+        context: createMockExtensionContext({
+            globalState: createStatefulGlobalState().globalState,
+            secrets: createMockSecretStorage().secrets,
+        }),
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(project),
+        }),
         sendMessage: jest.fn(),
-    } as unknown as HandlerContext;
+    });
 }
 
 const PAYLOAD = {
@@ -82,17 +94,21 @@ beforeEach(() => {
         get: jest.fn((key: string) =>
             key === 'apiBaseUrl'
                 ? 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api'
-                : true,
+                : true
         ),
     });
     mockedCredentials.mockResolvedValue({
         ok: true,
-        credentials: { kind: 'accs', clientId: 'cid', clientSecret: 'fake-test-secret-not-a-secret' },
+        credentials: {
+            kind: 'accs',
+            clientId: 'cid',
+            clientSecret: 'fake-test-secret-not-a-secret',
+        },
     });
     listExportItems = jest.fn().mockResolvedValue({ items: [], totalCount: 0, excludedCount: 0 });
     startExport = jest.fn().mockResolvedValue({ success: true, perType: [] });
     MockedClient.mockImplementation(
-        () => ({ listExportItems, startExport }) as unknown as DataInstallerWriteClient,
+        () => ({ listExportItems, startExport }) as unknown as DataInstallerWriteClient
     );
 });
 
@@ -108,7 +124,7 @@ describe('list-datapack-export-items', () => {
             expect.objectContaining({
                 restBaseUrl: 'https://na1-sandbox.api.commerce.adobe.com/UoGYsHrcxMyeoVd2zUktZi',
             }),
-            'attribute_sets',
+            'attribute_sets'
         );
     });
 
@@ -129,7 +145,10 @@ describe('list-datapack-export-items', () => {
     });
 
     it('refuses without a data type rather than asking for everything', async () => {
-        const result = await importHandlers['list-datapack-export-items'](makeImportHarness(), PAYLOAD);
+        const result = await importHandlers['list-datapack-export-items'](
+            makeImportHarness(),
+            PAYLOAD
+        );
 
         expect(result.success).toBe(false);
         expect(listExportItems).not.toHaveBeenCalled();
@@ -180,7 +199,7 @@ describe('start-datapack-export', () => {
                 id: { name: 'captured-pack', version: 'v1' },
                 commerceInstance: 'UoGYsHrcxMyeoVd2zUktZi',
                 dataTypes: ['attribute_sets'],
-            }),
+            })
         );
     });
 

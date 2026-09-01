@@ -92,6 +92,8 @@ import {
 import { executeStorefrontSetupPhases } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhases';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../../helpers/authenticationServiceFake';
 
 // Get mock references
 const mockEnsureAdobeIOAuth = ensureAdobeIOAuth as jest.MockedFunction<typeof ensureAdobeIOAuth>;
@@ -105,7 +107,7 @@ const mockExecuteStorefrontSetupPhases = executeStorefrontSetupPhases as jest.Mo
 // =============================================================================
 
 function createMockContext(overrides: Partial<HandlerContext> = {}): HandlerContext {
-    return {
+    return createMockHandlerContext({
         panel: {
             webview: { postMessage: jest.fn() },
         } as unknown as HandlerContext['panel'],
@@ -120,14 +122,13 @@ function createMockContext(overrides: Partial<HandlerContext> = {}): HandlerCont
             secrets: {},
             globalState: { get: jest.fn(), update: jest.fn() },
         } as unknown as HandlerContext['context'],
-        sharedState: {},
-        authManager: {
+        authManager: createMockAuthenticationService({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
             getTokenManager: jest.fn(),
-        },
+        }),
         ...overrides,
-    } as unknown as HandlerContext;
+    });
 }
 
 function createValidPayload(): StorefrontSetupStartPayload {

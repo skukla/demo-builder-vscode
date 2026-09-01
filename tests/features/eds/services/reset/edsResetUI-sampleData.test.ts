@@ -71,6 +71,12 @@ import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../../helpers/secretStorageFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../../helpers/extensionContextFake';
 
 /** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
 const meshDeps = createMeshDepsFake();
@@ -127,13 +133,19 @@ function createProject(datapack?: { name: string; version: string }): Project {
 }
 
 function createContext(): HandlerContext {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
-        stateManager: createMockStateManager({ saveProject: jest.fn(), getCurrentProject: jest.fn() }),
+        stateManager: createMockStateManager({
+            saveProject: jest.fn(),
+            getCurrentProject: jest.fn(),
+        }),
         sendMessage: jest.fn(),
-        context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
-    } as unknown as HandlerContext;
+        context: createMockExtensionContext({
+            globalState: createStatefulGlobalState().globalState,
+            secrets: createMockSecretStorage().secrets,
+        }),
+    });
 }
 
 /** The confirm answers, in order: the reset, then the sample-data prompt. */
@@ -161,7 +173,12 @@ async function flush(): Promise<void> {
 
 function run(project: Project) {
     return resetEdsProjectWithUI({
-            githubAppService: fakeGitHubAppService, meshDeps, project, context: createContext(), packages: testPackages });
+        githubAppService: fakeGitHubAppService,
+        meshDeps,
+        project,
+        context: createContext(),
+        packages: testPackages,
+    });
 }
 
 beforeEach(() => {

@@ -20,13 +20,17 @@ import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 function ctx(project: unknown): HandlerContext {
-    return {
-        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
+    return createMockHandlerContext({
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(project),
+        }),
         logger: createMockLogger(),
-        context: { extensionPath: '/ext' },
-    } as unknown as HandlerContext;
+        context: createMockExtensionContext({ extensionPath: '/ext' }),
+    });
 }
 
 describe('handleRefreshBlockLibraryHeadless', () => {
@@ -61,7 +65,13 @@ describe('handleRefreshBlockLibraryHeadless', () => {
 
         const call = mockRefresh.mock.calls[0][0];
         expect(call.onProgress).toBeUndefined();
-        expect(call.context).toEqual({ extensionPath: '/ext' });
+        // Asserts the FIELD, not the whole object. It read
+        // `toEqual({ extensionPath: '/ext' })`, which also asserted that nothing
+        // else was on the context — a claim about the FAKE's shape rather than
+        // about the handler, and one that broke the moment the context became a
+        // real `createMockExtensionContext`. What this test means is that the
+        // extension context is threaded through with the right path.
+        expect(call.context.extensionPath).toBe('/ext');
         expect(result).toEqual({
             success: true,
             data: { libraryPaths: ['/.da/library/blocks/hero'] },

@@ -25,8 +25,16 @@ const mockRegisterSite = jest.fn();
 jest.mock('@/features/eds/services/configService/configurationService', () => ({
     // Mirrors the real 4-arg shape (legacyLookupKey retired 2026-08-23):
     // lookup key AND content source both use the GitHub owner/repo.
-    buildSiteConfigParams: (owner: string, repo: string, daLiveOrg: string, overlayUrl?: string) => ({
-        org: owner, site: repo, codeOwner: owner, codeRepo: repo,
+    buildSiteConfigParams: (
+        owner: string,
+        repo: string,
+        daLiveOrg: string,
+        overlayUrl?: string
+    ) => ({
+        org: owner,
+        site: repo,
+        codeOwner: owner,
+        codeRepo: repo,
         contentSourceUrl: `https://content.da.live/${daLiveOrg}/${repo}/`,
         ...(overlayUrl && { contentOverlayUrl: overlayUrl }),
     }),
@@ -36,16 +44,15 @@ jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
 }));
 
-
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
-        QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 },
+        QUICK: 5000,
+        NORMAL: 30000,
+        PREREQUISITE_CHECK: 10000,
+        UI: { MIN_LOADING: 200 },
         CONFIG_SERVICE_RETRY_DELAY: 0,
     },
 }));
-
-
-
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -54,10 +61,10 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
-
-
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn().mockResolvedValue({ success: true, blocksCount: 0, blockIds: [] }),
+    installBlockCollections: jest
+        .fn()
+        .mockResolvedValue({ success: true, blocksCount: 0, blockIds: [] }),
 }));
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -78,20 +85,17 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     surfaceOverlayRegistrationFailure: jest.fn(),
 }));
 
-
-
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-
 jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: jest.fn().mockResolvedValue({
-        success: true, contentFilesCopied: 3, libraryPaths: [],
+        success: true,
+        contentFilesCopied: 3,
+        libraryPaths: [],
     }),
 }));
-
-
 
 global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 
@@ -100,15 +104,13 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
 // =============================================================================
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
-import {
-    meshDeps,
-} from './edsResetService.testUtils';
+import { meshDeps } from './edsResetService.testUtils';
 import type { ConfigStepServices } from '@/features/eds/services/reset/edsResetConfigStep';
 import { surfaceOverlayRegistrationFailure } from '@/features/eds/handlers/edsHelpers';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
-
-
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../../helpers/authenticationServiceFake';
 
 const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.MockedFunction<
     typeof surfaceOverlayRegistrationFailure
@@ -145,7 +147,7 @@ function createProject(): Project {
 }
 
 function createContext(): HandlerContext {
-    return {
+    return createMockHandlerContext({
         panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn(),
@@ -158,14 +160,13 @@ function createContext(): HandlerContext {
             secrets: {},
             globalState: { get: jest.fn(), update: jest.fn() },
         } as unknown as HandlerContext['context'],
-        sharedState: {},
-        authManager: {
+        authManager: createMockAuthenticationService({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest.fn().mockReturnValue({
                 getAccessToken: jest.fn().mockResolvedValue('mock-token'),
             }),
-        },
-    } as unknown as HandlerContext;
+        }),
+    });
 }
 
 const mockTokenProvider = { getAccessToken: jest.fn().mockResolvedValue('mock-token') };
@@ -225,7 +226,14 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
         // does: the reset genuinely did the rest of its work.
         mockUpdateSiteConfig.mockResolvedValue({ success: false, statusCode: 500, error: 'boom' });
 
-        const result = await executeEdsReset(createParams(), context, mockTokenProvider, meshDeps, undefined, SERVICES);
+        const result = await executeEdsReset(
+            createParams(),
+            context,
+            mockTokenProvider,
+            meshDeps,
+            undefined,
+            SERVICES
+        );
 
         expect(result.success).toBe(true);
         expect(result.errorType).toBe('CONFIG_WRITE_FAILED');
@@ -233,14 +241,28 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
     });
 
     it('leaves errorType unset when the config write lands', async () => {
-        const result = await executeEdsReset(createParams(), context, mockTokenProvider, meshDeps, undefined, SERVICES);
+        const result = await executeEdsReset(
+            createParams(),
+            context,
+            mockTokenProvider,
+            meshDeps,
+            undefined,
+            SERVICES
+        );
 
         expect(result.success).toBe(true);
         expect(result.errorType).toBeUndefined();
     });
 
     it('calls updateSiteConfig on successful reset', async () => {
-        await executeEdsReset(createParams(), context, mockTokenProvider, meshDeps, undefined, SERVICES);
+        await executeEdsReset(
+            createParams(),
+            context,
+            mockTokenProvider,
+            meshDeps,
+            undefined,
+            SERVICES
+        );
 
         expect(mockUpdateSiteConfig).toHaveBeenCalledTimes(1);
     });
@@ -248,11 +270,18 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
     it('logs warning and continues when updateSiteConfig fails', async () => {
         mockUpdateSiteConfig.mockResolvedValue({ success: false, error: 'API rejected' });
 
-        const result = await executeEdsReset(createParams(), context, mockTokenProvider, meshDeps, undefined, SERVICES);
+        const result = await executeEdsReset(
+            createParams(),
+            context,
+            mockTokenProvider,
+            meshDeps,
+            undefined,
+            SERVICES
+        );
 
         const warnCalls = (context.logger.warn as jest.Mock).mock.calls;
-        const hasConfigWarning = warnCalls.some(
-            (call: string[]) => call[0].includes('Configuration Service'),
+        const hasConfigWarning = warnCalls.some((call: string[]) =>
+            call[0].includes('Configuration Service')
         );
         expect(hasConfigWarning).toBe(true);
         expect(result.success).toBe(true);
@@ -264,12 +293,19 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
         await executeEdsReset(params, context, mockTokenProvider, meshDeps, undefined, SERVICES);
 
         expect(mockUpdateSiteConfig).toHaveBeenCalledWith(
-            expect.objectContaining({ contentOverlayUrl: 'https://byom.example.com' }),
+            expect.objectContaining({ contentOverlayUrl: 'https://byom.example.com' })
         );
     });
 
     it('omits contentOverlayUrl from updateSiteConfig params when byomOverlayUrl absent', async () => {
-        await executeEdsReset(createParams(), context, mockTokenProvider, meshDeps, undefined, SERVICES);
+        await executeEdsReset(
+            createParams(),
+            context,
+            mockTokenProvider,
+            meshDeps,
+            undefined,
+            SERVICES
+        );
 
         const callArgs = mockUpdateSiteConfig.mock.calls[0][0];
         expect(callArgs.contentOverlayUrl).toBeUndefined();
@@ -295,7 +331,14 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
     it('does NOT surface the overlay failure when no overlay configured even if update fails', async () => {
         mockUpdateSiteConfig.mockResolvedValue({ success: false, error: 'API rejected' });
 
-        await executeEdsReset(createParams(), context, mockTokenProvider, meshDeps, undefined, SERVICES);
+        await executeEdsReset(
+            createParams(),
+            context,
+            mockTokenProvider,
+            meshDeps,
+            undefined,
+            SERVICES
+        );
 
         expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
     });
@@ -314,7 +357,11 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
     });
 
     it('surfaces the overlay failure after 403 retries are exhausted', async () => {
-        mockUpdateSiteConfig.mockResolvedValue({ success: false, statusCode: 403, error: 'Forbidden' });
+        mockUpdateSiteConfig.mockResolvedValue({
+            success: false,
+            statusCode: 403,
+            error: 'Forbidden',
+        });
         const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
 
         await executeEdsReset(params, context, mockTokenProvider, meshDeps, undefined, SERVICES);
@@ -325,7 +372,11 @@ describe('executeEdsReset - Configuration Service (Step 6)', () => {
     });
 
     it('does NOT retry a non-403 config failure', async () => {
-        mockUpdateSiteConfig.mockResolvedValue({ success: false, statusCode: 500, error: 'Server error' });
+        mockUpdateSiteConfig.mockResolvedValue({
+            success: false,
+            statusCode: 500,
+            error: 'Server error',
+        });
         const params = { ...createParams(), byomOverlayUrl: 'https://byom.example.com' };
 
         await executeEdsReset(params, context, mockTokenProvider, meshDeps, undefined, SERVICES);
