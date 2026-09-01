@@ -303,6 +303,49 @@ describe('a fake of a real type is not a literal the compiler was told to ignore
                       : 'at',
         }).toEqual({ type, count, verdict: 'at' });
     });
+
+    /**
+     * The families that reached ZERO, kept under enforcement.
+     *
+     * This exists because of a hole opened on 2026-09-01 and found the same day by
+     * the owner asking "can we check our work?". Five families were closed by
+     * DELETING their ceiling key — and the test above iterates
+     * `Object.keys(CEILINGS)`, so deleting a key deletes its check. All five were
+     * silently unenforced: `as Logger` could have come straight back, in any
+     * number, with nothing failing.
+     *
+     * A ceiling of 0 would have kept enforcing. The deletion is what broke it. So
+     * a closed family moves HERE rather than vanishing, and this asserts both
+     * halves — no occurrences, and no ceiling row to reopen. The same shape as
+     * `expectBanned` in architectureScan, which was written three hours earlier
+     * for exactly this failure and then not applied here.
+     */
+    const BANNED = (LEDGER as unknown as { castBans: string[] }).castBans;
+
+    it('CONTROL: the ban list is populated and disjoint from the ceilings', () => {
+        // An empty list would make every assertion below vacuous.
+        expect(BANNED.length).toBeGreaterThanOrEqual(5);
+        expect(BANNED.filter((t) => t in CEILINGS)).toEqual([]);
+    });
+
+    it.each(BANNED)('%s: closed — casts to it never come back', (type) => {
+        const re = new RegExp(
+            String.raw`\}\s*as\s+(?:unknown\s+as\s+)?${type.replace(/[.[\]'$]/g, '\\$&')}\b`,
+            'g'
+        );
+        const offenders: string[] = [];
+        for (const f of collectTestFiles(testsDir)) {
+            if (f.startsWith('tests/helpers/')) continue;
+            const body = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+            if (re.test(body)) offenders.push(f);
+            re.lastIndex = 0;
+        }
+        expect({ type, offenders, reopenedCeiling: type in CEILINGS }).toEqual({
+            type,
+            offenders: [],
+            reopenedCeiling: false,
+        });
+    });
 });
 
 describe('a jest.mock factory reaches the builder too', () => {

@@ -7,5 +7,13 @@
         "Partial<Project>": 38,
         "vscode.ExtensionContext": 6
     },
-    "_logger_closed": "CLOSED 2026-09-01. Seeded at 296 hand-rolled logger fakes; the last four were converted the same day (two EDS service suites, one rate-limiting suite whose fake is read inside a jest.mock factory, and one handler testUtils). The list stays as an EMPTY ARRAY rather than being deleted because the two tests below read it: one bans a new hand-rolled fake outright, the other fails on a stale row. With the array empty the first is a flat ban."
+    "_logger_closed": "CLOSED 2026-09-01. Seeded at 296 hand-rolled logger fakes; the last four were converted the same day (two EDS service suites, one rate-limiting suite whose fake is read inside a jest.mock factory, and one handler testUtils). The list stays as an EMPTY ARRAY rather than being deleted because the two tests below read it: one bans a new hand-rolled fake outright, the other fails on a stale row. With the array empty the first is a flat ban.",
+    "castBans": [
+        "Logger",
+        "ExtensionContext",
+        "StateManager",
+        "HandlerContext['stateManager']",
+        "CommandExecutor"
+    ],
+    "_castBans_what": "Families that reached ZERO. They live here rather than as a ceiling of 0 because the ceiling test iterates the ceiling KEYS \u2014 deleting a key deleted its check, and on 2026-09-01 that left all five silently unenforced for the length of one session. A row here asserts both halves: no casts to the type anywhere outside tests/helpers/, and no ceiling row reopened for it. Entries are never removed."
 }
