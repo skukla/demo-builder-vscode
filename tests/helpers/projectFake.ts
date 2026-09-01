@@ -16,9 +16,12 @@
  * composed from memory, per ADR-016 rule 3. What reading it settled:
  *
  *   - `componentInstances` is a RECORD keyed by component id, not an array.
- *   - `components` also exists, and IS an array — of id STRINGS. Both are real
- *     and they are not alternatives to each other. (The earlier invention was
- *     an array of objects standing in for the record.)
+ *   - `components` also exists ON THE MANIFEST, and IS an array of id STRINGS.
+ *     (The earlier invention was an array of objects standing in for the record.)
+ *     But it is NOT on `Project`, and this file set it anyway until 2026-09-01 —
+ *     the note above was a true statement about the manifest, written into a
+ *     builder that returns a Project, where the next reader takes it as a claim
+ *     about the type. Nothing in production reads `project.components`.
  *   - the frontend port lives on the INSTANCE whose `type` is `frontend`;
  *     there is no top-level `frontendPort`.
  *   - `adobe` carries organization + organizationName + projectId + workspace
@@ -31,7 +34,10 @@
  * shape production passes around. Read the TYPE too.
  *
  * Keep it that way: if this needs a new field, read a real manifest again
- * rather than adding what seems reasonable.
+ * rather than adding what seems reasonable — AND check the field against the
+ * `Project` type, because the manifest carries fields memory does not. That is not
+ * hypothetical: `version: '1.0.0'` sat here until 2026-09-01 for exactly that
+ * reason, and only removing this function's own cast revealed it.
  */
 
 import type { Project } from '@/types/base';
@@ -72,8 +78,23 @@ export function createMockProject(overrides: Partial<Project> = {}): Project {
         // as the same string. Third instance of the same lesson — a default
         // that production PREFERS is not a neutral default.
         path: '/projects/demo',
-        version: '1.0.0',
-        formatVersion: 2,
+        // NO `version`, though the real manifest carries `version: '1.0.0'`.
+        //
+        // It is a MANIFEST field and `Project` does not declare it — the same
+        // distinction the dates note below makes, in the other direction: there the
+        // manifest holds strings where memory holds Dates; here the manifest holds a
+        // field memory does not have at all. Nothing in `projectFileLoader` reads it
+        // onto a Project, and `stateManager`'s `version` is the extension-state
+        // NUMBER, not this string.
+        //
+        // It was here until 2026-09-01, hidden by this function's own
+        // `as unknown as Project`, so every suite using the canonical fixture carried
+        // a field production never sees. Removing the cast is what surfaced it —
+        // which is the argument against the cast, not against the builder.
+        //
+        // `formatVersion` went the same way and for the same reason:
+        // `projectConfigWriter` STAMPS it on the manifest and `manifestFormatSweep`
+        // reads it straight off the parsed JSON. Neither puts it on a Project.
         // DATES, not the strings the manifest holds. This is the distinction the
         // provenance note below got wrong for three days: `ProjectManifest.created`
         // is a `string` on disk and `Project.created` is a `Date` in memory, and
@@ -101,10 +122,9 @@ export function createMockProject(overrides: Partial<Project> = {}): Project {
             integrations: [],
             appBuilder: [],
         },
-        components: [],
         componentInstances: {},
         componentConfigs: {},
         componentVersions: {},
         ...overrides,
-    } as unknown as Project;
+    };
 }
