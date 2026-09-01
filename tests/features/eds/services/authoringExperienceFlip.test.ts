@@ -16,6 +16,7 @@ import type { Logger } from '@/types/logger';
 import type { AuthoringExperience, Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
@@ -90,9 +91,7 @@ describe('applyAuthoringExperienceFlip', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockContext = {
-            secrets: { get: jest.fn(), store: jest.fn() },
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
         mockLogger = createMockLogger() as unknown as Logger;
         fakeTokenService = {
             getToken: jest.fn().mockResolvedValue('gh-token'),

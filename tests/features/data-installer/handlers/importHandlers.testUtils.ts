@@ -101,7 +101,7 @@ export function makeImportHarness(project: unknown = PAAS_PROJECT) {
             getTokenManager: jest.fn().mockReturnValue(tokenManager),
         },
         panel: {} as vscode.WebviewPanel,
-        context: stores as unknown as vscode.ExtensionContext,
+        context: stores,
         stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
         sendMessage: jest.fn().mockResolvedValue(undefined),
     } as unknown as HandlerContext;

@@ -18,6 +18,7 @@ import type { Project } from '@/types/base';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 
 const mockApplyAuthoringExperienceFlip = jest.fn().mockResolvedValue({
@@ -113,7 +114,7 @@ describe('registerEwSettingChangeListener', () => {
             return { dispose: subscriptionDispose };
         });
 
-        mockContext = { secrets: {} } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
         mockLogger = createMockLogger() as unknown as Logger;
     });
 

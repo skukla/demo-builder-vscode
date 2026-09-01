@@ -66,6 +66,7 @@ import type { Project } from '@/types/base';
 import { COMPONENT_IDS } from '@/core/constants';
 import { createMockLogger } from '../helpers/loggerFake';
 import { createMockStateManager } from '../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../helpers/extensionContextFake';
 
 const migrateMock = migrateStorefrontNamingIfNeeded as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
@@ -111,7 +112,7 @@ function makeStateManager(projectsByPath: Record<string, Project>): StateManager
 
 function makeCommand(stateManager: StateManager) {
     const logger = makeLogger();
-    const context = {} as unknown as vscode.ExtensionContext;
+    const context = createMockExtensionContext();
     return new MigrateStorefrontNamesCommand(context, stateManager, logger);
 }
 

@@ -14,6 +14,7 @@ import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/sh
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { createMockLogger } from '../helpers/loggerFake';
+import { createMockExtensionContext } from '../helpers/extensionContextFake';
 
 // Mock VS Code API
 
@@ -114,14 +115,7 @@ describe('CommandManager', () => {
         jest.clearAllMocks();
 
         // Create mock context
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/path',
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn(),
-            },
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
         // Create mock dependencies
         mockStateManager = new StateManager(mockContext);

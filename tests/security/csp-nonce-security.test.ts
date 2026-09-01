@@ -14,6 +14,7 @@ import type { StateManager } from '@/types/state';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../helpers/loggerFake';
 import { createMockStateManager } from '../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../helpers/extensionContextFake';
 
 // Mock dependencies
 jest.mock('@/core/communication/webviewCommunicationManager');
@@ -57,10 +58,7 @@ describe('Security: CSP Nonce Generation', () => {
     let mockLogger: Logger;
 
     beforeEach(() => {
-        mockContext = {
-            extensionPath: '/mock/path',
-            subscriptions: [],
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
         mockStateManager = createMockStateManager();
         mockLogger = createMockLogger() as unknown as Logger;

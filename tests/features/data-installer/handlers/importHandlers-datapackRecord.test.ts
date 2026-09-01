@@ -68,7 +68,7 @@ function makeImportHarness(project: Partial<Project>, saveProject = jest.fn()) {
                 setKeysForSync: jest.fn(),
             },
             secrets: { get: jest.fn(async () => undefined), store: jest.fn(), delete: jest.fn() },
-        } as unknown as vscode.ExtensionContext,
+        },
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,

@@ -16,6 +16,7 @@ import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
@@ -102,7 +103,7 @@ describe('DeployMeshCommand - pre-deploy subscribe', () => {
             success: true, data: { meshId: 'mesh-1', endpoint: 'https://m.adobe.io/graphql' },
         });
 
-        mockContext = { subscriptions: [], extensionPath: '/test/extension' } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
         mockStateManager = createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(createTestProject()),
             saveProject: jest.fn().mockResolvedValue(undefined),

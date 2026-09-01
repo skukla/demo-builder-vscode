@@ -83,42 +83,14 @@ jest.mock('vscode', () => {
 import * as vscode from 'vscode';
 import { ErrorLogger } from '@/core/logging/errorLogger';
 import { getLogger } from '@/core/logging/debugLogger';
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 
 describe('ErrorLogger', () => {
     let errorLogger: ErrorLogger;
     let mockContext: vscode.ExtensionContext;
 
     function createMockContext(): vscode.ExtensionContext {
-        return {
-            subscriptions: [],
-            extensionPath: '/test/path',
-            extensionUri: vscode.Uri.file('/test/path'),
-            globalStorageUri: vscode.Uri.file('/test/global-storage'),
-            storageUri: vscode.Uri.file('/test/storage'),
-            logUri: vscode.Uri.file('/test/logs'),
-            extensionMode: vscode.ExtensionMode.Development,
-            asAbsolutePath: jest.fn((p: string) => `/test/path/${p}`),
-            workspaceState: {
-                get: jest.fn(),
-                update: jest.fn(),
-                keys: jest.fn().mockReturnValue([]),
-            },
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn(),
-                keys: jest.fn().mockReturnValue([]),
-                setKeysForSync: jest.fn(),
-            },
-            secrets: {
-                get: jest.fn(),
-                store: jest.fn(),
-                delete: jest.fn(),
-                onDidChange: jest.fn(),
-            },
-            environmentVariableCollection: {} as vscode.GlobalEnvironmentVariableCollection,
-            extension: {} as vscode.Extension<unknown>,
-            languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
-        } as unknown as vscode.ExtensionContext;
+        return createMockExtensionContext();
     }
 
     beforeEach(() => {

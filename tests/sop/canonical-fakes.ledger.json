@@ -5,7 +5,7 @@
         "Project": 150,
         "HandlerContext": 59,
         "Partial<Project>": 38,
-        "vscode.ExtensionContext": 36
+        "vscode.ExtensionContext": 6
     },
     "_logger_closed": "CLOSED 2026-09-01. Seeded at 296 hand-rolled logger fakes; the last four were converted the same day (two EDS service suites, one rate-limiting suite whose fake is read inside a jest.mock factory, and one handler testUtils). The list stays as an EMPTY ARRAY rather than being deleted because the two tests below read it: one bans a new hand-rolled fake outright, the other fails on a stale row. With the array empty the first is a flat ban."
 }

@@ -15,6 +15,7 @@ import * as vscode from 'vscode';
 import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // Mock vscode module
 jest.mock('vscode', () => ({
@@ -55,14 +56,7 @@ describe('SidebarProvider Registration', () => {
         jest.clearAllMocks();
 
         // Create mock extension context
-        mockContext = {
-            extensionPath: '/mock/extension/path',
-            extensionUri: {
-                fsPath: '/mock/extension/path',
-                path: '/mock/extension/path',
-            },
-            subscriptions: [],
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
         // Create mock state manager
         mockStateManager = createMockStateManager({

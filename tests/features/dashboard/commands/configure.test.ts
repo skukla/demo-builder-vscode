@@ -13,6 +13,7 @@ import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // Mock VS Code API
 
@@ -54,15 +55,7 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
         } as unknown as vscode.WebviewPanel;
 
         // Create mock context
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/extension/path',
-            extensionUri: vscode.Uri.file('/test/extension/path'),
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn(),
-            },
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
         // Create mock state manager
         mockStateManager = {

@@ -45,6 +45,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
@@ -103,10 +104,7 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/extension',
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
         mockStateManager = createMockStateManager({
             getCurrentProject: jest.fn(),

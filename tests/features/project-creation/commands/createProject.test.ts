@@ -55,7 +55,7 @@ function createMockExtensionContext(): vscode.ExtensionContext {
         secrets: {} as any,
         extension: {} as any,
         languageModelAccessInformation: {} as any,
-    } as vscode.ExtensionContext;
+    };
 }
 
 /**

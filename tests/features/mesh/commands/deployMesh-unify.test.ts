@@ -59,6 +59,7 @@ import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { fetchMeshInfoFromAdobeIO } from '@/features/mesh/services/meshVerifier';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
@@ -96,7 +97,7 @@ describe('DeployMeshCommand - Unification (delegates to deployMeshComponent)', (
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockContext = { subscriptions: [], extensionPath: '/test/extension' } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
         mockStateManager = createMockStateManager({ getCurrentProject: jest.fn(), saveProject: jest.fn() }) as unknown as jest.Mocked<StateManager>;
         mockLogger = createMockLogger() as jest.Mocked<Logger>;
         mockAuthManager = {
