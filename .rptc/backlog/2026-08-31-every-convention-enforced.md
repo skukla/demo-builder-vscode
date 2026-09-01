@@ -219,3 +219,6 @@ is the current reference for the four-control pattern.
 - 2026-09-01  docs(handbook): the nine rules no check can make leave the conventions list (`3884bf0f9`)
 - 2026-09-01  Merge loop/2026-08-31-pl33: every convention is enforced, or names what it waits on (`fd56f7e4f`)
 - 2026-09-01  docs(backlog): PL-33 closes — 71 conventions, 70 enforced, and the criterion needed a third state (`d7b287915`)
+- 2026-09-01  test(sop): adopt the day's findings — two enforcers, one discipline entry, nothing else (`f5cf4f8ae`)
+- 2026-09-01  test(hooks): the rule proofs are now RUN, and running them found two dead guards (`604faaad0`)
+- 2026-09-01  feat(hooks): the zsh word-splitting trap is a hook, not a paragraph (`f56080441`)
