@@ -4,6 +4,8 @@
  * Tests for file operations extracted from GitHubService.
  */
 
+import { createMockLogger } from '../../../../helpers/loggerFake';
+
 export {};
 
 // Mock Octokit
@@ -373,7 +375,7 @@ describe('GitHub File Operations', () => {
             // The block cannot be reproduced locally — it comes from policy on the
             // reporting user's account. What GitHub said is the only evidence there
             // will ever be, so it has to reach the debug log.
-            const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
+            const logger = createMockLogger();
             const service = new GitHubFileOperations(mockTokenService, logger);
             const rejection = new Error('Repository rule violations found') as Error & {
                 status?: number;

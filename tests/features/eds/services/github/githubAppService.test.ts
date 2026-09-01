@@ -4,6 +4,8 @@
  * Tests for AEM Code Sync GitHub App detection and installation URL generation.
  */
 
+import { createMockLogger } from '../../../../helpers/loggerFake';
+
 // Mock fetch globally
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -328,13 +330,7 @@ describe('GitHub App Service', () => {
         // leak a secret into a file users paste into tickets.
 
         it('should log the credential type but never the credential itself', async () => {
-            const logger = {
-                trace: jest.fn(),
-                debug: jest.fn(),
-                info: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-            };
+            const logger = createMockLogger();
             mockTokenService.getToken.mockResolvedValue({
                 token: 'gho_SUPERSECRETVALUE',
                 tokenType: 'bearer',
@@ -348,8 +344,11 @@ describe('GitHub App Service', () => {
 
             await service.isAppInstalled('test-owner', 'test-repo');
 
-            const logged = ['trace', 'debug', 'info', 'warn', 'error']
-                .flatMap((lvl) => (logger as never as Record<string, jest.Mock>)[lvl].mock.calls)
+            // `as never as Record<string, jest.Mock>` stood here to index the fake by
+            // level name. The canonical builder returns `jest.Mocked<Logger>`, so a
+            // const-asserted tuple indexes it with no cast at all.
+            const logged = (['trace', 'debug', 'info', 'warn', 'error'] as const)
+                .flatMap((lvl) => logger[lvl].mock.calls)
                 .map((c) => String(c[0]))
                 .join('\n');
             expect(logged).toContain('gho_');

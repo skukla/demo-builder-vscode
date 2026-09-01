@@ -195,8 +195,18 @@ describe('a fake with a canonical builder is not hand-rolled again', () => {
         expect(handRolledFakes('const s = { debug: jest.fn(), info: jest.fn() };')).toEqual([]);
     });
 
-    it('no test file outside the ledger hand-rolls a covered fake', () => {
+    /**
+     * A FLAT BAN since 2026-09-01: the grandfather list is empty, so every file is
+     * judged by the rule and there is nothing left to be exempt. It was seeded at
+     * 296 and shrank to zero — the arc `featureBarrels` and `reExportIndex` took.
+     *
+     * The empty array is kept rather than deleted because the stale-row test below
+     * reads it too. Re-adding a name would grandfather a fake again, which is why
+     * the ledger's own note says the list is closed.
+     */
+    it('no test file hand-rolls a fake that has a canonical builder', () => {
         const grandfathered = new Set(ledger.logger);
+        expect(grandfathered.size).toBe(0); // the ban: nothing is exempt any more
         const offenders: string[] = [];
         for (const file of files) {
             const kinds = handRolledFakes(fs.readFileSync(path.join(repoRoot, file), 'utf8'));

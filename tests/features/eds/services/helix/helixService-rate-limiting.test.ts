@@ -11,18 +11,14 @@
  * more than 10 pages.
  */
 
+import { createMockLogger } from '../../../../helpers/loggerFake';
+
 export {};
 
 // Mock vscode module
 
 // Mock logging
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-};
+const mockLogger = createMockLogger();
 // `Logger` was ALSO listed here as a mocked export. `@/core/logging` never
 // exported a `Logger` — only DebugLogger/ErrorLogger/StepLogger and the two
 // accessors — so that line faked a symbol that does not exist. Dropped 2026-08-31
