@@ -257,3 +257,6 @@ conversion, which the enforcer requires anyway.
 - 2026-09-01  feat(codemod): the mechanical cast work is finished — here is what replaces it (`2c5395e83`)
 - 2026-09-01  refactor(tests): every remaining cast position swept — 1,328 to 1,275 (`30373a340`)
 - 2026-09-01  refactor(tests): argument-position `as never` — low yield, and the failures are the finding (`9d5c7944f`)
+- 2026-09-01  refactor(ui): one way to declare a component — React.FC is gone, and banned (`8a8aad8c7`)
+- 2026-09-01  test(sop): production erases no types — banned in src/, with the allowed forms written down (`23ae66761`)
+- 2026-09-01  test: delete 20 mocks of methods that do not exist (`8456e2261`)

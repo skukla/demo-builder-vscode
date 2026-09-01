@@ -223,3 +223,4 @@ is the current reference for the four-control pattern.
 - 2026-09-01  test(hooks): the rule proofs are now RUN, and running them found two dead guards (`604faaad0`)
 - 2026-09-01  feat(hooks): the zsh word-splitting trap is a hook, not a paragraph (`f56080441`)
 - 2026-09-01  fix(hooks): the word-splitting guard now covers LOOP variables (`01b19ac13`)
+- 2026-09-01  fix(ui): the trap we said no tool could catch — caught, emptied, banned (`dab8cd921`)
