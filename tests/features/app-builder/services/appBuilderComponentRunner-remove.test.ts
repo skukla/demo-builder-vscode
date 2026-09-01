@@ -62,7 +62,7 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
                 dependencies: ['eds-accs-mesh', 'some-other-dep'],
                 integrations: [],
                 appBuilder: [],
-            } as never,
+            },
             componentInstances: {
                 'eds-accs-mesh': {
                     id: 'eds-accs-mesh',
@@ -71,7 +71,7 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
                     subType: 'mesh',
                     status: 'ready',
                     path: '/proj/components/eds-accs-mesh',
-                } as never,
+                },
             },
             appBuilderComponents: {
                 'eds-accs-mesh': {
@@ -88,7 +88,7 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
         const project = meshProject();
         const deps = createDeps();
 
-        await removeAppBuilderComponent(project, 'eds-accs-mesh', deps as never);
+        await removeAppBuilderComponent(project, 'eds-accs-mesh', deps);
 
         const saved = deps.saveProject.mock.calls.at(-1)![0] as Project;
         // All THREE arms of showDashboard's `hasMesh` must fall together —
@@ -113,7 +113,7 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
         };
         const deps = createDeps();
 
-        await removeAppBuilderComponent(project, 'eds-accs-mesh', deps as never);
+        await removeAppBuilderComponent(project, 'eds-accs-mesh', deps);
 
         const saved = deps.saveProject.mock.calls.at(-1)![0] as Project;
         expect(saved.componentConfigs?.['eds-accs-mesh']).toBeUndefined();
@@ -148,7 +148,7 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
                 dependencies: ['eds-accs-mesh'],
                 integrations: [],
                 appBuilder: ['erp-bridge', 'order-sync'],
-            } as never,
+            },
             appBuilderComponents: {
                 'erp-bridge': {
                     kind: 'integration',
@@ -163,7 +163,7 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
         const project = integrationSelectionProject();
         const deps = createDeps();
 
-        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+        await removeAppBuilderComponent(project, 'erp-bridge', deps);
 
         const saved = deps.saveProject.mock.calls.at(-1)![0] as Project;
         expect(saved.componentSelections?.appBuilder).toEqual(['order-sync']);
@@ -175,7 +175,7 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
         const project = integrationSelectionProject();
         const deps = createDeps();
 
-        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+        await removeAppBuilderComponent(project, 'erp-bridge', deps);
 
         const saved = deps.saveProject.mock.calls.at(-1)![0] as Project;
         // The mesh dependency belongs to the mesh, not to the integration —
@@ -195,14 +195,14 @@ describe('removeAppBuilderComponent (integration)', () => {
                     subType: 'mesh',
                     status: 'ready',
                     path: '/proj/components/commerce-mesh',
-                } as never,
+                },
                 'erp-bridge': {
                     id: 'erp-bridge',
                     name: 'ERP',
                     type: 'app-builder',
                     status: 'ready',
                     path: '/proj/components/erp-bridge',
-                } as never,
+                },
             },
             appBuilderComponents: {
                 'commerce-mesh': {
@@ -226,7 +226,7 @@ describe('removeAppBuilderComponent (integration)', () => {
         const project = integrationProject();
         const deps = createDeps();
 
-        const result = await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+        const result = await removeAppBuilderComponent(project, 'erp-bridge', deps);
 
         expect(result.success).toBe(true);
         const undeployCall = deps.commandManager.execute.mock.calls.find((c: unknown[]) =>
@@ -255,7 +255,7 @@ describe('removeAppBuilderComponent (integration)', () => {
         const project = integrationProject();
         const deps = createDeps();
 
-        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+        await removeAppBuilderComponent(project, 'erp-bridge', deps);
 
         expect(deps.refreshAiBundle).toHaveBeenCalledTimes(1);
         // The CLEARED project, not the caller's stale reference — the skill set
@@ -273,7 +273,7 @@ describe('removeAppBuilderComponent (integration)', () => {
             refreshAiBundle: jest.fn().mockRejectedValue(new Error('disk full')),
         });
 
-        const result = await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+        const result = await removeAppBuilderComponent(project, 'erp-bridge', deps);
 
         expect(result.success).toBe(true);
         expect(deps.logger.warn).toHaveBeenCalledWith(expect.stringContaining('disk full'));
@@ -294,7 +294,7 @@ describe('removeAppBuilderComponent (integration)', () => {
         };
         const deps = createDeps();
 
-        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+        await removeAppBuilderComponent(project, 'erp-bridge', deps);
 
         const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
         expect(persisted.componentApiPicks).toEqual({ 'order-sync': ['EventsSDK'] });
@@ -312,7 +312,7 @@ describe('removeAppBuilderComponent (integration)', () => {
         };
         const deps = createDeps();
 
-        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+        await removeAppBuilderComponent(project, 'erp-bridge', deps);
 
         const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
         expect(persisted.componentApiPicks).toEqual({ __existing__: ['commerceeventing'] });
@@ -322,7 +322,7 @@ describe('removeAppBuilderComponent (integration)', () => {
         const project = integrationProject();
         const deps = createDeps();
 
-        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+        await removeAppBuilderComponent(project, 'erp-bridge', deps);
 
         expect(deps.republishStorefront).not.toHaveBeenCalled();
     });
@@ -331,7 +331,7 @@ describe('removeAppBuilderComponent (integration)', () => {
         const project = integrationProject();
         const deps = createDeps();
 
-        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+        await removeAppBuilderComponent(project, 'erp-bridge', deps);
 
         const meshDeleteCall = deps.commandManager.execute.mock.calls.find((c: unknown[]) =>
             String(c[0]).includes('api-mesh:delete')
@@ -351,7 +351,7 @@ describe('removeAppBuilderComponent (mesh)', () => {
                     subType: 'mesh',
                     status: 'ready',
                     path: '/proj/components/commerce-mesh',
-                } as never,
+                },
             },
             appBuilderComponents: {
                 'commerce-mesh': {
@@ -369,7 +369,7 @@ describe('removeAppBuilderComponent (mesh)', () => {
         const project = meshProject();
         const deps = createDeps();
 
-        const result = await removeAppBuilderComponent(project, 'commerce-mesh', deps as never);
+        const result = await removeAppBuilderComponent(project, 'commerce-mesh', deps);
 
         expect(result.success).toBe(true);
         const deleteCall = deps.commandManager.execute.mock.calls.find((c: unknown[]) =>
@@ -386,7 +386,7 @@ describe('removeAppBuilderComponent (mesh)', () => {
         const project = meshProject();
         const deps = createDeps();
 
-        await removeAppBuilderComponent(project, 'commerce-mesh', deps as never);
+        await removeAppBuilderComponent(project, 'commerce-mesh', deps);
 
         expect(deps.republishStorefront).toHaveBeenCalledTimes(1);
         const republishArg = deps.republishStorefront.mock.calls[0][0] as { project: Project };
@@ -398,7 +398,7 @@ describe('removeAppBuilderComponent (mesh)', () => {
         const project = meshProject();
         const deps = createDeps();
 
-        await removeAppBuilderComponent(project, 'commerce-mesh', deps as never);
+        await removeAppBuilderComponent(project, 'commerce-mesh', deps);
 
         const undeployCall = deps.commandManager.execute.mock.calls.find((c: unknown[]) =>
             String(c[0]).includes('app undeploy')
@@ -410,7 +410,7 @@ describe('removeAppBuilderComponent (mesh)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        const result = await removeAppBuilderComponent(project, 'nope', deps as never);
+        const result = await removeAppBuilderComponent(project, 'nope', deps);
 
         expect(result.success).toBe(false);
     });
@@ -441,7 +441,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass (AB-4)', () 
                     },
                     deployedUrls: KIT_URLS,
                 },
-            } as never,
+            },
             componentInstances: {
                 [id]: {
                     id,
@@ -449,7 +449,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass (AB-4)', () 
                     type: 'app-builder',
                     status: 'ready',
                     path: `/proj/components/${id}`,
-                } as never,
+                },
             },
         });
     }
@@ -474,7 +474,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass (AB-4)', () 
             uninstallAppManagement,
         });
 
-        const result = await removeAppBuilderComponent(project, 'kit-app', deps as never);
+        const result = await removeAppBuilderComponent(project, 'kit-app', deps);
 
         expect(result.success).toBe(true);
         expect(uninstallAppManagement).toHaveBeenCalledWith(
@@ -497,7 +497,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass (AB-4)', () 
         const uninstallAppManagement = jest.fn().mockResolvedValue({ status: 'uninstalled' });
         const deps = createDeps({ uninstallAppManagement });
 
-        await removeAppBuilderComponent(project, 'my-erp-sync', deps as never);
+        await removeAppBuilderComponent(project, 'my-erp-sync', deps);
 
         expect(uninstallAppManagement).toHaveBeenCalled();
     });
@@ -512,19 +512,26 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass (AB-4)', () 
                     name: 'ERP Bridge',
                     source: { owner: 'acme', repo: 'erp-bridge', branch: 'main' },
                 },
-            } as never,
+            },
             componentInstances: {
                 'erp-bridge': {
                     id: 'erp-bridge',
+                    // `name` is REQUIRED on ComponentInstance and a real instance on
+                    // disk carries it; this fixture omitted it behind an `as never`.
+                    // Nothing broke here because the remove path reads the name off
+                    // the catalog entry and the App Builder state, not the instance —
+                    // but a fixture the real type rejects is not evidence about the
+                    // real type.
+                    name: 'ERP Bridge',
                     type: 'app-builder',
                     status: 'ready',
                     path: '/proj/components/erp-bridge',
-                } as never,
+                },
             },
         });
         const deps = createDeps({ uninstallAppManagement });
 
-        await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
+        await removeAppBuilderComponent(project, 'erp-bridge', deps);
 
         expect(uninstallAppManagement).not.toHaveBeenCalled();
     });
@@ -536,7 +543,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass (AB-4)', () 
             uninstallAppManagement: jest.fn().mockRejectedValue(new Error('api down')),
         });
 
-        const result = await removeAppBuilderComponent(project, 'kit-app', deps as never);
+        const result = await removeAppBuilderComponent(project, 'kit-app', deps);
 
         expect(result.success).toBe(true);
         expect(deps.logger.warn).toHaveBeenCalledWith(
