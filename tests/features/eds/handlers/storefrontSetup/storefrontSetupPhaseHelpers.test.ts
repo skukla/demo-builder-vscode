@@ -26,11 +26,14 @@
 jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 
 import { checkGitHubAppForExistingRepo } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhaseHelpers';
-import type { RepoInfo, SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
+import type {
+    RepoInfo,
+    SetupServices,
+} from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
-
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 
 const REPO_INFO: RepoInfo = {
     repoOwner: 'acme-demos',
@@ -41,10 +44,10 @@ const REPO_INFO: RepoInfo = {
 const INSTALL_URL = 'https://github.com/apps/aem-code-sync/installations/select_target';
 
 function makeContext(): HandlerContext {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger() as unknown as Logger,
         sendMessage: jest.fn().mockResolvedValue(undefined),
-    } as unknown as HandlerContext;
+    });
 }
 
 /** Build services whose `isAppInstalled` returns the given results in order. */
@@ -155,9 +158,7 @@ describe('checkGitHubAppForExistingRepo', () => {
 
             await checkGitHubAppForExistingRepo(context, outer404(), REPO_INFO);
 
-            expect(sentMessageTypes(context)).not.toContain(
-                'storefront-setup-github-app-required',
-            );
+            expect(sentMessageTypes(context)).not.toContain('storefront-setup-github-app-required');
         });
 
         it('says so in the progress feed rather than passing in silence', async () => {

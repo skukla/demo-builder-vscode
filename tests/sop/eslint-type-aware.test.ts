@@ -31,33 +31,48 @@ import * as path from 'path';
 const repoRoot = path.resolve(__dirname, '../..');
 const CONFIG = 'eslint.casts.mjs';
 const RULE = '@typescript-eslint/no-unnecessary-type-assertion';
-const PROBE = 'tests/sop/__type-aware-probe.ts';
 
-/** Run the real config over one file; returns eslint's JSON report. */
-function lintProbe(): Array<{ ruleId: string | null }> {
-    let out = '';
+/**
+ * Lint a snippet by writing a probe FILE and linting it.
+ *
+ * `--stdin` was tried first and is a dead end here: eslint IGNORED the piped
+ * content entirely and linted the `--stdin-filename` file from disk. The proof is
+ * that the only filename which "worked" was one that already contains two
+ * unnecessary assertions of its own — the findings were its, at lines 394 and 405,
+ * not the snippet's. Every neutral filename returned nothing.
+ *
+ * So a real file it is. The probe lives under `tests/tmp-probe/` rather than
+ * `tests/sop/`: jest runs suites in parallel, and the first version planted the file
+ * in a directory other scanners walk, which raced and blew one of them up with
+ * ENOENT. The scanners now tolerate a file vanishing mid-walk — a latent bug this
+ * surfaced — but not planting it in their path is the actual fix.
+ */
+function lintSnippet(code: string): Array<{ ruleId: string | null }> {
+    const dir = path.join(repoRoot, 'tests/tmp-probe');
+    const probe = path.join(dir, 'probe.ts');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(probe, code);
     try {
-        out = execFileSync(
-            'npx',
-            ['eslint', '--config', CONFIG, '--no-ignore', '-f', 'json', PROBE],
-            { cwd: repoRoot, encoding: 'utf8', timeout: 180_000 }
-        );
-    } catch (e) {
-        // eslint exits non-zero when it finds problems — the report is still on stdout.
-        out = (e as { stdout?: string }).stdout ?? '';
+        let out = '';
+        try {
+            out = execFileSync(
+                'npx',
+                ['eslint', '--config', CONFIG, '--no-ignore', '-f', 'json', 'tests/tmp-probe/probe.ts'],
+                { cwd: repoRoot, encoding: 'utf8', timeout: 180_000 }
+            );
+        } catch (e) {
+            // eslint exits non-zero when it finds problems — the report is stdout.
+            out = (e as { stdout?: string }).stdout ?? '';
+        }
+        if (!out.trim()) return [];
+        const report = JSON.parse(out) as Array<{ messages: Array<{ ruleId: string | null }> }>;
+        return report.flatMap((f) => f.messages);
+    } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
     }
-    if (!out.trim()) return [];
-    const report = JSON.parse(out) as Array<{ messages: Array<{ ruleId: string | null }> }>;
-    return report.flatMap((f) => f.messages);
 }
 
 describe('the type-aware lint config can still see a pointless cast', () => {
-    const probePath = path.join(repoRoot, PROBE);
-
-    afterEach(() => {
-        if (fs.existsSync(probePath)) fs.unlinkSync(probePath);
-    });
-
     it('the config exists and names the rule it is for', () => {
         const body = fs.readFileSync(path.join(repoRoot, CONFIG), 'utf8');
         expect(body).toContain(RULE);
@@ -71,21 +86,20 @@ describe('the type-aware lint config can still see a pointless cast', () => {
     it('finds an unnecessary assertion that is really there', () => {
         // NOTE the explicit annotation. Written first as `const s = "x"`, which
         // TypeScript infers as the LITERAL type `"x"` — there `as string` genuinely
-        // widens and the rule is right to stay silent. The test failed and the
-        // config was fine, which is the fixture being wrong rather than the tool.
-        fs.writeFileSync(probePath, 'const s: string = "x";\nexport const t = s as string;\n');
-        const ruleIds = lintProbe().map((m) => m.ruleId);
-        expect(ruleIds).toContain(RULE);
+        // widens and the rule is right to stay silent. That test failed while the
+        // config was fine: the fixture was wrong, not the tool.
+        const ids = lintSnippet('const s: string = "x";\nexport const t = s as string;\n').map(
+            (m) => m.ruleId
+        );
+        expect(ids).toContain(RULE);
     });
 
     it('CONTROL: stays quiet on a cast that is doing work', () => {
         // Here the assertion narrows `unknown`, so removing it would not compile.
         // A config that flagged this would be worse than useless.
-        fs.writeFileSync(
-            probePath,
+        const ids = lintSnippet(
             'const u: unknown = "x";\nexport const v = (u as string).length;\n'
-        );
-        const ruleIds = lintProbe().map((m) => m.ruleId);
-        expect(ruleIds).not.toContain(RULE);
+        ).map((m) => m.ruleId);
+        expect(ids).not.toContain(RULE);
     });
 });

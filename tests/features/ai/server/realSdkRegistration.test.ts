@@ -50,9 +50,9 @@ import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
-import type { HandlerContext } from '@/types/handlers';
 import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 /**
  * A REAL SDK server, handed over as our narrowed `McpToolServer`.
@@ -64,9 +64,8 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
  * file intact: every registration below still runs against the REAL SDK, which is
  * the only thing that catches a bad inputSchema at all.
  */
-const server = () =>
-    new McpServer({ name: 'test', version: '0.0.0' }) as unknown as McpToolServer;
-const ctxFactory = () => ({ sendMessage: async () => {} }) as unknown as HandlerContext;
+const server = () => new McpServer({ name: 'test', version: '0.0.0' }) as unknown as McpToolServer;
+const ctxFactory = () => createMockHandlerContext({ sendMessage: async () => {} });
 // The builder's `getCurrentProject` already resolves null, so there is nothing to override.
 const stateManager = createMockStateManager();
 
@@ -133,7 +132,7 @@ describe('registration against the real MCP SDK', () => {
             registerAgentTraceTool(
                 s,
                 { all: () => [], repeats: () => [] } as never,
-                '/nonexistent-trace-dir',
+                '/nonexistent-trace-dir'
             );
             registerProjectStatusTool(s, stateManager);
             registerCommerceEndpointsTool(s, stateManager);

@@ -92,13 +92,31 @@ console.log('ts-morph harness self-test\n');
         NEVER_TOUCH.includes('tests/helpers/') && NEVER_TOUCH.includes('tests/sop/'),
         NEVER_TOUCH
     );
-    let threw = false;
+    // Filtered, not thrown: any real glob sweeps these up, so throwing made the
+    // harness unusable. The exclusion is PRINTED, and saveTouched still refuses.
+    const filtered = addFiles(createProject(), ['tests/helpers/*.ts'], { quiet: true });
+    check('addFiles DROPS protected files when loading to write', filtered.length === 0, filtered.length);
+
+    let readOk = false;
     try {
-        addFiles(createProject(), ['tests/helpers/loggerFake.ts']);
-    } catch (e) {
-        threw = /refusing to load protected files/.test(String(e));
+        addFiles(createProject(), ['tests/helpers/loggerFake.ts'], { readOnly: true });
+        readOk = true;
+    } catch {
+        readOk = false;
     }
-    check('addFiles REFUSES a protected path', threw);
+    check('addFiles ALLOWS reading one — the danger is writing, not reading', readOk);
+
+    // The hard backstop: readOnly must not become a way to write them.
+    const sneaky = createProject();
+    addFiles(sneaky, ['tests/helpers/loggerFake.ts'], { readOnly: true });
+    sneaky.getSourceFiles()[0].addStatements('// edited');
+    let blocked = false;
+    try {
+        saveTouched(sneaky, { dryRun: false });
+    } catch (e) {
+        blocked = /refusing to WRITE protected files/.test(String(e));
+    }
+    check('saveTouched REFUSES to write a protected file even after readOnly', blocked);
 
     let badMode = false;
     try {

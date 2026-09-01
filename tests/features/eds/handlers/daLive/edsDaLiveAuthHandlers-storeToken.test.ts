@@ -65,6 +65,7 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations');
 
 import { handleStoreDaLiveTokenWithOrg } from '@/features/eds/handlers/daLive/edsDaLiveAuthHandlers';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 
 // =============================================================================
 // Utilities
@@ -84,14 +85,14 @@ const goodToken = makeToken({
 });
 
 function createMockContext(): HandlerContext {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger() as unknown as HandlerContext['logger'],
         sendMessage: jest.fn().mockResolvedValue(undefined),
         context: {
             globalState: { get: jest.fn(), update: jest.fn().mockResolvedValue(undefined) },
             secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn() },
         } as unknown as HandlerContext['context'],
-    } as unknown as HandlerContext;
+    });
 }
 
 // =============================================================================

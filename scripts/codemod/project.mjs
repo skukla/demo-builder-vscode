@@ -81,30 +81,58 @@ export function createProject({ mode = 'structural', tsConfigFilePath = 'tsconfi
 }
 
 /**
- * Add files, refusing the protected directories.
+ * Add files, dropping the protected directories and SAYING SO.
  *
- * Refuses rather than silently filtering: a codemod that thinks it is editing
- * `tests/helpers` should stop and be rewritten, not quietly do less than it says.
+ * It filters rather than throwing, and the reason is ergonomic rather than a
+ * softening: any useful glob — `tests/**\/*.ts` — necessarily sweeps up
+ * `tests/helpers` and `tests/sop`, so throwing made the harness unusable for the
+ * first real codemod written on it. Intent lives in the glob, not in the accident
+ * of what it matched.
+ *
+ * It is not SILENT filtering, which was the original worry: the excluded paths are
+ * printed, and `saveTouched` still refuses outright. Two layers, and the loud one
+ * is the convenient one.
+ *
+ * `readOnly` keeps them in, for a survey that wants to SEE those directories. The
+ * danger is writing them, never reading them.
  *
  * @param {Project} project
  * @param {string[]} globs - repo-relative globs, e.g. `['tests/features/**\/*.test.ts']`
+ * @param {{ readOnly?: boolean, quiet?: boolean }} [opts]
  * @returns {import('ts-morph').SourceFile[]}
  */
-export function addFiles(project, globs) {
+export function addFiles(project, globs, { readOnly = false, quiet = false } = {}) {
     const added = project.addSourceFilesAtPaths(globs);
-    const protectedFiles = added
-        .map((f) => path.relative(process.cwd(), f.getFilePath()))
-        .filter((p) => NEVER_TOUCH.some((dir) => p.startsWith(dir)));
-    if (protectedFiles.length > 0) {
-        throw new Error(
-            `refusing to load protected files (see NEVER_TOUCH):\n  ${protectedFiles.join('\n  ')}`
+    if (readOnly) return added;
+
+    // Partition FIRST. `removeSourceFile` forgets the node, so any later
+    // `getFilePath()` on a removed file throws "information from a node that was
+    // removed or forgotten" — which is what the first version of this did.
+    const kept = [];
+    const excluded = [];
+    for (const f of added) {
+        const rel = path.relative(process.cwd(), f.getFilePath());
+        (NEVER_TOUCH.some((dir) => rel.startsWith(dir)) ? excluded : kept).push(f);
+    }
+
+    for (const f of excluded) project.removeSourceFile(f);
+
+    if (excluded.length > 0 && !quiet) {
+        console.log(
+            `  excluded ${excluded.length} protected file(s) from writing ` +
+                `(${NEVER_TOUCH.join(', ')})`
         );
     }
-    return added;
+    return kept;
 }
 
 /**
  * Save, then hand the touched paths back so the caller can format and verify them.
+ *
+ * THE HARD BACKSTOP. This refuses to write a protected file no matter how it got
+ * into the project — including through `{ readOnly: true }`, which is exactly the
+ * hole that option would otherwise open. A survey that starts reading and ends up
+ * editing is the shape that has to be impossible, not merely discouraged.
  *
  * @param {Project} project
  * @param {{ dryRun?: boolean }} [opts] - `dryRun` reports what WOULD change and
@@ -116,6 +144,14 @@ export function saveTouched(project, { dryRun = true } = {}) {
         .getSourceFiles()
         .filter((f) => !f.isSaved())
         .map((f) => path.relative(process.cwd(), f.getFilePath()));
+
+    const forbidden = touched.filter((p) => NEVER_TOUCH.some((dir) => p.startsWith(dir)));
+    if (forbidden.length > 0) {
+        throw new Error(
+            `refusing to WRITE protected files (see NEVER_TOUCH):\n  ${forbidden.join('\n  ')}`
+        );
+    }
+
     if (!dryRun) project.saveSync();
     return touched;
 }

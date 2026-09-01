@@ -10,12 +10,12 @@ import {
     withCapturedProgress,
     type CapturedEvent,
 } from '@/features/ai/server/progressCapture';
-import type { HandlerContext } from '@/types/handlers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 describe('progressCapture', () => {
     it('captures sendMessage events into the sink and still calls the base', async () => {
         const baseSend = jest.fn(async () => undefined);
-        const base = { sendMessage: baseSend } as unknown as HandlerContext;
+        const base = createMockHandlerContext({ sendMessage: baseSend });
         const sink: CapturedEvent[] = [];
         const ctx = withCapturedProgress(base, sink);
 

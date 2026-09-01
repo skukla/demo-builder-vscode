@@ -60,6 +60,7 @@ import {
     buildPlaceholderStubJson,
 } from '@/features/eds/services/placeholderStubs';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 
 const PARAMS = {
     repoOwner: 'me',
@@ -69,13 +70,12 @@ const PARAMS = {
     templateOwner: 'tpl-owner',
     templateRepo: 'tpl-repo',
     project: { name: 'p', path: '/p', selectedBlockLibraries: [] },
-     
 } as any;
 
 function makeContext(): HandlerContext {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger(),
-    } as unknown as HandlerContext;
+    });
 }
 
 describe('resetRepoToTemplate — placeholder stubs ride the bulk override commit', () => {
@@ -83,7 +83,6 @@ describe('resetRepoToTemplate — placeholder stubs ride the bulk override commi
         const resetMock = jest.fn().mockResolvedValue({ fileCount: 20, commitSha: 'abc1234567' });
         const githubFileOps = {
             resetRepoToTemplate: resetMock,
-             
         } as any;
 
         await resetRepoToTemplate(PARAMS, makeContext(), githubFileOps, jest.fn());

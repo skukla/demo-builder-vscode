@@ -97,7 +97,23 @@ const counts: Record<string, number> = (() => {
     const out: Record<string, number> = {};
     for (const key of Object.keys(PATTERNS)) out[key] = 0;
     for (const f of corpus) {
-        const body = stripComments(fs.readFileSync(path.join(repoRoot, f), 'utf8'));
+        let raw: string;
+        try {
+            raw = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+        } catch {
+            // Vanished between the listing and the read — a concurrent suite's
+            // temp file. `collectTestFiles` already tolerates this for DIRECTORIES
+            // and says so; the read was left unguarded, and jest running suites in
+            // parallel made that a real failure on 2026-09-01 when a new suite
+            // began writing a probe file into tests/sop/.
+            //
+            // Skipping is correct rather than fatal: this counts COMMITTED files,
+            // and a file that no longer exists is not committed. The ceiling is
+            // exact-equality, so a genuinely missing corpus file would fail the
+            // count rather than pass unnoticed.
+            continue;
+        }
+        const body = stripComments(raw);
         for (const [key, re] of Object.entries(PATTERNS)) {
             out[key] += body.match(re)?.length ?? 0;
         }

@@ -6,7 +6,7 @@
  */
 
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
-import type { HandlerContext } from '@/types/handlers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 const dispatchHandler = jest.fn();
 jest.mock('@/core/handlers/dispatchHandler', () => ({
@@ -17,13 +17,14 @@ function serve() {
     const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
     registerValidateSelectionTool(
         { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-        () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
+        () => createMockHandlerContext({ sendMessage: async () => {} })
     );
     const invoke = (args: Record<string, unknown>) =>
         tools.get('validate_component_selection')!(args);
     return {
         raw: async (args: Record<string, unknown>) => (await invoke(args)).content[0].text,
-        call: async (args: Record<string, unknown>) => JSON.parse((await invoke(args)).content[0].text),
+        call: async (args: Record<string, unknown>) =>
+            JSON.parse((await invoke(args)).content[0].text),
     };
 }
 
@@ -53,7 +54,11 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('validate_component_selection', () => {
     it('answers compatibility, dependencies and validity in ONE call', async () => {
-        respond({ checkCompatibility: COMPATIBLE, loadDependencies: DEPS, validateSelection: VALID });
+        respond({
+            checkCompatibility: COMPATIBLE,
+            loadDependencies: DEPS,
+            validateSelection: VALID,
+        });
 
         expect(await serve().call(PAIR)).toEqual({
             compatible: true,
@@ -80,7 +85,11 @@ describe('validate_component_selection', () => {
     });
 
     it('returns ids, not the wizard rows', async () => {
-        respond({ checkCompatibility: COMPATIBLE, loadDependencies: DEPS, validateSelection: VALID });
+        respond({
+            checkCompatibility: COMPATIBLE,
+            loadDependencies: DEPS,
+            validateSelection: VALID,
+        });
         const raw = await serve().raw(PAIR);
 
         // name/impact are for a wizard card; an agent needs what it can pass on.
@@ -105,7 +114,11 @@ describe('validate_component_selection', () => {
     });
 
     it('passes chosen dependencies through to validation', async () => {
-        respond({ checkCompatibility: COMPATIBLE, loadDependencies: DEPS, validateSelection: VALID });
+        respond({
+            checkCompatibility: COMPATIBLE,
+            loadDependencies: DEPS,
+            validateSelection: VALID,
+        });
         await serve().call({ ...PAIR, dependencies: ['analytics'] });
 
         const validateCall = dispatchHandler.mock.calls.find((c) => c[2] === 'validateSelection');
@@ -113,7 +126,11 @@ describe('validate_component_selection', () => {
     });
 
     it('defaults to no chosen dependencies rather than sending undefined', async () => {
-        respond({ checkCompatibility: COMPATIBLE, loadDependencies: DEPS, validateSelection: VALID });
+        respond({
+            checkCompatibility: COMPATIBLE,
+            loadDependencies: DEPS,
+            validateSelection: VALID,
+        });
         await serve().call(PAIR);
 
         // The handler rejects a payload whose `dependencies` is not an array

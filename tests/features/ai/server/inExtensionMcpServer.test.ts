@@ -17,7 +17,7 @@ import {
     isReadOnlyToolName,
 } from '@/features/ai/server/inExtensionMcpServer';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
-import type { HandlerContext, HandlerMap } from '@/types/handlers';
+import type { HandlerMap } from '@/types/handlers';
 import {
     callToolOverSocket,
     connectAndInit,
@@ -26,6 +26,7 @@ import {
     serverInfoOverSocket,
 } from './inExtensionMcpServer.testUtils';
 import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 describe('InExtensionMcpServer', () => {
     let socketPath: string;
@@ -141,7 +142,7 @@ describe('InExtensionMcpServer', () => {
                         readOnly: true,
                     },
                 ],
-                () => ({}) as HandlerContext
+                () => createMockHandlerContext()
             );
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger(), {
             registerExtraTools: registerExtra,
