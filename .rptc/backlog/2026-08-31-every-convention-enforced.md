@@ -178,3 +178,5 @@ is the current reference for the four-control pattern.
 - 2026-08-31  test(sop): every MCP tool is reviewed for the credentials rule (option C) (`9542dfe7c`)
 - 2026-08-31  feat(mcp): type the tool-registration surface — the `server: any` hole is closed (`4a1552442`)
 - 2026-08-31  test(sop): first five tool-auth verdicts — 114 unreviewed to 109 (`a943c9efd`)
+- 2026-08-31  docs(mcp): 65 tools reviewed, and a systemic breach the ledger was built to find (`70686d71d`)
+- 2026-08-31  docs(mcp): 51 tool-auth verdicts, and the rule names one handoff shape of three (`f90d45134`)
