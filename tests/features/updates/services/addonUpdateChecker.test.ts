@@ -13,6 +13,7 @@ import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 // Mock modules
 jest.mock('vscode', () => ({}), { virtual: true });
 jest.mock('@/core/utils/timeoutConfig', () => ({
@@ -34,18 +35,18 @@ global.fetch = jest.fn();
 describe('AddonUpdateChecker', () => {
     let checker: AddonUpdateChecker;
     let mockLogger: Logger;
-    let mockSecrets: { get: jest.Mock };
+    let mockSecrets: ReturnType<typeof createMockSecretStorage>['secrets'];
 
     beforeEach(() => {
         jest.clearAllMocks();
 
         mockLogger = createMockLogger() as unknown as Logger;
 
-        mockSecrets = {
-            get: jest.fn().mockResolvedValue('fake-github-token'),
-        };
+        // Keyed store rather than a blanket `get`: production reads `githubToken`,
+        // and a fake that answers to every key cannot notice if that name changes.
+        mockSecrets = createMockSecretStorage({ githubToken: 'fake-github-token' }).secrets;
 
-        checker = new AddonUpdateChecker(mockSecrets as any, mockLogger);
+        checker = new AddonUpdateChecker(mockSecrets, mockLogger);
     });
 
     // -------------------------------------------------------------------------

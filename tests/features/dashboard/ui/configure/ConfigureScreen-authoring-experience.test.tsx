@@ -130,7 +130,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
     it('renders the Authoring Experience radio group for an EDS project', () => {
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 isEds
                 authoringExperience="da-live-classic"
@@ -148,7 +148,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
     it('adds an "Authoring" tab to the rail for EDS, last', () => {
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 isEds
                 authoringExperience="da-live-classic"
@@ -165,7 +165,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
 
     it('adds NO "Authoring" tab for a non-EDS project (the control)', () => {
         renderWithProvider(
-            <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+            <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
         );
 
         expect(railTabLabels()).not.toContain('Authoring');
@@ -174,7 +174,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
     it('defaults the selection to the initial authoringExperience value', () => {
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 isEds
                 authoringExperience="experience-workspace"
@@ -191,7 +191,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
 
     it('does NOT render the radio group for a non-EDS project', () => {
         renderWithProvider(
-            <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+            <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
         );
 
         expect(
@@ -204,7 +204,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
 
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 existingEnvValues={validConfig}
                 isEds
@@ -237,7 +237,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
     it('renders the DA.live & authoring settings link inside the Authoring section', () => {
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 isEds
                 authoringExperience="da-live-classic"
@@ -261,7 +261,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
 
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 isEds
                 authoringExperience="da-live-classic"
@@ -277,7 +277,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
     it('no longer renders the old "Universal Editor settings" footer text', () => {
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 isEds
                 authoringExperience="da-live-classic"
@@ -292,7 +292,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
 
     it('does NOT render the authoring settings link for a non-EDS project', () => {
         renderWithProvider(
-            <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+            <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
         );
 
         expect(
@@ -305,7 +305,7 @@ describe('ConfigureScreen - Authoring Experience radio (EDS only)', () => {
 
         renderWithProvider(
             <ConfigureScreen
-                project={mockProject as any}
+                project={mockProject}
                 componentsData={mockComponentsData}
                 existingEnvValues={validConfig}
             />

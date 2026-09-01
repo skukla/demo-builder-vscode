@@ -17,6 +17,7 @@ import {
     resetMocks,
 } from './envFileWatcherService.testUtils';
 
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 describe('EnvFileWatcherService - Security and Resource Management (Mocked)', () => {
     let mockContext: vscode.ExtensionContext;
     let mockWatcherManager: WorkspaceWatcherManager;
@@ -25,10 +26,9 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
         jest.useFakeTimers();
         resetMocks();
 
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test',
-        } as any;
+        // The canonical fake, with this suite's path. The literal it replaces named
+        // two of ExtensionContext's twenty-one members and cast the difference away.
+        mockContext = createMockExtensionContext({ subscriptions: [] }, '/test');
 
         mockWatcherManager = new WorkspaceWatcherManager();
     });

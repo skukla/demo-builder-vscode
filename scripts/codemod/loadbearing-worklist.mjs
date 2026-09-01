@@ -87,6 +87,25 @@ for (const [, f, line, msg] of rows) {
 
 const ranked = [...byFile].sort((a, b) => b[1].length - a[1].length);
 
+/**
+ * `--json` dumps EVERY row instead of the markdown.
+ *
+ * The report deliberately elides repeats within a file — the same message on ten
+ * lines is one finding to a reader. That makes it the wrong input for a sweep
+ * organised by TYPE rather than by file, which needs every site. Same single
+ * compiler run either way; only the rendering differs.
+ */
+if (process.argv.includes('--json')) {
+    console.log(
+        JSON.stringify(
+            rows.map(([, f, line, msg]) => ({ file: f, line: Number(line), msg })),
+            null,
+            2
+        )
+    );
+    process.exit(0);
+}
+
 console.log('# Load-bearing casts — where a test disagrees with the code\n');
 // A stale report reads exactly like a fresh one — that cost a wrong "the worklist is
 // current" on 2026-09-01, because this script prints to STDOUT and the caller has to

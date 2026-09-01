@@ -20,6 +20,7 @@ import * as _vscode from 'vscode';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 // Record the target rather than stubbing it out — the assertion IS the target.
 // buildOrgTargetFromProjectAdobe is pure, so the real one is used.
 const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
@@ -53,8 +54,8 @@ describe('handleDeleteApiMesh — org targeting', () => {
         mockContext = {
             context: { globalStorageUri: { fsPath: '/tmp/test-storage' } },
             logger: createMockLogger(),
-            debugLogger: { trace: jest.fn(), debug: jest.fn() },
-            stateManager: {
+            debugLogger: createMockLogger(),
+            stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue({
                     adobe: {
                         organization: 'test-org@AdobeOrg',
@@ -62,7 +63,7 @@ describe('handleDeleteApiMesh — org targeting', () => {
                         workspace: 'project-workspace-id',
                     },
                 }),
-            },
+            }),
             sharedState: {},
         } as any;
     });

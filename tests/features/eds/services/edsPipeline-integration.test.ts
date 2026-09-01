@@ -17,6 +17,7 @@ import {
     type EdsPipelineServices,
 } from './edsPipeline.testUtils';
 
+import { createMockProject } from '../../../helpers/projectFake';
 // Mock edsHelpers
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
 const mockPublishLibraryPaths = jest.fn().mockResolvedValue(undefined);
@@ -475,7 +476,7 @@ describe('executeEdsPipeline - integration', () => {
                     ...baseParams,
                     contentSource: { org: 'o', site: 's' },
                     byomOverlayUrl: 'https://overlay.example',
-                    project: { name: 'p' } as never,
+                    project: createMockProject({ name: 'p' }),
                 },
                 services
             );

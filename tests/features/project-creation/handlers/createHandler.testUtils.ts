@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 /**
  * Shared test utilities for createHandler tests
  */
@@ -47,12 +48,12 @@ export function createProjectCreationContext(
                 update: jest.fn().mockResolvedValue(undefined),
             },
         },
-        stateManager: {
-            getAllProjects: jest.fn().mockResolvedValue([]) as jest.MockedFunction<any>,
-            getCurrentProject: jest.fn().mockResolvedValue(undefined) as jest.MockedFunction<any>,
-            saveProject: jest.fn().mockResolvedValue(undefined) as jest.MockedFunction<any>,
-            clearProject: jest.fn().mockResolvedValue(undefined) as jest.MockedFunction<any>,
-        },
+        stateManager: createMockStateManager({
+            getAllProjects: jest.fn().mockResolvedValue([]),
+            getCurrentProject: jest.fn().mockResolvedValue(undefined),
+            saveProject: jest.fn().mockResolvedValue(undefined),
+            clearProject: jest.fn().mockResolvedValue(undefined),
+        }),
         sharedState: {
             projectCreationAbortController: undefined,
             meshCreatedForWorkspace: undefined,

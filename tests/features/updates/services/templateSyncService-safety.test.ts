@@ -59,6 +59,7 @@ import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 /** An EDS project with the metadata the service reads. */
 function edsProject(): Project {
     return createMockProject({
@@ -82,7 +83,7 @@ function edsProject(): Project {
 
 function service(): TemplateSyncService {
     return new TemplateSyncService(
-        { get: jest.fn().mockResolvedValue('gh-token') } as never,
+        createMockSecretStorage({ githubToken: 'gh-token' }).secrets,
         createMockLogger(),
         createMockCommandExecutor({ execute: (...a: unknown[]) => mockExecute(...a) })
     );

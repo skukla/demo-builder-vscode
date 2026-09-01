@@ -19,6 +19,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as _vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 // Mock dependencies
 jest.mock('@/core/di/serviceLocator');
 // Uses the real @/core/utils/timeoutConfig (pure constants) — a partial config-leaf
@@ -78,18 +79,15 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
                 extensionPath: '/tmp/test-extension',
             },
             logger: mockLogger,
-            debugLogger: {
-                trace: jest.fn(),
-                debug: jest.fn(),
-            },
-            stateManager: {
+            debugLogger: createMockLogger(),
+            stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue({
                     adobe: {
                         projectId: 'test-project-id',
                         workspaceId: 'test-workspace-id',
                     },
                 }),
-            },
+            }),
             sharedState: {
                 apiServicesConfig: {
                     services: {

@@ -12,6 +12,7 @@ import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler'
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 describe('lifecycleHandlers', () => {
     describe('handler registration', () => {
         it('should be defined as an object', () => {
@@ -92,7 +93,7 @@ describe('handleOpenExternal - Security', () => {
     const createMockContext = (): HandlerContext => ({
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
-        context: {} as any,
+        context: createMockExtensionContext(),
         panel: undefined,
         stateManager: {} as any,
         communicationManager: undefined,

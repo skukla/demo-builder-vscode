@@ -18,6 +18,7 @@ import {
     getLatestRelease,
 } from '@/features/updates/services/githubApiClient';
 
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 describe('githubApiClient', () => {
     const mockFetch = global.fetch as jest.Mock;
 
@@ -27,9 +28,11 @@ describe('githubApiClient', () => {
 
     describe('buildGitHubHeaders', () => {
         it('should include auth token when available', async () => {
-            const mockSecrets = {
-                get: jest.fn().mockResolvedValue('my-token'),
-            };
+            // Keyed, not blanket. The old fake resolved its token for ANY key, so
+            // a rename of `githubToken` in production would not have failed here —
+            // a fake more generous than the real thing, which is the shape this
+            // repo has been bitten by.
+            const mockSecrets = createMockSecretStorage({ githubToken: 'my-token' }).secrets;
 
             const headers = await buildGitHubHeaders(mockSecrets as any);
 
@@ -39,9 +42,8 @@ describe('githubApiClient', () => {
         });
 
         it('should omit auth header when no token stored', async () => {
-            const mockSecrets = {
-                get: jest.fn().mockResolvedValue(undefined),
-            };
+            // Empty store: `get` resolves undefined for every key.
+            const mockSecrets = createMockSecretStorage().secrets;
 
             const headers = await buildGitHubHeaders(mockSecrets as any);
 
@@ -81,7 +83,7 @@ describe('githubApiClient', () => {
     });
 
     describe('getLatestBranchCommit', () => {
-        const mockSecrets = { get: jest.fn().mockResolvedValue('tok') } as any;
+        const mockSecrets = createMockSecretStorage({ githubToken: 'tok' }).secrets;
 
         it('should return commit SHA on success', async () => {
             mockFetch.mockResolvedValueOnce({
@@ -116,7 +118,7 @@ describe('githubApiClient', () => {
     });
 
     describe('getLatestRelease', () => {
-        const mockSecrets = { get: jest.fn().mockResolvedValue('tok') } as any;
+        const mockSecrets = createMockSecretStorage({ githubToken: 'tok' }).secrets;
 
         it('should return tag + version on success and strip a v-prefix', async () => {
             mockFetch.mockResolvedValueOnce({
@@ -180,7 +182,7 @@ describe('githubApiClient', () => {
     });
 
     describe('compareCommits', () => {
-        const mockSecrets = { get: jest.fn().mockResolvedValue('tok') } as any;
+        const mockSecrets = createMockSecretStorage({ githubToken: 'tok' }).secrets;
 
         it('should return comparison data on success', async () => {
             mockFetch.mockResolvedValueOnce({

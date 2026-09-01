@@ -100,9 +100,7 @@ export function createContinueHandlerContext(
         },
         sendMessage: jest.fn().mockResolvedValue(undefined),
         logger: createMockLogger(),
-        debugLogger: {
-            debug: jest.fn(),
-        },
+        debugLogger: createMockLogger(),
         stepLogger: {
             log: jest.fn(),
         },

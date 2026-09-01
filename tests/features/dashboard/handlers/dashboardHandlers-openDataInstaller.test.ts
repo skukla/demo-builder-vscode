@@ -59,9 +59,9 @@ describe('openDataInstaller', () => {
     /** The rule this handler exists to keep. */
     it('leaves the dashboard open — the catalog is global, not project-scoped', async () => {
         const dispose = jest.fn();
-        jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockReturnValue({
-            dispose,
-        } as never);
+        jest.spyOn(BaseWebviewCommand, 'getActivePanel').mockReturnValue(
+            createMockWebviewPanel({ dispose })
+        );
 
         await dashboardHandlers.openDataInstaller(makeContext(), undefined);
 

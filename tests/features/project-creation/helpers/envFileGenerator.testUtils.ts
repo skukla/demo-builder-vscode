@@ -11,6 +11,8 @@ import { ProjectSetupContext } from '@/features/project-creation/services/Projec
 /** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 export { createMockLogger };
 
 /**
@@ -27,7 +29,7 @@ export function createEnvFileGeneratorContext(
         debugLogger: createMockLogger(),
         context: {
             extensionPath: '/test/extension/path',
-            secrets: {} as any,
+            secrets: createMockSecretStorage().secrets,
             globalState: {
                 get: jest.fn(),
                 update: jest.fn().mockResolvedValue(undefined),
@@ -40,7 +42,7 @@ export function createEnvFileGeneratorContext(
         sharedState: {
             isAuthenticating: false,
         },
-        authManager: {} as any,
+        authManager: createMockAuthenticationService(),
         ...overrides,
     })
 }

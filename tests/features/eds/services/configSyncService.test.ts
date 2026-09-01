@@ -26,6 +26,8 @@ import {
 import { promises as fsPromises } from 'fs';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 // Mock the dependencies
 jest.mock('fs', () => ({
     promises: {
@@ -76,9 +78,7 @@ describe('syncConfigToRemote', () => {
         delete: jest.Mock;
     };
 
-    let mockAuthManager: {
-        getTokenManager: jest.Mock;
-    };
+    let mockAuthManager: jest.Mocked<AuthenticationService>;
 
     let baseParams: ConfigSyncParams;
 
@@ -94,11 +94,11 @@ describe('syncConfigToRemote', () => {
             delete: jest.fn(),
         };
 
-        mockAuthManager = {
+        mockAuthManager = createMockAuthenticationService({
             getTokenManager: jest.fn().mockReturnValue({
                 getAccessToken: jest.fn().mockResolvedValue('mock-access-token'),
             }),
-        };
+        });
 
         baseParams = {
             componentPath: '/path/to/eds-storefront',

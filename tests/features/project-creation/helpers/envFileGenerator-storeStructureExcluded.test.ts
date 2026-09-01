@@ -16,6 +16,7 @@ import { generateComponentEnvFile } from '@/features/project-creation/helpers/en
 import { TransformedComponentDefinition } from '@/types/components';
 import { createMockSetupContext, TEST_COMPONENT_PATH } from './envFileGenerator.testUtils';
 
+import { createMockProject } from '../../../helpers/projectFake';
 jest.mock('fs', () => ({ promises: { writeFile: jest.fn() } }));
 jest.mock('@/features/project-creation/helpers/formatters', () => ({
     formatGroupName: (g: string) => g,
@@ -41,7 +42,7 @@ beforeEach(() => jest.clearAllMocks());
 
 it('writes the store CODE and never the name it was picked by', async () => {
     const componentConfigs = { [BACKEND_ID]: { ACCS_WEBSITE_CODE: 'citisignal' } };
-    const project = {
+    const project = createMockProject({
         name: 'p',
         path: '/p',
         componentConfigs,
@@ -52,10 +53,10 @@ it('writes the store CODE and never the name it was picked by', async () => {
             storeViews: [],
         },
         componentSelections: { backend: BACKEND_ID },
-    };
+    });
     const context = createMockSetupContext({
         registry: { envVars: ENV_VARS } as never,
-        project: project as never,
+        project,
         config: { projectName: 'test-project', componentConfigs, components: { backend: BACKEND_ID } },
     });
 

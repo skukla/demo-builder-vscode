@@ -160,12 +160,14 @@ const mockReadMeshEnvVarsFromFile = stalenessDetector.readMeshEnvVarsFromFile as
 import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 describe('Executor - Mesh Component Loading', () => {
     let mockContext: Partial<HandlerContext>;
 
     const createMockContext = (): Partial<HandlerContext> => {
         return {
-            context: { extensionPath: '/test/extension' } as any,
+            context: createMockExtensionContext({}, '/test/extension'),
             logger: createMockLogger(),
             stateManager: {
                 getCurrentProject: jest.fn().mockResolvedValue(null),
@@ -173,7 +175,7 @@ describe('Executor - Mesh Component Loading', () => {
             } as any,
             sharedState: { isAuthenticating: false },
             sendMessage: jest.fn(),
-            panel: { visible: false, dispose: jest.fn() } as any,
+            panel: createMockWebviewPanel({ visible: false }),
         };
     };
 

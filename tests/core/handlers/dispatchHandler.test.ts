@@ -11,12 +11,13 @@ import { dispatchHandler, hasHandler, getRegisteredTypes } from '@/core/handlers
 import type { HandlerMap, HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../helpers/loggerFake';
 
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 // Mock handler context factory
 function createMockContext(): HandlerContext {
     return {
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
-        context: {} as any,
+        context: createMockExtensionContext(),
         panel: undefined,
         stateManager: {} as any,
         communicationManager: undefined,

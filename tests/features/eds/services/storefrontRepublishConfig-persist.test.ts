@@ -42,6 +42,7 @@ import {
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 const logger = createMockLogger() as unknown as Logger;
 
 /** A project the extractor accepts: repo, DA.live pair and a component path. */
@@ -71,7 +72,7 @@ function run(over: Record<string, unknown> = {}, project = edsProject()) {
         persist,
         result: republishStorefrontConfig({
             project,
-            secrets: {} as never,
+            secrets: createMockSecretStorage().secrets,
             logger,
             persist,
             ...over,

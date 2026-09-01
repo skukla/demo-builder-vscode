@@ -23,6 +23,7 @@ import { generateComponentEnvFile } from '@/features/project-creation/helpers/en
 import { TransformedComponentDefinition } from '@/types/components';
 import { createMockSetupContext, TEST_COMPONENT_PATH } from './envFileGenerator.testUtils';
 
+import { createMockProject } from '../../../helpers/projectFake';
 jest.mock('fs', () => ({ promises: { writeFile: jest.fn() } }));
 jest.mock('@/features/project-creation/helpers/formatters', () => ({
     formatGroupName: (g: string) => g,
@@ -56,15 +57,15 @@ const CONFIGS_MESH_FIRST = {
 };
 
 async function envFor(componentConfigs: ComponentConfigs, backendId?: string) {
-    const project = {
+    const project = createMockProject({
         name: 'p',
         path: '/p',
         componentConfigs,
         componentSelections: { backend: backendId },
-    };
+    });
     const context = createMockSetupContext({
         registry: { envVars: ENV_VARS } as never,
-        project: project as never,
+        project,
         // getBackendId() reads config.components.backend — not componentSelections.
         config: { projectName: 'test-project', componentConfigs, components: { backend: backendId } },
     });

@@ -139,7 +139,7 @@ describe('ConfigureScreen - Operations', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />
@@ -182,7 +182,7 @@ describe('ConfigureScreen - Operations', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />
@@ -221,7 +221,7 @@ describe('ConfigureScreen - Operations', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />
@@ -241,7 +241,7 @@ describe('ConfigureScreen - Operations', () => {
         it('should send cancel message when Close clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             const closeButton = screen.getByText('Close');
@@ -271,7 +271,7 @@ describe('ConfigureScreen - Operations', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={existingValues}
                 />
@@ -308,7 +308,7 @@ describe('ConfigureScreen - Operations', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={existingValues}
                 />
@@ -353,7 +353,7 @@ describe('ConfigureScreen - Operations', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />

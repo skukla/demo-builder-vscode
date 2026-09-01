@@ -27,6 +27,8 @@ import type {
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 // Test data
 export const mockConfig = {
     version: '1.0',
@@ -91,7 +93,7 @@ export function createCheckHandlerContext(
                 clearAll: jest.fn(),
             }),
         },
-        authManager: {},
+        authManager: createMockAuthenticationService(),
         componentHandler: {},
         errorLogger: {},
         progressUnifier: {},
@@ -99,10 +101,8 @@ export function createCheckHandlerContext(
             log: jest.fn(),
         },
         logger: createMockLogger(),
-        debugLogger: {
-            debug: jest.fn(),
-        },
-        context: {},
+        debugLogger: createMockLogger(),
+        context: createMockExtensionContext(),
         panel: undefined,
         stateManager: {},
         communicationManager: undefined,

@@ -34,10 +34,7 @@ describe('workspaceHandlers', () => {
         mockContext = {
             authManager: mockAuthManager,
             logger: createMockLogger(),
-            debugLogger: {
-                trace: jest.fn(),
-                debug: jest.fn(),
-            },
+            debugLogger: createMockLogger(),
             sendMessage: jest.fn().mockResolvedValue(undefined),
             sharedState: {
                 isAuthenticating: false,
