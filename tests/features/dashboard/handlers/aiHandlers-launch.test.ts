@@ -132,10 +132,10 @@ describe('aiHandlers — launch & save', () => {
             const saveProject = jest.fn().mockResolvedValue(undefined);
             const project = { name: 'p', path: '/projects/p', aiPrompts: [] as unknown[] };
             const context = createAiHandlerContext({
-                stateManager: createMockStateManager(createMockStateManager({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(project),
                     saveProject,
-                })) as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             const result = await handleSaveAiPrompt(context, {
@@ -163,10 +163,10 @@ describe('aiHandlers — launch & save', () => {
                 ],
             };
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(project),
                     saveProject,
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             const result = await handleSaveAiPrompt(context, {
@@ -205,10 +205,10 @@ describe('aiHandlers — launch & save', () => {
                 aiPrompts: [],
             });
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject,
                     saveProject,
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             await handleSaveAiPrompt(context, {
@@ -224,7 +224,7 @@ describe('aiHandlers — launch & save', () => {
                 stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
                     saveProject: jest.fn(),
-                }) as unknown as HandlerContext['stateManager'],
+                }),
             });
             const result = await handleSaveAiPrompt(context, {
                 prompt: { id: 'x', title: 'T', prompt: 'B' },

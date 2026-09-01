@@ -46,15 +46,15 @@ import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { resetComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { resetPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
-import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 /** The parts a webview surface hands the factory, identical between messages. */
 function panelParts() {
     return {
         context: { extensionPath: '/ext' } as never,
         panel: undefined,
-        stateManager: {} as HandlerContext['stateManager'],
+        stateManager: createMockStateManager(),
         communicationManager: undefined,
         sendMessage: jest.fn(),
     };

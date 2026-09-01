@@ -77,7 +77,7 @@ function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext 
         sharedState: {},
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(null),
-        }) as unknown as HandlerContext['stateManager'],
+        }),
         authManager: {
             getTokenManager: jest.fn().mockReturnValue({
                 inspectToken: jest.fn().mockResolvedValue({ valid: true, expiresIn: 3600, token: 'mock-ims-token' }),

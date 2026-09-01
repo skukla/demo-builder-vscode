@@ -129,7 +129,7 @@ function createMockContext(): HandlerContext {
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn(),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        }) as unknown as HandlerContext['stateManager'],
+        }),
         logger: createMockLogger() as unknown as HandlerContext['logger'],
         debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),

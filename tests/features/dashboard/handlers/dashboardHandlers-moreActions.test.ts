@@ -85,6 +85,7 @@ import {
 } from '@/features/dashboard/handlers/dashboardHandlers';
 import { exportProjectSettings } from '@/features/projects-dashboard/services/settingsTransferService';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // =============================================================================
 // Test Utilities
@@ -105,11 +106,11 @@ function createMockProject(overrides?: Partial<Project>): Project {
 function createMockContext(project: Project | undefined): HandlerContext {
     return {
         panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
             removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
+        }),
         logger: createMockLogger() as unknown as HandlerContext['logger'],
         sendMessage: jest.fn(),
         context: { secrets: {} },

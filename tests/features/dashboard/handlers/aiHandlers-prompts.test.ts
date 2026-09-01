@@ -12,7 +12,6 @@ import {
     createAiHandlerContext,
     makeScopedContext,
 } from './aiHandlers.testUtils';
-import type { HandlerContext } from './aiHandlers.testUtils';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 describe('aiHandlers — prompt CRUD & scope', () => {
@@ -32,10 +31,10 @@ describe('aiHandlers — prompt CRUD & scope', () => {
                 ],
             };
             const context = createAiHandlerContext({
-                stateManager: createMockStateManager(createMockStateManager({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(project),
                     saveProject,
-                })) as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             const result = await handleDeleteAiPrompt(context, { promptId: 'a' });
@@ -57,10 +56,10 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
         it('returns project-not-found when no current project is loaded', async () => {
             const context = createAiHandlerContext({
-                stateManager: createMockStateManager(createMockStateManager({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
                     saveProject: jest.fn(),
-                })) as unknown as HandlerContext['stateManager'],
+                }),
             });
             const result = await handleDeleteAiPrompt(context, { promptId: 'a' });
             expect(result.success).toBe(false);
@@ -69,13 +68,13 @@ describe('aiHandlers — prompt CRUD & scope', () => {
         it('returns the empty array when project has no aiPrompts', async () => {
             const saveProject = jest.fn().mockResolvedValue(undefined);
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue({
                         name: 'p',
                         path: '/projects/p',
                     }),
                     saveProject,
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
             const result = await handleDeleteAiPrompt(context, { promptId: 'a' });
             expect(result.success).toBe(true);
@@ -149,14 +148,14 @@ describe('aiHandlers — prompt CRUD & scope', () => {
                 { id: 'b', title: 'B', prompt: 'b' },
             ];
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue({
                         name: 'p',
                         path: '/projects/p',
                         aiPrompts: prompts,
                     }),
                     saveProject: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             const result = await handleListAiPrompts(context);
@@ -165,13 +164,13 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
         it('returns an empty array when aiPrompts is undefined', async () => {
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue({
                         name: 'p',
                         path: '/projects/p',
                     }),
                     saveProject: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             const result = await handleListAiPrompts(context);
@@ -180,10 +179,10 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
         it('returns project-not-found when no current project', async () => {
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
                     saveProject: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
             const result = await handleListAiPrompts(context);
             expect(result.success).toBe(false);
@@ -246,10 +245,10 @@ describe('aiHandlers — prompt CRUD & scope', () => {
             const saveProject = jest.fn().mockResolvedValue(undefined);
             const project = { name: 'p', path: '/projects/p', aiPrompts };
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(project),
                     saveProject,
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
             return { context, saveProject };
         }

@@ -72,7 +72,7 @@ export function createResetContext(currentProject?: Project | null): HandlerCont
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(currentProject),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        }) as unknown as HandlerContext['stateManager'],
+        }),
         context: {
             secrets: {},
             globalState: { get: jest.fn(), update: jest.fn() },

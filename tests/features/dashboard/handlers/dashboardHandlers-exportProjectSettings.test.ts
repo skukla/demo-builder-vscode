@@ -48,7 +48,7 @@ function makeContext(project: Project | undefined): HandlerContext {
     return {
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
-        }) as unknown as HandlerContext['stateManager'],
+        }),
         logger: createMockLogger() as unknown as HandlerContext['logger'],
     } as unknown as HandlerContext;
 }
