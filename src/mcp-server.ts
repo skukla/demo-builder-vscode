@@ -123,6 +123,7 @@ export function registerProjectTools(
     server.registerTool(
         'list_projects',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Projects',
             description:
@@ -136,6 +137,7 @@ export function registerProjectTools(
     server.registerTool(
         'get_project',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Project',
             description:
@@ -155,6 +157,7 @@ export function registerProjectTools(
     server.registerTool(
         'get_component_config',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Component Config',
             description:
@@ -177,6 +180,7 @@ export function registerProjectTools(
     server.registerTool(
         'update_project_config',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Update Project Config',
             description:
@@ -203,6 +207,7 @@ export function registerProjectTools(
     server.registerTool(
         'sync_storefront',
         {
+            needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Sync Storefront',
             description: 'Git add, commit, and push changes in the storefront directory',
@@ -225,6 +230,7 @@ export function registerProjectTools(
     server.registerTool(
         'list_blocks',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Blocks',
             description: 'List all block directories in the storefront blocks/ directory',
@@ -248,6 +254,7 @@ export function registerProjectTools(
     server.registerTool(
         'get_block_authoring_shape',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Block Authoring Shape',
             description:
@@ -281,6 +288,7 @@ export function registerProjectTools(
     server.registerTool(
         'promote_block_to_library',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Promote Block to Library',
             // Phrasing matches sync-changes.md ("Block changes to push back to
@@ -343,6 +351,7 @@ export function registerProjectTools(
     server.registerTool(
         'remove_block_from_library',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             title: 'Remove Block from Library',
             description:

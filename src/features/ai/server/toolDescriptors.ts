@@ -11,7 +11,7 @@
 
 import { z } from 'zod';
 import { asRawText, asText } from './mcpToolResult';
-import type { McpToolServer } from './mcpToolServer';
+import type { AuthProvider, McpToolServer } from './mcpToolServer';
 import {
     payloadOfEvent,
     withCapturedProgress,
@@ -49,6 +49,19 @@ export interface ToolDescriptor {
      * which is why that one guard had to be found by a hand audit.
      */
     readOnly: boolean;
+    /**
+     * Which sign-ins this tool needs, or `false` for none.
+     *
+     * REQUIRED for the same reason `readOnly` is: a field you can forget is a
+     * hole that opens quietly. It is passed straight through to the registration,
+     * where {@link McpToolSchema} types it, so a new descriptor row cannot land
+     * without someone answering the question.
+     *
+     * All 48 rows were filled from the 2026-08-31 tool-auth review, which read
+     * every tool and recorded a reason. The ledger that tracked that review was
+     * deleted when it reached zero unreviewed — this field replaced it.
+     */
+    needsAuth: AuthProvider[] | false;
     /** When true, the tool refuses unless called with `confirm: true`. */
     confirm?: boolean;
     /**
@@ -227,6 +240,7 @@ export function registerDescriptorTools(
             {
                 description: d.description,
                 inputSchema,
+                needsAuth: d.needsAuth,
                 // MCP's own annotation block, so the declaration does double
                 // duty: our dry run reads it, and it travels to the client in
                 // `tools/list` — Claude Code learns which of our tools are safe.

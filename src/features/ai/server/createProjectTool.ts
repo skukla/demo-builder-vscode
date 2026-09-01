@@ -370,6 +370,7 @@ export function registerCreateProjectTool(server: McpToolServer, ctxFactory: () 
     server.registerTool(
         'create_project',
         {
+            needsAuth: ['github', 'dalive'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Create Project',
             description:

@@ -116,6 +116,7 @@ export function registerSettingsTools(
     server.registerTool(
         'get_settings',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Settings',
             description:
@@ -165,6 +166,7 @@ export function registerSettingsTools(
     server.registerTool(
         'set_setting',
         {
+            needsAuth: false,
             // Hands back to the user; it changes no setting itself.
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Set Setting',

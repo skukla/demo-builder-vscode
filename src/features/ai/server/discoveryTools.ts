@@ -52,6 +52,7 @@ export function registerDiscoveryTools(server: McpToolServer): void {
     server.registerTool(
         'list_stacks',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Stacks',
             description:
@@ -75,6 +76,7 @@ export function registerDiscoveryTools(server: McpToolServer): void {
     server.registerTool(
         'list_demo_packages',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Demo Packages',
             description:
@@ -97,6 +99,7 @@ export function registerDiscoveryTools(server: McpToolServer): void {
     server.registerTool(
         'list_components',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Components',
             description:

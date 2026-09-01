@@ -86,7 +86,7 @@ describe('registerDescriptorTools', () => {
             'my-type': async (_ctx, args) => ({ success: true, data: { echoed: args } }),
         };
         const descriptors: ToolDescriptor[] = [
-            { tool: 'my_tool', description: 'x', map, type: 'my-type', readOnly: true },
+            { needsAuth: false, tool: 'my_tool', description: 'x', map, type: 'my-type', readOnly: true },
         ];
         const server = fakeServer();
 
@@ -104,7 +104,7 @@ describe('registerDescriptorTools', () => {
 
         registerDescriptorTools(
             server,
-            [{ tool: 'danger', description: 'x', map, type: 'do-it', confirm: true, readOnly: false }],
+            [{ needsAuth: false, tool: 'danger', description: 'x', map, type: 'do-it', confirm: true, readOnly: false }],
             ctxFactory,
         );
 
@@ -123,8 +123,8 @@ describe('registerDescriptorTools', () => {
         registerDescriptorTools(
             server,
             [
-                { tool: 'safe', description: 'x', map, type: 't', readOnly: true },
-                { tool: 'gated', description: 'x', map, type: 't', confirm: true, readOnly: false },
+                { needsAuth: false, tool: 'safe', description: 'x', map, type: 't', readOnly: true },
+                { needsAuth: false, tool: 'gated', description: 'x', map, type: 't', confirm: true, readOnly: false },
             ],
             ctxFactory,
         );
@@ -138,7 +138,7 @@ describe('registerDescriptorTools', () => {
         const server = fakeServer();
         registerDescriptorTools(
             server,
-            [{ tool: 'custom', description: 'x', map, type: 't', shape: () => 'SHAPED', readOnly: true }],
+            [{ needsAuth: false, tool: 'custom', description: 'x', map, type: 't', shape: () => 'SHAPED', readOnly: true }],
             ctxFactory,
         );
 
@@ -173,7 +173,7 @@ describe('capturePayloadFrom', () => {
         };
         registerDescriptorTools(
             server,
-            [{ tool: 't', description: 'd', map: dispatchOnly, type: 'check-thing', ...row } as ToolDescriptor],
+            [{ needsAuth: false, tool: 't', description: 'd', map: dispatchOnly, type: 'check-thing', ...row } as ToolDescriptor],
             () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
         );
         return async () => JSON.parse((await tools.get('t')!({})).content[0].text);
@@ -204,7 +204,7 @@ describe('capturePayloadFrom', () => {
         const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
         registerDescriptorTools(
             { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-            [{ tool: 't', description: 'd', map: both, type: 'check-thing', capturePayloadFrom: 'thing-status', readOnly: true }],
+            [{ needsAuth: false, tool: 't', description: 'd', map: both, type: 'check-thing', capturePayloadFrom: 'thing-status', readOnly: true }],
             () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
         );
         const out = JSON.parse((await tools.get('t')!({})).content[0].text);
@@ -221,7 +221,7 @@ describe('capturePayloadFrom', () => {
         const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
         registerDescriptorTools(
             { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-            [{ tool: 't', description: 'd', map: failing, type: 'check-thing', capturePayloadFrom: 'thing-status', readOnly: true }],
+            [{ needsAuth: false, tool: 't', description: 'd', map: failing, type: 'check-thing', capturePayloadFrom: 'thing-status', readOnly: true }],
             () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
         );
         expect((await tools.get('t')!({})).content[0].text).toMatch(/^Error: nope/);
@@ -242,7 +242,7 @@ describe('capturePayloadFrom — when the payload disagrees with the return', ()
         const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
         registerDescriptorTools(
             { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-            [{ tool: 't', description: 'd', map, type: 'do-thing', capturePayloadFrom: 'thing-result', readOnly: false }],
+            [{ needsAuth: false, tool: 't', description: 'd', map, type: 'do-thing', capturePayloadFrom: 'thing-result', readOnly: false }],
             () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
         );
         return tools.get('t')!({});
@@ -282,7 +282,7 @@ describe('argDefaults', () => {
         const tools = new Map<string, (a: unknown) => Promise<unknown>>();
         registerDescriptorTools(
             { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-            [{ tool: 't', description: 'd', map, type: 'do-thing', ...row } as ToolDescriptor],
+            [{ needsAuth: false, tool: 't', description: 'd', map, type: 'do-thing', ...row } as ToolDescriptor],
             () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
         );
         return tools.get('t')!(sent).then(() => seen[0]);
@@ -328,7 +328,7 @@ describe('preflight', () => {
         const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
         registerDescriptorTools(
             { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
-            [{ tool: 't', description: 'd', map, type: 'do-thing', ...row } as ToolDescriptor],
+            [{ needsAuth: false, tool: 't', description: 'd', map, type: 'do-thing', ...row } as ToolDescriptor],
             () => ({ sendMessage: async () => {} }) as unknown as HandlerContext,
         );
         return { call: (a: unknown) => tools.get('t')!(a), ran };

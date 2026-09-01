@@ -161,6 +161,7 @@ export function registerAuthTools(server: McpToolServer, ctxFactory: () => Handl
     server.registerTool(
         'get_auth_status',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Auth Status',
             description:
@@ -179,6 +180,7 @@ export function registerAuthTools(server: McpToolServer, ctxFactory: () => Handl
     server.registerTool(
         'sign_in',
         {
+            needsAuth: false,
             // NOT read-only: writes credentials and opens an auth window.
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Sign In',

@@ -58,7 +58,6 @@
         "tests/features/updates/commands/updateExecutor",
         "tests/sop/credential",
         "tests/sop/no",
-        "tests/sop/tool",
         "tests/templates/config",
         "tests/templates/demo",
         "tests/templates/manifest",

@@ -184,6 +184,7 @@ export function registerCommerceEndpointsTool(
     server.registerTool(
         'get_commerce_endpoints',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             description:
                 'The Commerce API endpoints and request headers for this project: GraphQL, Catalog Service, and the deployed API Mesh, plus the store-scope headers a query needs. Use before querying the catalog, building an integration, or working out why a query returns no products.',

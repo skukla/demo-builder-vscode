@@ -197,6 +197,7 @@ describe('registration against the real MCP SDK', () => {
             server().registerTool(
                 'raw_json_schema',
                 {
+                    needsAuth: false,
                     description: 'the e26bd01e mistake',
 
                     inputSchema: { componentId: { type: 'string' } } as any,

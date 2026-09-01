@@ -70,6 +70,7 @@ export function registerLifecycleTools(
     server.registerTool(
         'open_url',
         {
+            needsAuth: false,
             // NOT read-only: it opens a browser tab. Nothing persists, but the
             // user sees it happen, and a read is meant to be invisible.
             annotations: { readOnlyHint: false, destructiveHint: false },
@@ -129,6 +130,7 @@ export function registerLifecycleTools(
     server.registerTool(
         'edit_project',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Edit Project',
             description:

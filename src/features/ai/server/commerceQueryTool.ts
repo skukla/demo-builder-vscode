@@ -82,6 +82,7 @@ export function registerCommerceQueryTool(
     server.registerTool(
         'run_commerce_query',
         {
+            needsAuth: false,
             // Read-only: it refuses mutations, so it cannot change the backend.
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Run Commerce Query',

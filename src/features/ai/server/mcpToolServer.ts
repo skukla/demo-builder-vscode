@@ -37,6 +37,9 @@
 
 import type { z } from 'zod';
 
+/** A sign-in a tool may require before it can do its work. */
+export type AuthProvider = 'adobe' | 'github' | 'dalive' | 'commerce';
+
 /** The schema block a tool declares: what it is, what it takes, how it behaves. */
 export interface McpToolSchema {
     /** One-line description — it rides in context every session, so keep it terse. */
@@ -68,18 +71,22 @@ export interface McpToolSchema {
      * cannot be refreshed silently, and an error tells the agent nothing about
      * what to do next.
      *
-     * OPTIONAL FOR NOW, AND THAT IS A STAGE, NOT THE DESTINATION. Making it
-     * required today would demand 114 judgements in one commit — the same review
-     * `tests/sop/tool-auth-review.ledger.json` already tracks, only forced and
-     * therefore rushed. Declare it as each tool is reviewed; when the ledger's
-     * `unreviewedCeiling` reaches zero this becomes REQUIRED, and the ledger is
-     * deleted. That is the arc the feature-barrel ledger took when it emptied.
+     * REQUIRED, and required on purpose — the same reasoning `readOnly` gives on
+     * the descriptor type: "a field you can forget is a hole that opens quietly.
+     * The compiler asks every row; that is stronger than any test."
      *
-     * Why a field and not only a ledger, once the review is done: `readOnly` on
-     * the descriptor type says it best — "a field you can forget is a hole that
-     * opens quietly. The compiler asks every row; that is stronger than any test."
+     * It arrived optional on 2026-08-31, tracked by a shrink-only ledger while all
+     * 114 tools were reviewed one at a time. The ledger reached zero unreviewed on
+     * 2026-09-01 and was deleted; every verdict it held now lives here, where the
+     * compiler checks it. That is the arc the feature-barrel ledger took, and the
+     * type-erasing-cast ceiling is on the same path.
+     *
+     * AN ARRAY, BECAUSE FOUR TOOLS NEED TWO. `check_github_app`, `create_project`,
+     * `republish` and `sync_content` each need GitHub AND DA.live. A single value
+     * would have forced a choice between two true answers, and the one dropped is
+     * exactly the sign-in an agent would then fail to offer.
      */
-    needsAuth?: 'adobe' | 'github' | 'dalive' | 'commerce' | false;
+    needsAuth: AuthProvider[] | false;
 }
 
 /**

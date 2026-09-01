@@ -222,6 +222,7 @@ const OPERATION_MODE = z.enum(['import', 'export', 'delete', 'validate']);
 export const READ_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'verify_ai_setup',
+        needsAuth: false,
         readOnly: true,
         description:
             "Check the project's AI setup (context files, MCP config, skills) and report status. " +
@@ -239,6 +240,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'list_ai_prompts',
+        needsAuth: false,
         readOnly: true,
         description:
             'List saved AI prompts for the current project (global + project-local, merged). ' +
@@ -255,6 +257,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'check_mesh',
+        needsAuth: ['adobe'],
         readOnly: true,
         description: "Report whether the current project's API mesh is deployed and up to date",
         map: meshHandlers,
@@ -274,6 +277,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'get_integration_install_status',
+        needsAuth: false,
         readOnly: true,
         description:
             "Read an App Management integration's Commerce install state: the persisted " +
@@ -288,6 +292,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'list_console_apis',
+        needsAuth: ['adobe'],
         readOnly: true,
         description:
             "List the Adobe APIs (sdk codes + names) the org can subscribe to on this project's " +
@@ -305,6 +310,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'get_store_structure',
+        needsAuth: ['commerce'],
         readOnly: true,
         description:
             "The Commerce websites, store groups and store views the project's backend actually " +
@@ -316,6 +322,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'get_project_urls',
+        needsAuth: false,
         readOnly: true,
         description:
             "The current project's useful URLs as data (no browser opened): local storefront " +
@@ -354,6 +361,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     // a fixture says what the shape is, never what the VOLUME will be.
     {
         tool: 'check_datapack_service',
+        needsAuth: ['adobe'],
         readOnly: true,
         description:
             'Check whether the Data Installer API is configured and reachable. Use before the ' +
@@ -363,6 +371,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'find_datapacks',
+        needsAuth: ['adobe'],
         readOnly: true,
         description:
             'List Adobe Commerce sample-data datapacks the Data Installer holds. Returns one row ' +
@@ -382,6 +391,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'get_datapack',
+        needsAuth: ['adobe'],
         readOnly: true,
         description:
             "One datapack's metadata plus which of its declared data types the service actually " +
@@ -397,6 +407,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'list_datapack_data_types',
+        needsAuth: ['adobe'],
         readOnly: true,
         description:
             'The data types the Data Installer can process for one operation mode, in dependency ' +
@@ -410,6 +421,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'list_installed_datapacks',
+        needsAuth: ['adobe'],
         readOnly: true,
         description:
             'Datapacks the Data Installer records as installed, and the Commerce instance each ' +
@@ -425,6 +437,7 @@ export const READ_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'get_datapack_activity',
+        needsAuth: ['adobe'],
         readOnly: true,
         description:
             "The Data Installer's own request log — which packs were imported, exported or " +

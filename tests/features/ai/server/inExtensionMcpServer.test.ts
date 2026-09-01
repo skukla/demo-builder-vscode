@@ -134,6 +134,7 @@ describe('InExtensionMcpServer', () => {
                 [
                     {
                         tool: 'ping_tool',
+                        needsAuth: false,
                         description: 'test',
                         map: extraMap,
                         type: 'ping',

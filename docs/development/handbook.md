@@ -599,33 +599,33 @@ promising an agent that every response parses.
 
 > **Convention.** A tool needing credentials pre-flights and returns a structured
 > `needsAuth` handoff rather than erroring, so the agent can drive sign-in and retry.
-> Every tool is REVIEWED against this, and the review is recorded.
+> Every tool DECLARES which sign-ins it needs, or `false` for none.
 > *Why:* interactive browser sign-in cannot be refreshed silently, and an error tells the
-> agent nothing about what to do next. Obeyed at 39 sites, asserted by 11 suites.
-> Enforced by `tests/sop/tool-auth-review.test.ts` — a new tool with no ledger row fails
-> the build, so the question is asked at authoring time.
+> agent nothing about what to do next.
+> Enforced by the COMPILER: `needsAuth` is a required field on `McpToolSchema` and on
+> `ToolDescriptor`, so a tool cannot be registered without answering the question.
 >
-> **It is a LEDGER rather than a scan, and that is not laziness.** No marker says a tool
-> touches credentials: compliance is reached three ways (`runGuards`, a bespoke
-> pre-flight, or nothing because none is needed) and no static check separates them. Two
-> attempts on 2026-08-31 failed in opposite directions — a file-level scan gave 37 tools
-> the same signals because 23 share one descriptor file, and a per-handler scan reported
-> nothing for `add_console_apis`, whose handler demonstrably calls `runGuards`.
+> **IT WAS A LEDGER FIRST, AND THE LEDGER IS NOW DELETED.** No static check can tell
+> whether a tool touches credentials — compliance is reached three ways (`runGuards`, a
+> bespoke pre-flight, or nothing because none is needed) and two scans failed in opposite
+> directions trying: a file-level one gave 37 tools each other's signals because 23 share
+> a descriptor file, and a per-handler one reported nothing for `add_console_apis`, whose
+> handler demonstrably calls `runGuards`.
 >
-> `readOnly` solved the same problem by making the AUTHOR declare it — "a field you can
-> forget is a hole that opens quietly". A row is that move where a type field cannot
-> reach: only 48 of the 114 tools have a descriptor to put a field on, and the other 66
-> register directly, including the Adobe, cloud, site and storefront tools most likely to
-> need credentials.
+> So all 114 tools were reviewed one at a time against a shrink-only ledger, each row
+> carrying a verdict and a reason. When it reached zero unreviewed (2026-09-01) every
+> verdict moved into the code as a `needsAuth` declaration and the ledger was deleted —
+> the arc `featureBarrels` took, and the one the type-erasing-cast ceiling is on.
 >
-> **The surface is 114 tools, and no previous count was right.** The `tool-verdicts` skill
-> says 107; a pass earlier the same day said 102. Both missed
-> `dataInstallerDescriptors.ts` (8) and `statusDescriptors.ts` (4). The suite recomputes
-> the inventory rather than trusting a number.
+> The declarations were transcribed mechanically and then VERIFIED against the ledger
+> row by row: 114 found in code, zero mismatches, zero missing. The field is an ARRAY
+> because four tools need two sign-ins — `check_github_app`, `create_project`,
+> `republish` and `sync_content` each need GitHub AND DA.live, and a single value would
+> have dropped exactly the sign-in an agent then fails to offer.
 >
-> All 114 rows were seeded UNREVIEWED. That is the honest state: the check stops the
-> bleeding immediately, and `unreviewedCeiling` — which may only fall — is how the pool
-> drains.
+> **The surface is 114 tools, and no previous count was right**: the `tool-verdicts`
+> skill says 107, an earlier pass said 102. Both missed `dataInstallerDescriptors.ts`
+> (8) and `statusDescriptors.ts` (4).
 >
 > **THE REVIEW FOUND THREE HANDOFF SHAPES, AND THIS RULE NAMED ONE.** `needsAuth` is
 > the shape for a sign-in an AGENT can drive. It is not the only honest answer:
@@ -940,7 +940,7 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 10 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 29 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 28 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 

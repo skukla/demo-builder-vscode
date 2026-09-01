@@ -95,6 +95,7 @@ export function registerAdobeResourceTools(
     server.registerTool(
         'create_adobe_project',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 'Create an Adobe Developer Console project in the selected org (select_org first). Returns the project, or why it could not be created.',
@@ -134,6 +135,7 @@ export function registerAdobeResourceTools(
     server.registerTool(
         'create_adobe_workspace',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 'Create a workspace in the SELECTED Adobe project (select_org and select_project first).',
@@ -173,6 +175,7 @@ export function registerAdobeResourceTools(
     server.registerTool(
         'delete_adobe_project',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Permanently delete an Adobe Console project and everything in it (irreversible). Requires confirm:true and confirmName equal to the project name.',
