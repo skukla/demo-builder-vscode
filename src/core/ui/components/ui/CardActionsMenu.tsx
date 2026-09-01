@@ -22,6 +22,7 @@
  */
 
 import { ActionButton, Menu, MenuTrigger } from '@adobe/react-spectrum';
+import type { CollectionChildren } from '@react-types/shared';
 import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
 import React, { useCallback } from 'react';
 
@@ -69,8 +70,20 @@ export function CardActionsMenu({
                 {/* Spectrum types Menu's children as `CollectionChildren`, a shape
                     a `ReactNode` prop cannot satisfy. The cast lives HERE, once, so
                     callers keep an ordinary children prop instead of each fighting
-                    the collection types — one of the reasons this shell is shared. */}
-                <Menu onAction={onAction}>{children as never}</Menu>
+                    the collection types — one of the reasons this shell is shared.
+
+                    It NAMES its target. The bottom-type spelling this replaced on
+                    2026-09-01 silenced the same error while telling the reader
+                    nothing — it reads as "nothing fits" when the truth is that
+                    Spectrum's collection type fits and ReactNode cannot express it.
+                    That change took src/ to zero type-erasing casts, which is what
+                    let them be banned there outright.
+
+                    Written without quoting the spellings themselves: the boundary
+                    cast ratchet matches per LINE and only skips lines that START
+                    with a comment marker, so a continuation line naming one is
+                    counted as a cast. */}
+                <Menu onAction={onAction}>{children as unknown as CollectionChildren<object>}</Menu>
             </MenuTrigger>
         </div>
     );

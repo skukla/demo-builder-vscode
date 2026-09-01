@@ -91,7 +91,17 @@ function collectTestFiles(dir: string): string[] {
 /** This guard quotes both forms in its own prose, so it must not count itself. */
 const SELF = path.relative(repoRoot, __filename).replace(/\\/g, '/');
 
-const corpus = collectTestFiles(testsDir).filter((f) => f !== SELF);
+/**
+ * Detectors whose CONTROL FIXTURES contain the very spellings this counts.
+ *
+ * `SELF` was the only exclusion until 2026-09-01, when the src-side ban arrived
+ * carrying `'const x = y as any;'` in its controls — string literals, not casts,
+ * but this counter reads text and cannot tell them apart. Counting them would put
+ * the ceiling up by two for writing a test that proves a ban works.
+ */
+const DETECTOR_FIXTURES = new Set([SELF, 'tests/sop/src-erases-no-types.test.ts']);
+
+const corpus = collectTestFiles(testsDir).filter((f) => !DETECTOR_FIXTURES.has(f));
 
 const counts: Record<string, number> = (() => {
     const out: Record<string, number> = {};

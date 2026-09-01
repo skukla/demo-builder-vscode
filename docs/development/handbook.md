@@ -885,6 +885,28 @@ check says so and names the file.
 > also a production function, so every handler test calling the real one looked like a
 > consumer of the fake.
 
+> **Convention.** PRODUCTION erases no types. `as any` and `as never` are banned in
+> `src/` outright.
+> *Why:* `src/` was already at zero when this was adopted, so the ban cost nothing —
+> and leaving it to habit plus a warn-level lint rule that reports nothing is how a
+> property that took effort to reach comes quietly undone. Enforced by
+> `tests/sop/src-erases-no-types.test.ts`.
+>
+> **What is still allowed, because banning the wrong thing teaches people to work
+> around the check rather than write better types:**
+>
+> | form | when | in this codebase |
+> |---|---|---|
+> | `unknown` + a type guard | you do not know the type yet | the correct default |
+> | `: never` as a RETURN type | the function does not return | `handleStreamingError(...): never` |
+> | `(args: any)` at a real interop boundary | the input is genuinely untyped | the MCP SDK hands over untyped args — 51 of the 61 `: any` in `src/` |
+> | `as unknown as X` | the value cannot be expressed in the target's terms | `children as unknown as CollectionChildren<object>` |
+>
+> That last row is why `src/` reached zero: `CardActionsMenu` held the final
+> `as never`, silencing a real Spectrum collection-type mismatch. Both spellings
+> silence the same error; only one tells the next reader what the value is being
+> treated as. **`as any` names nothing, and that is the whole objection to it.**
+
 > **Convention.** No test erases a type. `as any` and `as never` are banned anywhere in
 > `tests/`. A builder is declared as the REAL type it stands for; where the structural
 > fake cannot satisfy that type honestly, cast the object literal INTO it at the
@@ -949,11 +971,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 32 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 33 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 73 conventions. 72 of them are enforced; 1 is not.**
+**This handbook states 74 conventions. 73 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on
