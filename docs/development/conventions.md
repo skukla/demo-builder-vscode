@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **80** conventions, **67** enforced
+- **80** conventions, **68** enforced
 - **22** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -143,7 +143,7 @@ it means the rule rests on somebody noticing.
 | Every scan declares a control: something it is known to find. A detector that has silently stopped detecting reports "all clear" in exactly the same words as one that verified. |  |  | `every-scan-declares-a-control.test.ts` |
 | A control proves the tool works, not that you aimed it right. Before trusting a result of nothing, say where the answer would be if it existed, and confirm the command actually reads there. |  |  | **—** |
 | A named field in a response, a matching string, or a green check is a LEAD. Read the source before it becomes a finding. |  |  | **—** |
-| Never publish an identifier you have not read from the source. Setting keys, env vars, command ids, file paths and function names are cheap to grep and expensive to get wrong in something a user reads. |  |  | **—** |
+| Never publish an identifier you have not read from the source. Setting keys, env vars, command ids, file paths and function names are cheap to grep and expensive to get wrong in something a user reads. |  |  | `doc-identifiers.test.ts`<br>`doc-module-refs.test.ts` |
 | Capture an exit code in a variable. Never read one through a pipe. |  |  | `13-piped-exit-code.rule` |
 | A count that measures what code *looks like* is not a count of what is wrong with it. Before working a scan's list, ask what defect it would catch and whether a clean file could score badly. |  |  | **—** |
 | Before naming a cause, name the command that would prove you wrong, and run that first. |  |  | **—** |

@@ -876,11 +876,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 10 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 27 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 28 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 80 conventions. 67 of them are enforced; 13 are not.**
+**This handbook states 80 conventions. 68 of them are enforced; 12 are not.**
 
 The fifteen that remain are not one thing, and treating them as one is what kept them
 open:
@@ -954,9 +954,21 @@ not.
 > **Convention.** Never publish an identifier you have not read from the source. Setting
 > keys, env vars, command ids, file paths and function names are cheap to grep and
 > expensive to get wrong in something a user reads.
-> *Why:* `demoBuilder.eds.defaultDaLiveOrg` went into release notes from memory. The real
-> key is `demoBuilder.daLive.defaultOrg`. Caught only by diffing `package.json` against the
-> previous tag. **Not enforced** for prose; `tests/sop/doc-module-refs.test.ts` covers paths.
+> *Why:* `demoBuilder.eds.defaultDaLiveOrg` went into release notes from memory; the key it
+> should have named was `demoBuilder.daLive.defaultOrg`. Caught only by diffing
+> `package.json` against the previous tag.
+>
+> **This entry then broke its own rule**, and that is why it is now enforced. It said "the
+> real key IS `demoBuilder.daLive.defaultOrg`" in the present tense long after that setting
+> was DROPPED (`6e14114b9` — the DA.live org became a GitHub-namespace picker with no
+> setting at all). A correction naming a second dead identifier is the original defect
+> wearing the fix's clothes.
+>
+> Enforced by `tests/sop/doc-identifiers.test.ts`: every `demoBuilder.*` key a
+> CURRENT-TENSE document names must exist in `package.json` or be registered in `src/`.
+> Historical genres (CHANGELOG, research, ADRs) are excluded, and a deliberate mention of
+> a removed identifier goes in the ledger with its reason.
+> `tests/sop/doc-module-refs.test.ts` covers file paths.
 
 > **Convention.** Capture an exit code in a variable. Never read one through a pipe.
 > *Why:* `head`, `tail`, `grep` and `wc` all exit 0 on empty input, so the pipe reports its
