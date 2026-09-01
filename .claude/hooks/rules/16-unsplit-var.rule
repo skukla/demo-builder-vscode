@@ -1,0 +1,100 @@
+# Blocks a bare `$VAR` — assigned from a command substitution — being passed to a
+# command that takes a LIST of files.
+#
+# NOT once-per-session, like its two zsh siblings: a mechanical mistake with a
+# silent failure mode, not a pointer to a document.
+#
+# WHY. bash word-splits an unquoted `$VAR`; zsh does NOT. So the idiom every
+# shell tutorial teaches —
+#
+#     FILES=$(git diff --name-only)
+#     eslint --fix $FILES
+#
+# — hands zsh ONE argument containing newlines instead of N paths. The command
+# then runs against a path that cannot exist, and most tools treat "no such file"
+# as nothing to do and exit 0. The failure is silent and reads exactly like
+# success, which is the same shape as its two siblings: `no matches found` from
+# an unquoted glob, and `wc -l` exiting 0 on empty input.
+#
+# Three incidents, and the third is why this exists rather than another sentence
+# in CLAUDE.md:
+#   - a 7-path `git rm $PATHS` deleted nothing; the echo after it announced success
+#   - the same shape again, same session
+#   - 2026-09-01: `npx eslint --fix $FILES` over 18 files fixed NOTHING. The
+#     recount was unchanged, which looked like "these warnings are not
+#     auto-fixable" — a wrong conclusion, not just a wasted step. Re-run through
+#     xargs it fixed all 18 and went five BELOW the baseline.
+#
+# CLAUDE.md has named this since August and it was still hit a third time by the
+# session that had just read it. That is the argument for mechanising it.
+#
+# SCOPE IS DELIBERATELY NARROW — two conditions, both required:
+#   1. the variable was assigned from `$(...)`, so it plausibly holds a list
+#   2. it is passed bare to a command known to take many file arguments
+# `n=$(wc -l < f); [ $n -gt 0 ]` does NOT fire: `[` is not in the command list.
+# `echo $VAR` does not fire. A quoted `"$VAR"` never fires — that is the correct
+# form when one argument is meant.
+#
+# THE FIX IS ALWAYS THE SAME: write the list to a file and pipe it through xargs,
+# or quote it if a single argument was intended.
+rule_id=unsplit-var
+rule_once=0
+
+rule_match() {
+    [ "$1" = "Bash" ] || return 1
+    local cmd="$2" name rest
+    # Commands that take a LIST of paths. A bare list-valued variable here is
+    # always a bug in zsh; anywhere else it may well be deliberate.
+    local tools='(npx[[:space:]]+)?(eslint|prettier|tsc|jest|rm|cp|mv|chmod|cat|grep|wc|head|tail|git[[:space:]]+(rm|add|checkout|restore))'
+
+    # Every NAME in `NAME=$(` or `NAME="$(`.
+    for name in $(printf '%s' "$cmd" | grep -oE '\b[A-Za-z_][A-Za-z0-9_]*=\"?\$\(' | sed -E 's/=.*//'); do
+        # Bare `$NAME` (not "$NAME", not ${NAME}) somewhere after one of those
+        # tools on the same line.
+        # `)` and `[` are excluded from the span, and that is what keeps this
+        # rule quiet on correct code. The router joins the whole command into ONE
+        # line, replacing newlines with spaces, so a tool on one line and a
+        # variable on the next end up adjacent. Without `)` in the class,
+        # `n=$(wc -l < f); [ $n -gt 0 ]` matched — `wc` from inside the
+        # substitution, `$n` from the test after it — which is correct, common
+        # code, and exactly the false positive that gets a rule switched off.
+        # Excluding `)` stops the span escaping the `$( ... )` it started in.
+        #
+        # An earlier attempt excluded a backslash instead, on the theory that the
+        # newline arrived escaped. It arrives as a space; the class was inert and
+        # the proof still failed.
+        if printf '%s' "$cmd" | grep -qE "${tools}[^|;&()[]*[[:space:]]\\\$${name}([[:space:]]|\$)"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+rule_message() {
+    cat <<'MSG'
+Blocked: zsh does NOT word-split an unquoted variable.
+
+  FILES=$(git diff --name-only)
+  npx eslint --fix $FILES        <- ONE argument containing newlines, not N paths
+
+The command runs against a path that cannot exist, most tools call that nothing
+to do, and you get exit 0. It reads exactly like success.
+
+Use xargs, which splits on newlines and is what the list wanted anyway:
+
+  git diff --name-only > "$SCRATCH/files.txt"
+  xargs npx eslint --fix < "$SCRATCH/files.txt"
+
+Or quote it, if you really meant ONE argument:
+
+  cp "$SRC" "$DEST"
+
+This has been in CLAUDE.md since August and was hit a third time on 2026-09-01,
+where `eslint --fix $FILES` silently fixed nothing and the unchanged recount was
+read as "not auto-fixable". Through xargs it fixed all 18 files.
+
+Writing ABOUT the pattern — a commit message or heredoc? Put the text in a file
+with Write and pass the file (`git commit -F`), the same workaround the
+unquoted-glob rule asks for.
+MSG
+}

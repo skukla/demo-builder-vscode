@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **71** conventions, **70** enforced
+- **72** conventions, **71** enforced
 - **20** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -138,6 +138,7 @@ it means the rule rests on somebody noticing.
 | Every scan declares a control: something it is known to find. A detector that has silently stopped detecting reports "all clear" in exactly the same words as one that verified. |  |  | `every-scan-declares-a-control.test.ts` |
 | Never publish an identifier you have not read from the source. Setting keys, env vars, command ids, file paths and function names are cheap to grep and expensive to get wrong in something a user reads. |  |  | `cited-identifiers.test.ts`<br>`doc-module-refs.test.ts` |
 | Capture an exit code in a variable. Never read one through a pipe. |  |  | `13-piped-exit-code.rule` |
+| A list of paths reaches a command through `xargs`, never as a bare `$VAR`. Quote the variable when one argument is what you meant. |  |  | `16-unsplit-var.rule`<br>`eslint.config.mjs` |
 | Quote glob arguments passed to `grep` or `find`. In zsh an unquoted pattern is expanded before the command sees it, and an unquoted variable is not split into separate arguments. |  |  | `12-unquoted-glob.rule` |
 | Anything claiming to be an instrument is in the registry, and the registry and the disk must agree in both directions. A count written in prose has something checking it. |  |  | `tooling-registry.test.ts` |
 | A module path named in a document resolves. A citation must reach a file or directory; an `import` in a code example must reach something importable. |  |  | `doc-module-refs.test.ts` |

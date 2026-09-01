@@ -49,6 +49,25 @@ case "$payload" in
     # call. Caught by a test; it looked exactly like a rule that simply never
     # matched.
     *"--include="*|*"--exclude"*|*"-name "*|*"-iname "*|*"-path "*|*"-ipath "*) ;;
+    # 16-unsplit-var. The rule requires a variable assigned from a command
+    # substitution, so `=$(` is a NECESSARY condition and the gate cannot hide a
+    # real hit. Both spellings, because `F="$(ls)"` is as common as `F=$(ls)`.
+    #
+    # This rule's proof script failed 3 of its 4 blocking cases before this line
+    # existed, and the one that "passed" did so by ACCIDENT — its payload happened
+    # to contain `-name "x"`, a token rule 12 had already registered. Exactly the
+    # failure the note above predicts: a rule that is never reached is
+    # indistinguishable from a rule that never matches.
+    #
+    # SINGLE quotes, both. Written as *"=$("* first, which bash parses as the
+    # START of a command substitution inside the double quotes — the router
+    # stopped parsing and EVERY Bash, Edit and Write call in the session failed
+    # with "unexpected EOF". A broken router fails CLOSED against its own stated
+    # contract, and it gates the very tools needed to edit it back.
+    # The THIRD spelling is the JSON-escaped one. This gate reads the raw payload,
+    # where a command containing F="$(ls)" arrives as F=\"$(ls)\" — so the plain
+    # ="$( never appears and that case silently never reached the rule.
+    *'=$('*|*'="$('*|*'=\"$('*) ;;
     # 13-piped-exit-code. The rule requires a pipe INTO head/tail/wc, so the pipe
     # must be part of the token — a bare *head* would admit every path containing
     # the word. Both spacings, because `|wc` and `| wc` are equally common.

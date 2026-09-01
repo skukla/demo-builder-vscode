@@ -933,12 +933,12 @@ it is, and the count of unenforced rules is stated rather than hidden.
 
 Conventions decay unless something checks them. Four layers do:
 
-- **Hooks** stop a bad action as it happens — 10 rules in `.claude/hooks/rules/`
+- **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
 - **Enforcer suites** fail the build when code drifts — 29 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 71 conventions. 70 of them are enforced; 1 is not.**
+**This handbook states 72 conventions. 71 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on
@@ -1025,6 +1025,23 @@ not.
 > a pipe into `head`, `tail` or `wc` — those exit 0 whatever they were fed, so a failure
 > and an empty result are indistinguishable. `grep` is deliberately not blocked:
 > `cmd | grep -q x && …` is correct, because there grep's own exit code is the answer.
+
+> **Convention.** A list of paths reaches a command through `xargs`, never as a bare
+> `$VAR`. Quote the variable when one argument is what you meant.
+> *Why:* bash word-splits an unquoted variable and **zsh does not**, so
+> `FILES=$(...)` followed by `eslint --fix $FILES` passes ONE argument containing
+> newlines instead of N paths. The command then runs against a path that cannot exist,
+> most tools call that nothing to do, and exit 0 — the failure reads exactly like
+> success. Three incidents: a seven-path `git rm` that deleted nothing while the echo
+> after it announced success; the same shape again the same session; and on 2026-09-01
+> an `eslint --fix` over 18 files that fixed none, where the unchanged recount was read
+> as "these warnings are not auto-fixable" — a wrong conclusion drawn from a command
+> that never ran. Through `xargs` it fixed all 18 and went five below the baseline.
+> Enforced by `.claude/hooks/rules/16-unsplit-var.rule`, which fires only when the
+> variable was assigned from `$(...)` AND is passed bare to a command that takes a list
+> of files. `[ $n -gt 0 ]` does not fire; `echo $VAR` does not fire; a quoted `"$VAR"`
+> never fires. This rule was in prose here since August and was broken a third time by
+> the session that had just read it, which is the argument for mechanising it.
 
 > **Convention.** Quote glob arguments passed to `grep` or `find`. In zsh an unquoted
 > pattern is expanded before the command sees it, and an unquoted variable is not split
