@@ -33,7 +33,7 @@ describe('CommandExecutor - org-context env injection', () => {
 
     const runAio = async (command: string, wrap: boolean) => {
         const mockSubprocess = createMockExecaSubprocess();
-        mockExeca.mockReturnValue(mockSubprocess as any);
+        mockExeca.mockReturnValue(mockSubprocess);
 
         const exec = () => {
             const p = commandExecutor.execute(command, { configureTelemetry: false });

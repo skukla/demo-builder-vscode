@@ -1,3 +1,4 @@
+import type { ExecaChildProcess } from 'execa';
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
 import { ResourceLocker } from '@/core/shell/resourceLocker';
 import { RetryStrategyManager } from '@/core/shell/retryStrategyManager';
@@ -39,7 +40,20 @@ export interface MockExecaResult {
  * Use emit('data', Buffer.from('text')) on stdout/stderr to simulate output.
  * Use _resolve() or _reject() to complete the subprocess.
  */
-export function createMockExecaSubprocess(): MockExecaSubprocess {
+/**
+ * The mock subprocess, typed so `mockExeca.mockReturnValue(...)` accepts it.
+ *
+ * `MockExecaSubprocess` is an EventEmitter carrying the eight members
+ * `CommandExecutor` actually touches; `ExecaChildProcess` is a much larger type no
+ * object literal can satisfy. Every call site therefore wrote
+ * `mockReturnValue(subprocess)` — 49 of them across 8 suites, each switching
+ * off checking of the whole statement to get past one assignment.
+ *
+ * The intersection puts that cast HERE, once, and names what it is pretending to be.
+ * Call sites need no cast at all: they still reach `.stdout.emit(...)` through the
+ * mock half, and `mockReturnValue` accepts the execa half.
+ */
+export function createMockExecaSubprocess(): MockExecaSubprocess & ExecaChildProcess {
     const emitter = new EventEmitter();
 
     let resolvePromise: (result: MockExecaResult) => void;
@@ -80,7 +94,7 @@ export function createMockExecaSubprocess(): MockExecaSubprocess {
     };
     mockSubprocess._reject = (error: Error) => rejectPromise!(error);
 
-    return mockSubprocess;
+    return mockSubprocess as MockExecaSubprocess & ExecaChildProcess;
 }
 
 /**

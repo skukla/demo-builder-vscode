@@ -34,6 +34,7 @@ import {
 } from '@/features/eds/services/quickEditPublisher';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockGithub, type GithubFake } from '../../../helpers/githubFake';
 const mockLogger = createMockLogger();
 
 // Minimal canonical-shaped scripts.js: the loadLazy + loadPage declarations
@@ -255,14 +256,11 @@ describe('installQuickEdit', () => {
     const repoOwner = 'skukla';
     const repoName = 'citisignal-b2b';
 
-    let mockGithub: {
-        getFileContent: jest.Mock;
-        createOrUpdateFile: jest.Mock;
-    };
+    let mockGithub: GithubFake;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockGithub = {
+        mockGithub = createMockGithub({
             getFileContent: jest.fn().mockImplementation((_o, _r, path) => {
                 if (path === SCRIPTS_JS_PATH) {
                     return Promise.resolve({ content: CANONICAL_SCRIPTS_JS, sha: 'scripts-sha' });
@@ -277,12 +275,12 @@ describe('installQuickEdit', () => {
                 sha: 'new-file-sha',
                 commitSha: 'commit-sha',
             }),
-        };
+        });
     });
 
     it('adds the export to loadPage and writes the transformed scripts.js with the existing SHA', async () => {
         const result = await installQuickEdit(
-            mockGithub as never, repoOwner, repoName, mockLogger as never,
+            mockGithub, repoOwner, repoName, mockLogger as never,
         );
 
         expect(result).toEqual({ installed: true });
@@ -296,7 +294,7 @@ describe('installQuickEdit', () => {
 
     it('adds the ?quick-edit dynamic-import branch in the same scripts.js write', async () => {
         await installQuickEdit(
-            mockGithub as never, repoOwner, repoName, mockLogger as never,
+            mockGithub, repoOwner, repoName, mockLogger as never,
         );
 
         const scriptsCall = mockGithub.createOrUpdateFile.mock.calls.find(c => c[2] === SCRIPTS_JS_PATH);
@@ -309,7 +307,7 @@ describe('installQuickEdit', () => {
 
     it('writes the net-new tools/quick-edit/quick-edit.js via createOrUpdateFile', async () => {
         await installQuickEdit(
-            mockGithub as never, repoOwner, repoName, mockLogger as never,
+            mockGithub, repoOwner, repoName, mockLogger as never,
         );
 
         const qeCall = mockGithub.createOrUpdateFile.mock.calls.find(c => c[2] === QUICK_EDIT_JS_PATH);
@@ -335,7 +333,7 @@ describe('installQuickEdit', () => {
         });
 
         const result = await installQuickEdit(
-            mockGithub as never, repoOwner, repoName, mockLogger as never,
+            mockGithub, repoOwner, repoName, mockLogger as never,
         );
 
         expect(result).toEqual({ installed: false, reason: 'already installed' });
@@ -372,7 +370,7 @@ describe('installQuickEdit', () => {
         });
 
         const result = await installQuickEdit(
-            mockGithub as never, repoOwner, repoName, mockLogger as never,
+            mockGithub, repoOwner, repoName, mockLogger as never,
         );
 
         expect(result).toEqual({ installed: true });
@@ -421,7 +419,7 @@ describe('installQuickEdit', () => {
         });
 
         const result = await installQuickEdit(
-            mockGithub as never, repoOwner, repoName, mockLogger as never,
+            mockGithub, repoOwner, repoName, mockLogger as never,
         );
 
         // Not short-circuited as "already installed" — the guard gets added.
@@ -451,7 +449,7 @@ describe('installQuickEdit', () => {
         });
 
         await installQuickEdit(
-            mockGithub as never, repoOwner, repoName, mockLogger as never,
+            mockGithub, repoOwner, repoName, mockLogger as never,
         );
 
         const qeCommits = mockGithub.createOrUpdateFile.mock.calls.filter(c => c[2] === QUICK_EDIT_JS_PATH);
@@ -465,7 +463,7 @@ describe('installQuickEdit', () => {
         });
 
         const result = await installQuickEdit(
-            mockGithub as never, repoOwner, repoName, mockLogger as never,
+            mockGithub, repoOwner, repoName, mockLogger as never,
         );
 
         expect(result).toEqual({ installed: false, reason: 'scripts.js missing' });
@@ -485,7 +483,7 @@ describe('installQuickEdit', () => {
         });
 
         const result = await installQuickEdit(
-            mockGithub as never, repoOwner, repoName, mockLogger as never,
+            mockGithub, repoOwner, repoName, mockLogger as never,
         );
 
         expect(result.installed).toBe(false);
@@ -500,7 +498,7 @@ describe('installQuickEdit', () => {
         });
 
         const result = await installQuickEdit(
-            mockGithub as never, repoOwner, repoName, mockLogger as never,
+            mockGithub, repoOwner, repoName, mockLogger as never,
         );
 
         expect(result.installed).toBe(false);
@@ -518,7 +516,7 @@ describe('installQuickEdit', () => {
         });
 
         const result = await installQuickEdit(
-            mockGithub as never, repoOwner, repoName, mockLogger as never,
+            mockGithub, repoOwner, repoName, mockLogger as never,
         );
 
         expect(result).toEqual({ installed: true });

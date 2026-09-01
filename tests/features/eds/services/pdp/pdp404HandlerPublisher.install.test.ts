@@ -30,11 +30,11 @@ import {
     overlayUrl,
     repoName,
     repoOwner,
-    type MockGithub,
+    type GithubFake,
 } from './pdp404HandlerPublisher.testUtils';
 
 describe('installSmart404Handler', () => {
-    let mockGithub: MockGithub;
+    let mockGithub: GithubFake;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -43,7 +43,7 @@ describe('installSmart404Handler', () => {
 
     it('installs the snippet on the happy path', async () => {
         const result = await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -69,7 +69,7 @@ describe('installSmart404Handler', () => {
     });
     it('appends the snippet to the existing delayed.js content (preserves prior content)', async () => {
         await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -85,7 +85,7 @@ describe('installSmart404Handler', () => {
     });
     it('skips when BYOM is disabled (overlayUrl is undefined)', async () => {
         const result = await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             undefined,
@@ -100,7 +100,7 @@ describe('installSmart404Handler', () => {
     });
     it('skips when the overlay URL cannot be parsed', async () => {
         const result = await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             'not-a-url',
@@ -115,7 +115,7 @@ describe('installSmart404Handler', () => {
     });
     it('skips when the overlay URL is the wrong shape', async () => {
         const result = await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             'https://example.com/api/v1/web/accs-discovery/discover-stores',
@@ -130,7 +130,7 @@ describe('installSmart404Handler', () => {
     it('skips gracefully when delayed.js is missing from the storefront', async () => {
         mockGithub.getFileContent.mockResolvedValue(null);
         const result = await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -152,7 +152,7 @@ describe('installSmart404Handler', () => {
             sha: 'sha-already-installed',
         });
         const result = await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -183,7 +183,7 @@ describe('installSmart404Handler', () => {
         });
 
         const result = await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -219,7 +219,7 @@ describe('installSmart404Handler', () => {
         });
 
         const result = await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -240,7 +240,7 @@ describe('installSmart404Handler', () => {
     it('skips gracefully when the GitHub commit fails', async () => {
         mockGithub.createOrUpdateFile.mockRejectedValue(new Error('GitHub 422 conflict'));
         const result = await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,
@@ -255,7 +255,7 @@ describe('installSmart404Handler', () => {
     });
     it('passes the storefront org and site through to the vendored snippet', async () => {
         await installSmart404Handler(
-            mockGithub as never,
+            mockGithub,
             repoOwner,
             repoName,
             overlayUrl,

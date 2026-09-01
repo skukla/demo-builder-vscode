@@ -7,6 +7,9 @@ import * as fs from 'fs/promises';
 import * as crypto from 'crypto';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 
+import type { MeshStalenessDeps } from '@/features/mesh/services/stalenessDetector';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 // Mock dependencies
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
@@ -145,46 +148,58 @@ export function createMockProjectWithFrontend(overrides?: Partial<Project>): Pro
  * function below swaps the fakes inside it, so the suites' existing setup calls
  * keep working unchanged and no registry mock is involved.
  */
-export const meshDeps = {
-    commandManager: { execute: jest.fn() },
-    authManager: { getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })) },
-} as never;
-
-/** The same object, typed for mutation by the setup helper below. */
-const mutableDeps = meshDeps as unknown as {
-    commandManager: { execute: jest.Mock };
-    authManager: { getTokenStatus: jest.Mock };
+/**
+ * The real `MeshStalenessDeps`, built from the canonical fakes.
+ *
+ * It was a two-member literal cast to `never` — and then cast BACK, through
+ * `as unknown as {…}`, because the setup helper below has to swap its members. Two
+ * casts to end up where the type already was: `commandManager` is a
+ * `CommandExecutor` and `authManager` an `AuthenticationService`, and both have
+ * builders. Erasing it cost 29 checks across four suites.
+ *
+ * No `mutableDeps` view is needed now — the members are typed, so they can be
+ * assigned directly.
+ */
+export const meshDeps: MeshStalenessDeps = {
+    commandManager: createMockCommandExecutor(),
+    authManager: createMockAuthenticationService(),
 };
 
 export function setupMockCommandExecutor(
     authResponse: { code: number; stdout: string; stderr?: string },
     meshResponse?: { code: number; stdout: string; stderr?: string } | Error
 ) {
-    const mockCommandManager = {
-        execute: jest.fn(),
-    };
+    const mockCommandManager = createMockCommandExecutor();
 
     // Determine if auth should succeed based on the authResponse code
     // code: 0 = authenticated, code: 1 = not authenticated
     const isAuthenticated = authResponse.code === 0;
-    const mockAuthService = {
+    meshDeps.authManager = createMockAuthenticationService({
         getTokenStatus: jest.fn().mockResolvedValue({
             isAuthenticated,
             expiresInMinutes: isAuthenticated ? 30 : -5,
         }),
-    };
-    mutableDeps.authManager = mockAuthService as never;
+    });
 
     // Only set up command executor mock for mesh response (auth is now handled by authService)
     if (meshResponse) {
         if (meshResponse instanceof Error) {
             mockCommandManager.execute.mockRejectedValueOnce(meshResponse);
         } else {
-            mockCommandManager.execute.mockResolvedValueOnce(meshResponse);
+            // A full `CommandResult`. The suites' friendly `{ code, stdout }` is not
+            // one — `stderr` and `duration` are required — and the erased deps meant
+            // nothing said so. Production reads only `stdout`, so this changes no
+            // behaviour; it stops the fake answering in a shape execute never returns.
+            mockCommandManager.execute.mockResolvedValueOnce({
+                stdout: meshResponse.stdout,
+                stderr: meshResponse.stderr ?? '',
+                code: meshResponse.code,
+                duration: 0,
+            });
         }
     }
 
-    mutableDeps.commandManager = mockCommandManager as never;
+    meshDeps.commandManager = mockCommandManager;
     return mockCommandManager;
 }
 
