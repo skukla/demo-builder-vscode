@@ -176,3 +176,5 @@ is the current reference for the four-control pattern.
 - 2026-08-31  test(sop): the hook-stability footgun is half-enforced, and Lane A is three not five (`3c74453fc`)
 - 2026-08-31  test(sop): identifiers in current-tense docs must exist — and README was lying (`12d5dbb7a`)
 - 2026-08-31  test(sop): every MCP tool is reviewed for the credentials rule (option C) (`9542dfe7c`)
+- 2026-08-31  feat(mcp): type the tool-registration surface — the `server: any` hole is closed (`4a1552442`)
+- 2026-08-31  test(sop): first five tool-auth verdicts — 114 unreviewed to 109 (`a943c9efd`)

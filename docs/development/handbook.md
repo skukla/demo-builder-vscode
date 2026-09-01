@@ -623,8 +623,28 @@ promising an agent that every response parses.
 > `dataInstallerDescriptors.ts` (8) and `statusDescriptors.ts` (4). The suite recomputes
 > the inventory rather than trusting a number.
 >
-> All 114 rows are seeded UNREVIEWED. That is the honest state: the check stops the
-> bleeding today, and `unreviewedCeiling` — which may only fall — is how the pool drains.
+> All 114 rows were seeded UNREVIEWED. That is the honest state: the check stops the
+> bleeding immediately, and `unreviewedCeiling` — which may only fall — is how the pool
+> drains.
+>
+> **THE REVIEW FOUND THREE HANDOFF SHAPES, AND THIS RULE NAMED ONE.** `needsAuth` is
+> the shape for a sign-in an AGENT can drive. It is not the only honest answer:
+>
+> - **`needsUser`** (`src/features/ai/server/handoff.ts`) is the more general form, for
+>   work only a PERSON can finish — the DA.live bookmarklet-and-paste, the IMS browser
+>   login, a GitHub App install approval. Its own docblock says it "generalises" the
+>   `needsAuth` convention. `connect_dalive` is right to use it: no agent can click a
+>   bookmarklet.
+> - **A domain status** — `siteAccessManagerHeadless` returns `{status:'no_credential'}`,
+>   which is structured and deliberately separates "not signed in" from "refused". Its
+>   comment records why: merging the two once sent users to the Debug Logs instead of to
+>   sign-in.
+>
+> So the rule is really *return a structured handoff naming what will fix it*, and
+> `needsAuth` is one of its shapes. Two tools DO breach it: `promote_block_to_library`
+> and `remove_block_from_library` THROW when the DA.live token is missing. The message
+> names the recovery, so an agent is not stranded — but it is an error, which is the one
+> thing the rule asks tools not to do.
 
 > **How to add one.** [mcp-tool-authoring](../../.claude/skills/mcp-tool-authoring/SKILL.md) ·
 > registration is pinned by `tests/features/ai/server/realSdkRegistration.test.ts`.

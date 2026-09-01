@@ -72,9 +72,13 @@ export const toolHandlers = {
  * @param server      An `McpServer` instance (typed `any`; see above).
  * @param projectsDir Absolute path to the projects root (`~/.demo-builder/projects`).
  * @param credentials Optional resolver for DA.live / GitHub tokens, injected by
- *   the in-extension server so the credential-needing tools (`sync_storefront`,
- *   `promote_block_to_library`) use the live sign-in session rather than env
- *   vars. Omitted in vscode-free/file-only contexts (tools fall back to env).
+ *   the in-extension server so the credential-needing tools use the live sign-in
+ *   session rather than env vars. Omitted in vscode-free/file-only contexts.
+ *
+ *   There are THREE, not the two this line used to name: `sync_storefront`,
+ *   `promote_block_to_library` and `remove_block_from_library`. The third was
+ *   missing until the 2026-08-31 tool-auth review read every tool for whether it
+ *   calls `resolveCredentials`.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function registerProjectTools(
