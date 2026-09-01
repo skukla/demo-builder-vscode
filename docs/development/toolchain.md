@@ -280,6 +280,32 @@ a test call it. A generator nobody runs rots exactly like the list it replaced.
 
 ---
 
+## When the mechanical work runs out
+
+Every cast position in this repo was swept on 2026-09-01 and the seam closed: the
+last compiler-verified pass kept zero files, because every remaining cast sits in a
+file that fails for another reason. That is the normal end state, not a failure — and
+it is the point at which the useful artifact changes.
+
+```bash
+node scripts/codemod/loadbearing-worklist.mjs > reports/loadbearing-casts.md
+```
+
+It strips every remaining `as any`/`as never` IN MEMORY, asks the compiler once,
+records what it says, and restores — the working tree is never left modified, and the
+restore runs even if the compiler run throws.
+
+The output is a ranked list of the places where a test and the code genuinely
+disagree, with the compiler's own explanation per line. "1,275 casts" is not a plan;
+253 files ranked by error count, each carrying its reason, is one. The output is
+GITIGNORED on purpose: it is a snapshot that rots as soon as a cast moves, so
+regenerate it rather than reading a stale copy.
+
+Read the disagreement kinds before starting — they are not one job. A fake missing
+members wants a builder; an invented member is a test asserting against something
+that cannot happen; an argument mismatch is the shape that has hidden four production
+defects here.
+
 ## The trustworthy workflow
 
 For any change repeating across more than ~10 sites:

@@ -107,6 +107,11 @@ reports/mutation/*
 
 # jscpd working output for the health snapshot — the numbers are kept in
 # reports/health/history.json; the raw report is regenerated each run.
+# The load-bearing cast worklist is DERIVED — regenerate it, never read a stale copy:
+#   node scripts/codemod/loadbearing-worklist.mjs > reports/loadbearing-casts.md
+# It is a snapshot of what the compiler says today, and it rots the moment a cast
+# moves. The generator is tracked; the output is not.
+reports/loadbearing-casts.md
 reports/health/.jscpd-tests/
 reports/mutation/mutation.json
 reports/mutation/pl22.json
