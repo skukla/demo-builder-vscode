@@ -44,16 +44,16 @@ function createMockExtensionContext(): vscode.ExtensionContext {
             update: jest.fn(),
             keys: jest.fn(() => []),
             setKeysForSync: jest.fn(),
-        } as any,
+        },
         workspaceState: {
             get: jest.fn(),
             update: jest.fn(),
             keys: jest.fn(() => []),
-        } as any,
+        },
         extensionUri: vscode.Uri.file('/mock/extension/path'),
         extensionMode: vscode.ExtensionMode.Test,
         asAbsolutePath: (relativePath: string) => `/mock/extension/path/${relativePath}`,
-        secrets: {} as any,
+        secrets: {},
     } as unknown as vscode.ExtensionContext;
 }
 

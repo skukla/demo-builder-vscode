@@ -8,7 +8,7 @@
 
 import {
     handleGetWorkspaces,
-    handleSelectWorkspace
+    handleSelectWorkspace,
 } from '@/features/authentication/handlers/workspaceHandlers';
 import { HandlerContext } from '@/types/handlers';
 import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
@@ -27,7 +27,7 @@ describe('workspaceHandlers', () => {
         // Mock authentication manager
         mockAuthManager = {
             getCurrentProject: jest.fn(),
-            getWorkspaces: jest.fn()
+            getWorkspaces: jest.fn(),
         };
 
         // Create mock context
@@ -36,26 +36,26 @@ describe('workspaceHandlers', () => {
             logger: createMockLogger(),
             debugLogger: {
                 trace: jest.fn(),
-                debug: jest.fn()
-            } as any,
+                debug: jest.fn(),
+            },
             sendMessage: jest.fn().mockResolvedValue(undefined),
             sharedState: {
-                isAuthenticating: false
-            }
+                isAuthenticating: false,
+            },
         } as any;
     });
 
     describe('handleGetWorkspaces', () => {
         const mockWorkspaces = [
             { id: 'ws-1', name: 'Production', title: 'Production Workspace' },
-            { id: 'ws-2', name: 'Stage', title: 'Staging Workspace' }
+            { id: 'ws-2', name: 'Stage', title: 'Staging Workspace' },
         ];
 
         it('should fetch workspaces successfully', async () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-123',
                 name: 'Test Project',
-                title: 'Test Project'
+                title: 'Test Project',
             });
             mockAuthManager.getWorkspaces.mockResolvedValue(mockWorkspaces);
 
@@ -70,7 +70,7 @@ describe('workspaceHandlers', () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-123',
                 name: 'Test Project',
-                title: 'Test Project Title'
+                title: 'Test Project Title',
             });
             mockAuthManager.getWorkspaces.mockResolvedValue(mockWorkspaces);
 
@@ -79,14 +79,14 @@ describe('workspaceHandlers', () => {
             expect(mockContext.sendMessage).toHaveBeenCalledWith('workspace-loading-status', {
                 isLoading: true,
                 message: 'Loading workspaces...',
-                subMessage: 'Fetching from project: Test Project Title'
+                subMessage: 'Fetching from project: Test Project Title',
             });
         });
 
         it('should use project name if title is not available', async () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-123',
-                name: 'Test Project'
+                name: 'Test Project',
             });
             mockAuthManager.getWorkspaces.mockResolvedValue(mockWorkspaces);
 
@@ -95,7 +95,7 @@ describe('workspaceHandlers', () => {
             expect(mockContext.sendMessage).toHaveBeenCalledWith('workspace-loading-status', {
                 isLoading: true,
                 message: 'Loading workspaces...',
-                subMessage: 'Fetching from project: Test Project'
+                subMessage: 'Fetching from project: Test Project',
             });
         });
 
@@ -103,7 +103,7 @@ describe('workspaceHandlers', () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-123',
                 name: 'Test Project',
-                title: 'Test Project'
+                title: 'Test Project',
             });
             mockAuthManager.getWorkspaces.mockResolvedValue([]);
 
@@ -117,7 +117,7 @@ describe('workspaceHandlers', () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-123',
                 name: 'Test Project',
-                title: 'Test Project'
+                title: 'Test Project',
             });
 
             mockAuthManager.getWorkspaces.mockRejectedValue(
@@ -139,7 +139,7 @@ describe('workspaceHandlers', () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-123',
                 name: 'Test Project',
-                title: 'Test Project'
+                title: 'Test Project',
             });
 
             const error = new Error('Network error');
@@ -159,13 +159,13 @@ describe('workspaceHandlers', () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-123',
                 name: 'Test Project',
-                title: 'Test Project'
+                title: 'Test Project',
             });
             mockAuthManager.getWorkspaces.mockResolvedValue(mockWorkspaces);
 
             const result = await handleGetWorkspaces(mockContext, {
                 orgId: 'org-123',
-                projectId: 'proj-123'
+                projectId: 'proj-123',
             });
 
             expect(result.success).toBe(true);
@@ -198,13 +198,16 @@ describe('workspaceHandlers', () => {
         it('should accept the workspace selection without mutating the aio global', async () => {
             const workspaceId = 'ws-123';
 
-            const result = await handleSelectWorkspace(mockContext, { workspaceId, projectId: 'proj-123' });
+            const result = await handleSelectWorkspace(mockContext, {
+                workspaceId,
+                projectId: 'proj-123',
+            });
 
             expect(result.success).toBe(true);
             // Phase 4a: the selection lives in webview state and is threaded
             // per-op; the handler does not mutate the shared `aio` global.
             expect(mockContext.sendMessage).toHaveBeenCalledWith('workspaceSelected', {
-                workspaceId
+                workspaceId,
             });
         });
 
@@ -236,7 +239,10 @@ describe('workspaceHandlers', () => {
         it('should handle special characters in workspace ID', async () => {
             const workspaceId = 'ws-123-prod';
 
-            const result = await handleSelectWorkspace(mockContext, { workspaceId, projectId: 'proj-123' });
+            const result = await handleSelectWorkspace(mockContext, {
+                workspaceId,
+                projectId: 'proj-123',
+            });
 
             expect(result.success).toBe(true);
             expect(validateWorkspaceId).toHaveBeenCalledWith(workspaceId);
@@ -245,7 +251,10 @@ describe('workspaceHandlers', () => {
         it('should handle very long workspace IDs', async () => {
             const workspaceId = 'ws-' + 'a'.repeat(100);
 
-            const result = await handleSelectWorkspace(mockContext, { workspaceId, projectId: 'proj-123' });
+            const result = await handleSelectWorkspace(mockContext, {
+                workspaceId,
+                projectId: 'proj-123',
+            });
 
             expect(result.success).toBe(true);
         });
@@ -279,13 +288,13 @@ describe('workspaceHandlers', () => {
         it('should handle complete workspace selection flow', async () => {
             const mockWorkspaces = [
                 { id: 'ws-1', name: 'Production', title: 'Production' },
-                { id: 'ws-2', name: 'Stage', title: 'Stage' }
+                { id: 'ws-2', name: 'Stage', title: 'Stage' },
             ];
 
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-123',
                 name: 'Test Project',
-                title: 'Test Project'
+                title: 'Test Project',
             });
             mockAuthManager.getWorkspaces.mockResolvedValue(mockWorkspaces);
 
@@ -309,10 +318,10 @@ describe('workspaceHandlers', () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-1',
                 name: 'Project 1',
-                title: 'Project 1'
+                title: 'Project 1',
             });
             mockAuthManager.getWorkspaces.mockResolvedValue([
-                { id: 'ws-1', name: 'WS1', title: 'WS1' }
+                { id: 'ws-1', name: 'WS1', title: 'WS1' },
             ]);
 
             await handleGetWorkspaces(mockContext);
@@ -321,17 +330,15 @@ describe('workspaceHandlers', () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-2',
                 name: 'Project 2',
-                title: 'Project 2'
+                title: 'Project 2',
             });
             mockAuthManager.getWorkspaces.mockResolvedValue([
-                { id: 'ws-2', name: 'WS2', title: 'WS2' }
+                { id: 'ws-2', name: 'WS2', title: 'WS2' },
             ]);
 
             const result = await handleGetWorkspaces(mockContext);
 
-            expect(result.data).toEqual([
-                { id: 'ws-2', name: 'WS2', title: 'WS2' }
-            ]);
+            expect(result.data).toEqual([{ id: 'ws-2', name: 'WS2', title: 'WS2' }]);
         });
     });
 
@@ -340,7 +347,7 @@ describe('workspaceHandlers', () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-123',
                 name: 'Test Project',
-                title: 'Test Project'
+                title: 'Test Project',
             });
             mockAuthManager.getWorkspaces.mockRejectedValue(
                 new Error('Request timed out. Please check your connection and try again.')
@@ -360,7 +367,7 @@ describe('workspaceHandlers', () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-123',
                 name: 'Test Project',
-                title: 'Test Project'
+                title: 'Test Project',
             });
             mockAuthManager.getWorkspaces.mockRejectedValue(new Error('Some other error'));
 
@@ -375,7 +382,7 @@ describe('workspaceHandlers', () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-123',
                 name: 'Test Project',
-                title: 'Test Project'
+                title: 'Test Project',
             });
             mockAuthManager.getWorkspaces.mockResolvedValue(null as any);
 
@@ -390,7 +397,7 @@ describe('workspaceHandlers', () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-123',
                 name: 'Test Project',
-                title: 'Test Project'
+                title: 'Test Project',
             });
             mockAuthManager.getWorkspaces.mockResolvedValue(undefined as any);
 
@@ -415,16 +422,16 @@ describe('workspaceHandlers', () => {
             mockAuthManager.getCurrentProject.mockResolvedValue({
                 id: 'proj-123',
                 name: 'Test Project',
-                title: 'Test Project'
+                title: 'Test Project',
             });
             mockAuthManager.getWorkspaces.mockResolvedValue([
-                { id: 'ws-1', name: 'WS1', title: 'WS1' }
+                { id: 'ws-1', name: 'WS1', title: 'WS1' },
             ]);
 
             // Fetch workspaces concurrently
             const [result1, result2] = await Promise.all([
                 handleGetWorkspaces(mockContext),
-                handleGetWorkspaces(mockContext)
+                handleGetWorkspaces(mockContext),
             ]);
 
             expect(result1.success).toBe(true);
@@ -438,12 +445,15 @@ describe('workspaceHandlers', () => {
             const workspaceId = 'ws-123';
             (validateWorkspaceId as jest.Mock).mockImplementation(() => {});
 
-            const result = await handleSelectWorkspace(mockContext, { workspaceId, projectId: 'proj-123' });
+            const result = await handleSelectWorkspace(mockContext, {
+                workspaceId,
+                projectId: 'proj-123',
+            });
 
             // Phase 4a: selection is webview state; no shared `aio` global mutation.
             expect(result.success).toBe(true);
             expect(mockContext.sendMessage).toHaveBeenCalledWith('workspaceSelected', {
-                workspaceId
+                workspaceId,
             });
         });
     });

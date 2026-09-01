@@ -35,7 +35,9 @@ export interface TestSetup {
  * that omits a context field may be expressing something, and a canonical
  * fixture that fills every gap with a truthy empty object is not neutral.
  */
-export function createProjectCreationContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
+export function createProjectCreationContext(
+    overrides?: Partial<HandlerContext>
+): jest.Mocked<HandlerContext> {
     return {
         sendMessage: jest.fn().mockResolvedValue(undefined),
         logger: createMockLogger(),
@@ -44,13 +46,13 @@ export function createProjectCreationContext(overrides?: Partial<HandlerContext>
                 get: jest.fn().mockReturnValue(false),
                 update: jest.fn().mockResolvedValue(undefined),
             },
-        } as any,
+        },
         stateManager: {
             getAllProjects: jest.fn().mockResolvedValue([]) as jest.MockedFunction<any>,
             getCurrentProject: jest.fn().mockResolvedValue(undefined) as jest.MockedFunction<any>,
             saveProject: jest.fn().mockResolvedValue(undefined) as jest.MockedFunction<any>,
             clearProject: jest.fn().mockResolvedValue(undefined) as jest.MockedFunction<any>,
-        } as any,
+        },
         sharedState: {
             projectCreationAbortController: undefined,
             meshCreatedForWorkspace: undefined,

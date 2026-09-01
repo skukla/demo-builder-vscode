@@ -69,7 +69,7 @@ describe('Project Creation - Create Handler - Validation', () => {
         it('should reject non-string project name', async () => {
             await expect(
                 handleCreateProject(mockContext, {
-                    projectName: 123 as any,
+                    projectName: 123,
                 })
             ).rejects.toThrow('projectName must be a string');
 
@@ -220,15 +220,15 @@ describe('Project Creation - Create Handler - Validation', () => {
 
     describe('edge cases', () => {
         it('should handle missing projectName', async () => {
-            await expect(
-                handleCreateProject(mockContext, {})
-            ).rejects.toThrow('projectName must be a string');
+            await expect(handleCreateProject(mockContext, {})).rejects.toThrow(
+                'projectName must be a string'
+            );
         });
 
         it('should handle null projectName', async () => {
-            await expect(
-                handleCreateProject(mockContext, { projectName: null })
-            ).rejects.toThrow('projectName must be a string');
+            await expect(handleCreateProject(mockContext, { projectName: null })).rejects.toThrow(
+                'projectName must be a string'
+            );
         });
 
         it('should handle empty projectName', async () => {
@@ -251,12 +251,8 @@ describe('Project Creation - Create Handler - Validation', () => {
             (executor.executeProjectCreation as jest.Mock).mockImplementation(
                 () => new Promise((resolve) => setTimeout(resolve, 65000))
             );
-            (promiseUtils.withTimeout as jest.Mock).mockImplementation(
-                async (promise) => promise
-            );
-            (executor.executeProjectCreation as jest.Mock).mockRejectedValue(
-                new Error('Failed')
-            );
+            (promiseUtils.withTimeout as jest.Mock).mockImplementation(async (promise) => promise);
+            (executor.executeProjectCreation as jest.Mock).mockRejectedValue(new Error('Failed'));
 
             await handleCreateProject(mockContext, {
                 projectName: 'test-project',

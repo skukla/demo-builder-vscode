@@ -6,33 +6,35 @@
  * - handleOpenAdobeConsole: Opens Adobe Developer Console
  */
 
-import {
-    handleLog,
-} from '@/features/project-creation/handlers/wizardLifecycleHandlers';
+import { handleLog } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 import { HandlerContext as _HandlerContext } from '@/types/handlers';
 import { createWizardLifecycleContext } from './wizardLifecycleHandlers.testUtils';
 
 // Mock vscode inline to avoid hoisting issues
-jest.mock('vscode', () => ({
-    Uri: {
-        file: jest.fn((path: string) => ({ fsPath: path, path })),
-        parse: jest.fn((uri: string) => ({ fsPath: uri, path: uri }))
-    },
-    window: {
-        showErrorMessage: jest.fn(),
-        showInformationMessage: jest.fn(),
-        showWarningMessage: jest.fn()
-    },
-    workspace: {
-        updateWorkspaceFolders: jest.fn()
-    },
-    commands: {
-        executeCommand: jest.fn()
-    },
-    env: {
-        openExternal: jest.fn()
-    }
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        Uri: {
+            file: jest.fn((path: string) => ({ fsPath: path, path })),
+            parse: jest.fn((uri: string) => ({ fsPath: uri, path: uri })),
+        },
+        window: {
+            showErrorMessage: jest.fn(),
+            showInformationMessage: jest.fn(),
+            showWarningMessage: jest.fn(),
+        },
+        workspace: {
+            updateWorkspaceFolders: jest.fn(),
+        },
+        commands: {
+            executeCommand: jest.fn(),
+        },
+        env: {
+            openExternal: jest.fn(),
+        },
+    }),
+    { virtual: true }
+);
 describe('lifecycleHandlers - Utilities', () => {
     let mockContext: any;
 
@@ -45,7 +47,7 @@ describe('lifecycleHandlers - Utilities', () => {
         it('should log error messages', async () => {
             const result = await handleLog(mockContext, {
                 level: 'error',
-                message: 'Test error message'
+                message: 'Test error message',
             });
 
             expect(result.success).toBe(true);
@@ -55,7 +57,7 @@ describe('lifecycleHandlers - Utilities', () => {
         it('should log warning messages', async () => {
             const result = await handleLog(mockContext, {
                 level: 'warn',
-                message: 'Test warning'
+                message: 'Test warning',
             });
 
             expect(result.success).toBe(true);
@@ -65,7 +67,7 @@ describe('lifecycleHandlers - Utilities', () => {
         it('should log debug messages', async () => {
             const result = await handleLog(mockContext, {
                 level: 'debug',
-                message: 'Test debug info'
+                message: 'Test debug info',
             });
 
             expect(result.success).toBe(true);
@@ -75,7 +77,7 @@ describe('lifecycleHandlers - Utilities', () => {
         it('should log info messages by default', async () => {
             const result = await handleLog(mockContext, {
                 level: 'info',
-                message: 'Test info message'
+                message: 'Test info message',
             });
 
             expect(result.success).toBe(true);
@@ -84,13 +86,14 @@ describe('lifecycleHandlers - Utilities', () => {
 
         it('should handle unknown log levels as info', async () => {
             const result = await handleLog(mockContext, {
-                level: 'unknown' as any,
-                message: 'Unknown level message'
+                level: 'unknown',
+                message: 'Unknown level message',
             });
 
             expect(result.success).toBe(true);
-            expect(mockContext.logger.debug).toHaveBeenCalledWith('[Webview] Unknown level message');
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
+                '[Webview] Unknown level message'
+            );
         });
     });
-
 });

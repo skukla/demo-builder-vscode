@@ -51,9 +51,9 @@ describe('handleDeleteApiMesh — org targeting', () => {
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
         mockContext = {
-            context: { globalStorageUri: { fsPath: '/tmp/test-storage' } } as any,
+            context: { globalStorageUri: { fsPath: '/tmp/test-storage' } },
             logger: createMockLogger(),
-            debugLogger: { trace: jest.fn(), debug: jest.fn() } as any,
+            debugLogger: { trace: jest.fn(), debug: jest.fn() },
             stateManager: {
                 getCurrentProject: jest.fn().mockResolvedValue({
                     adobe: {
@@ -62,8 +62,8 @@ describe('handleDeleteApiMesh — org targeting', () => {
                         workspace: 'project-workspace-id',
                     },
                 }),
-            } as any,
-            sharedState: {} as any,
+            },
+            sharedState: {},
         } as any;
     });
 

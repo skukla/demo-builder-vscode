@@ -66,12 +66,12 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                 globalStorageUri: {
                     fsPath: '/tmp/test-storage',
                 },
-            } as any,
+            },
             logger: createMockLogger(),
             debugLogger: {
                 trace: jest.fn(),
                 debug: jest.fn(),
-            } as any,
+            },
             stateManager: {
                 getCurrentProject: jest.fn().mockResolvedValue({
                     adobe: {
@@ -80,8 +80,8 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                         workspaceId: 'test-workspace-id',
                     },
                 }),
-            } as any,
-            authManager: {} as any,
+            },
+            authManager: {},
             sharedState: {
                 apiServicesConfig: {
                     services: {
@@ -94,7 +94,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                         },
                     },
                 },
-            } as any,
+            },
         } as any;
     });
 

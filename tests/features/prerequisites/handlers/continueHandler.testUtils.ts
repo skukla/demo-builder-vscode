@@ -30,7 +30,10 @@ export * as shared from '@/features/prerequisites/handlers/shared';
 export { ServiceLocator } from '@/core/di/serviceLocator';
 
 import { HandlerContext } from '@/types/handlers';
-import { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
+import {
+    PrerequisiteDefinition,
+    PrerequisiteStatus,
+} from '@/features/prerequisites/services/types';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
@@ -40,7 +43,7 @@ export const mockNodePrereq: PrerequisiteDefinition = {
     name: 'Node.js',
     description: 'JavaScript runtime',
     check: { command: 'node --version' },
-} as any;
+};
 
 export const mockNpmPrereq: PrerequisiteDefinition = {
     id: 'npm',
@@ -48,7 +51,7 @@ export const mockNpmPrereq: PrerequisiteDefinition = {
     description: 'Package manager',
     depends: ['node'],
     check: { command: 'npm --version' },
-} as any;
+};
 
 export const mockAdobeCliPrereq: PrerequisiteDefinition = {
     id: 'adobe-cli',
@@ -56,7 +59,7 @@ export const mockAdobeCliPrereq: PrerequisiteDefinition = {
     description: 'Adobe I/O command-line tool',
     perNodeVersion: true,
     check: { command: 'aio --version', parseVersion: '@adobe/aio-cli/(\\S+)' },
-} as any;
+};
 
 export const mockNodeResult: PrerequisiteStatus = {
     id: 'node',
@@ -80,7 +83,9 @@ export const mockNpmResult: PrerequisiteStatus = {
 
 // Helper to create mock HandlerContext
 // CRITICAL: Return a function, not the object directly, to avoid closure issues
-export function createContinueHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
+export function createContinueHandlerContext(
+    overrides?: Partial<HandlerContext>
+): jest.Mocked<HandlerContext> {
     const states = new Map();
     states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
     states.set(1, { prereq: mockNpmPrereq, result: mockNpmResult });
@@ -92,19 +97,19 @@ export function createContinueHandlerContext(overrides?: Partial<HandlerContext>
                 { version: 'Node 18', component: 'v18.0.0', installed: true },
                 { version: 'Node 20', component: 'v20.0.0', installed: true },
             ]),
-        } as any,
+        },
         sendMessage: jest.fn().mockResolvedValue(undefined),
         logger: createMockLogger(),
         debugLogger: {
             debug: jest.fn(),
-        } as any,
+        },
         stepLogger: {
             log: jest.fn(),
-        } as any,
+        },
         sharedState: {
             currentPrerequisites: [mockNodePrereq, mockNpmPrereq],
             currentPrerequisiteStates: states,
         },
         ...overrides,
-    } as never)
+    } as never);
 }
