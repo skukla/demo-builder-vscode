@@ -32,21 +32,23 @@ export interface SelectionCheckProps {
  * @param props - `corner` placement + optional `testId`
  * @returns the check element
  */
-export const SelectionCheck: React.FC<SelectionCheckProps> = ({ corner = false, testId }) => (
-    <span
-        className={cn('selection-check', corner && 'selection-check-corner')}
-        aria-hidden="true"
-        data-testid={testId}
-    >
-        <svg viewBox="0 0 12 12" width="14" height="14" focusable="false">
-            <path
-                d="M2 6.2 4.6 9 10 3"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    </span>
-);
+export function SelectionCheck({ corner = false, testId }: SelectionCheckProps) {
+    return (
+        <span
+            className={cn('selection-check', corner && 'selection-check-corner')}
+            aria-hidden="true"
+            data-testid={testId}
+        >
+            <svg viewBox="0 0 12 12" width="14" height="14" focusable="false">
+                <path
+                    d="M2 6.2 4.6 9 10 3"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
+            </svg>
+        </span>
+    );
+}

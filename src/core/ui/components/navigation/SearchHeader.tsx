@@ -230,7 +230,7 @@ function computeDisplayValues(props: SearchHeaderProps) {
     };
 }
 
-export const SearchHeader: React.FC<SearchHeaderProps> = (props) => {
+export function SearchHeader(props: SearchHeaderProps) {
     const {
         searchQuery,
         onSearchQueryChange,
@@ -285,4 +285,4 @@ export const SearchHeader: React.FC<SearchHeaderProps> = (props) => {
             )}
         </div>
     );
-};
+}

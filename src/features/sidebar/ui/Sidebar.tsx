@@ -56,7 +56,7 @@ export interface SidebarProps {
 /**
  * Sidebar — single centered group: AiZone above UtilityBar.
  */
-export const Sidebar: React.FC<SidebarProps> = ({
+export function Sidebar({
     context: _context,
     onNavigate: _onNavigate,
     onBack: _onBack,
@@ -73,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenDashboard: _onOpenDashboard,
     onOpenConfigure: _onOpenConfigure,
     onCheckUpdates: _onCheckUpdates,
-}) => {
+}: SidebarProps) {
     const showAiZone = onOpenAiChat && onShowPrompts;
     return (
         <Flex
@@ -107,4 +107,4 @@ export const Sidebar: React.FC<SidebarProps> = ({
             />
         </Flex>
     );
-};
+}

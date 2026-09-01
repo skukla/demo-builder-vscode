@@ -16,22 +16,30 @@ import { ChoiceCard } from './ChoiceCard';
 import type { BlockLibrary, CustomBlockLibrary } from '@/types/blockLibraries';
 
 /** One block-library selection card (a multi-select toggle; disabled = locked native). */
-const LibraryCard: React.FC<{
+function LibraryCard({
+    name,
+    description,
+    selected,
+    disabled = false,
+    onToggle,
+}: {
     name: string;
     description: string;
     selected: boolean;
     disabled?: boolean;
     onToggle?: (next: boolean) => void;
-}> = ({ name, description, selected, disabled = false, onToggle }) => (
-    <ChoiceCard
-        name={name}
-        description={description}
-        selected={selected}
-        disabled={disabled}
-        pressed={selected}
-        onSelect={onToggle ? () => onToggle(!selected) : undefined}
-    />
-);
+}) {
+    return (
+        <ChoiceCard
+            name={name}
+            description={description}
+            selected={selected}
+            disabled={disabled}
+            pressed={selected}
+            onSelect={onToggle ? () => onToggle(!selected) : undefined}
+        />
+    );
+}
 
 export interface BlockLibrariesStepContentProps {
     nativeBlockLibraries: BlockLibrary[];
@@ -44,7 +52,7 @@ export interface BlockLibrariesStepContentProps {
     onOpenCustomSettings: () => void;
 }
 
-export const BlockLibrariesStepContent: React.FC<BlockLibrariesStepContentProps> = ({
+export function BlockLibrariesStepContent({
     nativeBlockLibraries,
     availableBlockLibraries,
     selectedBlockLibraries,
@@ -53,58 +61,60 @@ export const BlockLibrariesStepContent: React.FC<BlockLibrariesStepContentProps>
     customBlockLibraries,
     onCustomLibraryToggle,
     onOpenCustomSettings,
-}) => (
-    <>
-        <Text UNSAFE_className="description-block">
-            Which block libraries should be included?
-        </Text>
-        <div className="choice-grid" role="group" aria-label="Block libraries">
-            {nativeBlockLibraries.map((lib) => (
-                <LibraryCard
-                    key={lib.id}
-                    name={lib.name}
-                    description="Included with your storefront"
-                    selected
-                    disabled
-                />
-            ))}
-            {availableBlockLibraries.map((lib) => (
-                <LibraryCard
-                    key={lib.id}
-                    name={lib.name}
-                    description={lib.description}
-                    selected={selectedBlockLibraries.includes(lib.id)}
-                    onToggle={(next) => onBlockLibraryToggle(lib.id, next)}
-                />
-            ))}
-        </div>
+}: BlockLibrariesStepContentProps) {
+    return (
+        <>
+            <Text UNSAFE_className="description-block">
+                Which block libraries should be included?
+            </Text>
+            <div className="choice-grid" role="group" aria-label="Block libraries">
+                {nativeBlockLibraries.map((lib) => (
+                    <LibraryCard
+                        key={lib.id}
+                        name={lib.name}
+                        description="Included with your storefront"
+                        selected
+                        disabled
+                    />
+                ))}
+                {availableBlockLibraries.map((lib) => (
+                    <LibraryCard
+                        key={lib.id}
+                        name={lib.name}
+                        description={lib.description}
+                        selected={selectedBlockLibraries.includes(lib.id)}
+                        onToggle={(next) => onBlockLibraryToggle(lib.id, next)}
+                    />
+                ))}
+            </div>
 
-        {/* Custom block libraries from VS Code settings */}
-        {customBlockLibraryDefaults.length > 0 && (
-            <>
-                <Divider size="S" marginTop="size-300" marginBottom="size-200" />
-                <Text UNSAFE_className="description-block-sm">Custom Libraries</Text>
-                <div className="choice-grid" role="group" aria-label="Custom block libraries">
-                    {customBlockLibraryDefaults.map((lib) => (
-                        <LibraryCard
-                            key={`${lib.source.owner}/${lib.source.repo}`}
-                            name={lib.name}
-                            description={`${lib.source.owner}/${lib.source.repo}`}
-                            selected={customBlockLibraries.some(
-                                (c) =>
-                                    c.source.owner === lib.source.owner &&
-                                    c.source.repo === lib.source.repo,
-                            )}
-                            onToggle={(next) => onCustomLibraryToggle(lib, next)}
-                        />
-                    ))}
-                </div>
-                <div className="settings-link">
-                    <Link isQuiet onPress={onOpenCustomSettings}>
-                        Configure custom libraries in Settings
-                    </Link>
-                </div>
-            </>
-        )}
-    </>
-);
+            {/* Custom block libraries from VS Code settings */}
+            {customBlockLibraryDefaults.length > 0 && (
+                <>
+                    <Divider size="S" marginTop="size-300" marginBottom="size-200" />
+                    <Text UNSAFE_className="description-block-sm">Custom Libraries</Text>
+                    <div className="choice-grid" role="group" aria-label="Custom block libraries">
+                        {customBlockLibraryDefaults.map((lib) => (
+                            <LibraryCard
+                                key={`${lib.source.owner}/${lib.source.repo}`}
+                                name={lib.name}
+                                description={`${lib.source.owner}/${lib.source.repo}`}
+                                selected={customBlockLibraries.some(
+                                    (c) =>
+                                        c.source.owner === lib.source.owner &&
+                                        c.source.repo === lib.source.repo,
+                                )}
+                                onToggle={(next) => onCustomLibraryToggle(lib, next)}
+                            />
+                        ))}
+                    </div>
+                    <div className="settings-link">
+                        <Link isQuiet onPress={onOpenCustomSettings}>
+                            Configure custom libraries in Settings
+                        </Link>
+                    </div>
+                </>
+            )}
+        </>
+    );
+}

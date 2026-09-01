@@ -43,12 +43,12 @@ export interface ProjectCardProps {
  *
  * Layout: Gray-50 base with gray-75 hover, lift animation, and uppercase status
  */
-export const ProjectCard: React.FC<ProjectCardProps> = ({
+export function ProjectCard({
     project,
     isRunning = false,
     onSelect,
     actions = {},
-}) => {
+}: ProjectCardProps) {
     const { handleClick, handleKeyDown } = useProjectSelectHandlers(project, onSelect);
 
     const brandStackSummary = useMemo(() => getBrandStackSummary(project), [project]);
@@ -65,7 +65,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     // project at rest has no runtime line, and a project with nothing deployed has
     // no deployment line. Joining what exists keeps the spoken label matching the
     // visible card instead of hard-coding a slot that may be empty.
-    const ariaLabel = [getProjectDisplayName(project), runtime?.text, deployment?.text, brandStackSummary]
+    const ariaLabel = [
+        getProjectDisplayName(project),
+        runtime?.text,
+        deployment?.text,
+        brandStackSummary,
+    ]
         .filter(Boolean)
         .join(', ');
 
@@ -153,4 +158,4 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             )}
         </div>
     );
-};
+}

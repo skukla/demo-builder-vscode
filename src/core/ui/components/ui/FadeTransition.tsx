@@ -15,12 +15,7 @@ export interface FadeTransitionProps {
  * Simple fade transition wrapper using CSS transitions.
  * Fades content in/out based on the `show` prop.
  */
-export const FadeTransition: React.FC<FadeTransitionProps> = ({
-    show,
-    duration = 200,
-    children,
-    className,
-}) => {
+export function FadeTransition({ show, duration = 200, children, className }: FadeTransitionProps) {
     const [shouldRender, setShouldRender] = useState(show);
 
     useEffect(() => {
@@ -49,5 +44,4 @@ export const FadeTransition: React.FC<FadeTransitionProps> = ({
             {children}
         </div>
     );
-};
-
+}

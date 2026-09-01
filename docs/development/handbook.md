@@ -885,6 +885,23 @@ check says so and names the file.
 > also a production function, so every handler test calling the real one looked like a
 > consumer of the fake.
 
+> **Convention.** A component is declared ONE way: `function Name(props: NameProps)`.
+> `React.FC` is banned.
+> *Why:* the repo had both — 98 files as plain functions, 31 as `React.FC` — and two
+> ways of doing one thing is what a convention exists to stop. Both compile and both
+> work; the cost is that every reader holds two shapes, every example has a dialect,
+> and a new component copies whichever neighbour it landed beside.
+>
+> The plain function won on numbers before it won on merit. On merit: `React.FC` used
+> to add an implicit `children` prop, which React 18's types dropped and which is most
+> of why it fell out of favour; it pins the return type; and it obstructs generic
+> components. Nothing here needs what it offers.
+>
+> **`React.memo(...)` is unaffected.** Memoisation is a per-component performance
+> decision, not a house style, and five components use it correctly.
+> Enforced by `tests/sop/one-component-form.test.ts`; the corpus was emptied by
+> `scripts/codemod/react-fc-to-function.mjs` (37 sites, 33 files).
+
 > **Convention.** PRODUCTION erases no types. `as any` and `as never` are banned in
 > `src/` outright.
 > *Why:* `src/` was already at zero when this was adopted, so the ban cost nothing —
@@ -971,11 +988,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 33 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 34 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 74 conventions. 73 of them are enforced; 1 is not.**
+**This handbook states 75 conventions. 74 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

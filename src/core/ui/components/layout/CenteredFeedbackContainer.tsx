@@ -85,12 +85,12 @@ export interface CenteredFeedbackContainerProps {
  * </CenteredFeedbackContainer>
  * ```
  */
-const CenteredFeedbackContainerComponent: React.FC<CenteredFeedbackContainerProps> = ({
+function CenteredFeedbackContainerComponent({
     children,
     height = '350px',
     maxWidth,
     fill = false,
-}) => {
+}: CenteredFeedbackContainerProps) {
     return (
         <Flex
             direction="column"
@@ -103,7 +103,7 @@ const CenteredFeedbackContainerComponent: React.FC<CenteredFeedbackContainerProp
             {children}
         </Flex>
     );
-};
+}
 
 CenteredFeedbackContainerComponent.displayName = 'CenteredFeedbackContainer';
 

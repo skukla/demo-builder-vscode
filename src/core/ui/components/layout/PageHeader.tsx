@@ -71,7 +71,7 @@ export interface PageHeaderProps {
  * - Flex layout with title/subtitle on left, action on right
  * - Optional width constraint for centered content
  */
-export const PageHeader: React.FC<PageHeaderProps> = ({
+export function PageHeader({
     title,
     subtitle,
     description,
@@ -80,7 +80,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     backButton,
     constrainWidth = false,
     className,
-}) => {
+}: PageHeaderProps) {
     // One tight single row: [back?] title · subtitle crumb … [action]. A description or
     // status renders as an optional secondary line only when supplied. This reclaimed
     // density is the canonical header for every screen — the page context (a left rail
@@ -130,4 +130,4 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             {constrainWidth ? <div className="page-container">{headerContent}</div> : headerContent}
         </View>
     );
-};
+}

@@ -27,17 +27,14 @@ export interface ProjectsGridProps {
 /**
  * ProjectsGrid - Displays projects in a responsive grid layout
  */
-export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
+export function ProjectsGrid({
     projects,
     runningProjectPath,
     onSelectProject,
     actions = {},
-}) => {
+}: ProjectsGridProps) {
     return (
-        <div
-            data-testid="projects-grid"
-            className="projects-grid"
-        >
+        <div data-testid="projects-grid" className="projects-grid">
             {projects.map((project) => (
                 <ProjectCard
                     key={project.path}
@@ -49,4 +46,4 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
             ))}
         </div>
     );
-};
+}

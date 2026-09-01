@@ -25,12 +25,7 @@ export interface StatusDotProps {
  * <StatusDot variant="error" size={10} />
  * ```
  */
-export const StatusDot: React.FC<StatusDotProps> = ({
-    variant,
-    size = 8,
-    className,
-    testId,
-}) => {
+export function StatusDot({ variant, size = 8, className, testId }: StatusDotProps) {
     // Each variant resolves to a design token WITH a literal fallback. The
     // fallback is load-bearing, not cosmetic: the `--db-*` tokens live in
     // `tokens.css` (reached via an `@import`), and when that token doesn't
@@ -90,4 +85,4 @@ export const StatusDot: React.FC<StatusDotProps> = ({
             data-testid={testId}
         />
     );
-};
+}

@@ -46,14 +46,14 @@ export interface GridLayoutProps {
  * </GridLayout>
  * ```
  */
-export const GridLayout: React.FC<GridLayoutProps> = ({
+export function GridLayout({
     children,
     columns = 2,
     gap = 'size-300',
     maxWidth,
     padding,
     className,
-}) => {
+}: GridLayoutProps) {
     // SOP §11: Static styles use utility classes, dynamic styles stay inline
     const containerClasses = ['grid', 'w-full', className].filter(Boolean).join(' ');
 
@@ -70,4 +70,4 @@ export const GridLayout: React.FC<GridLayoutProps> = ({
             {children}
         </div>
     );
-};
+}
