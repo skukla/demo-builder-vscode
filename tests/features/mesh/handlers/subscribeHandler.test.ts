@@ -10,11 +10,16 @@
 import { handleEnsureMeshApiSubscribed } from '@/features/mesh/handlers/subscribeHandler';
 import { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
+import {
+    validateOrgId,
+    validateProjectId,
+    validateWorkspaceId,
+} from '@/core/validation/validators/AdobeResourceValidator';
 import { ensureAuthenticated } from '@/features/mesh/handlers/shared';
 import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 jest.mock('@/core/di/serviceLocator');
 jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
@@ -64,10 +69,10 @@ describe('handleEnsureMeshApiSubscribed', () => {
         mockAuthService = { getCachedOrganization: jest.fn() };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthService);
 
-        mockContext = {
+        mockContext = createMockHandlerContext({
             logger: createMockLogger(),
             sendMessage: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext;
+        });
     });
 
     it('should return MESH_CONFIG_INVALID when workspaceId is invalid', async () => {

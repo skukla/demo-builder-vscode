@@ -19,7 +19,7 @@ export function createSidebarProject(overrides?: Partial<Project>): Project {
         status: 'stopped',
         organization: 'Test Org',
         ...overrides,
-    } as never)
+    })
 }
 
 /**

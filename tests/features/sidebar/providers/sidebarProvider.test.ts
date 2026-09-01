@@ -105,7 +105,7 @@ describe('SidebarProvider', () => {
             subscriptions: [],
             globalState: {
                 get: jest.fn((key: string, defaultValue?: unknown) =>
-                    key in globalStateStore ? globalStateStore[key] : defaultValue,
+                    key in globalStateStore ? globalStateStore[key] : defaultValue
                 ),
                 update: jest.fn(async (key: string, value: unknown) => {
                     globalStateStore[key] = value;
@@ -121,11 +121,7 @@ describe('SidebarProvider', () => {
         // Create mock logger
         mockLogger = createMockLogger();
 
-        provider = new SidebarProvider(
-            mockContext,
-            mockStateManager as any,
-            mockLogger as any
-        );
+        provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
     });
 
     afterEach(() => {
@@ -254,22 +250,23 @@ describe('SidebarProvider', () => {
             await messageHandler({ type: 'navigate', payload: { target: 'projects' } });
 
             // Navigation is logged
-            expect(mockLogger.info).toHaveBeenCalledWith(
-                expect.stringContaining('navigate')
-            );
+            expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('navigate'));
         });
 
         it('routes openAiChat to demoBuilder.openAiExperience', async () => {
             await messageHandler({ type: 'openAiChat' });
 
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openAiExperience');
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder.openAiExperience'
+            );
         });
-
 
         it('routes showPrompts to demoBuilder.showPromptsPicker', async () => {
             await messageHandler({ type: 'showPrompts' });
 
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.showPromptsPicker');
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+                'demoBuilder.showPromptsPicker'
+            );
         });
 
         it('routes openLogs to the toggleLogsPanel chokepoint (toggle, not show)', async () => {
@@ -303,11 +300,7 @@ describe('SidebarProvider', () => {
 
         it('should not throw when webview is not available', async () => {
             // Create provider without resolving view
-            const newProvider = new SidebarProvider(
-                mockContext,
-                mockStateManager as any,
-                mockLogger as any
-            );
+            const newProvider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
 
             // Should not throw
             await expect(
@@ -315,9 +308,7 @@ describe('SidebarProvider', () => {
             ).resolves.not.toThrow();
 
             // Should log warning
-            expect(mockLogger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('not available')
-            );
+            expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('not available'));
         });
     });
 
@@ -344,7 +335,6 @@ describe('SidebarProvider', () => {
                 data: { context },
             });
         });
-
     });
 
     // ------------------------------------------------------------------------
@@ -376,7 +366,7 @@ describe('SidebarProvider', () => {
                 subscriptions: [],
                 globalState: {
                     get: jest.fn((key: string, defaultValue?: unknown) =>
-                        key in globalStateStore ? globalStateStore[key] : defaultValue,
+                        key in globalStateStore ? globalStateStore[key] : defaultValue
                     ),
                     update: jest.fn(async (key: string, value: unknown) => {
                         globalStateStore[key] = value;
@@ -384,11 +374,7 @@ describe('SidebarProvider', () => {
                 },
             } as unknown as vscode.ExtensionContext;
 
-            provider = new SidebarProvider(
-                mockContext,
-                mockStateManager as any,
-                mockLogger as any,
-            );
+            provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
 
             mockWebviewView = createMockWebviewView();
 
@@ -402,13 +388,13 @@ describe('SidebarProvider', () => {
         });
 
         const wasCheckCommandInvoked = (): boolean =>
-            executeCommandMock.mock.calls.some(call => call[0] === 'demoBuilder.checkForUpdates');
+            executeCommandMock.mock.calls.some((call) => call[0] === 'demoBuilder.checkForUpdates');
 
         it('runs the update check on first activation (no prior timestamp)', () => {
             provider.resolveWebviewView(
                 mockWebviewView as unknown as vscode.WebviewView,
                 {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken,
+                { isCancellationRequested: false } as vscode.CancellationToken
             );
 
             expect(wasCheckCommandInvoked()).toBe(true);
@@ -418,7 +404,7 @@ describe('SidebarProvider', () => {
             provider.resolveWebviewView(
                 mockWebviewView as unknown as vscode.WebviewView,
                 {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken,
+                { isCancellationRequested: false } as vscode.CancellationToken
             );
 
             const update = mockContext.globalState.update as unknown as jest.Mock;
@@ -426,12 +412,12 @@ describe('SidebarProvider', () => {
         });
 
         it('skips the update check when the last check was within the throttle window', () => {
-            globalStateStore['lastUpdateCheck'] = NOW - (30 * 60 * 1000); // 30 min ago
+            globalStateStore['lastUpdateCheck'] = NOW - 30 * 60 * 1000; // 30 min ago
 
             provider.resolveWebviewView(
                 mockWebviewView as unknown as vscode.WebviewView,
                 {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken,
+                { isCancellationRequested: false } as vscode.CancellationToken
             );
 
             expect(wasCheckCommandInvoked()).toBe(false);
@@ -443,7 +429,7 @@ describe('SidebarProvider', () => {
             provider.resolveWebviewView(
                 mockWebviewView as unknown as vscode.WebviewView,
                 {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken,
+                { isCancellationRequested: false } as vscode.CancellationToken
             );
 
             expect(wasCheckCommandInvoked()).toBe(true);
@@ -455,7 +441,7 @@ describe('SidebarProvider', () => {
             provider.resolveWebviewView(
                 mockWebviewView as unknown as vscode.WebviewView,
                 {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken,
+                { isCancellationRequested: false } as vscode.CancellationToken
             );
 
             // At exactly the boundary the check is still throttled; one
@@ -470,14 +456,14 @@ describe('SidebarProvider', () => {
             provider.resolveWebviewView(
                 mockWebviewView as unknown as vscode.WebviewView,
                 {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken,
+                { isCancellationRequested: false } as vscode.CancellationToken
             );
 
             expect(wasCheckCommandInvoked()).toBe(false);
         });
 
         it('rolls the timestamp back when the network call rejects (no throttle on retry)', async () => {
-            const previous = NOW - (2 * ONE_HOUR_MS);
+            const previous = NOW - 2 * ONE_HOUR_MS;
             globalStateStore['lastUpdateCheck'] = previous;
             executeCommandMock.mockImplementation((cmd: string) => {
                 if (cmd === 'demoBuilder.checkForUpdates') {
@@ -489,7 +475,7 @@ describe('SidebarProvider', () => {
             provider.resolveWebviewView(
                 mockWebviewView as unknown as vscode.WebviewView,
                 {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken,
+                { isCancellationRequested: false } as vscode.CancellationToken
             );
 
             // Flush the rejection so the rollback runs.

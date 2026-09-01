@@ -16,9 +16,7 @@ import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField'
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
-import {
-    getProjectStatusDisplay,
-} from '@/features/projects-dashboard/utils/projectStatusUtils';
+import { getProjectStatusDisplay } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
 
 export interface ProjectRowProps {
@@ -39,12 +37,12 @@ export interface ProjectRowProps {
 /**
  * ProjectRow - Displays a project as a clickable row with Spectrum styling
  */
-export const ProjectRow: React.FC<ProjectRowProps> = ({
+export function ProjectRow({
     project,
     isRunning = false,
     onSelect,
     actions = {},
-}) => {
+}: ProjectRowProps) {
     const { handleClick, handleKeyDown } = useProjectSelectHandlers(project, onSelect);
 
     const { statusText, statusVariant } = getProjectStatusDisplay(project);
@@ -114,4 +112,4 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
             </Flex>
         </div>
     );
-};
+}

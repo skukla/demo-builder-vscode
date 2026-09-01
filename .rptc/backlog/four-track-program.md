@@ -118,3 +118,6 @@ the state table above is the record until there is real work to hold.
 - 2026-08-31  Track 3 (test strategy) COMPLETE, overnight 2026-08-31. All 28 module-mock walls converted; PL-14's seven artifacts done; family-extraction worklist 11/11; dead-mock-scan shipped and registered; the 63-family ledger swept. 159 dead mocks removed across the night. Tracks 1 and 2 were already complete; Track 4 (architecture programme) is the remaining one.
 - 2026-08-31  feat(tooling): one reading of codebase health, appended to a time series (`309b2e69b`)
 - 2026-08-31  Merge the Track 3 convergence loop into develop (`b5b610003`)
+- 2026-09-01  test(helpers): the logger fake ledger reaches zero and becomes a ban (`f2f9e3816`)
+- 2026-09-01  test(sop): seven rules that reached zero are banned, not ledgered (`4413bb469`)
+- 2026-09-01  chore(health): snapshot 7 — after the PL-33 merge (`bbe320dda`)

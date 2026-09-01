@@ -11,7 +11,6 @@ import {
     ShowProjectsListCommand,
 } from './showProjectsList.testUtils';
 import * as vscode from 'vscode';
-import { StateManager } from '@/core/state/stateManager';
 
 // Track sidebar provider method calls
 const mockSetShowingProjectsList = jest.fn().mockResolvedValue(undefined);
@@ -29,6 +28,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
 // Import after mock setup
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // Mock communication manager
 jest.mock('@/core/communication/webviewCommunicationManager', () => ({
@@ -175,23 +175,9 @@ function createMockExtensionContext(): vscode.ExtensionContext {
         secrets: {} as any,
         extension: {} as any,
         languageModelAccessInformation: {} as any,
-    } as vscode.ExtensionContext;
+    };
 }
 
-/**
- * Create mock StateManager
- */
-function createMockStateManager(): StateManager {
-    return {
-        getState: jest.fn(),
-        setState: jest.fn(),
-        clearState: jest.fn(),
-        getCurrentProject: jest.fn().mockResolvedValue(undefined),
-        hasProject: jest.fn().mockResolvedValue(false),
-        getAllProjects: jest.fn().mockResolvedValue([]),
-        loadProjectFromPath: jest.fn().mockResolvedValue(null),
-    } as any;
-}
 
 /**
  * Create mock Logger

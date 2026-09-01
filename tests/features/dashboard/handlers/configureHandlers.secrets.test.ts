@@ -42,7 +42,12 @@ const meshEntry: AppBuilderComponentCatalogEntry = {
     kind: 'mesh',
     source: { owner: 'skukla', repo: 'commerce-paas-mesh', branch: 'main' },
     envSchema: [
-        { name: 'COMMERCE_ENDPOINT', type: 'text', label: 'Commerce endpoint', derivedFrom: 'connect-commerce' },
+        {
+            name: 'COMMERCE_ENDPOINT',
+            type: 'text',
+            label: 'Commerce endpoint',
+            derivedFrom: 'connect-commerce',
+        },
     ],
 };
 
@@ -51,9 +56,13 @@ function makeSecretStorage() {
     return {
         store,
         api: {
-            store: jest.fn(async (key: string, value: string) => { store.set(key, value); }),
+            store: jest.fn(async (key: string, value: string) => {
+                store.set(key, value);
+            }),
             get: jest.fn(async (key: string) => store.get(key)),
-            delete: jest.fn(async (key: string) => { store.delete(key); }),
+            delete: jest.fn(async (key: string) => {
+                store.delete(key);
+            }),
         },
     };
 }
@@ -68,7 +77,11 @@ describe('splitAppBuilderComponentSecrets', () => {
 
         // The secret is captured for SecretStorage routing...
         expect(secrets).toEqual([
-            { appBuilderComponentId: 'erp-integration', varName: 'ERP_API_KEY', value: FAKE_SECRET },
+            {
+                appBuilderComponentId: 'erp-integration',
+                varName: 'ERP_API_KEY',
+                value: FAKE_SECRET,
+            },
         ]);
         // ...and is ABSENT from the sanitized configs (never .env / never manifest).
         expect(sanitizedConfigs['erp-integration']).not.toHaveProperty('ERP_API_KEY');
@@ -110,9 +123,15 @@ describe('persistAppBuilderComponentSecrets', () => {
         const { api } = makeSecretStorage();
 
         await persistAppBuilderComponentSecrets(
-            [{ appBuilderComponentId: 'erp-integration', varName: 'ERP_API_KEY', value: FAKE_SECRET }],
+            [
+                {
+                    appBuilderComponentId: 'erp-integration',
+                    varName: 'ERP_API_KEY',
+                    value: FAKE_SECRET,
+                },
+            ],
             'proj-1',
-            api as never,
+            api
         );
 
         const expectedKey = secretKey('proj-1', 'erp-integration', 'ERP_API_KEY');
@@ -124,10 +143,16 @@ describe('persistAppBuilderComponentSecrets', () => {
         const logger = createMockLogger();
 
         await persistAppBuilderComponentSecrets(
-            [{ appBuilderComponentId: 'erp-integration', varName: 'ERP_API_KEY', value: FAKE_SECRET }],
+            [
+                {
+                    appBuilderComponentId: 'erp-integration',
+                    varName: 'ERP_API_KEY',
+                    value: FAKE_SECRET,
+                },
+            ],
             'proj-1',
-            api as never,
-            logger as never,
+            api,
+            logger
         );
 
         const allLogArgs = JSON.stringify([
@@ -141,7 +166,7 @@ describe('persistAppBuilderComponentSecrets', () => {
 
     it('does nothing (no store calls) for an empty secret list', async () => {
         const { api } = makeSecretStorage();
-        await persistAppBuilderComponentSecrets([], 'proj-1', api as never);
+        await persistAppBuilderComponentSecrets([], 'proj-1', api);
         expect(api.store).not.toHaveBeenCalled();
     });
 });
@@ -151,7 +176,7 @@ describe('loadAppBuilderComponentSecretFlags', () => {
         const { api } = makeSecretStorage();
         await api.store(secretKey('proj-1', 'erp-integration', 'ERP_API_KEY'), FAKE_SECRET);
 
-        const flags = await loadAppBuilderComponentSecretFlags([erpEntry], 'proj-1', api as never);
+        const flags = await loadAppBuilderComponentSecretFlags([erpEntry], 'proj-1', api);
 
         expect(flags['erp-integration'].ERP_API_KEY).toBe(true);
         // The flags map carries only booleans — never the secret value.
@@ -161,7 +186,7 @@ describe('loadAppBuilderComponentSecretFlags', () => {
     it('reports an unset secret as false', async () => {
         const { api } = makeSecretStorage();
 
-        const flags = await loadAppBuilderComponentSecretFlags([erpEntry], 'proj-1', api as never);
+        const flags = await loadAppBuilderComponentSecretFlags([erpEntry], 'proj-1', api);
 
         expect(flags['erp-integration'].ERP_API_KEY).toBe(false);
     });
@@ -169,7 +194,7 @@ describe('loadAppBuilderComponentSecretFlags', () => {
     it('produces no entries for a seed mesh (no secret vars)', async () => {
         const { api } = makeSecretStorage();
 
-        const flags = await loadAppBuilderComponentSecretFlags([meshEntry], 'proj-1', api as never);
+        const flags = await loadAppBuilderComponentSecretFlags([meshEntry], 'proj-1', api);
 
         expect(flags['commerce-paas-mesh']).toBeUndefined();
     });

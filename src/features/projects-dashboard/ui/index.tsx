@@ -13,7 +13,11 @@ import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { sleep } from '@/core/utils/sleep';
 import type { Project } from '@/types/base';
-import type { ConfigChangedPayload, DemoStateChangedPayload, ProjectsUpdatedPayload } from '@/types/webviewPayloads';
+import type {
+    ConfigChangedPayload,
+    DemoStateChangedPayload,
+    ProjectsUpdatedPayload,
+} from '@/types/webviewPayloads';
 
 // Import global styles
 import '@/core/ui/styles/index.css';
@@ -26,7 +30,7 @@ const PROJECT_STATE_PERSIST_DELAY = 500;
 /**
  * ProjectsDashboardApp - Wrapper component that handles data fetching
  */
-const ProjectsDashboardApp: React.FC = () => {
+function ProjectsDashboardApp() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -453,7 +457,7 @@ const ProjectsDashboardApp: React.FC = () => {
             onViewModeOverride={handleViewModeOverride}
         />
     );
-};
+}
 
 // Mount the app
 const container = document.getElementById('root');

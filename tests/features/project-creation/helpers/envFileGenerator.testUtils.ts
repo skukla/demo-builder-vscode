@@ -42,7 +42,7 @@ export function createEnvFileGeneratorContext(
         },
         authManager: {} as any,
         ...overrides,
-    } as never)
+    })
 }
 
 /**

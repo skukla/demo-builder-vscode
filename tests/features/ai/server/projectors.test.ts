@@ -73,7 +73,7 @@ describe('indexDetail', () => {
     // 21,992 bytes at 300 components — the split bounds detail, not growth.
     it('bounds the index itself and says how much was withheld', () => {
         const many = Array.from({ length: 300 }, (_, i) => ({ id: `i${i}`, title: 't', body: '' }));
-        const out = indexDetail(many, { ...opts, wanted: false, limit: 100 } as never);
+        const out = indexDetail(many, { ...opts, wanted: false, limit: 100 });
         expect(out.count).toBe(100);
         expect(out.total).toBe(300);
         expect(out.more).toMatch(/200 more/);

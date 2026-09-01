@@ -19,7 +19,6 @@ import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import type { StateManager } from '@/core/state/stateManager';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { asDisplayName, getProjectDisplayName } from '@/core/utils/projectDisplayName';
@@ -28,6 +27,7 @@ import { importHandlers } from '@/features/data-installer/handlers/importHandler
 import { handleOpenDataInstallerSettings } from '@/features/data-installer/handlers/settingsHandlers';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 
 const WEBVIEW_ID = 'demoBuilder.dataInstaller';

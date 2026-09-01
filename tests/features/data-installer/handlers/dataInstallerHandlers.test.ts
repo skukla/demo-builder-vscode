@@ -19,6 +19,8 @@ import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import * as vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -43,18 +45,20 @@ function setupSettings(values: { apiBaseUrl?: unknown; enabled?: unknown } = {})
 
 /** A context with the fields the guard and handlers actually touch. */
 function makeImportHarness(overrides: Partial<HandlerContext> = {}): HandlerContext {
-    const tokenManager = { inspectToken: jest.fn().mockResolvedValue({ valid: true, expiresIn: 55, token: 'tok' }) };
-    return {
+    const tokenManager = {
+        inspectToken: jest.fn().mockResolvedValue({ valid: true, expiresIn: 55, token: 'tok' }),
+    };
+    return createMockHandlerContext({
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
-        authManager: {
+        authManager: createMockAuthenticationService({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest.fn().mockReturnValue(tokenManager),
-        },
+        }),
         panel: {} as vscode.WebviewPanel,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         ...overrides,
-    } as unknown as HandlerContext;
+    });
 }
 
 /** A headless context — what `createHeadlessHandlerContext` produces. */
@@ -184,8 +188,9 @@ describe('dataInstallerHandlers', () => {
 
         it('reports AUTH_REQUIRED when the token is missing after sign-in', async () => {
             const context = makeImportHarness();
-            (context.authManager!.getTokenManager() as unknown as { inspectToken: jest.Mock }).inspectToken
-                .mockResolvedValue({ valid: false, expiresIn: 0, token: undefined });
+            (
+                context.authManager!.getTokenManager() as unknown as { inspectToken: jest.Mock }
+            ).inspectToken.mockResolvedValue({ valid: false, expiresIn: 0, token: undefined });
             const access = await resolveDataInstallerAccess(context);
             expect(access.ok === false && access.response.code).toBe(ErrorCode.AUTH_REQUIRED);
         });
@@ -234,7 +239,9 @@ describe('dataInstallerHandlers', () => {
         it('find-datapacks drops the shared filter when community packs are requested', async () => {
             const findDatapacks = jest.fn().mockResolvedValue({ items: [], count: 0, total: 0 });
             MockedClient.prototype.findDatapacks = findDatapacks;
-            await dataInstallerHandlers['find-datapacks'](makeImportHarness(), { includeCommunity: true });
+            await dataInstallerHandlers['find-datapacks'](makeImportHarness(), {
+                includeCommunity: true,
+            });
             expect(findDatapacks.mock.calls[0][0].shared).toBeUndefined();
         });
 
@@ -248,7 +255,15 @@ describe('dataInstallerHandlers', () => {
                 dataTypes: ['categories', 'products'],
                 art: {},
             });
-            const batch = jest.fn().mockResolvedValue({ present: [], missing: [], presentCount: 0, missingCount: 0, requestedCount: 0 });
+            const batch = jest
+                .fn()
+                .mockResolvedValue({
+                    present: [],
+                    missing: [],
+                    presentCount: 0,
+                    missingCount: 0,
+                    requestedCount: 0,
+                });
             MockedClient.prototype.batchGetDataItems = batch;
 
             await dataInstallerHandlers['get-datapack-detail'](makeImportHarness(), {
@@ -256,10 +271,10 @@ describe('dataInstallerHandlers', () => {
                 version: 'main',
             });
 
-            expect(batch).toHaveBeenCalledWith(
-                { name: 'citisignal_new', version: 'main' },
-                ['categories', 'products'],
-            );
+            expect(batch).toHaveBeenCalledWith({ name: 'citisignal_new', version: 'main' }, [
+                'categories',
+                'products',
+            ]);
         });
 
         it('get-datapack-detail skips the inventory call when the datapack has no data types', async () => {
@@ -283,14 +298,19 @@ describe('dataInstallerHandlers', () => {
         });
 
         it('list-datapack-data-types requires an operation mode', async () => {
-            const res = await dataInstallerHandlers['list-datapack-data-types'](makeImportHarness(), {});
+            const res = await dataInstallerHandlers['list-datapack-data-types'](
+                makeImportHarness(),
+                {}
+            );
             expect(res.success).toBe(false);
         });
 
         it('list-datapack-data-types asks per mode, since the sets differ', async () => {
             const order = jest.fn().mockResolvedValue(['giftcards']);
             MockedClient.prototype.getProcessorOrder = order;
-            await dataInstallerHandlers['list-datapack-data-types'](makeImportHarness(), { operationMode: 'import' });
+            await dataInstallerHandlers['list-datapack-data-types'](makeImportHarness(), {
+                operationMode: 'import',
+            });
             expect(order).toHaveBeenCalledWith('import');
         });
 
@@ -314,7 +334,9 @@ describe('dataInstallerHandlers', () => {
         });
 
         it('never lets a thrown error escape as an unhandled rejection', async () => {
-            MockedClient.prototype.findDatapacks = jest.fn().mockRejectedValue(new Error('unexpected'));
+            MockedClient.prototype.findDatapacks = jest
+                .fn()
+                .mockRejectedValue(new Error('unexpected'));
             const res = await dataInstallerHandlers['find-datapacks'](makeImportHarness(), {});
             expect(res.success).toBe(false);
             expect(res.error).toBeDefined();

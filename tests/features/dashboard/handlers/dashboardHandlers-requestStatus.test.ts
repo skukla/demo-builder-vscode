@@ -106,15 +106,19 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         });
     });
 
-    // ADR-011 D3 Steps 07+09: a keyed-only project (no meshState — the post-Step-07
-    // shape) must report the same deployed status + endpoint from the keyed entry.
+    // ADR-011 D3 Steps 07+09: a keyed-only project must report the same deployed
+    // status + endpoint from the keyed entry.
+    //
+    // These cases used to pass `meshState: undefined` to say "the post-Step-07
+    // shape". That field was REMOVED from the in-memory Project by PL-1 phase 2,
+    // so setting it to undefined asserted nothing — keyed-only is now the only
+    // shape there is. An `as any` on the override was hiding it.
     it('should report deployed status + endpoint for a keyed-only project (Steps 07+09)', async () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({
             meshStatusSummary: 'deployed',
-            meshState: undefined,
             appBuilderComponents: {
                 mesh: {
                     kind: 'mesh',
@@ -148,7 +152,6 @@ describe('dashboardHandlers - handleRequestStatus', () => {
                     port: 3000,
                 },
             },
-            meshState: undefined,
         } as any);
 
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');

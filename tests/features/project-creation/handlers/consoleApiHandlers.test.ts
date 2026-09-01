@@ -14,7 +14,7 @@ import { createApiSubscriberClient } from '@/features/app-builder/services/apiSu
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
-
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 const mockGetServicesForOrg = jest.fn();
 jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({
@@ -73,10 +73,10 @@ const ORG_SERVICES = [
 ];
 
 function makeContext(): HandlerContext {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger(),
         sendMessage: jest.fn(),
-    } as unknown as HandlerContext;
+    });
 }
 
 type ApiRow = {

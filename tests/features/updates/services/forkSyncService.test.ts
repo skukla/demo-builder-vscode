@@ -25,7 +25,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Mock global fetch
-global.fetch = jest.fn() as jest.Mock;
+global.fetch = jest.fn();
 
 import { ForkSyncService } from '@/features/updates/services/forkSyncService';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -148,9 +148,7 @@ describe('ForkSyncService', () => {
             const result = await service.checkForkStatus('my-org', 'my-repo');
 
             expect(result).toBeNull();
-            expect(mockLogger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('Timeout'),
-            );
+            expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Timeout'));
         });
     });
 
@@ -174,7 +172,7 @@ describe('ForkSyncService', () => {
                 expect.objectContaining({
                     method: 'POST',
                     body: JSON.stringify({ branch: 'main' }),
-                }),
+                })
             );
         });
 
@@ -203,9 +201,9 @@ describe('ForkSyncService', () => {
                 }),
             });
 
-            await expect(
-                service.syncFork('my-org', 'accs-citisignal', 'main'),
-            ).rejects.toThrow(/rate limit/i);
+            await expect(service.syncFork('my-org', 'accs-citisignal', 'main')).rejects.toThrow(
+                /rate limit/i
+            );
         });
 
         it('should throw permission error on 403 without rate limit message', async () => {
@@ -217,9 +215,9 @@ describe('ForkSyncService', () => {
                 }),
             });
 
-            await expect(
-                service.syncFork('my-org', 'accs-citisignal', 'main'),
-            ).rejects.toThrow(/permission denied/i);
+            await expect(service.syncFork('my-org', 'accs-citisignal', 'main')).rejects.toThrow(
+                /permission denied/i
+            );
         });
     });
 });

@@ -30,13 +30,13 @@ export interface UtilityBarProps {
  * UtilityBar — labeled zone with Tools, Help, Settings tiles stacked
  * vertically. Tiles render only when their callback prop is provided.
  */
-export const UtilityBar: React.FC<UtilityBarProps> = ({
+export function UtilityBar({
     onOpenTools,
     onOpenHelp,
     onOpenSettings,
     onOpenLogs,
     compact: _compact = false,
-}) => {
+}: UtilityBarProps) {
     return (
         <Flex direction="column" gap="size-100" alignItems="center">
             <Text UNSAFE_className="dashboard-zone-label">Utilities</Text>
@@ -92,4 +92,4 @@ export const UtilityBar: React.FC<UtilityBarProps> = ({
             </div>
         </Flex>
     );
-};
+}

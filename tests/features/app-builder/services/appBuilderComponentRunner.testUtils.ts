@@ -123,7 +123,7 @@ export function createDeps(overrides: Partial<Record<string, unknown>> = {}) {
         republishStorefront: jest.fn().mockResolvedValue({ success: true }),
         // The catalog of all appBuilderComponents (for the union subscribe).
         catalog: [MESH_ENTRY, INTEGRATION_ENTRY],
-        secrets: {} as never,
+        secrets: {},
         ...overrides,
     };
 }
@@ -139,5 +139,5 @@ export function createProject(overrides: Partial<Project> = {}): Project {
         },
         componentInstances: {},
         ...overrides,
-    } as never)
+    })
 }

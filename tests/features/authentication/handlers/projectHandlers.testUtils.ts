@@ -4,6 +4,9 @@
  * Common mocks, factories, and helpers used across project handler tests.
  */
 
+import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
+
 // Mock dependencies setup
 export const setupMocks = () => {
     jest.mock('@/core/di/serviceLocator');
@@ -49,17 +52,14 @@ export const createMockContext = () => {
 
     return {
         authManager: mockAuthManager,
-        logger: {
-            trace: jest.fn(),
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn()
-        } as any,
+        logger: createMockLogger(),
+        // Kept a literal: this is the DEBUG logger, a different interface, and the
+        // two methods here are the only ones the handlers under test call. The
+        // canonical builder is `Logger`-shaped and would be the wrong fake.
         debugLogger: {
             trace: jest.fn(),
-            debug: jest.fn()
-        } as any,
+            debug: jest.fn(),
+        } as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: {
             isAuthenticating: false

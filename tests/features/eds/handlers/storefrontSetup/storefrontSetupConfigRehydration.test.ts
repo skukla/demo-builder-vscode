@@ -69,7 +69,7 @@ describe('rehydratePackageDerivedConfig', () => {
             EDIT_MODE_CONFIG,
             'custom',
             'eds-accs',
-            logger as never
+            logger
         );
 
         expect(result.codePatches).toEqual(STOREFRONT.codePatches);
@@ -84,7 +84,7 @@ describe('rehydratePackageDerivedConfig', () => {
             EDIT_MODE_CONFIG,
             'custom',
             'eds-accs',
-            logger as never
+            logger
         )) as Record<string, unknown>;
 
         for (const key of Object.keys(STOREFRONT)) {
@@ -97,7 +97,7 @@ describe('rehydratePackageDerivedConfig', () => {
             EDIT_MODE_CONFIG,
             'custom',
             'eds-accs',
-            logger as never
+            logger
         );
 
         expect(result.repoName).toBe('demo-builder-test');
@@ -114,7 +114,7 @@ describe('rehydratePackageDerivedConfig', () => {
             supplied,
             'custom',
             'eds-accs',
-            logger as never
+            logger
         );
 
         expect(result.codePatches).toEqual(['only-this-one']);
@@ -127,7 +127,7 @@ describe('rehydratePackageDerivedConfig', () => {
             EDIT_MODE_CONFIG,
             'nope',
             'eds-accs',
-            logger as never
+            logger
         );
 
         expect(result).toEqual(EDIT_MODE_CONFIG);
@@ -138,7 +138,7 @@ describe('rehydratePackageDerivedConfig', () => {
             EDIT_MODE_CONFIG,
             undefined,
             undefined,
-            logger as never
+            logger
         );
 
         expect(result).toEqual(EDIT_MODE_CONFIG);
@@ -148,7 +148,7 @@ describe('rehydratePackageDerivedConfig', () => {
     it('warns when it cannot resolve, rather than no-opping in silence', async () => {
         // A silent no-op here is what let a missing `selectedStack` disable every
         // patch with no trace in the log — the same failure this function fixes.
-        await rehydratePackageDerivedConfig(EDIT_MODE_CONFIG, 'custom', undefined, logger as never);
+        await rehydratePackageDerivedConfig(EDIT_MODE_CONFIG, 'custom', undefined, logger);
 
         expect(logger.warn).toHaveBeenCalled();
         expect(logger.warn.mock.calls.flat().join(' ')).toContain('stack=missing');
@@ -163,7 +163,7 @@ describe('rehydratePackageDerivedConfig', () => {
             EDIT_MODE_CONFIG,
             'custom',
             'eds-accs',
-            logger as never
+            logger
         );
 
         expect(result).toEqual(EDIT_MODE_CONFIG);
@@ -175,7 +175,7 @@ describe('rehydratePackageDerivedConfig', () => {
             EDIT_MODE_CONFIG,
             'custom',
             'eds-accs',
-            logger as never
+            logger
         );
 
         const said = logger.info.mock.calls.flat().join(' ');

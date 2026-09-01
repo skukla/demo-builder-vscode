@@ -172,7 +172,7 @@ function setup(initial: Partial<WizardState> = {}, extras: SetupExtras = {}) {
                 blockLibraryDefaults,
                 customBlockLibraryDefaults,
             }),
-        { initialProps: { state: stateRef.current } },
+        { initialProps: { state: stateRef.current } }
     );
 
     return { result, rerender, updateState, stateRef };
@@ -194,7 +194,7 @@ describe('useProjectBuilder — addon handler', () => {
             result.current.onAddonsChange(['live-search', 'catalog-service']);
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedAddons: ['live-search', 'catalog-service'] }),
+            expect.objectContaining({ selectedAddons: ['live-search', 'catalog-service'] })
         );
     });
 });
@@ -206,7 +206,7 @@ describe('useProjectBuilder — block library handlers', () => {
             result.current.onBlockLibrariesChange(['isle5']);
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedBlockLibraries: ['isle5'] }),
+            expect.objectContaining({ selectedBlockLibraries: ['isle5'] })
         );
     });
 
@@ -216,7 +216,7 @@ describe('useProjectBuilder — block library handlers', () => {
             result.current.onCustomBlockLibrariesChange([customLib]);
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ customBlockLibraries: [customLib] }),
+            expect.objectContaining({ customBlockLibraries: [customLib] })
         );
     });
 });
@@ -228,7 +228,7 @@ describe('useProjectBuilder — onStackSelect addon seeding (parity)', () => {
         act(() => {
             result.current.onStackSelect('eds-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedAddons).toEqual(['live-search']);
     });
 
@@ -237,7 +237,7 @@ describe('useProjectBuilder — onStackSelect addon seeding (parity)', () => {
         act(() => {
             result.current.onStackSelect('eds-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         // edsStack defaults live-search (default:true); catalog-service is default:false.
         expect(call.selectedAddons).toEqual(['live-search']);
     });
@@ -247,7 +247,7 @@ describe('useProjectBuilder — onStackSelect addon seeding (parity)', () => {
         act(() => {
             result.current.onStackSelect('headless-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedAddons).toEqual([]);
     });
 });
@@ -258,21 +258,21 @@ describe('useProjectBuilder — onStackSelect block library seeding (parity)', (
         mockGetDefaultBlockLibraryIds.mockReturnValue(['isle5']);
         const { result, updateState } = setup(
             { selectedPackage: 'citisignal' },
-            { blockLibraryDefaults: ['isle5'] },
+            { blockLibraryDefaults: ['isle5'] }
         );
         act(() => {
             result.current.onStackSelect('eds-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(new Set(call.selectedBlockLibraries)).toEqual(
-            new Set(['demo-team-blocks', 'isle5']),
+            new Set(['demo-team-blocks', 'isle5'])
         );
     });
 
     it('passes blockLibraryDefaults through to getDefaultBlockLibraryIds', () => {
         const { result } = setup(
             { selectedPackage: 'citisignal' },
-            { blockLibraryDefaults: ['isle5'] },
+            { blockLibraryDefaults: ['isle5'] }
         );
         act(() => {
             result.current.onStackSelect('eds-paas');
@@ -280,7 +280,7 @@ describe('useProjectBuilder — onStackSelect block library seeding (parity)', (
         expect(mockGetDefaultBlockLibraryIds).toHaveBeenCalledWith(
             expect.objectContaining({ id: 'eds-paas' }),
             'citisignal',
-            ['isle5'],
+            ['isle5']
         );
     });
 
@@ -291,19 +291,19 @@ describe('useProjectBuilder — onStackSelect block library seeding (parity)', (
         act(() => {
             result.current.onStackSelect('eds-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedBlockLibraries).toEqual(['isle5']);
     });
 
     it('seeds customBlockLibraries from customBlockLibraryDefaults when state has none', () => {
         const { result, updateState } = setup(
             { selectedPackage: 'citisignal' },
-            { customBlockLibraryDefaults: [customLib] },
+            { customBlockLibraryDefaults: [customLib] }
         );
         act(() => {
             result.current.onStackSelect('eds-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.customBlockLibraries).toEqual([customLib]);
     });
 
@@ -314,12 +314,12 @@ describe('useProjectBuilder — onStackSelect block library seeding (parity)', (
         };
         const { result, updateState } = setup(
             { selectedPackage: 'citisignal', customBlockLibraries: [existing] },
-            { customBlockLibraryDefaults: [customLib] },
+            { customBlockLibraryDefaults: [customLib] }
         );
         act(() => {
             result.current.onStackSelect('eds-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.customBlockLibraries).toEqual([existing]);
     });
 
@@ -330,12 +330,12 @@ describe('useProjectBuilder — onStackSelect block library seeding (parity)', (
                 selectedBlockLibraries: ['stale-lib'],
                 customBlockLibraries: [customLib],
             },
-            { customBlockLibraryDefaults: [customLib] },
+            { customBlockLibraryDefaults: [customLib] }
         );
         act(() => {
             result.current.onStackSelect('headless-paas');
         });
-        const call = updateState.mock.calls[0][0] as Partial<WizardState>;
+        const call = updateState.mock.calls[0][0];
         expect(call.selectedBlockLibraries).toEqual([]);
         expect(call.customBlockLibraries).toEqual([]);
     });
@@ -361,12 +361,11 @@ describe('useProjectBuilder — onBlockLibrariesChange offers save-defaults tip'
             result.current.onBlockLibrariesChange(['blocks-a', 'blocks-b']);
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedBlockLibraries: ['blocks-a', 'blocks-b'] }),
+            expect.objectContaining({ selectedBlockLibraries: ['blocks-a', 'blocks-b'] })
         );
-        expect(vscode.postMessage).toHaveBeenCalledWith(
-            'offer-save-block-library-defaults',
-            { selectedLibraries: ['blocks-a', 'blocks-b'] },
-        );
+        expect(vscode.postMessage).toHaveBeenCalledWith('offer-save-block-library-defaults', {
+            selectedLibraries: ['blocks-a', 'blocks-b'],
+        });
     });
 
     it('does NOT offer the tip when the selection is cleared to empty', () => {
@@ -375,7 +374,7 @@ describe('useProjectBuilder — onBlockLibrariesChange offers save-defaults tip'
             result.current.onBlockLibrariesChange([]);
         });
         expect(updateState).toHaveBeenCalledWith(
-            expect.objectContaining({ selectedBlockLibraries: [] }),
+            expect.objectContaining({ selectedBlockLibraries: [] })
         );
         expect(vscode.postMessage).not.toHaveBeenCalled();
     });

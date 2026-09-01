@@ -36,9 +36,9 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
 
         service = new EnvFileWatcherService(
             mockContext,
-            mockStateManager as any,
+            mockStateManager,
             mockWatcherManager,
-            mockLogger,
+            mockLogger
         );
 
         service.initialize();
@@ -56,25 +56,26 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             mockFileContents.set(filePath, content);
 
             // Initialize hash
-            await vscode.commands.executeCommand(
-                'demoBuilder._internal.initializeFileHashes',
-                [filePath]
-            );
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                filePath,
+            ]);
 
             // Set demo as running
-            mockStateManager.getCurrentProject.mockResolvedValue(createMockProject({ status: 'running' }));
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ status: 'running' })
+            );
 
             // When: File event fires with same content
             const uri = vscode.Uri.file(filePath);
             mockWatchers[0]._simulateChange(uri);
 
             // Wait for async processing
-            await new Promise(resolve => process.nextTick(resolve));
+            await new Promise((resolve) => process.nextTick(resolve));
 
             // Then: No notification shown
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Content unchanged'),
+                expect.stringContaining('Content unchanged')
             );
         });
 
@@ -85,13 +86,14 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             mockFileContents.set(filePath, initialContent);
 
             // Initialize hash
-            await vscode.commands.executeCommand(
-                'demoBuilder._internal.initializeFileHashes',
-                [filePath]
-            );
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                filePath,
+            ]);
 
             // Set demo as running
-            mockStateManager.getCurrentProject.mockResolvedValue(createMockProject({ status: 'running' }));
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ status: 'running' })
+            );
 
             // When: File content changes
             const newContent = 'API_KEY=test456';
@@ -101,12 +103,12 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             mockWatchers[0]._simulateChange(uri);
 
             // Wait for async processing
-            await new Promise(resolve => process.nextTick(resolve));
+            await new Promise((resolve) => process.nextTick(resolve));
 
             // Then: Notification shown
             expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
                 expect.stringContaining('Environment configuration changed'),
-                'Restart Demo',
+                'Restart Demo'
             );
         });
     });
@@ -119,10 +121,9 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             mockFileContents.set(filePath, content);
 
             // Initialize hash
-            await vscode.commands.executeCommand(
-                'demoBuilder._internal.initializeFileHashes',
-                [filePath]
-            );
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                filePath,
+            ]);
 
             // Register programmatic write
             await vscode.commands.executeCommand(
@@ -131,7 +132,9 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             );
 
             // Set demo as running
-            mockStateManager.getCurrentProject.mockResolvedValue(createMockProject({ status: 'running' }));
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ status: 'running' })
+            );
 
             // When: File change event fires
             const newContent = 'API_KEY=test456';
@@ -141,12 +144,12 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
             mockWatchers[0]._simulateChange(uri);
 
             // Wait for async processing
-            await new Promise(resolve => process.nextTick(resolve));
+            await new Promise((resolve) => process.nextTick(resolve));
 
             // Then: No notification shown
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Ignoring programmatic write'),
+                expect.stringContaining('Ignoring programmatic write')
             );
         });
     });
@@ -222,7 +225,7 @@ describe('apply prompts are re-armed by a new config change', () => {
         configChanged();
 
         expect(commandCallbacks['demoBuilder._internal.shouldShowRestartNotification']()).toBe(
-            false,
+            false
         );
     });
 });

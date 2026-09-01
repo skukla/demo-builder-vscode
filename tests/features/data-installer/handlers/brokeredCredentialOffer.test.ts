@@ -22,6 +22,13 @@ import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../helpers/extensionContextFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -35,7 +42,8 @@ jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })) },
 }));
 
-const DISCOVERY_URL = 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/discover-stores';
+const DISCOVERY_URL =
+    'https://example.adobeioruntime.net/api/v1/web/accs-discovery/discover-stores';
 const SHARED_SECRET = 'fake-shared-secret-not-a-secret';
 
 const FULL_BINDING = {
@@ -75,23 +83,26 @@ const unboundProject = (): Partial<Project> => accsProject();
 const boundProject = (): Partial<Project> => accsProject(FULL_BINDING);
 
 function makeImportHarness(project: unknown): HandlerContext {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
-        authManager: {
+        authManager: createMockAuthenticationService({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest.fn().mockReturnValue({
                 inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }),
             }),
-        },
+        }),
         panel: {} as vscode.WebviewPanel,
-        context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
+        context: createMockExtensionContext({
+            globalState: createStatefulGlobalState().globalState,
+            secrets: createMockSecretStorage().secrets,
+        }),
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn(),
         }),
         sendMessage: jest.fn(),
-    } as unknown as HandlerContext;
+    });
 }
 
 /**
@@ -157,8 +168,9 @@ describe('a project the broker can serve', () => {
 
         // `data` is absent entirely once credentials resolve — the refusal is
         // what carries the flag — so read through it rather than matching on it.
-        expect((result.data as { needsAccsCredentials?: boolean } | undefined)?.needsAccsCredentials)
-            .not.toBe(true);
+        expect(
+            (result.data as { needsAccsCredentials?: boolean } | undefined)?.needsAccsCredentials
+        ).not.toBe(true);
     });
 
     it('works with no Adobe binding at all — the population this exists for', async () => {
@@ -255,7 +267,10 @@ describe('when the broker cannot serve', () => {
             ok: true,
             status: 200,
             text: async () =>
-                JSON.stringify({ success: true, data: { clientId: 'x', clientSecret: SHARED_SECRET } }),
+                JSON.stringify({
+                    success: true,
+                    data: { clientId: 'x', clientSecret: SHARED_SECRET },
+                }),
         }) as unknown as typeof fetch;
 
         const result = await validate(unboundProject());

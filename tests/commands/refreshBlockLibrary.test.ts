@@ -82,6 +82,7 @@ import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../helpers/loggerFake';
 import { createMockStateManager } from '../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../helpers/extensionContextFake';
 
 const executePipelineMock = executeEdsPipeline as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
@@ -98,14 +99,7 @@ function makeStateManager(project: Project | null): StateManager {
 }
 
 function makeContext(): vscode.ExtensionContext {
-    return {
-        subscriptions: [],
-        secrets: {
-            get: jest.fn(),
-            store: jest.fn(),
-            delete: jest.fn(),
-        },
-    } as unknown as vscode.ExtensionContext;
+    return createMockExtensionContext();
 }
 
 const EDS_PROJECT = {

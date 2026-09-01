@@ -90,7 +90,7 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
 
         await removeAppBuilderComponent(project, 'eds-accs-mesh', deps as never);
 
-        const saved = (deps.saveProject as jest.Mock).mock.calls.at(-1)![0] as Project;
+        const saved = deps.saveProject.mock.calls.at(-1)![0] as Project;
         // All THREE arms of showDashboard's `hasMesh` must fall together —
         // instance OR keyed-state OR dependency. Any one left standing keeps the
         // card alive over a component that no longer exists.
@@ -115,7 +115,7 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
 
         await removeAppBuilderComponent(project, 'eds-accs-mesh', deps as never);
 
-        const saved = (deps.saveProject as jest.Mock).mock.calls.at(-1)![0] as Project;
+        const saved = deps.saveProject.mock.calls.at(-1)![0] as Project;
         expect(saved.componentConfigs?.['eds-accs-mesh']).toBeUndefined();
         expect(saved.componentConfigs?.['adobe-commerce-accs']).toEqual({
             ACCS_GRAPHQL_ENDPOINT: 'https://fresh.example/graphql',
@@ -165,7 +165,7 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
 
         await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
 
-        const saved = (deps.saveProject as jest.Mock).mock.calls.at(-1)![0] as Project;
+        const saved = deps.saveProject.mock.calls.at(-1)![0] as Project;
         expect(saved.componentSelections?.appBuilder).toEqual(['order-sync']);
         // The other two arms must fall with it, as they already did.
         expect(saved.appBuilderComponents?.['erp-bridge']).toBeUndefined();
@@ -177,7 +177,7 @@ describe('removeAppBuilderComponent — a removed mesh is a mesh the project no 
 
         await removeAppBuilderComponent(project, 'erp-bridge', deps as never);
 
-        const saved = (deps.saveProject as jest.Mock).mock.calls.at(-1)![0] as Project;
+        const saved = deps.saveProject.mock.calls.at(-1)![0] as Project;
         // The mesh dependency belongs to the mesh, not to the integration —
         // removing an integration must not revoke it.
         expect(saved.componentSelections?.dependencies).toEqual(['eds-accs-mesh']);
@@ -542,7 +542,7 @@ describe('removeAppBuilderComponent — the Commerce uninstall pass (AB-4)', () 
         expect(deps.logger.warn).toHaveBeenCalledWith(
             expect.stringContaining('Commerce uninstall warning')
         );
-        const saved = (deps.saveProject as jest.Mock).mock.calls.at(-1)![0] as Project;
+        const saved = deps.saveProject.mock.calls.at(-1)![0] as Project;
         expect(saved.appBuilderComponents?.['kit-app']).toBeUndefined();
     });
 });

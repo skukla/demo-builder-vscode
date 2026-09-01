@@ -16,7 +16,6 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types/base';
 
-
 // Auth always passes — isolate the org-context gate.
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -42,13 +41,16 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 import { ensureProjectOrgContext } from '@/features/authentication/services/ensureProjectOrgContext';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
 // the shared harness it applied too late and every test failed on
 // `access.mockResolvedValue is not a function`.
 jest.mock('fs/promises');
-const mockEnsureOrg = ensureProjectOrgContext as jest.MockedFunction<typeof ensureProjectOrgContext>;
+const mockEnsureOrg = ensureProjectOrgContext as jest.MockedFunction<
+    typeof ensureProjectOrgContext
+>;
 
 function createTestProject(): Project {
     return {
@@ -88,29 +90,45 @@ describe('DeployMeshCommand - Org-Context Gate (ensureProjectOrgContext)', () =>
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockContext = { subscriptions: [], extensionPath: '/test/extension' } as unknown as vscode.ExtensionContext;
-        mockStateManager = createMockStateManager({ getCurrentProject: jest.fn(), saveProject: jest.fn() }) as unknown as jest.Mocked<StateManager>;
-        mockLogger = createMockLogger() as jest.Mocked<Logger>;
+        mockContext = createMockExtensionContext();
+        mockStateManager = createMockStateManager({
+            getCurrentProject: jest.fn(),
+            saveProject: jest.fn(),
+        }) as unknown as jest.Mocked<StateManager>;
+        mockLogger = createMockLogger();
         mockAuthManager = {
-            getOrganizations: jest.fn().mockResolvedValue([{ id: 'org-123', code: 'ORG@AdobeOrg', name: 'Org 123' }]),
+            getOrganizations: jest
+                .fn()
+                .mockResolvedValue([{ id: 'org-123', code: 'ORG@AdobeOrg', name: 'Org 123' }]),
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
         };
         mockCommandExecutor = {
-            execute: jest.fn().mockResolvedValue({ code: 0, stdout: 'Mesh deployed successfully', stderr: '', duration: 5000 }),
+            execute: jest
+                .fn()
+                .mockResolvedValue({
+                    code: 0,
+                    stdout: 'Mesh deployed successfully',
+                    stderr: '',
+                    duration: 5000,
+                }),
         };
 
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
         (vscode.window.withProgress as jest.Mock).mockImplementation(
-            async (_o: unknown, task: (p: unknown) => Promise<void>) => { await task({ report: jest.fn() }); },
+            async (_o: unknown, task: (p: unknown) => Promise<void>) => {
+                await task({ report: jest.fn() });
+            }
         );
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
         (vscode.window.showErrorMessage as jest.Mock).mockResolvedValue(undefined);
         (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
 
         (fs.access as jest.Mock).mockResolvedValue(undefined);
-        (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify({ meshConfig: { sources: [] } }));
+        (fs.readFile as jest.Mock).mockResolvedValue(
+            JSON.stringify({ meshConfig: { sources: [] } })
+        );
 
         mockStateManager.getCurrentProject.mockResolvedValue(createTestProject());
     });
@@ -121,14 +139,22 @@ describe('DeployMeshCommand - Org-Context Gate (ensureProjectOrgContext)', () =>
         await new DeployMeshCommand(mockContext, mockStateManager, mockLogger).execute();
 
         expect(mockEnsureOrg).toHaveBeenCalledWith(
-            expect.objectContaining({ authManager: mockAuthManager, project: expect.any(Object), logPrefix: '[Mesh Deployment]' }),
+            expect.objectContaining({
+                authManager: mockAuthManager,
+                project: expect.any(Object),
+                logPrefix: '[Mesh Deployment]',
+            })
         );
         // Proceeded past the gate: the gate did not trigger its early refresh-only return.
         expect(mockRefreshStatus).not.toHaveBeenCalled();
     });
 
     it('returns early without an error toast when the user cancels the switch', async () => {
-        mockEnsureOrg.mockResolvedValue({ reachable: false, cancelled: true, currentOrg: 'Wrong Org' });
+        mockEnsureOrg.mockResolvedValue({
+            reachable: false,
+            cancelled: true,
+            currentOrg: 'Wrong Org',
+        });
 
         await new DeployMeshCommand(mockContext, mockStateManager, mockLogger).execute();
 
@@ -144,7 +170,7 @@ describe('DeployMeshCommand - Org-Context Gate (ensureProjectOrgContext)', () =>
 
         expect(mockRefreshStatus).toHaveBeenCalled();
         expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-            expect.stringContaining('wrong Adobe organization'),
+            expect.stringContaining('wrong Adobe organization')
         );
         expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
     });

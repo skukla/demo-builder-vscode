@@ -4,6 +4,8 @@
  * Tests for AEM Code Sync GitHub App detection and installation URL generation.
  */
 
+import { createMockLogger } from '../../../../helpers/loggerFake';
+
 // Mock fetch globally
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -328,13 +330,7 @@ describe('GitHub App Service', () => {
         // leak a secret into a file users paste into tickets.
 
         it('should log the credential type but never the credential itself', async () => {
-            const logger = {
-                trace: jest.fn(),
-                debug: jest.fn(),
-                info: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-            };
+            const logger = createMockLogger();
             mockTokenService.getToken.mockResolvedValue({
                 token: 'gho_SUPERSECRETVALUE',
                 tokenType: 'bearer',
@@ -348,8 +344,11 @@ describe('GitHub App Service', () => {
 
             await service.isAppInstalled('test-owner', 'test-repo');
 
-            const logged = ['trace', 'debug', 'info', 'warn', 'error']
-                .flatMap((lvl) => (logger as never as Record<string, jest.Mock>)[lvl].mock.calls)
+            // `as never as Record<string, jest.Mock>` stood here to index the fake by
+            // level name. The canonical builder returns `jest.Mocked<Logger>`, so a
+            // const-asserted tuple indexes it with no cast at all.
+            const logged = (['trace', 'debug', 'info', 'warn', 'error'] as const)
+                .flatMap((lvl) => logger[lvl].mock.calls)
                 .map((c) => String(c[0]))
                 .join('\n');
             expect(logged).toContain('gho_');
@@ -445,7 +444,7 @@ describe('GitHubAppService — access-protected sites', () => {
     // Same dynamic-import setup the suite above uses: the module is loaded after
     // `jest.resetModules()` so the mocked logger/timeouts take effect.
     let GitHubAppService: any;
-    const tokenService = { getToken: jest.fn() } as never;
+    const tokenService = { getToken: jest.fn() };
     const daLive = { getAccessToken: jest.fn() };
 
     const headersOfLastCall = () => mockFetch.mock.calls.at(-1)?.[1]?.headers ?? {};
@@ -468,7 +467,7 @@ describe('GitHubAppService — access-protected sites', () => {
     });
 
     it('sends the DA.live Bearer alongside the GitHub token', async () => {
-        const service = new GitHubAppService(tokenService, undefined, daLive as never);
+        const service = new GitHubAppService(tokenService, undefined, daLive);
 
         await service.isAppInstalled('skukla', 'demo-builder-test');
 
@@ -482,7 +481,7 @@ describe('GitHubAppService — access-protected sites', () => {
         // An unprotected site never needed the Bearer, and a signed-out user must
         // not have a working check turned into a hard failure.
         daLive.getAccessToken.mockResolvedValue(undefined);
-        const service = new GitHubAppService(tokenService, undefined, daLive as never);
+        const service = new GitHubAppService(tokenService, undefined, daLive);
 
         await service.isAppInstalled('skukla', 'foobar');
 
@@ -491,7 +490,7 @@ describe('GitHubAppService — access-protected sites', () => {
 
     it('degrades when the DA.live provider itself throws', async () => {
         daLive.getAccessToken.mockRejectedValue(new Error('keychain unavailable'));
-        const service = new GitHubAppService(tokenService, undefined, daLive as never);
+        const service = new GitHubAppService(tokenService, undefined, daLive);
 
         const result = await service.isAppInstalled('skukla', 'foobar');
 

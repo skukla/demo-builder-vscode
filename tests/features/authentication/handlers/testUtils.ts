@@ -10,10 +10,10 @@ import type { PrerequisitesManager } from '@/features/prerequisites/services/Pre
 import type { ErrorLogger } from '@/core/logging/errorLogger';
 import type { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
 import type { StepLogger } from '@/core/logging/stepLogger';
-import type { StateManager } from '@/core/state/stateManager';
-import type { ExtensionContext } from 'vscode';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // Test data
 export const mockOrg: AdobeOrg = {
@@ -66,14 +66,14 @@ export function createAuthHandlerContext(overrides?: Partial<HandlerContext>): j
         stepLogger: {} as StepLogger,
         logger: createMockLogger(), // Simplified mock
         debugLogger: createMockLogger(), // Simplified mock
-        context: {} as ExtensionContext,
+        context: createMockExtensionContext(),
         panel: undefined,
-        stateManager: {} as StateManager,
+        stateManager: createMockStateManager(),
         communicationManager: undefined,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: {
             isAuthenticating: false,
         },
         ...overrides,
-    } as never)
+    })
 }

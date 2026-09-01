@@ -77,12 +77,17 @@ export interface StepRailProps {
  * `hasError` is the one exception to "no per-item glyph": it is not a duplicate of
  * anything visible, because the errored step's body is off screen by definition.
  */
-const StepButton: React.FC<{
+function StepButton({
+    step,
+    isActive,
+    isEntering,
+    onSelect,
+}: {
     step: StepTab;
     isActive: boolean;
     isEntering: boolean;
     onSelect: (id: string) => void;
-}> = ({ step, isActive, isEntering, onSelect }) => {
+}) {
     const { id, title, status, lockReason, hasError } = step;
     const locked = status === 'locked';
     const reachable = status === 'done' || status === 'current';
@@ -121,13 +126,11 @@ const StepButton: React.FC<{
                         <span className="vsteplist-sr">, has errors</span>
                     </>
                 ) : null}
-                {locked && lockReason ? (
-                    <span className="vsteplist-sr">{lockReason}</span>
-                ) : null}
+                {locked && lockReason ? <span className="vsteplist-sr">{lockReason}</span> : null}
             </button>
         </li>
     );
-};
+}
 
 /**
  * The controlled step rail. Rendered as a horizontal, scrollable tab strip by the
@@ -137,11 +140,7 @@ const StepButton: React.FC<{
  * @param props - the steps, the active id, and the onSelect callback
  * @returns the step rail element
  */
-export const StepRail: React.FC<StepRailProps> = ({
-    steps,
-    activeId,
-    onSelect,
-}) => {
+export function StepRail({ steps, activeId, onSelect }: StepRailProps) {
     const listRef = useRef<HTMLOListElement>(null);
 
     // Shared enter orchestration (cf. TimelineNav): only a newly-revealed tab animates
@@ -160,7 +159,7 @@ export const StepRail: React.FC<StepRailProps> = ({
 
     return (
         <ol ref={listRef} className="vsteplist" role="tablist" aria-orientation="horizontal">
-            {steps.map(step => (
+            {steps.map((step) => (
                 <StepButton
                     key={step.id}
                     step={step}
@@ -171,4 +170,4 @@ export const StepRail: React.FC<StepRailProps> = ({
             ))}
         </ol>
     );
-};
+}

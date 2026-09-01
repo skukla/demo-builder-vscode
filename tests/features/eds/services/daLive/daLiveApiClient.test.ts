@@ -2,8 +2,7 @@ import { DaLiveApiClient } from '@/features/eds/services/daLive/daLiveApiClient'
 import { DaLiveError, DaLiveAuthError, DaLiveNetworkError } from '@/features/eds/services/types';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const makeLogger = () =>
-    createMockLogger();
+const makeLogger = () => createMockLogger();
 
 const makeClient = (token: string | null) =>
     new DaLiveApiClient({ getAccessToken: jest.fn().mockResolvedValue(token) }, makeLogger());
@@ -51,9 +50,7 @@ describe('DaLiveApiClient', () => {
         it('invokes a request factory once per attempt, so one-shot bodies are rebuilt', async () => {
             const failing = { status: 503, ok: false } as Response;
             const ok = { status: 200, ok: true } as Response;
-            jest.spyOn(global, 'fetch')
-                .mockResolvedValueOnce(failing)
-                .mockResolvedValueOnce(ok);
+            jest.spyOn(global, 'fetch').mockResolvedValueOnce(failing).mockResolvedValueOnce(ok);
 
             const factory = jest.fn(() => ({ method: 'POST' as const }));
             const res = await makeClient('t').fetchWithRetry('https://da/x', factory);
@@ -72,7 +69,7 @@ describe('DaLiveApiClient', () => {
             const res = await makeClient('t').fetchWithRetry(
                 'https://da/x',
                 { method: 'POST' },
-                { rateLimit: 'return' },
+                { rateLimit: 'return' }
             );
 
             expect(res.status).toBe(429);
@@ -97,7 +94,7 @@ describe('DaLiveApiClient', () => {
             const err = client.createErrorFromResponse({ status } as Response, 'read');
             expect(err).toBeInstanceOf(DaLiveError);
             expect(err.message).toContain(fragment);
-            expect((err as DaLiveError).code).toBe(`HTTP_${status}`);
+            expect(err.code).toBe(`HTTP_${status}`);
         });
     });
 });

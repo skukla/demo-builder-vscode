@@ -12,10 +12,7 @@
  * pick up `.mcp.json` natively and need no per-tool file.
  */
 
-import {
-    fsPromises,
-    writeMcpConfigs,
-} from './mcpConfigWriter.testUtils';
+import { fsPromises, writeMcpConfigs } from './mcpConfigWriter.testUtils';
 import * as path from 'path';
 import { makeTestWriter } from './generatedFileWriter.testUtils';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
@@ -332,7 +329,7 @@ describe('writeMcpConfigs', () => {
         );
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
-        const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p as string);
+        const writtenPaths = writeFileMock.mock.calls.map(([p]: [string]) => p);
 
         expect(writtenPaths.some((p: string) => p.endsWith('/.mcp.json'))).toBe(true);
     });

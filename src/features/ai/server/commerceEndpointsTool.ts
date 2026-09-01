@@ -66,12 +66,12 @@
 import { asRawText, asText } from './mcpToolResult';
 import type { McpToolServer } from './mcpToolServer';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
-import type { StateManager } from '@/core/state/stateManager';
 import {
     buildConfigGeneratorParams,
     extractConfigParamsFromConfigs,
     generateHeaders,
 } from '@/features/eds/services/configGenerator';
+import type { StateManager } from '@/types/state';
 
 /** What an agent needs before it can send a Commerce query. */
 interface CommerceEndpoints {

@@ -46,9 +46,11 @@ describe('meshStatusHelpers', () => {
             const postMessage = jest.fn();
             const context = {
                 panel: { webview: { postMessage } },
-                stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
+                stateManager: createMockStateManager({
+                    getCurrentProject: jest.fn().mockResolvedValue(project),
+                }),
                 logger: createMockLogger(),
-            } as any;
+            };
 
             await sendDemoStatusUpdate(context);
 

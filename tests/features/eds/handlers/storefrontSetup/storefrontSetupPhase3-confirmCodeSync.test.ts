@@ -41,9 +41,13 @@ jest.mock('@/features/eds/services/appInstallationResolver', () => ({
 
 import { executePhaseCodeSync } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhase3';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
-import type { RepoInfo, SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
+import type {
+    RepoInfo,
+    SetupServices,
+} from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 
 const REPO: RepoInfo = {
     repoOwner: 'skukla',
@@ -55,10 +59,10 @@ const REPO: RepoInfo = {
 let order: string[];
 
 function makeContext(): HandlerContext {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
-    } as unknown as HandlerContext;
+    });
 }
 
 function makeServices(): SetupServices {
@@ -85,11 +89,8 @@ const TEAM_ORG_CONFIG = {
     githubAuth: { user: { login: 'someone-else' } },
 } as unknown as StorefrontSetupStartPayload['edsConfig'];
 
-const run = (
-    context: HandlerContext,
-    services: SetupServices,
-    edsConfig = EDS_CONFIG,
-) => executePhaseCodeSync(context, edsConfig, services, REPO);
+const run = (context: HandlerContext, services: SetupServices, edsConfig = EDS_CONFIG) =>
+    executePhaseCodeSync(context, edsConfig, services, REPO);
 
 const appRequiredPayload = (context: HandlerContext): { message: string; isTeamOrg?: boolean } => {
     const send = context.sendMessage as unknown as jest.Mock;
@@ -138,7 +139,7 @@ describe('the App verdict waits for the site', () => {
             expect.anything(),
             expect.anything(),
             expect.anything(),
-            { awaitRegistration: true },
+            { awaitRegistration: true }
         );
     });
 });

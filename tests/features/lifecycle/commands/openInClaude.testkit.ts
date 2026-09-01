@@ -79,7 +79,7 @@ export function makeOpenInClaudeProject(overrides: Partial<Project> = {}): Parti
         name: 'demo',
         path: '/projects/demo',
         ...overrides,
-    } as never)
+    })
 }
 
 // ----------------------------------------------------------------------------

@@ -8,21 +8,25 @@
  */
 
 // IMPORTANT: Mock declarations must precede imports
-jest.mock('vscode', () => ({
-    window: {
-        activeColorTheme: { kind: 1 },
-    },
-    ColorThemeKind: { Dark: 2, Light: 1 },
-    commands: {
-        executeCommand: jest.fn().mockResolvedValue(undefined),
-    },
-    env: {
-        openExternal: jest.fn(),
-    },
-    Uri: {
-        parse: jest.fn((url: string) => ({ toString: () => url })),
-    },
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        window: {
+            activeColorTheme: { kind: 1 },
+        },
+        ColorThemeKind: { Dark: 2, Light: 1 },
+        commands: {
+            executeCommand: jest.fn().mockResolvedValue(undefined),
+        },
+        env: {
+            openExternal: jest.fn(),
+        },
+        Uri: {
+            parse: jest.fn((url: string) => ({ toString: () => url })),
+        },
+    }),
+    { virtual: true }
+);
 
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
@@ -49,19 +53,20 @@ import { HandlerContext } from '@/types/handlers';
 import { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 function makeContext(project: Project | undefined): HandlerContext {
-    return {
+    return createMockHandlerContext({
         panel: {
             webview: { postMessage: jest.fn() },
         } as unknown as HandlerContext['panel'],
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        }) as unknown as HandlerContext['stateManager'],
+        }),
         logger: createMockLogger() as unknown as HandlerContext['logger'],
         sendMessage: jest.fn(),
-    } as unknown as HandlerContext;
+    });
 }
 
 function makeEdsProject(): Project {
@@ -88,7 +93,7 @@ function makeHeadlessProject(): Project {
         status: 'running',
         selectedStack: 'headless-paas',
         componentInstances: {
-            'headless': {
+            headless: {
                 id: 'headless',
                 name: 'Headless',
                 type: 'frontend',
@@ -130,7 +135,9 @@ describe('handleRefreshBlockLibrary', () => {
 
         const result = await handleRefreshBlockLibrary(context);
 
-        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.refreshBlockLibrary');
+        expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+            'demoBuilder.refreshBlockLibrary'
+        );
         expect(result.success).toBe(true);
     });
 });

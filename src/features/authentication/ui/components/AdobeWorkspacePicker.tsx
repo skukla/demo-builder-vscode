@@ -24,6 +24,9 @@ import { SelectionStepContent } from '@/core/ui/components/selection/SelectionSt
 import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import type { WizardSessionState, Workspace, WizardState } from '@/types/webview';
 
+/** Constant per call site — see PROJECT_SEARCH_FIELDS in AdobeProjectPicker. */
+const WORKSPACE_SEARCH_FIELDS: ReadonlyArray<keyof Workspace> = ['title', 'name'];
+
 export interface AdobeWorkspacePickerProps {
     /** Current wizard state (provides project + cached workspaces + selection). */
     state: WizardSessionState;
@@ -90,7 +93,7 @@ export function AdobeWorkspacePicker({
         updateState,
         selectedItem: state.adobeWorkspace,
         autoSelectSingle: !suppressAutoSelect,
-        searchFields: ['title', 'name'],
+        searchFields: WORKSPACE_SEARCH_FIELDS,
         // Auto-select "Stage" workspace if available and nothing selected — unless the
         // user reopened this picker to change it, in which case leave it to them.
         autoSelectCustom: suppressAutoSelect

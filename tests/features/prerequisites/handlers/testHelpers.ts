@@ -8,6 +8,7 @@ import type { HandlerContext } from '@/types/handlers';
 
 /** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 export { createMockLogger };
 
 /**
@@ -36,7 +37,7 @@ export function createPrereqHandlerContext(overrides?: Partial<HandlerContext>):
             extensionPath: '/test/extension/path',
         } as HandlerContext['context'],
         panel: undefined,
-        stateManager: {} as HandlerContext['stateManager'],
+        stateManager: createMockStateManager(),
         communicationManager: undefined,
         sendMessage: jest.fn(),
         sharedState: {

@@ -16,13 +16,13 @@ import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
 // the shared harness it applied too late and every test failed on
 // `access.mockResolvedValue is not a function`.
 jest.mock('fs/promises');
-
 
 // Preflight + permission gate pass.
 jest.mock('@/features/authentication/services/ensureProjectAdobeContext', () => ({
@@ -45,7 +45,8 @@ jest.mock('@/features/app-builder/services/ensureMeshApiSubscribed', () => ({
 
 // The deploy core.
 const mockDeployMeshComponent = jest.fn().mockResolvedValue({
-    success: true, data: { meshId: 'mesh-1', endpoint: 'https://m.adobe.io/graphql' },
+    success: true,
+    data: { meshId: 'mesh-1', endpoint: 'https://m.adobe.io/graphql' },
 });
 jest.mock('@/features/mesh/services/meshDeployment', () => ({
     deployMeshComponent: (...args: unknown[]) => mockDeployMeshComponent(...args),
@@ -74,14 +75,21 @@ function createTestProject(): Project {
         created: new Date(),
         lastModified: new Date(),
         adobe: {
-            projectId: 'proj-123', projectName: 'Test', organization: 'org-123',
-            workspace: 'ws-123', authenticated: true,
+            projectId: 'proj-123',
+            projectName: 'Test',
+            organization: 'org-123',
+            workspace: 'ws-123',
+            authenticated: true,
         },
         componentSelections: { backend: 'adobe-commerce-paas', frontend: 'eds-storefront' },
         componentInstances: {
             'commerce-mesh': {
-                id: 'commerce-mesh', name: 'Commerce Mesh', type: 'app-builder',
-                subType: 'mesh', path: '/test/project/mesh', status: 'ready',
+                id: 'commerce-mesh',
+                name: 'Commerce Mesh',
+                type: 'app-builder',
+                subType: 'mesh',
+                path: '/test/project/mesh',
+                status: 'ready',
             } as ComponentInstance,
         },
         componentConfigs: {},
@@ -99,37 +107,44 @@ describe('DeployMeshCommand - pre-deploy subscribe', () => {
         jest.clearAllMocks();
         mockEnsureSubscribed.mockResolvedValue(undefined);
         mockDeployMeshComponent.mockResolvedValue({
-            success: true, data: { meshId: 'mesh-1', endpoint: 'https://m.adobe.io/graphql' },
+            success: true,
+            data: { meshId: 'mesh-1', endpoint: 'https://m.adobe.io/graphql' },
         });
 
-        mockContext = { subscriptions: [], extensionPath: '/test/extension' } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
         mockStateManager = createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(createTestProject()),
             saveProject: jest.fn().mockResolvedValue(undefined),
         }) as unknown as jest.Mocked<StateManager>;
-        mockLogger = createMockLogger() as jest.Mocked<Logger>;
+        mockLogger = createMockLogger();
         mockAuthManager = {
             testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
             getCachedOrganization: jest.fn().mockReturnValue(undefined),
         };
-        mockCommandExecutor = { execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '', duration: 1 }) };
+        mockCommandExecutor = {
+            execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '', duration: 1 }),
+        };
 
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
         (vscode.window.withProgress as jest.Mock).mockImplementation(
-            async (_o: unknown, task: (p: unknown) => Promise<void>) => task({ report: jest.fn() }),
+            async (_o: unknown, task: (p: unknown) => Promise<void>) => task({ report: jest.fn() })
         );
         (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
         (vscode.window.showErrorMessage as jest.Mock).mockResolvedValue(undefined);
         (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
         (fs.access as jest.Mock).mockResolvedValue(undefined);
-        (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify({ meshConfig: { sources: [] } }));
+        (fs.readFile as jest.Mock).mockResolvedValue(
+            JSON.stringify({ meshConfig: { sources: [] } })
+        );
     });
 
     it('calls ensureMeshApiSubscribed BEFORE deployMeshComponent', async () => {
         const order: string[] = [];
-        mockEnsureSubscribed.mockImplementation(async () => { order.push('subscribe'); });
+        mockEnsureSubscribed.mockImplementation(async () => {
+            order.push('subscribe');
+        });
         mockDeployMeshComponent.mockImplementation(async () => {
             order.push('deploy');
             return { success: true, data: { meshId: 'm', endpoint: 'e' } };

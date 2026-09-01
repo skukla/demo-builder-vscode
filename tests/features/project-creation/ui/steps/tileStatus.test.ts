@@ -174,7 +174,11 @@ describe('isMeshSelected', () => {
     it('is false when the mesh id sits only in the retired legacy dependency field', () => {
         expect(
             isMeshSelected(
-                state({ selectedOptionalDependencies: ['eds-commerce-mesh'] } as never),
+                // `selectedOptionalDependencies` was REMOVED by D3; the cast is what
+                // lets the test put a value in a field that no longer exists.
+                state({
+                    selectedOptionalDependencies: ['eds-commerce-mesh'],
+                } as unknown as WizardState),
                 'eds-commerce-mesh'
             )
         ).toBe(false);
@@ -349,7 +353,11 @@ describe('anyDeployableSelected', () => {
     it('is false when a mesh id sits only in the retired legacy dependency field', () => {
         expect(
             anyDeployableSelected(
-                state({ selectedOptionalDependencies: ['eds-commerce-mesh'] } as never)
+                // `selectedOptionalDependencies` was REMOVED by D3; the cast is what
+                // lets the test put a value in a field that no longer exists.
+                state({
+                    selectedOptionalDependencies: ['eds-commerce-mesh'],
+                } as unknown as WizardState)
             )
         ).toBe(false);
     });

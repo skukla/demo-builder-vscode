@@ -20,7 +20,6 @@ import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 
-
 export interface BrandGalleryProps {
     /** Demo packages to display (renamed from brands) */
     packages: DemoPackage[];
@@ -51,7 +50,7 @@ interface PackageCardProps {
 /**
  * PackageCard - displays package info with selection indicator
  */
-const PackageCard: React.FC<PackageCardProps> = ({
+function PackageCard({
     pkg,
     selectedStack,
     selectedBlockLibraries = [],
@@ -60,7 +59,7 @@ const PackageCard: React.FC<PackageCardProps> = ({
     isComplete,
     isDimmed,
     onCardClick,
-}) => {
+}: PackageCardProps) {
     const isComingSoon = pkg.status === 'coming-soon';
 
     const handleCardClick = useCallback(() => {
@@ -96,19 +95,13 @@ const PackageCard: React.FC<PackageCardProps> = ({
             aria-disabled={isComingSoon || undefined}
             aria-label={`${pkg.name}: ${pkg.description}`}
         >
-            {isComingSoon && (
-                <span className="architecture-badge">Coming Soon</span>
-            )}
+            {isComingSoon && <span className="architecture-badge">Coming Soon</span>}
             {isSelected && <SelectionCheck corner />}
             <div className="brand-card-header">
                 <div className="brand-card-title-row">
-                    <Text UNSAFE_className="brand-card-name">
-                        {pkg.name}
-                    </Text>
+                    <Text UNSAFE_className="brand-card-name">{pkg.name}</Text>
                 </div>
-                <Text UNSAFE_className="brand-card-description">
-                    {pkg.description}
-                </Text>
+                <Text UNSAFE_className="brand-card-description">{pkg.description}</Text>
             </div>
 
             {/* Compact selection: a quiet secondary line (matching the backend card's
@@ -128,13 +121,16 @@ const PackageCard: React.FC<PackageCardProps> = ({
                                 <Text UNSAFE_className="brand-card-selection-label">
                                     Block Libraries
                                 </Text>
-                                {selectedBlockLibraries.map(id => (
+                                {selectedBlockLibraries.map((id) => (
                                     <Text key={id} UNSAFE_className="brand-card-selection-value">
                                         {getBlockLibraryName(id)}
                                     </Text>
                                 ))}
-                                {customBlockLibraries?.map(lib => (
-                                    <Text key={`${lib.source.owner}/${lib.source.repo}`} UNSAFE_className="brand-card-selection-value">
+                                {customBlockLibraries?.map((lib) => (
+                                    <Text
+                                        key={`${lib.source.owner}/${lib.source.repo}`}
+                                        UNSAFE_className="brand-card-selection-value"
+                                    >
                                         {lib.name}
                                     </Text>
                                 ))}
@@ -145,9 +141,9 @@ const PackageCard: React.FC<PackageCardProps> = ({
             )}
         </div>
     );
-};
+}
 
-export const BrandGallery: React.FC<BrandGalleryProps> = ({
+export function BrandGallery({
     packages,
     stacks,
     selectedPackage,
@@ -156,7 +152,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     selectedBlockLibraries = [],
     customBlockLibraries = [],
     headerContent,
-}) => {
+}: BrandGalleryProps) {
     const [searchQuery, setSearchQuery] = useState('');
 
     const filteredPackages = useMemo(
@@ -167,15 +163,13 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     // Get the selected stack object
     const selectedStackObj = useMemo(() => {
         if (!selectedStack) return undefined;
-        return stacks.find(s => s.id === selectedStack);
+        return stacks.find((s) => s.id === selectedStack);
     }, [stacks, selectedStack]);
 
     if (packages.length === 0) {
         return (
             <SingleColumnLayout>
-                <Text UNSAFE_className="text-gray-600">
-                    No packages available
-                </Text>
+                <Text UNSAFE_className="text-gray-600">No packages available</Text>
             </SingleColumnLayout>
         );
     }
@@ -197,7 +191,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
             />
 
             <div className="expandable-brand-grid">
-                {filteredPackages.map(pkg => {
+                {filteredPackages.map((pkg) => {
                     const isSelected = selectedPackage === pkg.id;
                     const isDimmed = selectedPackage !== undefined && !isSelected;
                     return (
@@ -217,10 +211,8 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
             </div>
 
             {searchQuery && filteredPackages.length === 0 && (
-                <Text UNSAFE_className="empty-state-text">
-                    No packages match "{searchQuery}"
-                </Text>
+                <Text UNSAFE_className="empty-state-text">No packages match "{searchQuery}"</Text>
             )}
         </SingleColumnLayout>
     );
-};
+}

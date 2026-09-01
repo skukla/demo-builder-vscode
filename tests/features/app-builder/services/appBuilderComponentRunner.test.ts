@@ -389,7 +389,7 @@ describe('addAppBuilderComponent partial-failure', () => {
         const deps = createDeps();
         const seen: string[] = [];
 
-        (deps.deployMesh as jest.Mock).mockImplementation(
+        deps.deployMesh.mockImplementation(
             async (_path, _cmd, _log, onProgress?: (m: string, s?: string) => void) => {
                 onProgress?.('Reading mesh configuration...', '');
                 onProgress?.('Deploying...', 'Validating configuration');
@@ -417,7 +417,7 @@ describe('addAppBuilderComponent partial-failure', () => {
         const deps = createDeps();
         const seen: string[] = [];
 
-        (deps.deployApp as jest.Mock).mockImplementation(
+        deps.deployApp.mockImplementation(
             async (
                 _path,
                 _pkg,
@@ -461,14 +461,14 @@ describe('addAppBuilderComponent partial-failure', () => {
                     type: 'app-builder',
                     status: 'ready',
                     path: '/proj/components/erp-bridge',
-                } as never,
+                },
             },
         });
         const deps = createDeps();
 
         await deployAppBuilderComponent(project, 'erp-bridge', deps as never);
 
-        const saved = (deps.saveProject as jest.Mock).mock.calls.at(-1)![0] as Project;
+        const saved = deps.saveProject.mock.calls.at(-1)![0] as Project;
         const entry = saved.appBuilderComponents?.['erp-bridge'];
         expect(entry?.status).toBe('deployed');
         expect(entry?.sourceHash).toBe('abc123');
@@ -523,7 +523,7 @@ describe('deployAppBuilderComponent (redeploy)', () => {
                     subType: 'mesh',
                     status: 'ready',
                     path: '/proj/components/commerce-mesh',
-                } as never,
+                },
             },
             appBuilderComponents: {
                 'commerce-mesh': {
@@ -569,7 +569,7 @@ describe('deployAppBuilderComponent (redeploy)', () => {
                     type: 'app-builder',
                     status: 'ready',
                     path: '/proj/components/erp-bridge',
-                } as never,
+                },
             },
             appBuilderComponents: {
                 'erp-bridge': {
@@ -601,7 +601,7 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
         const project = createProject();
         const deps = createDeps();
         let statusDuringDeploy: string | undefined;
-        (deps.deployApp as jest.Mock).mockImplementation(async () => {
+        deps.deployApp.mockImplementation(async () => {
             statusDuringDeploy = project.appBuilderComponents?.[INTEGRATION_ENTRY.id]?.status;
             return { success: true, data: { url: 'https://app' } };
         });
@@ -632,12 +632,12 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
                 status: 'ready',
                 path: '/proj/components/erp',
                 lastUpdated: new Date(),
-            } as never,
+            },
         };
         const deps = createDeps();
         let errorDuringDeploy: string | undefined = 'unset';
         let statusDuringDeploy: string | undefined;
-        (deps.deployApp as jest.Mock).mockImplementation(async () => {
+        deps.deployApp.mockImplementation(async () => {
             const entry = project.appBuilderComponents?.[INTEGRATION_ENTRY.id];
             statusDuringDeploy = entry?.status;
             errorDuringDeploy = entry?.error;
@@ -667,10 +667,10 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
                 status: 'ready',
                 path: '/proj/components/erp',
                 lastUpdated: new Date(),
-            } as never,
+            },
         };
         const deps = createDeps();
-        (deps.deployApp as jest.Mock).mockResolvedValue({
+        deps.deployApp.mockResolvedValue({
             success: false,
             error: 'webpack said no',
         });

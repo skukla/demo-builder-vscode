@@ -33,11 +33,11 @@ function renderDialog(props: Partial<React.ComponentProps<typeof PromptEditDialo
 }
 
 function getTitleInput(): HTMLInputElement {
-    return screen.getByLabelText(/title/i) as HTMLInputElement;
+    return screen.getByLabelText(/title/i);
 }
 
 function getPromptInput(): HTMLTextAreaElement {
-    return screen.getByLabelText(/prompt/i) as HTMLTextAreaElement;
+    return screen.getByLabelText(/prompt/i);
 }
 
 function getSaveButton(): HTMLElement {

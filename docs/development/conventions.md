@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **71** conventions, **70** enforced
+- **76** conventions, **75** enforced
 - **20** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -35,7 +35,7 @@ it means the rule rests on somebody noticing.
 |---|---|---|---|
 | Nothing under `src/core/` imports `@/features` or `@/commands`. Enforced by the `layerDirection` ledger in `tests/sop/architecture-rules.exemptions.json` — seven predate the rule and the set may only shrink. |  |  | *named in prose* |
 | Features do not import other features; commands may. enforced by eslint. |  |  | `eslint.config.mjs` |
-| A module is imported by the path that DEFINES the symbol. No re-export-only `index.ts` — not in `core/`, not in a feature. **The ledger is CLOSED**: all 43 that predated the rule were retired on 2026-08-31, so this is now a ban with nowhere to write an exception down. Enforced by the `reExportIndex` ledger in `tests/sop/architecture-rules.exemptions.json`, with the `featureBarrels` ledger — now empty — banning feature-level barrels outright. | [ADR](../architecture/adr/022-barrel-files.md) |  | *named in prose* |
+| A module is imported by the path that DEFINES the symbol. No re-export-only `index.ts` — not in `core/`, not in a feature. **The ledger is CLOSED**: all 43 that predated the rule were retired on 2026-08-31, so this is now a ban with nowhere to write an exception down. Enforced by `tests/sop/architecture-rules.test.ts` through `expectBanned`, which asserts both halves: no violations, AND no ledger key to write one into. > That second half arrived on 2026-09-01, and this entry is why it was needed. It already SAID "a ban with nowhere to write an exception down" while `reExportIndex: {}` and `featureBarrels: {}` sat in the exemptions file — empty, but still keys. An empty ledger already fails a new violation, so nothing was undetected; what remained was the SLOT. The next person to trip the rule could add a row with a reason and stay green, and the rule would quietly go back to being negotiable. Seven rules that had reached zero were in that state; all seven are now banned outright, and re-adding an exemption to any of them fails the build naming the rule. | [ADR](../architecture/adr/022-barrel-files.md) |  | `architecture-rules.test.ts` |
 | A PascalCase `.tsx` exports a component of that name, and an exported ALL-CAPS const is `UPPER_SNAKE_CASE`. Files are otherwise named for their SUBJECT — `WizardContainer.tsx`, `loadingHTML.ts`, `commerceSections.ts`. |  |  | `naming-conventions.test.ts` |
 
 ## 3. Code gets what it needs handed to it
@@ -116,6 +116,7 @@ it means the rule rests on somebody noticing.
 
 | Rule | Why | How | Enforced by |
 |---|---|---|---|
+| A canonical fake covers its subject's WHOLE public surface, and invents nothing. |  |  | `fake-mirrors-subject.test.ts` |
 | A split test family shares one `.testUtils` file, which owns the mocks and the subject import. enforced by `tests/sop/test-family-setup.test.ts`. |  | [procedure](../../.claude/skills/webview-test-authoring/SKILL.md) | `test-family-setup.test.ts` |
 | Before designing a way to hand a mocked collaborator in — or to share one between suites — delete the mock and run the suite. If it still passes, the mock was the whole problem. |  |  | `redundant-automocks.test.ts` |
 | No test file over 750 lines. enforced by `npm run validate:test-file-sizes`. |  |  | *named in prose* |
@@ -125,6 +126,9 @@ it means the rule rests on somebody noticing.
 | A fixture builder name has exactly one definition. |  |  | `builder-uniqueness.test.ts` |
 | A fake that has a builder in `tests/helpers/` is imported, not written again inline. Enforced by `tests/sop/canonical-fakes.test.ts` — a shrink-only ledger grandfathers the files that already do, so it stops new copies rather than demanding a sweep. |  |  | `canonical-fakes.test.ts` |
 | A fake that a SECOND feature directory needs lives in `tests/helpers/`. A `*.testUtils.ts` beside a suite is for setup specific to that subject. | [ADR](../architecture/adr/016-test-strategy.md) |  | `canonical-fakes.test.ts` |
+| A value handed to a hook that DEPENDS on it must be stable across renders. |  |  | `stable-hook-arguments.test.ts` |
+| A component is declared ONE way: `function Name(props: NameProps)`. `React.FC` is banned. |  |  | `one-component-form.test.ts` |
+| PRODUCTION erases no types. `as any` and `as never` are banned in `src/` outright. |  |  | `src-erases-no-types.test.ts` |
 | No test erases a type. `as any` and `as never` are banned anywhere in `tests/`. A builder is declared as the REAL type it stands for; where the structural fake cannot satisfy that type honestly, cast the object literal INTO it at the builder's boundary as `as unknown as X` — once, where it is visible. | [ADR](../architecture/adr/016-test-strategy.md) |  | `type-erasing-casts.test.ts`<br>`eslint.config.mjs` |
 | Do not mock a configuration leaf. |  |  | `no-config-leaf-mocks.test.ts` |
 | Do not lower one test's timeout below the file's budget. |  |  | `no-lowered-test-timeout.test.ts` |
@@ -135,9 +139,10 @@ it means the rule rests on somebody noticing.
 
 | Rule | Why | How | Enforced by |
 |---|---|---|---|
-| Every scan declares a control: something it is known to find. A detector that has silently stopped detecting reports "all clear" in exactly the same words as one that verified. |  |  | `every-scan-declares-a-control.test.ts` |
+| Every scan declares a control: something it is known to find. A detector that has silently stopped detecting reports "all clear" in exactly the same words as one that verified. |  |  | `every-scan-declares-a-control.test.ts`<br>`rule-proofs.test.ts`<br>`eslint-type-aware.test.ts`<br>`codemod-harness.test.ts`<br>`eslint.config.mjs` |
 | Never publish an identifier you have not read from the source. Setting keys, env vars, command ids, file paths and function names are cheap to grep and expensive to get wrong in something a user reads. |  |  | `cited-identifiers.test.ts`<br>`doc-module-refs.test.ts` |
 | Capture an exit code in a variable. Never read one through a pipe. |  |  | `13-piped-exit-code.rule` |
+| A list of paths reaches a command through `xargs`, never as a bare `$VAR`. Quote the variable when one argument is what you meant. |  |  | `16-unsplit-var.rule`<br>`eslint.config.mjs` |
 | Quote glob arguments passed to `grep` or `find`. In zsh an unquoted pattern is expanded before the command sees it, and an unquoted variable is not split into separate arguments. |  |  | `12-unquoted-glob.rule` |
 | Anything claiming to be an instrument is in the registry, and the registry and the disk must agree in both directions. A count written in prose has something checking it. |  |  | `tooling-registry.test.ts` |
 | A module path named in a document resolves. A citation must reach a file or directory; an `import` in a code example must reach something importable. |  |  | `doc-module-refs.test.ts` |

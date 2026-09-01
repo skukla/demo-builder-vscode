@@ -29,7 +29,7 @@ jest.mock('@/features/eds/services/inspectorHelpers', () => ({
 }));
 
 // Mock fetch globally
-global.fetch = jest.fn() as jest.Mock;
+global.fetch = jest.fn();
 
 describe('AddonUpdateChecker', () => {
     let checker: AddonUpdateChecker;
@@ -78,7 +78,7 @@ describe('AddonUpdateChecker', () => {
     function mockGitHubApi(
         branchSha: string | null,
         behindBy: number = 0,
-        branchStatus: number = 200,
+        branchStatus: number = 200
     ): void {
         (global.fetch as jest.Mock).mockImplementation(async (url: string) => {
             if (url.includes('/branches/')) {
@@ -141,15 +141,13 @@ describe('AddonUpdateChecker', () => {
         });
 
         it('should skip library with missing source and log warning', async () => {
-            const lib = makeLibrary({ source: undefined as any });
+            const lib = makeLibrary({ source: undefined });
             const project = makeProject({ installedBlockLibraries: [lib] });
 
             const results = await checker.checkBlockLibraries(project);
 
             expect(results).toEqual([]);
-            expect(mockLogger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('[Updates]'),
-            );
+            expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('[Updates]'));
         });
 
         it('should handle GitHub API failure gracefully and return empty', async () => {

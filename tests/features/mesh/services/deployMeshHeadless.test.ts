@@ -168,7 +168,7 @@ describe('deployMeshHeadless', () => {
 
         await deployMeshHeadless(d);
 
-        const entry = (d.project as Project).appBuilderComponents?.['commerce-mesh'];
+        const entry = d.project.appBuilderComponents?.['commerce-mesh'];
         expect(entry?.status).toBe('error');
         expect(entry?.error).toBe(
             'The specified organization, project, and workspace combination is invalid'
@@ -184,7 +184,7 @@ describe('deployMeshHeadless', () => {
 
         await deployMeshHeadless(d);
 
-        const entry = (d.project as Project).appBuilderComponents?.['commerce-mesh'];
+        const entry = d.project.appBuilderComponents?.['commerce-mesh'];
         expect(entry?.error).not.toContain('/Users/someone');
     });
 
@@ -517,7 +517,7 @@ describe('deployMeshHeadless', () => {
                 expect.anything(),
                 'commerce-mesh',
                 '/p/mesh',
-                expect.anything(),
+                expect.anything()
             );
         });
 

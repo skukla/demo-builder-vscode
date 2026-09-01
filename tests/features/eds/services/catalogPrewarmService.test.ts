@@ -36,7 +36,7 @@ describe('prewarmCatalog — gate / skip cases', () => {
             DA_ORG,
             DA_SITE,
             makePublisher(),
-            mockLogger as never
+            mockLogger
         );
         expect(result).toEqual({
             attempted: 0,
@@ -55,7 +55,7 @@ describe('prewarmCatalog — gate / skip cases', () => {
             DA_ORG,
             DA_SITE,
             makePublisher(),
-            mockLogger as never
+            mockLogger
         );
         expect(result.skipped).toBe(true);
         expect(result.skipReason).toContain('invalid overlay URL');
@@ -73,7 +73,7 @@ describe('prewarmCatalog — gate / skip cases', () => {
             DA_ORG,
             DA_SITE,
             makePublisher(),
-            mockLogger as never
+            mockLogger
         );
 
         expect(result.skipped).toBe(true);
@@ -96,7 +96,7 @@ describe('prewarmCatalog — gate / skip cases', () => {
             DA_ORG,
             DA_SITE,
             makePublisher(),
-            mockLogger as never
+            mockLogger
         );
         expect(result.skipped).toBe(true);
         expect(result.skipReason).toContain('no commerce endpoint');
@@ -126,7 +126,7 @@ describe('prewarmCatalog — authenticated publish path', () => {
             DA_ORG,
             DA_SITE,
             publisher,
-            mockLogger as never
+            mockLogger
         );
 
         expect(publisher.previewAndPublishPage).toHaveBeenCalledWith(
@@ -160,7 +160,7 @@ describe('prewarmCatalog — authenticated publish path', () => {
             DA_ORG,
             DA_SITE,
             publisher,
-            mockLogger as never
+            mockLogger
         );
 
         expect(publisher.previewAndPublishPage).toHaveBeenCalledTimes(2);
@@ -202,7 +202,7 @@ describe('prewarmCatalog — happy path', () => {
             DA_ORG,
             DA_SITE,
             publisher,
-            mockLogger as never
+            mockLogger
         );
 
         expect(result).toEqual({ attempted: 3, succeeded: 3, failed: 0, skipped: false });
@@ -236,7 +236,7 @@ describe('prewarmCatalog — happy path', () => {
             DA_ORG,
             DA_SITE,
             publisher,
-            mockLogger as never
+            mockLogger
         );
 
         // The published path must be lowercase in both segments.
@@ -280,7 +280,7 @@ describe('prewarmCatalog — happy path', () => {
             DA_ORG,
             DA_SITE,
             publisher,
-            mockLogger as never
+            mockLogger
         );
 
         const expectedPath = '/products/cmlodestar/yale_20unoplus-series_20a';
@@ -329,7 +329,7 @@ describe('prewarmCatalog — happy path', () => {
             DA_ORG,
             DA_SITE,
             publisher,
-            mockLogger as never
+            mockLogger
         );
 
         expect(result.attempted).toBe(4);
@@ -363,7 +363,7 @@ describe('prewarmCatalog — happy path', () => {
             DA_ORG,
             DA_SITE,
             makePublisher(),
-            mockLogger as never,
+            mockLogger,
             onProgress
         );
 
@@ -389,7 +389,7 @@ describe('pickSampleSku', () => {
             catalogPage([{ sku: 'VA19-SI-NA', urlKey: 'Cronus Yoga Pant' }])
         );
 
-        const sample = await pickSampleSku(makeAccsProject(), mockLogger as never);
+        const sample = await pickSampleSku(makeAccsProject(), mockLogger);
 
         expect(sample).toEqual({
             sku: 'VA19-SI-NA',
@@ -408,7 +408,7 @@ describe('pickSampleSku', () => {
             catalogPage([{ sku: 'AB 12/CD', urlKey: 'Widget' }])
         );
 
-        const sample = await pickSampleSku(makeAccsProject(), mockLogger as never);
+        const sample = await pickSampleSku(makeAccsProject(), mockLogger);
 
         expect(sample?.path).toBe('/products/widget/ab_2012_2fcd');
     });
@@ -418,7 +418,7 @@ describe('pickSampleSku', () => {
         // assert on the destination rather than the verb.
         (global.fetch as jest.Mock).mockResolvedValue(catalogPage([{ sku: 'S1', urlKey: 'u1' }]));
 
-        await pickSampleSku(makeAccsProject(), mockLogger as never);
+        await pickSampleSku(makeAccsProject(), mockLogger);
 
         for (const [url] of (global.fetch as jest.Mock).mock.calls) {
             expect(String(url)).not.toContain('prepublish-pdp');
@@ -431,20 +431,20 @@ describe('pickSampleSku', () => {
             componentSelections: { backend: 'adobe-commerce-paas' },
         } as Partial<Project>);
 
-        expect(await pickSampleSku(paas, mockLogger as never)).toBeUndefined();
+        expect(await pickSampleSku(paas, mockLogger)).toBeUndefined();
         expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('returns undefined when the catalog is empty', async () => {
         (global.fetch as jest.Mock).mockResolvedValue(catalogPage([]));
 
-        expect(await pickSampleSku(makeAccsProject(), mockLogger as never)).toBeUndefined();
+        expect(await pickSampleSku(makeAccsProject(), mockLogger)).toBeUndefined();
     });
 
     it('returns undefined when Catalog Service is down', async () => {
         (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 503 });
 
-        expect(await pickSampleSku(makeAccsProject(), mockLogger as never)).toBeUndefined();
+        expect(await pickSampleSku(makeAccsProject(), mockLogger)).toBeUndefined();
     });
 
     it('returns undefined on GraphQL errors rather than throwing', async () => {
@@ -454,6 +454,6 @@ describe('pickSampleSku', () => {
             json: async () => ({ errors: [{ message: 'boom' }] }),
         });
 
-        expect(await pickSampleSku(makeAccsProject(), mockLogger as never)).toBeUndefined();
+        expect(await pickSampleSku(makeAccsProject(), mockLogger)).toBeUndefined();
     });
 });

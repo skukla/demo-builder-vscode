@@ -29,23 +29,25 @@ export interface ContentWithSidebarProps {
     className?: string;
 }
 
-export const ContentWithSidebar: React.FC<ContentWithSidebarProps> = ({
+export function ContentWithSidebar({
     children,
     sidebar,
     sidebarContentWidth = '280px',
     className,
-}) => (
-    <TwoColumnLayout
-        // Left-aligned, full-width: the left column is capped at --content-width via CSS
-        // (.content-with-sidebar), and the right column flex-grows so its panel reaches
-        // the screen edge. The sidebar CONTENT is capped (inner div) so it stays tight.
-        maxWidth="none"
-        className={cn('content-with-sidebar', className)}
-        leftContent={children}
-        rightContent={
-            <div className="content-sidebar-inner" style={{ maxWidth: sidebarContentWidth }}>
-                {sidebar}
-            </div>
-        }
-    />
-);
+}: ContentWithSidebarProps) {
+    return (
+        <TwoColumnLayout
+            // Left-aligned, full-width: the left column is capped at --content-width via CSS
+            // (.content-with-sidebar), and the right column flex-grows so its panel reaches
+            // the screen edge. The sidebar CONTENT is capped (inner div) so it stays tight.
+            maxWidth="none"
+            className={cn('content-with-sidebar', className)}
+            leftContent={children}
+            rightContent={
+                <div className="content-sidebar-inner" style={{ maxWidth: sidebarContentWidth }}>
+                    {sidebar}
+                </div>
+            }
+        />
+    );
+}

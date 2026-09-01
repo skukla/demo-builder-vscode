@@ -42,6 +42,10 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { WizardSessionState, AdobeProject, WizardState } from '@/types/webview';
 
 /** The delete handler's response envelope (`webviewClient.request` resolves with this). */
+/** Constant per call site, so it lives at module level — an inline array is a new
+ *  reference every render, and this one is named by the filter memo's deps. */
+const PROJECT_SEARCH_FIELDS: ReadonlyArray<keyof AdobeProject> = ['title', 'name', 'description'];
+
 interface DeleteProjectResult {
     success: boolean;
     cancelled?: boolean;
@@ -208,7 +212,7 @@ export function AdobeProjectPicker({
         // caller (onProjectSelect) never auto-selects: the pick must be a
         // deliberate click, committed by that flow's Continue.
         autoSelectSingle: !hasDeleted && !onProjectSelect,
-        searchFields: ['title', 'name', 'description'],
+        searchFields: PROJECT_SEARCH_FIELDS,
         // Thread the wizard-selected org into get-projects so the handler can
         // establish org-context targeting (the handler consumes payload.orgId).
         messagePayload: { orgId: state.adobeOrg?.id },

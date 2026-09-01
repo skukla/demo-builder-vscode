@@ -20,7 +20,7 @@ jest.mock(
     () => ({
         window: {
             withProgress: (...a: unknown[]) =>
-                (mockWithProgress as never as (...x: unknown[]) => unknown)(...a),
+                (mockWithProgress as (...x: unknown[]) => unknown)(...a),
         },
         ProgressLocation: { Notification: 15 },
     }),
@@ -52,11 +52,11 @@ jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', 
 }));
 
 import { handleSetProjectDestination } from '@/features/dashboard/handlers/destinationHandlers';
-import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 const EXISTING_ADOBE = {
     organization: '285361',
@@ -77,13 +77,13 @@ const NEW_DESTINATION = {
 function makeContext(adobe: Record<string, unknown> | undefined = EXISTING_ADOBE) {
     const project = { name: 'demo', path: '/p/demo', adobe: adobe ? { ...adobe } : undefined };
     const saveProject = jest.fn().mockResolvedValue(undefined);
-    const context = {
+    const context = createMockHandlerContext({
         logger: createMockLogger(),
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
         }),
-    } as unknown as HandlerContext;
+    });
     return { context, project, saveProject };
 }
 
@@ -92,11 +92,6 @@ beforeEach(() => {
     mockRunGuards.mockResolvedValue(undefined);
     mockMove.mockResolvedValue({ success: true, moved: [], failed: [] });
 });
-
-
-
-
-
 
 /**
  * ADR-015 (2026-08-28): this handler resolves the shared services from the REAL
@@ -157,10 +152,12 @@ describe('handleSetProjectDestination', () => {
     });
 
     it('fails when there is no current project', async () => {
-        const context = {
+        const context = createMockHandlerContext({
             logger: createMockLogger(),
-            stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(undefined) }),
-        } as unknown as HandlerContext;
+            stateManager: createMockStateManager({
+                getCurrentProject: jest.fn().mockResolvedValue(undefined),
+            }),
+        });
 
         const result = await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -193,13 +190,13 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
             appBuilderComponents: { 'erp-sync': { kind: 'integration', status: 'deployed' } },
         };
         const saveProject = jest.fn().mockResolvedValue(undefined);
-        const context = {
+        const context = createMockHandlerContext({
             logger: createMockLogger(),
             stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(project),
                 saveProject,
             }),
-        } as unknown as HandlerContext;
+        });
         return { context, saveProject };
     }
 
@@ -252,13 +249,13 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
             adobe: { ...EXISTING_ADOBE },
             appBuilderComponents: { 'eds-accs-mesh': { kind: 'mesh', status: 'deployed' } },
         };
-        const context = {
+        const context = createMockHandlerContext({
             logger: createMockLogger(),
             stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(project),
                 saveProject: jest.fn().mockResolvedValue(undefined),
             }),
-        } as unknown as HandlerContext;
+        });
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
         const onRowStatus = mockMove.mock.calls[0][3] as (

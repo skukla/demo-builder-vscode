@@ -17,10 +17,16 @@
 import * as vscode from 'vscode';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { provisionAccsCredentials } from '@/features/data-installer/services/accsCredentialProvisioner';
-import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../helpers/extensionContextFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -73,23 +79,26 @@ function accsProject(): Partial<Project> {
 
 function makeImportHarness(project: unknown = accsProject()) {
     const saved: unknown[] = [];
-    const context = {
+    const context = createMockHandlerContext({
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
-        authManager: {
+        authManager: createMockAuthenticationService({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest.fn().mockReturnValue({
                 inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }),
             }),
-        },
+        }),
         panel: {} as vscode.WebviewPanel,
-        context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
+        context: createMockExtensionContext({
+            globalState: createStatefulGlobalState().globalState,
+            secrets: createMockSecretStorage().secrets,
+        }),
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn(async (p: Project) => void saved.push(p)),
         }),
         sendMessage: jest.fn(),
-    } as unknown as HandlerContext;
+    });
     return { context, saved };
 }
 
@@ -180,7 +189,7 @@ describe('the needs-accs-credentials refusal carries its flag', () => {
             get: jest.fn((key: string) =>
                 key === 'apiBaseUrl'
                     ? 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api'
-                    : true,
+                    : true
             ),
         });
     });
@@ -226,7 +235,7 @@ describe('the offer appears only where provisioning could actually run', () => {
             get: jest.fn((key: string) =>
                 key === 'apiBaseUrl'
                     ? 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api'
-                    : true,
+                    : true
             ),
         });
     });

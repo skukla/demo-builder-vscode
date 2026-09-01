@@ -70,7 +70,7 @@ export interface ProjectsDashboardProps {
  * - Always-visible search/filter
  * - Responsive card grid with breathing room
  */
-export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
+export function ProjectsDashboard({
     projects,
     runningProjectPath,
     onSelectProject,
@@ -84,7 +84,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     hasLoadedOnce = true,
     initialViewMode = 'cards',
     onViewModeOverride,
-}) => {
+}: ProjectsDashboardProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
 
@@ -248,4 +248,4 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             </PageLayout>
         </div>
     );
-};
+}

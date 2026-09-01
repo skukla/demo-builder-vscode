@@ -10,7 +10,10 @@
 import Add from '@spectrum-icons/workflow/Add';
 import Import from '@spectrum-icons/workflow/Import';
 import React from 'react';
-import { CtaEmptyState, type CtaEmptyStateAction } from '@/core/ui/components/feedback/CtaEmptyState';
+import {
+    CtaEmptyState,
+    type CtaEmptyStateAction,
+} from '@/core/ui/components/feedback/CtaEmptyState';
 
 export interface DashboardEmptyStateProps {
     /** Callback when the create button is clicked */
@@ -28,13 +31,13 @@ export interface DashboardEmptyStateProps {
 /**
  * DashboardEmptyState - Shows empty state with CTA for first-time users
  */
-export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
+export function DashboardEmptyState({
     onCreate,
     onImportFromFile,
     title = 'No projects yet',
     buttonText = 'New',
     autoFocus = false,
-}) => {
+}: DashboardEmptyStateProps) {
     const actions: CtaEmptyStateAction[] = [
         { label: buttonText, variant: 'cta', onPress: onCreate, icon: <Add /> },
     ];
@@ -56,4 +59,4 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
             autoFocus={autoFocus}
         />
     );
-};
+}

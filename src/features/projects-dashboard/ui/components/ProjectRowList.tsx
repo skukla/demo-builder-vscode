@@ -28,12 +28,12 @@ export interface ProjectRowListProps {
 /**
  * ProjectRowList - Displays projects in a vertical row list
  */
-export const ProjectRowList: React.FC<ProjectRowListProps> = ({
+export function ProjectRowList({
     projects,
     runningProjectPath,
     onSelectProject,
     actions = {},
-}) => {
+}: ProjectRowListProps) {
     return (
         <div className="project-row-list">
             {projects.map((project) => (
@@ -47,4 +47,4 @@ export const ProjectRowList: React.FC<ProjectRowListProps> = ({
             ))}
         </div>
     );
-};
+}

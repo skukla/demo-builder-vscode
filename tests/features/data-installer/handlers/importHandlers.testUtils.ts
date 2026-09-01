@@ -92,7 +92,9 @@ export const PAAS_PROJECT: Partial<Project> = {
  */
 export function makeImportHarness(project: unknown = PAAS_PROJECT) {
     const stores = makeStores();
-    const tokenManager = { inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }) };
+    const tokenManager = {
+        inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }),
+    };
     const context = {
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
@@ -101,8 +103,10 @@ export function makeImportHarness(project: unknown = PAAS_PROJECT) {
             getTokenManager: jest.fn().mockReturnValue(tokenManager),
         },
         panel: {} as vscode.WebviewPanel,
-        context: stores as unknown as vscode.ExtensionContext,
-        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
+        context: stores,
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(project),
+        }),
         sendMessage: jest.fn().mockResolvedValue(undefined),
     } as unknown as HandlerContext;
     return { context, stores };
@@ -122,7 +126,7 @@ export function happyClient() {
     const startDelete = jest.fn().mockResolvedValue({ activationId: 'act-9' });
     const checkCredentials = jest.fn().mockResolvedValue({ usable: true });
     MockedWriteClient.mockImplementation(
-        () => ({ validateImport, startImport, startDelete, checkCredentials }) as never,
+        () => ({ validateImport, startImport, startDelete, checkCredentials }) as never
     );
     return { validateImport, startImport, startDelete, checkCredentials };
 }
@@ -134,5 +138,5 @@ export function happyClient() {
 export function resetImportHandlerMocks(): void {
     jest.clearAllMocks();
     setupSettings();
-    mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} } as never);
+    mockedWatch.mockResolvedValue({ outcome: 'success', perType: {} });
 }

@@ -50,7 +50,7 @@ describe('installBlockCollections', () => {
             commitTreeToBranch: jest.fn(),
         } as unknown as jest.Mocked<GitHubFileOperations>;
         delegateCommitTreeToBranch(
-            mockGithubFileOps as unknown as Parameters<typeof delegateCommitTreeToBranch>[0],
+            mockGithubFileOps as unknown as Parameters<typeof delegateCommitTreeToBranch>[0]
         );
     });
 
@@ -268,7 +268,7 @@ describe('installBlockCollections', () => {
                 mockLogger
             );
 
-            const commitMessage = mockGithubFileOps.createCommit.mock.calls[0][2] as string;
+            const commitMessage = mockGithubFileOps.createCommit.mock.calls[0][2];
             expect(commitMessage).toContain('3 blocks');
             expect(commitMessage).toContain('2 libraries');
         });

@@ -53,6 +53,9 @@ import {
     showDaLiveAuthQuickPick,
 } from '@/features/eds/handlers/edsHelpers';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 function fakeServer() {
     const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
@@ -79,16 +82,16 @@ function fakeServer() {
 const login = jest.fn(async () => true);
 function makeCtxFactory(adobeAuthed = true): () => HandlerContext {
     return () =>
-        ({
-            authManager: {
+        createMockHandlerContext({
+            authManager: createMockAuthenticationService({
                 getTokenStatus: jest.fn(async () => ({
                     isAuthenticated: adobeAuthed,
                     expiresInMinutes: 120,
                 })),
                 login,
-            },
-            context: {},
-        }) as unknown as HandlerContext;
+            }),
+            context: createMockExtensionContext(),
+        });
 }
 
 describe('registerAuthTools', () => {

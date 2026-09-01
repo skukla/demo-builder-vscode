@@ -19,22 +19,28 @@ import {
     registerContentAuthoringTools,
 } from './contentAuthoringTools.testUtils';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 /** Minimal MCP server double: capture handlers, invoke by name, parse the JSON back. */
 function fakeServer() {
-    const tools = new Map<string, (args: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+    const tools = new Map<
+        string,
+        (args: unknown) => Promise<{ content: Array<{ text: string }> }>
+    >();
     return {
         registerTool(
             name: string,
             _def: unknown,
-            handler: (args: unknown) => Promise<{ content: Array<{ text: string }> }>,
+            handler: (args: unknown) => Promise<{ content: Array<{ text: string }> }>
         ) {
             tools.set(name, handler);
         },
         names: () => [...tools.keys()],
-         
+
         async call(name: string, args: unknown = {}): Promise<any> {
             return JSON.parse((await tools.get(name)!(args)).content[0].text);
         },
@@ -57,11 +63,11 @@ const EDS_PROJECT = {
 };
 
 const ctxFactory = () =>
-    ({
-        stateManager: { getCurrentProject },
-        context: { secrets: {} },
+    createMockHandlerContext({
+        stateManager: createMockStateManager({ getCurrentProject }),
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
         logger: createMockLogger(),
-    }) as unknown as HandlerContext;
+    });
 
 // ─── service doubles ─────────────────────────────────────────────────────────
 
@@ -140,7 +146,7 @@ describe('registerContentAuthoringTools', () => {
                 'read_page',
                 'read_published_page',
                 'write_page',
-            ].sort(),
+            ].sort()
         );
     });
 });
@@ -232,7 +238,9 @@ describe('path containment', () => {
 
     it('still accepts ordinary paths, including a legitimate dot in a filename', async () => {
         expect(await register().call('read_page', { path: '/about' })).not.toHaveProperty('error');
-        expect(await register().call('list_content', { path: '/products' })).not.toHaveProperty('error');
+        expect(await register().call('list_content', { path: '/products' })).not.toHaveProperty(
+            'error'
+        );
     });
 });
 
@@ -305,7 +313,12 @@ describe('read_page', () => {
     });
 
     it('reports a 404 as a missing page rather than throwing', async () => {
-        daOps.readSource.mockResolvedValueOnce({ status: 404, body: '', bytes: 0, truncated: false });
+        daOps.readSource.mockResolvedValueOnce({
+            status: 404,
+            body: '',
+            bytes: 0,
+            truncated: false,
+        });
         expect(await register().call('read_page', { path: '/nope' })).toMatchObject({
             error: expect.stringMatching(/not found/i),
         });
@@ -313,10 +326,14 @@ describe('read_page', () => {
 
     it('surfaces truncation so an agent knows the body is partial', async () => {
         daOps.readSource.mockResolvedValueOnce({
-            status: 200, body: 'x'.repeat(100), bytes: 999_999, truncated: true,
+            status: 200,
+            body: 'x'.repeat(100),
+            bytes: 999_999,
+            truncated: true,
         });
         expect(await register().call('read_page', { path: '/big' })).toMatchObject({
-            truncated: true, bytes: 999_999,
+            truncated: true,
+            bytes: 999_999,
         });
     });
 
@@ -338,7 +355,7 @@ describe('write_page', () => {
             'bodea',
             'about.html',
             '<p>x</p>',
-            { overwrite: true },
+            { overwrite: true }
         );
         expect(helix.previewAndPublishPage).not.toHaveBeenCalled();
         expect(res).toMatchObject({ written: true, published: false, path: '/about' });
@@ -357,14 +374,18 @@ describe('write_page', () => {
             'bodea',
             'about.html',
             expect.any(String),
-            expect.any(Object),
+            expect.any(Object)
         );
         expect(helix.previewAndPublishPage).toHaveBeenCalledWith('skukla', 'bodea', '/about');
         expect(res).toMatchObject({ written: true, published: true });
     });
 
     it('does not publish when the write failed', async () => {
-        daOps.createSource.mockResolvedValueOnce({ success: false, path: '/about.html', error: 'boom' });
+        daOps.createSource.mockResolvedValueOnce({
+            success: false,
+            path: '/about.html',
+            error: 'boom',
+        });
 
         const res = await register().call('write_page', {
             path: '/about',
@@ -400,13 +421,13 @@ describe('write_page', () => {
         });
 
         // Write alone: DA.live is enough.
-        expect(
-            await register().call('write_page', { path: '/a', content: 'x' }),
-        ).toMatchObject({ written: true });
+        expect(await register().call('write_page', { path: '/a', content: 'x' })).toMatchObject({
+            written: true,
+        });
 
         // Publishing sends x-auth-token, so GitHub is required.
         expect(
-            await register().call('write_page', { path: '/a', content: 'x', publish: true }),
+            await register().call('write_page', { path: '/a', content: 'x', publish: true })
         ).toMatchObject({ needsAuth: 'github' });
     });
 
@@ -423,7 +444,11 @@ describe('publish_page', () => {
     it('previews and publishes the web path', async () => {
         const res = await register().call('publish_page', { path: '/products/shoes' });
 
-        expect(helix.previewAndPublishPage).toHaveBeenCalledWith('skukla', 'bodea', '/products/shoes');
+        expect(helix.previewAndPublishPage).toHaveBeenCalledWith(
+            'skukla',
+            'bodea',
+            '/products/shoes'
+        );
         expect(res).toMatchObject({ published: true, path: '/products/shoes' });
     });
 
@@ -560,7 +585,11 @@ describe('delete_page', () => {
         const res = await register().call('delete_page', { path: '/about', confirm: true });
 
         expect(daOps.deleteSource).not.toHaveBeenCalled();
-        expect(res).toMatchObject({ deleted: false, unpublished: false, error: expect.stringMatching(/403/) });
+        expect(res).toMatchObject({
+            deleted: false,
+            unpublished: false,
+            error: expect.stringMatching(/403/),
+        });
     });
 
     // unpublishPage returns false (not throws) on 401/403, so the falsy result
@@ -582,7 +611,9 @@ describe('read_published_page', () => {
     it('fetches .plain.html from the live CDN, with a timeout', async () => {
         const res = await register().call('read_published_page', { path: '/about' });
 
-        expect(fetchMock.mock.calls[0][0]).toBe('https://main--bodea--skukla.aem.live/about.plain.html');
+        expect(fetchMock.mock.calls[0][0]).toBe(
+            'https://main--bodea--skukla.aem.live/about.plain.html'
+        );
         // Every other CDN read in the codebase bounds itself; an MCP call has no
         // client-side cancel, so a hung socket would hang the agent's turn.
         expect(fetchMock.mock.calls[0][1]).toMatchObject({ signal: expect.anything() });
@@ -592,7 +623,7 @@ describe('read_published_page', () => {
     it('maps the site root to index.plain.html', async () => {
         await register().call('read_published_page', { path: '/' });
         expect(fetchMock.mock.calls[0][0]).toBe(
-            'https://main--bodea--skukla.aem.live/index.plain.html',
+            'https://main--bodea--skukla.aem.live/index.plain.html'
         );
     });
 

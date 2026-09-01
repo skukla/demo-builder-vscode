@@ -87,7 +87,7 @@ describe('deployAppComponent', () => {
         it('should return success with a primary url and deployedUrls map', async () => {
             wireHappyPath();
 
-            const result = await deployAppComponent('/app', cm as any, logger as any);
+            const result = await deployAppComponent('/app', cm, logger);
 
             expect(result.success).toBe(true);
             expect(typeof result.data?.url).toBe('string');
@@ -99,7 +99,7 @@ describe('deployAppComponent', () => {
         it('should issue `aio app deploy` EXACTLY ONCE (no create/update branch)', async () => {
             wireHappyPath();
 
-            await deployAppComponent('/app', cm as any, logger as any);
+            await deployAppComponent('/app', cm, logger);
 
             const deployCalls = cm.execute.mock.calls.filter(
                 (args: unknown[]) => args[0] === DEPLOY_CMD
@@ -110,7 +110,7 @@ describe('deployAppComponent', () => {
         it('should call deploy before get-url', async () => {
             wireHappyPath();
 
-            await deployAppComponent('/app', cm as any, logger as any);
+            await deployAppComponent('/app', cm, logger);
 
             const commands = cm.execute.mock.calls.map((args: unknown[]) => args[0] as string);
             expect(commands).toContain(DEPLOY_CMD);
@@ -121,7 +121,7 @@ describe('deployAppComponent', () => {
         it('should pass streaming, useNodeVersion and enhancePath to deploy', async () => {
             wireHappyPath();
 
-            await deployAppComponent('/app', cm as any, logger as any);
+            await deployAppComponent('/app', cm, logger);
 
             const deployCall = cm.execute.mock.calls.find(
                 (args: unknown[]) => args[0] === DEPLOY_CMD
@@ -141,7 +141,7 @@ describe('deployAppComponent', () => {
         it('injects the workspace Runtime credentials as env on deploy AND get-url', async () => {
             wireHappyPath();
 
-            await deployAppComponent('/app', cm as any, logger as any);
+            await deployAppComponent('/app', cm, logger);
 
             const expectedEnv = {
                 AIO_RUNTIME_NAMESPACE: 'test-namespace',
@@ -161,7 +161,7 @@ describe('deployAppComponent', () => {
             wireHappyPath();
             const onProgress = jest.fn();
 
-            await deployAppComponent('/app', cm as any, logger as any, { onProgress });
+            await deployAppComponent('/app', cm, logger, { onProgress });
 
             expect(onProgress).toHaveBeenCalled();
         });
@@ -169,11 +169,14 @@ describe('deployAppComponent', () => {
 
     describe('deploy failure', () => {
         it('should return a failure result when deploy exits non-zero', async () => {
-            cm.execute.mockResolvedValue({ code: 1, stdout: '', stderr: 'deploy boom',
-    duration: 0,
-});
+            cm.execute.mockResolvedValue({
+                code: 1,
+                stdout: '',
+                stderr: 'deploy boom',
+                duration: 0,
+            });
 
-            const result = await deployAppComponent('/app', cm as any, logger as any);
+            const result = await deployAppComponent('/app', cm, logger);
 
             expect(result.success).toBe(false);
             expect(result.error).toBeDefined();
@@ -181,25 +184,30 @@ describe('deployAppComponent', () => {
         });
 
         it('should NOT call get-url when deploy fails', async () => {
-            cm.execute.mockResolvedValue({ code: 1, stdout: '', stderr: 'deploy boom',
-    duration: 0,
-});
+            cm.execute.mockResolvedValue({
+                code: 1,
+                stdout: '',
+                stderr: 'deploy boom',
+                duration: 0,
+            });
 
-            await deployAppComponent('/app', cm as any, logger as any);
+            await deployAppComponent('/app', cm, logger);
 
             const getUrlCalls = cm.execute.mock.calls.filter(
-                (args: unknown[]) =>
-                    typeof args[0] === 'string' && (args[0] as string).includes('get-url')
+                (args: unknown[]) => typeof args[0] === 'string' && args[0].includes('get-url')
             );
             expect(getUrlCalls).toHaveLength(0);
         });
 
         it('should fall back to stdout when stderr is empty on deploy failure', async () => {
-            cm.execute.mockResolvedValue({ code: 1, stdout: 'stdout boom', stderr: '',
-    duration: 0,
-});
+            cm.execute.mockResolvedValue({
+                code: 1,
+                stdout: 'stdout boom',
+                stderr: '',
+                duration: 0,
+            });
 
-            const result = await deployAppComponent('/app', cm as any, logger as any);
+            const result = await deployAppComponent('/app', cm, logger);
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('stdout boom');
@@ -210,14 +218,12 @@ describe('deployAppComponent', () => {
         it('should return best-effort success when get-url exits non-zero', async () => {
             cm.execute.mockImplementation((command: string) => {
                 if (command.includes('get-url')) {
-                    return Promise.resolve({ code: 1, stdout: '', stderr: 'no url',
-    duration: 0,
-});
+                    return Promise.resolve({ code: 1, stdout: '', stderr: 'no url', duration: 0 });
                 }
                 return Promise.resolve(ok('Deploy successful'));
             });
 
-            const result = await deployAppComponent('/app', cm as any, logger as any);
+            const result = await deployAppComponent('/app', cm, logger);
 
             // Deploy succeeded; missing URL must not turn it into a failure.
             expect(result.success).toBe(true);
@@ -233,7 +239,7 @@ describe('deployAppComponent', () => {
                 return Promise.resolve(ok('Deploy successful'));
             });
 
-            const result = await deployAppComponent('/app', cm as any, logger as any);
+            const result = await deployAppComponent('/app', cm, logger);
 
             expect(result.success).toBe(true);
             expect(result.data?.url).toBe('');
@@ -248,7 +254,7 @@ describe('deployAppComponent', () => {
                 return Promise.resolve(ok('Deploy successful'));
             });
 
-            const result = await deployAppComponent('/app', cm as any, logger as any);
+            const result = await deployAppComponent('/app', cm, logger);
 
             expect(result.success).toBe(true);
             expect(result.data?.deployedUrls).toBeDefined();
@@ -260,7 +266,7 @@ describe('deployAppComponent', () => {
                 return Promise.resolve(ok('Deploy successful'));
             });
 
-            await deployAppComponent('/app', cm as any, logger as any);
+            await deployAppComponent('/app', cm, logger);
 
             const commands = cm.execute.mock.calls.map((args: unknown[]) => args[0] as string);
             expect(commands).toContain(GET_URL_CMD);
@@ -288,11 +294,11 @@ describe('extension layout: workspace config import', () => {
     });
 
     it('downloads and imports the workspace config before building', async () => {
-        await deployAppComponent('/app', cm as any, logger as any, { layout: 'extension' });
+        await deployAppComponent('/app', cm, logger, { layout: 'extension' });
 
         const commands = cm.execute.mock.calls.map((c: unknown[]) => c[0] as string);
         const downloadIdx = commands.findIndex((c: string) =>
-            c.startsWith('aio console workspace download'),
+            c.startsWith('aio console workspace download')
         );
         const useIdx = commands.findIndex((c: string) => c.startsWith('aio app use'));
         expect(downloadIdx).toBeGreaterThanOrEqual(0);
@@ -303,7 +309,7 @@ describe('extension layout: workspace config import', () => {
     });
 
     it('standalone (and default) layout never imports workspace config', async () => {
-        await deployAppComponent('/app', cm as any, logger as any, {});
+        await deployAppComponent('/app', cm, logger, {});
 
         const commands = cm.execute.mock.calls.map((c: unknown[]) => c[0] as string);
         expect(commands.some((c: string) => c.startsWith('aio app use'))).toBe(false);

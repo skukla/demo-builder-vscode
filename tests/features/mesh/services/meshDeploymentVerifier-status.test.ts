@@ -162,7 +162,7 @@ describe('MeshDeploymentVerifier - Status and Polling', () => {
                 initialWait: 100,
                 pollInterval: 100,
                 maxRetries: 1,
-                logger: mockLogger as any,
+                logger: mockLogger,
             });
 
             jest.advanceTimersByTime(150);

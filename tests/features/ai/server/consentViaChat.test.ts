@@ -107,7 +107,7 @@ describe('consent in the chat', () => {
         socketPath = path.join(dir, 'srv.sock');
         server = new InExtensionMcpServer(socketPath, '/projects', makeLogger(), {
             registerExtraTools: registerProbe,
-            consentGate: modalGate as never,
+            consentGate: modalGate,
         });
         await server.start();
     });

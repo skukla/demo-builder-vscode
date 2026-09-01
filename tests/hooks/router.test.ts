@@ -518,6 +518,12 @@ describe('every rule is reachable through the pre-filter', () => {
         'reuse-first': () => run(write(path.join(REPO2, 'src/features/x/ui/BrandNew.tsx')), fresh()),
         'webview-test-skill': () =>
             run(edit(path.join(REPO2, 'tests/features/x/ui/Thing.test.tsx')), fresh()),
+        // The list-valued variable passed bare. This rule's own proof failed 3 of
+        // its 4 blocking cases on the day it was written, because its pre-filter
+        // token was missing — the exact gate failure the docblock above describes,
+        // for the third time. The fourth case "passed" only because its payload
+        // happened to contain another rule's token.
+        'unsplit-var': () => run(bash('F=$(cat list.txt)\nnpx eslint --fix $F'), fresh()),
         'adobe-docs': () => run(mcp('mcp__adobe-exl__search_experience_league'), fresh()),
     };
 

@@ -37,6 +37,8 @@ jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () =>
 
 import { renameProjectCore } from '@/features/projects-dashboard/services/projectRenameService';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 function createMockProject(overrides?: Partial<Project>): Project {
     return {
@@ -56,15 +58,15 @@ function createMockProject(overrides?: Partial<Project>): Project {
 }
 
 function createMockContext(): HandlerContext {
-    return {
-        stateManager: {
+    return createMockHandlerContext({
+        stateManager: createMockStateManager({
             saveProject: jest.fn().mockResolvedValue(undefined),
             saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
             removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
+        }),
         logger: createMockLogger() as unknown as HandlerContext['logger'],
         context: { extensionPath: '/ext' } as unknown as HandlerContext['context'],
-    } as unknown as HandlerContext;
+    });
 }
 
 describe('renameProjectCore', () => {
@@ -99,7 +101,9 @@ describe('renameProjectCore', () => {
     it('should reject an invalid project name', async () => {
         const project = createMockProject();
         const context = createMockContext();
-        mockValidateName.mockImplementation(() => { throw new Error('Invalid name'); });
+        mockValidateName.mockImplementation(() => {
+            throw new Error('Invalid name');
+        });
 
         const result = await renameProjectCore(context, project, 'Bad Name');
 
@@ -134,7 +138,9 @@ describe('renameProjectCore', () => {
         await renameProjectCore(context, project, 'new-name');
 
         expect(project.path).toBe('/projects/new-name');
-        expect(project.componentInstances!['eds-storefront'].path).toBe('/projects/new-name/storefront');
+        expect(project.componentInstances!['eds-storefront'].path).toBe(
+            '/projects/new-name/storefront'
+        );
     });
 
     it('should remove the old path from recent projects', async () => {
@@ -143,7 +149,9 @@ describe('renameProjectCore', () => {
 
         await renameProjectCore(context, project, 'new-name');
 
-        expect((context.stateManager.removeFromRecentProjects as jest.Mock)).toHaveBeenCalledWith('/projects/old-name');
+        expect(context.stateManager.removeFromRecentProjects as jest.Mock).toHaveBeenCalledWith(
+            '/projects/old-name'
+        );
     });
 
     it('should save the renamed project', async () => {
@@ -152,7 +160,7 @@ describe('renameProjectCore', () => {
 
         await renameProjectCore(context, project, 'new-name');
 
-        expect((context.stateManager.saveProject as jest.Mock)).toHaveBeenCalledWith(project);
+        expect(context.stateManager.saveProject as jest.Mock).toHaveBeenCalledWith(project);
         expect(project.name).toBe('new-name');
     });
 
@@ -164,7 +172,11 @@ describe('renameProjectCore', () => {
 
         expect(result.success).toBe(true);
         expect(result.data).toEqual(
-            expect.objectContaining({ success: true, newName: 'new-name', newPath: '/projects/new-name' }),
+            expect.objectContaining({
+                success: true,
+                newName: 'new-name',
+                newPath: '/projects/new-name',
+            })
         );
     });
 
@@ -175,7 +187,11 @@ describe('renameProjectCore', () => {
         await renameProjectCore(context, project, 'new-name');
 
         // Regenerated with the NEW path + the mutated project + the extension path.
-        expect(mockGenerateAIContextFiles).toHaveBeenCalledWith('/projects/new-name', project, '/ext');
+        expect(mockGenerateAIContextFiles).toHaveBeenCalledWith(
+            '/projects/new-name',
+            project,
+            '/ext'
+        );
     });
 
     it('does not regenerate AI context for a no-op rename (path unchanged)', async () => {
@@ -195,7 +211,7 @@ describe('renameProjectCore', () => {
         const result = await renameProjectCore(context, project, 'new-name');
 
         expect(result.success).toBe(true);
-        expect((context.logger.warn as jest.Mock)).toHaveBeenCalled();
+        expect(context.logger.warn as jest.Mock).toHaveBeenCalled();
     });
 });
 
@@ -250,7 +266,7 @@ describe('renaming by TITLE', () => {
         await renameProjectCore(context, project, 'Bodea B2B Demo');
 
         expect(project.componentInstances?.['eds-storefront'].path).toBe(
-            '/projects/bodea-b2b-demo/storefront',
+            '/projects/bodea-b2b-demo/storefront'
         );
     });
 
@@ -290,7 +306,11 @@ describe('rollback when the save fails after the move', () => {
 
         await renameProjectCore(context, project, 'Bodea B2B Demo').catch(() => undefined);
 
-        expect(mockRename).toHaveBeenNthCalledWith(2, '/projects/bodea-b2b-demo', '/projects/old-name');
+        expect(mockRename).toHaveBeenNthCalledWith(
+            2,
+            '/projects/bodea-b2b-demo',
+            '/projects/old-name'
+        );
     });
 
     it('restores the project to exactly what it was', async () => {
@@ -304,7 +324,7 @@ describe('rollback when the save fails after the move', () => {
         expect(project.path).toBe('/projects/old-name');
         expect(project.title).toBeUndefined();
         expect(project.componentInstances?.['eds-storefront'].path).toBe(
-            '/projects/old-name/storefront',
+            '/projects/old-name/storefront'
         );
     });
 
@@ -386,9 +406,7 @@ describe('remote Adobe I/O project title sync', () => {
         const result = await renameProjectCore(ctx, project, 'New Title');
 
         expect(result.success).toBe(true);
-        expect(ctx.logger.warn).toHaveBeenCalledWith(
-            expect.stringContaining('remote'),
-        );
+        expect(ctx.logger.warn).toHaveBeenCalledWith(expect.stringContaining('remote'));
     });
 
     it('skips silently when the context has no authManager', async () => {

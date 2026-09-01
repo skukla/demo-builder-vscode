@@ -98,7 +98,10 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 import { createMockProject } from '../../../helpers/projectFake';
 import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import type { Project } from '@/types/base';
-import { PushRejectedError, syncAndPublish } from '@/features/eds/services/storefront/storefrontSyncService';
+import {
+    PushRejectedError,
+    syncAndPublish,
+} from '@/features/eds/services/storefront/storefrontSyncService';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
@@ -126,7 +129,7 @@ export function makeSyncStorefrontContext(): vscode.ExtensionContext {
         store: jest.fn(),
         delete: jest.fn(),
         onDidChange: jest.fn(),
-    } as never;
+    };
     return { secrets, globalState: { get: jest.fn(), update: jest.fn() } } as never;
 }
 
@@ -181,7 +184,7 @@ export function resetSyncStorefrontMocks(): void {
     // Seeded here rather than mocked away: the builder genuinely needs one, and
     // `clearAllMocks` above wipes the locator's registry between tests.
     ServiceLocator.setCommandExecutor(createMockCommandExecutor());
-    statMock.mockResolvedValue({} as never);
+    statMock.mockResolvedValue({});
     // Default: input box returns the supplied default value; user picks "Continue".
     (vscode.window.showInputBox as jest.Mock).mockResolvedValue('Demo Builder: sync local changes');
     (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);

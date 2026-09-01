@@ -18,6 +18,9 @@ import type { CheckGitHubAppServices } from '@/features/project-creation/handler
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 const mockIsAppInstalled = jest.fn();
 const mockPreviewCode = jest.fn();
@@ -46,10 +49,10 @@ const SERVICES: CheckGitHubAppServices = {
 };
 
 function makeContext(): HandlerContext {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger() as unknown as Logger,
-        context: { secrets: {} },
-    } as unknown as HandlerContext;
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
+    });
 }
 
 function allLogs(context: HandlerContext): string {
@@ -315,7 +318,11 @@ describe('checkGitHubApp handler', () => {
                 httpStatus: 404,
             });
 
-            const res = await checkGitHubApp(makeContext(), { ...REQUEST, skipTrigger: true }, SERVICES);
+            const res = await checkGitHubApp(
+                makeContext(),
+                { ...REQUEST, skipTrigger: true },
+                SERVICES
+            );
 
             expect(res.isInstalled).toBe(false);
         });
@@ -350,8 +357,8 @@ describe('checkGitHubApp handler', () => {
 describe('checkGitHubApp handler — DA.live session wiring', () => {
     it('constructs the service WITH the DA.live token provider', async () => {
         const { tryCreateDaLiveTokenProvider } = jest.requireMock(
-            '@/features/eds/handlers/edsHelpers',
-        ) as { tryCreateDaLiveTokenProvider: jest.Mock };
+            '@/features/eds/handlers/edsHelpers'
+        );
         const provider = { getAccessToken: jest.fn() };
         tryCreateDaLiveTokenProvider.mockReturnValue(provider);
         mockIsAppInstalled.mockResolvedValue({ isInstalled: true, codeStatus: 200 });
@@ -365,8 +372,7 @@ describe('checkGitHubApp handler — DA.live session wiring', () => {
         expect(mockMakeGitHubAppService).toHaveBeenCalledWith(
             expect.objectContaining({ getToken: expect.any(Function) }),
             expect.objectContaining({ info: expect.any(Function) }),
-            provider,
+            provider
         );
     });
 });
-

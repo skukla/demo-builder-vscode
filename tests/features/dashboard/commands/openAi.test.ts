@@ -13,6 +13,7 @@ import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // Mock VS Code API
 
@@ -60,15 +61,7 @@ describe('ShowAiCommand', () => {
             reveal: jest.fn(),
         } as unknown as vscode.WebviewPanel;
 
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/extension/path',
-            extensionUri: vscode.Uri.file('/test/extension/path'),
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn(),
-            },
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
         mockStateManager = {
             getCurrentProject: jest.fn().mockResolvedValue(createMockProject({

@@ -13,12 +13,9 @@
  */
 
 // Mock global fetch
-global.fetch = jest.fn() as jest.Mock;
+global.fetch = jest.fn();
 
-import {
-    UpdateManager,
-    vscode,
-} from './updateManager.testUtils';
+import { UpdateManager, vscode } from './updateManager.testUtils';
 import {
     createUpdateManagerContext,
     createMockLogger,

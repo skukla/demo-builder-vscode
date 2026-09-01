@@ -2,6 +2,7 @@ import {
     DaLiveAuthService,
     ExtensionContext,
 } from './daLiveAuthService.testUtils';
+import { createMockExtensionContext, createStatefulGlobalState } from '../../../../helpers/extensionContextFake';
 /**
  * DA.live Auth Service Tests
  *
@@ -26,23 +27,9 @@ describe('DaLiveAuthService', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        // Create mock global state store
-        globalStateStore = new Map();
-
-        // Create mock extension context
-        mockContext = {
-            globalState: {
-                get: jest.fn((key: string) => globalStateStore.get(key)),
-                update: jest.fn((key: string, value: unknown) => {
-                    if (value === undefined) {
-                        globalStateStore.delete(key);
-                    } else {
-                        globalStateStore.set(key, value);
-                    }
-                    return Promise.resolve();
-                }),
-            },
-        } as unknown as ExtensionContext;
+        const stateful = createStatefulGlobalState();
+        globalStateStore = stateful.store;
+        mockContext = createMockExtensionContext({ globalState: stateful.globalState });
 
         service = new DaLiveAuthService(mockContext);
     });

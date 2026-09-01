@@ -41,7 +41,7 @@ describe('fetchServedStorefrontConfig', () => {
             },
         });
 
-        const result = await fetchServedStorefrontConfig('acme', 'shop', mockLogger as never);
+        const result = await fetchServedStorefrontConfig('acme', 'shop', mockLogger);
 
         expect(result).toEqual({
             commerceEndpoint: 'https://mesh.example.com/graphql',
@@ -60,7 +60,7 @@ describe('fetchServedStorefrontConfig', () => {
         respond({}, false, 404);
 
         expect(
-            await fetchServedStorefrontConfig('acme', 'shop', mockLogger as never)
+            await fetchServedStorefrontConfig('acme', 'shop', mockLogger)
         ).toBeUndefined();
     });
 
@@ -68,7 +68,7 @@ describe('fetchServedStorefrontConfig', () => {
         respond({ nothing: true });
 
         expect(
-            await fetchServedStorefrontConfig('acme', 'shop', mockLogger as never)
+            await fetchServedStorefrontConfig('acme', 'shop', mockLogger)
         ).toBeUndefined();
     });
 
@@ -77,7 +77,7 @@ describe('fetchServedStorefrontConfig', () => {
         // an empty scope, not a parse failure.
         respond({ public: { default: { 'commerce-endpoint': 'https://e.example.com' } } });
 
-        const result = await fetchServedStorefrontConfig('acme', 'shop', mockLogger as never);
+        const result = await fetchServedStorefrontConfig('acme', 'shop', mockLogger);
 
         expect(result?.scope).toEqual({
             websiteCode: undefined,
@@ -91,7 +91,7 @@ describe('fetchServedStorefrontConfig', () => {
             public: { default: { headers: { cs: { 'Magento-Website-Code': '' } } } },
         });
 
-        const result = await fetchServedStorefrontConfig('acme', 'shop', mockLogger as never);
+        const result = await fetchServedStorefrontConfig('acme', 'shop', mockLogger);
 
         expect(result?.scope.websiteCode).toBeUndefined();
     });
@@ -100,7 +100,7 @@ describe('fetchServedStorefrontConfig', () => {
         (global.fetch as jest.Mock).mockRejectedValue(new Error('ECONNREFUSED'));
 
         expect(
-            await fetchServedStorefrontConfig('acme', 'shop', mockLogger as never)
+            await fetchServedStorefrontConfig('acme', 'shop', mockLogger)
         ).toBeUndefined();
     });
 });

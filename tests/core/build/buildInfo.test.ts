@@ -122,7 +122,7 @@ describe('newestMtimeUnder', () => {
                 const child = `${prefix}${name}`;
                 const isDir = Object.keys(files).some((p) => p.startsWith(child + '/'));
                 return { name, isFile: () => !isDir, isDirectory: () => isDir };
-            }) as never;
+            });
         });
         statMock.mockImplementation(async (p: string) => ({ mtimeMs: files[p] ?? 0 }));
     }

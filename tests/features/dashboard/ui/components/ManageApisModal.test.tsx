@@ -30,9 +30,7 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 }));
 
 function getClient() {
-    const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient') as {
-        webviewClient: { request: jest.Mock; postMessage: jest.Mock };
-    };
+    const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient');
     return webviewClient;
 }
 

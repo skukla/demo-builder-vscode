@@ -14,7 +14,7 @@ import { createMockContext } from './projectHandlers.testUtils';
 jest.mock('@/core/di/serviceLocator');
 jest.mock('@/core/validation/validators/AdobeResourceValidator');
 jest.mock('@/types/typeGuards', () => ({
-    toError: jest.fn((error: any) => error instanceof Error ? error : new Error(String(error))),
+    toError: jest.fn((error: any) => (error instanceof Error ? error : new Error(String(error)))),
     parseJSON: jest.fn((str: string) => JSON.parse(str)),
 }));
 jest.mock('@/core/utils/timeoutConfig', () => ({ TIMEOUTS: { NORMAL: 30000 } }));
@@ -28,13 +28,15 @@ describe('projectHandlers - Create', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockContext = createMockContext();
-        mockContext.authManager.testDeveloperPermissions = jest.fn().mockResolvedValue({ hasPermissions: true });
+        mockContext.authManager.testDeveloperPermissions = jest
+            .fn()
+            .mockResolvedValue({ hasPermissions: true });
         mockContext.authManager.createProject = jest.fn().mockResolvedValue(PROJECT);
     });
 
     describe('handleCreateAdobeProject', () => {
         it('returns an error when authManager is missing', async () => {
-            const ctx = { ...mockContext, authManager: undefined } as any;
+            const ctx = { ...mockContext, authManager: undefined };
 
             const result = await handleCreateAdobeProject(ctx, { name: 'My Demo' });
 
@@ -74,7 +76,10 @@ describe('projectHandlers - Create', () => {
         it('returns the refreshed list ON THE RESPONSE (the caller is unmounted, a push is lost)', async () => {
             mockContext.authManager.getProjects.mockResolvedValue([PROJECT]);
 
-            const result = await handleCreateAdobeProject(mockContext, { name: 'My Demo', description: 'A demo' });
+            const result = await handleCreateAdobeProject(mockContext, {
+                name: 'My Demo',
+                description: 'A demo',
+            });
 
             expect(result.success).toBe(true);
             expect(result.data).toEqual(PROJECT);
@@ -93,8 +98,14 @@ describe('projectHandlers - Create', () => {
             // Add Integration flow for a phase spinner), so nothing is listening for
             // `get-projects` at this moment — WebviewClient drops it. `projectSelected`
             // never had a listener at all.
-            expect(mockContext.sendMessage).not.toHaveBeenCalledWith('get-projects', expect.anything());
-            expect(mockContext.sendMessage).not.toHaveBeenCalledWith('projectSelected', expect.anything());
+            expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
+                'get-projects',
+                expect.anything()
+            );
+            expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
+                'projectSelected',
+                expect.anything()
+            );
         });
 
         it('stamps the returned list with ownership (deletable=true for own projects)', async () => {

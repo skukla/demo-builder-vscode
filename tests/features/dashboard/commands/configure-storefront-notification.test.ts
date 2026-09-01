@@ -14,9 +14,10 @@
 import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
 import type { Logger } from '@/types/logger';
-import { StateManager } from '@/core/state/stateManager';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 
 const mockRepublishStorefrontConfig = jest.fn();
@@ -51,16 +52,8 @@ describe('ConfigureProjectWebviewCommand - storefront republish resets notificat
 
     beforeEach(() => {
         jest.clearAllMocks();
-        const mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/extension/path',
-            extensionUri: vscode.Uri.file('/test/extension/path'),
-            secrets: { get: jest.fn(), store: jest.fn() },
-            globalState: { get: jest.fn(), update: jest.fn() },
-        } as unknown as vscode.ExtensionContext;
-        const mockStateManager = {
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as StateManager;
+        const mockContext = createMockExtensionContext();
+        const mockStateManager = createMockStateManager();
         const mockLogger = createMockLogger() as unknown as Logger;
         command = new ConfigureProjectWebviewCommand(mockContext, mockStateManager, mockLogger);
     });

@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: built
+status: active
 ---
 
 # Give StateManager and Project fixtures a shared builder, the way HandlerContext has one
@@ -328,3 +328,42 @@ never filed anywhere until now.
 - 2026-08-31  feat(tests): the cast is the smell — nine ratcheting ceilings, target zero (`1b214a9ad`)
 - 2026-08-31  test(helpers): the StateManager fake covers the interface, and the typing caught four defects (`76190bd73`)
 - 2026-08-31  test(logging): the factory-logger group closes — 23 to zero, and the blind spot with it (`9371cc9be`)
+- 2026-09-01  fix(sop): the cast bans are narrower than they read, and the compiler named the next builders (`e7769713a`)
+
+## Reopened by the compiler, 2026-09-01 — and it named the next builders itself
+
+`HandlerContext` casts were converted to `createMockHandlerContext(...)` on the AST.
+51 of 74 files then failed `typecheck:tests`, and the failures are the useful part:
+the literals hold PARTIAL FAKES OF COLLABORATORS. `as unknown as HandlerContext`
+erased that; handing the same literal to a typed builder does not.
+
+So the compiler produced a build order, ranked by how many conversions each unblocks
+— which beats guessing, and is the first time this item has had a priority that was
+measured rather than argued:
+
+| Blocking type | Failures | Builder? |
+|---|---|---|
+| `SecretStorage` | 21 | **none** |
+| `AuthenticationService` | 16 | **none** |
+| `globalState` (Memento) | 12 | yes — `createStatefulGlobalState`, added 2026-09-01 |
+| `StateManager` | 12 | yes |
+| `ExtensionContext` | 9 | yes |
+| `WebviewPanel` | 5 | **none** |
+| `Project` | 5 | yes |
+| `Logger` | 3 | yes |
+| `TokenManager` | 2 | **none** |
+
+**41 failures are for types that ALREADY have a builder.** Those files do not need
+new fakes — they need the codemod to replace the member with its builder too, not
+just the outer context. That is a codemod change, not a design question.
+
+**44 need a builder that does not exist**, and two types are most of it:
+`SecretStorage` (21) and `AuthenticationService` (16). Writing those two unblocks
+roughly 37 of the 44.
+
+Order to work in: extend the codemod to use existing builders for members (41), then
+`SecretStorage`, then `AuthenticationService`, then re-run. `WebviewPanel` and
+`TokenManager` are small enough to leave.
+
+Method and tooling: `docs/development/toolchain.md`, harness at
+`scripts/codemod/project.mjs`.

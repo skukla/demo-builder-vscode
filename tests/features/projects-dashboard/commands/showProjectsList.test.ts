@@ -15,8 +15,8 @@ import {
 import * as vscode from 'vscode';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { StateManager } from '@/core/state/stateManager';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 /**
  * Create mock ExtensionContext
@@ -49,21 +49,9 @@ function createMockExtensionContext(): vscode.ExtensionContext {
         secrets: {} as any,
         extension: {} as any,
         languageModelAccessInformation: {} as any,
-    } as vscode.ExtensionContext;
+    };
 }
 
-/**
- * Create mock StateManager
- */
-function createMockStateManager(): StateManager {
-    return {
-        getState: jest.fn(),
-        setState: jest.fn(),
-        clearState: jest.fn(),
-        getCurrentProject: jest.fn().mockResolvedValue(null),
-        getAllProjects: jest.fn().mockResolvedValue([]),
-    } as any;
-}
 
 /**
  * Create mock Logger

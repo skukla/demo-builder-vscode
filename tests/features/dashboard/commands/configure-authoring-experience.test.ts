@@ -16,6 +16,7 @@ import type { Project } from '@/types/base';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 
 
@@ -186,13 +187,7 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         jest.clearAllMocks();
         savedProject = undefined;
 
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/extension/path',
-            extensionUri: vscode.Uri.file('/test/extension/path'),
-            secrets: { get: jest.fn(), store: jest.fn() },
-            globalState: { get: jest.fn(), update: jest.fn() },
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
         mockLogger = createMockLogger() as unknown as Logger;
 

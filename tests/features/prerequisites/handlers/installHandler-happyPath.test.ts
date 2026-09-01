@@ -94,7 +94,7 @@ describe('Install Handler - Happy Path', () => {
 
     it('should handle manual installation by opening URL', async () => {
         arrangeManualInstall();
-        mockContext.panel = {} as never;
+        mockContext.panel = {};
 
         const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
@@ -126,7 +126,7 @@ describe('Install Handler - Happy Path', () => {
 
     it('carries the manual URL in the payload on the webview path too', async () => {
         arrangeManualInstall();
-        mockContext.panel = {} as never;
+        mockContext.panel = {};
 
         const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 

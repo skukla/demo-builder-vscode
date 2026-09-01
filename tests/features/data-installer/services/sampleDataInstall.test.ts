@@ -52,7 +52,7 @@ function project(over: Record<string, unknown> = {}) {
             },
         },
         ...over,
-    } as never;
+    };
 }
 
 describe('resolveInstallTarget', () => {
@@ -153,7 +153,7 @@ describe('installSampleData', () => {
     it('imports the recorded pack into the recorded scope', async () => {
         const d = deps();
 
-        await installSampleData(project(), d as never);
+        await installSampleData(project(), d);
 
         // The client's real shape: target NESTED, credentials alongside. An
         // earlier version of this test asserted a flat websiteCode/storeCode and
@@ -176,14 +176,14 @@ describe('installSampleData', () => {
             },
         });
 
-        const result = await installSampleData(noInstance, d as never);
+        const result = await installSampleData(noInstance, d);
 
         expect(result).toMatchObject({ skipped: true });
         expect(d.startImport).not.toHaveBeenCalled();
     });
 
     it('reports the outcome it watched', async () => {
-        const result = await installSampleData(project(), deps() as never);
+        const result = await installSampleData(project(), deps());
 
         expect(result).toMatchObject({ ran: true, outcome: 'success' });
     });
@@ -192,7 +192,7 @@ describe('installSampleData', () => {
     it('never throws when the service refuses', async () => {
         const d = deps({ startImport: jest.fn().mockRejectedValue(new Error('service down')) });
 
-        const result = await installSampleData(project(), d as never);
+        const result = await installSampleData(project(), d);
 
         expect(result).toMatchObject({ ran: false });
         expect(result.reason).toMatch(/service down/i);
@@ -201,7 +201,7 @@ describe('installSampleData', () => {
     it('never throws when the watch itself fails', async () => {
         const d = deps({ watch: jest.fn().mockRejectedValue(new Error('poll exploded')) });
 
-        await expect(installSampleData(project(), d as never)).resolves.toMatchObject({
+        await expect(installSampleData(project(), d)).resolves.toMatchObject({
             ran: false,
         });
     });
@@ -214,7 +214,7 @@ describe('installSampleData', () => {
             }),
         });
 
-        const result = await installSampleData(project(), d as never);
+        const result = await installSampleData(project(), d);
 
         expect(result).toMatchObject({ ran: true, outcome: 'partial' });
     });
@@ -223,7 +223,7 @@ describe('installSampleData', () => {
         it('skips a project that chose no pack', async () => {
             const d = deps();
 
-            const result = await installSampleData(project({ datapack: undefined }), d as never);
+            const result = await installSampleData(project({ datapack: undefined }), d);
 
             expect(result).toMatchObject({ ran: false, skipped: true });
             expect(d.startImport).not.toHaveBeenCalled();
@@ -234,7 +234,7 @@ describe('installSampleData', () => {
 
             const result = await installSampleData(
                 project({ componentConfigs: { [ACCS]: {} } }),
-                d as never,
+                d,
             );
 
             expect(result).toMatchObject({ skipped: true });
@@ -246,7 +246,7 @@ describe('installSampleData', () => {
                 credentials: jest.fn().mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' }),
             });
 
-            const result = await installSampleData(project(), d as never);
+            const result = await installSampleData(project(), d);
 
             expect(result).toMatchObject({ skipped: true });
             expect(d.startImport).not.toHaveBeenCalled();
@@ -256,7 +256,7 @@ describe('installSampleData', () => {
         it('skips when the service holds no item for the pack', async () => {
             const d = deps({ inventory: jest.fn().mockResolvedValue([]) });
 
-            const result = await installSampleData(project(), d as never);
+            const result = await installSampleData(project(), d);
 
             expect(result).toMatchObject({ skipped: true });
             expect(d.startImport).not.toHaveBeenCalled();
@@ -272,13 +272,13 @@ describe('installSampleData', () => {
             }),
         });
 
-        await installSampleData(project(), d as never);
+        await installSampleData(project(), d);
 
         expect(d.onProgress).toHaveBeenCalled();
     });
 
     it('never puts the credential pair in its result', async () => {
-        const result = await installSampleData(project(), deps() as never);
+        const result = await installSampleData(project(), deps());
 
         expect(JSON.stringify(result)).not.toContain('fake-test-secret-not-a-secret');
     });
@@ -317,7 +317,7 @@ describe('removeSampleData', () => {
     it('starts a DELETE, never an import', async () => {
         const d = deps();
 
-        await removeSampleData(project(), d as never);
+        await removeSampleData(project(), d);
 
         expect(d.startDelete).toHaveBeenCalled();
         expect(d.startImport).not.toHaveBeenCalled();
@@ -326,7 +326,7 @@ describe('removeSampleData', () => {
     it('removes from the same scope the pack was installed into', async () => {
         const d = deps();
 
-        await removeSampleData(project(), d as never);
+        await removeSampleData(project(), d);
 
         expect(d.startDelete).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -340,7 +340,7 @@ describe('removeSampleData', () => {
     it('watches the delete it started, not some other job', async () => {
         const d = deps();
 
-        await removeSampleData(project(), d as never);
+        await removeSampleData(project(), d);
 
         expect(d.watch).toHaveBeenCalledWith(
             expect.objectContaining({ activationId: 'act-delete' }),
@@ -348,7 +348,7 @@ describe('removeSampleData', () => {
     });
 
     it('reports the outcome', async () => {
-        const result = await removeSampleData(project(), deps() as never);
+        const result = await removeSampleData(project(), deps());
 
         expect(result).toMatchObject({ ran: true, outcome: 'success' });
     });
@@ -357,7 +357,7 @@ describe('removeSampleData', () => {
     it('never throws when the delete refuses', async () => {
         const d = deps({ startDelete: jest.fn().mockRejectedValue(new Error('service down')) });
 
-        await expect(removeSampleData(project(), d as never)).resolves.toMatchObject({
+        await expect(removeSampleData(project(), d)).resolves.toMatchObject({
             ran: false,
         });
     });
@@ -365,14 +365,14 @@ describe('removeSampleData', () => {
     it('skips a project that recorded no pack', async () => {
         const d = deps();
 
-        const result = await removeSampleData(project({ datapack: undefined }), d as never);
+        const result = await removeSampleData(project({ datapack: undefined }), d);
 
         expect(result).toMatchObject({ skipped: true });
         expect(d.startDelete).not.toHaveBeenCalled();
     });
 
     it('never puts the credential pair in its result', async () => {
-        const result = await removeSampleData(project(), deps() as never);
+        const result = await removeSampleData(project(), deps());
 
         expect(JSON.stringify(result)).not.toContain('fake-test-secret-not-a-secret');
     });

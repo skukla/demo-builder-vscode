@@ -726,7 +726,7 @@ export const ListView: React.FC<any> = ({
         // Children are pre-rendered Item elements - render them directly
         content = React.Children.map(children, (child: any, index) => {
             if (!React.isValidElement(child)) return child;
-            const key = child.key || (items?.[index] as any)?.id || index;
+            const key = child.key || items?.[index]?.id || index;
             return (
                 <li key={key} {...rowProps(key)}>
                     {child}

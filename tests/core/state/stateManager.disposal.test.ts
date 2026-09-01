@@ -75,6 +75,7 @@ jest.mock('@/types/typeGuards', () => ({
 // Mock logger - StateManager uses getLogger() internally
 
 import { StateManager } from '@/core/state/stateManager';
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 
 describe('StateManager - Disposal', () => {
     let mockContext: vscode.ExtensionContext;
@@ -86,20 +87,7 @@ describe('StateManager - Disposal', () => {
         _mockEmitterFireCount = 0;
 
         // Create mock context
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/mock/extension',
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn().mockResolvedValue(undefined),
-                keys: jest.fn().mockReturnValue([]),
-            },
-            workspaceState: {
-                get: jest.fn(),
-                update: jest.fn().mockResolvedValue(undefined),
-                keys: jest.fn().mockReturnValue([]),
-            },
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
         // Reset vscode.EventEmitter mock
         (vscode.EventEmitter as jest.Mock).mockClear();

@@ -23,7 +23,7 @@ function createContext() {
     return {
         authManager,
         logger: createMockLogger(),
-        debugLogger: { trace: jest.fn(), debug: jest.fn() } as any,
+        debugLogger: { trace: jest.fn(), debug: jest.fn() },
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: { isAuthenticating: false },
     } as any;
@@ -38,7 +38,7 @@ describe('workspaceHandlers - Create', () => {
     });
 
     it('returns an error when authManager is missing', async () => {
-        const ctx = { ...mockContext, authManager: undefined } as any;
+        const ctx = { ...mockContext, authManager: undefined };
 
         const result = await handleCreateAdobeWorkspace(ctx, { name: 'Stage' });
 
@@ -78,11 +78,17 @@ describe('workspaceHandlers - Create', () => {
     it('returns the refreshed list ON THE RESPONSE (the caller is unmounted, a push is lost)', async () => {
         mockContext.authManager.getWorkspaces.mockResolvedValue([WS]);
 
-        const result = await handleCreateAdobeWorkspace(mockContext, { name: 'Stage', description: 'A workspace' });
+        const result = await handleCreateAdobeWorkspace(mockContext, {
+            name: 'Stage',
+            description: 'A workspace',
+        });
 
         expect(result.success).toBe(true);
         expect(result.data).toEqual(WS);
-        expect(mockContext.authManager.createWorkspace).toHaveBeenCalledWith('Stage', 'A workspace');
+        expect(mockContext.authManager.createWorkspace).toHaveBeenCalledWith(
+            'Stage',
+            'A workspace'
+        );
         expect(result.workspaces).toEqual([WS]);
     });
 
@@ -92,8 +98,14 @@ describe('workspaceHandlers - Create', () => {
         // `AdobeWorkspaceField` swaps the picker out for the create panel, so nothing
         // is listening for `get-workspaces` at this moment — WebviewClient drops it.
         // `workspaceSelected` never had a listener at all.
-        expect(mockContext.sendMessage).not.toHaveBeenCalledWith('get-workspaces', expect.anything());
-        expect(mockContext.sendMessage).not.toHaveBeenCalledWith('workspaceSelected', expect.anything());
+        expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
+            'get-workspaces',
+            expect.anything()
+        );
+        expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
+            'workspaceSelected',
+            expect.anything()
+        );
     });
 
     it('still succeeds when the refresh fetch fails, omitting workspaces so the caller reloads', async () => {
@@ -111,7 +123,9 @@ describe('workspaceHandlers - Create', () => {
 
         // The refresh must target the wizard's project; the fetcher resolves the org via
         // its token-org fallback. Unthreaded, the fetch would drop to the stale-org CLI.
-        expect(mockContext.authManager.getWorkspaces).toHaveBeenCalledWith({ projectId: 'proj-42' });
+        expect(mockContext.authManager.getWorkspaces).toHaveBeenCalledWith({
+            projectId: 'proj-42',
+        });
     });
 
     it('returns an error when createWorkspace throws', async () => {

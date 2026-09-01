@@ -144,6 +144,9 @@ import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import type { AiPrompt, Project } from '@/types/base';
 
 // ==========================================================
 // Test Helpers
@@ -224,16 +227,26 @@ function makeStatefulMemento(initial: Record<string, unknown> = {}) {
  */
 export function makeScopedContext(
     opts: {
-        projectPrompts?: unknown[];
-        globalPrompts?: unknown[];
+        projectPrompts?: AiPrompt[];
+        globalPrompts?: AiPrompt[];
     } = {}
 ) {
-    const project = {
+    /**
+     * A real `Project`, not a three-field literal.
+     *
+     * Until 2026-09-01 this was `{ name, path, aiPrompts: unknown[] }` cast to
+     * `HandlerContext['stateManager']` through the state-manager fake. The cast
+     * was doing real work: `Project.aiPrompts` is `AiPrompt[]`, and the whole
+     * fixture was `unknown[]`, so every prompt this suite fed a handler was a
+     * shape the compiler had been told not to look at. Dropping the cast is what
+     * surfaced it.
+     */
+    const project = createMockProject({
         name: 'p',
         path: '/projects/p',
-        aiPrompts: [...(opts.projectPrompts ?? [])] as unknown[],
-    };
-    const saveProject = jest.fn(async (next: { aiPrompts?: unknown[] }) => {
+        aiPrompts: [...(opts.projectPrompts ?? [])],
+    });
+    const saveProject = jest.fn(async (next: Project) => {
         project.aiPrompts = next.aiPrompts ?? [];
     });
     const memento = makeStatefulMemento({
@@ -251,10 +264,10 @@ export function makeScopedContext(
             globalState: memento,
             subscriptions: [],
         } as unknown as HandlerContext['context'],
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn(async () => project),
             saveProject,
-        } as unknown as HandlerContext['stateManager'],
+        }),
     });
     return { context, project, saveProject, memento };
 }

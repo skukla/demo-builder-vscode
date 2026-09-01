@@ -19,7 +19,6 @@ import {
     verifyAiSetup,
     createAiHandlerContext,
 } from './aiHandlers.testUtils';
-import type { HandlerContext } from './aiHandlers.testUtils';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 
@@ -115,7 +114,7 @@ describe('aiHandlers — setup & verification', () => {
             (verifyAiSetup as jest.Mock).mockResolvedValue({ status: 'ok', checks: [] });
             const aiFileHashes = { 'AGENTS.md': 'abc123' };
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue({
                         name: 'Test Project',
                         path: '/projects/test',
@@ -123,7 +122,7 @@ describe('aiHandlers — setup & verification', () => {
                         aiFileHashes,
                     }),
                     saveProjectConfigOnly: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             await handleVerifyAiSetup(context);
@@ -139,7 +138,7 @@ describe('aiHandlers — setup & verification', () => {
             const context = createAiHandlerContext({
                 stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
-                }) as unknown as HandlerContext['stateManager'],
+                }),
             });
             const result = await handleVerifyAiSetup(context);
 

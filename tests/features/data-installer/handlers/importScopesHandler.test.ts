@@ -21,10 +21,16 @@
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
-import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../helpers/extensionContextFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
     discoverStoreStructure: jest.fn(),
@@ -49,14 +55,20 @@ const STRUCTURE = {
         { id: 2, code: 'bodea', name: 'Bodea' },
     ],
     storeGroups: [
-        { id: 1, website_id: 1, code: 'main_website_store', name: 'Main Store', root_category_id: 2 },
+        {
+            id: 1,
+            website_id: 1,
+            code: 'main_website_store',
+            name: 'Main Store',
+            root_category_id: 2,
+        },
         { id: 2, website_id: 2, code: 'bodea_store', name: 'Bodea Store', root_category_id: 3 },
     ],
     storeViews: [
         { id: 1, store_group_id: 1, website_id: 1, code: 'default', name: 'Default View' },
         { id: 2, store_group_id: 2, website_id: 2, code: 'bodea_view', name: 'Bodea View' },
     ],
-} as never;
+};
 
 function paasProject(): Partial<Project> {
     return {
@@ -72,18 +84,23 @@ function paasProject(): Partial<Project> {
 }
 
 function makeImportHarness(project: unknown = paasProject()) {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
-        authManager: {
+        authManager: createMockAuthenticationService({
             getTokenManager: jest.fn().mockReturnValue({
                 inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }),
             }),
-        },
-        context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
-        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
+        }),
+        context: createMockExtensionContext({
+            globalState: createStatefulGlobalState().globalState,
+            secrets: createMockSecretStorage().secrets,
+        }),
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(project),
+        }),
         sendMessage: jest.fn(),
-    } as unknown as HandlerContext;
+    });
 }
 
 /** The response's website list, typed — matches the sibling suite's cast style. */
@@ -135,7 +152,10 @@ describe('list-datapack-import-scopes', () => {
     });
 
     it('reports a discovery failure as a reason, not an exception', async () => {
-        mockedDiscover.mockResolvedValue({ success: false, error: 'Connection timed out.' } as never);
+        mockedDiscover.mockResolvedValue({
+            success: false,
+            error: 'Connection timed out.',
+        } as never);
         const context = makeImportHarness();
 
         const result = await importHandlers['list-datapack-import-scopes'](context);

@@ -41,7 +41,7 @@ describe('buildComponentList — app-builder derivation', () => {
 
     it('produces NO app-builder entry from selectedAddons', () => {
         const stack = createStack({
-            optionalAddons: [{ id: 'opt-addon' }] as never,
+            optionalAddons: [{ id: 'opt-addon' }],
         });
         const project = {
             // An addon that is NOT in optionalAddons used to leak into app-builder.

@@ -30,7 +30,7 @@ export function createMeshProject(overrides: Partial<Project> = {}): Project {
             },
         },
         ...overrides,
-    } as never)
+    })
 }
 
 /** Canonical command-executor fake (ADR-016). */

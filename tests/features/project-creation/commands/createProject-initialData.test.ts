@@ -10,9 +10,9 @@
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
-import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // Factory mock keeping the real module: transitive deps (fetch-blob via the
 // auth service import chain) destructure fs.promises at load time, so a bare
@@ -44,28 +44,19 @@ function createMockExtensionContext(): vscode.ExtensionContext {
             update: jest.fn(),
             keys: jest.fn(() => []),
             setKeysForSync: jest.fn(),
-        } as any,
+        },
         workspaceState: {
             get: jest.fn(),
             update: jest.fn(),
             keys: jest.fn(() => []),
-        } as any,
+        },
         extensionUri: vscode.Uri.file('/mock/extension/path'),
         extensionMode: vscode.ExtensionMode.Test,
         asAbsolutePath: (relativePath: string) => `/mock/extension/path/${relativePath}`,
-        secrets: {} as any,
+        secrets: {},
     } as unknown as vscode.ExtensionContext;
 }
 
-function createMockStateManager(): StateManager {
-    return {
-        getState: jest.fn(),
-        setState: jest.fn(),
-        clearState: jest.fn(),
-        getCurrentProject: jest.fn(),
-        getAllProjects: jest.fn().mockResolvedValue([]),
-    } as any;
-}
 
 /** Serve `json` as the wizard-steps.json content; no other file exists. */
 function setupStepsFile(json: string): void {

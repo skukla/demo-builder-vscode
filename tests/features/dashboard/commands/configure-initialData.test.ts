@@ -16,6 +16,7 @@ import { ComponentRegistryManager } from '@/features/components/services/Compone
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 
 
@@ -60,13 +61,7 @@ describe('ConfigureProjectWebviewCommand - getInitialData envVars', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        const mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/extension/path',
-            extensionUri: vscode.Uri.file('/test/extension/path'),
-            globalState: { get: jest.fn(), update: jest.fn() },
-            secrets: { get: jest.fn(), store: jest.fn() },
-        } as unknown as vscode.ExtensionContext;
+        const mockContext = createMockExtensionContext();
 
         mockStateManager = {
             getCurrentProject: jest.fn().mockResolvedValue({

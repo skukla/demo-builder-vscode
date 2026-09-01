@@ -17,9 +17,15 @@ import * as vscode from 'vscode';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import type { Project } from '@/types/base';
-import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../helpers/extensionContextFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -49,32 +55,26 @@ const PAAS_PROJECT = (): Partial<Project> => ({
 });
 
 function makeImportHarness(project: Partial<Project>, saveProject = jest.fn()) {
-    const mem = new Map<string, unknown>();
-    const context = {
+    const context = createMockHandlerContext({
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
-        authManager: {
+        authManager: createMockAuthenticationService({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest
                 .fn()
                 .mockReturnValue({ inspectToken: jest.fn().mockResolvedValue({ token: 'tok' }) }),
-        },
+        }),
         panel: {} as vscode.WebviewPanel,
-        context: {
-            globalState: {
-                get: jest.fn((k: string, d?: unknown) => (mem.has(k) ? mem.get(k) : d)),
-                update: jest.fn(async (k: string, v: unknown) => void mem.set(k, v)),
-                keys: jest.fn(() => [...mem.keys()]),
-                setKeysForSync: jest.fn(),
-            },
-            secrets: { get: jest.fn(async () => undefined), store: jest.fn(), delete: jest.fn() },
-        } as unknown as vscode.ExtensionContext,
+        context: createMockExtensionContext({
+            globalState: createStatefulGlobalState().globalState,
+            secrets: createMockSecretStorage().secrets,
+        }),
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
         }),
         sendMessage: jest.fn().mockResolvedValue(undefined),
-    } as unknown as HandlerContext;
+    });
     return { context, saveProject };
 }
 
@@ -93,7 +93,7 @@ function happyClient() {
                 startImport: jest.fn().mockResolvedValue({ activationId: 'act-1' }),
                 startDelete: jest.fn().mockResolvedValue({ activationId: 'act-9' }),
                 checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
-            }) as never,
+            }) as never
     );
 }
 
@@ -106,7 +106,7 @@ function refusingClient() {
                 startImport: jest.fn(),
                 startDelete: jest.fn(),
                 checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
-            }) as never,
+            }) as never
     );
 }
 

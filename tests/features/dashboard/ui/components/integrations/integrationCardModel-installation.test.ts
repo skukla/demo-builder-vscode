@@ -22,7 +22,7 @@ describe('deriveIntegrationCard — installation facet', () => {
             integration({
                 status: 'deployed',
                 installation: { status: 'installed', at: '2026-08-27T01:00:00Z' },
-            } as never)
+            })
         );
 
         expect(model.installation).toMatchObject({ label: 'Installed', failed: false });
@@ -35,7 +35,7 @@ describe('deriveIntegrationCard — installation facet', () => {
             integration({
                 status: 'deployed',
                 installation: { status: 'skipped', detail: 'Already installed and current.' },
-            } as never)
+            })
         );
 
         expect(model.installation).toMatchObject({
@@ -50,7 +50,7 @@ describe('deriveIntegrationCard — installation facet', () => {
             integration({
                 status: 'deployed',
                 installation: { status: 'failed', detail: 'hands-back line' },
-            } as never)
+            })
         );
 
         expect(model.installation).toMatchObject({
@@ -67,10 +67,10 @@ describe('deriveIntegrationCard — installation facet', () => {
         const failedInstall = { status: 'failed' as const };
 
         const deploying = deriveIntegrationCard(
-            integration({ status: 'deploying', installation: failedInstall } as never)
+            integration({ status: 'deploying', installation: failedInstall })
         );
         const errored = deriveIntegrationCard(
-            integration({ status: 'error', installation: failedInstall } as never)
+            integration({ status: 'error', installation: failedInstall })
         );
 
         expect(deploying.menuActions).toEqual([]);

@@ -161,7 +161,7 @@ describe('code-sync sub-step is present for existing repos too (2026-08-06)', ()
         for (const mode of ['new', 'existing'] as const) {
             expect(
                 isStorefrontStepComplete(
-                    { ...withMode(mode), storefrontCodeSyncValid: false } as never,
+                    { ...withMode(mode), storefrontCodeSyncValid: false },
                     'code-sync',
                 )
             ).toBe(false);

@@ -50,7 +50,9 @@ describe('resolveIntegrationRows — mesh row (single-authority selection)', () 
     // yields a row — a package-seeded mesh arrives in selectedAppBuilderComponents.
     it('yields NO mesh row from the retired legacy dependency key alone', () => {
         const rows = resolveIntegrationRows(
-            state({ selectedOptionalDependencies: ['eds-accs-mesh'] } as never),
+            // `selectedOptionalDependencies` was REMOVED by D3; the cast is what
+            // lets the test put a value in a field that no longer exists.
+            state({ selectedOptionalDependencies: ['eds-accs-mesh'] } as unknown as WizardState),
             MESH_ENTRY,
             CATALOG
         );

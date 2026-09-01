@@ -69,28 +69,23 @@ export interface PageLayoutProps {
  * Structure follows the pattern established in WizardContainer, ConfigureScreen,
  * and ProjectsDashboard for consistent full-page layouts.
  */
-export const PageLayout: React.FC<PageLayoutProps> = ({
+export function PageLayout({
     header,
     footer,
     children,
     backgroundColor,
     className,
-}) => {
+}: PageLayoutProps) {
     return (
-        <div
-            className={cn(className)}
-            style={{ ...PAGE_LAYOUT_STYLES.container, backgroundColor }}
-        >
+        <div className={cn(className)} style={{ ...PAGE_LAYOUT_STYLES.container, backgroundColor }}>
             {/* Header slot - fixed, no shrink */}
             {header}
 
             {/* Content area - scrollable, flex-grow */}
-            <div style={PAGE_LAYOUT_STYLES.content}>
-                {children}
-            </div>
+            <div style={PAGE_LAYOUT_STYLES.content}>{children}</div>
 
             {/* Footer slot - fixed, no shrink */}
             {footer}
         </div>
     );
-};
+}

@@ -214,16 +214,13 @@ describe('activation chain sequencing (source pin)', () => {
         // The chain is sequential because every sweep saves whole manifests; a
         // sweep added beside it (a separate `void` call) would race the others
         // and silently drop their fields. Pin the shape, not line numbers.
-        const realFs = jest.requireActual('fs') as typeof import('fs');
-        const realPath = jest.requireActual('path') as typeof import('path');
+        const realFs = jest.requireActual('fs');
+        const realPath = jest.requireActual('path');
         const src = realFs.readFileSync(
             realPath.resolve(__dirname, '../../../src/extension.ts'),
-            'utf8',
+            'utf8'
         );
-        const chain = src.slice(
-            src.indexOf('void (async () => {'),
-            src.indexOf('})().catch'),
-        );
+        const chain = src.slice(src.indexOf('void (async () => {'), src.indexOf('})().catch'));
         const order = [
             'refreshAiBundlesOnActivation',
             'sweepPublishKeyRenewals',

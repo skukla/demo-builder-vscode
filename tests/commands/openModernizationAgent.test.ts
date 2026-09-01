@@ -27,6 +27,7 @@ import type { Project } from '@/types/base';
 import { createMockLogger } from '../helpers/loggerFake';
 import { createMockStateManager } from '../helpers/stateManagerFake';
 import { createMockProject } from '../helpers/projectFake';
+import { createMockExtensionContext } from '../helpers/extensionContextFake';
 
 function makeLogger(): Logger {
     return createMockLogger() as unknown as Logger;
@@ -39,13 +40,7 @@ function makeStateManager(project: Project | null): StateManager {
 }
 
 function makeContext(): vscode.ExtensionContext {
-    return {
-        globalState: {
-            get: jest.fn(),
-            update: jest.fn().mockResolvedValue(undefined),
-        },
-        subscriptions: [],
-    } as unknown as vscode.ExtensionContext;
+    return createMockExtensionContext();
 }
 
 const PROJECT = createMockProject({ name: 'My Demo', path: '/projects/demo' });

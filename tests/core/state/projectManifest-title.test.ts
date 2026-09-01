@@ -48,7 +48,7 @@ function writtenManifest(): Record<string, unknown> {
 }
 
 async function write(project: Project): Promise<void> {
-    const writer = new ProjectConfigWriter(mockLogger as never) as unknown as {
+    const writer = new ProjectConfigWriter(mockLogger) as unknown as {
         writeManifest(project: unknown): Promise<void>;
     };
     await writer.writeManifest(project);

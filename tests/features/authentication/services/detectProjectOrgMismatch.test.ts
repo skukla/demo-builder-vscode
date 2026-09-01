@@ -17,15 +17,23 @@ import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 const makeProject = (organization?: string): Project =>
-    ({ name: 'p', path: '/p', adobe: organization ? { organization } : undefined } as unknown as Project);
+    ({
+        name: 'p',
+        path: '/p',
+        adobe: organization ? { organization } : undefined,
+    }) as unknown as Project;
 
-const mockLogger = () => (createMockLogger());
+const mockLogger = () => createMockLogger();
 
 describe('detectProjectOrgMismatch', () => {
     it('returns undefined when the project has no Adobe org (fresh/non-Adobe)', async () => {
-        const authManager = { getOrganizations: jest.fn() } as any;
+        const authManager = { getOrganizations: jest.fn() };
 
-        const result = await detectProjectOrgMismatch(authManager, makeProject(undefined), mockLogger());
+        const result = await detectProjectOrgMismatch(
+            authManager,
+            makeProject(undefined),
+            mockLogger()
+        );
 
         expect(result).toBeUndefined();
         expect(authManager.getOrganizations).not.toHaveBeenCalled();
@@ -33,41 +41,70 @@ describe('detectProjectOrgMismatch', () => {
 
     it('reports reachable with the current org id + name when the token reaches the project org', async () => {
         const authManager = {
-            getOrganizations: jest.fn().mockResolvedValue([
-                { id: 'org-A', code: 'A@AdobeOrg', name: 'Org A' },
-            ]),
-        } as any;
+            getOrganizations: jest
+                .fn()
+                .mockResolvedValue([{ id: 'org-A', code: 'A@AdobeOrg', name: 'Org A' }]),
+        };
 
-        const result = await detectProjectOrgMismatch(authManager, makeProject('org-A'), mockLogger());
+        const result = await detectProjectOrgMismatch(
+            authManager,
+            makeProject('org-A'),
+            mockLogger()
+        );
 
-        expect(result).toEqual({ reachable: true, expectedOrg: 'org-A', currentOrgId: 'org-A', currentOrg: 'Org A' });
+        expect(result).toEqual({
+            reachable: true,
+            expectedOrg: 'org-A',
+            currentOrgId: 'org-A',
+            currentOrg: 'Org A',
+        });
     });
 
     it('reports reachable for a legacy project that stored the org NAME (matched by name)', async () => {
         const authManager = {
-            getOrganizations: jest.fn().mockResolvedValue([
-                { id: 'org-A', code: 'A@AdobeOrg', name: 'Acme Org' },
-            ]),
-        } as any;
+            getOrganizations: jest
+                .fn()
+                .mockResolvedValue([{ id: 'org-A', code: 'A@AdobeOrg', name: 'Acme Org' }]),
+        };
 
         // Legacy project: organization holds the name, not the id.
-        const result = await detectProjectOrgMismatch(authManager, makeProject('Acme Org'), mockLogger());
+        const result = await detectProjectOrgMismatch(
+            authManager,
+            makeProject('Acme Org'),
+            mockLogger()
+        );
 
-        expect(result).toEqual({ reachable: true, expectedOrg: 'Acme Org', currentOrgId: 'org-A', currentOrg: 'Acme Org' });
+        expect(result).toEqual({
+            reachable: true,
+            expectedOrg: 'Acme Org',
+            currentOrgId: 'org-A',
+            currentOrg: 'Acme Org',
+        });
     });
 
     it('reports NOT reachable, naming the token org from getOrganizations (not the stale CLI org)', async () => {
         const authManager = {
-            getOrganizations: jest.fn().mockResolvedValue([
-                { id: 'org-B', code: 'B@AdobeOrg', name: 'Org B' },
-            ]),
+            getOrganizations: jest
+                .fn()
+                .mockResolvedValue([{ id: 'org-B', code: 'B@AdobeOrg', name: 'Org B' }]),
             // Stale CLI console selection — MUST be ignored.
-            getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org-STALE', name: 'Stale Org' }),
-        } as any;
+            getCurrentOrganization: jest
+                .fn()
+                .mockResolvedValue({ id: 'org-STALE', name: 'Stale Org' }),
+        };
 
-        const result = await detectProjectOrgMismatch(authManager, makeProject('org-A'), mockLogger());
+        const result = await detectProjectOrgMismatch(
+            authManager,
+            makeProject('org-A'),
+            mockLogger()
+        );
 
-        expect(result).toEqual({ reachable: false, expectedOrg: 'org-A', currentOrgId: 'org-B', currentOrg: 'Org B' });
+        expect(result).toEqual({
+            reachable: false,
+            expectedOrg: 'org-A',
+            currentOrgId: 'org-B',
+            currentOrg: 'Org B',
+        });
         // The stale CLI selection is never consulted.
         expect(authManager.getCurrentOrganization).not.toHaveBeenCalled();
     });
@@ -76,7 +113,7 @@ describe('detectProjectOrgMismatch', () => {
         const logger = mockLogger();
         const authManager = {
             getOrganizations: jest.fn().mockRejectedValue(new Error('no token')),
-        } as any;
+        };
 
         const result = await detectProjectOrgMismatch(authManager, makeProject('org-A'), logger);
 

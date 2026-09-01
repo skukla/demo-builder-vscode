@@ -11,12 +11,12 @@
  */
 
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
-import type { StateManager } from '@/core/state/stateManager';
 import type { Project } from '@/types/base';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const getCurrentProject = jest.fn();
 const saveProject = jest.fn();
-const stateManager = { getCurrentProject, saveProject } as unknown as StateManager;
+const stateManager = createMockStateManager({ getCurrentProject, saveProject });
 
 function serve() {
     const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();

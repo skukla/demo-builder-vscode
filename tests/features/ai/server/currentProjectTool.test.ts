@@ -5,14 +5,20 @@
  */
 
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
-import type { HandlerContext } from '@/types/handlers';
 import { expectWithinCeiling } from './responseCeilings';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 function fakeServer() {
     const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
     return {
-        registerTool(name: string, _def: unknown, handler: (args: any) => Promise<{ content: Array<{ text: string }> }>) {
+        registerTool(
+            name: string,
+            _def: unknown,
+            handler: (args: any) => Promise<{ content: Array<{ text: string }> }>
+        ) {
             tools.set(name, handler);
         },
         async call(args?: unknown): Promise<any> {
@@ -23,11 +29,11 @@ function fakeServer() {
 
 const getCurrentProject = jest.fn();
 const ctxFactory = () =>
-    ({
-        stateManager: { getCurrentProject },
-        context: {},
+    createMockHandlerContext({
+        stateManager: createMockStateManager({ getCurrentProject }),
+        context: createMockExtensionContext(),
         logger: createMockLogger(),
-    }) as unknown as HandlerContext;
+    });
 
 describe('get_current_project', () => {
     beforeEach(() => {
@@ -86,7 +92,7 @@ describe('get_current_project', () => {
                 registered.push(name);
             },
         };
-        registerCurrentProjectTool(s as any, ctxFactory);
+        registerCurrentProjectTool(s, ctxFactory);
         expect(registered).toEqual(['get_current_project']);
     });
 });
@@ -96,6 +102,9 @@ describe('response-size ceiling', () => {
     it('get_current_project stays tiny — it returns a name and a path', async () => {
         const s = fakeServer();
         registerCurrentProjectTool(s, ctxFactory);
-        expectWithinCeiling('get_current_project', JSON.stringify(await s.call('get_current_project')));
+        expectWithinCeiling(
+            'get_current_project',
+            JSON.stringify(await s.call('get_current_project'))
+        );
     });
 });

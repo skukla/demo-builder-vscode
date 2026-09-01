@@ -39,7 +39,7 @@ describe('ProjectConfigWriter atomic writes', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        writer = new ProjectConfigWriter(mockLogger as any);
+        writer = new ProjectConfigWriter(mockLogger);
 
         // Default mock implementations for directory checks
         mockFs.access.mockResolvedValue(undefined);

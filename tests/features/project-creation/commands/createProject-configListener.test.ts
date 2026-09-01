@@ -15,6 +15,7 @@ import * as vscode from 'vscode';
 import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
@@ -205,25 +206,7 @@ describe('CreateProjectWebviewCommand - Config Change Listener', () => {
         jest.clearAllMocks();
         configChangeCallback = undefined;
 
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/mock/extension/path',
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn(),
-                keys: jest.fn(() => []),
-                setKeysForSync: jest.fn(),
-            },
-            workspaceState: {
-                get: jest.fn(),
-                update: jest.fn(),
-                keys: jest.fn(() => []),
-            },
-            extensionUri: vscode.Uri.file('/mock/extension/path'),
-            extensionMode: vscode.ExtensionMode.Test,
-            asAbsolutePath: (relativePath: string) => `/mock/extension/path/${relativePath}`,
-            secrets: {},
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
         mockStateManager = {
             getAllProjects: jest.fn().mockResolvedValue([]),

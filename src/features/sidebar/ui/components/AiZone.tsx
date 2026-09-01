@@ -85,11 +85,7 @@ function tileFor(
 /**
  * AiZone — labeled zone with Chat and Prompts tiles stacked vertically.
  */
-export const AiZone: React.FC<AiZoneProps> = ({
-    onOpenAiChat,
-    onShowPrompts,
-    onNewAiChat,
-}) => {
+export function AiZone({ onOpenAiChat, onShowPrompts, onNewAiChat }: AiZoneProps) {
     return (
         <Flex direction="column" gap="size-100" alignItems="center">
             <Text UNSAFE_className="dashboard-zone-label">AI</Text>
@@ -119,4 +115,4 @@ export const AiZone: React.FC<AiZoneProps> = ({
             </div>
         </Flex>
     );
-};
+}

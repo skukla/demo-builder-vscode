@@ -297,10 +297,7 @@ describe('demoStatusDisplay — remedy', () => {
 
     const edsHook = (storefront?: string) =>
         renderHook(() =>
-            useDashboardStatus(
-                { initialEdsStorefrontStatus: storefront as never },
-                true
-            )
+            useDashboardStatus({ initialEdsStorefrontStatus: storefront as never }, true)
         );
 
     it('asks for a republish when the storefront has drifted', () => {
@@ -344,7 +341,7 @@ describe('demoStatusDisplay — remedy', () => {
                 status: 'running',
                 port: 3000,
                 frontendConfigChanged: true,
-            } as never);
+            });
         });
 
         expect(result.current.demoStatusDisplay).toEqual({
@@ -363,7 +360,7 @@ describe('demoStatusDisplay — remedy', () => {
                 path: '/test/path',
                 status: 'running',
                 port: 3000,
-            } as never);
+            });
         });
 
         expect(result.current.demoStatusDisplay.text).toBe('Running on port 3000');

@@ -21,8 +21,8 @@
  */
 
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
-import type { StateManager } from '@/core/state/stateManager';
 import { expectWithinCeiling } from './responseCeilings';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 function fakeServer() {
     const tools = new Map<string, () => Promise<{ content: Array<{ text: string }> }>>();
@@ -42,7 +42,7 @@ function fakeServer() {
 }
 
 const getCurrentProject = jest.fn();
-const stateManager = { getCurrentProject } as unknown as StateManager;
+const stateManager = createMockStateManager({ getCurrentProject });
 
 function serve() {
     const s = fakeServer();

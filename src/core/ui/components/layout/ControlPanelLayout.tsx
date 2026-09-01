@@ -40,43 +40,45 @@ export interface ControlPanelLayoutProps {
     className?: string;
 }
 
-export const ControlPanelLayout: React.FC<ControlPanelLayoutProps> = ({
+export function ControlPanelLayout({
     masthead,
     primary,
     secondary,
     secondaryContentWidth = '400px',
     className,
-}) => (
-    <div className={cn('control-panel', className)}>
-        {masthead}
-        {secondary ? (
-            <TwoColumnLayout
-                // Two left-anchored columns, NOT a gray edge-sidebar. The left
-                // column hugs its content (fit-content) so the detail column sits
-                // right beside the action tiles; the detail column is TRANSPARENT
-                // (the secondary is primary content, not a summary panel — a gray
-                // fill reaching the editor edge reads as a sea of empty gray), with
-                // a quiet divider separating it and its inner content capped.
-                // size-400 left padding aligns the tiles under the masthead content.
-                maxWidth="none"
-                leftMaxWidth={'fit-content' as DimensionValue}
-                leftPadding="size-400"
-                rightBackgroundColor="transparent"
-                leftContent={primary}
-                rightContent={
-                    <div
-                        className="control-panel-secondary-inner"
-                        style={{ maxWidth: secondaryContentWidth, width: '100%' }}
-                    >
-                        {secondary}
-                    </div>
-                }
-                className="control-panel-body"
-            />
-        ) : (
-            // Single-column fallback (no detail panel): match the two-column left
-            // padding so the action tiles still align under the masthead content.
-            <div className="control-panel-single">{primary}</div>
-        )}
-    </div>
-);
+}: ControlPanelLayoutProps) {
+    return (
+        <div className={cn('control-panel', className)}>
+            {masthead}
+            {secondary ? (
+                <TwoColumnLayout
+                    // Two left-anchored columns, NOT a gray edge-sidebar. The left
+                    // column hugs its content (fit-content) so the detail column sits
+                    // right beside the action tiles; the detail column is TRANSPARENT
+                    // (the secondary is primary content, not a summary panel — a gray
+                    // fill reaching the editor edge reads as a sea of empty gray), with
+                    // a quiet divider separating it and its inner content capped.
+                    // size-400 left padding aligns the tiles under the masthead content.
+                    maxWidth="none"
+                    leftMaxWidth={'fit-content' as DimensionValue}
+                    leftPadding="size-400"
+                    rightBackgroundColor="transparent"
+                    leftContent={primary}
+                    rightContent={
+                        <div
+                            className="control-panel-secondary-inner"
+                            style={{ maxWidth: secondaryContentWidth, width: '100%' }}
+                        >
+                            {secondary}
+                        </div>
+                    }
+                    className="control-panel-body"
+                />
+            ) : (
+                // Single-column fallback (no detail panel): match the two-column left
+                // padding so the action tiles still align under the masthead content.
+                <div className="control-panel-single">{primary}</div>
+            )}
+        </div>
+    );
+}

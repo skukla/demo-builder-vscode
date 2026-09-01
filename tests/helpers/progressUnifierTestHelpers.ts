@@ -134,7 +134,7 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
                         const result = handler(code);
                         // Attach catch handler immediately to prevent unhandled rejection detection
                         if (result && typeof result === 'object' && 'then' in result) {
-                            (result as Promise<void>).catch(() => {
+                            (result).catch(() => {
                                 // Swallow rejections - prevents Node unhandled rejection event
                             });
                         }

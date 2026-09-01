@@ -49,32 +49,34 @@ describe('ProcessCleanup - Coverage Gaps', () => {
     describe('killWithTimeout Fallback Path', () => {
         beforeEach(() => {
             // Set up process.kill mock
-            process.kill = jest.fn().mockImplementation((pid: number, signal: NodeJS.Signals | number = 'SIGTERM') => {
-                killCalls.push({ pid, signal });
+            process.kill = jest
+                .fn()
+                .mockImplementation((pid: number, signal: NodeJS.Signals | number = 'SIGTERM') => {
+                    killCalls.push({ pid, signal });
 
-                if (signal === 0) {
-                    // Signal 0 checks existence
+                    if (signal === 0) {
+                        // Signal 0 checks existence
+                        if (!processExistsSet.has(pid)) {
+                            const error: any = new Error('No such process');
+                            error.code = 'ESRCH';
+                            throw error;
+                        }
+                        return true;
+                    }
+
                     if (!processExistsSet.has(pid)) {
                         const error: any = new Error('No such process');
                         error.code = 'ESRCH';
                         throw error;
                     }
+
+                    // SIGTERM/SIGKILL kills the process
+                    if (signal === 'SIGTERM' || signal === 'SIGKILL') {
+                        processExistsSet.delete(pid);
+                    }
+
                     return true;
-                }
-
-                if (!processExistsSet.has(pid)) {
-                    const error: any = new Error('No such process');
-                    error.code = 'ESRCH';
-                    throw error;
-                }
-
-                // SIGTERM/SIGKILL kills the process
-                if (signal === 'SIGTERM' || signal === 'SIGKILL') {
-                    processExistsSet.delete(pid);
-                }
-
-                return true;
-            }) as any;
+                });
 
             // Create fresh instance and spy on isTreeKillAvailable to return false
             processCleanup = new ProcessCleanup({ gracefulTimeout: 5000 });
@@ -95,7 +97,7 @@ describe('ProcessCleanup - Coverage Gaps', () => {
             await promise;
 
             // Verify process.kill was called with SIGTERM (not tree-kill)
-            expect(killCalls.some(c => c.signal === 'SIGTERM')).toBe(true);
+            expect(killCalls.some((c) => c.signal === 'SIGTERM')).toBe(true);
             expect(processExistsSet.has(pid)).toBe(false);
         });
 
@@ -120,34 +122,36 @@ describe('ProcessCleanup - Coverage Gaps', () => {
             const pid = 1000;
             let sigTermSent = false;
 
-            process.kill = jest.fn().mockImplementation((p: number, sig: NodeJS.Signals | number) => {
-                killCalls.push({ pid: p, signal: sig });
+            process.kill = jest
+                .fn()
+                .mockImplementation((p: number, sig: NodeJS.Signals | number) => {
+                    killCalls.push({ pid: p, signal: sig });
 
-                if (sig === 0) {
-                    // After SIGTERM sent and timeout passed, process is gone
-                    if (sigTermSent && killCalls.filter(c => c.signal === 0).length > 30) {
+                    if (sig === 0) {
+                        // After SIGTERM sent and timeout passed, process is gone
+                        if (sigTermSent && killCalls.filter((c) => c.signal === 0).length > 30) {
+                            const error: any = new Error('ESRCH');
+                            error.code = 'ESRCH';
+                            throw error;
+                        }
+                        return true;
+                    }
+
+                    if (sig === 'SIGTERM') {
+                        sigTermSent = true;
+                        // Process ignores SIGTERM (stays alive)
+                        return true;
+                    }
+
+                    if (sig === 'SIGKILL') {
+                        // Process exited before we could SIGKILL
                         const error: any = new Error('ESRCH');
                         error.code = 'ESRCH';
                         throw error;
                     }
+
                     return true;
-                }
-
-                if (sig === 'SIGTERM') {
-                    sigTermSent = true;
-                    // Process ignores SIGTERM (stays alive)
-                    return true;
-                }
-
-                if (sig === 'SIGKILL') {
-                    // Process exited before we could SIGKILL
-                    const error: any = new Error('ESRCH');
-                    error.code = 'ESRCH';
-                    throw error;
-                }
-
-                return true;
-            }) as any;
+                });
 
             // Create fresh instance with short graceful timeout
             processCleanup = new ProcessCleanup({ gracefulTimeout: 1000 });
@@ -177,7 +181,7 @@ describe('ProcessCleanup - Coverage Gaps', () => {
             await promise;
 
             // Verify SIGKILL was sent (not waiting for SIGTERM timeout)
-            expect(killCalls.some(c => c.signal === 'SIGKILL')).toBe(true);
+            expect(killCalls.some((c) => c.signal === 'SIGKILL')).toBe(true);
             expect(processExistsSet.has(pid)).toBe(false);
         });
     });
@@ -197,17 +201,19 @@ describe('ProcessCleanup - Coverage Gaps', () => {
             // Given: process exists but throws EPERM when trying to kill
             const pid = 1000;
 
-            process.kill = jest.fn().mockImplementation((p: number, sig: NodeJS.Signals | number) => {
-                if (sig === 0) {
-                    // Process exists
-                    return true;
-                }
+            process.kill = jest
+                .fn()
+                .mockImplementation((p: number, sig: NodeJS.Signals | number) => {
+                    if (sig === 0) {
+                        // Process exists
+                        return true;
+                    }
 
-                // EPERM when sending actual signal
-                const error: any = new Error('Operation not permitted');
-                error.code = 'EPERM';
-                throw error;
-            }) as any;
+                    // EPERM when sending actual signal
+                    const error: any = new Error('Operation not permitted');
+                    error.code = 'EPERM';
+                    throw error;
+                });
 
             // When/Then: should reject with error
             await expect(processCleanup.killProcessTree(pid, 'SIGTERM')).rejects.toThrow(
@@ -221,20 +227,22 @@ describe('ProcessCleanup - Coverage Gaps', () => {
             const pid = 1000;
             let attemptedKill = false;
 
-            process.kill = jest.fn().mockImplementation((p: number, sig: NodeJS.Signals | number) => {
-                if (sig === 0) {
-                    // EPERM on existence check - process exists but no permission
+            process.kill = jest
+                .fn()
+                .mockImplementation((p: number, sig: NodeJS.Signals | number) => {
+                    if (sig === 0) {
+                        // EPERM on existence check - process exists but no permission
+                        const error: any = new Error('Operation not permitted');
+                        error.code = 'EPERM';
+                        throw error;
+                    }
+
+                    // Attempting actual kill - this proves processExists returned true
+                    attemptedKill = true;
                     const error: any = new Error('Operation not permitted');
                     error.code = 'EPERM';
                     throw error;
-                }
-
-                // Attempting actual kill - this proves processExists returned true
-                attemptedKill = true;
-                const error: any = new Error('Operation not permitted');
-                error.code = 'EPERM';
-                throw error;
-            }) as any;
+                });
 
             // When: killProcessTree is called
             try {
@@ -273,25 +281,27 @@ describe('ProcessCleanup - Coverage Gaps', () => {
 
             // Process stays alive initially, then dies to SIGKILL
             let sigKillSent = false;
-            process.kill = jest.fn().mockImplementation((p: number, sig: NodeJS.Signals | number) => {
-                if (sig === 0) {
-                    // After SIGKILL, process is gone
-                    if (sigKillSent) {
-                        const error: any = new Error('ESRCH');
-                        error.code = 'ESRCH';
-                        throw error;
+            process.kill = jest
+                .fn()
+                .mockImplementation((p: number, sig: NodeJS.Signals | number) => {
+                    if (sig === 0) {
+                        // After SIGKILL, process is gone
+                        if (sigKillSent) {
+                            const error: any = new Error('ESRCH');
+                            error.code = 'ESRCH';
+                            throw error;
+                        }
+                        // Still alive
+                        return true;
                     }
-                    // Still alive
-                    return true;
-                }
 
-                if (sig === 'SIGKILL') {
-                    sigKillSent = true;
-                    return true;
-                }
+                    if (sig === 'SIGKILL') {
+                        sigKillSent = true;
+                        return true;
+                    }
 
-                return true;
-            }) as any;
+                    return true;
+                });
 
             // When: killProcessTree is called
             const promise = processCleanup.killProcessTree(pid, 'SIGTERM');
@@ -317,27 +327,29 @@ describe('ProcessCleanup - Coverage Gaps', () => {
 
             // Process stays alive through SIGTERM, but exits before SIGKILL lands
             let pollCount = 0;
-            process.kill = jest.fn().mockImplementation((p: number, sig: NodeJS.Signals | number) => {
-                if (sig === 0) {
-                    pollCount++;
-                    // After several polls during timeout, process exits on its own
-                    if (pollCount > 10) {
+            process.kill = jest
+                .fn()
+                .mockImplementation((p: number, sig: NodeJS.Signals | number) => {
+                    if (sig === 0) {
+                        pollCount++;
+                        // After several polls during timeout, process exits on its own
+                        if (pollCount > 10) {
+                            const error: any = new Error('ESRCH');
+                            error.code = 'ESRCH';
+                            throw error;
+                        }
+                        return true;
+                    }
+
+                    if (sig === 'SIGKILL') {
+                        // Process already gone
                         const error: any = new Error('ESRCH');
                         error.code = 'ESRCH';
                         throw error;
                     }
+
                     return true;
-                }
-
-                if (sig === 'SIGKILL') {
-                    // Process already gone
-                    const error: any = new Error('ESRCH');
-                    error.code = 'ESRCH';
-                    throw error;
-                }
-
-                return true;
-            }) as any;
+                });
 
             // When: killProcessTree is called
             const promise = processCleanup.killProcessTree(pid, 'SIGTERM');

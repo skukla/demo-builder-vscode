@@ -34,6 +34,40 @@ function uri(p: string): unknown {
  * @param overrides - anything this suite genuinely needs different.
  * @param basePath - convenience for the several paths that move together.
  */
+/**
+ * A `globalState` that actually REMEMBERS, backed by a Map.
+ *
+ * The default fake's `globalState.get` is a bare `jest.fn()` returning undefined,
+ * which is right for a suite that only asserts the call. It is wrong for one that
+ * writes a value and reads it back — a token cached, then fetched again — and
+ * three DaLive auth suites each hand-rolled this Map to get it, byte-identical
+ * apart from the variable name, and each cast the whole context to escape the
+ * type.
+ *
+ * Returning the Map alongside is deliberate: two of the three assert on the
+ * stored value directly, and reaching through `context.globalState` to do that
+ * reads worse than being handed the store.
+ *
+ * @param initial - seed entries, for a suite that starts with state already there.
+ */
+export function createStatefulGlobalState(initial: Record<string, unknown> = {}): {
+    globalState: vscode.ExtensionContext['globalState'];
+    store: Map<string, unknown>;
+} {
+    const store = new Map<string, unknown>(Object.entries(initial));
+    const globalState = {
+        get: jest.fn((key: string) => store.get(key)),
+        update: jest.fn((key: string, value: unknown) => {
+            if (value === undefined) store.delete(key);
+            else store.set(key, value);
+            return Promise.resolve();
+        }),
+        keys: jest.fn(() => [...store.keys()]),
+        setKeysForSync: jest.fn(),
+    } as unknown as vscode.ExtensionContext['globalState'];
+    return { globalState, store };
+}
+
 export function createMockExtensionContext(
     overrides: Partial<vscode.ExtensionContext> = {},
     basePath = '/test/extension/path'

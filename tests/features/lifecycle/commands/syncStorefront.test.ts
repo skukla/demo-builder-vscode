@@ -42,7 +42,7 @@ describe('SyncStorefrontCommand', () => {
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
             makeStateManager(null) as unknown as StateManager,
-            makeLogger() as never
+            makeLogger()
         );
 
         await command.execute();
@@ -56,7 +56,7 @@ describe('SyncStorefrontCommand', () => {
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
             makeStateManager(project) as unknown as StateManager,
-            makeLogger() as never
+            makeLogger()
         );
 
         await command.execute();
@@ -73,7 +73,7 @@ describe('SyncStorefrontCommand', () => {
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
             makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-            makeLogger() as never
+            makeLogger()
         );
 
         await command.execute();
@@ -90,7 +90,7 @@ describe('SyncStorefrontCommand', () => {
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
             makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-            makeLogger() as never
+            makeLogger()
         );
 
         await command.execute();
@@ -110,7 +110,7 @@ describe('SyncStorefrontCommand', () => {
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
             makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-            makeLogger() as never
+            makeLogger()
         );
 
         await command.execute();
@@ -144,7 +144,7 @@ describe('SyncStorefrontCommand', () => {
         const command = new SyncStorefrontCommand(
             context,
             makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-            makeLogger() as never
+            makeLogger()
         );
 
         await command.execute();
@@ -169,7 +169,7 @@ describe('SyncStorefrontCommand', () => {
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
             makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-            makeLogger() as never
+            makeLogger()
         );
 
         await command.execute();
@@ -191,7 +191,7 @@ describe('SyncStorefrontCommand', () => {
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
             makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-            makeLogger() as never
+            makeLogger()
         );
 
         await command.execute();
@@ -219,7 +219,7 @@ describe('SyncStorefrontCommand', () => {
             new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
                 makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-                makeLogger() as never
+                makeLogger()
             ).execute();
 
         it('shows the rule-violation reason to the user, not just to the log', async () => {
@@ -311,7 +311,7 @@ describe('SyncStorefrontCommand', () => {
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
             makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-            makeLogger() as never
+            makeLogger()
         );
 
         await command.execute();
@@ -342,7 +342,7 @@ describe('SyncStorefrontCommand', () => {
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
             makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-            makeLogger() as never
+            makeLogger()
         );
 
         await command.execute();
@@ -392,7 +392,7 @@ describe('SyncStorefrontCommand', () => {
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
             makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-            makeLogger() as never
+            makeLogger()
         );
 
         await command.execute();
@@ -488,7 +488,7 @@ describe('SyncStorefrontCommand', () => {
             const command = new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
                 makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute();
@@ -520,7 +520,7 @@ describe('SyncStorefrontCommand', () => {
             const command = new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
                 makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute();
@@ -547,7 +547,7 @@ describe('SyncStorefrontCommand', () => {
             const command = new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
                 makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute();
@@ -572,7 +572,7 @@ describe('SyncStorefrontCommand', () => {
             const command = new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
                 makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute();
@@ -598,7 +598,7 @@ describe('SyncStorefrontCommand', () => {
             const command = new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
                 makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute();
@@ -614,7 +614,7 @@ describe('SyncStorefrontCommand', () => {
             const command = new SyncStorefrontCommand(
                 makeSyncStorefrontContext(),
                 makeStateManager(makeSyncTargetProject()) as unknown as StateManager,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute();

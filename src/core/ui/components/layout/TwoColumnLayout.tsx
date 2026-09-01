@@ -80,7 +80,7 @@ export interface TwoColumnLayoutProps {
  * />
  * ```
  */
-export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
+export function TwoColumnLayout({
     leftContent,
     rightContent,
     // 960 mirrors the canonical CSS --content-width (DimensionValue can't take a var()).
@@ -94,7 +94,7 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
     rightMinWidth = '300px' as DimensionValue,
     rightWidth,
     className,
-}) => {
+}: TwoColumnLayoutProps) {
     // SOP §11: Static styles use utility classes, dynamic styles stay inline.
     // The `two-column-layout*` classes are the targets for the responsive
     // stacking media query in custom-spectrum.css — at narrow viewports the
@@ -108,12 +108,29 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
     const fixedRight = rightWidth !== undefined;
     const translatedRightWidth = fixedRight ? translateSpectrumToken(rightWidth) : undefined;
 
-    const containerClasses = ['flex', 'h-full', 'w-full', 'flex-1', 'min-h-0', 'items-stretch', 'two-column-layout', className].filter(Boolean).join(' ');
-    const leftColumnClasses = 'flex flex-column w-full min-w-0 overflow-hidden two-column-layout-left';
+    const containerClasses = [
+        'flex',
+        'h-full',
+        'w-full',
+        'flex-1',
+        'min-h-0',
+        'items-stretch',
+        'two-column-layout',
+        className,
+    ]
+        .filter(Boolean)
+        .join(' ');
+    const leftColumnClasses =
+        'flex flex-column w-full min-w-0 overflow-hidden two-column-layout-left';
     const rightColumnClasses = [
         fixedRight ? null : 'flex-1',
-        'flex', 'flex-column', 'overflow-hidden', 'two-column-layout-right',
-    ].filter(Boolean).join(' ');
+        'flex',
+        'flex-column',
+        'overflow-hidden',
+        'two-column-layout-right',
+    ]
+        .filter(Boolean)
+        .join(' ');
 
     // Left column. Default: capped-primary (flex grow + maxWidth for readability).
     // Fixed-right mode: flexible majority (flex: 1 1 0 + min-width: 0) with the cap
@@ -148,10 +165,7 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
             }}
         >
             {/* Left Column: Main Content (constrained width) */}
-            <div
-                className={leftColumnClasses}
-                style={leftColumnStyle}
-            >
+            <div className={leftColumnClasses} style={leftColumnStyle}>
                 {leftContent}
             </div>
 
@@ -179,4 +193,4 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
             </div>
         </div>
     );
-};
+}

@@ -22,6 +22,7 @@ import { withOrgContext } from '@/core/shell/orgContextEnv';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
     runGuards: jest.fn().mockResolvedValue(undefined),
@@ -78,14 +79,14 @@ function makeProject(overrides: Record<string, unknown> = {}): Record<string, un
 }
 
 function makeContext(project: Record<string, unknown> | null): HandlerContext {
-    return {
+    return createMockHandlerContext({
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
         }),
         logger: createMockLogger(),
         sendMessage: jest.fn(),
-    } as unknown as HandlerContext;
+    });
 }
 
 describe('handleListConsoleApis', () => {
@@ -360,8 +361,18 @@ describe('per-integration attribution (step 04)', () => {
     function twoIntegrationProject() {
         return makeProject({
             appBuilderComponents: {
-                'erp-sync': { kind: 'integration', status: 'deployed', name: 'ERP Sync', source: { owner: 'o', repo: 'r' } },
-                'firefly-app': { kind: 'integration', status: 'deployed', name: 'Firefly App', source: { owner: 'o', repo: 'r' } },
+                'erp-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'ERP Sync',
+                    source: { owner: 'o', repo: 'r' },
+                },
+                'firefly-app': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    name: 'Firefly App',
+                    source: { owner: 'o', repo: 'r' },
+                },
             },
             componentApiPicks: {
                 'erp-sync': ['FireflyAPISDK', 'GraphQLServiceSDK'],
@@ -371,7 +382,7 @@ describe('per-integration attribution (step 04)', () => {
     }
 
     describe('list', () => {
-        it('returns only THIS integration\'s picks as `added`, not the union', async () => {
+        it("returns only THIS integration's picks as `added`, not the union", async () => {
             const context = makeContext(twoIntegrationProject());
 
             const result = await handleListConsoleApis(context, { componentId: 'firefly-app' });
@@ -409,7 +420,7 @@ describe('per-integration attribution (step 04)', () => {
     });
 
     describe('set', () => {
-        it('writes only this integration\'s entry, leaving the others intact', async () => {
+        it("writes only this integration's entry, leaving the others intact", async () => {
             const project = twoIntegrationProject();
             const context = makeContext(project);
 
@@ -451,4 +462,3 @@ describe('per-integration attribution (step 04)', () => {
         });
     });
 });
-

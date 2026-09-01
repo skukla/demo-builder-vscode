@@ -29,6 +29,7 @@ import {
     accumulatesState,
     classBodies,
     expectCeiling,
+    expectBanned as expectBannedAgainst,
     expectClean as expectCleanAgainst,
     isWebview,
     loadLedger,
@@ -53,6 +54,11 @@ const src = readStripped(FILES);
 
 function expectClean(check: string, violations: string[]): void {
     expectCleanAgainst(LEDGER, check, violations);
+}
+
+/** A rule that reached zero and had its ledger key deleted. See `expectBanned`. */
+function expectBanned(check: string, violations: string[]): void {
+    expectBannedAgainst(LEDGER, check, violations);
 }
 
 /** Boundary membership per ADR-015: where fetching is allowed. */
@@ -167,7 +173,7 @@ describe('ADR-015: fetch boundary — logic never fetches', () => {
     });
 
     it('every out-of-boundary fetch is a reasoned ledger entry — and nothing more', () => {
-        expectClean('fetchBoundary', violations);
+        expectBanned('fetchBoundary', violations);
     });
 });
 
@@ -211,7 +217,7 @@ describe('ADR-015: a class that ACCUMULATES STATE comes from one place', () => {
     });
 
     it('every out-of-boundary construction of a STATEFUL class is a reasoned ledger entry', () => {
-        expectClean('constructionBoundary', violations);
+        expectBanned('constructionBoundary', violations);
     });
 });
 
@@ -253,7 +259,7 @@ describe('ADR-015: a repeated composition point builds nothing STATEFUL', () => 
     });
 
     it('every stateful class built in a repeated composition point is a reasoned ledger entry', () => {
-        expectClean('compositionPointLifetime', violations);
+        expectBanned('compositionPointLifetime', violations);
     });
 });
 
@@ -450,7 +456,7 @@ describe('ADR-022: a module is imported by the path that DEFINES the symbol', ()
     });
 
     it('every re-exporting index file is a reasoned ledger entry', () => {
-        expectClean('reExportIndex', reExporting);
+        expectBanned('reExportIndex', reExporting);
     });
 });
 
@@ -481,7 +487,7 @@ describe('ADR-022: features get no new barrel', () => {
     });
 
     it('every feature-level barrel is a reasoned ledger entry', () => {
-        expectClean('featureBarrels', barrels);
+        expectBanned('featureBarrels', barrels);
     });
 });
 

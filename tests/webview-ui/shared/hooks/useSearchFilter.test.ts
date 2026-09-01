@@ -182,8 +182,8 @@ describe('useSearchFilter', () => {
 
         it('handles null field values', () => {
             const itemsWithNulls = [
-                { id: '1', title: 'Test', description: null as any },
-                { id: '2', title: null as any, description: 'Description' },
+                { id: '1', title: 'Test', description: null },
+                { id: '2', title: null, description: 'Description' },
             ];
 
             const { result } = renderHook(() =>
@@ -202,8 +202,8 @@ describe('useSearchFilter', () => {
 
         it('handles undefined field values', () => {
             const itemsWithUndefined = [
-                { id: '1', title: 'Test', description: undefined as any },
-                { id: '2', title: undefined as any, description: 'Description' },
+                { id: '1', title: 'Test', description: undefined },
+                { id: '2', title: undefined, description: 'Description' },
             ];
 
             const { result } = renderHook(() =>

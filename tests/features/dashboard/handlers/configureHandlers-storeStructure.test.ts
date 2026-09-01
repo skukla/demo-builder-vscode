@@ -23,6 +23,7 @@ import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 const STRUCTURE = {
     websites: [{ id: 2, code: 'citisignal', name: 'CitiSignal' }],
@@ -41,14 +42,14 @@ function discoveryEmits(result: unknown): void {
 function makeContext(project: Project | null) {
     const saveProject = jest.fn().mockResolvedValue(undefined);
     const sendMessage = jest.fn().mockResolvedValue(undefined);
-    const context = {
+    const context = createMockHandlerContext({
         sendMessage,
         logger: createMockLogger(),
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
         }),
-    } as unknown as HandlerContext;
+    });
     return { context, saveProject, sendMessage };
 }
 

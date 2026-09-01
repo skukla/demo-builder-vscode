@@ -18,7 +18,7 @@ describe('Project Creation - Validate Handler', () => {
             sendMessage: jest.fn().mockResolvedValue(undefined),
             logger: {
                 error: jest.fn(),
-            } as any,
+            },
         } as any;
     }
 

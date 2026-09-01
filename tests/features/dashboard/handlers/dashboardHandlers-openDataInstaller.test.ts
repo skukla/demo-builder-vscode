@@ -17,19 +17,28 @@
 import * as vscode from 'vscode';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
-import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../helpers/extensionContextFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
 function makeContext() {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
         sendMessage: jest.fn(),
-        panel: {},
+        panel: createMockWebviewPanel(),
         stateManager: createMockStateManager({ getCurrentProject: jest.fn() }),
-        context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
-    } as unknown as HandlerContext;
+        context: createMockExtensionContext({
+            globalState: createStatefulGlobalState().globalState,
+            secrets: createMockSecretStorage().secrets,
+        }),
+    });
 }
 
 beforeEach(() => jest.clearAllMocks());
@@ -43,7 +52,7 @@ describe('openDataInstaller', () => {
         await dashboardHandlers.openDataInstaller(makeContext(), undefined);
 
         expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-            'demoBuilder.showDataInstaller',
+            'demoBuilder.showDataInstaller'
         );
     });
 
@@ -70,12 +79,12 @@ describe('openDataInstaller', () => {
     /** A failed dispatch must not take the dashboard down with it. */
     it('reports rather than throws when the command fails', async () => {
         (vscode.commands.executeCommand as jest.Mock).mockRejectedValueOnce(
-            new Error('command missing'),
+            new Error('command missing')
         );
         const context = makeContext();
 
         await expect(
-            dashboardHandlers.openDataInstaller(context, undefined),
+            dashboardHandlers.openDataInstaller(context, undefined)
         ).resolves.not.toThrow();
     });
 });

@@ -90,9 +90,19 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > re-export-only `index.ts` — not in `core/`, not in a feature. **The ledger is
 > CLOSED**: all 43 that predated the rule were retired on 2026-08-31, so this is now
 > a ban with nowhere to write an exception down.
-> [ADR-022](../architecture/adr/022-barrel-files.md) · Enforced by the `reExportIndex`
-> ledger in `tests/sop/architecture-rules.exemptions.json`, with the `featureBarrels`
-> ledger — now empty — banning feature-level barrels outright.
+> [ADR-022](../architecture/adr/022-barrel-files.md) · Enforced by
+> `tests/sop/architecture-rules.test.ts` through `expectBanned`, which asserts both
+> halves: no violations, AND no ledger key to write one into.
+>
+> That second half arrived on 2026-09-01, and this entry is why it was needed. It
+> already SAID "a ban with nowhere to write an exception down" while
+> `reExportIndex: {}` and `featureBarrels: {}` sat in the exemptions file — empty, but
+> still keys. An empty ledger already fails a new violation, so nothing was
+> undetected; what remained was the SLOT. The next person to trip the rule could add
+> a row with a reason and stay green, and the rule would quietly go back to being
+> negotiable. Seven rules that had reached zero were in that state; all seven are now
+> banned outright, and re-adding an exemption to any of them fails the build naming
+> the rule.
 > *Why:* a symbol reachable by two paths is a symbol whose home nobody can name. It is
 > also the rule this codebase already follows: **1,935 imports reach into a module from
 > outside it, against 162 from within**, so the barrels were the minority report, not the
@@ -695,6 +705,21 @@ so when the point is *how* a collaborator was used, assert the arguments rather 
 result. And coverage does not tell you a test would catch a bug: `npm run test:mutation`
 breaks the code on purpose and reports what nothing noticed.
 
+> **Convention.** A canonical fake covers its subject's WHOLE public surface, and
+> invents nothing.
+> *Why:* both halves have failed here. A fake NARROWER than the need is one nobody
+> adopts — `stateManagerFake` answered a single method for months while fifty suites
+> hand-rolled their own in 22 distinct shapes, so the builder grew the divergence it
+> existed to stop. A fake with INVENTED members is worse because it is silent: five
+> appeared in hand-rolled StateManager fakes that are not on StateManager at all, and
+> two Logger fakes carried `setContext`, `with`, `show` and `dispose`, none of which
+> exist and none of which anything calls.
+> `jest.Mocked<T>` catches the invented half at compile time, which is why every
+> builder is typed. It CANNOT catch the missing half, because each one ends in a cast
+> to satisfy the mock type. Enforced by
+> `tests/sop/fake-mirrors-subject.test.ts`, which reads the subject from source
+> and compares in both directions.
+
 > **Convention.** A split test family shares one `.testUtils` file, which owns the mocks
 > and the subject import. [webview-test-authoring](../../.claude/skills/webview-test-authoring/SKILL.md) ·
 > enforced by `tests/sop/test-family-setup.test.ts`.
@@ -860,6 +885,70 @@ check says so and names the file.
 > also a production function, so every handler test calling the real one looked like a
 > consumer of the fake.
 
+> **Convention.** A value handed to a hook that DEPENDS on it must be stable
+> across renders.
+> *Why:* an inline `[]`, `{}` or `() => …` is a new reference every render. If the
+> hook names it in a dependency array, the effect re-runs every render — and one
+> that sets state never settles.
+>
+> This was listed for months as the rule nothing could enforce, and that was half
+> right. `exhaustive-deps` reads the dependency array from INSIDE the hook while the
+> value's freshness is decided OUTSIDE by the caller; neither end sees the other, and
+> the types are identical either way, so the compiler is silent too. But the TYPE
+> CHECKER crosses that boundary — it resolves the call to the hook's declaration, and
+> the dependency arrays are then plain text to read.
+>
+> Three things are NOT violations, and each was a false positive before it was a
+> rule: a **destructured** parameter (the object is torn apart in the signature, so
+> nothing depends on it), a **spread** dependency (`[...conditions, setX]` depends on
+> the elements), and **React's own hooks** — `useState([])` reads its argument once
+> and the `[]` in `useMemo(fn, [])` IS the dependency array (1,077 correct sites).
+>
+> The fix is one of three: hoist it to a module constant when it is genuinely
+> constant, memoise it when it derives from state, or hold it in a ref inside the
+> hook when what the hook wants is "whatever the caller means right now".
+> Enforced by `tests/sop/stable-hook-arguments.test.ts`; the corpus was emptied by
+> `scripts/codemod/survey-unstable-refs.mjs` (12 findings to zero).
+
+> **Convention.** A component is declared ONE way: `function Name(props: NameProps)`.
+> `React.FC` is banned.
+> *Why:* the repo had both — 98 files as plain functions, 31 as `React.FC` — and two
+> ways of doing one thing is what a convention exists to stop. Both compile and both
+> work; the cost is that every reader holds two shapes, every example has a dialect,
+> and a new component copies whichever neighbour it landed beside.
+>
+> The plain function won on numbers before it won on merit. On merit: `React.FC` used
+> to add an implicit `children` prop, which React 18's types dropped and which is most
+> of why it fell out of favour; it pins the return type; and it obstructs generic
+> components. Nothing here needs what it offers.
+>
+> **`React.memo(...)` is unaffected.** Memoisation is a per-component performance
+> decision, not a house style, and five components use it correctly.
+> Enforced by `tests/sop/one-component-form.test.ts`; the corpus was emptied by
+> `scripts/codemod/react-fc-to-function.mjs` (37 sites, 33 files).
+
+> **Convention.** PRODUCTION erases no types. `as any` and `as never` are banned in
+> `src/` outright.
+> *Why:* `src/` was already at zero when this was adopted, so the ban cost nothing —
+> and leaving it to habit plus a warn-level lint rule that reports nothing is how a
+> property that took effort to reach comes quietly undone. Enforced by
+> `tests/sop/src-erases-no-types.test.ts`.
+>
+> **What is still allowed, because banning the wrong thing teaches people to work
+> around the check rather than write better types:**
+>
+> | form | when | in this codebase |
+> |---|---|---|
+> | `unknown` + a type guard | you do not know the type yet | the correct default |
+> | `: never` as a RETURN type | the function does not return | `handleStreamingError(...): never` |
+> | `(args: any)` at a real interop boundary | the input is genuinely untyped | the MCP SDK hands over untyped args — 51 of the 61 `: any` in `src/` |
+> | `as unknown as X` | the value cannot be expressed in the target's terms | `children as unknown as CollectionChildren<object>` |
+>
+> That last row is why `src/` reached zero: `CardActionsMenu` held the final
+> `as never`, silencing a real Spectrum collection-type mismatch. Both spellings
+> silence the same error; only one tells the next reader what the value is being
+> treated as. **`as any` names nothing, and that is the whole objection to it.**
+
 > **Convention.** No test erases a type. `as any` and `as never` are banned anywhere in
 > `tests/`. A builder is declared as the REAL type it stands for; where the structural
 > fake cannot satisfy that type honestly, cast the object literal INTO it at the
@@ -923,12 +1012,12 @@ it is, and the count of unenforced rules is stated rather than hidden.
 
 Conventions decay unless something checks them. Four layers do:
 
-- **Hooks** stop a bad action as it happens — 10 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 29 in `tests/sop/`
+- **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
+- **Enforcer suites** fail the build when code drifts — 35 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 71 conventions. 70 of them are enforced; 1 is not.**
+**This handbook states 76 conventions. 75 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on
@@ -987,7 +1076,24 @@ not.
 > detector that has silently stopped detecting reports "all clear" in exactly the same
 > words as one that verified.
 > *Why:* a first sweep printed "clean" over a scan that had just measured a 34% gap.
-> Enforced by `tests/sop/every-scan-declares-a-control.test.ts`.
+> Enforced by `tests/sop/every-scan-declares-a-control.test.ts`, and — for the
+> instruments that live OUTSIDE the scan directory — by
+> `tests/hooks/rule-proofs.test.ts` and `tests/sop/eslint-type-aware.test.ts`.
+>
+> `tests/sop/codemod-harness.test.ts` is the same rule applied to the tool that
+> REWRITES the code: it runs `scripts/codemod/selftest.mjs`, which ends in a
+> deliberately false assertion, and asserts the exact failure count — so a self-test
+> reporting zero failures fails the build, because a checker that cannot fail is not
+> a checker.
+>
+> Those three were added on 2026-09-01, after the same failure appeared three times in
+> one day: a hook rule that never reached its own guard, a blocking rule with no proof
+> harness at all, and a bracket expression that had silently stopped matching. All
+> three exited 0 and looked fine. An instrument whose dependencies live elsewhere —
+> a router pre-filter, a rule name owned by a third party, a tsconfig that must still
+> cover the tree — needs a planted defect it must find AND a clean case it must
+> ignore, or it can degrade into a command that reports nothing and reads as good
+> news.
 
 > **Convention.** Never publish an identifier you have not read from the source. Setting
 > keys, env vars, command ids, file paths and function names are cheap to grep and
@@ -1015,6 +1121,23 @@ not.
 > a pipe into `head`, `tail` or `wc` — those exit 0 whatever they were fed, so a failure
 > and an empty result are indistinguishable. `grep` is deliberately not blocked:
 > `cmd | grep -q x && …` is correct, because there grep's own exit code is the answer.
+
+> **Convention.** A list of paths reaches a command through `xargs`, never as a bare
+> `$VAR`. Quote the variable when one argument is what you meant.
+> *Why:* bash word-splits an unquoted variable and **zsh does not**, so
+> `FILES=$(...)` followed by `eslint --fix $FILES` passes ONE argument containing
+> newlines instead of N paths. The command then runs against a path that cannot exist,
+> most tools call that nothing to do, and exit 0 — the failure reads exactly like
+> success. Three incidents: a seven-path `git rm` that deleted nothing while the echo
+> after it announced success; the same shape again the same session; and on 2026-09-01
+> an `eslint --fix` over 18 files that fixed none, where the unchanged recount was read
+> as "these warnings are not auto-fixable" — a wrong conclusion drawn from a command
+> that never ran. Through `xargs` it fixed all 18 and went five below the baseline.
+> Enforced by `.claude/hooks/rules/16-unsplit-var.rule`, which fires only when the
+> variable was assigned from `$(...)` AND is passed bare to a command that takes a list
+> of files. `[ $n -gt 0 ]` does not fire; `echo $VAR` does not fire; a quoted `"$VAR"`
+> never fires. This rule was in prose here since August and was broken a third time by
+> the session that had just read it, which is the argument for mechanising it.
 
 > **Convention.** Quote glob arguments passed to `grep` or `find`. In zsh an unquoted
 > pattern is expanded before the command sees it, and an unquoted variable is not split
@@ -1100,6 +1223,21 @@ The test for keeping one is the owner's, from the directive that started this: a
 that cannot be enforced AND that nobody can point at a defect for should be deleted, not
 preserved because it reads well. All nine pass the second half. If one ever stops
 passing it, delete it.
+
+> **Discipline.** Before writing a check, ask whether a tool here already performs
+> it. When a change repeats across more than about ten sites, drive it from a SYNTAX
+> TREE — never from a regex over source text.
+> *Why:* text cannot tell code from a string literal or a comment, and that is not a
+> care problem. On 2026-09-01 a regex converter deleted ` as never` from inside a
+> detector's own control fixtures — the strings that prove the argument-cast detector
+> can see a cast — silently disabling the proof while the enforcer kept passing. The
+> same day, a hand-rolled "is this import still used?" scan was wrong twice where
+> eslint's parsed output was right, and a prior about which casts were redundant was
+> wrong 29 times out of 36. A ts-morph probe over a file holding a cast in code, a
+> cast in a string and a cast in a comment returned exactly the two real ones.
+> [toolchain.md](toolchain.md) says which tool answers which question;
+> `ask-the-tool` is the procedure. **Not enforced** — no check can ask why you
+> reached for a regex.
 
 > **Discipline.** A comment describing what ANOTHER module does must cite the code that
 > makes it true. If you cannot cite it, write what you verified instead.

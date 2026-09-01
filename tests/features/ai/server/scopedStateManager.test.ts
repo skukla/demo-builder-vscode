@@ -9,19 +9,19 @@
  */
 
 import { createScopedStateManager } from '@/features/ai/server/scopedStateManager';
-import type { StateManager } from '@/core/state/stateManager';
 import { createMockProject } from '../../../helpers/projectFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const SCOPED_DIR = '/projects/battery-scratch';
 
 function makeReal() {
-    return {
+    return createMockStateManager({
         loadProjectFromPath: jest.fn().mockResolvedValue(createMockProject({ name: 'scratch' })),
-        saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
-        saveProject: jest.fn().mockResolvedValue(undefined),
-        getCurrentProject: jest.fn().mockResolvedValue(createMockProject({ name: 'pointer-project' })),
+        getCurrentProject: jest
+            .fn()
+            .mockResolvedValue(createMockProject({ name: 'pointer-project' })),
         hasProject: jest.fn().mockReturnValue(true),
-    } as unknown as StateManager;
+    });
 }
 
 describe('createScopedStateManager', () => {

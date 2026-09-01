@@ -43,14 +43,15 @@ import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 function makeContext(project: Project | undefined): HandlerContext {
-    return {
+    return createMockHandlerContext({
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
-        }) as unknown as HandlerContext['stateManager'],
+        }),
         logger: createMockLogger() as unknown as HandlerContext['logger'],
-    } as unknown as HandlerContext;
+    });
 }
 
 const PROJECT = createMockProject({ name: 'My Demo', path: '/projects/my-demo' });

@@ -20,7 +20,10 @@
  */
 
 import type { HandlerContext } from '@/types/handlers';
-import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
+import type {
+    PrerequisiteDefinition,
+    PrerequisiteStatus,
+} from '@/features/prerequisites/services/PrerequisitesManager';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
@@ -74,7 +77,9 @@ export const mockAdobeCliPrereq: PrerequisiteDefinition = {
 /**
  * Helper to create mock HandlerContext
  */
-export function createCheckHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
+export function createCheckHandlerContext(
+    overrides?: Partial<HandlerContext>
+): jest.Mocked<HandlerContext> {
     return createMockHandlerContextBase({
         prereqManager: {
             loadConfig: jest.fn(),
@@ -85,21 +90,21 @@ export function createCheckHandlerContext(overrides?: Partial<HandlerContext>): 
                 getPerVersionResults: jest.fn().mockReturnValue(undefined),
                 clearAll: jest.fn(),
             }),
-        } as any,
-        authManager: {} as any,
-        componentHandler: {} as any,
-        errorLogger: {} as any,
-        progressUnifier: {} as any,
+        },
+        authManager: {},
+        componentHandler: {},
+        errorLogger: {},
+        progressUnifier: {},
         stepLogger: {
             log: jest.fn(),
-        } as any,
+        },
         logger: createMockLogger(),
         debugLogger: {
             debug: jest.fn(),
-        } as any,
-        context: {} as any,
+        },
+        context: {},
         panel: undefined,
-        stateManager: {} as any,
+        stateManager: {},
         communicationManager: undefined,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: {
@@ -109,7 +114,7 @@ export function createCheckHandlerContext(overrides?: Partial<HandlerContext>): 
             currentComponentSelection: undefined,
         },
         ...overrides,
-    } as never)
+    } as never);
 }
 
 /** Canonical component-selection fixture (ADR-016). */
@@ -126,9 +131,11 @@ export function setupStandardMocks() {
     (shared.hasNodeVersions as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
         return mapping && Object.keys(mapping).length > 0;
     });
-    (shared.getNodeVersionKeys as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
-        return Object.keys(mapping || {}).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-    });
+    (shared.getNodeVersionKeys as jest.Mock).mockImplementation(
+        (mapping: Record<string, string>) => {
+            return Object.keys(mapping || {}).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+        }
+    );
 }
 
 /**

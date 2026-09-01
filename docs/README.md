@@ -13,6 +13,7 @@ how one rule ended up stated in three places and another (`Pattern B`) in none.
 | **Decisions** | Why it went this way, and what was rejected | [`architecture/adr/`](architecture/adr/) | Is there a rejected alternative worth recording? |
 | **Subsystems** | How one part actually works | [`systems/`](systems/) | Reference you read, not steps you run |
 | **Procedures** | Ordered steps somebody executes | `.claude/skills/` | Invoked, never transcribed |
+| **The toolchain** | Which tool answers which question, and the trap each one carries | [`development/toolchain.md`](development/toolchain.md) | Am I about to hand-roll a check a tool already performs? |
 | **Entry points** | Getting one audience started | [`../CONTRIBUTING.md`](../CONTRIBUTING.md), [`../tests/README.md`](../tests/README.md) | Who is this for? |
 | **Records** | What happened, dated | `.rptc/`, [`CHANGELOG.md`](CHANGELOG.md), [`research/`](research/) | Describes a moment, not the present |
 

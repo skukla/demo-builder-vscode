@@ -18,8 +18,8 @@ jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({ dashboardH
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
-import type { HandlerContext } from '@/types/handlers';
 import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 const ALL_URLS = {
     storefront: 'http://localhost:3000',
@@ -43,10 +43,10 @@ function harness() {
     };
     registerLifecycleTools(
         server,
-        () => ({}) as HandlerContext,
+        () => createMockHandlerContext(),
         async (url: string) => {
             opened.push(url);
-        },
+        }
     );
     return {
         opened,
@@ -95,7 +95,7 @@ describe('open_url', () => {
             expect.anything(),
             expect.anything(),
             'getProjectUrls',
-            {},
+            {}
         );
     });
 
@@ -143,7 +143,7 @@ describe('open_url', () => {
     it('its targets are exactly the keys handleGetProjectUrls can return', async () => {
         const source = (await import('fs')).readFileSync(
             'src/features/dashboard/handlers/openUrlHandlers.ts',
-            'utf8',
+            'utf8'
         );
         const assigned = [...source.matchAll(/urls\.([A-Za-z]+)\s*=/g)].map((m) => m[1]);
         // Control: a regex that matched nothing would make the comparison vacuous.
@@ -202,7 +202,7 @@ it('registers exactly the two tools', () => {
     expect(() =>
         registerLifecycleTools(
             s as unknown as McpToolServer,
-            () => ({}) as HandlerContext,
+            () => createMockHandlerContext(),
             async () => undefined
         )
     ).not.toThrow();

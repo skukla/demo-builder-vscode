@@ -18,7 +18,6 @@ import type { CustomBlockLibrary } from '@/types/blockLibraries';
 // calls `getLogger()`, which throws unless the logger is initialised. Same mock
 // the other suites of getGitHubServices consumers use.
 
-
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollections: jest.fn(),
 }));
@@ -29,12 +28,14 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
-
-
-
 jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     GitHubRepoOperations: jest.fn().mockImplementation(() => ({
-        createFromTemplate: jest.fn().mockResolvedValue({ fullName: 'owner/repo', htmlUrl: 'https://github.com/owner/repo' }),
+        createFromTemplate: jest
+            .fn()
+            .mockResolvedValue({
+                fullName: 'owner/repo',
+                htmlUrl: 'https://github.com/owner/repo',
+            }),
         waitForContent: jest.fn().mockResolvedValue(undefined),
     })),
 }));
@@ -43,11 +44,9 @@ jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
-
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
@@ -74,9 +73,8 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
     }),
 }));
 
-
 // Mock fetch for code sync verification
-global.fetch = jest.fn().mockResolvedValue({ ok: true }) as jest.Mock;
+global.fetch = jest.fn().mockResolvedValue({ ok: true });
 
 // =============================================================================
 // Imports (after mocks)
@@ -87,21 +85,32 @@ import {
     executeStorefrontSetupPhases,
 } from './storefrontSetupPhases.testUtils';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
-import { getBlockLibrarySource, getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
+import {
+    getBlockLibrarySource,
+    getBlockLibraryName,
+} from '@/features/components/services/blockLibraryLoader';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
 // Cast imported mocks for type-safe access
-const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<typeof installBlockCollections>;
-const mockGetBlockLibrarySource = getBlockLibrarySource as jest.MockedFunction<typeof getBlockLibrarySource>;
-const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<typeof getBlockLibraryName>;
+const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<
+    typeof installBlockCollections
+>;
+const mockGetBlockLibrarySource = getBlockLibrarySource as jest.MockedFunction<
+    typeof getBlockLibrarySource
+>;
+const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<
+    typeof getBlockLibraryName
+>;
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
-function createEdsConfig(overrides?: Partial<StorefrontSetupStartPayload['edsConfig']>): StorefrontSetupStartPayload['edsConfig'] {
+function createEdsConfig(
+    overrides?: Partial<StorefrontSetupStartPayload['edsConfig']>
+): StorefrontSetupStartPayload['edsConfig'] {
     return {
         repoName: 'test-repo',
         repoMode: 'new',
@@ -110,7 +119,12 @@ function createEdsConfig(overrides?: Partial<StorefrontSetupStartPayload['edsCon
         githubOwner: 'test-owner',
         templateOwner: 'template-owner',
         templateRepo: 'template-repo',
-        createdRepo: { owner: 'test-owner', name: 'test-repo', url: 'https://github.com/test-owner/test-repo', fullName: 'test-owner/test-repo' },
+        createdRepo: {
+            owner: 'test-owner',
+            name: 'test-repo',
+            url: 'https://github.com/test-owner/test-repo',
+            fullName: 'test-owner/test-repo',
+        },
         ...overrides,
     };
 }
@@ -118,7 +132,6 @@ function createEdsConfig(overrides?: Partial<StorefrontSetupStartPayload['edsCon
 // =============================================================================
 // Tests
 // =============================================================================
-
 
 /**
  * ADR-015 (2026-08-28): this boundary resolves the shell executor from the
@@ -131,7 +144,10 @@ beforeEach(() => {
 
 describe('Storefront Setup Phases - Custom Block Libraries', () => {
     const CUSTOM_LIBS: CustomBlockLibrary[] = [
-        { name: 'My Custom Blocks', source: { owner: 'user', repo: 'custom-blocks', branch: 'main' } },
+        {
+            name: 'My Custom Blocks',
+            source: { owner: 'user', repo: 'custom-blocks', branch: 'main' },
+        },
         { name: 'Partner Blocks', source: { owner: 'partner', repo: 'blocks-lib', branch: 'v2' } },
     ];
 
@@ -144,7 +160,9 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
         });
         mockGetBlockLibraryName.mockImplementation((id: string) => id);
         mockInstallBlockCollections.mockResolvedValue({
-            success: true, blocksCount: 5, blockIds: ['block-1', 'block-2', 'block-3', 'block-4', 'block-5'],
+            success: true,
+            blocksCount: 5,
+            blockIds: ['block-1', 'block-2', 'block-3', 'block-4', 'block-5'],
         });
     });
 
@@ -154,25 +172,31 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
         const edsConfig = createEdsConfig();
 
         // When: Executing setup with both built-in and custom libraries
-        await executeStorefrontSetupPhases(
-            context, edsConfig, AbortSignal.timeout(30000),
-            { selectedBlockLibraries: ['isle5'], customBlockLibraries: CUSTOM_LIBS },
-        );
+        await executeStorefrontSetupPhases(context, edsConfig, AbortSignal.timeout(30000), {
+            selectedBlockLibraries: ['isle5'],
+            customBlockLibraries: CUSTOM_LIBS,
+        });
 
         // Then: installBlockCollections (plural) should be called ONCE with all sources combined
         expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
         expect(mockInstallBlockCollections).toHaveBeenCalledWith(
             expect.anything(), // githubFileOps
-            'test-owner', 'test-repo',
+            'test-owner',
+            'test-repo',
             [
                 { source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' },
-                { source: { owner: 'user', repo: 'custom-blocks', branch: 'main' }, name: 'My Custom Blocks' },
-                { source: { owner: 'partner', repo: 'blocks-lib', branch: 'v2' }, name: 'Partner Blocks' },
+                {
+                    source: { owner: 'user', repo: 'custom-blocks', branch: 'main' },
+                    name: 'My Custom Blocks',
+                },
+                {
+                    source: { owner: 'partner', repo: 'blocks-lib', branch: 'v2' },
+                    name: 'Partner Blocks',
+                },
             ],
             expect.anything(), // logger
-            expect.anything(), // inspectorEntries
+            expect.anything() // inspectorEntries
         );
-
     });
 
     it('should call installBlockCollections with only built-in sources when custom is undefined', async () => {
@@ -181,39 +205,48 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
         const edsConfig = createEdsConfig();
 
         // When: Executing setup without custom libraries
-        await executeStorefrontSetupPhases(
-            context, edsConfig, AbortSignal.timeout(30000),
-            { selectedBlockLibraries: ['isle5'] },
-        );
+        await executeStorefrontSetupPhases(context, edsConfig, AbortSignal.timeout(30000), {
+            selectedBlockLibraries: ['isle5'],
+        });
 
         // Then: installBlockCollections (plural) called with only built-in source
         expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
         expect(mockInstallBlockCollections).toHaveBeenCalledWith(
-            expect.anything(), 'test-owner', 'test-repo',
+            expect.anything(),
+            'test-owner',
+            'test-repo',
             [{ source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' }],
             expect.anything(),
-            expect.anything(), // inspectorEntries
+            expect.anything() // inspectorEntries
         );
 
         // When: Executing with empty custom libraries array
         jest.clearAllMocks();
-        mockGetBlockLibrarySource.mockReturnValue({ owner: 'adobe', repo: 'isle5', branch: 'main' });
+        mockGetBlockLibrarySource.mockReturnValue({
+            owner: 'adobe',
+            repo: 'isle5',
+            branch: 'main',
+        });
         mockInstallBlockCollections.mockResolvedValue({
-            success: true, blocksCount: 3, blockIds: ['block-1', 'block-2', 'block-3'],
+            success: true,
+            blocksCount: 3,
+            blockIds: ['block-1', 'block-2', 'block-3'],
         });
 
-        await executeStorefrontSetupPhases(
-            context, edsConfig, AbortSignal.timeout(30000),
-            { selectedBlockLibraries: ['isle5'], customBlockLibraries: [] },
-        );
+        await executeStorefrontSetupPhases(context, edsConfig, AbortSignal.timeout(30000), {
+            selectedBlockLibraries: ['isle5'],
+            customBlockLibraries: [],
+        });
 
         // Then: Still only built-in library in the call
         expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
         expect(mockInstallBlockCollections).toHaveBeenCalledWith(
-            expect.anything(), 'test-owner', 'test-repo',
+            expect.anything(),
+            'test-owner',
+            'test-repo',
             [{ source: { owner: 'adobe', repo: 'isle5', branch: 'main' }, name: 'isle5' }],
             expect.anything(),
-            expect.anything(), // inspectorEntries
+            expect.anything() // inspectorEntries
         );
     });
 
@@ -226,10 +259,9 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
         ];
 
         // When: Executing setup with only custom libraries
-        await executeStorefrontSetupPhases(
-            context, edsConfig, AbortSignal.timeout(30000),
-            { customBlockLibraries: customLibs },
-        );
+        await executeStorefrontSetupPhases(context, edsConfig, AbortSignal.timeout(30000), {
+            customBlockLibraries: customLibs,
+        });
 
         // Then: Progress message should mention the library count
         expect(context.sendMessage).toHaveBeenCalledWith(
@@ -237,16 +269,18 @@ describe('Storefront Setup Phases - Custom Block Libraries', () => {
             expect.objectContaining({
                 phase: 'storefront-code',
                 message: expect.stringContaining('1'),
-            }),
+            })
         );
 
         // And: installBlockCollections should be called with the custom library
         expect(mockInstallBlockCollections).toHaveBeenCalledTimes(1);
         expect(mockInstallBlockCollections).toHaveBeenCalledWith(
-            expect.anything(), 'test-owner', 'test-repo',
+            expect.anything(),
+            'test-owner',
+            'test-repo',
             [{ source: { owner: 'user', repo: 'fancy', branch: 'main' }, name: 'My Fancy Blocks' }],
             expect.anything(),
-            expect.anything(), // inspectorEntries
+            expect.anything() // inspectorEntries
         );
     });
 });

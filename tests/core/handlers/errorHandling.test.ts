@@ -9,6 +9,7 @@ import { wrapHandler, createErrorResponse } from '@/core/handlers/errorHandling'
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockStateManager } from '../../helpers/stateManagerFake';
 
 // Mock logger for testing
 
@@ -18,7 +19,7 @@ const createMockContext = (): HandlerContext => ({
     debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
     context: {} as HandlerContext['context'],
     panel: undefined,
-    stateManager: {} as HandlerContext['stateManager'],
+    stateManager: createMockStateManager(),
     communicationManager: undefined,
     sendMessage: jest.fn(),
     sharedState: { isAuthenticating: false },

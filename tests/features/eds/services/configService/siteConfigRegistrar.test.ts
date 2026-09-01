@@ -34,7 +34,7 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockRegisterPublishKey = registerPublishKey as jest.MockedFunction<typeof registerPublishKey>;
 
-const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('da-live-token') } as never;
+const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('da-live-token') };
 
 const logger = createMockLogger() as unknown as Logger;
 
@@ -44,7 +44,7 @@ const siteParams = {
     codeOwner: 'owner',
     codeRepo: 'repo',
     contentSourceUrl: 'https://content.da.live/owner/repo/',
-} as never;
+};
 
 function service(registerSite: jest.Mock, updateSiteConfig = jest.fn()) {
     return { registerSite, updateSiteConfig } as never;

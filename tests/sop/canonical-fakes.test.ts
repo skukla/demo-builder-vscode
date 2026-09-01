@@ -117,6 +117,29 @@ export function handRolledFakes(source: string): string[] {
     return [...found];
 }
 
+/**
+ * Read a corpus file, or return empty if it vanished between the listing and the
+ * read.
+ *
+ * Jest runs suites in parallel, and another suite may create and delete a temporary
+ * file inside `tests/` while this one is walking it. `collectTestFiles` already
+ * tolerates that for DIRECTORIES and says so in a comment; the READS were left
+ * unguarded, and on 2026-09-01 that became a real ENOENT failure the moment a new
+ * suite started writing a probe file.
+ *
+ * Empty is the right answer, not a throw: this counts COMMITTED files, and a file
+ * that no longer exists is not one. The assertions are exact-equality against a
+ * pinned number, so a genuinely missing corpus file fails the count rather than
+ * slipping through.
+ */
+function readOrEmpty(rel: string): string {
+    try {
+        return fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+    } catch {
+        return '';
+    }
+}
+
 function collectTestFiles(dir: string): string[] {
     const files: string[] = [];
     let entries: fs.Dirent[];
@@ -195,11 +218,21 @@ describe('a fake with a canonical builder is not hand-rolled again', () => {
         expect(handRolledFakes('const s = { debug: jest.fn(), info: jest.fn() };')).toEqual([]);
     });
 
-    it('no test file outside the ledger hand-rolls a covered fake', () => {
+    /**
+     * A FLAT BAN since 2026-09-01: the grandfather list is empty, so every file is
+     * judged by the rule and there is nothing left to be exempt. It was seeded at
+     * 296 and shrank to zero — the arc `featureBarrels` and `reExportIndex` took.
+     *
+     * The empty array is kept rather than deleted because the stale-row test below
+     * reads it too. Re-adding a name would grandfather a fake again, which is why
+     * the ledger's own note says the list is closed.
+     */
+    it('no test file hand-rolls a fake that has a canonical builder', () => {
         const grandfathered = new Set(ledger.logger);
+        expect(grandfathered.size).toBe(0); // the ban: nothing is exempt any more
         const offenders: string[] = [];
         for (const file of files) {
-            const kinds = handRolledFakes(fs.readFileSync(path.join(repoRoot, file), 'utf8'));
+            const kinds = handRolledFakes(readOrEmpty(file));
             if (kinds.includes('logger') && !grandfathered.has(file)) offenders.push(file);
         }
         expect({
@@ -262,7 +295,7 @@ describe('a fake of a real type is not a literal the compiler was told to ignore
         for (const key of Object.keys(CEILINGS)) out[key] = 0;
         for (const f of collectTestFiles(testsDir)) {
             if (f.startsWith('tests/helpers/')) continue;
-            const body = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+            const body = readOrEmpty(f);
             for (const m of body.matchAll(CAST)) {
                 if (m[1] in out) out[m[1]] += 1;
             }
@@ -292,6 +325,57 @@ describe('a fake of a real type is not a literal the compiler was told to ignore
                       ? 'LOWER THE PIN in canonical-fakes.ledger.json'
                       : 'at',
         }).toEqual({ type, count, verdict: 'at' });
+    });
+
+    /**
+     * The families that reached ZERO, kept under enforcement.
+     *
+     * This exists because of a hole opened on 2026-09-01 and found the same day by
+     * the owner asking "can we check our work?". Five families were closed by
+     * DELETING their ceiling key — and the test above iterates
+     * `Object.keys(CEILINGS)`, so deleting a key deletes its check. All five were
+     * silently unenforced: `as Logger` could have come straight back, in any
+     * number, with nothing failing.
+     *
+     * A ceiling of 0 would have kept enforcing. The deletion is what broke it. So
+     * a closed family moves HERE rather than vanishing, and this asserts both
+     * halves — no occurrences, and no ceiling row to reopen. The same shape as
+     * `expectBanned` in architectureScan, which was written three hours earlier
+     * for exactly this failure and then not applied here.
+     *
+     * READ THE SCOPE PRECISELY, because it was overstated once. The pattern is
+     * brace-anchored: it bans a hand-rolled OBJECT LITERAL cast to the type — the
+     * thing a builder replaces. It does not ban every `as T`. An AST count on
+     * 2026-09-01 found casts of other expressions still present at Logger 98,
+     * StateManager 63 and CommandExecutor 9, against a ban that reads, if you skim
+     * it, like none exist. Those are a different defect — an argument cast is a
+     * silenced type error, not a missing builder — and they live in `astTotals`.
+     */
+    const BANNED = (LEDGER as unknown as { castBans: string[] }).castBans;
+
+    it('CONTROL: the ban list is populated and disjoint from the ceilings', () => {
+        // An empty list would make every assertion below vacuous.
+        expect(BANNED.length).toBeGreaterThanOrEqual(5);
+        expect(BANNED.filter((t) => t in CEILINGS)).toEqual([]);
+    });
+
+    it.each(BANNED)('%s: no object literal is cast to it', (type) => {
+        const re = new RegExp(
+            String.raw`\}\s*as\s+(?:unknown\s+as\s+)?${type.replace(/[.[\]'$]/g, '\\$&')}\b`,
+            'g'
+        );
+        const offenders: string[] = [];
+        for (const f of collectTestFiles(testsDir)) {
+            if (f.startsWith('tests/helpers/')) continue;
+            const body = readOrEmpty(f);
+            if (re.test(body)) offenders.push(f);
+            re.lastIndex = 0;
+        }
+        expect({ type, offenders, reopenedCeiling: type in CEILINGS }).toEqual({
+            type,
+            offenders: [],
+            reopenedCeiling: false,
+        });
     });
 });
 
@@ -391,7 +475,7 @@ describe('a jest.mock factory reaches the builder too', () => {
         const offenders = collectTestFiles(testsDir)
             .filter((f) => f !== path.relative(repoRoot, __filename).replace(/\\/g, '/'))
             .filter((f) => !EXEMPT_FACTORIES.has(f))
-            .filter((f) => factoryLoggerLiterals(fs.readFileSync(path.join(repoRoot, f), 'utf8')) > 0);
+            .filter((f) => factoryLoggerLiterals(readOrEmpty(f)) > 0);
         expect(offenders).toEqual([]);
     });
 });
@@ -442,7 +526,7 @@ describe('a fake two feature directories need lives in tests/helpers/', () => {
         const defined = new Map<string, string[]>();
         for (const f of files) {
             if (f.startsWith('tests/helpers/')) continue;
-            const body = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+            const body = readOrEmpty(f);
             for (const m of body.matchAll(BUILDER)) {
                 const name = m[1] ?? m[2];
                 defined.set(name, [...(defined.get(name) ?? []), f]);
@@ -452,7 +536,7 @@ describe('a fake two feature directories need lives in tests/helpers/', () => {
         // name -> the areas that IMPORT it from one of those defining files
         const areas = new Map<string, Set<string>>();
         for (const f of files) {
-            const body = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+            const body = readOrEmpty(f);
             for (const m of body.matchAll(/import\s*\{([^}]*)\}\s*from\s*'(\.[^']+)'/g)) {
                 const target = path
                     .normalize(path.join(path.dirname(f), m[2]))

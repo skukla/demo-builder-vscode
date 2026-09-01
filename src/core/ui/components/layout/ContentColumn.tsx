@@ -20,6 +20,6 @@ export interface ContentColumnProps {
     className?: string;
 }
 
-export const ContentColumn: React.FC<ContentColumnProps> = ({ children, className }) => (
-    <div className={cn('content-column', className)}>{children}</div>
-);
+export function ContentColumn({ children, className }: ContentColumnProps) {
+    return <div className={cn('content-column', className)}>{children}</div>;
+}

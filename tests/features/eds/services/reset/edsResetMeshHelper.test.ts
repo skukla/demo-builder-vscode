@@ -67,10 +67,11 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 import { redeployApiMesh } from '@/features/eds/services/reset/edsResetMeshHelper';
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 
 /** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
 const meshDeps = createMeshDepsFake();
-
 
 // =============================================================================
 // Fixtures
@@ -94,14 +95,25 @@ function makeProject(): Project {
 }
 
 function makeContext(): HandlerContext {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger(),
-        stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) },
-    } as unknown as HandlerContext;
+        stateManager: createMockStateManager({
+            saveProject: jest.fn().mockResolvedValue(undefined),
+        }),
+    });
 }
 
 async function run(): Promise<unknown> {
-    return redeployApiMesh(makeProject(), 'skukla', 'repo', makeContext(), jest.fn(), 1, 2, meshDeps);
+    return redeployApiMesh(
+        makeProject(),
+        'skukla',
+        'repo',
+        makeContext(),
+        jest.fn(),
+        1,
+        2,
+        meshDeps
+    );
 }
 
 // =============================================================================

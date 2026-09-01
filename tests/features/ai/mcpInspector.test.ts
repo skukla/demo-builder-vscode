@@ -113,19 +113,26 @@ describe('inspectAllServers', () => {
             const result = await inspectAllServers(PROJECT_PATH);
 
             expect(resolveTargetMock).toHaveBeenCalledWith(DB_SOCKET, PROJECT_PATH);
-            expect(probeMock).toHaveBeenCalledWith('/tmp/other-window.sock', MCP_INSPECT_TIMEOUT_MS);
+            expect(probeMock).toHaveBeenCalledWith(
+                '/tmp/other-window.sock',
+                MCP_INSPECT_TIMEOUT_MS
+            );
             expect(result[0]).toMatchObject({ id: 'demo-builder', status: 'ok' });
         });
 
         it('reports the guidance instead of probing when nothing is live', async () => {
             setDemoBuilderMcpJson();
-            resolveTargetMock.mockResolvedValue({ guidance: 'No running Demo Builder window found.' });
+            resolveTargetMock.mockResolvedValue({
+                guidance: 'No running Demo Builder window found.',
+            });
 
             const result = await inspectAllServers(PROJECT_PATH);
 
             expect(probeMock).not.toHaveBeenCalled();
             expect(result[0]).toMatchObject({ id: 'demo-builder', status: 'error' });
-            expect((result[0] as { error?: string }).error).toContain('No running Demo Builder window');
+            expect((result[0] as { error?: string }).error).toContain(
+                'No running Demo Builder window'
+            );
         });
 
         it('probes the socket directly and never spawns the proxy', async () => {
@@ -158,7 +165,10 @@ describe('inspectAllServers', () => {
 
         it('maps a probe connection failure to status "error"', async () => {
             setDemoBuilderMcpJson();
-            probeMock.mockResolvedValue({ ok: false, error: 'connect ENOENT /tmp/demo-builder.sock' });
+            probeMock.mockResolvedValue({
+                ok: false,
+                error: 'connect ENOENT /tmp/demo-builder.sock',
+            });
 
             const result = await inspectAllServers(PROJECT_PATH);
 
@@ -190,7 +200,7 @@ describe('inspectAllServers', () => {
                         args: ['/ext/dist/mcp-proxy.js'],
                         env: { DEMO_BUILDER_MCP_SOCKET: DB_SOCKET },
                     },
-                    'playwright': { command: 'npx', args: ['@playwright/mcp'] },
+                    playwright: { command: 'npx', args: ['@playwright/mcp'] },
                 },
             });
             probeMock.mockResolvedValue({ ok: true, tools: [] });
@@ -223,16 +233,16 @@ describe('inspectAllServers', () => {
 
         it('falls back to empty description when a tool omits or returns a non-string description', async () => {
             setMcpJson({
-                mcpServers: { 'srv': { command: 'node', args: [] } },
+                mcpServers: { srv: { command: 'node', args: [] } },
             });
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
             ClientModule.Client.mockImplementationOnce(() => {
                 const instance = {
                     connect: jest.fn().mockResolvedValue(undefined),
                     listTools: jest.fn().mockResolvedValue({
                         tools: [
-                            { name: 'missing-desc' },                    // no description field
+                            { name: 'missing-desc' }, // no description field
                             { name: 'non-string-desc', description: 42 }, // protocol violation
                         ],
                     }),
@@ -259,7 +269,7 @@ describe('inspectAllServers', () => {
             // so the Client mock implementation captures it.
             // Use a setup-on-construction approach: replace the default `listTools` mock
             // before the call by overriding the Client implementation:
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
             ClientModule.Client.mockImplementationOnce(() => {
                 const instance = {
                     connect: jest.fn().mockResolvedValue(undefined),
@@ -294,20 +304,27 @@ describe('inspectAllServers', () => {
             const result = await inspectAllServers(PROJECT_PATH);
 
             expect(result).toHaveLength(2);
-            expect(result.map(r => r.id).sort()).toEqual(['adobe-app-builder', 'demo-builder']);
+            expect(result.map((r) => r.id).sort()).toEqual(['adobe-app-builder', 'demo-builder']);
             expect(clientInstances).toHaveLength(2);
         });
     });
 
     describe('pagination', () => {
         it('paginates through multiple pages of tools/list', async () => {
-            setMcpJson({ mcpServers: { 'srv': { command: 'node', args: [] } } });
+            setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
             ClientModule.Client.mockImplementationOnce(() => {
-                const listTools = jest.fn()
-                    .mockResolvedValueOnce({ tools: [{ name: 't1', description: 'one' }], nextCursor: 'page-2' })
-                    .mockResolvedValueOnce({ tools: [{ name: 't2', description: 'two' }], nextCursor: 'page-3' })
+                const listTools = jest
+                    .fn()
+                    .mockResolvedValueOnce({
+                        tools: [{ name: 't1', description: 'one' }],
+                        nextCursor: 'page-2',
+                    })
+                    .mockResolvedValueOnce({
+                        tools: [{ name: 't2', description: 'two' }],
+                        nextCursor: 'page-3',
+                    })
                     .mockResolvedValueOnce({ tools: [{ name: 't3', description: 'three' }] });
                 const instance = {
                     connect: jest.fn().mockResolvedValue(undefined),
@@ -321,7 +338,7 @@ describe('inspectAllServers', () => {
             const result = await inspectAllServers(PROJECT_PATH);
 
             expect(result[0].tools).toHaveLength(3);
-            expect(result[0].tools?.map(t => t.name)).toEqual(['t1', 't2', 't3']);
+            expect(result[0].tools?.map((t) => t.name)).toEqual(['t1', 't2', 't3']);
             expect(clientInstances[0].listTools).toHaveBeenCalledTimes(3);
         });
     });
@@ -330,7 +347,7 @@ describe('inspectAllServers', () => {
         it('passes command, args, env, cwd, and stderr=pipe to the transport', async () => {
             setMcpJson({
                 mcpServers: {
-                    'srv': {
+                    srv: {
                         command: 'node',
                         args: ['/a.js'],
                         env: { FOO: 'bar' },
@@ -360,7 +377,7 @@ describe('inspectAllServers', () => {
             process.env.SECRET_THAT_MUST_NOT_LEAK = 'leaked';
             try {
                 setMcpJson({
-                    mcpServers: { 'srv': { command: 'node', args: [] } },
+                    mcpServers: { srv: { command: 'node', args: [] } },
                 });
 
                 await inspectAllServers(PROJECT_PATH);
@@ -375,7 +392,7 @@ describe('inspectAllServers', () => {
         it('allows serverConfig.env to override allowlisted keys', async () => {
             setMcpJson({
                 mcpServers: {
-                    'srv': { command: 'node', args: [], env: { PATH: '/custom' } },
+                    srv: { command: 'node', args: [], env: { PATH: '/custom' } },
                 },
             });
 
@@ -388,12 +405,17 @@ describe('inspectAllServers', () => {
     describe('error paths', () => {
         it('reports timeout when connect or listTools exceeds the per-server budget', async () => {
             jest.useFakeTimers();
-            setMcpJson({ mcpServers: { 'slow': { command: 'node', args: [] } } });
+            setMcpJson({ mcpServers: { slow: { command: 'node', args: [] } } });
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
             ClientModule.Client.mockImplementationOnce(() => {
                 const instance = {
-                    connect: jest.fn().mockImplementation(() => new Promise(() => { /* never */ })),
+                    connect: jest.fn().mockImplementation(
+                        () =>
+                            new Promise(() => {
+                                /* never */
+                            })
+                    ),
                     listTools: jest.fn(),
                     close: jest.fn().mockResolvedValue(undefined),
                 };
@@ -411,9 +433,9 @@ describe('inspectAllServers', () => {
         });
 
         it('reports error when connect throws (server crashes on spawn)', async () => {
-            setMcpJson({ mcpServers: { 'bad': { command: 'missing-binary', args: [] } } });
+            setMcpJson({ mcpServers: { bad: { command: 'missing-binary', args: [] } } });
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
             ClientModule.Client.mockImplementationOnce(() => {
                 const instance = {
                     connect: jest.fn().mockRejectedValue(new Error('spawn ENOENT')),
@@ -433,7 +455,7 @@ describe('inspectAllServers', () => {
         it('reports error when listTools fails with method-not-found', async () => {
             setMcpJson({ mcpServers: { 'no-tools': { command: 'node', args: [] } } });
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
             ClientModule.Client.mockImplementationOnce(() => {
                 const instance = {
                     connect: jest.fn().mockResolvedValue(undefined),
@@ -451,9 +473,9 @@ describe('inspectAllServers', () => {
         });
 
         it('always calls client.close() in finally, even on error', async () => {
-            setMcpJson({ mcpServers: { 'bad': { command: 'node', args: [] } } });
+            setMcpJson({ mcpServers: { bad: { command: 'node', args: [] } } });
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
             ClientModule.Client.mockImplementationOnce(() => {
                 const instance = {
                     connect: jest.fn().mockRejectedValue(new Error('boom')),
@@ -472,38 +494,38 @@ describe('inspectAllServers', () => {
         it('isolates server failures (one server failing does not block others)', async () => {
             setMcpJson({
                 mcpServers: {
-                    'good': { command: 'node', args: [] },
-                    'bad': { command: 'node', args: [] },
+                    good: { command: 'node', args: [] },
+                    bad: { command: 'node', args: [] },
                 },
             });
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js') as { Client: jest.Mock };
-            ClientModule.Client
-                .mockImplementationOnce(() => {
-                    const instance = {
-                        connect: jest.fn().mockResolvedValue(undefined),
-                        listTools: jest.fn().mockResolvedValue({ tools: [{ name: 'ok', description: 'fine' }] }),
-                        close: jest.fn().mockResolvedValue(undefined),
-                    };
-                    clientInstances.push(instance);
-                    return instance;
-                })
-                .mockImplementationOnce(() => {
-                    const instance = {
-                        connect: jest.fn().mockRejectedValue(new Error('crash')),
-                        listTools: jest.fn(),
-                        close: jest.fn().mockResolvedValue(undefined),
-                    };
-                    clientInstances.push(instance);
-                    return instance;
-                });
+            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
+            ClientModule.Client.mockImplementationOnce(() => {
+                const instance = {
+                    connect: jest.fn().mockResolvedValue(undefined),
+                    listTools: jest
+                        .fn()
+                        .mockResolvedValue({ tools: [{ name: 'ok', description: 'fine' }] }),
+                    close: jest.fn().mockResolvedValue(undefined),
+                };
+                clientInstances.push(instance);
+                return instance;
+            }).mockImplementationOnce(() => {
+                const instance = {
+                    connect: jest.fn().mockRejectedValue(new Error('crash')),
+                    listTools: jest.fn(),
+                    close: jest.fn().mockResolvedValue(undefined),
+                };
+                clientInstances.push(instance);
+                return instance;
+            });
 
             const result = await inspectAllServers(PROJECT_PATH);
 
-            const byId = Object.fromEntries(result.map(r => [r.id, r]));
+            const byId = Object.fromEntries(result.map((r) => [r.id, r]));
             // Order in mcpServers is deterministic in the mock, but rely on results either way:
             const okEntry = byId['good'] ?? byId['bad'];
-            const failEntry = (byId['good']?.status === 'ok') ? byId['bad'] : byId['good'];
+            const failEntry = byId['good']?.status === 'ok' ? byId['bad'] : byId['good'];
             expect(okEntry.status).toBe('ok');
             expect(failEntry.status).toBe('error');
         });

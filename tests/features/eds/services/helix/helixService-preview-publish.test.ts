@@ -70,7 +70,13 @@ describe('HelixService - Preview/Publish', () => {
         mockListDirectory.mockReset();
 
         mockGitHubTokenService = {
-            getToken: jest.fn().mockResolvedValue({ token: 'valid-github-token', tokenType: 'bearer', scopes: ['repo'] }),
+            getToken: jest
+                .fn()
+                .mockResolvedValue({
+                    token: 'valid-github-token',
+                    tokenType: 'bearer',
+                    scopes: ['repo'],
+                }),
             validateToken: jest.fn().mockResolvedValue({ valid: true }),
         };
 
@@ -82,7 +88,11 @@ describe('HelixService - Preview/Publish', () => {
         global.fetch = mockFetch;
 
         const module = await import('@/features/eds/services/helix/helixService');
-        service = new module.HelixService(undefined, mockGitHubTokenService as unknown as GitHubTokenService, mockDaLiveTokenProvider);
+        service = new module.HelixService(
+            undefined,
+            mockGitHubTokenService as unknown as GitHubTokenService,
+            mockDaLiveTokenProvider
+        );
     });
 
     afterEach(() => {
@@ -98,7 +108,7 @@ describe('HelixService - Preview/Publish', () => {
                 expect.objectContaining({
                     method: 'POST',
                     headers: expect.objectContaining({ 'x-auth-token': 'valid-github-token' }),
-                }),
+                })
             );
         });
 
@@ -107,7 +117,7 @@ describe('HelixService - Preview/Publish', () => {
             await service.previewPage('testuser', 'my-site', '/');
             expect(mockFetch).toHaveBeenCalledWith(
                 'https://admin.hlx.page/preview/testuser/my-site/main/',
-                expect.any(Object),
+                expect.any(Object)
             );
         });
 
@@ -119,7 +129,7 @@ describe('HelixService - Preview/Publish', () => {
                 expect.objectContaining({
                     method: 'POST',
                     headers: expect.objectContaining({ 'x-auth-token': 'valid-github-token' }),
-                }),
+                })
             );
         });
 
@@ -127,18 +137,30 @@ describe('HelixService - Preview/Publish', () => {
             mockFetch.mockResolvedValue({ ok: true, status: 200 });
             await service.previewAndPublishPage('testuser', 'my-site', '/contact');
             expect(mockFetch).toHaveBeenCalledTimes(2);
-            expect(mockFetch).toHaveBeenNthCalledWith(1, expect.stringContaining('/preview/'), expect.any(Object));
-            expect(mockFetch).toHaveBeenNthCalledWith(2, expect.stringContaining('/live/'), expect.any(Object));
+            expect(mockFetch).toHaveBeenNthCalledWith(
+                1,
+                expect.stringContaining('/preview/'),
+                expect.any(Object)
+            );
+            expect(mockFetch).toHaveBeenNthCalledWith(
+                2,
+                expect.stringContaining('/live/'),
+                expect.any(Object)
+            );
         });
 
         it('should handle 403 access denied on preview', async () => {
             mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
-            await expect(service.previewPage('testuser', 'my-site', '/')).rejects.toThrow(/access denied|permission/i);
+            await expect(service.previewPage('testuser', 'my-site', '/')).rejects.toThrow(
+                /access denied|permission/i
+            );
         });
 
         it('should handle 403 access denied on publish', async () => {
             mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
-            await expect(service.publishPage('testuser', 'my-site', '/')).rejects.toThrow(/access denied|permission/i);
+            await expect(service.publishPage('testuser', 'my-site', '/')).rejects.toThrow(
+                /access denied|permission/i
+            );
         });
     });
 
@@ -155,7 +177,7 @@ describe('HelixService - Preview/Publish', () => {
                         'Content-Type': 'application/json',
                     }),
                     body: JSON.stringify({ paths: ['/'], forceUpdate: true }),
-                }),
+                })
             );
         });
 
@@ -171,7 +193,7 @@ describe('HelixService - Preview/Publish', () => {
                         'Content-Type': 'application/json',
                     }),
                     body: JSON.stringify({ paths: ['/'], forceUpdate: true }),
-                }),
+                })
             );
         });
 
@@ -181,37 +203,64 @@ describe('HelixService - Preview/Publish', () => {
                     { name: 'index', ext: 'html', path: '/dalive-org/dalive-site/index.html' },
                     { name: 'about', ext: 'html', path: '/dalive-org/dalive-site/about.html' },
                     { name: 'nav', ext: 'html', path: '/dalive-org/dalive-site/nav.html' },
-                    { name: 'metadata', ext: 'json', path: '/dalive-org/dalive-site/metadata.json' },
+                    {
+                        name: 'metadata',
+                        ext: 'json',
+                        path: '/dalive-org/dalive-site/metadata.json',
+                    },
                     { name: 'products', path: '/dalive-org/dalive-site/products' },
                 ])
                 .mockResolvedValueOnce([
-                    { name: 'index', ext: 'html', path: '/dalive-org/dalive-site/products/index.html' },
+                    {
+                        name: 'index',
+                        ext: 'html',
+                        path: '/dalive-org/dalive-site/products/index.html',
+                    },
                 ]);
 
             mockFetch.mockResolvedValueOnce({
-                ok: true, status: 202,
-                json: () => Promise.resolve({ job: { name: 'preview-job-1', topic: 'preview', state: 'created' } }),
+                ok: true,
+                status: 202,
+                json: () =>
+                    Promise.resolve({
+                        job: { name: 'preview-job-1', topic: 'preview', state: 'created' },
+                    }),
             });
             mockFetch.mockResolvedValueOnce({
-                ok: true, status: 200,
-                json: () => Promise.resolve({ state: 'stopped', progress: { processed: 4, total: 4 } }),
+                ok: true,
+                status: 200,
+                json: () =>
+                    Promise.resolve({ state: 'stopped', progress: { processed: 4, total: 4 } }),
             });
             mockFetch.mockResolvedValueOnce({
-                ok: true, status: 202,
-                json: () => Promise.resolve({ job: { name: 'publish-job-1', topic: 'live', state: 'created' } }),
+                ok: true,
+                status: 202,
+                json: () =>
+                    Promise.resolve({
+                        job: { name: 'publish-job-1', topic: 'live', state: 'created' },
+                    }),
             });
             mockFetch.mockResolvedValueOnce({
-                ok: true, status: 200,
-                json: () => Promise.resolve({ state: 'stopped', progress: { processed: 4, total: 4 } }),
+                ok: true,
+                status: 200,
+                json: () =>
+                    Promise.resolve({ state: 'stopped', progress: { processed: 4, total: 4 } }),
             });
 
-            await service.publishAllSiteContent('github-owner/github-repo', 'main', 'dalive-org', 'dalive-site');
+            await service.publishAllSiteContent(
+                'github-owner/github-repo',
+                'main',
+                'dalive-org',
+                'dalive-site'
+            );
 
             expect(mockListDirectory).toHaveBeenCalledWith('dalive-org', 'dalive-site', '/');
             expect(mockFetch).toHaveBeenCalledTimes(4);
 
             const calls = mockFetch.mock.calls;
-            expect(calls.every((c: unknown[]) => (c[0] as string).includes('github-owner/github-repo'))).toBe(true);
+            expect(
+                calls.every((c: unknown[]) => (c[0] as string).includes('github-owner/github-repo'))
+            ).toBe(true);
 
             const bulkPreviewCall = calls[0];
             expect(bulkPreviewCall[0]).toContain('/preview/github-owner/github-repo/main/*');
@@ -234,10 +283,34 @@ describe('HelixService - Preview/Publish', () => {
             mockListDirectory.mockResolvedValueOnce([
                 { name: 'index', ext: 'html', path: '/testuser/my-site/index.html' },
             ]);
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 202, json: () => Promise.resolve({ job: { name: 'preview-job-1', topic: 'preview', state: 'created' } }) });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ state: 'stopped', progress: { processed: 1, total: 1 } }) });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 202, json: () => Promise.resolve({ job: { name: 'publish-job-1', topic: 'live', state: 'created' } }) });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ state: 'stopped', progress: { processed: 1, total: 1 } }) });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () =>
+                    Promise.resolve({
+                        job: { name: 'preview-job-1', topic: 'preview', state: 'created' },
+                    }),
+            });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () =>
+                    Promise.resolve({ state: 'stopped', progress: { processed: 1, total: 1 } }),
+            });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () =>
+                    Promise.resolve({
+                        job: { name: 'publish-job-1', topic: 'live', state: 'created' },
+                    }),
+            });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () =>
+                    Promise.resolve({ state: 'stopped', progress: { processed: 1, total: 1 } }),
+            });
 
             await service.publishAllSiteContent('testuser/my-site');
             expect(mockListDirectory).toHaveBeenCalledWith('testuser', 'my-site', '/');
@@ -250,10 +323,34 @@ describe('HelixService - Preview/Publish', () => {
                 { name: 'data', ext: 'json', path: '/testuser/my-site/data.json' },
                 { name: 'about', ext: 'html', path: '/testuser/my-site/about.html' },
             ]);
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 202, json: () => Promise.resolve({ job: { name: 'preview-job-1', topic: 'preview', state: 'created' } }) });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ state: 'stopped', progress: { processed: 2, total: 2 } }) });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 202, json: () => Promise.resolve({ job: { name: 'publish-job-1', topic: 'live', state: 'created' } }) });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ state: 'stopped', progress: { processed: 2, total: 2 } }) });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () =>
+                    Promise.resolve({
+                        job: { name: 'preview-job-1', topic: 'preview', state: 'created' },
+                    }),
+            });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () =>
+                    Promise.resolve({ state: 'stopped', progress: { processed: 2, total: 2 } }),
+            });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () =>
+                    Promise.resolve({
+                        job: { name: 'publish-job-1', topic: 'live', state: 'created' },
+                    }),
+            });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () =>
+                    Promise.resolve({ state: 'stopped', progress: { processed: 2, total: 2 } }),
+            });
 
             await service.publishAllSiteContent('testuser/my-site');
             expect(mockFetch).toHaveBeenCalledTimes(4);
@@ -261,33 +358,69 @@ describe('HelixService - Preview/Publish', () => {
 
         it('should throw error when no publishable pages found', async () => {
             mockListDirectory.mockResolvedValueOnce([]);
-            await expect(service.publishAllSiteContent('testuser/my-site')).rejects.toThrow(/no publishable pages found/i);
+            await expect(service.publishAllSiteContent('testuser/my-site')).rejects.toThrow(
+                /no publishable pages found/i
+            );
         });
 
         it('should handle 403 access denied on bulk preview', async () => {
             mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
-            await expect(service.previewAllContent('testuser', 'my-site')).rejects.toThrow(/access denied|permission/i);
+            await expect(service.previewAllContent('testuser', 'my-site')).rejects.toThrow(
+                /access denied|permission/i
+            );
         });
 
         it('should handle 403 access denied on bulk publish', async () => {
             mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
-            await expect(service.publishAllContent('testuser', 'my-site')).rejects.toThrow(/access denied|permission/i);
+            await expect(service.publishAllContent('testuser', 'my-site')).rejects.toThrow(
+                /access denied|permission/i
+            );
         });
 
         it('should complete successfully using bulk API', async () => {
             mockListDirectory.mockResolvedValueOnce([
                 { name: 'index', ext: 'html', path: '/testuser/my-site/index.html' },
                 { name: 'about', ext: 'html', path: '/testuser/my-site/about.html' },
-                { name: 'confirm', ext: 'html', path: '/testuser/my-site/customer/account/confirm.html' },
+                {
+                    name: 'confirm',
+                    ext: 'html',
+                    path: '/testuser/my-site/customer/account/confirm.html',
+                },
             ]);
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 202, json: () => Promise.resolve({ job: { name: 'preview-job-1', topic: 'preview', state: 'created' } }) });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ state: 'stopped', progress: { processed: 3, total: 3 } }) });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 202, json: () => Promise.resolve({ job: { name: 'publish-job-1', topic: 'live', state: 'created' } }) });
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ state: 'stopped', progress: { processed: 3, total: 3 } }) });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () =>
+                    Promise.resolve({
+                        job: { name: 'preview-job-1', topic: 'preview', state: 'created' },
+                    }),
+            });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () =>
+                    Promise.resolve({ state: 'stopped', progress: { processed: 3, total: 3 } }),
+            });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 202,
+                json: () =>
+                    Promise.resolve({
+                        job: { name: 'publish-job-1', topic: 'live', state: 'created' },
+                    }),
+            });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () =>
+                    Promise.resolve({ state: 'stopped', progress: { processed: 3, total: 3 } }),
+            });
 
             await service.publishAllSiteContent('testuser/my-site');
             expect(mockFetch).toHaveBeenCalledTimes(4);
-            expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Successfully published 3 pages using bulk API'));
+            expect(mockLogger.info).toHaveBeenCalledWith(
+                expect.stringContaining('Successfully published 3 pages using bulk API')
+            );
         });
 
         it('should fall back to page-by-page when bulk API returns 404', async () => {
@@ -303,33 +436,47 @@ describe('HelixService - Preview/Publish', () => {
 
             await service.publishAllSiteContent('testuser/my-site');
             expect(mockFetch).toHaveBeenCalledTimes(5);
-            expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('falling back to page-by-page'));
-            expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Successfully published 2/2'));
+            expect(mockLogger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('falling back to page-by-page')
+            );
+            expect(mockLogger.info).toHaveBeenCalledWith(
+                expect.stringContaining('Successfully published 2/2')
+            );
         });
 
         it('should succeed synchronously when bulk preview returns 200', async () => {
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
             await service.previewAllContent('testuser', 'my-site');
-            expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('completed synchronously'));
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                expect.stringContaining('completed synchronously')
+            );
         });
 
         it('should succeed synchronously when bulk publish returns 200', async () => {
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
             await service.publishAllContent('testuser', 'my-site');
-            expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('completed synchronously'));
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                expect.stringContaining('completed synchronously')
+            );
         });
 
         it('should fall back to page-by-page on any bulk error', async () => {
             mockListDirectory.mockResolvedValueOnce([
                 { name: 'index', ext: 'html', path: '/testuser/my-site/index.html' },
             ]);
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Internal Server Error' });
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error',
+            });
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
             mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
 
             await service.publishAllSiteContent('testuser/my-site');
             expect(mockFetch).toHaveBeenCalledTimes(3);
-            expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('falling back to page-by-page'));
+            expect(mockLogger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('falling back to page-by-page')
+            );
         });
 
         describe('Bulk job per-path failure detection', () => {
@@ -341,50 +488,69 @@ describe('HelixService - Preview/Publish', () => {
 
             it('previewAllContent throws when any resource in data.resources failed with 4xx/5xx', async () => {
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 202,
-                    json: () => Promise.resolve({ job: { name: 'preview-job-x', topic: 'preview', state: 'created' } }),
+                    ok: true,
+                    status: 202,
+                    json: () =>
+                        Promise.resolve({
+                            job: { name: 'preview-job-x', topic: 'preview', state: 'created' },
+                        }),
                 });
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 200,
-                    json: () => Promise.resolve({
-                        state: 'finished',
-                        progress: { processed: 3, total: 3 },
-                        data: {
-                            resources: [
-                                { path: '/', status: 200 },
-                                { path: '/cart', status: 500 },
-                                { path: '/checkout', status: 502 },
-                            ],
-                        },
-                    }),
+                    ok: true,
+                    status: 200,
+                    json: () =>
+                        Promise.resolve({
+                            state: 'finished',
+                            progress: { processed: 3, total: 3 },
+                            data: {
+                                resources: [
+                                    { path: '/', status: 200 },
+                                    { path: '/cart', status: 500 },
+                                    { path: '/checkout', status: 502 },
+                                ],
+                            },
+                        }),
                 });
 
                 await expect(
-                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/', '/cart', '/checkout']),
+                    service.previewAllContent('testuser', 'my-site', 'main', undefined, [
+                        '/',
+                        '/cart',
+                        '/checkout',
+                    ])
                 ).rejects.toThrow(/2\/3 paths failed/);
             });
 
             it('publishAllContent throws when any resource in data.resources failed with 4xx/5xx', async () => {
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 202,
-                    json: () => Promise.resolve({ job: { name: 'publish-job-x', topic: 'live', state: 'created' } }),
+                    ok: true,
+                    status: 202,
+                    json: () =>
+                        Promise.resolve({
+                            job: { name: 'publish-job-x', topic: 'live', state: 'created' },
+                        }),
                 });
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 200,
-                    json: () => Promise.resolve({
-                        state: 'finished',
-                        progress: { processed: 2, total: 2 },
-                        data: {
-                            resources: [
-                                { path: '/about', status: 200 },
-                                { path: '/contact', status: 404 },
-                            ],
-                        },
-                    }),
+                    ok: true,
+                    status: 200,
+                    json: () =>
+                        Promise.resolve({
+                            state: 'finished',
+                            progress: { processed: 2, total: 2 },
+                            data: {
+                                resources: [
+                                    { path: '/about', status: 200 },
+                                    { path: '/contact', status: 404 },
+                                ],
+                            },
+                        }),
                 });
 
                 await expect(
-                    service.publishAllContent('testuser', 'my-site', 'main', undefined, ['/about', '/contact']),
+                    service.publishAllContent('testuser', 'my-site', 'main', undefined, [
+                        '/about',
+                        '/contact',
+                    ])
                 ).rejects.toThrow(/1\/2 paths failed/);
             });
 
@@ -394,25 +560,31 @@ describe('HelixService - Preview/Publish', () => {
                     status: 500,
                 }));
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 202,
-                    json: () => Promise.resolve({ job: { name: 'preview-job-many', topic: 'preview', state: 'created' } }),
+                    ok: true,
+                    status: 202,
+                    json: () =>
+                        Promise.resolve({
+                            job: { name: 'preview-job-many', topic: 'preview', state: 'created' },
+                        }),
                 });
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 200,
-                    json: () => Promise.resolve({
-                        state: 'finished',
-                        data: { resources: failingResources },
-                    }),
+                    ok: true,
+                    status: 200,
+                    json: () =>
+                        Promise.resolve({
+                            state: 'finished',
+                            data: { resources: failingResources },
+                        }),
                 });
 
                 await expect(
-                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/page-1']),
+                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/page-1'])
                 ).rejects.toThrow();
 
                 expect(mockLogger.error).toHaveBeenCalledWith(
-                    expect.stringContaining('15/15 paths failed'),
+                    expect.stringContaining('15/15 paths failed')
                 );
-                const loggedMessage = (mockLogger.error.mock.calls[0]?.[0] as string) ?? '';
+                const loggedMessage = mockLogger.error.mock.calls[0]?.[0] ?? '';
                 // First 10 paths are mentioned; 11th onward truncated
                 expect(loggedMessage).toContain('/page-1 → 500');
                 expect(loggedMessage).toContain('/page-10 → 500');
@@ -422,45 +594,61 @@ describe('HelixService - Preview/Publish', () => {
 
             it('completes successfully when every resource in data.resources is 2xx', async () => {
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 202,
-                    json: () => Promise.resolve({ job: { name: 'preview-job-ok', topic: 'preview', state: 'created' } }),
+                    ok: true,
+                    status: 202,
+                    json: () =>
+                        Promise.resolve({
+                            job: { name: 'preview-job-ok', topic: 'preview', state: 'created' },
+                        }),
                 });
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 200,
-                    json: () => Promise.resolve({
-                        state: 'finished',
-                        progress: { processed: 3, total: 3 },
-                        data: {
-                            resources: [
-                                { path: '/', status: 200 },
-                                { path: '/about', status: 200 },
-                                { path: '/contact', status: 204 },
-                            ],
-                        },
-                    }),
+                    ok: true,
+                    status: 200,
+                    json: () =>
+                        Promise.resolve({
+                            state: 'finished',
+                            progress: { processed: 3, total: 3 },
+                            data: {
+                                resources: [
+                                    { path: '/', status: 200 },
+                                    { path: '/about', status: 200 },
+                                    { path: '/contact', status: 204 },
+                                ],
+                            },
+                        }),
                 });
 
                 await expect(
-                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/', '/about', '/contact']),
+                    service.previewAllContent('testuser', 'my-site', 'main', undefined, [
+                        '/',
+                        '/about',
+                        '/contact',
+                    ])
                 ).resolves.toBeUndefined();
             });
 
             it('completes when data.resources is absent (backward-compatible with older API responses)', async () => {
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 202,
-                    json: () => Promise.resolve({ job: { name: 'preview-job-legacy', topic: 'preview', state: 'created' } }),
+                    ok: true,
+                    status: 202,
+                    json: () =>
+                        Promise.resolve({
+                            job: { name: 'preview-job-legacy', topic: 'preview', state: 'created' },
+                        }),
                 });
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 200,
-                    json: () => Promise.resolve({
-                        state: 'finished',
-                        progress: { processed: 1, total: 1 },
-                        // no data field at all
-                    }),
+                    ok: true,
+                    status: 200,
+                    json: () =>
+                        Promise.resolve({
+                            state: 'finished',
+                            progress: { processed: 1, total: 1 },
+                            // no data field at all
+                        }),
                 });
 
                 await expect(
-                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/']),
+                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/'])
                 ).resolves.toBeUndefined();
             });
 
@@ -471,63 +659,89 @@ describe('HelixService - Preview/Publish', () => {
                 // not "0 paths succeeded" which historically scared SCs into
                 // thinking publish had failed when it had not.
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 202,
-                    json: () => Promise.resolve({ job: { name: 'preview-job-processed', topic: 'preview', state: 'created' } }),
+                    ok: true,
+                    status: 202,
+                    json: () =>
+                        Promise.resolve({
+                            job: {
+                                name: 'preview-job-processed',
+                                topic: 'preview',
+                                state: 'created',
+                            },
+                        }),
                 });
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 200,
-                    json: () => Promise.resolve({
-                        state: 'finished',
-                        progress: { processed: 78, total: 78 },
-                        // no data.resources — typical of bulk preview/publish responses
-                    }),
+                    ok: true,
+                    status: 200,
+                    json: () =>
+                        Promise.resolve({
+                            state: 'finished',
+                            progress: { processed: 78, total: 78 },
+                            // no data.resources — typical of bulk preview/publish responses
+                        }),
                 });
 
                 await service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/']);
 
                 expect(mockLogger.debug).toHaveBeenCalledWith(
-                    expect.stringContaining('78 paths processed'),
+                    expect.stringContaining('78 paths processed')
                 );
                 // No "0 paths" false alarm anywhere in the debug stream.
-                const allDebugMessages = mockLogger.debug.mock.calls.map((c: unknown[]) => String(c[0]));
-                expect(allDebugMessages.every((msg: string) => !msg.includes('0 paths'))).toBe(true);
+                const allDebugMessages = mockLogger.debug.mock.calls.map((c: unknown[]) =>
+                    String(c[0])
+                );
+                expect(allDebugMessages.every((msg: string) => !msg.includes('0 paths'))).toBe(
+                    true
+                );
             });
 
             it('completes when data.resources is an empty array', async () => {
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 202,
-                    json: () => Promise.resolve({ job: { name: 'preview-job-empty', topic: 'preview', state: 'created' } }),
+                    ok: true,
+                    status: 202,
+                    json: () =>
+                        Promise.resolve({
+                            job: { name: 'preview-job-empty', topic: 'preview', state: 'created' },
+                        }),
                 });
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 200,
-                    json: () => Promise.resolve({
-                        state: 'finished',
-                        progress: { processed: 0, total: 0 },
-                        data: { resources: [] },
-                    }),
+                    ok: true,
+                    status: 200,
+                    json: () =>
+                        Promise.resolve({
+                            state: 'finished',
+                            progress: { processed: 0, total: 0 },
+                            data: { resources: [] },
+                        }),
                 });
 
                 await expect(
-                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/']),
+                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/'])
                 ).resolves.toBeUndefined();
             });
 
             it('still throws on top-level job error before inspecting resources', async () => {
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 202,
-                    json: () => Promise.resolve({ job: { name: 'preview-job-err', topic: 'preview', state: 'created' } }),
+                    ok: true,
+                    status: 202,
+                    json: () =>
+                        Promise.resolve({
+                            job: { name: 'preview-job-err', topic: 'preview', state: 'created' },
+                        }),
                 });
                 mockFetch.mockResolvedValueOnce({
-                    ok: true, status: 200,
-                    json: () => Promise.resolve({
-                        state: 'finished',
-                        error: 'auth expired mid-job',
-                        data: { resources: [{ path: '/', status: 200 }] },
-                    }),
+                    ok: true,
+                    status: 200,
+                    json: () =>
+                        Promise.resolve({
+                            state: 'finished',
+                            error: 'auth expired mid-job',
+                            data: { resources: [{ path: '/', status: 200 }] },
+                        }),
                 });
 
                 await expect(
-                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/']),
+                    service.previewAllContent('testuser', 'my-site', 'main', undefined, ['/'])
                 ).rejects.toThrow(/auth expired mid-job/);
             });
         });

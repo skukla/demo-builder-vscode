@@ -26,7 +26,10 @@
 
 import { executePhaseGitHubRepo } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhase1';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
-import type { RepoInfo, SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
+import type {
+    RepoInfo,
+    SetupServices,
+} from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
 
 jest.mock('@/features/eds/services/patches/lkgPinHelper', () => ({
@@ -42,6 +45,12 @@ jest.mock('@/features/eds/services/appInstallationResolver', () => ({
 }));
 import { resolveAppInstallation } from '@/features/eds/services/appInstallationResolver';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../../helpers/extensionContextFake';
+import { createMockSecretStorage } from '../../../../helpers/secretStorageFake';
 
 const mockPin = pinRepoToLkg as jest.Mock;
 const mockResolve = resolveAppInstallation as jest.Mock;
@@ -50,11 +59,14 @@ const mockResolve = resolveAppInstallation as jest.Mock;
 let callOrder: string[];
 
 function makeContext(): HandlerContext {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
-        context: { secrets: {}, globalState: { get: jest.fn(), update: jest.fn() } },
-    } as unknown as HandlerContext;
+        context: createMockExtensionContext({
+            secrets: createMockSecretStorage().secrets,
+            globalState: createStatefulGlobalState().globalState,
+        }),
+    });
 }
 
 function makeServices(): SetupServices {
@@ -133,7 +145,7 @@ describe('a repo being RESET cannot answer until it has been reset', () => {
             expect.anything(),
             expect.anything(),
             expect.anything(),
-            { awaitRegistration: true },
+            { awaitRegistration: true }
         );
     });
 
@@ -171,7 +183,7 @@ describe('a repo the user chose to PRESERVE is gated before any write', () => {
             expect.anything(),
             expect.anything(),
             expect.anything(),
-            { awaitRegistration: false },
+            { awaitRegistration: false }
         );
     });
 

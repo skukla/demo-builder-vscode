@@ -27,9 +27,14 @@
 import * as vscode from 'vscode';
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import type { Project } from '@/types/base';
-import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../helpers/extensionContextFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -64,14 +69,19 @@ const PAAS_PROJECT: Partial<Project> = {
 };
 
 function makeImportHarness(project: unknown) {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
         panel: {} as vscode.WebviewPanel,
-        context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
-        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
+        context: createMockExtensionContext({
+            globalState: createStatefulGlobalState().globalState,
+            secrets: createMockSecretStorage().secrets,
+        }),
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(project),
+        }),
         sendMessage: jest.fn(),
-    } as unknown as HandlerContext;
+    });
 }
 
 async function target(project: unknown) {
@@ -181,7 +191,9 @@ describe('get-datapack-import-target', () => {
             const odd = {
                 ...ACCS_PROJECT,
                 componentConfigs: {
-                    'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://elsewhere.test/graphql' },
+                    'adobe-commerce-accs': {
+                        ACCS_GRAPHQL_ENDPOINT: 'https://elsewhere.test/graphql',
+                    },
                 },
             };
 
@@ -229,7 +241,9 @@ describe('get-datapack-import-target', () => {
         });
 
         it('succeeds with no instance when no project is open', async () => {
-            const result = await importHandlers['get-datapack-import-target'](makeImportHarness(null));
+            const result = await importHandlers['get-datapack-import-target'](
+                makeImportHarness(null)
+            );
 
             // Not a failure: the catalog is browsable with no project, and the
             // modal simply asks the user to type the target.

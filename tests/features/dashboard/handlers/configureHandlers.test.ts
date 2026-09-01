@@ -54,40 +54,42 @@ import {
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import {
+    createStatefulGlobalState,
+    createMockExtensionContext,
+} from '../../../helpers/extensionContextFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
 // ==========================================================
 // Test Helpers
 // ==========================================================
 
 function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext {
-    return {
-        context: {
+    return createMockHandlerContext({
+        context: createMockExtensionContext({
             extensionPath: '/mock/extension/path',
-            secrets: {
-                get: jest.fn(),
-                store: jest.fn(),
-                delete: jest.fn(),
-                onDidChange: jest.fn(),
-            },
-            globalState: { get: jest.fn(), update: jest.fn(), keys: jest.fn().mockReturnValue([]) },
+            secrets: createMockSecretStorage().secrets,
+            globalState: createStatefulGlobalState().globalState,
             subscriptions: [],
-        },
+        }),
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue({
                 name: 'Test Project',
                 path: '/projects/test',
                 stack: 'paas',
             }),
-        },
+        }),
         sendMessage: jest.fn().mockResolvedValue(undefined),
-        panel: {
+        panel: createMockWebviewPanel({
             dispose: jest.fn(),
-        },
-        sharedState: {},
+        }),
         ...overrides,
-    } as unknown as HandlerContext;
+    });
 }
 
 // ==========================================================

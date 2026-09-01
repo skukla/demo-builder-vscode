@@ -87,14 +87,20 @@ describe('AuthenticationService - Authentication Checks', () => {
         } as any;
 
         // Mock constructors
-        (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(() => mockSDKClient);
+        (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(
+            () => mockSDKClient
+        );
         (createEntityServices as jest.Mock).mockReturnValue({
             fetcher: { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
             resolver: { getCurrentOrganization: jest.fn().mockResolvedValue(mockOrg) },
             selector: {},
         });
 
-        authService = new AuthenticationService('/mock/extension/path', mockLogger, mockCommandExecutor);
+        authService = new AuthenticationService(
+            '/mock/extension/path',
+            mockLogger,
+            mockCommandExecutor
+        );
     });
 
     describe('initialization', () => {
@@ -141,7 +147,7 @@ describe('AuthenticationService - Authentication Checks', () => {
         it('should handle exceptions gracefully', async () => {
             // Given: the config store itself cannot be read
             mockStoredToken.value = undefined;
-            const config = jest.requireMock('@adobe/aio-lib-core-config') as { get: jest.Mock };
+            const config = jest.requireMock('@adobe/aio-lib-core-config');
             config.get.mockImplementationOnce(() => {
                 throw new Error('config store unreadable');
             });
@@ -206,7 +212,7 @@ describe('AuthenticationService - Authentication Checks', () => {
          */
         it('should handle an unreadable config store gracefully', async () => {
             // Given: the token store throws rather than answering
-            const config = jest.requireMock('@adobe/aio-lib-core-config') as { get: jest.Mock };
+            const config = jest.requireMock('@adobe/aio-lib-core-config');
             config.get.mockImplementationOnce(() => {
                 throw new Error('ENOENT: no such file');
             });
@@ -217,6 +223,5 @@ describe('AuthenticationService - Authentication Checks', () => {
             // Then: should return false
             expect(result).toBe(false);
         });
-
     });
 });

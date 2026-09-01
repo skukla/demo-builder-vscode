@@ -91,13 +91,39 @@ function collectTestFiles(dir: string): string[] {
 /** This guard quotes both forms in its own prose, so it must not count itself. */
 const SELF = path.relative(repoRoot, __filename).replace(/\\/g, '/');
 
-const corpus = collectTestFiles(testsDir).filter((f) => f !== SELF);
+/**
+ * Detectors whose CONTROL FIXTURES contain the very spellings this counts.
+ *
+ * `SELF` was the only exclusion until 2026-09-01, when the src-side ban arrived
+ * carrying `'const x = y as any;'` in its controls — string literals, not casts,
+ * but this counter reads text and cannot tell them apart. Counting them would put
+ * the ceiling up by two for writing a test that proves a ban works.
+ */
+const DETECTOR_FIXTURES = new Set([SELF, 'tests/sop/src-erases-no-types.test.ts']);
+
+const corpus = collectTestFiles(testsDir).filter((f) => !DETECTOR_FIXTURES.has(f));
 
 const counts: Record<string, number> = (() => {
     const out: Record<string, number> = {};
     for (const key of Object.keys(PATTERNS)) out[key] = 0;
     for (const f of corpus) {
-        const body = stripComments(fs.readFileSync(path.join(repoRoot, f), 'utf8'));
+        let raw: string;
+        try {
+            raw = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+        } catch {
+            // Vanished between the listing and the read — a concurrent suite's
+            // temp file. `collectTestFiles` already tolerates this for DIRECTORIES
+            // and says so; the read was left unguarded, and jest running suites in
+            // parallel made that a real failure on 2026-09-01 when a new suite
+            // began writing a probe file into tests/sop/.
+            //
+            // Skipping is correct rather than fatal: this counts COMMITTED files,
+            // and a file that no longer exists is not committed. The ceiling is
+            // exact-equality, so a genuinely missing corpus file would fail the
+            // count rather than pass unnoticed.
+            continue;
+        }
+        const body = stripComments(raw);
         for (const [key, re] of Object.entries(PATTERNS)) {
             out[key] += body.match(re)?.length ?? 0;
         }

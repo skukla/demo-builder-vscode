@@ -67,7 +67,12 @@ jest.mock('@/features/mesh/services/stalenessDetector');
 // Mock authentication
 
 // Mock showDaLiveAuthQuickPick result holder
-const mockQuickPickAuthResult: { success: boolean; cancelled?: boolean; email?: string; error?: string } = { success: false, cancelled: true };
+const mockQuickPickAuthResult: {
+    success: boolean;
+    cancelled?: boolean;
+    email?: string;
+    error?: string;
+} = { success: false, cancelled: true };
 
 // Mock edsHelpers - getGitHubServices, validateDaLiveToken, getDaLiveAuthService, showDaLiveAuthQuickPick
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -79,7 +84,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
             deleteFile: jest.fn(),
             getFileContent: jest.fn().mockResolvedValue(null),
             createOrUpdateFile: jest.fn(),
-            resetRepoToTemplate: jest.fn().mockResolvedValue({ commitSha: 'abc1234567890', fileCount: 50 }),
+            resetRepoToTemplate: jest
+                .fn()
+                .mockResolvedValue({ commitSha: 'abc1234567890', fileCount: 50 }),
         },
         oauthService: {},
     }),
@@ -87,7 +94,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getDaLiveAuthService: jest.fn().mockReturnValue({
         storeToken: jest.fn().mockResolvedValue(undefined),
     }),
-    showDaLiveAuthQuickPick: jest.fn().mockImplementation(() => Promise.resolve(mockQuickPickAuthResult)),
+    showDaLiveAuthQuickPick: jest
+        .fn()
+        .mockImplementation(() => Promise.resolve(mockQuickPickAuthResult)),
     clearServiceCache: jest.fn(),
     getAppliedPatchPaths: jest.fn().mockReturnValue([]),
     publishPatchedCodeToLive: jest.fn().mockResolvedValue(undefined),
@@ -178,6 +187,8 @@ import { ServiceLocator as ServiceLocatorDirect } from '@/core/di/serviceLocator
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 // =============================================================================
 // Test Utilities
@@ -220,16 +231,16 @@ function createMockEdsProject(overrides?: Partial<Project>): Project {
  * Create mock handler context with required dependencies
  */
 function createMockContext(project: Project | undefined): HandlerContext {
-    return {
+    return createMockHandlerContext({
         panel: {
             webview: {
                 postMessage: jest.fn(),
             },
         } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             loadProjectFromPath: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
+        }),
         logger: createMockLogger() as unknown as HandlerContext['logger'],
         debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),
@@ -239,7 +250,7 @@ function createMockContext(project: Project | undefined): HandlerContext {
                 update: jest.fn(),
             },
         } as unknown as HandlerContext['context'],
-    } as unknown as HandlerContext;
+    });
 }
 
 // =============================================================================
@@ -271,7 +282,9 @@ describe('handleResetProject DA.live auth (confirmation-first flow)', () => {
 
         // Wire up ServiceLocator (both import paths)
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthService);
-        (ServiceLocatorDirect.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthService);
+        (ServiceLocatorDirect.getAuthenticationService as jest.Mock).mockReturnValue(
+            mockAuthService
+        );
 
         // Make HelixService constructor return our mock
         (HelixService as unknown as jest.Mock).mockImplementation(() => mockHelixService);

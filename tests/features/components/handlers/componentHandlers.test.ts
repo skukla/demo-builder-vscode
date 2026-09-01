@@ -5,10 +5,7 @@
  * establishing the request-response pattern for component operations.
  */
 
-import {
-    ComponentRegistryManager,
-    DependencyResolver,
-} from './componentHandlers.testUtils';
+import { ComponentRegistryManager, DependencyResolver } from './componentHandlers.testUtils';
 import {
     handleLoadDependencies,
     handleValidateSelection,
@@ -40,9 +37,9 @@ describe('componentHandlers - Pattern B (request-response)', () => {
         mockDependencyResolver = createMockDependencyResolver();
 
         // Mock the ComponentRegistryManager constructor
-        (ComponentRegistryManager as jest.MockedClass<typeof ComponentRegistryManager>).mockImplementation(
-            () => mockRegistryManager
-        );
+        (
+            ComponentRegistryManager as jest.MockedClass<typeof ComponentRegistryManager>
+        ).mockImplementation(() => mockRegistryManager);
 
         // Mock the DependencyResolver constructor
         (DependencyResolver as jest.MockedClass<typeof DependencyResolver>).mockImplementation(
@@ -59,7 +56,12 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             // Arrange: mock resolver returning required + optional
             const mockResolved = {
                 required: [
-                    { id: 'dep-a', name: 'Dep A', description: 'Required dep', configuration: { impact: 'Required for checkout' } },
+                    {
+                        id: 'dep-a',
+                        name: 'Dep A',
+                        description: 'Required dep',
+                        configuration: { impact: 'Required for checkout' },
+                    },
                 ],
                 optional: [
                     { id: 'dep-b', name: 'Dep B', description: 'Optional dep', configuration: {} },
@@ -70,7 +72,10 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             mockDependencyResolver.resolveDependencies.mockResolvedValue(mockResolved as any);
 
             // Act
-            const result = await handleLoadDependencies(mockContext, { frontend: 'headless', backend: 'adobe-commerce-paas' });
+            const result = await handleLoadDependencies(mockContext, {
+                frontend: 'headless',
+                backend: 'adobe-commerce-paas',
+            });
 
             // Assert
             expect(result).toEqual({
@@ -78,8 +83,20 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                 type: 'dependenciesLoaded',
                 data: {
                     dependencies: [
-                        { id: 'dep-a', name: 'Dep A', description: 'Required dep', required: true, impact: 'Required for checkout' },
-                        { id: 'dep-b', name: 'Dep B', description: 'Optional dep', required: false, impact: undefined },
+                        {
+                            id: 'dep-a',
+                            name: 'Dep A',
+                            description: 'Required dep',
+                            required: true,
+                            impact: 'Required for checkout',
+                        },
+                        {
+                            id: 'dep-b',
+                            name: 'Dep B',
+                            description: 'Optional dep',
+                            required: false,
+                            impact: undefined,
+                        },
                     ],
                 },
             });
@@ -95,16 +112,21 @@ describe('componentHandlers - Pattern B (request-response)', () => {
         });
 
         it('should return error with success=false when resolver throws', async () => {
-            mockDependencyResolver.resolveDependencies.mockRejectedValue(new Error('Invalid frontend or backend selection'));
+            mockDependencyResolver.resolveDependencies.mockRejectedValue(
+                new Error('Invalid frontend or backend selection')
+            );
 
-            const result = await handleLoadDependencies(mockContext, { frontend: 'bad', backend: 'bad' });
+            const result = await handleLoadDependencies(mockContext, {
+                frontend: 'bad',
+                backend: 'bad',
+            });
 
             expect(result.success).toBe(false);
             expect(result).toHaveProperty('error');
             expect(result).toHaveProperty('code');
             expect(mockContext.logger.error).toHaveBeenCalledWith(
                 'Failed to load dependencies:',
-                expect.anything(),
+                expect.anything()
             );
         });
     });
@@ -140,10 +162,12 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             expect(mockDependencyResolver.resolveDependencies).toHaveBeenCalledWith(
                 'headless',
                 'adobe-commerce-paas',
-                ['dep-a'],
+                ['dep-a']
             );
             // Verify validateDependencyChain received resolved.all
-            expect(mockDependencyResolver.validateDependencyChain).toHaveBeenCalledWith(mockResolved.all);
+            expect(mockDependencyResolver.validateDependencyChain).toHaveBeenCalledWith(
+                mockResolved.all
+            );
 
             expect(mockContext.sendMessage).not.toHaveBeenCalled();
         });
@@ -156,7 +180,9 @@ describe('componentHandlers - Pattern B (request-response)', () => {
         });
 
         it('should return error with success=false when resolver throws', async () => {
-            mockDependencyResolver.resolveDependencies.mockRejectedValue(new Error('Invalid frontend or backend selection'));
+            mockDependencyResolver.resolveDependencies.mockRejectedValue(
+                new Error('Invalid frontend or backend selection')
+            );
 
             const result = await handleValidateSelection(mockContext, {
                 frontend: 'bad',
@@ -169,19 +195,24 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             expect(result).toHaveProperty('code');
             expect(mockContext.logger.error).toHaveBeenCalledWith(
                 'Failed to validate selection:',
-                expect.anything(),
+                expect.anything()
             );
         });
     });
 
     describe('handleUpdateComponentSelection', () => {
         it('should store selection in sharedState and return success:true', async () => {
-            const selection = { frontend: 'headless', backend: 'adobe-commerce-paas', dependencies: ['dep-a'], services: [] };
+            const selection = {
+                frontend: 'headless',
+                backend: 'adobe-commerce-paas',
+                dependencies: ['dep-a'],
+                services: [],
+            };
 
             const result = await handleUpdateComponentSelection(mockContext, selection);
 
             expect(result).toEqual({ success: true });
-            expect((mockContext.sharedState as any).currentComponentSelection).toEqual(selection);
+            expect(mockContext.sharedState.currentComponentSelection).toEqual(selection);
         });
 
         it('should return error for invalid payload', async () => {
@@ -198,7 +229,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             const result = await handleUpdateComponentsData(mockContext, data);
 
             expect(result).toEqual({ success: true });
-            expect((mockContext.sharedState as any).componentsData).toEqual(data);
+            expect(mockContext.sharedState.componentsData).toEqual(data);
         });
 
         it('should return error for invalid payload', async () => {
@@ -211,7 +242,13 @@ describe('componentHandlers - Pattern B (request-response)', () => {
     describe('handleLoadComponents', () => {
         it('should return componentsLoaded with success:true', async () => {
             mockRegistryManager.getFrontends.mockResolvedValue([
-                { id: 'headless', name: 'CitiSignal Next.js', description: 'Storefront', dependencies: { required: [], optional: [] }, configuration: {} },
+                {
+                    id: 'headless',
+                    name: 'CitiSignal Next.js',
+                    description: 'Storefront',
+                    dependencies: { required: [], optional: [] },
+                    configuration: {},
+                },
             ]);
             mockRegistryManager.getBackends.mockResolvedValue([]);
             mockRegistryManager.getIntegrations.mockResolvedValue([]);
@@ -223,7 +260,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             expect(result.success).toBe(true);
             expect(result).toHaveProperty('type', 'componentsLoaded');
             expect(result).toHaveProperty('data');
-            const data = (result as any).data;
+            const data = result.data;
             expect(data).toHaveProperty('frontends');
             expect(data).toHaveProperty('backends');
             expect(data).toHaveProperty('integrations');
@@ -247,7 +284,10 @@ describe('componentHandlers - Pattern B (request-response)', () => {
         it('should return compatible:true when checkCompatibility returns true', async () => {
             mockRegistryManager.checkCompatibility.mockResolvedValue(true);
 
-            const result = await handleCheckCompatibility(mockContext, { frontend: 'headless', backend: 'adobe-commerce-paas' });
+            const result = await handleCheckCompatibility(mockContext, {
+                frontend: 'headless',
+                backend: 'adobe-commerce-paas',
+            });
 
             expect(result).toEqual({
                 success: true,
@@ -259,7 +299,10 @@ describe('componentHandlers - Pattern B (request-response)', () => {
         it('should return compatible:false when checkCompatibility returns false', async () => {
             mockRegistryManager.checkCompatibility.mockResolvedValue(false);
 
-            const result = await handleCheckCompatibility(mockContext, { frontend: 'headless', backend: 'other' });
+            const result = await handleCheckCompatibility(mockContext, {
+                frontend: 'headless',
+                backend: 'other',
+            });
 
             expect(result).toEqual({
                 success: true,
@@ -277,7 +320,10 @@ describe('componentHandlers - Pattern B (request-response)', () => {
         it('should return error with success:false on registry failure', async () => {
             mockRegistryManager.checkCompatibility.mockRejectedValue(new Error('Registry error'));
 
-            const result = await handleCheckCompatibility(mockContext, { frontend: 'headless', backend: 'adobe-commerce-paas' });
+            const result = await handleCheckCompatibility(mockContext, {
+                frontend: 'headless',
+                backend: 'adobe-commerce-paas',
+            });
 
             expect(result.success).toBe(false);
             expect(result).toHaveProperty('code');

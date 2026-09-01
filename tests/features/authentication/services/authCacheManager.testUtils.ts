@@ -1,12 +1,16 @@
-import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeConsoleWhereResponse } from '@/features/authentication/services/types';
+import type {
+    AdobeOrg,
+    AdobeProject,
+    AdobeWorkspace,
+    AdobeConsoleWhereResponse,
+} from '@/features/authentication/services/types';
 
 /**
  * Shared test utilities for AuthCacheManager tests
  */
 
 // Mock getLogger
-export const mockLogger = () => {
-    };
+export const mockLogger = () => {};
 
 // Mock data factories
 export const createMockOrg = (overrides?: Partial<AdobeOrg>): AdobeOrg => ({
@@ -46,9 +50,9 @@ export const createMockConsoleWhere = (): AdobeConsoleWhereResponse => {
     const workspace = createMockWorkspace();
 
     return {
-        org: org as any, // Type assertion needed for test data
-        project: project as any,
-        workspace: workspace as any,
+        org: org, // Type assertion needed for test data
+        project: project,
+        workspace: workspace,
     };
 };
 

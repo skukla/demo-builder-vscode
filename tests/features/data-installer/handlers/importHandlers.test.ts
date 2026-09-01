@@ -43,7 +43,7 @@ describe('start-datapack-import', () => {
 
         expect(stores.globalState.update).toHaveBeenCalledWith(
             expect.anything(),
-            expect.objectContaining({ operation: 'import' }),
+            expect.objectContaining({ operation: 'import' })
         );
     });
 
@@ -61,8 +61,7 @@ describe('start-datapack-import', () => {
          * call to watchImportJob has not happened yet when the handler's promise
          * settles, and asserting straight away reads an empty mock.
          */
-        const settleWatch = (): Promise<void> =>
-            new Promise((resolve) => setImmediate(resolve));
+        const settleWatch = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
         it('forwards each poll to the webview as it arrives', async () => {
             happyClient();
@@ -78,7 +77,7 @@ describe('start-datapack-import', () => {
 
             expect(context.sendMessage).toHaveBeenCalledWith(
                 'datapack-import-progress',
-                expect.objectContaining({ perType: { categories: 'processing' } }),
+                expect.objectContaining({ perType: { categories: 'processing' } })
             );
         });
 
@@ -97,7 +96,7 @@ describe('start-datapack-import', () => {
 
             expect(context.sendMessage).toHaveBeenCalledWith(
                 'datapack-import-progress',
-                expect.objectContaining({ activationId: 'act-1' }),
+                expect.objectContaining({ activationId: 'act-1' })
             );
         });
 
@@ -114,7 +113,7 @@ describe('start-datapack-import', () => {
 
             expect(context.sendMessage).toHaveBeenCalledWith(
                 'datapack-import-progress',
-                expect.objectContaining({ operation: 'reset' }),
+                expect.objectContaining({ operation: 'reset' })
             );
         });
     });
@@ -128,7 +127,7 @@ describe('start-datapack-import', () => {
         expect(validateImport).toHaveBeenCalled();
         expect(startImport).toHaveBeenCalled();
         expect(validateImport.mock.invocationCallOrder[0]).toBeLessThan(
-            startImport.mock.invocationCallOrder[0],
+            startImport.mock.invocationCallOrder[0]
         );
     });
 
@@ -206,7 +205,13 @@ describe('start-datapack-import', () => {
             const { context } = makeImportHarness();
             let settled = false;
             mockedWatch.mockImplementation(
-                () => new Promise((resolve) => setTimeout(() => { settled = true; resolve({ outcome: 'success', perType: {} }); }, 50)),
+                () =>
+                    new Promise((resolve) =>
+                        setTimeout(() => {
+                            settled = true;
+                            resolve({ outcome: 'success', perType: {} });
+                        }, 50)
+                    )
             );
 
             const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
@@ -271,7 +276,7 @@ describe('start-datapack-import', () => {
             expect(startImport).toHaveBeenCalledWith(
                 expect.objectContaining({
                     target: { websiteCode: 'bodea', storeCode: 'bodea_store_view' },
-                }),
+                })
             );
         });
 
@@ -329,7 +334,7 @@ describe('validate-datapack-import', () => {
         await importHandlers['validate-datapack-import'](context, PAYLOAD);
 
         expect(checkCredentials.mock.invocationCallOrder[0]).toBeLessThan(
-            validateImport.mock.invocationCallOrder[0],
+            validateImport.mock.invocationCallOrder[0]
         );
     });
 
@@ -343,14 +348,17 @@ describe('validate-datapack-import', () => {
                         .mockResolvedValue({ usable: false, reason: 'Authentication failed' }),
                     validateImport,
                     startImport: jest.fn(),
-                }) as never,
+                }) as never
         );
         const { context } = makeImportHarness();
 
         const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);
 
         expect(validateImport).not.toHaveBeenCalled();
-        expect(result.data).toMatchObject({ valid: false, reason: expect.stringMatching(/Authentication/) });
+        expect(result.data).toMatchObject({
+            valid: false,
+            reason: expect.stringMatching(/Authentication/),
+        });
     });
 
     it('validates WITHOUT starting anything', async () => {
@@ -396,14 +404,17 @@ describe('validate-datapack-import', () => {
                     startImport: jest.fn(),
                     // Credentials pass, so the shape verdict is what comes back.
                     checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
-                }) as never,
+                }) as never
         );
         const { context } = makeImportHarness();
 
         const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);
 
         expect(result.success).toBe(true);
-        expect(result.data).toMatchObject({ valid: false, reason: expect.stringMatching(/Must provide/) });
+        expect(result.data).toMatchObject({
+            valid: false,
+            reason: expect.stringMatching(/Must provide/),
+        });
     });
 
     it('checks credentials before sending, like the start path', async () => {
@@ -446,7 +457,10 @@ describe('reset-datapack', () => {
         const { startDelete } = happyClient();
         const { context } = makeImportHarness();
 
-        const result = await importHandlers['reset-datapack'](context, { ...PAYLOAD, confirm: false });
+        const result = await importHandlers['reset-datapack'](context, {
+            ...PAYLOAD,
+            confirm: false,
+        });
 
         expect(startDelete).not.toHaveBeenCalled();
         expect(result.success).toBe(false);
@@ -459,7 +473,7 @@ describe('reset-datapack', () => {
         await importHandlers['reset-datapack'](context, CONFIRMED);
 
         expect(validateImport.mock.invocationCallOrder[0]).toBeLessThan(
-            startDelete.mock.invocationCallOrder[0],
+            startDelete.mock.invocationCallOrder[0]
         );
     });
 
@@ -475,7 +489,7 @@ describe('reset-datapack', () => {
         // more than one tick before asserting it started.
         await new Promise((r) => setTimeout(r, 25));
         expect(mockedWatch).toHaveBeenCalledWith(
-            expect.objectContaining({ activationId: 'act-9' }),
+            expect.objectContaining({ activationId: 'act-9' })
         );
     });
 
@@ -489,7 +503,7 @@ describe('reset-datapack', () => {
 
         expect(stores.globalState.update).toHaveBeenCalledWith(
             expect.anything(),
-            expect.objectContaining({ operation: 'reset' }),
+            expect.objectContaining({ operation: 'reset' })
         );
     });
 
@@ -537,7 +551,7 @@ describe('a watch that cannot run', () => {
         await importHandlers['start-datapack-import'](context, PAYLOAD);
         await settle();
 
-        expect(lastRecord(stores as never).outcome).toBe('unwatchable');
+        expect(lastRecord(stores).outcome).toBe('unwatchable');
     });
 
     // The reason IS the payload: "we stopped looking" is not actionable without
@@ -550,7 +564,7 @@ describe('a watch that cannot run', () => {
         await importHandlers['start-datapack-import'](context, PAYLOAD);
         await settle();
 
-        expect(lastRecord(stores as never)).toMatchObject({
+        expect(lastRecord(stores)).toMatchObject({
             outcome: 'unwatchable',
             reason: expect.stringContaining('the service went away'),
         });
@@ -566,7 +580,7 @@ describe('a watch that cannot run', () => {
         await importHandlers['start-datapack-import'](context, PAYLOAD);
         await settle();
 
-        expect(lastRecord(stores as never).outcome).not.toBe('stopped');
+        expect(lastRecord(stores).outcome).not.toBe('stopped');
     });
 
     // The import is unaffected — it is already running server-side. Only the

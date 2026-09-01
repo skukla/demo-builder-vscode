@@ -24,6 +24,7 @@ import {
     isWebview,
     readStripped,
     loadLedger,
+    expectBanned as expectBannedAgainst,
     expectClean as expectCleanAgainst,
 } from './architectureScan';
 
@@ -33,6 +34,11 @@ const src = readStripped(FILES);
 
 function expectClean(check: string, violations: string[]): void {
     expectCleanAgainst(LEDGER, check, violations);
+}
+
+/** A rule that reached zero and had its ledger key deleted. See `expectBanned`. */
+function expectBanned(check: string, violations: string[]): void {
+    expectBannedAgainst(LEDGER, check, violations);
 }
 
 describe('ADR-017: the scan sees the webview half at all', () => {
@@ -142,6 +148,6 @@ describe('ADR-017: a value passed into a hook is stable across renders', () => {
                 offenders.push(`${file}  ${m[0]}`);
             }
         }
-        expectClean('emptyLiteralProps', offenders);
+        expectBanned('emptyLiteralProps', offenders);
     });
 });

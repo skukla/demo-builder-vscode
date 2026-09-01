@@ -43,8 +43,10 @@ import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { executeEdsReset, extractResetParams } from '@/features/eds/services/reset/edsResetService';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { isEdsProject, getMeshComponentInstance } from '@/types/typeGuards';
-import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const executeEdsResetMock = executeEdsReset as jest.Mock;
 const extractResetParamsMock = extractResetParams as jest.Mock;
@@ -71,11 +73,11 @@ function fakeServer() {
 
 const getCurrentProject = jest.fn();
 const ctxFactory = () =>
-    ({
-        stateManager: { getCurrentProject },
-        context: {},
+    createMockHandlerContext({
+        stateManager: createMockStateManager({ getCurrentProject }),
+        context: createMockExtensionContext(),
         logger: createMockLogger(),
-    }) as unknown as HandlerContext;
+    });
 
 const PROJECT = { name: 'eds-proj', path: '/p/eds-proj' };
 const PARAMS = {

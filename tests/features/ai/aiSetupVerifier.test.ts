@@ -44,8 +44,10 @@ const EXT_DIST_PATH = '/ext/dist';
 
 function setupAllOk(): void {
     (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-        if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# Demo Builder Project\n\nContent');
-        if ((filePath as string).endsWith('mcp.json')) return Promise.resolve(JSON.stringify({ mcpServers: { 'demo-builder': {} } }));
+        if (filePath.endsWith('AGENTS.md'))
+            return Promise.resolve('# Demo Builder Project\n\nContent');
+        if (filePath.endsWith('mcp.json'))
+            return Promise.resolve(JSON.stringify({ mcpServers: { 'demo-builder': {} } }));
         return Promise.reject(new Error('unexpected readFile call'));
     });
     (fsPromises.access as jest.Mock).mockResolvedValue(undefined); // mcp-server.js exists
@@ -55,7 +57,7 @@ function setupAllOk(): void {
 }
 
 function findCheck(checks: AiCheckResult[], name: string): AiCheckResult | undefined {
-    return checks.find(c => c.name === name);
+    return checks.find((c) => c.name === name);
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -77,8 +79,9 @@ describe('verifyAiSetup', () => {
         it('returns warning when AGENTS.md does not exist', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.reject(new Error('ENOENT'));
-                if ((filePath as string).endsWith('mcp.json')) return Promise.resolve(JSON.stringify({ mcpServers: {} }));
+                if (filePath.endsWith('AGENTS.md')) return Promise.reject(new Error('ENOENT'));
+                if (filePath.endsWith('mcp.json'))
+                    return Promise.resolve(JSON.stringify({ mcpServers: {} }));
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -92,8 +95,9 @@ describe('verifyAiSetup', () => {
         it('returns warning when AGENTS.md is empty', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('');
-                if ((filePath as string).endsWith('mcp.json')) return Promise.resolve(JSON.stringify({ mcpServers: {} }));
+                if (filePath.endsWith('AGENTS.md')) return Promise.resolve('');
+                if (filePath.endsWith('mcp.json'))
+                    return Promise.resolve(JSON.stringify({ mcpServers: {} }));
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -116,8 +120,9 @@ describe('verifyAiSetup', () => {
         it('returns warning when mcp.json does not exist', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('mcp.json')) return Promise.reject(new Error('ENOENT'));
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# Demo Builder Project');
+                if (filePath.endsWith('mcp.json')) return Promise.reject(new Error('ENOENT'));
+                if (filePath.endsWith('AGENTS.md'))
+                    return Promise.resolve('# Demo Builder Project');
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -130,8 +135,9 @@ describe('verifyAiSetup', () => {
         it('returns error when mcp.json contains invalid JSON', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('mcp.json')) return Promise.resolve('{ invalid json }');
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# Demo Builder Project');
+                if (filePath.endsWith('mcp.json')) return Promise.resolve('{ invalid json }');
+                if (filePath.endsWith('AGENTS.md'))
+                    return Promise.resolve('# Demo Builder Project');
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -145,8 +151,10 @@ describe('verifyAiSetup', () => {
         it('returns warning when mcp.json is valid JSON but missing mcpServers key', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('mcp.json')) return Promise.resolve(JSON.stringify({ other: {} }));
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# Demo Builder Project');
+                if (filePath.endsWith('mcp.json'))
+                    return Promise.resolve(JSON.stringify({ other: {} }));
+                if (filePath.endsWith('AGENTS.md'))
+                    return Promise.resolve('# Demo Builder Project');
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -264,8 +272,8 @@ describe('verifyAiSetup', () => {
         it('returns error when any check is error', async () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('mcp.json')) return Promise.resolve('{ bad json');
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# content');
+                if (filePath.endsWith('mcp.json')) return Promise.resolve('{ bad json');
+                if (filePath.endsWith('AGENTS.md')) return Promise.resolve('# content');
                 return Promise.reject(new Error('unexpected'));
             });
 
@@ -278,8 +286,8 @@ describe('verifyAiSetup', () => {
             setupAllOk();
             // Both an error (bad JSON) and a warning (no mcp-binary)
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
-                if ((filePath as string).endsWith('mcp.json')) return Promise.resolve('{ bad json');
-                if ((filePath as string).endsWith('AGENTS.md')) return Promise.resolve('# content');
+                if (filePath.endsWith('mcp.json')) return Promise.resolve('{ bad json');
+                if (filePath.endsWith('AGENTS.md')) return Promise.resolve('# content');
                 return Promise.reject(new Error('unexpected'));
             });
             (fsPromises.access as jest.Mock).mockRejectedValue(new Error('ENOENT'));
@@ -293,7 +301,7 @@ describe('verifyAiSetup', () => {
             setupAllOk();
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
-            const names = result.checks.map(c => c.name);
+            const names = result.checks.map((c) => c.name);
             expect(names).toContain('AGENTS.md');
             expect(names).toContain('.claude/mcp.json');
             expect(names).toContain('mcp-binary');
@@ -316,10 +324,19 @@ describe('verifyAiSetup', () => {
         it('populates inventory with each inspector output', async () => {
             setupAllOk();
             (inspectSkills as jest.Mock).mockResolvedValueOnce([
-                { name: 'add-component', description: 'Add a component', path: '/p/.claude/skills/add-component.md', source: 'demo-builder' },
+                {
+                    name: 'add-component',
+                    description: 'Add a component',
+                    path: '/p/.claude/skills/add-component.md',
+                    source: 'demo-builder',
+                },
             ]);
             (inspectAllServers as jest.Mock).mockResolvedValueOnce([
-                { id: 'demo-builder', status: 'ok', tools: [{ name: 'list_projects', description: 'List' }] },
+                {
+                    id: 'demo-builder',
+                    status: 'ok',
+                    tools: [{ name: 'list_projects', description: 'List' }],
+                },
             ]);
             (detectSessionMcps as jest.Mock).mockResolvedValueOnce([
                 { displayName: 'claude.ai AEM Content - Prod', needsAuth: false },
@@ -329,14 +346,18 @@ describe('verifyAiSetup', () => {
 
             expect(result.inventory.skills).toHaveLength(1);
             expect(result.inventory.mcps[0].id).toBe('demo-builder');
-            expect(result.inventory.sessionMcps[0].displayName).toBe('claude.ai AEM Content - Prod');
+            expect(result.inventory.sessionMcps[0].displayName).toBe(
+                'claude.ai AEM Content - Prod'
+            );
         });
 
         it('runs checks and inventory in parallel (one slow inspector does not block checks)', async () => {
             setupAllOk();
             let resolveMcps: (v: unknown[]) => void = () => undefined;
             (inspectAllServers as jest.Mock).mockReturnValueOnce(
-                new Promise(resolve => { resolveMcps = resolve; }),
+                new Promise((resolve) => {
+                    resolveMcps = resolve;
+                })
             );
 
             const promise = verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
@@ -367,7 +388,12 @@ describe('verifyAiSetup', () => {
     describe('gatherInventory', () => {
         it('returns the union of all three inspector outputs', async () => {
             (inspectSkills as jest.Mock).mockResolvedValueOnce([
-                { name: 's', description: null, path: '/p/.claude/skills/s.md', source: 'demo-builder' },
+                {
+                    name: 's',
+                    description: null,
+                    path: '/p/.claude/skills/s.md',
+                    source: 'demo-builder',
+                },
             ]);
             (inspectAllServers as jest.Mock).mockResolvedValueOnce([
                 { id: 'srv', status: 'ok', tools: [] },
@@ -426,8 +452,7 @@ describe('verifyAiSetup', () => {
         // Contents match the setupAllOk() readFile mock verbatim.
         const AGENTS_CONTENT = '# Demo Builder Project\n\nContent';
         const MCP_CONTENT = JSON.stringify({ mcpServers: { 'demo-builder': {} } });
-        const sha = (s: string): string =>
-            createHash('sha256').update(s, 'utf-8').digest('hex');
+        const sha = (s: string): string => createHash('sha256').update(s, 'utf-8').digest('hex');
 
         beforeEach(() => {
             setupAllOk();

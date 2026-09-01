@@ -1,10 +1,10 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { StateManager } from '@/core/state/stateManager';
 import { DisposableStore } from '@/core/utils/disposableStore';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 
 /**
  * Base class for all VS Code commands

@@ -17,7 +17,7 @@
 // disposable temp directory in this test. Other os APIs (tmpdir, etc.)
 // keep their real implementations.
 jest.mock('os', () => {
-    const actual = jest.requireActual('os') as typeof import('os');
+    const actual = jest.requireActual('os');
     return { ...actual, homedir: jest.fn(() => actual.homedir()) };
 });
 
@@ -79,7 +79,7 @@ describe('claudeSessionStore.hasConversation', () => {
         seedSession('/Users/kukla/Documents/Repositories/app-builder/demo-builder-vscode');
 
         expect(
-            hasConversation('/Users/kukla/Documents/Repositories/app-builder/demo-builder-vscode'),
+            hasConversation('/Users/kukla/Documents/Repositories/app-builder/demo-builder-vscode')
         ).toBe(true);
     });
 
@@ -100,7 +100,7 @@ describe('claudeSessionStore.hasConversation', () => {
             tempHome,
             '.claude',
             'projects',
-            '-Users-kukla--demo-builder-projects-x',
+            '-Users-kukla--demo-builder-projects-x'
         );
         fs.mkdirSync(encodedDir, { recursive: true });
         fs.writeFileSync(path.join(encodedDir, 'session.jsonl'), '{}\n');

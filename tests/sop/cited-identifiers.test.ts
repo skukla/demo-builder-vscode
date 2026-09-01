@@ -43,6 +43,13 @@ const HISTORICAL = ['docs/research/', 'docs/architecture/adr/', '.rptc/', 'CHANG
  * fails just as loudly as a new violation.
  */
 const DELIBERATE: Record<string, string> = {
+    // Both of these name a script in ANOTHER project's package.json, which is the
+    // one shape this check cannot infer: `npm run` is the same text whether the
+    // reader is standing in this repo or in a demo project it generated.
+    '.claude/skills/debug-log-triage/SKILL.md  npm run build':
+        "a COMPONENT's build script, quoted in the row that explains the failure log it emits — not a script of this repo",
+    'src/features/project-creation/templates/skills/add-component.md  npm run dev':
+        "a template SHIPPED INTO a generated project; it describes that project's package.json, never this one",
     'docs/systems/mcp-server.md  demoBuilder.ai.dryRun':
         'under a heading that reads "The dry run — REMOVED 2026-08-26"; the section exists to say it is gone',
     'CLAUDE.md  demoBuilder.eds.defaultDaLiveOrg':
@@ -55,8 +62,7 @@ const DELIBERATE: Record<string, string> = {
         'same incident, quoted as the key it should have named and since removed',
     'README.md  demoBuilder.ai.surface':
         'named in the note recording that it was REMOVED in 7bbe1bd9e',
-    'README.md  demoBuilder.ai.dockToRight':
-        'named in the same removal note',
+    'README.md  demoBuilder.ai.dockToRight': 'named in the same removal note',
 };
 
 function declaredIdentifiers(): Set<string> {
@@ -71,6 +77,29 @@ function declaredIdentifiers(): Set<string> {
         for (const view of v) out.add(view.id);
     }
     return out;
+}
+
+/**
+ * Read a corpus file, or return empty if it vanished between the listing and the
+ * read.
+ *
+ * Jest runs suites in parallel, and another suite may create and delete a temporary
+ * file inside `tests/` while this one is walking it. `collectTestFiles` already
+ * tolerates that for DIRECTORIES and says so in a comment; the READS were left
+ * unguarded, and on 2026-09-01 that became a real ENOENT failure the moment a new
+ * suite started writing a probe file.
+ *
+ * Empty is the right answer, not a throw: this counts COMMITTED files, and a file
+ * that no longer exists is not one. The assertions are exact-equality against a
+ * pinned number, so a genuinely missing corpus file fails the count rather than
+ * slipping through.
+ */
+function readOrEmpty(rel: string): string {
+    try {
+        return fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+    } catch {
+        return '';
+    }
 }
 
 function walk(dir: string, ext: string): string[] {
@@ -139,12 +168,48 @@ describe('identifiers named by current-tense documents exist', () => {
     it('every demoBuilder.* identifier a current-tense document names is real', () => {
         const offenders: string[] = [];
         for (const f of currentTenseDocs) {
-            const body = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+            const body = readOrEmpty(f);
             for (const m of body.matchAll(/\bdemoBuilder\.[A-Za-z0-9_.]+/g)) {
                 const id = m[0].replace(/\.$/, '');
                 if (declared.has(id) || inSource.has(id)) continue;
                 const row = `${f}  ${id}`;
                 if (row in DELIBERATE) continue;
+                offenders.push(row);
+            }
+        }
+        expect([...new Set(offenders)].sort()).toEqual([]);
+    });
+
+    /**
+     * The same rule, aimed at the identifier a reader is most likely to TYPE.
+     *
+     * `npm run <name>` is an instruction, not a description: a doc naming a script
+     * that does not exist wastes the reader's time and reads as a repo that has
+     * drifted. It is the same defect as a dead setting name, and until 2026-09-01
+     * nothing checked it — the toolchain page alone names seventeen.
+     *
+     * Scripts are enumerable from package.json, so this needs no ledger. A doc
+     * that must mention a REMOVED script is already excluded by the genre filter.
+     */
+    it('every `npm run` a current-tense document names is a real script', () => {
+        const scripts = new Set(
+            Object.keys(
+                (
+                    JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')) as {
+                        scripts: Record<string, string>;
+                    }
+                ).scripts
+            )
+        );
+        // A zero here would make the assertion below vacuous.
+        expect(scripts.size).toBeGreaterThan(20);
+
+        const offenders: string[] = [];
+        for (const f of currentTenseDocs) {
+            const body = readOrEmpty(f);
+            for (const m of body.matchAll(/\bnpm run ([a-z0-9][a-z0-9:_-]*)/g)) {
+                const row = `${f}  npm run ${m[1]}`;
+                if (scripts.has(m[1]) || row in DELIBERATE) continue;
                 offenders.push(row);
             }
         }

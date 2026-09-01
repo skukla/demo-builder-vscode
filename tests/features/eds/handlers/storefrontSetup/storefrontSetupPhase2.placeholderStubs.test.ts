@@ -51,20 +51,20 @@ import {
     buildPlaceholderStubJson,
 } from '@/features/eds/services/placeholderStubs';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 
 const EDS_CONFIG = {
     daLiveOrg: 'acme',
     daLiveSite: 'shop',
-     
 } as any;
 
 const REPO_INFO = { repoOwner: 'me', repoName: 'shop' };
 
 function makeContext(): HandlerContext {
-    return {
+    return createMockHandlerContext({
         logger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
-    } as unknown as HandlerContext;
+    });
 }
 
 function makeGithubFileOps(overrides: Record<string, unknown> = {}) {
@@ -73,7 +73,6 @@ function makeGithubFileOps(overrides: Record<string, unknown> = {}) {
         createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
         commitTreeToBranch: jest.fn().mockResolvedValue('sha123'),
         ...overrides,
-         
     } as any;
 }
 
@@ -84,9 +83,9 @@ describe('executePhaseHelixConfig — placeholder stubs (creation)', () => {
         await executePhaseHelixConfig(
             makeContext(),
             EDS_CONFIG,
-             
+
             { githubFileOps } as any,
-             
+
             REPO_INFO as any,
             new AbortController().signal
         );
@@ -121,9 +120,9 @@ describe('executePhaseHelixConfig — placeholder stubs (creation)', () => {
             executePhaseHelixConfig(
                 context,
                 EDS_CONFIG,
-                 
+
                 { githubFileOps } as any,
-                 
+
                 REPO_INFO as any,
                 new AbortController().signal
             )

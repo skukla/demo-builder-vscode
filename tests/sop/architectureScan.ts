@@ -113,6 +113,33 @@ export function expectCeiling(ledger: Ledger, check: string, count: number): voi
     }).toEqual({ check, count, verdict: 'at' });
 }
 
+/**
+ * A rule whose ledger reached ZERO, banked so it cannot be un-reached.
+ *
+ * `expectClean` over an empty ledger already fails on a new violation, so this
+ * is not about detection — it is about the SLOT. A ledger key is an invitation:
+ * the next person who trips the rule can add a row with a reason and stay green,
+ * and the rule quietly becomes negotiable again. A ban has nowhere to write that
+ * row.
+ *
+ * So this asserts BOTH halves: no violations, and no ledger key. Re-adding an
+ * exemption for a banned rule fails the build naming the rule, which is the
+ * whole point — the argument for the exemption has to be made to a person, not
+ * to a JSON file.
+ *
+ * The arc every ledger here is on: seed at the measured count, shrink only, and
+ * when it empties, delete it. `featureBarrels`, `reExportIndex` and the
+ * `needsAuth` review ledger all completed it; the type-erasing-cast ceilings are
+ * still on it.
+ */
+export function expectBanned(ledger: Ledger, check: string, violations: string[]): void {
+    expect({
+        check,
+        violations,
+        reopenedExemptions: Object.keys((ledger[check] ?? {}) as Record<string, string>),
+    }).toEqual({ check, violations: [], reopenedExemptions: [] });
+}
+
 export function expectClean(ledger: Ledger, check: string, violations: string[]): void {
     const rows = (ledger[check] ?? {}) as Record<string, string>;
     const found = new Set(violations);

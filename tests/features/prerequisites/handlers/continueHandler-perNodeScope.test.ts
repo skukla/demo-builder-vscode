@@ -44,7 +44,7 @@ const MESH_SCOPED_PREREQ = {
     perNodeVersion: true,
     plugins: [{ requiredFor: ['eds-commerce-mesh'] }],
     check: { command: 'aio --version', parseVersion: '@adobe/aio-cli/(\\S+)' },
-} as never;
+};
 
 function makeContext(): HandlerContext {
     const states = new Map();

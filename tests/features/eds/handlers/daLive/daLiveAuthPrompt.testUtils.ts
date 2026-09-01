@@ -30,6 +30,7 @@
 
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 
 // SIX AUTOMOCKS USED TO SIT HERE, and both suites carried them:
 //
@@ -75,10 +76,10 @@ export function createAuthPromptContext(): HandlerContext {
         panel: {
             webview: { postMessage: jest.fn() },
         } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             loadProjectFromPath: jest.fn(),
             getCurrentProject: jest.fn(),
-        } as unknown as HandlerContext['stateManager'],
+        }),
         context: {
             globalState: {
                 get: jest.fn(),

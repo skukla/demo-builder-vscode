@@ -51,7 +51,6 @@ import {
     findStorefrontNameMismatch,
     migrateStorefrontNameForProject,
 } from '@/features/eds/services/storefront/storefrontNameMigrationForProject';
-import type * as vscode from 'vscode';
 import type {
     MigrationConfigService,
     MigrationContentOps,
@@ -60,10 +59,11 @@ import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
+import { createMockExtensionContext } from '../../../../helpers/extensionContextFake';
 
 const logger = createMockLogger() as unknown as Logger;
 
-const context = { secrets: {}, globalState: {} } as unknown as vscode.ExtensionContext;
+const context = createMockExtensionContext();
 
 /**
  * The three calls the migration makes, handed in through the seam.

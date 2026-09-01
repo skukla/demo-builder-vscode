@@ -25,8 +25,9 @@ import { DATA_INSTALLER_DESCRIPTORS } from '@/features/ai/server/dataInstallerDe
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { registerDescriptorTools, type ToolDescriptor } from '@/features/ai/server/toolDescriptors';
-import type { HandlerContext, HandlerMap, HandlerResponse } from '@/types/handlers';
+import type { HandlerMap, HandlerResponse } from '@/types/handlers';
 import { RESPONSE_CEILINGS } from './responseCeilings';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 /** Registers the rows and invokes them exactly as the MCP server does. */
 function harness(descriptors: ToolDescriptor[], response: HandlerResponse) {
@@ -54,7 +55,7 @@ function harness(descriptors: ToolDescriptor[], response: HandlerResponse) {
     registerDescriptorTools(
         server,
         descriptors.map((d) => ({ ...d, map: stub })),
-        () => ({}) as HandlerContext
+        () => createMockHandlerContext()
     );
     return {
         names: () => [...tools.keys()],

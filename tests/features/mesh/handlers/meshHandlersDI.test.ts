@@ -76,12 +76,12 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
                     fsPath: '/tmp/test-storage',
                 },
                 extensionPath: '/tmp/test-extension',
-            } as any,
+            },
             logger: mockLogger,
             debugLogger: {
                 trace: jest.fn(),
                 debug: jest.fn(),
-            } as any,
+            },
             stateManager: {
                 getCurrentProject: jest.fn().mockResolvedValue({
                     adobe: {
@@ -89,7 +89,7 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
                         workspaceId: 'test-workspace-id',
                     },
                 }),
-            } as any,
+            },
             sharedState: {
                 apiServicesConfig: {
                     services: {
@@ -102,7 +102,7 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
                         },
                     },
                 },
-            } as any,
+            },
         } as any;
     });
 

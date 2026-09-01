@@ -15,21 +15,25 @@ jest.setTimeout(5000);
 // Mock Setup
 // =============================================================================
 
-jest.mock('vscode', () => ({
-    commands: { executeCommand: jest.fn().mockResolvedValue(undefined) },
-    window: {
-        activeColorTheme: { kind: 1 },
-        showErrorMessage: jest.fn(),
-        withProgress: jest.fn(),
-    },
-    ColorThemeKind: { Dark: 2, Light: 1 },
-    ProgressLocation: { Notification: 15 },
-    env: {
-        clipboard: { writeText: jest.fn() },
-        openExternal: jest.fn(),
-    },
-    Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        commands: { executeCommand: jest.fn().mockResolvedValue(undefined) },
+        window: {
+            activeColorTheme: { kind: 1 },
+            showErrorMessage: jest.fn(),
+            withProgress: jest.fn(),
+        },
+        ColorThemeKind: { Dark: 2, Light: 1 },
+        ProgressLocation: { Notification: 15 },
+        env: {
+            clipboard: { writeText: jest.fn() },
+            openExternal: jest.fn(),
+        },
+        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
+    }),
+    { virtual: true }
+);
 
 jest.mock('@/features/mesh/services/stalenessDetector');
 jest.mock('@/core/di/serviceLocator', () => ({
@@ -74,6 +78,9 @@ import * as vscode from 'vscode';
 import { handleRepublishContent } from '@/features/dashboard/handlers/dashboardHandlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // =============================================================================
 // Utilities
@@ -104,16 +111,16 @@ function createMockEdsProject(overrides?: Partial<Project>): Project {
 }
 
 function createMockContext(project: Project | undefined): HandlerContext {
-    return {
+    return createMockHandlerContext({
         panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        }) as unknown as HandlerContext['stateManager'],
+        }),
         logger: createMockLogger() as unknown as HandlerContext['logger'],
         sendMessage: jest.fn(),
-        context: { secrets: {} },
-    } as unknown as HandlerContext;
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
+    });
 }
 
 // =============================================================================
@@ -186,14 +193,17 @@ describe('handleRepublishContent', () => {
                 repoName: 'test-repo',
                 daLiveOrg: 'test-org',
                 daLiveSite: 'test-site',
-            }),
+            })
         );
     });
 
     it('should surface republish failure', async () => {
         const project = createMockEdsProject();
         const context = createMockContext(project);
-        mockRepublishStorefrontContent.mockResolvedValue({ success: false, error: 'pipeline failed' });
+        mockRepublishStorefrontContent.mockResolvedValue({
+            success: false,
+            error: 'pipeline failed',
+        });
 
         const result = await handleRepublishContent(context);
 

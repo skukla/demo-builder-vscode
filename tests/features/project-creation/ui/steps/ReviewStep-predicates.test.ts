@@ -14,21 +14,21 @@ describe('hasRequiredReviewData', () => {
             adobeProject: { id: '2' },
             adobeWorkspace: { id: '3' },
         };
-        expect(hasRequiredReviewData(state as any)).toBe(false);
+        expect(hasRequiredReviewData(state)).toBe(false);
     });
 
     it('returns false when empty project name', () => {
         const state = {
             projectName: '',
         };
-        expect(hasRequiredReviewData(state as any)).toBe(false);
+        expect(hasRequiredReviewData(state)).toBe(false);
     });
 
     it('returns true with only project name when no mesh', () => {
         const state = {
             projectName: 'test',
         };
-        expect(hasRequiredReviewData(state as any)).toBe(true);
+        expect(hasRequiredReviewData(state)).toBe(true);
     });
 
     it('returns true for ACCS project without mesh (no Adobe I/O needed)', () => {
@@ -36,7 +36,7 @@ describe('hasRequiredReviewData', () => {
             projectName: 'test',
             // No mesh in dependencies, no Adobe I/O selections needed
         };
-        expect(hasRequiredReviewData(state as any)).toBe(true);
+        expect(hasRequiredReviewData(state)).toBe(true);
     });
 
     it('returns false when mesh included but no org', () => {
@@ -46,7 +46,7 @@ describe('hasRequiredReviewData', () => {
             adobeProject: { id: '2' },
             adobeWorkspace: { id: '3' },
         };
-        expect(hasRequiredReviewData(state as any)).toBe(false);
+        expect(hasRequiredReviewData(state)).toBe(false);
     });
 
     it('returns false when mesh included but no project', () => {
@@ -56,7 +56,7 @@ describe('hasRequiredReviewData', () => {
             adobeOrg: { id: '1' },
             adobeWorkspace: { id: '3' },
         };
-        expect(hasRequiredReviewData(state as any)).toBe(false);
+        expect(hasRequiredReviewData(state)).toBe(false);
     });
 
     it('returns false when mesh included but no workspace', () => {
@@ -66,7 +66,7 @@ describe('hasRequiredReviewData', () => {
             adobeOrg: { id: '1' },
             adobeProject: { id: '2' },
         };
-        expect(hasRequiredReviewData(state as any)).toBe(false);
+        expect(hasRequiredReviewData(state)).toBe(false);
     });
 
     it('returns true when mesh included and all Adobe I/O data present', () => {
@@ -77,6 +77,6 @@ describe('hasRequiredReviewData', () => {
             adobeProject: { id: '2' },
             adobeWorkspace: { id: '3' },
         };
-        expect(hasRequiredReviewData(state as any)).toBe(true);
+        expect(hasRequiredReviewData(state)).toBe(true);
     });
 });

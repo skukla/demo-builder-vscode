@@ -271,7 +271,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-23` | feature | [Graph-based dependency system](2026-08-30-graph-based-dependencies.md) | — | low | backlog |
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (31)
+### platform  (32)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -291,7 +291,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-22` | question | └ [Does the 93% mutation score hold outside the modules we already trusted?](2026-08-30-mutation-score-beyond-confident-modules.md) | — | med | open |
 | `PL-12` | question | [Pattern-conformance audit — one architecture, or one per feature?](2026-08-28-pattern-conformance-audit.md) | — | med | shipped |
 | `PL-13` | chore | [ADR-015 convergence — empty the exemption ledger](2026-08-28-adr-015-convergence.md) | — | high | built |
-| `PL-16` | fix | [Give StateManager and Project fixtures a shared builder, the way HandlerContext has one](2026-08-28-shared-test-builders.md) | — | high | built |
+| `PL-16` | fix | [Give StateManager and Project fixtures a shared builder, the way HandlerContext has one](2026-08-28-shared-test-builders.md) | — | high | active |
 | `PL-17` | question | [The architecture is written for the extension host only; the frontend has rules but no document](2026-08-28-adr015-webview-jurisdiction.md) | — | high | shipped |
 | `PL-18` | feature | [ADR-017 §6 is stated but unenforced — the check that closes it](2026-08-29-adr017-stylesheet-bundle-check.md) | — | high | shipped |
 | `PL-19` | fix | [The sidebar is the only webview not using the shared client](2026-08-29-sidebar-converge-on-webview-client.md) | — | med | backlog |
@@ -306,6 +306,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-31` | chore | [Retire the 43 re-export index files, module by module](2026-08-31-core-barrels-are-not-curated.md) | — | med | built |
 | `PL-32` | chore | [Work the type-erasing casts in tests to zero](2026-08-31-type-erasing-casts.md) | — | med | active |
 | `PL-33` | chore | [Every convention is enforced, or it stops being a convention](2026-08-31-every-convention-enforced.md) | — | high | built |
+| `PL-34` | chore | [Every open finding from the 2026-09-01 toolchain day, in one list](2026-09-01-cast-and-builder-worklog.md) | — | high | active |
 
 <!-- END GENERATED registry -->
 
@@ -453,7 +454,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 
-*55 item(s) sit outside the A–G chain.*
+*56 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

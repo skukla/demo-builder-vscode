@@ -150,7 +150,7 @@ describe('keyed entry persists the display name', () => {
                     type: 'app-builder',
                     status: 'ready',
                     path: '/proj/components/order-sync',
-                } as never,
+                },
             },
             appBuilderComponents: {
                 'order-sync': {

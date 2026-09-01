@@ -17,18 +17,13 @@ import * as vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import type { StateManager } from '@/core/state/stateManager';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 jest.mock('@/core/communication/webviewCommunicationManager');
 
 /** Minimal ExtensionContext — only what BaseWebviewCommand reaches for. */
 function makeExtensionContext(): vscode.ExtensionContext {
-    return {
-        extensionPath: '/ext',
-        subscriptions: [],
-        globalState: { get: jest.fn(), update: jest.fn() },
-        workspaceState: { get: jest.fn(), update: jest.fn() },
-        secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn() },
-    } as unknown as vscode.ExtensionContext;
+    return createMockExtensionContext();
 }
 
 function makeStateManager(): ReturnType<typeof createMockStateManager> {
@@ -50,7 +45,7 @@ function makeCommand(): ShowDataInstallerCommand & Internals {
     return new ShowDataInstallerCommand(
         makeExtensionContext(),
         makeStateManager() as unknown as StateManager,
-        logger as never
+        logger
     ) as ShowDataInstallerCommand & Internals;
 }
 

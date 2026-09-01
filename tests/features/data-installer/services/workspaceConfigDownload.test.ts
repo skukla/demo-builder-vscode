@@ -43,7 +43,7 @@ describe('downloadWorkspaceConfigJson', () => {
 
         await downloadWorkspaceConfigJson(executor as never, TARGET);
 
-        const command = executor.execute.mock.calls[0][0] as string;
+        const command = executor.execute.mock.calls[0][0];
         expect(command).toContain('aio console workspace download');
         expect(command).toContain('--orgId 285361');
         expect(command).toContain('--projectId proj-1');
@@ -55,7 +55,7 @@ describe('downloadWorkspaceConfigJson', () => {
 
         await downloadWorkspaceConfigJson(executor as never, TARGET);
 
-        const command = executor.execute.mock.calls[0][0] as string;
+        const command = executor.execute.mock.calls[0][0];
         const filePath = (command.match(/"([^"]+)"/) as RegExpMatchArray)[1];
         expect(fs.existsSync(filePath)).toBe(false);
     });
@@ -64,7 +64,7 @@ describe('downloadWorkspaceConfigJson', () => {
         const executor = executorWriting(null, 2, 'ERROR_DOWNLOAD_WORKSPACE_JSON 404');
 
         await expect(downloadWorkspaceConfigJson(executor as never, TARGET)).rejects.toThrow(
-            /workspace configuration/i,
+            /workspace configuration/i
         );
     });
 
@@ -107,7 +107,7 @@ describe('command injection', () => {
                 orgId: '285361',
                 projectId: '4566206088345707694',
                 workspaceId: '4566206088345747128',
-            }),
+            })
         ).resolves.toBe('{"project":{}}');
     });
 });

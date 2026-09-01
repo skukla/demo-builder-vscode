@@ -41,14 +41,14 @@ export interface SingleColumnLayoutProps {
  * </SingleColumnLayout>
  * ```
  */
-export const SingleColumnLayout: React.FC<SingleColumnLayoutProps> = ({
+export function SingleColumnLayout({
     children,
     // 960 mirrors the canonical CSS --content-width (DimensionValue can't take a var()).
     maxWidth = '960px' as DimensionValue,
     padding = '24px' as DimensionValue,
     margin = '0' as DimensionValue,
     className,
-}) => {
+}: SingleColumnLayoutProps) {
     return (
         <div
             style={{
@@ -66,4 +66,4 @@ export const SingleColumnLayout: React.FC<SingleColumnLayoutProps> = ({
             {children}
         </div>
     );
-};
+}

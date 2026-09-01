@@ -26,23 +26,15 @@ jest.mock('@/core/auth/adobeAuthGuard', () => ({
 }));
 
 // withOrgContext records the target then runs the callback (no global mutation).
-const mockWithOrgContext = jest.fn(
-    (_target: unknown, fn: () => Promise<unknown>) => fn(),
-);
+const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
 jest.mock('@/core/shell/orgContextEnv', () => ({
     ...jest.requireActual('@/core/shell/orgContextEnv'),
-    withOrgContext: (target: unknown, fn: () => Promise<unknown>) =>
-        mockWithOrgContext(target, fn),
+    withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
 }));
-
-
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
 }));
-
-
-
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -50,8 +42,6 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibraryContentSource: jest.fn().mockReturnValue(null),
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
-
-
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollections: jest.fn(),
@@ -61,7 +51,9 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn().mockReturnValue({
         tokenService: {},
         fileOperations: {
-            resetRepoToTemplate: jest.fn().mockResolvedValue({ fileCount: 10, commitSha: 'abc1234567' }),
+            resetRepoToTemplate: jest
+                .fn()
+                .mockResolvedValue({ fileCount: 10, commitSha: 'abc1234567' }),
             getFileContent: jest.fn().mockResolvedValue(null),
             createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
         },
@@ -73,19 +65,17 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     }),
 }));
 
-
-
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-
 jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: jest.fn().mockResolvedValue({
-        success: true, contentFilesCopied: 5, libraryPaths: [],
+        success: true,
+        contentFilesCopied: 5,
+        libraryPaths: [],
     }),
 }));
-
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
@@ -98,21 +88,15 @@ jest.mock('@/features/mesh/services/meshDeployment', () => ({
     }),
 }));
 
-
 // Mock fetch for placeholder files
-global.fetch = jest.fn().mockResolvedValue({ ok: false }) as jest.Mock;
+global.fetch = jest.fn().mockResolvedValue({ ok: false });
 
 // =============================================================================
 // Imports (after mocks)
 // =============================================================================
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
-import {
-    createResetContext,
-    meshDeps,
-} from './edsResetService.testUtils';
-
-
+import { createResetContext, meshDeps } from './edsResetService.testUtils';
 
 // =============================================================================
 // Helpers
@@ -188,13 +172,18 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         // When: Executing reset with mesh redeployment
         await executeEdsReset(
             {
-                repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
-                templateOwner: 'template-owner', templateRepo: 'template-repo',
-                project, redeployMesh: true,
+                repoOwner: 'test-owner',
+                repoName: 'test-repo',
+                daLiveOrg: 'test-org',
+                daLiveSite: 'test-repo',
+                templateOwner: 'template-owner',
+                templateRepo: 'template-repo',
+                project,
+                redeployMesh: true,
             },
-            context, mockTokenProvider,
-            meshDeps,
+            context,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: auth runs BEFORE the targeted redeploy
@@ -213,13 +202,18 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         // When
         await executeEdsReset(
             {
-                repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
-                templateOwner: 'template-owner', templateRepo: 'template-repo',
-                project, redeployMesh: true,
+                repoOwner: 'test-owner',
+                repoName: 'test-repo',
+                daLiveOrg: 'test-org',
+                daLiveSite: 'test-repo',
+                templateOwner: 'template-owner',
+                templateRepo: 'template-repo',
+                project,
+                redeployMesh: true,
             },
-            context, mockTokenProvider,
-            meshDeps,
+            context,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: the redeploy is targeted at the project's known org/project/workspace
@@ -229,7 +223,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
                 projectId: 'proj-456',
                 workspaceId: 'ws-789',
             }),
-            expect.any(Function),
+            expect.any(Function)
         );
     });
 
@@ -243,13 +237,18 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         // When
         await executeEdsReset(
             {
-                repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
-                templateOwner: 'template-owner', templateRepo: 'template-repo',
-                project, redeployMesh: true,
+                repoOwner: 'test-owner',
+                repoName: 'test-repo',
+                daLiveOrg: 'test-org',
+                daLiveSite: 'test-repo',
+                templateOwner: 'template-owner',
+                templateRepo: 'template-repo',
+                project,
+                redeployMesh: true,
             },
-            context, mockTokenProvider,
-            meshDeps,
+            context,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: Should pass project context for loginAndRestoreProjectContext
@@ -261,7 +260,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
                     workspace: 'ws-789',
                 }),
                 warningMessage: expect.stringContaining('expired'),
-            }),
+            })
         );
     });
 
@@ -275,13 +274,18 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         // When
         const result = await executeEdsReset(
             {
-                repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
-                templateOwner: 'template-owner', templateRepo: 'template-repo',
-                project, redeployMesh: true,
+                repoOwner: 'test-owner',
+                repoName: 'test-repo',
+                daLiveOrg: 'test-org',
+                daLiveSite: 'test-repo',
+                templateOwner: 'template-owner',
+                templateRepo: 'template-repo',
+                project,
+                redeployMesh: true,
             },
-            context, mockTokenProvider,
-            meshDeps,
+            context,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: Should return partial success (reset completed, mesh failed)
@@ -299,13 +303,18 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
         // When
         await executeEdsReset(
             {
-                repoOwner: 'test-owner', repoName: 'test-repo',
-                daLiveOrg: 'test-org', daLiveSite: 'test-repo',
-                templateOwner: 'template-owner', templateRepo: 'template-repo',
-                project, redeployMesh: false,
+                repoOwner: 'test-owner',
+                repoName: 'test-repo',
+                daLiveOrg: 'test-org',
+                daLiveSite: 'test-repo',
+                templateOwner: 'template-owner',
+                templateRepo: 'template-repo',
+                project,
+                redeployMesh: false,
             },
-            context, mockTokenProvider,
-            meshDeps,
+            context,
+            mockTokenProvider,
+            meshDeps
         );
 
         // Then: ensureAdobeIOAuth should NOT be called (mesh step skipped)

@@ -75,53 +75,53 @@ describe('EnvFileWatcherService', () => {
             // When: Service instantiated
             const _service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
 
             // Then: All 7 internal commands should be registered
             expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
                 'demoBuilder._internal.demoStarted',
-                expect.any(Function),
+                expect.any(Function)
             );
             expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
                 'demoBuilder._internal.demoStopped',
-                expect.any(Function),
+                expect.any(Function)
             );
             expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
                 'demoBuilder._internal.registerProgrammaticWrites',
-                expect.any(Function),
+                expect.any(Function)
             );
             expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
                 'demoBuilder._internal.initializeFileHashes',
-                expect.any(Function),
+                expect.any(Function)
             );
             expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
                 'demoBuilder._internal.restartActionTaken',
-                expect.any(Function),
+                expect.any(Function)
             );
             expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
                 'demoBuilder._internal.meshActionTaken',
-                expect.any(Function),
+                expect.any(Function)
             );
 
             // Additional commands for Configure UI coordination
             expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
                 'demoBuilder._internal.shouldShowRestartNotification',
-                expect.any(Function),
+                expect.any(Function)
             );
             expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
                 'demoBuilder._internal.shouldShowMeshNotification',
-                expect.any(Function),
+                expect.any(Function)
             );
             expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
                 'demoBuilder._internal.markRestartNotificationShown',
-                expect.any(Function),
+                expect.any(Function)
             );
             expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
                 'demoBuilder._internal.markMeshNotificationShown',
-                expect.any(Function),
+                expect.any(Function)
             );
         });
 
@@ -129,9 +129,9 @@ describe('EnvFileWatcherService', () => {
             // Given: Service with registered commands
             const _service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
 
             // Collect dispose functions
@@ -144,9 +144,9 @@ describe('EnvFileWatcherService', () => {
             // Recreate service to get our mocked disposables
             const service2 = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
 
             // When: Service disposed
@@ -154,7 +154,7 @@ describe('EnvFileWatcherService', () => {
 
             // Then: All commands should be disposed
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Service disposed'),
+                expect.stringContaining('Service disposed')
             );
         });
     });
@@ -164,9 +164,9 @@ describe('EnvFileWatcherService', () => {
             // Given: Service with workspace folders
             const service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
 
             // When: Service initialized
@@ -183,25 +183,33 @@ describe('EnvFileWatcherService', () => {
             // When: Service created
             new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
 
             // Then: All commands should be registered
-            const registeredCommands = (vscode.commands.registerCommand as jest.Mock).mock.calls.map(
-                call => call[0],
-            );
+            const registeredCommands = (
+                vscode.commands.registerCommand as jest.Mock
+            ).mock.calls.map((call) => call[0]);
 
             expect(registeredCommands).toContain('demoBuilder._internal.demoStarted');
             expect(registeredCommands).toContain('demoBuilder._internal.demoStopped');
-            expect(registeredCommands).toContain('demoBuilder._internal.registerProgrammaticWrites');
+            expect(registeredCommands).toContain(
+                'demoBuilder._internal.registerProgrammaticWrites'
+            );
             expect(registeredCommands).toContain('demoBuilder._internal.initializeFileHashes');
             expect(registeredCommands).toContain('demoBuilder._internal.restartActionTaken');
             expect(registeredCommands).toContain('demoBuilder._internal.meshActionTaken');
-            expect(registeredCommands).toContain('demoBuilder._internal.shouldShowRestartNotification');
-            expect(registeredCommands).toContain('demoBuilder._internal.shouldShowMeshNotification');
-            expect(registeredCommands).toContain('demoBuilder._internal.markRestartNotificationShown');
+            expect(registeredCommands).toContain(
+                'demoBuilder._internal.shouldShowRestartNotification'
+            );
+            expect(registeredCommands).toContain(
+                'demoBuilder._internal.shouldShowMeshNotification'
+            );
+            expect(registeredCommands).toContain(
+                'demoBuilder._internal.markRestartNotificationShown'
+            );
             expect(registeredCommands).toContain('demoBuilder._internal.markMeshNotificationShown');
         });
     });

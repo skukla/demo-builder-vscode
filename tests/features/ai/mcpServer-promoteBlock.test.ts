@@ -494,8 +494,8 @@ describe('toolHandlers.promoteBlockToLibrary', () => {
         // load-bearing text directly from the source via the un-mocked fs
         // module (jest.requireActual — `fs/promises` is mocked globally by
         // mcpServer.testUtils.ts).
-        const realFs = jest.requireActual('fs') as typeof import('fs');
-        const realPath = jest.requireActual('path') as typeof import('path');
+        const realFs = jest.requireActual('fs');
+        const realPath = jest.requireActual('path');
         const srcPath = realPath.resolve(__dirname, '../../../src/mcp-server.ts');
         const src = realFs.readFileSync(srcPath, 'utf-8');
         expect(src).toContain('promote_block_to_library');

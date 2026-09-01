@@ -14,16 +14,9 @@ import * as os from 'os';
 import * as path from 'path';
 import { ProjectDirectoryScanner } from '@/core/state/projectDirectoryScanner';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../helpers/loggerFake';
 
-const logger: Logger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-    show: jest.fn(),
-    dispose: jest.fn(),
-} as unknown as Logger;
+const logger: Logger = createMockLogger();
 
 describe('ProjectDirectoryScanner', () => {
     let prevProjectsDir: string | undefined;

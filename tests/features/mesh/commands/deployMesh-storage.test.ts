@@ -21,6 +21,7 @@ import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
@@ -149,10 +150,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
         capturedProject = null;
 
         // Setup mock context
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test/extension',
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext();
 
         // Setup mock StateManager
         mockStateManager = createMockStateManager({

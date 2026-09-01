@@ -95,7 +95,7 @@ describe('buildSampleDataDeps — the credential dispatch, unmocked', () => {
         mockedResolve.mockImplementation(actual.resolveCommerceCredentials);
         const deps = buildSampleDataDeps(makeImportHarness(), ACCS_WITH_PAIR, jest.fn());
 
-        const result = await deps.credentials(ACCS_WITH_PAIR as never);
+        const result = await deps.credentials(ACCS_WITH_PAIR);
 
         expect(result.ok).toBe(true);
     });
@@ -111,7 +111,7 @@ describe('buildSampleDataDeps — the credential dispatch, unmocked', () => {
         const noBackend = { ...ACCS_WITH_PAIR, componentSelections: undefined };
         const deps = buildSampleDataDeps(makeImportHarness(), noBackend, jest.fn());
 
-        const result = await deps.credentials(noBackend as never);
+        const result = await deps.credentials(noBackend);
 
         expect(result.ok).toBe(false);
     });
@@ -131,12 +131,12 @@ describe('buildSampleDataDeps — the credential dispatch, unmocked', () => {
  * handed over rather than on any outcome.
  */
 describe('buildSampleDataDeps — watch', () => {
-    const { watchImportJob } = jest.requireMock('@/features/data-installer/services/importJobRunner') as {
-        watchImportJob: jest.Mock;
-    };
+    const { watchImportJob } = jest.requireMock(
+        '@/features/data-installer/services/importJobRunner'
+    );
     const { resolveDataInstallerAccess } = jest.requireMock(
-        '@/features/data-installer/handlers/dataInstallerHandlers',
-    ) as { resolveDataInstallerAccess: jest.Mock };
+        '@/features/data-installer/handlers/dataInstallerHandlers'
+    );
 
     /** A read client: the two methods the poller calls, and nothing else. */
     const readClient = {
@@ -255,7 +255,7 @@ describe('buildSampleDataDeps — progress wording', () => {
         buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'install').onProgress?.(live);
 
         expect(report).toHaveBeenCalledWith(
-            expect.objectContaining({ processing: ['Customer groups'] }),
+            expect.objectContaining({ processing: ['Customer groups'] })
         );
     });
 });
@@ -264,10 +264,10 @@ describe('buildSampleDataDeps — credentials', () => {
     it('supplies a broker, so a project with no workspace can still install', async () => {
         const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
-        await deps.credentials(PROJECT as never);
+        await deps.credentials(PROJECT);
 
         expect(mockedResolve).toHaveBeenCalledWith(
-            expect.objectContaining({ broker: expect.any(Function) }),
+            expect.objectContaining({ broker: expect.any(Function) })
         );
     });
 
@@ -278,7 +278,7 @@ describe('buildSampleDataDeps — credentials', () => {
         });
         const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
-        await expect(deps.credentials(PROJECT as never)).resolves.toEqual({
+        await expect(deps.credentials(PROJECT)).resolves.toEqual({
             ok: true,
             credentials: { kind: 'accs', clientId: 'shared', clientSecret: 'fake-not-a-secret' },
         });
@@ -289,7 +289,7 @@ describe('buildSampleDataDeps — credentials', () => {
     it('reports a refusal without leaking what was tried', async () => {
         const deps = buildSampleDataDeps(makeImportHarness(), PROJECT, jest.fn());
 
-        const result = await deps.credentials(PROJECT as never);
+        const result = await deps.credentials(PROJECT);
 
         expect(result.ok).toBe(false);
         expect(JSON.stringify(result)).not.toContain('client');

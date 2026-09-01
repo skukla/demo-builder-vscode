@@ -12,7 +12,6 @@ import {
     createAiHandlerContext,
     makeScopedContext,
 } from './aiHandlers.testUtils';
-import type { HandlerContext } from './aiHandlers.testUtils';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 describe('aiHandlers — prompt CRUD & scope', () => {
@@ -32,10 +31,10 @@ describe('aiHandlers — prompt CRUD & scope', () => {
                 ],
             };
             const context = createAiHandlerContext({
-                stateManager: createMockStateManager(createMockStateManager({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(project),
                     saveProject,
-                })) as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             const result = await handleDeleteAiPrompt(context, { promptId: 'a' });
@@ -51,16 +50,16 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
         it('returns success: false when promptId is missing', async () => {
             const context = createAiHandlerContext();
-            const result = await handleDeleteAiPrompt(context, undefined as never);
+            const result = await handleDeleteAiPrompt(context, undefined);
             expect(result.success).toBe(false);
         });
 
         it('returns project-not-found when no current project is loaded', async () => {
             const context = createAiHandlerContext({
-                stateManager: createMockStateManager(createMockStateManager({
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
                     saveProject: jest.fn(),
-                })) as unknown as HandlerContext['stateManager'],
+                }),
             });
             const result = await handleDeleteAiPrompt(context, { promptId: 'a' });
             expect(result.success).toBe(false);
@@ -69,13 +68,13 @@ describe('aiHandlers — prompt CRUD & scope', () => {
         it('returns the empty array when project has no aiPrompts', async () => {
             const saveProject = jest.fn().mockResolvedValue(undefined);
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue({
                         name: 'p',
                         path: '/projects/p',
                     }),
                     saveProject,
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
             const result = await handleDeleteAiPrompt(context, { promptId: 'a' });
             expect(result.success).toBe(true);
@@ -149,14 +148,14 @@ describe('aiHandlers — prompt CRUD & scope', () => {
                 { id: 'b', title: 'B', prompt: 'b' },
             ];
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue({
                         name: 'p',
                         path: '/projects/p',
                         aiPrompts: prompts,
                     }),
                     saveProject: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             const result = await handleListAiPrompts(context);
@@ -165,13 +164,13 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
         it('returns an empty array when aiPrompts is undefined', async () => {
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue({
                         name: 'p',
                         path: '/projects/p',
                     }),
                     saveProject: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
 
             const result = await handleListAiPrompts(context);
@@ -180,10 +179,10 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
         it('returns project-not-found when no current project', async () => {
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
                     saveProject: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
             const result = await handleListAiPrompts(context);
             expect(result.success).toBe(false);
@@ -196,9 +195,7 @@ describe('aiHandlers — prompt CRUD & scope', () => {
                     { id: 'p1', title: 'Project 1', prompt: 'p1' },
                     { id: 'p2', title: 'Project 2', prompt: 'p2' },
                 ],
-                globalPrompts: [
-                    { id: 'g1', title: 'Global 1', prompt: 'g1', pinned: true },
-                ],
+                globalPrompts: [{ id: 'g1', title: 'Global 1', prompt: 'g1', pinned: true }],
             });
             const result = await handleListAiPrompts(context);
             expect(result.success).toBe(true);
@@ -211,9 +208,7 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
         it('returns only global prompts when the project has no prompts', async () => {
             const { context } = makeScopedContext({
-                globalPrompts: [
-                    { id: 'g1', title: 'Global', prompt: 'g1', pinned: true },
-                ],
+                globalPrompts: [{ id: 'g1', title: 'Global', prompt: 'g1', pinned: true }],
             });
             const result = await handleListAiPrompts(context);
             expect(result.aiPrompts).toEqual([
@@ -223,9 +218,7 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
         it('dedups by id when the same id appears in both stores (global wins)', async () => {
             const { context } = makeScopedContext({
-                projectPrompts: [
-                    { id: 'dup', title: 'Stale project copy', prompt: 'stale' },
-                ],
+                projectPrompts: [{ id: 'dup', title: 'Stale project copy', prompt: 'stale' }],
                 globalPrompts: [
                     { id: 'dup', title: 'Fresh global copy', prompt: 'fresh', pinned: true },
                 ],
@@ -246,10 +239,10 @@ describe('aiHandlers — prompt CRUD & scope', () => {
             const saveProject = jest.fn().mockResolvedValue(undefined);
             const project = { name: 'p', path: '/projects/p', aiPrompts };
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(project),
                     saveProject,
-                } as unknown as HandlerContext['stateManager'],
+                }),
             });
             return { context, saveProject };
         }
@@ -322,9 +315,7 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
             // 3. List returns it once, with pinned: true
             const listed = await handleListAiPrompts(context);
-            expect(listed.aiPrompts).toEqual([
-                { id: 'x', title: 'X', prompt: 'x', pinned: true },
-            ]);
+            expect(listed.aiPrompts).toEqual([{ id: 'x', title: 'X', prompt: 'x', pinned: true }]);
 
             // 4. Unpin → migrates back to current project
             await handleSaveAiPrompt(context, {
@@ -345,5 +336,4 @@ describe('aiHandlers — prompt CRUD & scope', () => {
     // ==========================================================
     // Surface-agnostic kebab + sessions browser handlers
     // ==========================================================
-
 });

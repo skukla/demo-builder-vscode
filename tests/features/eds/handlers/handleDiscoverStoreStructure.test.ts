@@ -5,7 +5,6 @@
  * parameter validation, discovery service lookup, auth guard, and message sending.
  */
 
-import type { ExtensionContext } from 'vscode';
 import * as vscode from 'vscode';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -41,10 +40,17 @@ import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDis
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
-const mockDiscoverStoreStructure = discoverStoreStructure as jest.MockedFunction<typeof discoverStoreStructure>;
+const mockDiscoverStoreStructure = discoverStoreStructure as jest.MockedFunction<
+    typeof discoverStoreStructure
+>;
 const mockEnsureAdobeIOAuth = ensureAdobeIOAuth as jest.MockedFunction<typeof ensureAdobeIOAuth>;
-const mockGetConfiguration = vscode.workspace.getConfiguration as jest.MockedFunction<typeof vscode.workspace.getConfiguration>;
+const mockGetConfiguration = vscode.workspace.getConfiguration as jest.MockedFunction<
+    typeof vscode.workspace.getConfiguration
+>;
 
 // ==========================================================
 // Test Helpers
@@ -55,7 +61,9 @@ const MOCK_DISCOVERY_SERVICE = {
     serviceUrl: 'https://actions.adobeioruntime.net/api/v1/web/discovery',
 };
 
-function mockDiscoveryServices(services: { orgName: string; serviceUrl: string }[] = [MOCK_DISCOVERY_SERVICE]): void {
+function mockDiscoveryServices(
+    services: { orgName: string; serviceUrl: string }[] = [MOCK_DISCOVERY_SERVICE]
+): void {
     mockGetConfiguration.mockReturnValue({
         get: jest.fn().mockReturnValue(services),
     } as unknown as ReturnType<typeof vscode.workspace.getConfiguration>);
@@ -68,33 +76,39 @@ function mockNoDiscoveryServices(): void {
 }
 
 function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext {
-    const mockExtensionContext = {
-        secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-        globalState: { get: jest.fn(), update: jest.fn(), keys: jest.fn().mockReturnValue([]) },
-        subscriptions: [],
-    } as unknown as ExtensionContext;
+    const mockExtensionContext = createMockExtensionContext();
 
-    return {
+    return createMockHandlerContext({
         context: mockExtensionContext,
         logger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
-        sharedState: {},
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(null),
-        }) as unknown as HandlerContext['stateManager'],
-        authManager: {
+        }),
+        authManager: createMockAuthenticationService({
             getTokenManager: jest.fn().mockReturnValue({
-                inspectToken: jest.fn().mockResolvedValue({ valid: true, expiresIn: 3600, token: 'mock-ims-token' }),
+                inspectToken: jest
+                    .fn()
+                    .mockResolvedValue({ valid: true, expiresIn: 3600, token: 'mock-ims-token' }),
             }),
-        },
+        }),
         ...overrides,
-    } as unknown as HandlerContext;
+    });
 }
 
 const MOCK_STORE_DATA = {
     websites: [{ id: 1, code: 'base', name: 'Main Website' }],
     storeGroups: [{ id: 1, code: 'main', name: 'Main Store', website_id: 1, root_category_id: 2 }],
-    storeViews: [{ id: 1, code: 'default', name: 'Default', store_group_id: 1, website_id: 1, is_active: true }],
+    storeViews: [
+        {
+            id: 1,
+            code: 'default',
+            name: 'Default',
+            store_group_id: 1,
+            website_id: 1,
+            is_active: true,
+        },
+    ],
 };
 
 // ==========================================================
@@ -119,10 +133,13 @@ describe('handleDiscoverStoreStructure', () => {
         const result = await handleDiscoverStoreStructure(context, undefined);
 
         expect(result.success).toBe(false);
-        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
-            success: false,
-            error: expect.stringContaining('Missing required parameters'),
-        }));
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'store-discovery-result',
+            expect.objectContaining({
+                success: false,
+                error: expect.stringContaining('Missing required parameters'),
+            })
+        );
     });
 
     it('should send error when baseUrl is missing', async () => {
@@ -134,9 +151,12 @@ describe('handleDiscoverStoreStructure', () => {
         });
 
         expect(result.success).toBe(false);
-        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
-            success: false,
-        }));
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'store-discovery-result',
+            expect.objectContaining({
+                success: false,
+            })
+        );
     });
 
     // ----------------------------------------------------------
@@ -155,16 +175,21 @@ describe('handleDiscoverStoreStructure', () => {
             password: 'fake-test-pw-not-a-secret',
         });
 
-        expect(mockDiscoverStoreStructure).toHaveBeenCalledWith(expect.objectContaining({
-            backendType: 'paas',
-            baseUrl: 'https://magento.test',
-            username: 'admin',
-            password: 'fake-test-pw-not-a-secret',
-        }));
-        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
-            success: true,
-            data: MOCK_STORE_DATA,
-        }));
+        expect(mockDiscoverStoreStructure).toHaveBeenCalledWith(
+            expect.objectContaining({
+                backendType: 'paas',
+                baseUrl: 'https://magento.test',
+                username: 'admin',
+                password: 'fake-test-pw-not-a-secret',
+            })
+        );
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'store-discovery-result',
+            expect.objectContaining({
+                success: true,
+                data: MOCK_STORE_DATA,
+            })
+        );
     });
 
     // ----------------------------------------------------------
@@ -180,10 +205,13 @@ describe('handleDiscoverStoreStructure', () => {
             baseUrl: 'https://accs.test',
         });
 
-        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
-            success: false,
-            error: expect.stringContaining('No discovery service configured'),
-        }));
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'store-discovery-result',
+            expect.objectContaining({
+                success: false,
+                error: expect.stringContaining('No discovery service configured'),
+            })
+        );
     });
 
     it('should send error when authManager is not available for ACCS', async () => {
@@ -194,10 +222,13 @@ describe('handleDiscoverStoreStructure', () => {
             baseUrl: 'https://accs.test',
         });
 
-        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
-            success: false,
-            error: expect.stringContaining('Authentication not available'),
-        }));
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'store-discovery-result',
+            expect.objectContaining({
+                success: false,
+                error: expect.stringContaining('Authentication not available'),
+            })
+        );
     });
 
     it('should send error when Adobe sign-in is cancelled for ACCS', async () => {
@@ -209,10 +240,13 @@ describe('handleDiscoverStoreStructure', () => {
             baseUrl: 'https://accs.test',
         });
 
-        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
-            success: false,
-            error: expect.stringContaining('cancelled'),
-        }));
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'store-discovery-result',
+            expect.objectContaining({
+                success: false,
+                error: expect.stringContaining('cancelled'),
+            })
+        );
     });
 
     it('should send error when Adobe sign-in fails for ACCS', async () => {
@@ -224,10 +258,13 @@ describe('handleDiscoverStoreStructure', () => {
             baseUrl: 'https://accs.test',
         });
 
-        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
-            success: false,
-            error: expect.stringContaining('sign-in failed'),
-        }));
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'store-discovery-result',
+            expect.objectContaining({
+                success: false,
+                error: expect.stringContaining('sign-in failed'),
+            })
+        );
     });
 
     it('should send error when IMS token is unavailable after sign-in for ACCS', async () => {
@@ -244,10 +281,13 @@ describe('handleDiscoverStoreStructure', () => {
             baseUrl: 'https://accs.test',
         });
 
-        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
-            success: false,
-            error: expect.stringContaining('IMS token'),
-        }));
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'store-discovery-result',
+            expect.objectContaining({
+                success: false,
+                error: expect.stringContaining('IMS token'),
+            })
+        );
     });
 
     it('should delegate to discoverStoreStructure for ACCS path with discovery service', async () => {
@@ -260,17 +300,22 @@ describe('handleDiscoverStoreStructure', () => {
             accsGraphqlEndpoint: 'https://accs.test/TestTenant123/graphql',
         });
 
-        expect(mockDiscoverStoreStructure).toHaveBeenCalledWith(expect.objectContaining({
-            backendType: 'accs',
-            baseUrl: 'https://accs.test',
-            imsToken: 'mock-ims-token',
-            discoveryServiceUrl: MOCK_DISCOVERY_SERVICE.serviceUrl,
-            accsGraphqlEndpoint: 'https://accs.test/TestTenant123/graphql',
-        }));
-        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
-            success: true,
-            data: MOCK_STORE_DATA,
-        }));
+        expect(mockDiscoverStoreStructure).toHaveBeenCalledWith(
+            expect.objectContaining({
+                backendType: 'accs',
+                baseUrl: 'https://accs.test',
+                imsToken: 'mock-ims-token',
+                discoveryServiceUrl: MOCK_DISCOVERY_SERVICE.serviceUrl,
+                accsGraphqlEndpoint: 'https://accs.test/TestTenant123/graphql',
+            })
+        );
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'store-discovery-result',
+            expect.objectContaining({
+                success: true,
+                data: MOCK_STORE_DATA,
+            })
+        );
     });
 
     // ----------------------------------------------------------
@@ -291,10 +336,13 @@ describe('handleDiscoverStoreStructure', () => {
             password: 'fake-test-pw-not-a-secret',
         });
 
-        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
-            success: false,
-            error: 'Connection timed out',
-        }));
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'store-discovery-result',
+            expect.objectContaining({
+                success: false,
+                error: 'Connection timed out',
+            })
+        );
     });
 
     it('should handle unexpected exceptions gracefully', async () => {
@@ -308,10 +356,13 @@ describe('handleDiscoverStoreStructure', () => {
             password: 'fake-test-pw-not-a-secret',
         });
 
-        expect(context.sendMessage).toHaveBeenCalledWith('store-discovery-result', expect.objectContaining({
-            success: false,
-            error: 'Store discovery failed. Please try again.',
-        }));
+        expect(context.sendMessage).toHaveBeenCalledWith(
+            'store-discovery-result',
+            expect.objectContaining({
+                success: false,
+                error: 'Store discovery failed. Please try again.',
+            })
+        );
         // Handler itself succeeds (discovery failed, not handler)
         expect(result.success).toBe(true);
     });
@@ -331,9 +382,7 @@ describe('handleDiscoverStoreStructure', () => {
             password: 'fake-test-pw-not-a-secret',
         });
 
-        expect(context.logger.info).toHaveBeenCalledWith(
-            expect.stringContaining('1 websites'),
-        );
+        expect(context.logger.info).toHaveBeenCalledWith(expect.stringContaining('1 websites'));
     });
 
     // ----------------------------------------------------------
@@ -355,11 +404,9 @@ describe('handleDiscoverStoreStructure', () => {
         });
 
         expect(context.logger.info).toHaveBeenCalledWith(
-            expect.stringContaining('[Store Discovery] IMS token: valid=false'),
+            expect.stringContaining('[Store Discovery] IMS token: valid=false')
         );
-        expect(context.logger.info).toHaveBeenCalledWith(
-            expect.stringContaining('present=false'),
-        );
+        expect(context.logger.info).toHaveBeenCalledWith(expect.stringContaining('present=false'));
     });
 
     it('never logs the IMS token value in any log argument', async () => {
@@ -385,7 +432,9 @@ describe('handleDiscoverStoreStructure', () => {
         });
 
         expect(context.logger.info).toHaveBeenCalledWith(
-            expect.stringContaining(`[Store Discovery] discovery service: ${MOCK_DISCOVERY_SERVICE.serviceUrl}`),
+            expect.stringContaining(
+                `[Store Discovery] discovery service: ${MOCK_DISCOVERY_SERVICE.serviceUrl}`
+            )
         );
     });
 });

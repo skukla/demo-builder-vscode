@@ -158,9 +158,7 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
         it('should handle mesh cleanup failure gracefully', async () => {
             mockExecutionFailure('Creation failed');
             setupMeshCleanupScenario(mockContext, false);
-            (mockCommandExecutor.execute as jest.Mock).mockRejectedValue(
-                new Error('Mesh delete failed')
-            );
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Mesh delete failed'));
 
             const result = await handleCreateProject(mockContext, mockConfig);
 
@@ -176,7 +174,7 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
             setupMeshCleanupScenario(mockContext, false); // meshCreatedForWorkspace = 'workspace-123'
 
             let capturedTarget: ReturnType<typeof getActiveOrgContext>;
-            (mockCommandExecutor.execute as jest.Mock).mockImplementation(async (cmd: string) => {
+            mockCommandExecutor.execute.mockImplementation(async (cmd: string) => {
                 if (cmd.includes('api-mesh:delete')) capturedTarget = getActiveOrgContext();
                 return { code: 0, stdout: 'Deleted', stderr: '' };
             });
@@ -199,7 +197,7 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
         it('should successfully delete mesh with exit code 0', async () => {
             mockExecutionFailure('Failed');
             setupMeshCleanupScenario(mockContext, false);
-            (mockCommandExecutor.execute as jest.Mock).mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: 'Deleted',
                 stderr: '',
@@ -215,7 +213,7 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
         it('should handle mesh delete with non-zero exit code', async () => {
             mockExecutionFailure('Failed');
             setupMeshCleanupScenario(mockContext, false);
-            (mockCommandExecutor.execute as jest.Mock).mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 1,
                 stdout: '',
                 stderr: 'Mesh not found',

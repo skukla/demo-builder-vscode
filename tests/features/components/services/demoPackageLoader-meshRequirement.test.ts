@@ -69,7 +69,7 @@ describe('getResolvedMeshRequirement', () => {
 
     it('should return undefined when package has no requiresMesh', () => {
         const pkg = { ...basePkg };
-        delete (pkg as any).requiresMesh;
+        delete pkg.requiresMesh;
         expect(getResolvedMeshRequirement(pkg, 'eds-accs')).toBeUndefined();
     });
 
