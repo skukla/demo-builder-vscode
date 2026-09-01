@@ -21,6 +21,7 @@ import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { z } from 'zod';
 import { asRawText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 
 /**
  * Channel-name → on-disk filename. VS Code names the mirror file after the
@@ -49,11 +50,12 @@ const MAX_RESPONSE_BYTES = 45_000;
  * @param server - McpServer (typed `any`; see registerProjectTools docstring)
  * @param logDirPath - the extension's log directory (`context.logUri.fsPath`)
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function registerDiagnosticsTools(server: any, logDirPath: string): void {
+export function registerDiagnosticsTools(server: McpToolServer, logDirPath: string): void {
     server.registerTool(
         'read_debug_logs',
         {
+            // Reviewed 2026-08-31: no service and no token on any path.
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Read Debug Logs',
             description:

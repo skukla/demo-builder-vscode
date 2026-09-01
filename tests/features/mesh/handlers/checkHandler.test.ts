@@ -67,7 +67,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                     fsPath: '/tmp/test-storage',
                 },
             } as any,
-            logger: createMockLogger() as any,
+            logger: createMockLogger(),
             debugLogger: {
                 trace: jest.fn(),
                 debug: jest.fn(),
@@ -267,7 +267,17 @@ describe('checkHandler - Security Tests (Step 2)', () => {
     });
 
     describe('Error Handling', () => {
-        it('should handle authentication failure gracefully', async () => {
+        it('hands the agent a sign-in it can act on, and does not prompt', async () => {
+            /**
+             * `mockContext` has no panel, so this is the AGENT surface. Until
+             * 2026-09-01 the guard awaited a `showWarningMessage` here — a
+             * notification on the user's window that blocked the tool until
+             * somebody clicked, which an agent cannot do.
+             *
+             * The old assertion only checked the prose said "authentication
+             * required". What matters to a caller is the MARKER: which sign-in to
+             * offer, in a field rather than a sentence.
+             */
             mockAuthService.isAuthenticated.mockResolvedValue(false);
 
             const result = await handleCheckApiMesh(mockContext, {
@@ -275,7 +285,9 @@ describe('checkHandler - Security Tests (Step 2)', () => {
             });
 
             expect(result.success).toBe(false);
-            expect(result.error).toMatch(/authentication required/i);
+            expect((result as { needsAuth?: string }).needsAuth).toBe('adobe');
+            expect(result.error).toMatch(/sign.?in/i);
+            expect(result.error).toContain('sign_in');
         });
 
         it('should not execute commands if workspaceId validation fails', async () => {

@@ -90,8 +90,8 @@ jest.mock('vscode', () => ({
 describe('handleOpenExternal - Security', () => {
     // Create mock context factory
     const createMockContext = (): HandlerContext => ({
-        logger: createMockLogger() as any,
-        debugLogger: createMockLogger() as any,
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         context: {} as any,
         panel: undefined,
         stateManager: {} as any,

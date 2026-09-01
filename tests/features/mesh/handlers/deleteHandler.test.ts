@@ -52,7 +52,7 @@ describe('handleDeleteApiMesh — org targeting', () => {
 
         mockContext = {
             context: { globalStorageUri: { fsPath: '/tmp/test-storage' } } as any,
-            logger: createMockLogger() as any,
+            logger: createMockLogger(),
             debugLogger: { trace: jest.fn(), debug: jest.fn() } as any,
             stateManager: {
                 getCurrentProject: jest.fn().mockResolvedValue({

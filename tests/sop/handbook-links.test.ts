@@ -65,8 +65,14 @@ describe('the development handbook points at things that exist', () => {
         // The handbook prints "states N conventions. M of them are enforced; K are not."
         // A count in prose is a claim, and this repo's rule is that a claim needs
         // something keeping it true — the handbook says so itself.
+        //
+        // `is|are` because the count reached ONE on 2026-09-01, when the nine
+        // working-discipline rules moved to §11, and "1 are not" is not a sentence.
+        // The pin read `are` only and failed on grammar rather than on arithmetic —
+        // a check that forces the prose to be wrong to stay green is worse than no
+        // check, so the pin moved rather than the sentence.
         const claim = md.match(
-            /states (\d+) conventions\. (\d+) of them are enforced; (\d+) are not/
+            /states (\d+) conventions\. (\d+) of them are enforced; (\d+) (?:are|is) not/
         );
         expect(claim).not.toBeNull();
         const [, total, enforced, unenforced] = claim!.map(Number);

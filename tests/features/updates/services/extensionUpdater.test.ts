@@ -45,7 +45,7 @@ describe('ExtensionUpdater', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockLogger = createMockLogger() as any;
+        mockLogger = createMockLogger();
 
         updater = new ExtensionUpdater(mockLogger);
 

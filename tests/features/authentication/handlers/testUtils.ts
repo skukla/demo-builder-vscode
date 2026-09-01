@@ -64,8 +64,8 @@ export function createAuthHandlerContext(overrides?: Partial<HandlerContext>): j
         errorLogger: {} as ErrorLogger,
         progressUnifier: {} as ProgressUnifier,
         stepLogger: {} as StepLogger,
-        logger: createMockLogger() as any, // Simplified mock
-        debugLogger: createMockLogger() as any, // Simplified mock
+        logger: createMockLogger(), // Simplified mock
+        debugLogger: createMockLogger(), // Simplified mock
         context: {} as ExtensionContext,
         panel: undefined,
         stateManager: {} as StateManager,

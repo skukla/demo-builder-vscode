@@ -52,6 +52,7 @@
 import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { AGENT_PAGE_SIZE } from './projectors';
 import { phaseReporter } from '@/core/utils/agentPhaseChannel';
 import { repairSiteConfigForProject } from '@/features/eds/services/configService/repairSiteConfigForProject';
@@ -96,13 +97,13 @@ function refuseIfNotEds(project: Project, tool: string): { error: string } | und
 }
 
 export function registerSiteTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
 ): void {
     server.registerTool(
         'get_site_access',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Site Access',
             description:
@@ -126,6 +127,7 @@ export function registerSiteTools(
     server.registerTool(
         'set_site_admin',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             title: 'Set Site Admin',
             description:
@@ -174,6 +176,7 @@ export function registerSiteTools(
     server.registerTool(
         'repair_site_configuration',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Repair Site Configuration',
             description:
@@ -232,6 +235,7 @@ export function registerSiteTools(
     server.registerTool(
         'find_storefront_name_mismatches',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Find Storefront Name Mismatches',
             description:
@@ -290,6 +294,7 @@ export function registerSiteTools(
     server.registerTool(
         'migrate_storefront_name',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             title: 'Migrate Storefront Name',
             description:
@@ -380,6 +385,7 @@ export function registerSiteTools(
     server.registerTool(
         'connect_dalive',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Connect DA.live',
             description:

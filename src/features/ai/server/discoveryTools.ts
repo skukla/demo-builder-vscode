@@ -11,6 +11,7 @@
  */
 
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import appBuilderCatalog from '@/features/components/config/app-builder-components.json';
 import componentsConfig from '@/features/components/config/components.json';
 import { getSelectablePackages } from '@/features/components/services/demoPackageLoader';
@@ -47,11 +48,11 @@ function listComponentSection(section: string): Array<{ id: string; name: string
  * Register the discovery tools on `server`.
  * @param server McpServer (typed `any`; see registerProjectTools docstring).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function registerDiscoveryTools(server: any): void {
+export function registerDiscoveryTools(server: McpToolServer): void {
     server.registerTool(
         'list_stacks',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Stacks',
             description:
@@ -75,6 +76,7 @@ export function registerDiscoveryTools(server: any): void {
     server.registerTool(
         'list_demo_packages',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Demo Packages',
             description:
@@ -97,6 +99,7 @@ export function registerDiscoveryTools(server: any): void {
     server.registerTool(
         'list_components',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Components',
             description:

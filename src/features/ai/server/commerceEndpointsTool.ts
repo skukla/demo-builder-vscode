@@ -64,6 +64,7 @@
  */
 
 import { asRawText, asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import type { StateManager } from '@/core/state/stateManager';
 import {
@@ -177,13 +178,13 @@ export function buildCommerceEndpoints(
 
 /** Registers `get_commerce_endpoints` on the MCP server. */
 export function registerCommerceEndpointsTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     stateManager: StateManager,
 ): void {
     server.registerTool(
         'get_commerce_endpoints',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             description:
                 'The Commerce API endpoints and request headers for this project: GraphQL, Catalog Service, and the deployed API Mesh, plus the store-scope headers a query needs. Use before querying the catalog, building an integration, or working out why a query returns no products.',

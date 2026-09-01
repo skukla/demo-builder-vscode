@@ -268,15 +268,22 @@ describe('remove_block_from_library — credential source', () => {
         );
     });
 
-    it('throws when no DA.live token is supplied (user not signed in)', async () => {
+    it('answers with a sign-in marker when DA.live is not signed in', async () => {
+        // Was a throw until 2026-09-01. A missing credential is the caller's
+        // normal state, not an exception — and an MCP error is not something an
+        // agent can branch on. `needsAuth` says which sign-in to offer, in a
+        // field rather than a sentence.
         mockFilesystem();
 
-        await expect(
-            toolHandlers.removeBlockFromLibrary(
-                PROJECTS_DIR, PROJECT_NAME, BLOCK_ID,
-                { daLiveToken: null, githubToken: null },
-            ),
-        ).rejects.toThrow(/DA\.live token unavailable/i);
+        const raw = await toolHandlers.removeBlockFromLibrary(
+            PROJECTS_DIR, PROJECT_NAME, BLOCK_ID,
+            { daLiveToken: null, githubToken: null },
+        );
+
+        expect(JSON.parse(raw)).toEqual({
+            error: expect.stringContaining('sign_in(provider:"dalive"'),
+            needsAuth: 'dalive',
+        });
     });
 });
 

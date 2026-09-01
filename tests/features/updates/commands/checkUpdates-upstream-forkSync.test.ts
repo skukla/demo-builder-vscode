@@ -108,7 +108,7 @@ function setupDefaultMocks(): {
         loadProjectFromPath: jest.fn().mockResolvedValue(null),
     } as any;
 
-    const mockLogger = createMockLogger() as any;
+    const mockLogger = createMockLogger();
 
     (vscode.window.withProgress as jest.Mock).mockImplementation((_opts, cb) => cb(mockProgress));
 

@@ -25,6 +25,7 @@ import {
     makeLogger,
     serverInfoOverSocket,
 } from './inExtensionMcpServer.testUtils';
+import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
 
 describe('InExtensionMcpServer', () => {
     let socketPath: string;
@@ -127,12 +128,13 @@ describe('InExtensionMcpServer', () => {
         const extraMap: HandlerMap = {
             ping: async () => ({ success: true, data: { pong: true } }),
         };
-        const registerExtra = (mcpServer: unknown) =>
+        const registerExtra = (mcpServer: McpToolServer) =>
             registerDescriptorTools(
                 mcpServer,
                 [
                     {
                         tool: 'ping_tool',
+                        needsAuth: false,
                         description: 'test',
                         map: extraMap,
                         type: 'ping',

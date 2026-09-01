@@ -12,8 +12,8 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **80** conventions, **64** enforced
-- **22** name the decision record behind them
+- **71** conventions, **70** enforced
+- **20** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
 
@@ -36,7 +36,7 @@ it means the rule rests on somebody noticing.
 | Nothing under `src/core/` imports `@/features` or `@/commands`. Enforced by the `layerDirection` ledger in `tests/sop/architecture-rules.exemptions.json` — seven predate the rule and the set may only shrink. |  |  | *named in prose* |
 | Features do not import other features; commands may. enforced by eslint. |  |  | `eslint.config.mjs` |
 | A module is imported by the path that DEFINES the symbol. No re-export-only `index.ts` — not in `core/`, not in a feature. **The ledger is CLOSED**: all 43 that predated the rule were retired on 2026-08-31, so this is now a ban with nowhere to write an exception down. Enforced by the `reExportIndex` ledger in `tests/sop/architecture-rules.exemptions.json`, with the `featureBarrels` ledger — now empty — banning feature-level barrels outright. | [ADR](../architecture/adr/022-barrel-files.md) |  | *named in prose* |
-| Commands are `camelCase`, React components `PascalCase`, constants `UPPER_SNAKE_CASE`, and a file is named for what it exports — `WizardContainer.tsx`, `loadingHTML.ts`. |  |  | **—** |
+| A PascalCase `.tsx` exports a component of that name, and an exported ALL-CAPS const is `UPPER_SNAKE_CASE`. Files are otherwise named for their SUBJECT — `WizardContainer.tsx`, `loadingHTML.ts`, `commerceSections.ts`. |  |  | `naming-conventions.test.ts` |
 
 ## 3. Code gets what it needs handed to it
 
@@ -53,7 +53,6 @@ it means the rule rests on somebody noticing.
 | Files in `src/types/` use `import type` only — a runtime import there pulls executable code into every module that wanted a shape. Enforced by `tests/sop/architecture-rules.test.ts`. |  |  | `architecture-rules.test.ts` |
 | Never pass an argument as `any` or `never`. If a cast is needed to make a call compile, the shape is wrong — build the object the callee declares. |  |  | `architecture-rules.test.ts` |
 | A shape that crosses a boundary — a message, a payload, a fixture — lives in a typechecked file and is typed to the real interface. |  |  | *named in prose* |
-| A comment describing what ANOTHER module does must cite the code that makes it true. If you cannot cite it, write what you verified instead. |  |  | **—** |
 | Time values come from the shared `TIMEOUTS` constants, never a literal. |  |  | `magic-timeouts.test.ts` |
 | Sleeps route through the shared `sleep()`. |  |  | `no-bare-sleep.test.ts` |
 | A complex inline expression becomes a named function. |  |  | `complex-expressions.test.ts` |
@@ -87,7 +86,7 @@ it means the rule rests on somebody noticing.
 | Rule | Why | How | Enforced by |
 |---|---|---|---|
 | The bundle entry is the composition root; dependencies arrive as props; hooks are the service layer. enforced by `tests/sop/webview-architecture-rules.test.ts`. | [ADR](../architecture/adr/017-webview-architecture.md) |  | `webview-architecture-rules.test.ts` |
-| A value passed into a hook is stable across renders. No inline array, object or arrow literal as a prop that will reach a dependency array — hoist it to a module-level constant or wrap it. |  |  | **—** |
+| A value passed into a hook is stable across renders. No inline array, object or arrow literal as a prop that will reach a dependency array — hoist it to a module-level constant or wrap it. |  |  | `webview-architecture-rules.test.ts` |
 | Vendor CSS sits in the lowest cascade layer. | [ADR](../architecture/adr/018-css-architecture.md) |  | **—** |
 | `!important` is not how you win a specificity argument. The count may not grow. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts` |
 | Hooks are the webview's service layer. A component renders and handles interaction; the state machine, the calls to the host and the derived data live in a hook. | [ADR](../architecture/adr/017-webview-architecture.md) |  | *named in prose* |
@@ -103,7 +102,6 @@ it means the rule rests on somebody noticing.
 | Utility classes live in the overrides layer, not scattered through component sheets. | [ADR](../architecture/adr/018-css-architecture.md) |  | `inline-styles.test.ts` |
 | Styling reaches Spectrum through `UNSAFE_className` and the `cn()` helper, not through style objects. |  |  | `inline-styles.test.ts` |
 | Class names are not assembled dynamically beyond a small ceiling. |  |  | `dynamicClassSiteCeiling` ledger |
-| When a parent selection changes, clear the state that depends on it. Change the Adobe project and the workspace selection goes with it. |  |  | **—** |
 
 ## 8. Agents are a second door, never the only one
 
@@ -112,25 +110,22 @@ it means the rule rests on somebody noticing.
 | Every capability has a human surface. MCP tools are additional. Enforced by measurement — `.claude/skills/ai-coverage-scan` reports the gap at release cuts. | [ADR](../architecture/adr/012-diagnostic-surfaces.md) | [procedure](../../.claude/skills/ai-coverage-scan/SKILL.md) | *named in prose* |
 | A tool response is built by `mcpToolResult.ts`'s `asText`/`asRawText`, never by hand. Enforced by `tests/features/ai/server/responseEnvelope.test.ts`, which checks descriptor rows at runtime and every registrar module at the source, in both halves of the server. |  |  | `responseEnvelope.test.ts` |
 | A tool requires an explicit `confirm: true` when its effect is hard to walk back: it DELETES something, or it PUSHES to a live site. Merely mutating is deliberately not the bar — deploys, lifecycle and config writes stay ungated, because they are reversible and gating them would make the agent surface useless for routine work. Three irreversible tools go further and require the resource's name echoed back. |  |  | `tool-catalog-gating.test.ts` |
-| A tool needing credentials pre-flights and returns a structured `needsAuth` handoff rather than erroring, so the agent can drive sign-in and retry. |  |  | **—** |
+| A tool needing credentials pre-flights and returns a structured `needsAuth` handoff rather than erroring, so the agent can drive sign-in and retry. Every tool DECLARES which sign-ins it needs, or `false` for none. |  |  | *named in prose* |
 
 ## 9. Tests
 
 | Rule | Why | How | Enforced by |
 |---|---|---|---|
-| The three tiers, and which applies. **Not enforced** — which tier fits is a judgement about what you are testing. | [ADR](../architecture/adr/016-test-strategy.md) |  | **—** |
 | A split test family shares one `.testUtils` file, which owns the mocks and the subject import. enforced by `tests/sop/test-family-setup.test.ts`. |  | [procedure](../../.claude/skills/webview-test-authoring/SKILL.md) | `test-family-setup.test.ts` |
-| When you change a test's structure, diff the set of things it asserts before and after — and prove shared setup is load-bearing by breaking it on purpose and checking the right suites fail. |  |  | **—** |
-| Before designing a way to hand a mocked collaborator in — or to share one between suites — delete the mock and run the suite. If it still passes, the mock was the whole problem. |  |  | **—** |
+| Before designing a way to hand a mocked collaborator in — or to share one between suites — delete the mock and run the suite. If it still passes, the mock was the whole problem. |  |  | `redundant-automocks.test.ts` |
 | No test file over 750 lines. enforced by `npm run validate:test-file-sizes`. |  |  | *named in prose* |
 | No test file repeats another file's tests wholesale. |  |  | `duplicate-test-files.test.ts` |
 | A fake standing in for a real type comes from the builder for that type. `{...} as unknown as Project` is a fake with the type check switched off. Enforced by the `castCeilings` pins in `tests/sop/canonical-fakes.ledger.json` — nine types that already have a builder, and the count for each may only fall. |  |  | *named in prose* |
 | A test file lives at the path mirroring the source file it covers. |  |  | `mirror-placement.test.ts` |
 | A fixture builder name has exactly one definition. |  |  | `builder-uniqueness.test.ts` |
 | A fake that has a builder in `tests/helpers/` is imported, not written again inline. Enforced by `tests/sop/canonical-fakes.test.ts` — a shrink-only ledger grandfathers the files that already do, so it stops new copies rather than demanding a sweep. |  |  | `canonical-fakes.test.ts` |
-| A fake that a SECOND feature directory needs lives in `tests/helpers/`. A `*.testUtils.ts` beside a suite is for setup specific to that subject. | [ADR](../architecture/adr/016-test-strategy.md) |  | **—** |
+| A fake that a SECOND feature directory needs lives in `tests/helpers/`. A `*.testUtils.ts` beside a suite is for setup specific to that subject. | [ADR](../architecture/adr/016-test-strategy.md) |  | `canonical-fakes.test.ts` |
 | No test erases a type. `as any` and `as never` are banned anywhere in `tests/`. A builder is declared as the REAL type it stands for; where the structural fake cannot satisfy that type honestly, cast the object literal INTO it at the builder's boundary as `as unknown as X` — once, where it is visible. | [ADR](../architecture/adr/016-test-strategy.md) |  | `type-erasing-casts.test.ts`<br>`eslint.config.mjs` |
-| A fixture's shape is READ, not remembered. A builder's method list comes from the real interface plus what callers actually use; a data fixture is copied from a real artifact on disk. And a domain fixture is CONTENT over a canonical shape, never a re-implementation of one the suite already has a builder for. | [ADR](../architecture/adr/016-test-strategy.md) |  | **—** |
 | Do not mock a configuration leaf. |  |  | `no-config-leaf-mocks.test.ts` |
 | Do not lower one test's timeout below the file's budget. |  |  | `no-lowered-test-timeout.test.ts` |
 | Never pipe jest through `tail`, `head` or `grep`. Redirect to a file with `> file 2>&1` and read that. |  |  | `10-jest-pipe.rule`<br>`11-jest-redirect.rule` |
@@ -141,12 +136,8 @@ it means the rule rests on somebody noticing.
 | Rule | Why | How | Enforced by |
 |---|---|---|---|
 | Every scan declares a control: something it is known to find. A detector that has silently stopped detecting reports "all clear" in exactly the same words as one that verified. |  |  | `every-scan-declares-a-control.test.ts` |
-| A control proves the tool works, not that you aimed it right. Before trusting a result of nothing, say where the answer would be if it existed, and confirm the command actually reads there. |  |  | **—** |
-| A named field in a response, a matching string, or a green check is a LEAD. Read the source before it becomes a finding. |  |  | **—** |
-| Never publish an identifier you have not read from the source. Setting keys, env vars, command ids, file paths and function names are cheap to grep and expensive to get wrong in something a user reads. |  |  | **—** |
+| Never publish an identifier you have not read from the source. Setting keys, env vars, command ids, file paths and function names are cheap to grep and expensive to get wrong in something a user reads. |  |  | `cited-identifiers.test.ts`<br>`doc-module-refs.test.ts` |
 | Capture an exit code in a variable. Never read one through a pipe. |  |  | `13-piped-exit-code.rule` |
-| A count that measures what code *looks like* is not a count of what is wrong with it. Before working a scan's list, ask what defect it would catch and whether a clean file could score badly. |  |  | **—** |
-| Before naming a cause, name the command that would prove you wrong, and run that first. |  |  | **—** |
 | Quote glob arguments passed to `grep` or `find`. In zsh an unquoted pattern is expanded before the command sees it, and an unquoted variable is not split into separate arguments. |  |  | `12-unquoted-glob.rule` |
 | Anything claiming to be an instrument is in the registry, and the registry and the disk must agree in both directions. A count written in prose has something checking it. |  |  | `tooling-registry.test.ts` |
 | A module path named in a document resolves. A citation must reach a file or directory; an `import` in a code example must reach something importable. |  |  | `doc-module-refs.test.ts` |

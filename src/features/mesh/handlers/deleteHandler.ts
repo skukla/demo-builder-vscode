@@ -46,12 +46,15 @@ export async function handleDeleteApiMesh(
         context.logger.debug('[API Mesh] Deleting mesh for workspace', { workspaceId });
 
         // PRE-FLIGHT: Check authentication before any Adobe CLI operations
-        const authResult = await ensureAuthenticated(context.logger, 'delete mesh');
+        const authResult = await ensureAuthenticated(context, 'delete mesh');
         if (!authResult.authenticated) {
             return {
                 success: false,
                 error: authResult.error,
                 code: authResult.code,
+                // Carried through so the AGENT is told which sign-in to offer;
+                // defaultShape returns a failure whole when it has more than error/code.
+                ...(authResult.needsAuth ? { needsAuth: authResult.needsAuth } : {}),
             };
         }
 

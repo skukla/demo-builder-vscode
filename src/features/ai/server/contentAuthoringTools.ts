@@ -38,6 +38,7 @@
 import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { buildSourceUrl, resolveDaPath } from '@/features/eds/services/daLive/daLiveContentHelpers';
@@ -321,8 +322,7 @@ const pathField = z
  * @param ctxFactory Builds a headless HandlerContext for each invocation.
  */
 export function registerContentAuthoringTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
     /**
      * Helix factory seam. Defaults to `helixFor`, which builds a service carrying
@@ -339,6 +339,7 @@ export function registerContentAuthoringTools(
     server.registerTool(
         'read_page',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             description: "Read a page's DA.live source HTML from the current project's storefront",
             inputSchema: { path: pathField },
@@ -386,6 +387,7 @@ export function registerContentAuthoringTools(
     server.registerTool(
         'write_page',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 "Write a page's HTML to the current project's DA.live storefront; set publish:true to preview+publish it in the same call",
@@ -455,6 +457,7 @@ export function registerContentAuthoringTools(
     server.registerTool(
         'publish_page',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description: 'Preview and publish an existing DA.live page to the live CDN',
             inputSchema: { path: pathField },
@@ -484,6 +487,7 @@ export function registerContentAuthoringTools(
     server.registerTool(
         'list_content',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             description:
                 "List pages and folders in the current project's DA.live storefront (defaults to " +
@@ -549,6 +553,7 @@ export function registerContentAuthoringTools(
     server.registerTool(
         'delete_page',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Unpublish and delete a page from the current project\'s DA.live storefront (irreversible). Requires confirm:true.',
@@ -636,6 +641,7 @@ export function registerContentAuthoringTools(
     server.registerTool(
         'read_published_page',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             description:
                 "Fetch a page as published on the live CDN (.plain.html) — the way to verify a publish actually landed",

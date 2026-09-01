@@ -21,6 +21,7 @@
 import { z } from 'zod';
 import { getAdobeTarget, runWithAdobeTarget, setAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { hasErrorCode } from '@/core/errors';
 import { withOrgContext } from '@/core/shell/orgContextEnv';
 import {
@@ -132,12 +133,11 @@ function matchesSearch(e: { id: string; name: string; title?: string }, term: st
  * @param server     McpServer (typed `any`; see registerProjectTools docstring).
  * @param ctxFactory Builds a headless HandlerContext per call.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext): void {
+export function registerAdobeTools(server: McpToolServer, ctxFactory: () => HandlerContext): void {
     // ── Listing ────────────────────────────────────────────────────────────────
     server.registerTool(
         'list_orgs',
-        { annotations: { readOnlyHint: true, destructiveHint: false }, title: 'List Orgs', description: 'List Adobe organizations available to the signed-in user', inputSchema: {} },
+        { needsAuth: ['adobe'], annotations: { readOnlyHint: true, destructiveHint: false }, title: 'List Orgs', description: 'List Adobe organizations available to the signed-in user', inputSchema: {} },
         async () => {
             const mgr = await authedManager(ctxFactory());
             if (!mgr) return NEEDS_ADOBE_AUTH;
@@ -148,6 +148,7 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
     server.registerTool(
         'list_adobe_projects',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Adobe Projects',
             description:
@@ -199,7 +200,7 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
 
     server.registerTool(
         'list_workspaces',
-        { annotations: { readOnlyHint: true, destructiveHint: false }, title: 'List Workspaces', description: 'List Adobe Runtime workspaces in the currently selected project', inputSchema: {} },
+        { needsAuth: ['adobe'], annotations: { readOnlyHint: true, destructiveHint: false }, title: 'List Workspaces', description: 'List Adobe Runtime workspaces in the currently selected project', inputSchema: {} },
         async () => {
             const mgr = await authedManager(ctxFactory());
             if (!mgr) return NEEDS_ADOBE_AUTH;
@@ -236,6 +237,7 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
     server.registerTool(
         'select_org',
         {
+            needsAuth: ['adobe'],
             // Session targeting only — `setAdobeTarget` is an in-memory module variable,
             // so nothing outlives this process. Blocking these would stop an agent
             // navigating during an evaluation, for no safety gain.
@@ -263,6 +265,7 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
     server.registerTool(
         'select_project',
         {
+            needsAuth: ['adobe'],
             // Session targeting only — see select_org.
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Select Project',
@@ -304,6 +307,7 @@ export function registerAdobeTools(server: any, ctxFactory: () => HandlerContext
     server.registerTool(
         'select_workspace',
         {
+            needsAuth: ['adobe'],
             // Session targeting only — see select_org.
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Select Workspace',

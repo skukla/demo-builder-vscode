@@ -395,3 +395,82 @@ describe('a jest.mock factory reaches the builder too', () => {
         expect(offenders).toEqual([]);
     });
 });
+
+describe('a fake two feature directories need lives in tests/helpers/', () => {
+    /**
+     * The placement half of the canonical-fake rule, and the one that was filed as
+     * unenforceable. It is not: "does a SECOND feature directory need it?" is a
+     * mechanical question once you resolve imports rather than match names.
+     *
+     * Measured 2026-08-31 before building this: 139 builders are defined outside
+     * `tests/helpers/`, and **zero** are imported from a second feature directory.
+     * The rule is already kept everywhere, so this is a flat ban rather than a
+     * ledger — nothing to grandfather.
+     *
+     * IT COUNTS IMPORTS, NOT CALLS, and that distinction is the whole check. A
+     * first pass matched call sites by NAME and reported nine violations; the worst
+     * was `createProject`, which is also a production function, so every handler
+     * test calling the real one looked like a consumer of the fake. Resolving the
+     * import to the defining module is what separates them.
+     *
+     * @see .rptc/backlog/2026-08-31-every-convention-enforced.md
+     */
+    const BUILDER =
+        /export\s+(?:async\s+)?function\s+((?:create|make|build)[A-Z]\w*)|export\s+const\s+((?:create|make|build)[A-Z]\w*)\s*(?::[^=]+)?=/g;
+
+    /** Which feature owns a test file — the unit the rule is about. */
+    function owningArea(relPath: string): string {
+        const parts = relPath.split('/');
+        if (parts[1] === 'features' && parts.length > 2) return `features/${parts[2]}`;
+        if (parts.length > 2) return parts[1];
+        return '<tests-root>';
+    }
+
+    it('CONTROL: the detector finds builders and resolves an import to its definition', () => {
+        const all = collectTestFiles(testsDir);
+        expect(all.length).toBeGreaterThan(500);
+        const helper = all.find((f) => f.endsWith('tests/helpers/loggerFake.ts'));
+        expect(helper).toBeDefined();
+        const body = fs.readFileSync(path.join(repoRoot, helper as string), 'utf8');
+        expect([...body.matchAll(BUILDER)].length).toBeGreaterThan(0);
+    });
+
+    it('no builder outside tests/helpers/ is imported by a second feature directory', () => {
+        const files = collectTestFiles(testsDir);
+
+        // name -> the files outside tests/helpers/ that define it
+        const defined = new Map<string, string[]>();
+        for (const f of files) {
+            if (f.startsWith('tests/helpers/')) continue;
+            const body = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+            for (const m of body.matchAll(BUILDER)) {
+                const name = m[1] ?? m[2];
+                defined.set(name, [...(defined.get(name) ?? []), f]);
+            }
+        }
+
+        // name -> the areas that IMPORT it from one of those defining files
+        const areas = new Map<string, Set<string>>();
+        for (const f of files) {
+            const body = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+            for (const m of body.matchAll(/import\s*\{([^}]*)\}\s*from\s*'(\.[^']+)'/g)) {
+                const target = path
+                    .normalize(path.join(path.dirname(f), m[2]))
+                    .replace(/\\/g, '/');
+                for (const raw of m[1].split(',')) {
+                    const name = raw.trim().split(' as ')[0].trim();
+                    const homes = defined.get(name);
+                    if (!homes) continue;
+                    if (!homes.some((h) => h.replace(/\.tsx?$/, '') === target)) continue;
+                    areas.set(name, (areas.get(name) ?? new Set()).add(owningArea(f)));
+                }
+            }
+        }
+
+        const offenders = [...areas.entries()]
+            .filter(([, seen]) => seen.size >= 2)
+            .map(([name, seen]) => `${name} — needed by ${[...seen].sort().join(', ')}`)
+            .sort();
+        expect(offenders).toEqual([]);
+    });
+});

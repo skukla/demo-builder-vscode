@@ -29,6 +29,7 @@
 import { z } from 'zod';
 import { needsUser } from './handoff';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import type { HandlerContext } from '@/types/handlers';
@@ -62,14 +63,14 @@ const TARGET_HINTS: Record<(typeof URL_TARGETS)[number], string> = {
  *   `extension.ts` so this module carries no vscode import, matching viewTools).
  */
 export function registerLifecycleTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
     openUrl: (url: string) => Promise<unknown>,
 ): void {
     server.registerTool(
         'open_url',
         {
+            needsAuth: false,
             // NOT read-only: it opens a browser tab. Nothing persists, but the
             // user sees it happen, and a read is meant to be invisible.
             annotations: { readOnlyHint: false, destructiveHint: false },
@@ -129,6 +130,7 @@ export function registerLifecycleTools(
     server.registerTool(
         'edit_project',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Edit Project',
             description:

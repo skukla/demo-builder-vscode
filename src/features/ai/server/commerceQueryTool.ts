@@ -36,6 +36,7 @@
 import { z } from 'zod';
 import { buildCommerceEndpoints } from './commerceEndpointsTool';
 import { asRawText, asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import type { StateManager } from '@/core/state/stateManager';
 
 /**
@@ -74,14 +75,14 @@ type EndpointKey = 'commerceGraphQl' | 'catalogService' | 'mesh';
  * @param fetchImpl    Injected so tests exercise the real shaping without a network.
  */
 export function registerCommerceQueryTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     stateManager: StateManager,
     fetchImpl: typeof fetch = fetch,
 ): void {
     server.registerTool(
         'run_commerce_query',
         {
+            needsAuth: false,
             // Read-only: it refuses mutations, so it cannot change the backend.
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Run Commerce Query',

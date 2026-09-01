@@ -41,6 +41,7 @@ import type { McpCredentialProvider, McpToolCredentials } from './mcp/credential
 import { projectToolHandlers } from './mcp/projectToolHandlers';
 import { storefrontSyncHandler } from './mcp/storefrontSyncHandler';
 import { asRawText, asText } from '@/features/ai/server/mcpToolResult';
+import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
 
 // Re-exported so the public identity of this module is unchanged by the split.
 export type { McpCredentialProvider, McpToolCredentials } from './mcp/credentials';
@@ -71,13 +72,17 @@ export const toolHandlers = {
  * @param server      An `McpServer` instance (typed `any`; see above).
  * @param projectsDir Absolute path to the projects root (`~/.demo-builder/projects`).
  * @param credentials Optional resolver for DA.live / GitHub tokens, injected by
- *   the in-extension server so the credential-needing tools (`sync_storefront`,
- *   `promote_block_to_library`) use the live sign-in session rather than env
- *   vars. Omitted in vscode-free/file-only contexts (tools fall back to env).
+ *   the in-extension server so the credential-needing tools use the live sign-in
+ *   session rather than env vars. Omitted in vscode-free/file-only contexts.
+ *
+ *   There are THREE, not the two this line used to name: `sync_storefront`,
+ *   `promote_block_to_library` and `remove_block_from_library`. The third was
+ *   missing until the 2026-08-31 tool-auth review read every tool for whether it
+ *   calls `resolveCredentials`.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function registerProjectTools(
-    server: any,
+    server: McpToolServer,
     projectsDir: string,
     credentials?: McpCredentialProvider,
 ): void {
@@ -118,6 +123,7 @@ export function registerProjectTools(
     server.registerTool(
         'list_projects',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Projects',
             description:
@@ -131,6 +137,7 @@ export function registerProjectTools(
     server.registerTool(
         'get_project',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Project',
             description:
@@ -150,6 +157,7 @@ export function registerProjectTools(
     server.registerTool(
         'get_component_config',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Component Config',
             description:
@@ -172,6 +180,7 @@ export function registerProjectTools(
     server.registerTool(
         'update_project_config',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Update Project Config',
             description:
@@ -198,6 +207,7 @@ export function registerProjectTools(
     server.registerTool(
         'sync_storefront',
         {
+            needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Sync Storefront',
             description: 'Git add, commit, and push changes in the storefront directory',
@@ -220,6 +230,7 @@ export function registerProjectTools(
     server.registerTool(
         'list_blocks',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'List Blocks',
             description: 'List all block directories in the storefront blocks/ directory',
@@ -243,6 +254,7 @@ export function registerProjectTools(
     server.registerTool(
         'get_block_authoring_shape',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Block Authoring Shape',
             description:
@@ -276,6 +288,7 @@ export function registerProjectTools(
     server.registerTool(
         'promote_block_to_library',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             title: 'Promote Block to Library',
             // Phrasing matches sync-changes.md ("Block changes to push back to
@@ -338,6 +351,7 @@ export function registerProjectTools(
     server.registerTool(
         'remove_block_from_library',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             title: 'Remove Block from Library',
             description:

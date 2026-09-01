@@ -15,6 +15,7 @@
 
 import { z } from 'zod';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import {
@@ -44,13 +45,13 @@ function summarize(selections: UpdateSelections): Record<string, unknown> {
  * @param ctxFactory Builds a headless HandlerContext for each invocation.
  */
 export function registerApplyUpdatesTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
 ): void {
     server.registerTool(
         'apply_updates',
         {
+            needsAuth: ['github'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 'Check and (with confirm:true) apply available updates for the current project — fork sync, template, components, Adobe MCP, block libraries, inspector SDK. Without confirm, reports what is available.',

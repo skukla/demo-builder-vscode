@@ -26,6 +26,7 @@
  */
 
 import { asRawText, asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import type { StateManager } from '@/core/state/stateManager';
@@ -88,13 +89,13 @@ export async function resolveProjectStatus(project: Project): Promise<unknown> {
 
 /** Registers `get_project_status` on the MCP server. */
 export function registerProjectStatusTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     stateManager: StateManager,
 ): void {
     server.registerTool(
         'get_project_status',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             description:
                 'Is the current demo running, on what port, is its frontend config stale, is the EDS storefront published, and what is the mesh status. Use after start_demo/stop_demo to confirm they took effect.',

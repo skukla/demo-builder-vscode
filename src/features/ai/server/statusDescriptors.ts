@@ -32,6 +32,7 @@ const REPO = {
 export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
     {
         tool: 'check_prerequisites',
+        needsAuth: false,
         readOnly: true,
         description:
             'Check the tools a stack needs (Node versions, aio CLI, plugins) and whether each is installed. Requires a stack id from list_stacks.',
@@ -68,6 +69,7 @@ export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'check_github_app',
+        needsAuth: ['github', 'dalive'],
         // AS EXPOSED: the handler triggers a Helix code sync on a 404, but
         // `argDefaults` below forces `skipTrigger`, so that write is unreachable
         // through this tool. Do not "correct" this to false.
@@ -87,6 +89,7 @@ export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'check_repo_readiness',
+        needsAuth: ['github'],
         readOnly: true,
         description:
             'Can this GitHub repo serve as an EDS storefront. Returns a readiness verdict, or "undetermined" with a reason.',
@@ -99,6 +102,7 @@ export const STATUS_DESCRIPTORS: ToolDescriptor[] = [
     },
     {
         tool: 'discover_store_structure',
+        needsAuth: ['commerce'],
         // Fetches the live hierarchy and returns it. The PERSISTING variant of
         // this handler is a different one (`handleDiscoverStoreStructureAndPersist`,
         // used by the Configure screen); the map here reaches the read-only one.

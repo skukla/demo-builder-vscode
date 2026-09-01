@@ -550,20 +550,37 @@ describe('promote_block_to_library — credential source', () => {
         );
     });
 
-    it('throws when no DA.live token is supplied (user not signed in)', async () => {
+    it('answers with a sign-in marker when DA.live is not signed in, and writes nothing', async () => {
+        /**
+         * Two behaviours, one cause, both changed on 2026-09-01.
+         *
+         * It used to THROW — an MCP error the caller cannot branch on, for the
+         * most ordinary state an agent is in. And the check ran AFTER
+         * applyComponentDefinitionEntry, so a signed-out caller got the error
+         * with component-definition.json already rewritten on disk: a half-done
+         * promotion nobody asked for and nothing would finish.
+         *
+         * The writeFile assertion is the load-bearing one. The old test could
+         * not have caught the stray write — a rejected promise says nothing
+         * about what happened before it.
+         */
         mockHappyPathFilesystem({ componentDef: [] });
 
-        await expect(
-            toolHandlers.promoteBlockToLibrary(
-                PROJECTS_DIR,
-                PROJECT_NAME,
-                BLOCK_ID,
-                BLOCK_TITLE,
-                BLOCK_HTML,
-                undefined,
-                { daLiveToken: null, githubToken: null }
-            )
-        ).rejects.toThrow(/DA\.live token unavailable/i);
+        const raw = await toolHandlers.promoteBlockToLibrary(
+            PROJECTS_DIR,
+            PROJECT_NAME,
+            BLOCK_ID,
+            BLOCK_TITLE,
+            BLOCK_HTML,
+            undefined,
+            { daLiveToken: null, githubToken: null }
+        );
+
+        expect(JSON.parse(raw)).toEqual({
+            error: expect.stringContaining('sign_in(provider:"dalive"'),
+            needsAuth: 'dalive',
+        });
+        expect(fsProm.writeFile as jest.Mock).not.toHaveBeenCalled();
     });
 
     /** Register the real tools against a stub server and hand back the promote tool. */

@@ -155,7 +155,7 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
             saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
             markDirty: jest.fn(),
         } as any,
-        logger: createMockLogger() as any,
+        logger: createMockLogger(),
         sendMessage: jest.fn(),
     } as any;
 

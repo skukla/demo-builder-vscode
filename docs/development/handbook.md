@@ -118,14 +118,28 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > selecting affected tests, so the mechanism behind those wins has nothing to bite on.
 > Adopted for one reason, not three.
 
-> **Convention.** Commands are `camelCase`, React components `PascalCase`, constants
-> `UPPER_SNAKE_CASE`, and a file is named for what it exports —
-> `WizardContainer.tsx`, `loadingHTML.ts`.
-> *Why:* it is what makes a symbol findable from its filename and a filename guessable
-> from its symbol. Nobody has broken it, which is the argument for writing it down
-> rather than against: an unstated convention survives on everyone having absorbed it.
-> **Not enforced** — visibly followed at every site, and a linter for it would be
-> policing something that has never gone wrong.
+> **Convention.** A PascalCase `.tsx` exports a component of that name, and an
+> exported ALL-CAPS const is `UPPER_SNAKE_CASE`. Files are otherwise named for their
+> SUBJECT — `WizardContainer.tsx`, `loadingHTML.ts`, `commerceSections.ts`.
+> *Why:* the first makes a component findable from its filename and guessable from
+> its symbol, which is the part that actually pays. Enforced by
+> `tests/sop/naming-conventions.test.ts`; two files are exempt, each with its reason,
+> and the list may only shrink.
+>
+> **This replaced a four-row rule that contradicted itself, and the correction is the
+> interesting part.** It read "commands are `camelCase`, React components
+> `PascalCase`, constants `UPPER_SNAKE_CASE`, and a file is named for what it
+> exports", and claimed nobody had ever broken it. Measured 2026-08-31: nobody could,
+> because the rows disagree. `ResetAllCommand.ts` exports `class ResetAllCommand` —
+> PascalCase, which the commands row forbids and the export row requires. Eleven
+> `.tsx` files export functions rather than components, so camelCase is right by one
+> row and wrong by another. And "named for what it exports" holds for **40%** of
+> `src/` (343 of 848): most files are named for their subject and export several
+> related symbols, which is the real convention and was not what was written.
+>
+> A rule that cannot be broken because it contradicts itself reads like a guarantee
+> and holds nothing. That is the same failure `src/core/CLAUDE.md`'s "❌" already cost
+> once.
 
 ---
 
@@ -198,13 +212,6 @@ should be functions.
 > invented in one afternoon; each had an exported type that would have refused to compile.
 > [tests/helpers/webviewFixtures.ts](../../tests/helpers/webviewFixtures.ts) is the worked
 > example · enforced by `npm run typecheck:tests` in CI for anything under `tests/`.
-
-> **Convention.** A comment describing what ANOTHER module does must cite the code that
-> makes it true. If you cannot cite it, write what you verified instead.
-> *Why:* nothing keeps such a comment true — not the compiler, not the tests — and it reads
-> to the next person as verified fact. Two comments once asserted a scheduled re-registration
-> that did not exist; they were false the day they were written, and they suppressed the
-> question that would have found a shipped bug. **Not enforced** — no check can read intent.
 
 ---
 
@@ -389,10 +396,23 @@ Know the difference before relying on it.
 > module-level constant or wrap it.
 > *Why:* a literal is a NEW reference every render, so an effect that depends on it runs
 > every render, and one that sets state loops forever. It has already happened here.
-> **Not enforced, and it cannot be by the obvious rule** — `exhaustive-deps` reads the
-> dependency array inside the hook and cannot see across the prop boundary to the caller
-> that created the value. The compiler cannot see it either: the types are identical.
-> This is the React footgun in this codebase that no tool catches.
+> **The EMPTY form is enforced**; the rest is not, and cannot be by the obvious rule —
+> `exhaustive-deps` reads the dependency array inside the hook and cannot see across the
+> prop boundary to the caller that created the value. The compiler cannot see it either:
+> the types are identical.
+>
+> `prop={[]}` and `prop={{}}` carry no data, so the only reason to write one is "this
+> component wants a collection and I have none" — which is exactly the shape that loops.
+> That is checkable without following the prop anywhere, and it is the case this repo has
+> actually been bitten by. Enforced by `tests/sop/webview-architecture-rules.test.ts`
+> (`emptyLiteralProps`), seeded EMPTY on 2026-08-31 because `src/` had none: a flat ban,
+> not a ledger.
+>
+> What stays a judgement, with the counts that make it one: 90 inline arrows
+> (overwhelmingly event handlers, harmless) and 34 non-empty array/object literals
+> (presentational lists and `UNSAFE_style`, covered by their own rules). Whether one of
+> those reaches a dependency array cannot be decided without following it into the
+> receiving hook.
 
 > **Convention.** Vendor CSS sits in the lowest cascade layer.
 > *Why:* layers settle specificity by declaration order rather than by escalation, so
@@ -511,18 +531,6 @@ check says so and names the file.
 > Enforced by the `dynamicClassSiteCeiling` ledger in
 > `tests/sop/webview-architecture-rules.exemptions.json`.
 
-> **Convention.** When a parent selection changes, clear the state that depends on it.
-> Change the Adobe project and the workspace selection goes with it.
-> *Why:* a stale child selection is how an operation targets a resource nobody chose —
-> the failure `withOrgContext` and the org-mismatch guard exist to catch downstream. The
-> place it belongs is the selection handler's `onSelect`, where `useSelectionStep` puts
-> it. Obeyed at 7 sites today.
-> **Not enforced**, and this one cannot be: 14 sites assign the parent field and reading
-> them shows most are not selections at all — one preserves a previous value, one builds
-> a display object, one assembles a payload from already-resolved context. A detector
-> written from the field name would report eight violations of which roughly none are
-> real, and a check that cries wolf gets switched off.
-
 ## 8. Agents are a second door, never the only one
 
 **Position.** Agents call the same functions the buttons call. Every capability has a human
@@ -572,9 +580,94 @@ promising an agent that every response parses.
 
 > **Convention.** A tool needing credentials pre-flights and returns a structured
 > `needsAuth` handoff rather than erroring, so the agent can drive sign-in and retry.
+> Every tool DECLARES which sign-ins it needs, or `false` for none.
 > *Why:* interactive browser sign-in cannot be refreshed silently, and an error tells the
-> agent nothing about what to do next. Obeyed at 39 sites, asserted by 11 suites.
-> **Not enforced** — a new tool that skips it fails no check.
+> agent nothing about what to do next.
+> Enforced by the COMPILER: `needsAuth` is a required field on `McpToolSchema` and on
+> `ToolDescriptor`, so a tool cannot be registered without answering the question.
+>
+> **IT WAS A LEDGER FIRST, AND THE LEDGER IS NOW DELETED.** No static check can tell
+> whether a tool touches credentials — compliance is reached three ways (`runGuards`, a
+> bespoke pre-flight, or nothing because none is needed) and two scans failed in opposite
+> directions trying: a file-level one gave 37 tools each other's signals because 23 share
+> a descriptor file, and a per-handler one reported nothing for `add_console_apis`, whose
+> handler demonstrably calls `runGuards`.
+>
+> So all 114 tools were reviewed one at a time against a shrink-only ledger, each row
+> carrying a verdict and a reason. When it reached zero unreviewed (2026-09-01) every
+> verdict moved into the code as a `needsAuth` declaration and the ledger was deleted —
+> the arc `featureBarrels` took, and the one the type-erasing-cast ceiling is on.
+>
+> The declarations were transcribed mechanically and then VERIFIED against the ledger
+> row by row: 114 found in code, zero mismatches, zero missing. The field is an ARRAY
+> because four tools need two sign-ins — `check_github_app`, `create_project`,
+> `republish` and `sync_content` each need GitHub AND DA.live, and a single value would
+> have dropped exactly the sign-in an agent then fails to offer.
+>
+> **The surface is 114 tools, and no previous count was right**: the `tool-verdicts`
+> skill says 107, an earlier pass said 102. Both missed `dataInstallerDescriptors.ts`
+> (8) and `statusDescriptors.ts` (4).
+>
+> **THE REVIEW FOUND THREE HANDOFF SHAPES, AND THIS RULE NAMED ONE.** `needsAuth` is
+> the shape for a sign-in an AGENT can drive. It is not the only honest answer:
+>
+> - **`needsUser`** (`src/features/ai/server/handoff.ts`) is the more general form, for
+>   work only a PERSON can finish — the DA.live bookmarklet-and-paste, the IMS browser
+>   login, a GitHub App install approval. Its own docblock says it "generalises" the
+>   `needsAuth` convention. `connect_dalive` is right to use it: no agent can click a
+>   bookmarklet.
+> - **A domain status** — `siteAccessManagerHeadless` returns `{status:'no_credential'}`,
+>   which is structured and deliberately separates "not signed in" from "refused". Its
+>   comment records why: merging the two once sent users to the Debug Logs instead of to
+>   sign-in.
+>
+> So the rule is really *return a structured handoff naming what will fix it*, and
+> `needsAuth` is one of its shapes.
+>
+> **A SYSTEMIC BREACH, found by the review on 2026-08-31 and FIXED on 2026-09-01.**
+> Every DESCRIPTOR-registered tool failed the rule, and one function did it.
+> `defaultShape` in `toolDescriptors.ts` rendered any failure as the string
+> `Error: <message> [CODE]` and discarded every other field on the response.
+>
+> The sharp part: `dataInstallerHandlers` was already doing it right. Its headless
+> branch returns `{success:false, error, code, needsAuth:'adobe'}` deliberately, with a
+> docblock explaining that an agent must be TOLD rather than prompted. That marker never
+> reached the agent — the projector threw it away one layer up. The best auth handoff in
+> the repo was invisible, and `ErrorCode.AUTH_REQUIRED` appears nowhere in
+> `src/features/ai` to translate it.
+>
+> `defaultShape` now returns a failure WHOLE when it carries more than `error`/`code`.
+> The terse string stays for the common case, because it is deliberate — this output is
+> billed as context tokens on every call. All three custom shapes delegate to it on
+> failure, so the one change reaches every descriptor tool. Guarded by a regression test
+> that asserts the `needsAuth` marker survives, and a control that a plain failure still
+> gets the terse string.
+>
+> **A worse one, also fixed on 2026-09-01: `check_mesh` and `delete_mesh` BLOCKED.**
+> `ensureAuthenticated` in `features/mesh/handlers/shared.ts` always awaited
+> `showWarningMessage(..., 'Open Dashboard')`, so an unauthenticated call from an MCP
+> tool put a notification on the user's window and stopped the tool until somebody
+> dismissed it. An agent cannot click, and the user had no idea what was waiting on
+> them. It now branches on `context.panel` — prompt for a webview, return the
+> `needsAuth` marker for an agent — which is the rule `dataInstallerHandlers` had
+> already written down and the mesh handlers never got.
+>
+> **The last two, fixed the same day: `promote_block_to_library` and
+> `remove_block_from_library` THREW** when the DA.live token was missing. The message
+> named the recovery, so an agent was not stranded — but erroring is the one thing the
+> rule asks tools not to do, and an MCP error is not a result a caller can branch on.
+> Both now answer with `needsAuth: 'dalive'`.
+>
+> Promote carried a second defect the throw hid: the token check ran AFTER
+> `applyComponentDefinitionEntry` had rewritten `component-definition.json`, so a
+> signed-out caller got the error with a half-done promotion left on disk. The check
+> runs first now. Its test asserts `writeFile` was never called — the old test could not
+> have caught this, because a rejected promise says nothing about what happened before
+> it. Restoring the old order fails that assertion, and only that one.
+>
+> **All 114 tools now satisfy this rule.** It went from a scan finding to a fact about
+> the surface in one day; what made that possible was reading every tool rather than
+> trying to detect the breaches statically, which failed three times.
 
 > **How to add one.** [mcp-tool-authoring](../../.claude/skills/mcp-tool-authoring/SKILL.md) ·
 > registration is pinned by `tests/features/ai/server/realSdkRegistration.test.ts`.
@@ -602,22 +695,10 @@ so when the point is *how* a collaborator was used, assert the arguments rather 
 result. And coverage does not tell you a test would catch a bug: `npm run test:mutation`
 breaks the code on purpose and reports what nothing noticed.
 
-> **Convention.** The three tiers, and which applies.
-> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — which tier fits is
-> a judgement about what you are testing.
-> *Why:* matching the test to the risk. A live test for pure logic is slow and flaky; a unit test for a network contract proves nothing.
-
 > **Convention.** A split test family shares one `.testUtils` file, which owns the mocks
 > and the subject import. [webview-test-authoring](../../.claude/skills/webview-test-authoring/SKILL.md) ·
 > enforced by `tests/sop/test-family-setup.test.ts`.
 > *Why:* the copies drift otherwise, and a spec that keeps its own copy can silently stop mocking anything.
-
-> **Convention.** When you change a test's structure, diff the set of things it asserts
-> before and after — and prove shared setup is load-bearing by breaking it on purpose and
-> checking the right suites fail.
-> *Why:* the failure mode of a test refactor is a suite that still passes while checking
-> nothing. Nothing else catches that. **Not enforced** — it is a habit, and the only guard
-> is doing it.
 
 > **Convention.** Before designing a way to hand a mocked collaborator in — or to share
 > one between suites — delete the mock and run the suite. If it still passes, the mock was
@@ -628,7 +709,13 @@ breaks the code on purpose and reports what nothing noticed.
 > with nothing failing. Two working sessions went into designing seams for files that only
 > needed a deletion, because the question asked was "how would this suite hand the service
 > in?" rather than "does this mock change anything?". The check costs one suite run.
-> **Not enforced** — it is a question to ask, not a state to hold.
+> **Half enforced, and the half that is was buildable all along.** "A question to ask,
+> not a state to hold" is true of the probe — delete the mock, re-run, see if anything
+> notices — and false of the static rule underneath it: a BARE automock of a module
+> `moduleNameMapper` already redirects is dead by construction, and that is a state in
+> the tree. `tests/sop/redundant-automocks.test.ts` bans it outright (a flat ban, not a
+> ceiling — the corpus was already zero when it was written). The probe half stays a
+> habit, and stays in `dead-mock-scan` at the periodic cadence.
 >
 > Three things only that check shows. `jest.mock('vscode')` is a no-op here — `jest.config.js`
 > already maps it — and four families carried copies. Mocks can serve only each other: twice,
@@ -757,8 +844,21 @@ check says so and names the file.
 > 98 builder functions; the problem was never unwillingness to share but that 14 of those
 > NAMES are defined in more than one file, so there is no canonical one to find and
 > writing another is cheaper than searching.
-> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — where a
-> builder belongs is a judgement about who needs it.
+> [ADR-016](../architecture/adr/016-test-strategy.md) · Enforced by
+> `tests/sop/canonical-fakes.test.ts` § "a fake two feature directories need lives in
+> tests/helpers/".
+>
+> **It was filed as unenforceable — "where a builder belongs is a judgement about who
+> needs it" — and that was wrong.** The rule's own wording gives the test: *does a
+> SECOND feature directory need it?* is mechanical once you resolve imports instead of
+> matching names. Measured 2026-08-31: 139 builders live outside `tests/helpers/` and
+> ZERO are imported from a second feature directory, so it is a flat ban with nothing
+> to grandfather.
+>
+> Counting IMPORTS rather than CALLS is the whole check. A first pass matched call
+> sites by name and reported nine violations; the worst was `createProject`, which is
+> also a production function, so every handler test calling the real one looked like a
+> consumer of the fake.
 
 > **Convention.** No test erases a type. `as any` and `as never` are banned anywhere in
 > `tests/`. A builder is declared as the REAL type it stands for; where the structural
@@ -795,18 +895,6 @@ check says so and names the file.
 > ledger became a ban when it emptied.
 > [ADR-016](../architecture/adr/016-test-strategy.md)
 
-> **Convention.** A fixture's shape is READ, not remembered. A builder's method list
-> comes from the real interface plus what callers actually use; a data fixture is copied
-> from a real artifact on disk. And a domain fixture is CONTENT over a canonical shape,
-> never a re-implementation of one the suite already has a builder for.
-> *Why:* an invented shape typechecks, parses, passes review, and fails only when a real
-> accessor touches it. `componentInstances` is the one that catches people — a record
-> keyed by component id, not an array, and a fixture inventing `components: [...]`
-> compiles cleanly because the field is optional.
-> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — the tell is
-> being able to state a shape without naming the file you read it from, which no check
-> can ask.
-
 > **Convention.** Do not mock a configuration leaf.
 > *Why:* the test then checks the mock rather than the shipped configuration.
 > Enforced by `tests/sop/no-config-leaf-mocks.test.ts`.
@@ -836,28 +924,36 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 10 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 26 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 29 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 80 conventions. 64 of them are enforced; 16 are not.**
+**This handbook states 71 conventions. 70 of them are enforced; 1 is not.**
 
-The fifteen that remain are not one thing, and treating them as one is what kept them
-open:
+The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
+`src/`, so a check would fail the build today rather than protect anything. It waits on
+the CSS migration (PL-21), which is not authorised. That is a rule with a start date,
+not debt.
 
-- **Fourteen cannot have an enforcer.** Which test tier fits, whether a metric measures
-  the defect or only its shape, naming the command that would prove you wrong, diffing a
-  test's assertions after restructuring it, whether a comment about another module is
-  actually true, whether you aimed a check at the right question, whether a matching
-  string has been read back to its source, whether an identifier in prose was copied or
-  remembered, whether a destructive tool carries the flag its REACH deserves, whether a
-  tool hands off instead of erroring, whether a selection handler cleared its dependents,
-  whether a name follows a convention nobody has broken, where a shared fake belongs, and
-  whether a fixture's shape was read or invented. Each is a judgement about intent, and a
-  check that scored it would be measuring shape — the exact mistake two of them warn
-  about. These are written down for the reader, not pending work.
-- **One is not yet true.** No `@layer vendor` exists in `src/`, so enforcing it today would
-  fail the build rather than protect anything. It waits on the CSS migration (PL-21).
+Everything else on this page has something that fails the build when it is broken.
+
+**Nine rules left this list on 2026-09-01 and are now [§11 Working
+discipline](#11-working-discipline).** None was deleted. They turn on a judgement no
+check can make — whether you aimed a command at the right question, whether a matching
+string has been read back to its source, whether a fixture's shape was read or
+remembered — and counting them here made the score describe two different things at
+once. The owner's directive that started it was *"if it cannot be enforced, it probably
+shouldn't be a convention"*, and the honest reading of "probably" is the second half of
+the test: a rule that cannot be enforced AND prevents no defect anyone can name should
+go. All nine prevent one that is named and dated, so all nine stayed — under a heading
+that claims nothing about the build.
+
+**This paragraph is why the scorecard above it is generated.** It once read "the fifteen
+that remain" and "fourteen cannot have an enforcer" beside a count of eleven, and listed
+five rules that had since been enforced. Nothing caught that, because a number written
+in prose is checked by nothing — the same defect these rules keep warning about, in the
+document that warns about it. Counts come from `npm run docs:conventions` now, and
+`tests/sop/handbook-links.test.ts` fails when a sentence here disagrees with them.
 
 The count of unenforced conventions **tripled** across 2026-08-30/31, and that is the
 scorecard getting honest rather than the codebase getting worse. Every one of them was
@@ -893,30 +989,24 @@ not.
 > *Why:* a first sweep printed "clean" over a scan that had just measured a 34% gap.
 > Enforced by `tests/sop/every-scan-declares-a-control.test.ts`.
 
-> **Convention.** A control proves the tool works, not that you aimed it right. Before
-> trusting a result of nothing, say where the answer would be if it existed, and confirm
-> the command actually reads there.
-> *Why:* a correct command pointed at the wrong place passes every control it has, because
-> the control shares the mistake. Five wrong answers in one day on 2026-08-11 were all this
-> — and on 2026-08-30 a status summary reported two tracks of work as "not started" because
-> it grepped for whether a backlog item was TITLED "Track 4", while seven ratified ADRs, a
-> 709-line handbook and twenty-four shipped test plans sat on disk. The grep was right; the
-> question it answered was not the question asked. **Not enforced** — no check can ask
-> whether you aimed at the right thing.
-
-> **Convention.** A named field in a response, a matching string, or a green check is a
-> LEAD. Read the source before it becomes a finding.
-> *Why:* `enabled: false` was read as "this org lacks the entitlement" and was wrong; a
-> `confirm: true` sitting eight lines past a grep window was read as "this destructive tool
-> is ungated" and was wrong. Both were one read away from correct. **Not enforced** — this
-> is a habit, and the cost of skipping it is a confident wrong answer.
-
 > **Convention.** Never publish an identifier you have not read from the source. Setting
 > keys, env vars, command ids, file paths and function names are cheap to grep and
 > expensive to get wrong in something a user reads.
-> *Why:* `demoBuilder.eds.defaultDaLiveOrg` went into release notes from memory. The real
-> key is `demoBuilder.daLive.defaultOrg`. Caught only by diffing `package.json` against the
-> previous tag. **Not enforced** for prose; `tests/sop/doc-module-refs.test.ts` covers paths.
+> *Why:* `demoBuilder.eds.defaultDaLiveOrg` went into release notes from memory; the key it
+> should have named was `demoBuilder.daLive.defaultOrg`. Caught only by diffing
+> `package.json` against the previous tag.
+>
+> **This entry then broke its own rule**, and that is why it is now enforced. It said "the
+> real key IS `demoBuilder.daLive.defaultOrg`" in the present tense long after that setting
+> was DROPPED (`6e14114b9` — the DA.live org became a GitHub-namespace picker with no
+> setting at all). A correction naming a second dead identifier is the original defect
+> wearing the fix's clothes.
+>
+> Enforced by `tests/sop/cited-identifiers.test.ts`: every `demoBuilder.*` key a
+> CURRENT-TENSE document names must exist in `package.json` or be registered in `src/`.
+> Historical genres (CHANGELOG, research, ADRs) are excluded, and a deliberate mention of
+> a removed identifier goes in the ledger with its reason.
+> `tests/sop/doc-module-refs.test.ts` covers file paths.
 
 > **Convention.** Capture an exit code in a variable. Never read one through a pipe.
 > *Why:* `head`, `tail`, `grep` and `wc` all exit 0 on empty input, so the pipe reports its
@@ -925,18 +1015,6 @@ not.
 > a pipe into `head`, `tail` or `wc` — those exit 0 whatever they were fed, so a failure
 > and an empty result are indistinguishable. `grep` is deliberately not blocked:
 > `cmd | grep -q x && …` is correct, because there grep's own exit code is the answer.
-
-> **Convention.** A count that measures what code *looks like* is not a count of what is
-> wrong with it. Before working a scan's list, ask what defect it would catch and whether
-> a clean file could score badly.
-> *Why:* three measures in this repo were found to describe style rather than defects.
-> Extracting duplicated setup into a helper — plainly an improvement — made one of them
-> worse. **Not enforced.** It is the question to ask, not a thing a test can check.
-
-> **Convention.** Before naming a cause, name the command that would prove you wrong, and
-> run that first.
-> *Why:* a cause is cheap to assert, expensive to retract, and the reader usually cannot
-> check it. **Not enforced.**
 
 > **Convention.** Quote glob arguments passed to `grep` or `find`. In zsh an unquoted
 > pattern is expanded before the command sees it, and an unquoted variable is not split
@@ -1001,6 +1079,100 @@ not.
 Every link in this file is checked by `tests/sop/handbook-links.test.ts`.
 
 ---
+
+## 11. Working discipline
+
+The nine rules below were counted as conventions until 2026-09-01, and the count was
+the problem. A convention here is a statement about the CODE, and every one of them is
+checked by something that fails the build. These nine turn on a judgement no check can
+make — mostly about how you investigate a question, once about the code but resting on
+the same kind of call. Averaging the two made "70 of 80 enforced" a number that
+described neither.
+
+**They are not weaker for being here, and none of them was deleted.** Each names a
+specific failure it would have prevented, with a date, and several were written the day
+that failure cost something. What changes is only the claim: nothing on this page fails
+the build, so nothing on this page is counted as if it did. The conventions list now
+means one thing — a rule stated there has an enforcer — and this list means another: a
+habit you have to keep yourself.
+
+The test for keeping one is the owner's, from the directive that started this: a rule
+that cannot be enforced AND that nobody can point at a defect for should be deleted, not
+preserved because it reads well. All nine pass the second half. If one ever stops
+passing it, delete it.
+
+> **Discipline.** A comment describing what ANOTHER module does must cite the code that
+> makes it true. If you cannot cite it, write what you verified instead.
+> *Why:* nothing keeps such a comment true — not the compiler, not the tests — and it reads
+> to the next person as verified fact. Two comments once asserted a scheduled re-registration
+> that did not exist; they were false the day they were written, and they suppressed the
+> question that would have found a shipped bug. **Not enforced** — no check can read intent.
+
+> **Discipline.** When a parent selection changes, clear the state that depends on it.
+> Change the Adobe project and the workspace selection goes with it.
+> *Why:* a stale child selection is how an operation targets a resource nobody chose —
+> the failure `withOrgContext` and the org-mismatch guard exist to catch downstream. The
+> place it belongs is the selection handler's `onSelect`, where `useSelectionStep` puts
+> it. Obeyed at 7 sites today.
+> **Not enforced**, and this one cannot be: 14 sites assign the parent field and reading
+> them shows most are not selections at all — one preserves a previous value, one builds
+> a display object, one assembles a payload from already-resolved context. A detector
+> written from the field name would report eight violations of which roughly none are
+> real, and a check that cries wolf gets switched off.
+
+> **Discipline.** The three tiers, and which applies.
+> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — which tier fits is
+> a judgement about what you are testing.
+> *Why:* matching the test to the risk. A live test for pure logic is slow and flaky; a unit test for a network contract proves nothing.
+
+> **Discipline.** When you change a test's structure, diff the set of things it asserts
+> before and after — and prove shared setup is load-bearing by breaking it on purpose and
+> checking the right suites fail.
+> *Why:* the failure mode of a test refactor is a suite that still passes while checking
+> nothing. Nothing else catches that. **Not enforced** — it is a habit, and the only guard
+> is doing it.
+
+> **Discipline.** A fixture's shape is READ, not remembered. A builder's method list
+> comes from the real interface plus what callers actually use; a data fixture is copied
+> from a real artifact on disk. And a domain fixture is CONTENT over a canonical shape,
+> never a re-implementation of one the suite already has a builder for.
+> *Why:* an invented shape typechecks, parses, passes review, and fails only when a real
+> accessor touches it. `componentInstances` is the one that catches people — a record
+> keyed by component id, not an array, and a fixture inventing `components: [...]`
+> compiles cleanly because the field is optional.
+> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — the tell is
+> being able to state a shape without naming the file you read it from, which no check
+> can ask.
+
+> **Discipline.** A control proves the tool works, not that you aimed it right. Before
+> trusting a result of nothing, say where the answer would be if it existed, and confirm
+> the command actually reads there.
+> *Why:* a correct command pointed at the wrong place passes every control it has, because
+> the control shares the mistake. Five wrong answers in one day on 2026-08-11 were all this
+> — and on 2026-08-30 a status summary reported two tracks of work as "not started" because
+> it grepped for whether a backlog item was TITLED "Track 4", while seven ratified ADRs, a
+> 709-line handbook and twenty-four shipped test plans sat on disk. The grep was right; the
+> question it answered was not the question asked. **Not enforced** — no check can ask
+> whether you aimed at the right thing.
+
+> **Discipline.** A named field in a response, a matching string, or a green check is a
+> LEAD. Read the source before it becomes a finding.
+> *Why:* `enabled: false` was read as "this org lacks the entitlement" and was wrong; a
+> `confirm: true` sitting eight lines past a grep window was read as "this destructive tool
+> is ungated" and was wrong. Both were one read away from correct. **Not enforced** — this
+> is a habit, and the cost of skipping it is a confident wrong answer.
+
+> **Discipline.** A count that measures what code *looks like* is not a count of what is
+> wrong with it. Before working a scan's list, ask what defect it would catch and whether
+> a clean file could score badly.
+> *Why:* three measures in this repo were found to describe style rather than defects.
+> Extracting duplicated setup into a helper — plainly an improvement — made one of them
+> worse. **Not enforced.** It is the question to ask, not a thing a test can check.
+
+> **Discipline.** Before naming a cause, name the command that would prove you wrong, and
+> run that first.
+> *Why:* a cause is cheap to assert, expensive to retract, and the reader usually cannot
+> check it. **Not enforced.**
 
 ## Where the reasoning lives
 

@@ -27,6 +27,7 @@
 import { z } from 'zod';
 import { COMPONENT_SECTIONS } from './discoveryTools';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import componentsConfig from '@/features/components/config/components.json';
 
 /** A component as `components.json` stores it — keyed by id, with no `id` field. */
@@ -80,12 +81,12 @@ function describeEnvVars(keys: string[]): unknown[] {
 }
 
 export function registerComponentRequirementsTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
 ): void {
     server.registerTool(
         'get_component_requirements',
         {
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             description:
                 'What one component needs: its required/optional env vars (with what each one means), required services, and dependencies. list_components only returns ids and names.',

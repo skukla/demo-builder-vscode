@@ -74,12 +74,15 @@ export async function handleEnsureMeshApiSubscribed(
     }
 
     // PRE-FLIGHT: Check authentication before any Adobe operations
-    const authResult = await ensureAuthenticated(context.logger, 'enable the API Mesh API');
+    const authResult = await ensureAuthenticated(context, 'enable the API Mesh API');
     if (!authResult.authenticated) {
         return {
             success: false,
             error: authResult.error,
             code: authResult.code,
+            // Carried through so the AGENT is told which sign-in to offer;
+            // defaultShape returns a failure whole when it has more than error/code.
+            ...(authResult.needsAuth ? { needsAuth: authResult.needsAuth } : {}),
         };
     }
 

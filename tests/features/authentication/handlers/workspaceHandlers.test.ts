@@ -33,7 +33,7 @@ describe('workspaceHandlers', () => {
         // Create mock context
         mockContext = {
             authManager: mockAuthManager,
-            logger: createMockLogger() as any,
+            logger: createMockLogger(),
             debugLogger: {
                 trace: jest.fn(),
                 debug: jest.fn()

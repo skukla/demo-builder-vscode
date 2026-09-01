@@ -11,6 +11,7 @@
 
 import { z } from 'zod';
 import { asRawText, asText } from './mcpToolResult';
+import type { AuthProvider, McpToolServer } from './mcpToolServer';
 import {
     payloadOfEvent,
     withCapturedProgress,
@@ -48,6 +49,19 @@ export interface ToolDescriptor {
      * which is why that one guard had to be found by a hand audit.
      */
     readOnly: boolean;
+    /**
+     * Which sign-ins this tool needs, or `false` for none.
+     *
+     * REQUIRED for the same reason `readOnly` is: a field you can forget is a
+     * hole that opens quietly. It is passed straight through to the registration,
+     * where {@link McpToolSchema} types it, so a new descriptor row cannot land
+     * without someone answering the question.
+     *
+     * All 48 rows were filled from the 2026-08-31 tool-auth review, which read
+     * every tool and recorded a reason. The ledger that tracked that review was
+     * deleted when it reached zero unreviewed — this field replaced it.
+     */
+    needsAuth: AuthProvider[] | false;
     /** When true, the tool refuses unless called with `confirm: true`. */
     confirm?: boolean;
     /**
@@ -111,11 +125,32 @@ export interface ToolDescriptor {
  * Default response shaping: compact JSON of the meaningful payload, or a terse
  * error string. Strips the internal `success` flag; unwraps a lone `data` field.
  * Never pretty-prints — the output is consumed as LLM context tokens.
+ *
+ * A FAILURE CARRYING STRUCTURED DATA IS RETURNED WHOLE, and that is the point of
+ * the branch below. This function used to render every failure as
+ * `Error: <message> [CODE]` and discard the rest of the response — which meant
+ * the ONE handler doing auth handoffs properly had its work thrown away here.
+ * `dataInstallerHandlers` returns `{success:false, error, code, needsAuth:'adobe'}`
+ * from its headless branch, deliberately, with a docblock explaining that an
+ * agent must be told rather than prompted. The marker never reached the agent:
+ * the tool answered with prose to parse, and `ErrorCode.AUTH_REQUIRED` appears
+ * nowhere in `src/features/ai` to translate it. Found 2026-08-31 by reviewing all
+ * 114 tools.
+ *
+ * The terse string stays for the common case, because it is deliberate — this
+ * output is billed as context tokens on every call. Only a failure that carries
+ * MORE than `error`/`code` is worth the JSON, and a handler adds those fields
+ * precisely so the caller sees them.
  */
 export function defaultShape(res: HandlerResponse): string {
     if (!res.success) {
-        const code = res.code ? ` [${res.code}]` : '';
-        return `Error: ${res.error ?? 'operation failed'}${code}`;
+        const { success: _ok, error, code, ...extra } = res as HandlerResponse &
+            Record<string, unknown>;
+        if (Object.keys(extra).length > 0) {
+            return JSON.stringify({ error, ...(code ? { code } : {}), ...extra });
+        }
+        const codeSuffix = res.code ? ` [${res.code}]` : '';
+        return `Error: ${res.error ?? 'operation failed'}${codeSuffix}`;
     }
     const { success: _success, ...rest } = res as HandlerResponse & Record<string, unknown>;
     const keys = Object.keys(rest);
@@ -189,8 +224,7 @@ async function runHandler(
 }
 
 export function registerDescriptorTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     descriptors: ToolDescriptor[],
     ctxFactory: () => HandlerContext,
 ): void {
@@ -206,6 +240,7 @@ export function registerDescriptorTools(
             {
                 description: d.description,
                 inputSchema,
+                needsAuth: d.needsAuth,
                 // MCP's own annotation block, so the declaration does double
                 // duty: our dry run reads it, and it travels to the client in
                 // `tools/list` — Claude Code learns which of our tools are safe.

@@ -20,6 +20,7 @@ import { runWithAdobeTarget } from './adobeTargetStore';
 import { isOrgMismatchError, orgMismatchResult } from './adobeTools';
 import { requireDaLive, requireEdsProject, requireGitHub } from './edsToolGuards';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { COMPONENT_IDS } from '@/core/constants';
 import { phaseReporter } from '@/core/utils/agentPhaseChannel';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
@@ -57,13 +58,13 @@ function edsTargets(
  * @param ctxFactory Builds a headless HandlerContext for each invocation.
  */
 export function registerStorefrontTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
 ): void {
     server.registerTool(
         'republish',
         {
+            needsAuth: ['github', 'dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description: 'Regenerate and republish the EDS storefront config.json to GitHub and the CDN',
             inputSchema: {},
@@ -122,6 +123,7 @@ export function registerStorefrontTools(
     server.registerTool(
         'sync_content',
         {
+            needsAuth: ['github', 'dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description: 'Publish all EDS storefront content (config + code + DA.live pages) to the CDN',
             inputSchema: {},

@@ -18,6 +18,7 @@
 
 import { z } from 'zod';
 import { asRawText, asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { createEventLifecycleDeps } from '@/features/authentication/handlers/eventLifecycleDeps';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import {
@@ -70,14 +71,14 @@ async function authed(ctx: HandlerContext): Promise<boolean> {
 }
 
 export function registerEventProviderTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
     authServiceFactory: () => AuthenticationService,
 ): void {
     server.registerTool(
         'list_event_providers',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: true },
             description:
                 "List the current project's Adobe I/O event providers and event registrations " +
@@ -105,6 +106,7 @@ export function registerEventProviderTools(
     server.registerTool(
         'create_event_provider',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 'Create an Adobe I/O event provider (with its event types) in the current ' +
@@ -158,6 +160,7 @@ export function registerEventProviderTools(
     server.registerTool(
         'create_event_registration',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 "Create an event registration (journal or webhook) in the current project's " +
@@ -213,6 +216,7 @@ export function registerEventProviderTools(
     server.registerTool(
         'delete_event_registration',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 "Delete one event registration from the current project's workspace. " +
@@ -242,6 +246,7 @@ export function registerEventProviderTools(
     server.registerTool(
         'delete_event_provider',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 "Delete an event provider from the current project's workspace, deleting the " +

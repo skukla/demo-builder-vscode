@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { requireDaLive, requireEdsProject, requireGitHub } from './edsToolGuards';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import {
@@ -43,13 +44,13 @@ async function adobeAuthed(): Promise<boolean> {
  * @param ctxFactory Builds a headless HandlerContext for each invocation.
  */
 export function registerEdsResetTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
 ): void {
     server.registerTool(
         'reset_eds_project',
         {
+            needsAuth: ['dalive'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Reset an EDS storefront to its template (repo + DA.live content + config). Requires confirm:true.',

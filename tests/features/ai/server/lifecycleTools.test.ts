@@ -19,6 +19,7 @@ jest.mock('@/features/dashboard/handlers/dashboardHandlers', () => ({ dashboardH
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerLifecycleTools } from '@/features/ai/server/lifecycleTools';
 import type { HandlerContext } from '@/types/handlers';
+import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
 
 const ALL_URLS = {
     storefront: 'http://localhost:3000',
@@ -193,5 +194,16 @@ describe('edit_project', () => {
 it('registers exactly the two tools', () => {
     const s = new McpServer({ name: 'test', version: '0.0.0' });
     // Against the REAL SDK: a bad inputSchema throws here, not at activation.
-    expect(() => registerLifecycleTools(s, () => ({}) as HandlerContext, async () => undefined)).not.toThrow();
+    // `s as unknown as McpToolServer`: the SDK's own registerTool is generic over
+    // its zod schema, and structurally matching it against our narrowed surface
+    // makes tsc give up with "type instantiation is excessively deep". The cast
+    // NAMES the target, which is the sanctioned form — the point of this test is
+    // that the REAL SDK accepts our registration, and that still runs.
+    expect(() =>
+        registerLifecycleTools(
+            s as unknown as McpToolServer,
+            () => ({}) as HandlerContext,
+            async () => undefined
+        )
+    ).not.toThrow();
 });

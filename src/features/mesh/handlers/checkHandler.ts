@@ -123,7 +123,7 @@ export async function handleCheckApiMesh(
     context.logger.debug(`[API Mesh] Checking workspace ${workspaceId}`);
 
     // PRE-FLIGHT: Check authentication before any Adobe CLI operations
-    const authResult = await ensureAuthenticated(context.logger, 'check mesh status');
+    const authResult = await ensureAuthenticated(context, 'check mesh status');
     if (!authResult.authenticated) {
         return {
             success: false,
@@ -131,6 +131,9 @@ export async function handleCheckApiMesh(
             meshExists: false,
             error: authResult.error,
             code: authResult.code,
+            // Carried through so the AGENT is told which sign-in to offer;
+            // defaultShape returns a failure whole when it has more than error/code.
+            ...(authResult.needsAuth ? { needsAuth: authResult.needsAuth } : {}),
         };
     }
 

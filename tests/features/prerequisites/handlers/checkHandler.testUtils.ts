@@ -93,7 +93,7 @@ export function createCheckHandlerContext(overrides?: Partial<HandlerContext>): 
         stepLogger: {
             log: jest.fn(),
         } as any,
-        logger: createMockLogger() as any,
+        logger: createMockLogger(),
         debugLogger: {
             debug: jest.fn(),
         } as any,

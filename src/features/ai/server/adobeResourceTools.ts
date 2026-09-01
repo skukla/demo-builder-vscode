@@ -31,6 +31,7 @@
 import { z } from 'zod';
 import { getAdobeTarget } from './adobeTargetStore';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import { createTeardownDeps } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
@@ -88,13 +89,13 @@ function requireProject(): { orgId: string; projectId: string } | { error: strin
 }
 
 export function registerAdobeResourceTools(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     ctxFactory: () => HandlerContext,
 ): void {
     server.registerTool(
         'create_adobe_project',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 'Create an Adobe Developer Console project in the selected org (select_org first). Returns the project, or why it could not be created.',
@@ -134,6 +135,7 @@ export function registerAdobeResourceTools(
     server.registerTool(
         'create_adobe_workspace',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: false },
             description:
                 'Create a workspace in the SELECTED Adobe project (select_org and select_project first).',
@@ -173,6 +175,7 @@ export function registerAdobeResourceTools(
     server.registerTool(
         'delete_adobe_project',
         {
+            needsAuth: ['adobe'],
             annotations: { readOnlyHint: false, destructiveHint: true },
             description:
                 'Permanently delete an Adobe Console project and everything in it (irreversible). Requires confirm:true and confirmName equal to the project name.',

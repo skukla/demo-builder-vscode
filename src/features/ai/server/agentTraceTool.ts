@@ -20,6 +20,7 @@ import * as path from 'path';
 import { z } from 'zod';
 import { listSessionFiles } from './agentTraceSink';
 import { asText } from './mcpToolResult';
+import type { McpToolServer } from './mcpToolServer';
 import type { ToolTraceRecorder } from './toolTraceRecorder';
 
 const DEFAULT_LIMIT = 50;
@@ -33,14 +34,15 @@ const MAX_LIMIT = 200;
  * @param traceDir - where the file sink keeps past sessions
  */
 export function registerAgentTraceTool(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    server: any,
+    server: McpToolServer,
     recorder: ToolTraceRecorder,
     traceDir: string,
 ): void {
     server.registerTool(
         'get_agent_trace',
         {
+            // Reviewed 2026-08-31: no service and no token on any path.
+            needsAuth: false,
             annotations: { readOnlyHint: true, destructiveHint: false },
             title: 'Get Agent Trace',
             description:

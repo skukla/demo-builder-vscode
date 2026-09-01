@@ -178,7 +178,7 @@ red, and so is a registry entry for something deleted.
 | Cadence | What runs | Who triggers it |
 |---|---|---|
 | per-tool-call | 10 hook rules in `.claude/hooks/rules/` | automatic |
-| per-jest-run | 26 enforcer suites in `tests/sop/` | automatic |
+| per-jest-run | 29 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | periodic | 10 scripted checks + 9 guided reviews | **`npm run sweep`** |
 
@@ -243,7 +243,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 80 of them, 64 with an enforcer that fails the build — and
+this codebase holds itself to — 71 of them, 70 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent
@@ -425,9 +425,17 @@ mirrored. A field that looks like an answer is the easiest kind of evidence to o
 
 **Never publish an identifier you have not read from the source.** Same day, a setting
 name written from memory into release notes — `demoBuilder.eds.defaultDaLiveOrg` — was
-wrong; the real key is `demoBuilder.daLive.defaultOrg`. Caught only by diffing
-`package.json` against the previous tag. Setting keys, env vars, command ids, file paths
-and function names are cheap to grep and expensive to get wrong in something users read.
+wrong; the key it should have named was `demoBuilder.daLive.defaultOrg`. Caught only by
+diffing `package.json` against the previous tag. Setting keys, env vars, command ids, file
+paths and function names are cheap to grep and expensive to get wrong in something users
+read.
+
+**And this paragraph then broke its own rule.** It said "the real key IS
+`demoBuilder.daLive.defaultOrg`" in the present tense long after that setting was DROPPED
+(`6e14114b9`, when the DA.live org became a GitHub-namespace picker with no setting at
+all). A correction that names a second dead identifier is the same defect wearing the
+fix's clothes. Found 2026-08-31 by `tests/sop/cited-identifiers.test.ts`, which is the
+enforced version of this rule.
 
 **A comment describing what ANOTHER module does is a claim, not documentation.** Nothing
 keeps it true — not the compiler, not the tests, not a scan — and it reads to the next
