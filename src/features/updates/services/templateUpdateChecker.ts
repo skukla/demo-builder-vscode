@@ -19,7 +19,7 @@ import {
 } from './githubApiClient';
 import { COMPONENT_IDS } from '@/core/constants';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /** Runtime shape guard for the LkgSource shape stored on EdsStorefrontMetadata.

@@ -9,7 +9,7 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 
 jest.setTimeout(5000);
 
@@ -41,23 +41,32 @@ jest.mock(
 );
 
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/ProjectNameValidator', () => ({
     validateProjectNameSecurity: jest.fn(),
 }));
 
-// Mock the shared services barrel (reused, not duplicated). Both the export and
-// rename handlers dynamically import from this barrel.
+// The export and rename handlers each dynamically import the module that
+// DECLARES what they need. These were one mock of a shared barrel until
+// 2026-08-31 (PL-31) — which is why the two unrelated services were fused here.
 const mockRenameProjectCore = jest.fn();
-jest.mock('@/features/projects-dashboard/services', () => ({
+jest.mock('@/features/projects-dashboard/services/settingsTransferService', () => ({
     exportProjectSettings: jest.fn().mockResolvedValue({ success: true }),
+}));
+
+jest.mock('@/features/projects-dashboard/services/projectRenameService', () => ({
     renameProjectCore: (...args: unknown[]) => mockRenameProjectCore(...args),
 }));
 
@@ -74,7 +83,8 @@ import {
     handleExportProject,
     handleRenameProject,
 } from '@/features/dashboard/handlers/dashboardHandlers';
-import { exportProjectSettings } from '@/features/projects-dashboard/services';
+import { exportProjectSettings } from '@/features/projects-dashboard/services/settingsTransferService';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // =============================================================================
 // Test Utilities
@@ -100,12 +110,7 @@ function createMockContext(project: Project | undefined): HandlerContext {
             saveProject: jest.fn().mockResolvedValue(undefined),
             removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
         sendMessage: jest.fn(),
         context: { secrets: {} },
     } as unknown as HandlerContext;

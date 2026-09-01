@@ -47,7 +47,7 @@ describe('Storefront Setup Operations', () => {
         });
 
         it('should have 7 phases total', () => {
-            expect(STOREFRONT_SETUP_PHASES.length).toBe(7);
+            expect(STOREFRONT_SETUP_PHASES).toHaveLength(7);
         });
 
         it('should NOT include tools-clone in storefront-setup', () => {

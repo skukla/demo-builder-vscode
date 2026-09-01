@@ -10,14 +10,6 @@ import { spawn } from 'child_process';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 /**
  * These suites drive REAL child processes, and `killProcessTree` observes exits

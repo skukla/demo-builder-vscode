@@ -349,7 +349,7 @@ describe('DebugLogger - Log Buffer Size Cap', () => {
         const content = logger.getLogContent();
         const lines = content.split('\n').filter((line) => line.trim());
 
-        expect(lines.length).toBe(100);
+        expect(lines).toHaveLength(100);
         expect(content).toContain('Message 0');
         expect(content).toContain('Message 99');
     });

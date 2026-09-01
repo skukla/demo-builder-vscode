@@ -17,7 +17,7 @@ import { createMockContext, mockProjects, mockOrganization } from './projectHand
 
 // Mock dependencies
 jest.mock('@/core/di/serviceLocator');
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/validators/AdobeResourceValidator');
 jest.mock('@/types/typeGuards', () => ({
     toError: jest.fn((error: any) => error instanceof Error ? error : new Error(String(error))),
     parseJSON: jest.fn((str: string) => JSON.parse(str))

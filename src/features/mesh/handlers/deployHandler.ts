@@ -14,7 +14,7 @@
  * what each does with the RESULT: toasts there, a tool response here.
  */
 
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { MeshDeployBlock } from '@/features/mesh/services/deployMeshHeadless';
 import { deployMeshWithFeedback } from '@/features/mesh/services/deployMeshWithFeedback';
 import { ErrorCode } from '@/types/errorCodes';

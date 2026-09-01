@@ -85,7 +85,7 @@ describe('WebviewClient - Handshake Reversal', () => {
             const webviewReadyCalls = (mockVscodeApi.postMessage as jest.Mock).mock.calls
                 .filter(call => call[0]?.type === '__webview_ready__');
 
-            expect(webviewReadyCalls.length).toBe(0);
+            expect(webviewReadyCalls).toHaveLength(0);
         });
 
         it('should complete handshake when receiving __handshake_complete__', async () => {

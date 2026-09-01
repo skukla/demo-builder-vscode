@@ -6,12 +6,8 @@
  */
 
 import type { Logger } from '@/types/logger';
-import {
-    ProgressUnifier,
-    IDateProvider,
-    ITimerProvider,
-    IProcessSpawner,
-} from '@/core/utils/progressUnifier';
+import { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
+import { IDateProvider, IProcessSpawner, ITimerProvider } from '@/core/utils/progressUnifier/types';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 import { EventEmitter } from 'events';
 

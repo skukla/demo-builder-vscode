@@ -297,7 +297,7 @@ describe('SOP: Component Extraction', () => {
             ];
 
             // This test documents the decision, not enforces a rule
-            expect(ACCEPTABLE_SINGLE_USAGE.length).toBe(2);
+            expect(ACCEPTABLE_SINGLE_USAGE).toHaveLength(2);
         });
     });
 });

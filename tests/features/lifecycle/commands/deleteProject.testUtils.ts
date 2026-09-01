@@ -33,20 +33,6 @@ jest.mock('vscode', () => ({
     },
 }));
 // Mock logging
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-    })),
-}));
 
 export { DeleteProjectCommand };
 export * as vscode from 'vscode';

@@ -6,13 +6,14 @@
  */
 
 import type { PrerequisiteDefinition } from '../services/PrerequisitesManager';
-import { ServiceLocator } from '@/core/di';
-import { TIMEOUTS, formatDuration } from '@/core/utils';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { isTimeout, toAppError } from '@/core/errors';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { formatDuration } from '@/core/utils/timeFormatting';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
 import { ComponentSelection } from '@/types/components';
-import { isTimeout, toAppError } from '@/types/errors';
 import { HandlerContext } from '@/types/handlers';
-import { DEFAULT_SHELL } from '@/types/shell';
 import { toError } from '@/types/typeGuards';
 import type { PrerequisiteStatusPayload } from '@/types/webviewPayloads';
 

@@ -19,16 +19,6 @@
 // (ADR-015 / D-2 — the cache holds the token-validation result). That builder
 // calls `getLogger()`, which throws unless the logger is initialised. Same mock
 // the other suites of getGitHubServices consumers use.
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        trace: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 
 jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 
@@ -107,10 +97,11 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 // Safe: the mocks above hoist over these imports (same module).
 import { createMockProject } from '../../../helpers/projectFake';
 import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { PushRejectedError, syncAndPublish } from '@/features/eds/services/storefront/storefrontSyncService';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Re-exported so specs never import the SUT directly (see the header note).
 export { PushRejectedError, SyncStorefrontCommand };
@@ -189,7 +180,7 @@ export function resetSyncStorefrontMocks(): void {
     // builder assembles the repo operations too — which need a CommandExecutor.
     // Seeded here rather than mocked away: the builder genuinely needs one, and
     // `clearAllMocks` above wipes the locator's registry between tests.
-    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
     statMock.mockResolvedValue({} as never);
     // Default: input box returns the supplied default value; user picks "Continue".
     (vscode.window.showInputBox as jest.Mock).mockResolvedValue('Demo Builder: sync local changes');

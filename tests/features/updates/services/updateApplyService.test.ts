@@ -17,6 +17,8 @@ import {
     updateCommitShaWithRollback,
 } from '@/features/updates/services/updateCore';
 import { shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const syncForkMock = jest.fn();
 const syncWithTemplateMock = jest.fn();
@@ -44,8 +46,11 @@ jest.mock('@/features/updates/services/templateSyncService', () => ({
 jest.mock('@/features/updates/services/componentUpdater', () => ({
     ComponentUpdater: jest.fn(() => ({ updateComponent: updateComponentMock })),
 }));
-jest.mock('@/features/project-creation/services', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
     generateAIContextFiles: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', () => ({
     // The MCP packages live in a per-project ISOLATED tools dir, never the
     // storefront's node_modules — `aiDefaultsInstaller` calls this resolver
     // "the single source of truth" for that location.
@@ -55,7 +60,7 @@ jest.mock('@/features/project-creation/services', () => ({
  * CONVERTED 2026-08-28 (ADR-015): the executor arrives in the context, so this
  * suite no longer mocks the service registry.
  */
-const executor = { execute: executeMock } as never;
+const executor = createMockCommandExecutor({ execute: executeMock });
 jest.mock('@/features/updates/services/updateCore', () => ({
     applyBlockLibraryUpdateResolved: jest.fn(),
     updateCommitShaWithRollback: jest.fn(),
@@ -90,13 +95,7 @@ const ctx = {
     extensionPath: '/ext',
     stateManager: { saveProject: jest.fn(async () => undefined) },
     commandManager: executor,
-    logger: {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-        trace: jest.fn(),
-    },
+    logger: createMockLogger(),
 } as never;
 
 const project = {

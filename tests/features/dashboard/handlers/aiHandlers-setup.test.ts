@@ -20,6 +20,7 @@ import {
     createAiHandlerContext,
 } from './aiHandlers.testUtils';
 import type { HandlerContext } from './aiHandlers.testUtils';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 
 describe('aiHandlers — setup & verification', () => {
@@ -136,9 +137,9 @@ describe('aiHandlers — setup & verification', () => {
 
         it('returns error when stateManager has no current project', async () => {
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
-                } as unknown as HandlerContext['stateManager'],
+                }) as unknown as HandlerContext['stateManager'],
             });
             const result = await handleVerifyAiSetup(context);
 

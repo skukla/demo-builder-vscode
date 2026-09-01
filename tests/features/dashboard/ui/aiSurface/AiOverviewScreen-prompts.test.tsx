@@ -47,7 +47,7 @@ describe('AiOverviewScreen — user prompts', () => {
                 } as Partial<Project>,
             });
             expect(screen.getByText('My first user prompt')).toBeInTheDocument();
-            expect(screen.queryAllByTestId('ai-prompt-card').length).toBe(1);
+            expect(screen.queryAllByTestId('ai-prompt-card')).toHaveLength(1);
         });
 
         it('loads pinned prompts on mount via list-ai-prompts (not just project.aiPrompts)', async () => {
@@ -80,7 +80,7 @@ describe('AiOverviewScreen — user prompts', () => {
 
         it('renders only the "+ New" tile when aiPrompts is undefined', async () => {
             await renderScreen();
-            expect(screen.queryAllByTestId('ai-prompt-card').length).toBe(0);
+            expect(screen.queryAllByTestId('ai-prompt-card')).toHaveLength(0);
             expect(screen.getByTestId('ai-new-prompt-tile')).toBeInTheDocument();
         });
 
@@ -147,7 +147,7 @@ describe('AiOverviewScreen — user prompts', () => {
             const saveCalls = (webviewClient.request as jest.Mock).mock.calls.filter(
                 (c) => c[0] === 'save-ai-prompt'
             );
-            expect(saveCalls.length).toBe(1);
+            expect(saveCalls).toHaveLength(1);
             const payload = saveCalls[0][1] as { prompt: { title: string; prompt: string } };
             expect(payload.prompt.title).toBe('New title');
             expect(payload.prompt.prompt).toBe('New body');
@@ -197,7 +197,7 @@ describe('AiOverviewScreen — user prompts', () => {
             const saveCalls = (webviewClient.request as jest.Mock).mock.calls.filter(
                 (c) => c[0] === 'save-ai-prompt'
             );
-            expect(saveCalls.length).toBe(1);
+            expect(saveCalls).toHaveLength(1);
             const payload = saveCalls[0][1] as { prompt: { id: string; title: string } };
             expect(payload.prompt.id).toBe('u1');
             expect(payload.prompt.title).toBe('Edited title');
@@ -232,7 +232,7 @@ describe('AiOverviewScreen — user prompts', () => {
             const saveCalls = (webviewClient.request as jest.Mock).mock.calls.filter(
                 (c) => c[0] === 'save-ai-prompt'
             );
-            expect(saveCalls.length).toBe(1);
+            expect(saveCalls).toHaveLength(1);
             const payload = saveCalls[0][1] as {
                 prompt: { id: string; title: string; prompt: string };
             };
@@ -271,7 +271,7 @@ describe('AiOverviewScreen — user prompts', () => {
             const deleteCalls = (webviewClient.request as jest.Mock).mock.calls.filter(
                 (c) => c[0] === 'delete-ai-prompt'
             );
-            expect(deleteCalls.length).toBe(1);
+            expect(deleteCalls).toHaveLength(1);
             expect(deleteCalls[0][1]).toEqual({ promptId: 'u1' });
         });
 
@@ -364,7 +364,7 @@ describe('AiOverviewScreen — user prompts', () => {
 
             const calls = (webviewClient.postMessage as jest.Mock).mock.calls;
             const copyCalls = calls.filter((c) => c[0] === 'copyAiPrompt');
-            expect(copyCalls.length).toBe(1);
+            expect(copyCalls).toHaveLength(1);
             expect(copyCalls[0][1]).toEqual(
                 expect.objectContaining({ prompt: 'This is the body' })
             );

@@ -33,6 +33,18 @@ jest.mock('@/features/eds/services/github/githubTokenService', () => ({
         getToken = jest.fn().mockResolvedValue({ token: 'gh-token' });
     },
 }));
+
+// The subject now asks the service cache instead of constructing its own token
+// service. This delegates to the SAME mocked class above, so the suite's
+// behaviour is unchanged — only the route to it is.
+jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
+    getGitHubServices: jest.fn(() => {
+        const { GitHubTokenService } = jest.requireMock(
+            '@/features/eds/services/github/githubTokenService',
+        );
+        return { tokenService: new GitHubTokenService() };
+    }),
+}));
 jest.mock('fs/promises', () => ({
     readFile: (...a: unknown[]) => mockReadFile(...a),
     writeFile: (...a: unknown[]) => mockWriteFile(...a),
@@ -43,8 +55,9 @@ jest.mock('fs/promises', () => ({
 
 import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
 import { createMockProject } from '../../../helpers/projectFake';
-import type { CommandExecutor } from '@/core/shell';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 /** An EDS project with the metadata the service reads. */
 function edsProject(): Project {
@@ -70,8 +83,8 @@ function edsProject(): Project {
 function service(): TemplateSyncService {
     return new TemplateSyncService(
         { get: jest.fn().mockResolvedValue('gh-token') } as never,
-        { trace: jest.fn(), debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
-        { execute: (...a: unknown[]) => mockExecute(...a) } as unknown as CommandExecutor
+        createMockLogger(),
+        createMockCommandExecutor({ execute: (...a: unknown[]) => mockExecute(...a) })
     );
 }
 

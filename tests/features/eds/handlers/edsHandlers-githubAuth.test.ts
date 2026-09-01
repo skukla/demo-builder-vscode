@@ -12,6 +12,7 @@
  */
 
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock the EDS services at module level
 const mockGitHubTokenService = {
@@ -59,17 +60,7 @@ jest.mock('vscode', () => ({
 }));
 
 // Mock logging
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-};
-
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => mockLogger),
-}));
+const mockLogger = createMockLogger();
 
 // Create mock handler context
 function createMockHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {

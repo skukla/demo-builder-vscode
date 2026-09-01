@@ -17,7 +17,9 @@ import {
     countSelections,
 } from '@/features/updates/services/updateApplyService';
 import type { HandlerContext } from '@/types/handlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const computeMock = computeProjectUpdateSelections as jest.Mock;
 const applyMock = applyUpdatesHeadless as jest.Mock;
@@ -43,9 +45,9 @@ const getCurrentProject = jest.fn();
 const ctxFactory = () =>
     ({
         stateManager: { getCurrentProject },
-        commandManager: { execute: jest.fn() } as never,
+        commandManager: createMockCommandExecutor({ execute: jest.fn() }),
         context: { secrets: {}, extensionPath: '/ext' },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
     }) as unknown as HandlerContext;
 
 
@@ -55,9 +57,9 @@ const ctxFactory = () =>
  * is seeded per-test rather than once at module scope.
  */
 beforeEach(() => {
-    ServiceLocator.setCommandExecutor({
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor({
         execute: jest.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
-    } as unknown as Parameters<typeof ServiceLocator.setCommandExecutor>[0]);
+    }));
 });
 
 describe('apply_updates', () => {

@@ -15,6 +15,7 @@ import {
 import type { DaLiveContentDiscovery } from '@/features/eds/services/daLive/daLiveContentDiscovery';
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 global.fetch = mockFetch;
 
@@ -31,12 +32,7 @@ describe('DaLiveContentOperations - HTML transformation', () => {
             getAccessToken: jest.fn().mockResolvedValue('mock-ims-token'),
         };
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
         discovery = (service as unknown as { discoveryOps: DaLiveContentDiscovery }).discoveryOps;
@@ -201,6 +197,6 @@ describe('DaLiveContentOperations - HTML transformation', () => {
         );
 
         expect(postedHtml).toContain('<div><p>&nbsp;</p></div>');
-        expect((postedHtml.match(/<div>/g) || []).length).toBe(3);
+        expect((postedHtml.match(/<div>/g) || [])).toHaveLength(3);
     });
 });

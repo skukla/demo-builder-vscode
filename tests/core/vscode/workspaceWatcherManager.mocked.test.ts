@@ -56,14 +56,6 @@ jest.mock('vscode', () => {
 });
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 describe('WorkspaceWatcherManager', () => {
     let manager: WorkspaceWatcherManager;

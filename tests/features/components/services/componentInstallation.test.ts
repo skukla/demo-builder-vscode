@@ -24,7 +24,7 @@ const mockExecute = jest.fn();
  * so this suite mocks the service registry NOT AT ALL. Assertions unchanged —
  * including the ones that pin the exact clone command and its options.
  */
-const executor = { execute: mockExecute } as never;
+const executor = createMockCommandExecutor({ execute: mockExecute });
 jest.mock('fs/promises', () => ({
     mkdir: jest.fn().mockResolvedValue(undefined),
     access: jest.fn().mockRejectedValue(new Error('ENOENT')),
@@ -42,20 +42,17 @@ jest.mock(
 
 import { ComponentInstallation } from '@/features/components/services/componentInstallation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DEFAULT_SHELL } from '@/types/shell';
-import type { ComponentInstance, TransformedComponentDefinition } from '@/types';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import type { ComponentInstance } from '@/types/base';
+import type { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const PROJECT = '/projects/demo';
 
 function makeLogger(): Logger {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function makeDef(overrides: Record<string, unknown> = {}): TransformedComponentDefinition {

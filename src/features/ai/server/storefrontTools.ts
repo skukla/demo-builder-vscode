@@ -28,7 +28,7 @@ import {
     republishStorefrontConfig,
     republishStorefrontContent,
 } from '@/features/eds/services/storefront/storefrontRepublishService';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 /** Pull the GitHub repo + DA.live target from an EDS project's storefront metadata. */
@@ -142,7 +142,7 @@ export function registerStorefrontTools(
             if (daLive) return asText(daLive);
             const daLiveAuthService = getDaLiveAuthService(ctx.context);
 
-            const { tokenService: githubTokenService } = getGitHubServices(ctx);
+            const { tokenService: githubTokenService } = getGitHubServices(ctx.context.secrets);
             try {
                 const result = await runWithAdobeTarget(() =>
                     republishStorefrontContent({

@@ -44,16 +44,6 @@ jest.mock('vscode', () => {
     };
 }, { virtual: true });
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
-
 // Service imports required by the daLiveSiteConfig module to load.
 jest.mock('@/features/eds/services/github/githubTokenService');
 jest.mock('@/features/eds/services/github/githubRepoOperations');
@@ -70,6 +60,7 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
 import { applyDaLiveOrgConfigSettings } from '@/features/eds/handlers/daLive/daLiveSiteConfig';
 import type { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const AEM_AUTHOR_URL = 'author-p158081-e1683323.adobeaemcloud.com';
 const IMS_ORG_ID = 'ABCDEF1234567890@AdobeOrg';
@@ -95,12 +86,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
             applyOrgConfig: mockApplyOrgConfig,
         } as unknown as DaLiveContentOperations;
 
-        mockLogger = {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
     });
 
     it('routes aem.repositoryId to applySiteConfig with the org and site (regression guard)', async () => {

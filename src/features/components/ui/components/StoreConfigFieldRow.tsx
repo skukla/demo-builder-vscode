@@ -12,7 +12,6 @@
  */
 import { Button, Flex, Text } from '@adobe/react-spectrum';
 import React from 'react';
-import { ACCS_OAUTH_CLIENT_ID, ACCS_OAUTH_CLIENT_SECRET } from '../../config/envVarKeys';
 import {
     CONNECTION_FIELDS,
     isStoreCodeField,
@@ -24,6 +23,7 @@ import type { StoreListItem } from '../hooks/useStoreDiscovery';
 import { BrokeredCredentialFields } from './BrokeredCredentialFields';
 import { ConfigFieldRenderer } from './ConfigFieldRenderer';
 import { StoreSelectionRow } from './StoreSelectionRow';
+import { ACCS_OAUTH_CLIENT_ID, ACCS_OAUTH_CLIENT_SECRET } from '@/core/config/envVarKeys';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 
 export interface StoreConfigFieldRowProps {

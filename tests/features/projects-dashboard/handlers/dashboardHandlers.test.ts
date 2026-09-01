@@ -2,7 +2,7 @@
  * Tests for Projects Dashboard handlers
  */
 
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import * as os from 'os';
 import * as path from 'path';
 import {
@@ -14,7 +14,8 @@ import {
     handleOpenDaLive,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';
 import { createProjectsDashboardProject, createMockProjects, createProjectsDashboardContext } from '../testUtils';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock mesh staleness detection
 jest.mock('@/core/state/appBuilderComponentState', () => ({
@@ -77,7 +78,7 @@ jest.mock(
  * are seeded per-test rather than mocked at the module level.
  */
 beforeEach(() => {
-    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
     ServiceLocator.setAuthenticationService({
         getCachedOrganization: jest.fn(),
         getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })),

@@ -14,9 +14,10 @@
 
 import { UNATTRIBUTED_PICKS_KEY, applyDesiredApis, migrateApiPicks, resolveDesiredApis } from '@/core/state/componentApiPicks';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../helpers/projectFake';
 
 function project(overrides: Partial<Project> = {}): Project {
-    return { name: 'p', path: '/p', ...overrides } as unknown as Project;
+    return createMockProject({ name: 'p', path: '/p', ...overrides });
 }
 
 describe('resolveDesiredApis', () => {

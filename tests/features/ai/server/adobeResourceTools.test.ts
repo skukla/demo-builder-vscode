@@ -20,12 +20,13 @@ jest.mock('@/features/authentication/services/consoleProjectTeardown', () => ({
 jest.mock('@/features/authentication/handlers/deleteAdobeProjectHandler', () => ({
     createTeardownDeps: jest.fn(() => ({})),
 }));
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn(() => ({})) },
 }));
 
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const createProject = jest.fn();
 const createWorkspace = jest.fn();
@@ -39,7 +40,7 @@ function serve(opts: { authed?: boolean; noManager?: boolean } = {}) {
             authManager: opts.noManager
                 ? undefined
                 : { isAuthenticated, createProject, createWorkspace },
-            logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+            logger: createMockLogger(),
         }) as unknown as HandlerContext;
 
     registerAdobeResourceTools(

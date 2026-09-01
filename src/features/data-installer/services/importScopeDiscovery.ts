@@ -16,7 +16,7 @@
  */
 
 import type { CommerceCredentials } from './dataInstallerWriteClient';
-import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/features/components/config/envVarKeys';
+import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
 import { selectDiscoveryService } from '@/features/eds/services/accsDiscoveryConfig';
 import type { Project } from '@/types/base';

@@ -12,24 +12,22 @@ import * as path from 'path';
 import { buildStatusPayload, deriveMeshStatus } from '../services/dashboardStatusService';
 import { withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
 import { AI_CONTEXT_VERSION } from '@/core/constants';
-import { ServiceLocator } from '@/core/di';
-import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { getMeshEndpoint } from '@/core/state/appBuilderComponentState';
-import { verifyAiSetup } from '@/features/ai';
+import { verifyAiSetup } from '@/features/ai/aiSetupVerifier';
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
-import { handleForcedOrgSwitch } from '@/features/authentication';
+import { handleForcedOrgSwitch } from '@/features/authentication/handlers/orgSwitchHandler';
 import {
     handleRegenerateAiFiles,
     logAiVerification,
 } from '@/features/dashboard/handlers/aiHandlers';
-import {
-    runOnOpenChecks,
-    createOrgContextCheck,
-    createMcpHealthCheck,
-    createMeshVerifyCheck,
-    createAiVerifyCheck,
-    createAiContextFreshnessCheck,
-} from '@/features/dashboard/services/onOpenChecks';
+import { createAiContextFreshnessCheck } from '@/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck';
+import { createAiVerifyCheck } from '@/features/dashboard/services/onOpenChecks/aiVerifyCheck';
+import { createMcpHealthCheck } from '@/features/dashboard/services/onOpenChecks/mcpHealthCheck';
+import { createMeshVerifyCheck } from '@/features/dashboard/services/onOpenChecks/meshVerifyCheck';
+import { runOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
+import { createOrgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import {
     applicableMcpPackages,

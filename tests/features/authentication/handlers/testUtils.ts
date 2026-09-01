@@ -8,11 +8,12 @@ import type { HandlerContext } from '@/types/handlers';
 import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
 import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { ErrorLogger } from '@/core/logging/errorLogger';
-import type { ProgressUnifier } from '@/core/utils/progressUnifier';
+import type { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
 import type { StepLogger } from '@/core/logging/stepLogger';
 import type { StateManager } from '@/core/state/stateManager';
 import type { ExtensionContext } from 'vscode';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Test data
 export const mockOrg: AdobeOrg = {
@@ -63,20 +64,8 @@ export function createAuthHandlerContext(overrides?: Partial<HandlerContext>): j
         errorLogger: {} as ErrorLogger,
         progressUnifier: {} as ProgressUnifier,
         stepLogger: {} as StepLogger,
-        logger: {
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as any, // Simplified mock
-        debugLogger: {
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as any, // Simplified mock
+        logger: createMockLogger() as any, // Simplified mock
+        debugLogger: createMockLogger() as any, // Simplified mock
         context: {} as ExtensionContext,
         panel: undefined,
         stateManager: {} as StateManager,

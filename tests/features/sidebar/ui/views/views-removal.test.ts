@@ -24,7 +24,6 @@ describe('Sidebar View Components Removal', () => {
         __dirname,
         '../../../../../src/features/sidebar/ui/Sidebar.tsx'
     );
-    const indexPath = path.resolve(viewsDir, 'index.ts');
 
     describe('File removal verification', () => {
         it('should not have ProjectsListView.tsx file', () => {
@@ -43,37 +42,17 @@ describe('Sidebar View Components Removal', () => {
         });
     });
 
-    describe('Export removal verification', () => {
-        it('should not export ProjectsListView from index.ts', () => {
-            const indexContent = fs.readFileSync(indexPath, 'utf-8');
-            expect(indexContent).not.toMatch(/export\s+.*ProjectsListView/);
-        });
-
-        it('should not export ProjectView from index.ts', () => {
-            const indexContent = fs.readFileSync(indexPath, 'utf-8');
-            expect(indexContent).not.toMatch(/export\s+.*ProjectView/);
-        });
-
-        it('should not export WelcomeView from index.ts', () => {
-            const indexContent = fs.readFileSync(indexPath, 'utf-8');
-            expect(indexContent).not.toMatch(/export\s+.*WelcomeView/);
-        });
-
-        it('should not export ProjectsListViewProps type from index.ts', () => {
-            const indexContent = fs.readFileSync(indexPath, 'utf-8');
-            expect(indexContent).not.toMatch(/export\s+type\s+.*ProjectsListViewProps/);
-        });
-
-        it('should not export ProjectViewProps type from index.ts', () => {
-            const indexContent = fs.readFileSync(indexPath, 'utf-8');
-            expect(indexContent).not.toMatch(/export\s+type\s+.*ProjectViewProps/);
-        });
-
-        it('should not export WelcomeViewProps type from index.ts', () => {
-            const indexContent = fs.readFileSync(indexPath, 'utf-8');
-            expect(indexContent).not.toMatch(/export\s+type\s+.*WelcomeViewProps/);
-        });
-    });
+    /**
+     * `describe('Export removal verification')` was DELETED here on 2026-08-31
+     * (PL-31). Its six cases read `views/index.ts` and asserted it did not
+     * re-export three removed components. That index no longer exists — the
+     * barrel was retired — which is a strictly STRONGER guarantee than the one
+     * these cases made: there is no re-export file for a deleted component to
+     * reappear in, and the reExportIndex ledger fails the build if one is added.
+     *
+     * The file-existence and import checks above and below still earn their keep:
+     * they guard against the components themselves coming back.
+     */
 
     describe('Import removal verification', () => {
         it('should not import ProjectsListView in Sidebar.tsx', () => {
@@ -109,11 +88,13 @@ describe('Sidebar View Components Removal', () => {
         });
     });
 
-    describe('views directory should still exist with index.ts', () => {
-        it('should have index.ts file in views directory', () => {
-            expect(fs.existsSync(indexPath)).toBe(true);
-        });
-
+    describe('the views directory still exists', () => {
+        /**
+         * The `index.ts` case that sat here REQUIRED the barrel to exist. It was
+         * deleted on 2026-08-31 with the barrel (PL-31) — a module is imported by
+         * the path that declares it, so a re-export index in this directory is now
+         * a build failure rather than a requirement.
+         */
         it('should have views directory', () => {
             expect(fs.existsSync(viewsDir)).toBe(true);
         });

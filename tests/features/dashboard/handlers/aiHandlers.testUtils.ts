@@ -27,38 +27,46 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Mock BaseWebviewCommand to avoid pulling the whole webview infrastructure
-jest.mock('@/core/base', () => ({
+jest.mock('@/core/base/baseCommand', () => ({
     BaseCommand: class {},
+}));
+
+jest.mock('@/core/base/baseWebviewCommand', () => ({
     BaseWebviewCommand: {
         startWebviewTransition: jest.fn().mockResolvedValue(undefined),
     },
 }));
 
 // Mock validateURL (transitive dependency)
-jest.mock('@/core/validation', () => ({
-    validateURL: jest.fn(),
+jest.mock('@/core/validation/SensitiveDataRedactor', () => ({
     // Real redactor — logAiVerification sanitizes the MCP stderr tail through it.
-    sanitizeErrorForLogging: jest.requireActual('@/core/validation').sanitizeErrorForLogging,
+    sanitizeErrorForLogging: jest.requireActual('@/core/validation/SensitiveDataRedactor').sanitizeErrorForLogging,
+}));
+
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
 }));
 
 // Mock AI feature barrel
-jest.mock('@/features/ai', () => ({
+// Two mocks where there was one: the barrel these names came through was retired
+// under ADR-022, and they live in two different modules.
+jest.mock('@/features/ai/aiSetupVerifier', () => ({
     verifyAiSetup: jest.fn(),
+}));
+jest.mock('@/features/ai/mcpInspector', () => ({
     inspectAllServers: jest.fn().mockResolvedValue([]),
     clearMcpCache: jest.fn(),
 }));
 
 // Mock AI context file generator
-jest.mock('@/features/project-creation/services', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
     generateAIContextFiles: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', () => ({
     // Default: success — tests can override per-case via mockResolvedValueOnce.
     installAiDefaultsMcpTools: jest.fn().mockResolvedValue({ success: true }),
     readInstalledMcpPackages: jest.fn().mockResolvedValue([]),
-    // Real predicate: pure function over the project record, so the
-    // storefront/headless fixtures keep their production meaning.
-    projectNeedsAppBuilderTooling: jest.requireActual(
-        '@/features/project-creation/services/aiBundle/aiToolingGate'
-    ).projectNeedsAppBuilderTooling,
     // Real resolver: pure function over the bundled ai-defaults.json, so the
     // "Downloading AI tool packages" prompt names the ACTUAL packages the
     // fixtures qualify for (e.g. @playwright/mcp for the storefront fixture).
@@ -66,6 +74,13 @@ jest.mock('@/features/project-creation/services', () => ({
         '@/features/project-creation/services/aiBundle/aiDefaultsInstaller'
     ).applicableMcpPackages,
 }));
+
+// aiToolingGate is NOT mocked. It was only ever in the barrel factory because
+// mocking the barrel replaced every symbol at once, and these tests wanted the
+// REAL predicate — a pure function over the project record, so the fixtures keep
+// their production meaning. Mocking per-module makes the stand-in unnecessary,
+// and a partial factory here would have silently deleted the module's other
+// exports (aiDefaultsEntryApplies, gatedSkillReasons).
 
 // Mock vscode
 jest.mock('vscode', () => ({
@@ -119,15 +134,16 @@ export {
     readMergedAiPrompts,
 } from '@/features/dashboard/handlers/aiPromptHandlers';
 export { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-export { clearMcpCache, inspectAllServers, verifyAiSetup } from '@/features/ai';
-export {
-    generateAIContextFiles,
-    installAiDefaultsMcpTools,
-} from '@/features/project-creation/services';
+export { verifyAiSetup } from '@/features/ai/aiSetupVerifier';
+export { clearMcpCache, inspectAllServers } from '@/features/ai/mcpInspector';
+export { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
+export { installAiDefaultsMcpTools } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 export type { HandlerContext } from '@/types/handlers';
 
 import type { HandlerContext } from '@/types/handlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // ==========================================================
 // Test Helpers
@@ -155,18 +171,8 @@ export function createAiHandlerContext(overrides?: Partial<HandlerContext>): Han
             globalState: memento,
             subscriptions: [],
         },
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        },
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         stateManager: {
             getCurrentProject: jest.fn().mockResolvedValue({
                 name: 'Test Project',
@@ -261,7 +267,7 @@ export function makeScopedContext(
  * resets the registry after EVERY test, so this must run per-test.
  */
 export function seedCommandExecutor(): void {
-    ServiceLocator.setCommandExecutor({
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor({
         execute: jest.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
-    } as unknown as Parameters<typeof ServiceLocator.setCommandExecutor>[0]);
+    }));
 }

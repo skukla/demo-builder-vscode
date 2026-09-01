@@ -20,7 +20,7 @@
  * @module features/dashboard/services/onOpenChecks/types
  */
 
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /** Unified status for any on-open check. */

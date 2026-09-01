@@ -12,8 +12,13 @@
  */
 
 // Mock dependencies
-jest.mock('@/core/logging');
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/PathSafetyValidator');
+jest.mock('@/core/validation/SensitiveDataRedactor');
+jest.mock('@/core/validation/URLValidator');
+jest.mock('@/core/validation/Validator');
+jest.mock('@/core/validation/fieldValidation');
+jest.mock('@/core/validation/normalizers');
+jest.mock('@/core/validation/validators/NodeVersionValidator');
 jest.mock('fs/promises');
 jest.mock(
     'vscode',
@@ -38,7 +43,7 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
 
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 
 export { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 

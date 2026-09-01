@@ -1,5 +1,5 @@
-import { getLogger } from '@/core/logging';
-import { formatDuration } from '@/core/utils';
+import { getLogger } from '@/core/logging/debugLogger';
+import { formatDuration } from '@/core/utils/timeFormatting';
 
 /**
  * Performance benchmarks for authentication operations (milliseconds).

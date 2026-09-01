@@ -6,19 +6,20 @@
 
 import { handleCheckApiMesh } from '@/features/mesh/handlers/checkHandler';
 import { HandlerContext } from '@/types/handlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as _vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // withOrgContext records the target then runs the callback (no global mutation).
 // buildOrgTargetFromProjectAdobe is pure — use the real implementation.
 const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
+jest.mock('@/core/shell/orgContextEnv', () => ({
+    ...jest.requireActual('@/core/shell/orgContextEnv'),
     withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
 }));
 
 // Mock dependencies
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('fs', () => ({
     promises: {
         mkdir: jest.fn().mockResolvedValue(undefined),
@@ -66,12 +67,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                     fsPath: '/tmp/test-storage',
                 },
             } as any,
-            logger: {
-                info: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-                debug: jest.fn(),
-            } as any,
+            logger: createMockLogger() as any,
             debugLogger: {
                 trace: jest.fn(),
                 debug: jest.fn(),

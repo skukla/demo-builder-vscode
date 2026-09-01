@@ -21,16 +21,6 @@ import { makeTestWriter } from './generatedFileWriter.testUtils';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import type { Project, ComponentInstance } from '@/types/base';
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    })),
-}));
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const EDS_STOREFRONT_PATH = '/projects/test/components/eds-storefront';

@@ -30,18 +30,10 @@ jest.mock('os', () => ({
 }));
 
 // Mock logger - StateManager uses getLogger() internally
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-        trace: jest.fn(),
-    })),
-}));
 
 // Import mocked fs/promises after jest.mock
 import * as fs from 'fs/promises';
+import { createMockProject } from '../../helpers/projectFake';
 
 describe('StateManager - Error Handling', () => {
     let stateManager: StateManager;
@@ -79,13 +71,13 @@ describe('StateManager - Error Handling', () => {
         stateManager = new StateManager(mockContext);
 
         // Create mock project
-        mockProject = {
+        mockProject = createMockProject({
             name: 'test-project',
             path: '/mock/home/.demo-builder/projects/test-project',
             created: new Date(),
             lastModified: new Date(),
             status: 'ready',
-        } as Project;
+        });
     });
 
     describe('saveProject() - Error Propagation', () => {

@@ -16,9 +16,10 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ComponentDependencies } from './componentDependencies';
 import { ComponentInstallation } from './componentInstallation';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { ComponentInstallOptions, ComponentInstallResult } from '@/features/components/services/types';
-import { Project, ComponentInstance, TransformedComponentDefinition, ComponentStatus } from '@/types';
+import { ComponentInstance, ComponentStatus, Project } from '@/types/base';
+import { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
 import { getComponentInstancesByType } from '@/types/typeGuards';
 

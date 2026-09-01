@@ -14,17 +14,13 @@ import {
 import { COMPONENT_IDS } from "@/core/constants";
 import type { Project } from "@/types/base";
 import type { Logger } from "@/types/logger";
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe("configGenerator — flags, escaping & params", () => {
     let mockLogger: Logger;
 
     beforeEach(() => {
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
     });
 
     describe('placeholder value escaping', () => {

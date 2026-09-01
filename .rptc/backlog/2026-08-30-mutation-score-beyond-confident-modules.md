@@ -93,3 +93,5 @@ beside the existing baseline table, so the next run has something to compare aga
 - 2026-08-30  test(mutation): ratchet the score before improving it, and guard against gaming it (`0fd0974ce`)
 - 2026-08-31  feat(tooling): widen the mutation sample to the UI layer, and split duplication into two floors (`3ab1d0328`)
 - 2026-08-31  2026-08-31  Mutation numbers CORRECTED, not improved: jest.pl22.config.js named 12 of installHandler's 13 suites and 1 of integrationCardModel's 5. integrationCardModel 42.96% -> 91.90% (comes off the target list, was never badly tested); installHandler 49.17% -> 57.12% and remains the real worst, its NoCoverage 112 -> 36 converting into Survived. Ten unmoved modules are the control. Baseline carries _supersedes + _correction so this cannot be counted as progress. mutation-config-pairing now requires EVERY suite for a mutated module.
+- 2026-08-31  chore(health): snapshot, with the mutation half marked as a correction (`3b0223654`)
+- 2026-08-31  docs(backlog): record the mutation correction against PL-22 (`02cfbea46`)

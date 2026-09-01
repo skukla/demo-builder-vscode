@@ -20,14 +20,9 @@ import {
     readSiteAccess,
 } from '@/features/eds/services/configService/configServiceAccess';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const logger: Logger = {
-    trace: jest.fn(),
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+const logger: Logger = createMockLogger();
 
 const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('ims-token') };
 

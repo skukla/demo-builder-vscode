@@ -20,9 +20,11 @@ import {
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { Logger } from '@/types/logger';
-import type { StateManager } from '@/core/state';
-import type { Project } from '@/types';
-import { ServiceLocator } from '@/core/di';
+import type { StateManager } from '@/core/state/stateManager';
+import type { Project } from '@/types/base';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock VS Code API
 jest.mock('vscode', () => ({
@@ -106,12 +108,7 @@ function setupDefaultMocks(): {
         loadProjectFromPath: jest.fn().mockResolvedValue(null),
     } as any;
 
-    const mockLogger = {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as any;
+    const mockLogger = createMockLogger() as any;
 
     (vscode.window.withProgress as jest.Mock).mockImplementation((_opts, cb) => cb(mockProgress));
 
@@ -159,9 +156,9 @@ function setupDefaultMocks(): {
  * is seeded per-test rather than once at module scope.
  */
 beforeEach(() => {
-    ServiceLocator.setCommandExecutor({
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor({
         execute: jest.fn(async () => ({ code: 0, stdout: '', stderr: '' })),
-    } as unknown as Parameters<typeof ServiceLocator.setCommandExecutor>[0]);
+    }));
 });
 
 describe('CheckUpdatesCommand — Fork Sync', () => {

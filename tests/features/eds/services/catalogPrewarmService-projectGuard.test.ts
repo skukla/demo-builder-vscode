@@ -20,7 +20,7 @@
  */
 
 import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarmService';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 function projectFor(githubRepo: string | undefined): Project {
     return {

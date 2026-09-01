@@ -12,7 +12,7 @@
  */
 
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { validateURL } from '@/core/validation';
+import { validateURL } from '@/core/validation/URLValidator';
 import { normalizeUrl } from '@/core/validation/Validator';
 import type {
     CommerceStoreStructure,

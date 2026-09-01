@@ -31,11 +31,12 @@ jest.mock('@/features/eds/services/patches/lkgPinHelper', () => ({
     pinRepoToLkg: jest.fn().mockResolvedValue(true),
 }));
 import { pinRepoToLkg } from '@/features/eds/services/patches/lkgPinHelper';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 const mockPinRepoToLkg = pinRepoToLkg as jest.Mock;
 
 function makeContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
         context: { secrets: {}, globalState: { get: jest.fn(), update: jest.fn() } },
     } as unknown as HandlerContext;

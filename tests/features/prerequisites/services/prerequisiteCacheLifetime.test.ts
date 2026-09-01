@@ -33,28 +33,21 @@ const mockGetLogger = jest.fn();
 jest.mock('vscode', () => ({ window: {}, workspace: {} }), { virtual: true });
 // The cache manager imports getLogger from the MODULE, not the barrel
 // (`@/core/logging/debugLogger`), so both need stubbing.
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: (...a: unknown[]) => mockGetLogger(...a),
-}));
-jest.mock('@/core/logging', () => ({
-    getLogger: (...a: unknown[]) => mockGetLogger(...a),
-    getStepLogger: jest.fn().mockReturnValue({}),
-    ErrorLogger: class {},
-}));
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn().mockReturnValue({}),
         getAuthenticationService: jest.fn(),
     },
 }));
 jest.mock('@/core/logging/errorLogger', () => ({ ErrorLogger: class {} }));
-jest.mock('@/core/utils/progressUnifier', () => ({ ProgressUnifier: class {} }));
+jest.mock('@/core/utils/progressUnifier/ProgressUnifier', () => ({ ProgressUnifier: class {} }));
 
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { resetComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { resetPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /** The parts a webview surface hands the factory, identical between messages. */
 function panelParts() {
@@ -71,13 +64,7 @@ beforeEach(() => {
     jest.clearAllMocks();
     resetPrerequisitesManager(); // a shared instance must not leak between tests
     resetComponentRegistryManager();
-    mockGetLogger.mockReturnValue({
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    });
+    mockGetLogger.mockReturnValue(createMockLogger());
 });
 
 /** Two contexts, built exactly as two consecutive messages build them. */

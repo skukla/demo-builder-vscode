@@ -12,16 +12,17 @@ import {
     isMeshUpdateDeclined,
 } from '@/features/mesh/services/meshUpdateDecline';
 import type { Project, AppBuilderComponentState } from '@/types/base';
+import { createMockProject } from '../../../helpers/projectFake';
 
 function makeProject(overrides: Partial<Project> = {}): Project {
-    return {
+    return createMockProject({
         name: 'demo',
         path: '/tmp/demo',
         status: 'ready',
         created: new Date(),
         lastModified: new Date(),
         ...overrides,
-    } as Project;
+    });
 }
 
 function keyedMesh(overrides: Record<string, unknown> = {}): AppBuilderComponentState {

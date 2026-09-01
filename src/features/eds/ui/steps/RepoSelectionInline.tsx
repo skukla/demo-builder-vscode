@@ -21,6 +21,7 @@
 import { Button, Text } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import React, { useEffect, useCallback, useState } from 'react';
+import { edsConfigStringDefaults, type WizardEdsConfig } from '../helpers/edsConfigDefaults';
 import {
     CodeSyncStatusView,
     NewRepoForm,
@@ -35,8 +36,8 @@ import {
     type GitHubAppStatus,
     type RepoCreationState,
 } from './repoSelectionInline.helpers';
-import { SelectionStepContent } from '@/core/ui/components/selection';
-import { useSelectionStep } from '@/core/ui/hooks';
+import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
+import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 import {
     isValidRepositoryName,
@@ -45,7 +46,6 @@ import {
 } from '@/core/validation/normalizers';
 import type { GitHubRepoItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
-import { edsConfigStringDefaults, type WizardEdsConfig } from '../helpers/edsConfigDefaults';
 import '../styles/eds-steps.css';
 
 

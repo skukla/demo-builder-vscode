@@ -12,7 +12,7 @@
 
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import {
     getProjectFrontendPort,
     getMeshComponentInstance,

@@ -6,7 +6,7 @@
  */
 
 // IMPORTANT: Mock must be declared before imports
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
     },
@@ -107,7 +107,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
         } as any);
 
         // Override auth mock AFTER setupMocks (which sets isAuthenticated=true)
-        const { ServiceLocator } = require('@/core/di');
+        const { ServiceLocator } = require('@/core/di/serviceLocator');
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(false),
         });
@@ -146,7 +146,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
 
         it('reports "error" without waiting on auth (matching sendDemoStatusUpdate)', async () => {
             const mockContext = withFailedMesh('deployed');
-            const { ServiceLocator } = require('@/core/di');
+            const { ServiceLocator } = require('@/core/di/serviceLocator');
             ServiceLocator.getAuthenticationService.mockReturnValue({
                 isAuthenticated: jest.fn().mockResolvedValue(false),
             });

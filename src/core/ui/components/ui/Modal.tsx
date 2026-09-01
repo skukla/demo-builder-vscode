@@ -1,7 +1,7 @@
 import { Dialog, Heading, Content, Divider } from '@adobe/react-spectrum';
 import React, { ReactNode, useCallback } from 'react';
-
 import { cn } from '@/core/ui/utils/classNames';
+
 export interface ActionButton {
     label: string;
     variant: 'primary' | 'secondary' | 'accent' | 'negative';

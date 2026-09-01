@@ -11,7 +11,7 @@ import {
     DeleteProjectCommand,
     vscode,
 } from './deleteProject.testUtils';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 
 // Mock fs/promises with explicit exports
@@ -19,6 +19,7 @@ jest.mock('fs/promises', () => ({
     rm: jest.fn().mockResolvedValue(undefined),
 }));
 import * as fs from 'fs/promises';
+import { createMockLogger } from '../../../helpers/loggerFake';
 const mockRm = fs.rm as jest.Mock;
 
 // Import vscode after mock
@@ -61,12 +62,7 @@ describe('DeleteProjectCommand - Retry Logic', () => {
         } as any;
 
         // Mock logger
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as any;
+        mockLogger = createMockLogger() as any;
 
         // Mock vscode.window.showInformationMessage for confirmation (returns 'Yes')
         (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Yes');

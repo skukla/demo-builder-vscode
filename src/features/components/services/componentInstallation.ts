@@ -12,15 +12,16 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type {
     ComponentInstallOptions,
     ComponentInstallResult,
 } from '@/features/components/services/types';
-import { ComponentInstance, TransformedComponentDefinition } from '@/types';
+import { ComponentInstance } from '@/types/base';
+import { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
 
 /**
  * Handles Git-based component installation

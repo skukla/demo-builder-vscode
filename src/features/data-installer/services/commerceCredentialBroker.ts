@@ -25,7 +25,7 @@
  */
 
 import type { BrokerOutcome, CredentialBroker, CredentialResolution } from './commerceCredentials';
-import { createCacheEntry, isExpired, type CacheEntry } from '@/core/cache';
+import { createCacheEntry, isExpired, type CacheEntry } from '@/core/cache/cacheUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { selectCredentialService } from '@/features/eds/services/accsDiscoveryConfig';
 import type { HandlerContext } from '@/types/handlers';

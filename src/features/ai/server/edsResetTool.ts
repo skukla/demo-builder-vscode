@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { runWithAdobeTarget } from './adobeTargetStore';
 import { requireDaLive, requireEdsProject, requireGitHub } from './edsToolGuards';
 import { asText } from './mcpToolResult';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { reportPhase } from '@/core/utils/agentPhaseChannel';
 import {
     getDaLiveAuthService,

@@ -25,14 +25,6 @@
  */
 
 import type { StatusDisplay, MeshStatus } from '../../hooks/useDashboardStatus';
-import type { IdentifiedAppBuilderComponent } from '@/core/state/appBuilderComponentState';
-import type {
-    CardAction,
-    CardStatus,
-    CommerceScopePart,
-    IntegrationCardModel,
-} from '@/core/ui/components/integrations';
-import { getStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
 import {
     ACCS_WEBSITE_CODE,
     ACCS_STORE_CODE,
@@ -40,7 +32,10 @@ import {
     PAAS_WEBSITE_CODE,
     PAAS_STORE_CODE,
     PAAS_STORE_VIEW_CODE,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
+import type { IdentifiedAppBuilderComponent } from '@/core/state/appBuilderComponentState';
+import type { CardAction, CardStatus, CommerceScopePart, IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
+import { getStatusDisplay, severityToDot } from '@/core/ui/utils/statusVocabulary';
 import {
     getAppBuilderComponentEntry,
     isBlankSource,
@@ -64,7 +59,7 @@ export type {
     CardStatus,
     CommerceScopePart,
     IntegrationCardModel,
-} from '@/core/ui/components/integrations';
+} from '@/core/ui/components/integrations/integrationCardModel.types';
 
 /**
  * The verb a status is ASKING for, or undefined when the card is idle.

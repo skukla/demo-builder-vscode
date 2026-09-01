@@ -14,13 +14,9 @@
 
 import { ConfigurationService } from '@/features/eds/services/configService/configurationService';
 import type { SiteRegistrationParams } from '@/features/eds/services/configService/configurationService';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+const mockLogger = createMockLogger();
 
 const mockTokenProvider = {
     getAccessToken: jest.fn(),

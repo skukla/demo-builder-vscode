@@ -18,11 +18,12 @@ import {
     getLogger,
 } from './adobeEntityFetcher.testUtils';
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
-import { CACHE_TTL, TIMEOUTS } from '@/core/utils';
-import type { CommandExecutor } from '@/core/shell';
+import { CACHE_TTL, TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
     let fetcher: AdobeEntityFetcher;
@@ -30,9 +31,7 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
     let sdk: { getServicesForOrg: jest.Mock };
 
     beforeEach(() => {
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(), debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
         sdk = { getServicesForOrg: jest.fn() };
 
@@ -43,10 +42,10 @@ describe('AdobeEntityFetcher — getServicesForOrg cache', () => {
         } as unknown as jest.Mocked<AdobeSDKClient>;
 
         fetcher = new AdobeEntityFetcher(
-            { execute: jest.fn() } as unknown as jest.Mocked<CommandExecutor>,
+            createMockCommandExecutor(),
             mockSDKClient,
             {} as unknown as jest.Mocked<AuthCacheManager>,
-            { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as unknown as jest.Mocked<Logger>,
+            createMockLogger() as unknown as jest.Mocked<Logger>,
             { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>,
         );
     });

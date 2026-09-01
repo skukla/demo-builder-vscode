@@ -9,47 +9,24 @@
  * these mocks register. Specs import EVERYTHING from here, `vscode` included.
  */
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    initializeLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
+jest.mock('@/core/logging/debugLogger', () => {
+    const { createMockLogger } = require('./helpers/loggerFake');
+    // initializeLogger hands back a DebugLogger, which is a Logger plus three
+    // methods the canonical builder deliberately excludes (nothing else in the
+    // corpus fakes them). The builder supplies the Logger surface; the extras
+    // stay explicit so it is visible that they are NOT part of Logger.
+    return {
+        initializeLogger: jest.fn(() => ({
+            ...createMockLogger(),
         replayLogsFromFile: jest.fn().mockResolvedValue(undefined),
         show: jest.fn(),
         showDebug: jest.fn(),
-    })),
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
+        })),
+        getLogger: jest.fn(() => createMockLogger()),
+    };
+});
 
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-    initializeLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        replayLogsFromFile: jest.fn().mockResolvedValue(undefined),
-        show: jest.fn(),
-        showDebug: jest.fn(),
-    })),
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
+
 
 // StateManager knobs the specs steer per test.
 export const mockHasProject = jest.fn();
@@ -59,7 +36,7 @@ export const mockOnProjectChanged = {
     event: jest.fn(() => ({ dispose: jest.fn() })),
 };
 
-jest.mock('@/core/state', () => ({
+jest.mock('@/core/state/stateManager', () => ({
     StateManager: jest.fn().mockImplementation(() => ({
         initialize: mockInitialize.mockResolvedValue(undefined),
         hasProject: mockHasProject,
@@ -69,7 +46,7 @@ jest.mock('@/core/state', () => ({
     })),
 }));
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         setSidebarProvider: jest.fn(),
         setCommandExecutor: jest.fn(),
@@ -81,13 +58,13 @@ jest.mock('@/core/di', () => ({
     },
 }));
 
-jest.mock('@/features/sidebar', () => ({
+jest.mock('@/features/sidebar/providers/sidebarProvider', () => ({
     SidebarProvider: jest.fn().mockImplementation(() => ({
         viewId: 'demoBuilder.sidebar',
     })),
 }));
 
-jest.mock('@/features/authentication', () => ({
+jest.mock('@/features/authentication/services/authenticationService', () => ({
     AuthenticationService: jest.fn().mockImplementation(() => ({})),
 }));
 
@@ -97,17 +74,20 @@ jest.mock('@/commands/commandManager', () => ({
     })),
 }));
 
-jest.mock('@/core/vscode', () => ({
+jest.mock('@/core/vscode/workspaceWatcherManager', () => ({
     WorkspaceWatcherManager: jest.fn().mockImplementation(() => ({
         dispose: jest.fn(),
     })),
+}));
+
+jest.mock('@/core/vscode/envFileWatcherService', () => ({
     EnvFileWatcherService: jest.fn().mockImplementation(() => ({
         initialize: jest.fn(),
         dispose: jest.fn(),
     })),
 }));
 
-jest.mock('@/core/shell', () => ({
+jest.mock('@/core/shell/commandExecutor', () => ({
     CommandExecutor: jest.fn().mockImplementation(() => ({
         dispose: jest.fn(),
     })),

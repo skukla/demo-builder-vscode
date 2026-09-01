@@ -10,17 +10,6 @@
 // Mock vscode module
 
 // Mock logging
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-};
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => mockLogger),
-    Logger: jest.fn(() => mockLogger),
-}));
 
 // Mock timeout config - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({

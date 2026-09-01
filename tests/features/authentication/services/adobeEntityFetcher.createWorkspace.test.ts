@@ -6,17 +6,17 @@
  */
 
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import type { Logger } from '@/types/logger';
-
-jest.mock('@/core/logging');
 jest.mock('@/types/typeGuards');
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { parseJSON } from '@/types/typeGuards';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher.createWorkspace()', () => {
     let fetcher: AdobeEntityFetcher;
@@ -32,13 +32,7 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
     const PROJECT = { id: 'proj-456', name: 'Test Project', title: 'Test Project' };
 
     beforeEach(() => {
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
         (parseJSON as jest.Mock).mockImplementation((str) => {
             try {
                 return JSON.parse(str);
@@ -47,7 +41,7 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
             }
         });
 
-        mockCommandExecutor = { execute: jest.fn() } as unknown as jest.Mocked<CommandExecutor>;
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
 
         createWorkspace = jest.fn();
         createRuntimeNamespace = jest.fn().mockResolvedValue({ body: {} });
@@ -62,12 +56,7 @@ describe('AdobeEntityFetcher.createWorkspace()', () => {
             getCachedProject: jest.fn().mockReturnValue(PROJECT),
         } as unknown as jest.Mocked<AuthCacheManager>;
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
+        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
         mockStepLogger = { logTemplate: jest.fn() } as unknown as jest.Mocked<StepLogger>;
 
         fetcher = new AdobeEntityFetcher(

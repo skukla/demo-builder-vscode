@@ -10,11 +10,9 @@
  * Target Coverage: 90%+
  */
 
-import {
-    validateAccessToken,
-    validateURL,
-    sanitizeErrorForLogging
-} from '@/core/validation';
+import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
+import { validateURL } from '@/core/validation/URLValidator';
+import { validateAccessToken } from '@/core/validation/validators/AccessTokenValidator';
 
 describe('securityValidation - Network Security', () => {
 

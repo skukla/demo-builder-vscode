@@ -10,7 +10,7 @@
  * @module features/data-installer/services/importInstance
  */
 
-import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/features/components/config/envVarKeys';
+import { ACCS_GRAPHQL_ENDPOINT, PAAS_URL } from '@/core/config/envVarKeys';
 import {
     deriveAccsTenantId,
     lookupComponentConfigValue,

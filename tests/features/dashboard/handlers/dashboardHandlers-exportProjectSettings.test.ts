@@ -17,43 +17,43 @@ jest.mock(
     { virtual: true }
 );
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
-jest.mock('@/core/validation', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
+jest.mock('@/core/validation/URLValidator', () => ({
     validateURL: jest.fn(),
 }));
 
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
+    validateOrgId: jest.fn(),
+    validateProjectId: jest.fn(),
+    validateWorkspaceId: jest.fn(),
+}));
+
 const mockExportToFile = jest.fn();
-jest.mock('@/features/projects-dashboard/services', () => ({
+jest.mock('@/features/projects-dashboard/services/settingsTransferService', () => ({
     exportProjectSettingsToFile: (...args: unknown[]) => mockExportToFile(...args),
 }));
 
 import { handleExportProjectSettings } from '@/features/dashboard/handlers/dashboardHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 function makeContext(project: Project | undefined): HandlerContext {
     return {
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
+        }) as unknown as HandlerContext['stateManager'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
     } as unknown as HandlerContext;
 }
 
-const PROJECT = { name: 'My Demo', path: '/projects/my-demo' } as unknown as Project;
+const PROJECT = createMockProject({ name: 'My Demo', path: '/projects/my-demo' });
 
 describe('handleExportProjectSettings', () => {
     beforeEach(() => jest.clearAllMocks());

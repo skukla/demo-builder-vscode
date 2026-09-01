@@ -5,10 +5,12 @@
 
 import { getEndpoint } from '@/features/mesh/services/meshEndpoint';
 import type { Logger } from '@/types/logger';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock validation
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateMeshId: jest.fn(),
 }));
 
@@ -28,25 +30,11 @@ describe('meshEndpoint', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockCommandManager = {
-            execute: jest.fn(),
-        } as any;
+        mockCommandManager = createMockCommandExecutor();
 
-        mockLogger = {
-            trace: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
-        mockDebugLogger = {
-            trace: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        };
+        mockDebugLogger = createMockLogger();
     });
 
     describe('getEndpoint', () => {
@@ -69,7 +57,7 @@ describe('meshEndpoint', () => {
         });
 
         it('should validate meshId before using it', async () => {
-            const { validateMeshId } = require('@/core/validation');
+            const { validateMeshId } = require('@/core/validation/validators/AdobeResourceValidator');
 
             await getEndpoint(
                 meshId,

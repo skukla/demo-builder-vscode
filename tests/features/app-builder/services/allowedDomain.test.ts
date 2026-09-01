@@ -8,6 +8,7 @@
 
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../../helpers/projectFake';
 
 function projectWithFrontend(frontendId: string, port?: number): Project {
     return {
@@ -33,7 +34,7 @@ describe('deriveAllowedDomain', () => {
     });
 
     it('should default to localhost:3000 when no frontend is selected', () => {
-        const project = { name: 'p', status: 'ready', path: '/p' } as unknown as Project;
+        const project = createMockProject({ name: 'p', status: 'ready', path: '/p' });
         expect(deriveAllowedDomain(project)).toBe('localhost:3000');
     });
 

@@ -12,7 +12,7 @@
 import { buildStatusPayload } from '../services/dashboardStatusService';
 import { hasMeshDeploymentRecord, getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import { detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { HandlerContext } from '@/types/handlers';
 import { getMeshComponentInstance } from '@/types/typeGuards';
 import type { MeshStatusInfo } from '@/types/webviewPayloads';

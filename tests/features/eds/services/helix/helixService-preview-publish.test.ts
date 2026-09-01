@@ -10,20 +10,18 @@
  */
 
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // Mock vscode module
 
 // Mock logging
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    trace: jest.fn(),
-};
-jest.mock('@/core/logging', () => ({
+const mockLogger = createMockLogger();
+// `Logger` was ALSO listed here as a mocked export. `@/core/logging` never
+// exported a `Logger` — only DebugLogger/ErrorLogger/StepLogger and the two
+// accessors — so that line faked a symbol that does not exist. Dropped 2026-08-31
+// (PL-31) when the barrel went and every key had to name its declaring module.
+jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: jest.fn(() => mockLogger),
-    Logger: jest.fn(() => mockLogger),
 }));
 
 // Mock timeout config
@@ -223,13 +221,13 @@ describe('HelixService - Preview/Publish', () => {
             expect(previewBody.paths).toContain('/about');
             expect(previewBody.paths).toContain('/nav');
             expect(previewBody.paths).toContain('/products');
-            expect(previewBody.paths.length).toBe(4);
+            expect(previewBody.paths).toHaveLength(4);
 
             const bulkPublishCall = calls[2];
             expect(bulkPublishCall[0]).toContain('/live/github-owner/github-repo/main/*');
             const publishBody = JSON.parse((bulkPublishCall[1] as { body: string }).body);
             expect(publishBody.forceUpdate).toBe(true);
-            expect(publishBody.paths.length).toBe(4);
+            expect(publishBody.paths).toHaveLength(4);
         });
 
         it('should fall back to GitHub org/site if DA.live org/site not provided', async () => {

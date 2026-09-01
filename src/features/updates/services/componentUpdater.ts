@@ -1,15 +1,15 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { isMeshComponentId } from '@/core/constants';
-import type { CommandExecutor } from '@/core/shell';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { Project } from '@/types';
-import { toAppError, isTimeout, isNetwork } from '@/types/errors';
-import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
-import { parseJSON } from '@/types/typeGuards';
 import { mergeEnvContent, parseEnvFile } from './envMerge';
+import { isMeshComponentId } from '@/core/constants';
+import { toAppError, isTimeout, isNetwork } from '@/core/errors';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { Project } from '@/types/base';
+import type { Logger } from '@/types/logger';
+import { parseJSON } from '@/types/typeGuards';
 
 /**
  * How much build output to dump on failure.
@@ -151,8 +151,10 @@ export class ComponentUpdater {
                     // During rollback, we just want to get dependencies installed
                     let nodeVersion: string | null = null;
                     try {
-                        const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
-                        const registryManager = new ComponentRegistryManager(this.extensionPath);
+                        const { getComponentRegistryManager } = await import(
+                '@/features/components/services/componentRegistryInstance'
+            );
+                        const registryManager = getComponentRegistryManager(this.extensionPath);
                         const registry = await registryManager.loadRegistry();
                         // Search for component across all categories
                         const allComponents = [
@@ -287,8 +289,10 @@ export class ComponentUpdater {
      */
     private async runPostUpdateBuild(componentPath: string, componentId: string): Promise<void> {
         // Get component configuration from registry
-        const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
-        const registryManager = new ComponentRegistryManager(this.extensionPath);
+        const { getComponentRegistryManager } = await import(
+                '@/features/components/services/componentRegistryInstance'
+            );
+        const registryManager = getComponentRegistryManager(this.extensionPath);
         const componentDef = await registryManager.getComponentById(componentId);
 
         const nodeVersion = componentDef?.configuration?.nodeVersion || null;
@@ -399,7 +403,7 @@ export class ComponentUpdater {
         componentId: string,
     ): Promise<void> {
         // SECURITY: Validate GitHub URL before downloading
-        const { validateGitHubDownloadURL } = await import('@/core/validation');
+        const { validateGitHubDownloadURL } = await import('@/core/validation/URLValidator');
         try {
             validateGitHubDownloadURL(downloadUrl);
         } catch (error) {

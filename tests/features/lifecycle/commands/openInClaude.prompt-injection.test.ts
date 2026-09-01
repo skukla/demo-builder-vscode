@@ -41,7 +41,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'do the thing' });
@@ -54,7 +54,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'do the thing' });
@@ -71,7 +71,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -93,7 +93,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'do the thing' });
@@ -109,7 +109,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'do the thing' });
@@ -124,7 +124,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: "it's a test" });
@@ -142,7 +142,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: multiLine });
@@ -160,7 +160,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'do the thing' });
@@ -176,7 +176,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -189,7 +189,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -219,7 +219,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'hello world' });
@@ -246,7 +246,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: multiLine });
@@ -270,7 +270,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(globalState),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute({ project: makeOpenInClaudeProject() as Project, prompt: 'first' });
@@ -279,7 +279,7 @@ describe('OpenInClaudeCommand', () => {
             const firstTipCalls = mocks.showInformationMessageMock.mock.calls.filter((c) =>
                 /sent to claude/i.test(String(c[0]))
             );
-            expect(firstTipCalls.length).toBe(1);
+            expect(firstTipCalls).toHaveLength(1);
             expect(globalState.update).toHaveBeenCalledWith(CLIPBOARD_TIP_KEY, true);
 
             // Second click — flag already set, tip should NOT fire again
@@ -292,7 +292,7 @@ describe('OpenInClaudeCommand', () => {
             const secondTipCalls = mocks.showInformationMessageMock.mock.calls.filter((c) =>
                 /sent to claude/i.test(String(c[0]))
             );
-            expect(secondTipCalls.length).toBe(0);
+            expect(secondTipCalls).toHaveLength(0);
         });
 
         it('does NOT inject anything when no prompt is provided', async () => {
@@ -305,7 +305,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as never,
-                makeLogger() as never
+                makeLogger()
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);

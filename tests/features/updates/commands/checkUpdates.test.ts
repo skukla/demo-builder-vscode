@@ -19,7 +19,8 @@ import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { UpdateManager } from '@/features/updates/services/updateManager';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock VS Code API
 jest.mock('vscode', () => ({
@@ -73,12 +74,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
         } as any;
 
         // Create mock logger
-        mockLogger = {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as any;
+        mockLogger = createMockLogger() as any;
 
         // Create mock progress reporter
         mockProgress = {

@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { createMockProject as createMockProjectBase } from '../../helpers/projectFake';
 
 // Mock VS Code API
@@ -15,20 +15,19 @@ jest.mock('fs/promises');
 jest.mock('os');
 
 // Mock Logger - StateManager uses getLogger() internally
-// Note: jest.mock() is hoisted, so we define the logger mock object inline
-jest.mock('@/core/logging', () => {
-    const mockLogger = {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-        trace: jest.fn(),
-    };
+// A jest.mock factory is hoisted above the imports, so it cannot reference an
+// imported builder — but the factory BODY runs lazily, so a require() inside it
+// reaches the shared builder. `__mockLoggerInstance` is not an export of the real
+// module; it is this helper's handle on the same instance the SUT receives.
+jest.mock('@/core/logging/debugLogger', () => {
+    const { createMockLogger } = require('../../helpers/loggerFake');
+    const mockLogger = createMockLogger();
     return {
         getLogger: jest.fn(() => mockLogger),
         __mockLoggerInstance: mockLogger, // Export for tests to access
     };
 });
+
 
 // Access the mock logger instance via the mocked module
 type MockLoggerShape = {
@@ -38,7 +37,7 @@ type MockLoggerShape = {
     debug: jest.Mock;
     trace: jest.Mock;
 };
-const loggingModule = jest.requireMock('@/core/logging') as { __mockLoggerInstance: MockLoggerShape };
+const loggingModule = jest.requireMock('@/core/logging/debugLogger') as { __mockLoggerInstance: MockLoggerShape };
 export const mockLoggerInstance = loggingModule.__mockLoggerInstance;
 
 export const mockHomedir = '/mock/home';

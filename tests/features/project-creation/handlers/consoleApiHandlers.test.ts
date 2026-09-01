@@ -13,6 +13,7 @@ import { handleListOrgConsoleApis } from '@/features/project-creation/handlers/c
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 
 const mockGetServicesForOrg = jest.fn();
@@ -73,7 +74,7 @@ const ORG_SERVICES = [
 
 function makeContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
         sendMessage: jest.fn(),
     } as unknown as HandlerContext;
 }

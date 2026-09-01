@@ -17,6 +17,7 @@ jest.mock('vscode', () => ({ env: { openExternal: jest.fn() }, Uri: { parse: (u:
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const DOCKER = {
     id: 'docker',
@@ -31,7 +32,7 @@ const RESOLVED = [NODE, DOCKER];
 
 function createContext(): HandlerContext {
     return {
-        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        logger: createMockLogger(),
         debugLogger: { debug: jest.fn() },
         errorLogger: { logError: jest.fn() },
         sendMessage: jest.fn().mockResolvedValue(undefined),

@@ -19,9 +19,10 @@
 import * as vscode from 'vscode';
 import { resolveProjectAuthoringExperience } from '../handlers/edsHelpers';
 import { applyAuthoringExperienceFlip } from './authoringExperienceFlip';
+import type { GitHubTokenService } from './github/githubTokenService';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { StateManager } from '@/core/state';
-import type { AuthoringExperience, Project } from '@/types';
+import type { StateManager } from '@/core/state/stateManager';
+import type { AuthoringExperience, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { isEdsProject } from '@/types/typeGuards';
 
@@ -46,6 +47,12 @@ export interface EwSettingChangeListenerDeps {
     context: vscode.ExtensionContext;
     stateManager: StateManager;
     logger: Logger;
+    /**
+     * Passed straight through to `applyAuthoringExperienceFlip`, which needs the
+     * SHARED instance — see that interface for why a fresh one costs a GitHub round
+     * trip. This listener has no use for it itself.
+     */
+    githubTokenService: GitHubTokenService;
 }
 
 /**
@@ -106,7 +113,7 @@ async function handleEwSettingChange(
     deps: EwSettingChangeListenerDeps,
     flags: ChangeFlags,
 ): Promise<void> {
-    const { context, stateManager, logger } = deps;
+    const { context, stateManager, logger, githubTokenService } = deps;
     try {
         const affected = await findAffectedProjects(stateManager, flags);
         if (affected.length === 0) {
@@ -130,6 +137,7 @@ async function handleEwSettingChange(
                     context,
                     logger,
                     saveProject: (p) => stateManager.saveProject(p),
+                    githubTokenService,
                 });
                 successCount++;
             } catch (error) {

@@ -21,20 +21,21 @@ jest.mock('@/core/utils/browserUtils', () => ({
 
 import { OpenModernizationAgentCommand } from '@/commands/openModernizationAgent';
 import { openUrl } from '@/core/utils/browserUtils';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
+import { createMockLogger } from '../helpers/loggerFake';
+import { createMockStateManager } from '../helpers/stateManagerFake';
+import { createMockProject } from '../helpers/projectFake';
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function makeStateManager(project: Project | null): StateManager {
-    return {
+    return createMockStateManager({
         getCurrentProject: jest.fn().mockResolvedValue(project),
-    } as unknown as StateManager;
+    }) as unknown as StateManager;
 }
 
 function makeContext(): vscode.ExtensionContext {
@@ -47,7 +48,7 @@ function makeContext(): vscode.ExtensionContext {
     } as unknown as vscode.ExtensionContext;
 }
 
-const PROJECT = { name: 'My Demo', path: '/projects/demo' } as unknown as Project;
+const PROJECT = createMockProject({ name: 'My Demo', path: '/projects/demo' });
 
 describe('OpenModernizationAgentCommand', () => {
     beforeEach(() => {

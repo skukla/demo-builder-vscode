@@ -24,7 +24,7 @@ import { refreshMcpConfigs, refreshContextAndSkills } from './aiBundleService';
 import { installAiDefaultsMcpTools } from './aiDefaultsInstaller';
 import { createGeneratedFileWriter } from './generatedFileWriter';
 import { resolveNodePath } from './mcpConfigWriter';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import { ProjectDirectoryScanner } from '@/core/state/projectDirectoryScanner';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';

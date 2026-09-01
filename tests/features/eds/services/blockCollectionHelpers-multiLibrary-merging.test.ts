@@ -21,6 +21,7 @@ import {
     createBlockFileEntries,
     delegateCommitTreeToBranch,
 } from './blockCollectionHelpers.testUtils';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('installBlockCollections', () => {
     const SOURCE_A: AddonSource = { owner: 'adobe', repo: 'isle5', branch: 'main' };
@@ -159,12 +160,7 @@ describe('installBlockCollections', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
+        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
 
         mockGithubFileOps = {
             listRepoFiles: jest.fn(),

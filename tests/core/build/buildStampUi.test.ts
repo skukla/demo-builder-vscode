@@ -43,6 +43,7 @@ jest.mock('@/core/build/buildInfo', () => ({
 
 import * as vscode from 'vscode';
 import { registerBuildStamp } from '@/core/build/buildStampUi';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 const INFO = {
     checkoutPath: '/checkout/main',
@@ -60,7 +61,7 @@ function ctx(mode: number) {
     } as unknown as vscode.ExtensionContext;
 }
 
-const logger = { debug: jest.fn() };
+const logger = createMockLogger();
 
 beforeEach(() => {
     jest.clearAllMocks();

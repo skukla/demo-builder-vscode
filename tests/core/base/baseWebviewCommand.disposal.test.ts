@@ -17,20 +17,13 @@
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { DisposableStore } from '@/core/utils/disposableStore';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 // Mock panel state for disposal testing
 let mockPanel: any;
 let mockDisposeCallback: (() => void) | undefined;
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 // Mock VS Code API with comprehensive webview support
 jest.mock('vscode', () => ({
@@ -76,7 +69,7 @@ jest.mock('vscode', () => ({
 }));
 
 // Mock WebviewCommunicationManager
-jest.mock('@/core/communication', () => ({
+jest.mock('@/core/communication/webviewCommunicationManager', () => ({
     createWebviewCommunication: jest.fn().mockResolvedValue({
         on: jest.fn(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
@@ -169,12 +162,7 @@ describe('BaseWebviewCommand Disposal', () => {
             saveProject: jest.fn().mockResolvedValue(undefined),
         };
 
-        mockLogger = {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-        };
+        mockLogger = createMockLogger();
     });
 
     describe('Inherited DisposableStore', () => {

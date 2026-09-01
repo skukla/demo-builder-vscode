@@ -17,7 +17,7 @@
 import { applyIsolatedPackages } from './appConfigPackages';
 import { deployAppComponent, type DeployAppOptions } from './appDeployment';
 import type { AppDeploymentResult } from './types';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
 
 /**

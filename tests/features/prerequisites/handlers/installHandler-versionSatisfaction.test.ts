@@ -12,7 +12,7 @@
 
 // Mock all dependencies (MUST be at top before imports)
 jest.mock('@/features/prerequisites/handlers/shared');
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('vscode', () => ({
     env: {
         openExternal: jest.fn(),
@@ -20,15 +20,6 @@ jest.mock('vscode', () => ({
     Uri: {
         parse: jest.fn((url: string) => ({ url })),
     },
-}));
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        trace: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
 }));
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';

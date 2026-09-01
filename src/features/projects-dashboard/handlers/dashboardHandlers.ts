@@ -10,28 +10,25 @@
  */
 
 import * as vscode from 'vscode';
-import {
-    extractSettingsFromProject,
-    importSettingsFromFile,
-    copySettingsFromProject,
-    exportProjectSettings,
-    deleteProject,
-    renameProjectCore,
-} from '../services';
-import { BaseWebviewCommand } from '@/core/base';
-import { ServiceLocator } from '@/core/di';
-import { executeCommandForProject } from '@/core/handlers';
-import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { executeCommandForProject } from '@/core/handlers/projectCommandHelper';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { hasMeshDeploymentRecord } from '@/core/state/appBuilderComponentState';
 import { sessionUIState } from '@/core/state/sessionUIState';
-import { openInIncognito } from '@/core/utils';
-import { validateProjectPath, validateURL } from '@/core/validation';
+import { openInIncognito } from '@/core/utils/browserUtils';
+import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
+import { validateURL } from '@/core/validation/URLValidator';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
 import { determineMeshStatus } from '@/features/mesh/services/meshStatusResolver';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
+import { deleteProject } from '@/features/projects-dashboard/services/projectDeletionService';
+import { renameProjectCore } from '@/features/projects-dashboard/services/projectRenameService';
+import { extractSettingsFromProject } from '@/features/projects-dashboard/services/settingsSerializer';
+import { copySettingsFromProject, exportProjectSettings, importSettingsFromFile } from '@/features/projects-dashboard/services/settingsTransferService';
 import type { Project } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';

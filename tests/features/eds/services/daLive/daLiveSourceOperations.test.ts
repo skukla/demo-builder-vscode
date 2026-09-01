@@ -12,6 +12,7 @@ import { DaLiveSourceOperations } from '@/features/eds/services/daLive/daLiveSou
 import { DaLiveNetworkError } from '@/features/eds/services/types';
 import type { DaLiveApiClient } from '@/features/eds/services/daLive/daLiveApiClient';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // Mock the timeout config
 jest.mock('@/core/utils/timeoutConfig', () => ({
@@ -60,12 +61,7 @@ describe('DaLiveSourceOperations', () => {
             createErrorFromResponse: jest.fn(),
         };
 
-        logger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        logger = createMockLogger() as unknown as Logger;
 
         service = new DaLiveSourceOperations(apiClient as unknown as DaLiveApiClient, logger);
     });

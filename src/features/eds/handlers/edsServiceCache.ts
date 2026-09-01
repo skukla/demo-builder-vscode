@@ -17,9 +17,8 @@ import { GitHubOAuthService } from '../services/github/githubOAuthService';
 import { GitHubRepoOperations } from '../services/github/githubRepoOperations';
 import { GitHubTokenService } from '../services/github/githubTokenService';
 import { HelixService } from '../services/helix/helixService';
-import { ServiceLocator } from '@/core/di';
-import { getLogger } from '@/core/logging';
-import type { HandlerContext } from '@/types/handlers';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { getLogger } from '@/core/logging/debugLogger';
 
 /**
  * GitHub Services - composed from extracted modules
@@ -38,22 +37,32 @@ let cachedGitHubServices: GitHubServices | null = null;
 let cachedDaLiveAuthService: DaLiveAuthService | null = null;
 
 /**
- * Get or create GitHub services
- * Returns all GitHub-related services with explicit dependencies
+ * Get or create GitHub services.
+ * Returns all GitHub-related services with explicit dependencies.
  *
- * Parameter narrowed to the ONE field this actually reads
- * (`context.context.secrets`) — same reason `getDaLiveAuthService` below
- * takes ExtensionContext directly: callers without a full HandlerContext
- * (commands, headless paths) can then call it without a widening cast.
+ * **Takes the secret store, because that is the only thing it reads.** This was
+ * narrowed once before, from a full `HandlerContext` to `Pick<HandlerContext,
+ * 'context'>`, with a comment claiming it was down to "the ONE field this
+ * actually reads". It was not: the body only ever touched
+ * `context.context.secrets`, so the signature still demanded a whole extension
+ * context to reach a secret store.
+ *
+ * That gap had a cost. Four services under the boundary hold a `SecretStorage`
+ * and no context, so they could not call this at all — and each built its OWN
+ * `GitHubTokenService` instead, which is a five-minute validation cache starting
+ * empty every time. The over-wide parameter was the reason the duplication
+ * existed.
+ *
+ * The cache stays a module singleton: one extension host, one secret store.
  */
-export function getGitHubServices(context: Pick<HandlerContext, 'context'>): GitHubServices {
+export function getGitHubServices(secrets: vscode.SecretStorage): GitHubServices {
     const logger = getLogger();
     if (!cachedGitHubServices) {
         logger.debug('[EDS:ServiceCache] Creating NEW GitHub services (no cache)');
-        const tokenService = new GitHubTokenService(context.context.secrets, logger);
+        const tokenService = new GitHubTokenService(secrets, logger);
         const repoOperations = new GitHubRepoOperations(tokenService, ServiceLocator.getCommandExecutor(), logger);
         const fileOperations = new GitHubFileOperations(tokenService, logger);
-        const oauthService = new GitHubOAuthService(context.context.secrets, logger);
+        const oauthService = new GitHubOAuthService(secrets, logger);
 
         cachedGitHubServices = {
             tokenService,

@@ -1,10 +1,7 @@
 import * as path from 'path';
-import { getInstallSteps } from './installation';
 import { PrerequisitesCacheManager } from './prerequisitesCacheManager';
 import type {
     PrerequisiteCheck,
-    ProgressMilestone,
-    InstallStep,
     PrerequisiteInstall,
     PrerequisitePlugin,
     PrerequisiteDefinition,
@@ -12,19 +9,18 @@ import type {
     PrerequisitesConfig,
     PrerequisiteStatus,
 } from './types';
-import {
-    checkVersionSatisfaction,
-    checkMultipleNodeVersions,
-    getInstalledNodeVersions,
-    getLatestInFamily,
-    resolveDependencies,
-} from './versioning';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
-import type { CommandExecutor } from '@/core/shell';
-import { TIMEOUTS, formatDuration } from '@/core/utils';
-import { isTimeout, toAppError } from '@/types/errors';
+import { isTimeout, toAppError } from '@/core/errors';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { formatDuration } from '@/core/utils/timeFormatting';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getInstallSteps } from '@/features/prerequisites/services/installation/InstallStepBuilder';
+import { resolveDependencies } from '@/features/prerequisites/services/versioning/DependencyResolver';
+import { checkMultipleNodeVersions, getInstalledNodeVersions, getLatestInFamily } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
+import { checkVersionSatisfaction } from '@/features/prerequisites/services/versioning/VersionSatisfactionChecker';
 import { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
+import type { InstallStep, ProgressMilestone } from '@/types/prerequisites';
 import { toError } from '@/types/typeGuards';
 
 // Extracted modules
@@ -55,7 +51,15 @@ export type {
 export class PrerequisitesManager {
     private configLoader: ConfigurationLoader<PrerequisitesConfig>;
     private logger: Logger;
-    private cacheManager = new PrerequisitesCacheManager();
+    /**
+     * The result cache, handed in rather than built here.
+     *
+     * It is STATEFUL — a bounded Map plus hit/miss stats — and this class is a
+     * session singleton, so the instance it gets is the one the whole session
+     * shares. Building it in a field initialiser put a stateful construction in a
+     * service, which is the thing ADR-015 keeps out of the middle of the graph.
+     */
+    private readonly cacheManager: PrerequisitesCacheManager;
 
     /**
      * ADR-015: the shell executor arrives here rather than being fetched at
@@ -65,7 +69,9 @@ export class PrerequisitesManager {
         extensionPath: string,
         logger: Logger,
         private commandManager: CommandExecutor,
+        cacheManager: PrerequisitesCacheManager,
     ) {
+        this.cacheManager = cacheManager;
         const configPath = path.join(
             extensionPath,
             'src',

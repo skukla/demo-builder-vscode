@@ -13,15 +13,6 @@ import {
 } from './cacheManager.testUtils';
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
-
 describe('PrerequisitesCacheManager - Invalidation & TTL', () => {
     let cacheManager: PrerequisitesCacheManager;
 

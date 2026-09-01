@@ -15,14 +15,15 @@
  */
 
 import * as vscode from 'vscode';
-import { parseGitHubUrl } from '@/core/utils';
+import { parseGitHubUrl } from '@/core/utils/githubUrlParser';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLive/daLiveConstants';
-import { createPatchReport, reportUnapplied } from '@/features/eds/services/patches/patchReportHelper';
 import type { LibraryPublishHelix } from '@/features/eds/handlers/blockLibraryPublish';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import { DA_LIVE_BASE_URL } from '@/features/eds/services/daLive/daLiveConstants';
 import type { TokenProvider } from '@/features/eds/services/daLive/daLiveOrgOperations';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import type { SitePublishProgress } from '@/features/eds/services/helix/helixSiteContent';
+import { createPatchReport, reportUnapplied } from '@/features/eds/services/patches/patchReportHelper';
 import type { Logger } from '@/types/logger';
 
 interface EdsContentConfig {
@@ -188,7 +189,6 @@ export async function ensureEdsContent(
     }
 
     // Service dependencies for remaining operations (daLiveAuthService + daLiveTokenProvider created above)
-    const { GitHubTokenService } = await import('@/features/eds/services/github/githubTokenService');
     const { HelixService } = await import('@/features/eds/services/helix/helixService');
     const {
         configureDaLivePermissions,
@@ -198,7 +198,9 @@ export async function ensureEdsContent(
     } =
         await import('@/features/eds/handlers/edsHelpers');
 
-    const githubTokenService = new GitHubTokenService(deps.secrets, logger);
+    // The SHARED instance: its validation cache is per-instance, so a fresh one
+    // would re-validate against GitHub.
+    const { tokenService: githubTokenService } = getGitHubServices(deps.secrets);
     const makeHelix =
         deps.makeHelix ??
         ((l: Logger, gh: GitHubTokenService, tp: TokenProvider) => new HelixService(l, gh, tp));

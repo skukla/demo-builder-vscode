@@ -8,12 +8,11 @@
 
 import * as vscode from 'vscode';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
-import { BaseWebviewCommand } from '@/core/base';
-import { StateManager } from '@/core/state';
-import type { Logger } from '@/types/logger';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { StateManager } from '@/core/state/stateManager';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock dependencies
-jest.mock('@/core/logging/debugLogger');
 
 /**
  * Create mock ExtensionContext
@@ -64,14 +63,6 @@ function createMockStateManager(): StateManager {
 /**
  * Create mock Logger
  */
-function createMockLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as any;
-}
 
 /**
  * Helper to create dashboard command instance

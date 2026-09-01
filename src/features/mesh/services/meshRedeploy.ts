@@ -21,7 +21,7 @@
 
 import { deployMeshComponent, type MeshDeploymentResult } from './meshDeployment';
 import { fetchMeshInfoFromAdobeIO } from './meshVerifier';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
 
 /**

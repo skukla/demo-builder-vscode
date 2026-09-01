@@ -35,22 +35,18 @@ import { detectAppLayout, listDeclaredPackageNames, type AppConfigLayout } from 
 import { deriveOwPackage } from './owPackageName';
 import type { AppDeploymentResult } from './types';
 import { isMeshComponentId } from '@/core/constants';
-import {
-    buildOrgTargetFromProjectAdobe,
-    withOrgContext,
-    type CachedOrgRef,
-    type CommandExecutor,
-} from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type CachedOrgRef } from '@/core/shell/orgContextEnv';
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { buildCustomIntegrationEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import type { ComponentManager } from '@/features/components/services/componentManager';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
-import type { Project, TransformedComponentDefinition } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { AppBuilderComponentState } from '@/types/base';
+import type { Project , AppBuilderComponentState } from '@/types/base';
+import type { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
 import { toError } from '@/types/typeGuards';
 

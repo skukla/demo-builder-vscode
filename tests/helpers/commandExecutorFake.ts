@@ -17,7 +17,7 @@
  * file stops compiling when that surface changes.
  */
 
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 
 /**
  * @param overrides - give a method real behaviour, e.g.

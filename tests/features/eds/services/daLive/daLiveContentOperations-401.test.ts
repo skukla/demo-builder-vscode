@@ -14,6 +14,7 @@ import type { DaLiveContentDiscovery } from '@/features/eds/services/daLive/daLi
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // Mock the timeout config
 jest.mock('@/core/utils/timeoutConfig', () => ({
@@ -45,12 +46,7 @@ describe('DaLiveContentOperations - 401 Token Expiration', () => {
             getAccessToken: jest.fn().mockResolvedValue('test-token'),
         };
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
         discovery = (service as unknown as { discoveryOps: DaLiveContentDiscovery }).discoveryOps;

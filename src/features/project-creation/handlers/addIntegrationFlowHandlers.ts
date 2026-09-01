@@ -32,8 +32,12 @@
 // before the barrel's consoleApiHandlers re-export exists, capturing `undefined`.
 import { handleListOrgConsoleApis } from './consoleApiHandlers';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
-import { ServiceLocator } from '@/core/di';
-import * as authentication from '@/features/authentication';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { handleAuthenticate, handleCheckAuth } from '@/features/authentication/handlers/authenticationHandlers';
+import { handleDeleteAdobeProject } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
+import { handleForcedOrgSwitch } from '@/features/authentication/handlers/orgSwitchHandler';
+import { handleCreateAdobeProject, handleGetProjects, handleSelectProject } from '@/features/authentication/handlers/projectHandlers';
+import { handleCreateAdobeWorkspace, handleGetWorkspaces, handleSelectWorkspace } from '@/features/authentication/handlers/workspaceHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 import { defineHandlers, type HandlerContext } from '@/types/handlers';
@@ -118,8 +122,8 @@ export const addIntegrationFlowHandlers = defineHandlers({
     // The signed-out destination stage renders AdobeAuthStep, which sends these.
     // Unregistered they do not hang (both are postMessage) — the step simply never
     // learns the auth state changed, which is a quieter failure.
-    'check-auth': authentication.handleCheckAuth,
-    authenticate: authentication.handleAuthenticate,
+    'check-auth': handleCheckAuth,
+    authenticate: handleAuthenticate,
 
     // The destination stages: browse or create an Adobe project/workspace.
     //
@@ -128,21 +132,21 @@ export const addIntegrationFlowHandlers = defineHandlers({
     // them can launch a browser on a stale token. They are guarded, not the
     // sign-in trio above: guarding those would deadlock the stage's own
     // AdobeAuthStep, which is how a signed-out user gets back in.
-    'get-projects': requireAdobeAuth('get-projects', authentication.handleGetProjects),
-    'select-project': requireAdobeAuth('select-project', authentication.handleSelectProject),
+    'get-projects': requireAdobeAuth('get-projects', handleGetProjects),
+    'select-project': requireAdobeAuth('select-project', handleSelectProject),
     'create-adobe-project': requireAdobeAuth(
         'create-adobe-project',
-        authentication.handleCreateAdobeProject,
+        handleCreateAdobeProject,
     ),
     'delete-adobe-project': requireAdobeAuth(
         'delete-adobe-project',
-        authentication.handleDeleteAdobeProject,
+        handleDeleteAdobeProject,
     ),
-    'get-workspaces': requireAdobeAuth('get-workspaces', authentication.handleGetWorkspaces),
-    'select-workspace': requireAdobeAuth('select-workspace', authentication.handleSelectWorkspace),
+    'get-workspaces': requireAdobeAuth('get-workspaces', handleGetWorkspaces),
+    'select-workspace': requireAdobeAuth('select-workspace', handleSelectWorkspace),
     'create-adobe-workspace': requireAdobeAuth(
         'create-adobe-workspace',
-        authentication.handleCreateAdobeWorkspace,
+        handleCreateAdobeWorkspace,
     ),
 
     // Org recovery: the pickers offer "Switch IMS Org" when the target org is
@@ -150,7 +154,7 @@ export const addIntegrationFlowHandlers = defineHandlers({
     // another org (adobe-org-context rule 3). The dashboard registers its own
     // status-verifying variant under this key and, registering second, wins on that
     // panel — `messageHandlers` is a Map, so the later registration replaces.
-    switchOrg: authentication.handleForcedOrgSwitch,
+    switchOrg: handleForcedOrgSwitch,
 
     // Reachable from useProjectCreationPhases. The flow passes skipEnabling so it
     // should never fire — but "should never fire" is precisely the assumption that

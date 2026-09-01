@@ -23,15 +23,6 @@ jest.mock('execa');
 import execa from 'execa';
 import { createFakeCommandExecutorDeps } from '../../helpers/commandExecutorDepsFake';
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
-
 
 describe('CommandExecutor - Security: Node Version Validation Integration', () => {
     let commandExecutor: CommandExecutor;

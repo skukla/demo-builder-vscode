@@ -13,16 +13,19 @@ import {
     type MeshApiConfig,
 } from '@/features/project-creation/services/meshSetupService';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
-import type { Project, TransformedComponentDefinition } from '@/types';
+import type { Project } from '@/types/base';
+import type { TransformedComponentDefinition } from '@/types/components';
 
 // Mock dependencies
-jest.mock('@/core/logging/debugLogger');
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     updateMeshState: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('@/features/project-creation/helpers', () => ({
-    generateComponentEnvFile: jest.fn(),
+jest.mock('@/features/mesh/services/meshDeployment', () => ({
     deployMeshComponent: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
+    generateComponentEnvFile: jest.fn(),
 }));
 const mockEnsureSubscribed = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/app-builder/services/ensureMeshApiSubscribed', () => ({
@@ -30,7 +33,10 @@ jest.mock('@/features/app-builder/services/ensureMeshApiSubscribed', () => ({
 }));
 
 // Import mocked functions
-import * as helpers from '@/features/project-creation/helpers';
+import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
+import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('meshSetupService', () => {
     let mockSetupContext: ProjectSetupContext;
@@ -45,7 +51,7 @@ describe('meshSetupService', () => {
         jest.clearAllMocks();
 
         // Setup default mock for deployMeshComponent (can be overridden in specific tests)
-        (helpers.deployMeshComponent as jest.Mock).mockResolvedValue({
+        (deployMeshComponent as jest.Mock).mockResolvedValue({
             success: true,
             data: {
                 meshId: 'deployed-mesh-id',
@@ -82,18 +88,8 @@ describe('meshSetupService', () => {
 
         // Create a real ProjectSetupContext with mock dependencies
         mockHandlerContext = {
-            logger: {
-                info: jest.fn(),
-                error: jest.fn(),
-                warn: jest.fn(),
-                debug: jest.fn(),
-            },
-            debugLogger: {
-                info: jest.fn(),
-                error: jest.fn(),
-                warn: jest.fn(),
-                debug: jest.fn(),
-            },
+            logger: createMockLogger(),
+            debugLogger: createMockLogger(),
             context: {
                 extensionPath: '/test/extension',
             },
@@ -121,9 +117,7 @@ describe('meshSetupService', () => {
 
         mockProgressTracker = jest.fn();
 
-        mockCommandExecutor = {
-            execute: jest.fn(),
-        };
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
 
         // CONVERTED 2026-08-28 (ADR-015): both collaborators arrive on the
         // MeshSetupContext, so this suite mocks the service registry NOT AT ALL.
@@ -178,7 +172,7 @@ describe('meshSetupService', () => {
             await deployNewMesh(context, undefined);
 
             // Verify generateComponentEnvFile was called with setupContext
-            expect(helpers.generateComponentEnvFile).toHaveBeenCalledWith(
+            expect(generateComponentEnvFile).toHaveBeenCalledWith(
                 '/test/project/components/commerce-mesh',
                 'commerce-mesh',
                 mockMeshDefinition,
@@ -191,7 +185,7 @@ describe('meshSetupService', () => {
             mockEnsureSubscribed.mockImplementation(async () => {
                 order.push('subscribe');
             });
-            (helpers.deployMeshComponent as jest.Mock).mockImplementation(async () => {
+            (deployMeshComponent as jest.Mock).mockImplementation(async () => {
                 order.push('deploy');
                 return { success: true, data: { meshId: 'm', endpoint: 'e' } };
             });
@@ -207,7 +201,7 @@ describe('meshSetupService', () => {
             await deployNewMesh(context, undefined);
 
             expect(mockEnsureSubscribed).toHaveBeenCalled();
-            expect(helpers.deployMeshComponent).toHaveBeenCalled();
+            expect(deployMeshComponent).toHaveBeenCalled();
             expect(order).toEqual(['subscribe', 'deploy']);
         });
 
@@ -242,7 +236,7 @@ describe('meshSetupService', () => {
 
             await deployNewMesh(context, undefined);
 
-            expect(helpers.generateComponentEnvFile).not.toHaveBeenCalled();
+            expect(generateComponentEnvFile).not.toHaveBeenCalled();
         });
 
         it('should not generate env if mesh definition is missing', async () => {
@@ -256,7 +250,7 @@ describe('meshSetupService', () => {
 
             await deployNewMesh(context, undefined);
 
-            expect(helpers.generateComponentEnvFile).not.toHaveBeenCalled();
+            expect(generateComponentEnvFile).not.toHaveBeenCalled();
         });
 
         it('should call progressTracker during deployment', async () => {
@@ -318,7 +312,7 @@ describe('meshSetupService', () => {
             });
 
             const getExistingMeshIdArg = (): unknown => {
-                const call = (helpers.deployMeshComponent as jest.Mock).mock.calls[0];
+                const call = (deployMeshComponent as jest.Mock).mock.calls[0];
                 return call[4];
             };
 
@@ -379,7 +373,7 @@ describe('meshSetupService', () => {
             await linkExistingMesh(context, meshConfig);
 
             // Verify generateComponentEnvFile was called with setupContext
-            expect(helpers.generateComponentEnvFile).toHaveBeenCalledWith(
+            expect(generateComponentEnvFile).toHaveBeenCalledWith(
                 '/test/project/components/commerce-mesh',
                 'commerce-mesh',
                 mockMeshDefinition,
@@ -423,7 +417,7 @@ describe('meshSetupService', () => {
 
             await linkExistingMesh(context, meshConfig);
 
-            expect(helpers.generateComponentEnvFile).not.toHaveBeenCalled();
+            expect(generateComponentEnvFile).not.toHaveBeenCalled();
         });
 
         it('should call progressTracker during linking', async () => {

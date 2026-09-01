@@ -31,7 +31,7 @@ import type { HandlerContext } from '@/types/handlers';
  */
 export async function executeSampleDataPhase(
     context: HandlerContext,
-    project: import('@/types').Project,
+    project: import('@/types/base').Project,
     progressTracker: ProgressTracker,
 ): Promise<void> {
     const chosen = (project as { datapack?: { name: string; version: string } }).datapack;

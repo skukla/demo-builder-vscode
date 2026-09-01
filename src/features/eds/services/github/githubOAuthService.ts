@@ -12,7 +12,7 @@
 import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import { GITHUB_SCOPES, type OAuthCallbackParams } from '../types';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 

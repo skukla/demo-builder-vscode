@@ -6,10 +6,11 @@
 
 import * as semver from 'semver';
 import { parseInstalledVersions, isValidVersionFamily } from './NodeVersionParser';
-import type { CommandExecutor } from '@/core/shell';
-import { TIMEOUTS, formatDuration } from '@/core/utils';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
+import { formatDuration } from '@/core/utils/timeFormatting';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
 
 interface VersionSatisfactionResult {
     satisfied: boolean;

@@ -9,12 +9,13 @@
 
 import { dispatchHandler, hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import type { HandlerMap, HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 // Mock handler context factory
 function createMockContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as any,
-        debugLogger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as any,
+        logger: createMockLogger() as any,
+        debugLogger: createMockLogger() as any,
         context: {} as any,
         panel: undefined,
         stateManager: {} as any,

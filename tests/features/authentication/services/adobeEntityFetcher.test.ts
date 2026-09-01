@@ -7,18 +7,19 @@
 
 import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import type { Logger } from '@/types/logger';
 
 // Mock external dependencies
-jest.mock('@/core/logging');
 jest.mock('@/types/typeGuards');
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { parseJSON } from '@/types/typeGuards';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher', () => {
     let fetcher: AdobeEntityFetcher;
@@ -31,13 +32,7 @@ describe('AdobeEntityFetcher', () => {
 
     beforeEach(() => {
         // Setup logger mock
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
         // Mock parseJSON
         (parseJSON as jest.Mock).mockImplementation((str) => {
@@ -49,9 +44,7 @@ describe('AdobeEntityFetcher', () => {
         });
 
         // Create mocks
-        mockCommandExecutor = {
-            execute: jest.fn(),
-        } as unknown as jest.Mocked<CommandExecutor>;
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
 
         mockSDKClient = {
             isInitialized: jest.fn().mockReturnValue(false),
@@ -66,12 +59,7 @@ describe('AdobeEntityFetcher', () => {
             getCachedProject: jest.fn().mockReturnValue(undefined),
         } as unknown as jest.Mocked<AuthCacheManager>;
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
+        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
 
         mockStepLogger = {
             logTemplate: jest.fn(),

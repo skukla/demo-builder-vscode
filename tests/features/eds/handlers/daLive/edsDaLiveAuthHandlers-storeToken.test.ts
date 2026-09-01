@@ -35,16 +35,6 @@ jest.mock(
     { virtual: true }
 );
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
-
 const mockStoreToken = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
     const actual = jest.requireActual('@/features/eds/services/daLive/daLiveAuthService');

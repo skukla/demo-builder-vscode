@@ -13,8 +13,10 @@
 import * as fs from 'fs/promises';
 import { ComponentDependencies } from '@/features/components/services/componentDependencies';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { TransformedComponentDefinition } from '@/types';
+import type { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 jest.mock('fs/promises');
 
@@ -24,18 +26,12 @@ const mockExecute = jest.fn();
  * mocks the service registry NOT AT ALL — the fake is a plain object and the
  * assertions are unchanged.
  */
-const executor = { execute: mockExecute } as never;
+const executor = createMockCommandExecutor({ execute: mockExecute });
 
 const mockedFs = fs as jest.Mocked<typeof fs>;
 
 function logger(): Logger {
-    return {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function componentDef(

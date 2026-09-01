@@ -16,20 +16,17 @@ jest.mock('@/features/prerequisites/services/PrerequisitesManager', () => ({
     })),
 }));
 
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 describe('createHeadlessHandlerContext', () => {
@@ -41,14 +38,14 @@ describe('createHeadlessHandlerContext', () => {
         extensionPath: '/ext',
         globalState: { get: jest.fn(), update: jest.fn() },
     } as any;
-    const fakeStateManager = { getCurrentProject: jest.fn() } as unknown as StateManager;
+    const fakeStateManager = createMockStateManager({ getCurrentProject: jest.fn() }) as unknown as StateManager;
 
     beforeEach(() => {
         ServiceLocator.reset();
         ServiceLocator.setAuthenticationService(fakeAuth);
         // ADR-015: the headless context builds a PrerequisitesManager, which
         // now takes the executor as a constructor argument.
-        ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+        ServiceLocator.setCommandExecutor(createMockCommandExecutor());
     });
 
     it('builds a webview-free context (panel/comm undefined, sendMessage no-op)', async () => {
@@ -71,7 +68,10 @@ describe('createHeadlessHandlerContext', () => {
             fakeContext.extensionPath,
             expect.anything(),
             // ADR-015: the shell executor, resolved here at the boundary.
-            expect.objectContaining({ execute: expect.any(Function) })
+            expect.objectContaining({ execute: expect.any(Function) }),
+            // And its cache, likewise handed in rather than built inside the manager
+            // — it is stateful, so the manager may not construct it.
+            expect.objectContaining({ getCachedResult: expect.any(Function) })
         );
     });
 

@@ -23,14 +23,18 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 
 // withOrgContext — spy that the subscribe runs inside it; passthrough-executes fn.
-jest.mock('@/core/shell', () => {
-    const actual = jest.requireActual('@/core/shell');
+
+// withOrgContext — spy that the subscribe runs inside it; passthrough-executes fn.
+jest.mock('@/core/shell/orgContextEnv', () => {
+    const actual = jest.requireActual('@/core/shell/orgContextEnv');
     return {
         ...actual,
         withOrgContext: jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn()),
     };
 });
-import { withOrgContext } from '@/core/shell';
+
+import { withOrgContext } from '@/core/shell/orgContextEnv';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const MESH = 'GraphQLServiceSDK';
 const MGMT = 'AdobeIOManagementAPISDK';
@@ -85,13 +89,7 @@ describe('ensureMeshApiSubscribed', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        logger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        } as jest.Mocked<Logger>;
+        logger = createMockLogger() as jest.Mocked<Logger>;
         (withOrgContext as jest.Mock).mockImplementation(
             (_t: unknown, fn: () => Promise<unknown>) => fn()
         );

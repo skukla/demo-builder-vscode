@@ -1,10 +1,11 @@
 import { HandlerContext } from '@/types/handlers';
-import * as validation from '@/core/validation';
+import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
 import * as executor from '@/features/project-creation/handlers/executor';
 import * as promiseUtils from '@/core/utils/promiseUtils';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
  * Shared test utilities for createHandler tests
@@ -37,13 +38,7 @@ export interface TestSetup {
 export function createProjectCreationContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
     return {
         sendMessage: jest.fn().mockResolvedValue(undefined),
-        logger: {
-            trace: jest.fn(),
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-        } as any,
+        logger: createMockLogger() as any,
         context: {
             globalState: {
                 get: jest.fn().mockReturnValue(false),
@@ -90,7 +85,7 @@ export function setupDefaultMocks(): MockCommandExecutor {
     (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
     // Mock validation
-    (validation.validateProjectNameSecurity as jest.Mock).mockImplementation(() => {});
+    (validateProjectNameSecurity as jest.Mock).mockImplementation(() => {});
 
     // Mock executor
     (executor.executeProjectCreation as jest.Mock).mockResolvedValue(undefined);
@@ -112,7 +107,7 @@ export function setupDefaultMocks(): MockCommandExecutor {
  * Configures mocks for a validation error scenario
  */
 export function mockValidationError(errorMessage: string): void {
-    (validation.validateProjectNameSecurity as jest.Mock).mockImplementation(() => {
+    (validateProjectNameSecurity as jest.Mock).mockImplementation(() => {
         throw new Error(errorMessage);
     });
 }

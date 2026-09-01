@@ -12,31 +12,44 @@
 const mockWithOrgContext = jest.fn(
     (_target: unknown, fn: () => Promise<unknown>) => fn(),
 );
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
+jest.mock('@/core/shell/orgContextEnv', () => ({
+    ...jest.requireActual('@/core/shell/orgContextEnv'),
     withOrgContext: (target: unknown, fn: () => Promise<unknown>) =>
         mockWithOrgContext(target, fn),
 }));
 
 const mockDeployNewMesh = jest.fn().mockResolvedValue(undefined);
-jest.mock('@/features/project-creation/services', () => ({
-    deployNewMesh: (...args: unknown[]) => mockDeployNewMesh(...args),
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
+    generateAIContextFiles: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/componentInstallationOrchestrator', () => ({
     // Other named exports referenced at module load (kept minimal).
     cloneAllComponents: jest.fn(),
     installAllComponents: jest.fn(),
-    linkExistingMesh: jest.fn(),
-    shouldConfigureExistingMesh: jest.fn(),
-    generateEnvironmentFiles: jest.fn(),
-    finalizeProject: jest.fn(),
-    sendCompletionAndCleanup: jest.fn(),
-    generateAIContextFiles: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/edsContentSetup', () => ({
     ensureEdsContent: jest.fn(),
 }));
 
+jest.mock('@/features/project-creation/services/meshSetupService', () => ({
+    deployNewMesh: (...args: unknown[]) => mockDeployNewMesh(...args),
+    linkExistingMesh: jest.fn(),
+    shouldConfigureExistingMesh: jest.fn(),
+}));
+
+jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
+    generateEnvironmentFiles: jest.fn(),
+    finalizeProject: jest.fn(),
+    sendCompletionAndCleanup: jest.fn(),
+}));
+
 import { deployFreshMesh } from '@/features/project-creation/handlers/executor';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 function createLogger() {
-    return { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
+    return createMockLogger();
 }
 
 function createContext(authOverrides: Record<string, unknown> = {}) {

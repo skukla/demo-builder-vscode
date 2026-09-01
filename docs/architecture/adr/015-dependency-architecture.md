@@ -186,6 +186,42 @@ building a stateless collaborator inline was never the thing that hurt.
 
 Research: `.rptc/research/construction-boundary-is-the-wrong-question/`.
 
+## Amendment 2026-08-31 — three permanent exceptions, ratified
+
+The exemption ledger this ADR froze has been worked down from 30 rows to 3, and
+those 3 are not debt. They were measured, put to the owner, and ratified as
+permanent. Recording them here is what makes them decisions rather than a backlog
+nobody got to.
+
+**`src/commands/commandManager.ts` — CommandManager does not extend BaseCommand.**
+It is the REGISTRAR: it builds and registers all 25 commands, so it cannot be one
+of them. Exempt by role.
+
+**`src/types/typeGuards.ts` — runtime code in the types tree.**
+It needs six values as VALUES, measured by converting every import in the file to
+type-only and reading tsc. A type guard is the one kind of runtime code that
+belongs beside the types it narrows; separating it would make the guards harder to
+find, and they are imported very widely. Its two neighbours in that category were
+NOT ratified — `errors.ts` moved to `@/core/errors` and `shell.ts`'s single
+constant moved to `@/core/shell`, because neither was a type guard and neither had
+a reason to sit in `src/types/`.
+
+**`src/core/di/serviceLocator.ts` — core names two feature classes.**
+A locator has to name what it locates. Type-only imports, so no runtime coupling
+and no cycle. Two fixes were measured and rejected before ratifying: extracting
+interfaces does not work (both are classes, and `AuthenticationService` has 44
+public methods across 855 lines, so the copy would drift from the original), and
+converting the callers does not either (all 48 are handlers, commands or MCP
+tools — files this ADR explicitly permits to fetch). A typed-token registry
+(`ServiceLocator.get(AUTH)`, token declared by the owning feature) would remove
+the naming honestly; it also rewrites the DI shape and 50+ call sites, and was
+judged to buy less than it costs.
+
+**What this changes about the ledger.** Two of its categories are now empty and
+stay that way by enforcement rather than by ratchet: `constructionBoundary` (39
+rows at first measurement) and `featureBarrels` (5). A new feature barrel now
+fails the build with nowhere to record it.
+
 ## Rejected alternatives
 
 - **Locator everywhere** — entrenches the style that produced our measured

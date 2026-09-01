@@ -3,19 +3,21 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { CommandManager } from '@/commands/commandManager';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { describeBuildInfo, readBuildInfo } from '@/core/build/buildInfo';
 import { registerBuildStamp } from '@/core/build/buildStampUi';
-import { ServiceLocator } from '@/core/di';
-import { initializeLogger, getLogger } from '@/core/logging';
-import { CommandExecutor } from '@/core/shell';
-import { StateManager } from '@/core/state';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { getLogger, initializeLogger } from '@/core/logging/debugLogger';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
+import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
 import { sweepManifestFormat } from '@/core/state/manifestFormatSweep';
+import { StateManager } from '@/core/state/stateManager';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import { resolveProjectsRoot } from '@/core/utils/projectsRoot';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
+import { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
+import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';
@@ -59,7 +61,7 @@ import { narrationFor } from '@/features/ai/server/toolNarration';
 import { ToolTraceRecorder } from '@/features/ai/server/toolTraceRecorder';
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
 import { registerViewTools } from '@/features/ai/server/viewTools';
-import { AuthenticationService } from '@/features/authentication';
+import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
 import { shouldAutoReopenProjectsList } from '@/features/dashboard/commands/showDashboard';
 import { seedDefaultAiPrompts } from '@/features/dashboard/services/defaultPromptsSeeder';
@@ -79,13 +81,12 @@ import {
     refreshHomeAgentsMd,
 } from '@/features/project-creation/services/aiBundle/homeAiContextWriter';
 import { registerThirdPartyToolingSettingListener } from '@/features/project-creation/services/aiBundle/thirdPartyToolingSettingListener';
-import { SidebarProvider } from '@/features/sidebar';
+import { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 import type { McpCredentialProvider } from '@/mcp-server';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
-import { createCommandExecutorDeps } from '@/core/shell/commandExecutorDeps';
 
 /**
  * Whether this window should re-home to the projects root on activation.
@@ -428,7 +429,14 @@ export async function activate(context: vscode.ExtensionContext) {
         // Republish affected EDS projects when an EW-URL-affecting daLive setting
         // (ewCanvasBranch / authoringExperience) changes — confirm-gated, debounced.
         context.subscriptions.push(
-            registerEwSettingChangeListener({ context, stateManager, logger }),
+            registerEwSettingChangeListener({
+            context,
+            stateManager,
+            logger,
+            // The SHARED token service: its validation cache is per-instance, so
+            // building a fresh one downstream would cost a GitHub round trip.
+            githubTokenService: getGitHubServices(context.secrets).tokenService,
+        }),
             // Step 7 of the third-party-tooling item: re-enabling must install.
             registerThirdPartyToolingSettingListener(
                 ServiceLocator.getCommandExecutor(),
@@ -623,7 +631,8 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
         const credentials: McpCredentialProvider = {
             getDaLiveToken: () => getDaLiveAuthService(context).getAccessToken(),
             getGitHubToken: async () =>
-                (await getGitHubServices(ctxFactory()).tokenService.getToken())?.token ?? null,
+                (await getGitHubServices(ctxFactory().context.secrets).tokenService.getToken())
+                    ?.token ?? null,
         };
         // One socket: the projects-root path, derivable without an open
         // workspace (the window model is "homed at the projects root, project

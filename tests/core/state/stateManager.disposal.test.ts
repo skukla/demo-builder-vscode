@@ -73,15 +73,6 @@ jest.mock('@/types/typeGuards', () => ({
 }));
 
 // Mock logger - StateManager uses getLogger() internally
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-        trace: jest.fn(),
-    })),
-}));
 
 import { StateManager } from '@/core/state/stateManager';
 
@@ -137,13 +128,13 @@ describe('StateManager - Disposal', () => {
             // Add listeners
             stateManager.onProjectChanged(callback1);
             stateManager.onProjectChanged(callback2);
-            expect(mockListeners.length).toBe(2);
+            expect(mockListeners).toHaveLength(2);
 
             // Dispose
             stateManager.dispose();
 
             // All listeners should be cleared
-            expect(mockListeners.length).toBe(0);
+            expect(mockListeners).toHaveLength(0);
         });
     });
 
@@ -154,11 +145,11 @@ describe('StateManager - Disposal', () => {
 
             // Subscribe
             const subscription = stateManager.onProjectChanged(callback);
-            expect(mockListeners.length).toBe(1);
+            expect(mockListeners).toHaveLength(1);
 
             // Dispose subscription
             subscription.dispose();
-            expect(mockListeners.length).toBe(0);
+            expect(mockListeners).toHaveLength(0);
         });
 
         it('should not affect other subscriptions when one is disposed', () => {
@@ -169,11 +160,11 @@ describe('StateManager - Disposal', () => {
             // Subscribe both
             const subscription1 = stateManager.onProjectChanged(callback1);
             const _subscription2 = stateManager.onProjectChanged(callback2);
-            expect(mockListeners.length).toBe(2);
+            expect(mockListeners).toHaveLength(2);
 
             // Dispose only first subscription
             subscription1.dispose();
-            expect(mockListeners.length).toBe(1);
+            expect(mockListeners).toHaveLength(1);
 
             // Second subscription should still be active
             expect(mockListeners[0]).toBe(callback2);
@@ -197,7 +188,7 @@ describe('StateManager - Disposal', () => {
             const callback = jest.fn();
 
             stateManager.onProjectChanged(callback);
-            expect(mockListeners.length).toBe(1);
+            expect(mockListeners).toHaveLength(1);
 
             // Dispose multiple times
             stateManager.dispose();
@@ -205,7 +196,7 @@ describe('StateManager - Disposal', () => {
 
             // Should still be disposed (listeners cleared)
             expect(mockEmitterDisposed).toBe(true);
-            expect(mockListeners.length).toBe(0);
+            expect(mockListeners).toHaveLength(0);
         });
     });
 
@@ -226,7 +217,7 @@ describe('StateManager - Disposal', () => {
             const subscription = stateManager.onProjectChanged(callback);
             expect(subscription).toBeDefined();
             expect(subscription.dispose).toBeDefined();
-            expect(mockListeners.length).toBe(1);
+            expect(mockListeners).toHaveLength(1);
         });
     });
 });

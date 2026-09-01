@@ -21,7 +21,7 @@ import type {
     EdsCleanupResult,
     CleanupOperationResult,
 } from './types';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import type { Logger } from '@/types/logger';
 
 /**

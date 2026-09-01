@@ -24,7 +24,7 @@ import type {
     WorkspaceCredential,
     WorkspaceS2SCredentialIds,
 } from './types';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 
 /**
  * Name/description for the shared S2S credential created by ensureOAuthCredentialId.

@@ -12,9 +12,12 @@ import {
 } from './ConfigureScreen.testUtils';
 
 // Mock hooks
-jest.mock('@/core/ui/hooks', () => ({
-    useSelectableDefault: jest.fn(() => ({})),
+jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
     useFocusTrap: jest.fn(() => ({ current: null })),
+}));
+
+jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
+    useSelectableDefault: jest.fn(() => ({})),
 }));
 
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
@@ -34,17 +37,20 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 // (`navigation/StepRail`) are deliberately NOT mocked — ConfigureScreen imports them by
 // direct path and they are plain presentational markup, so these tests exercise the real
 // rail the user clicks.
-jest.mock('@/core/ui/components/layout', () => ({
-    PageHeader: ({ title, subtitle }: any) => (
-        <div data-testid="page-header" className="border-b bg-gray-75">
-            <h1>{title}</h1>
-            {subtitle && <h3>{subtitle}</h3>}
-        </div>
-    ),
+jest.mock('@/core/ui/components/layout/PageFooter', () => ({
     PageFooter: ({ leftContent, rightContent }: any) => (
         <div data-testid="page-footer" className="border-t bg-gray-75 max-w-800">
             <div data-testid="footer-left">{leftContent}</div>
             <div data-testid="footer-right">{rightContent}</div>
+        </div>
+    ),
+}));
+
+jest.mock('@/core/ui/components/layout/PageHeader', () => ({
+    PageHeader: ({ title, subtitle }: any) => (
+        <div data-testid="page-header" className="border-b bg-gray-75">
+            <h1>{title}</h1>
+            {subtitle && <h3>{subtitle}</h3>}
         </div>
     ),
 }));

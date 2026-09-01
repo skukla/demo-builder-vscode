@@ -13,10 +13,8 @@ import { ProgressTracker } from '../handlers/shared';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
 import { isMeshComponentId } from '@/core/constants';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import {
-    ProjectSetupContext,
-    generateComponentConfigFiles,
-} from '@/features/project-creation/helpers';
+import { generateComponentConfigFiles } from '@/features/project-creation/helpers/envFileGenerator';
+import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import { getComponentIds, getEntryCount } from '@/types/typeGuards';
 
 export interface FinalizationContext {

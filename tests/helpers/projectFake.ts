@@ -24,11 +24,17 @@
  *   - `adobe` carries organization + organizationName + projectId + workspace
  *     and their *Name/*Title variants.
  *
+ * AND THE ONE THE MANIFEST CANNOT TELL YOU. `created`/`lastModified` are ISO
+ * STRINGS on disk and `Date` objects in memory — `ProjectManifest` declares
+ * `string`, `Project` declares `Date`, and `projectFileLoader` converts at the
+ * boundary. Reading a manifest gives you the persisted shape, which is not the
+ * shape production passes around. Read the TYPE too.
+ *
  * Keep it that way: if this needs a new field, read a real manifest again
  * rather than adding what seems reasonable.
  */
 
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 /**
  * A ready EDS-storefront instance, shaped as the real manifest stores it.
@@ -68,8 +74,14 @@ export function createMockProject(overrides: Partial<Project> = {}): Project {
         path: '/projects/demo',
         version: '1.0.0',
         formatVersion: 2,
-        created: '2026-01-01T00:00:00.000Z',
-        lastModified: '2026-01-01T00:00:00.000Z',
+        // DATES, not the strings the manifest holds. This is the distinction the
+        // provenance note below got wrong for three days: `ProjectManifest.created`
+        // is a `string` on disk and `Project.created` is a `Date` in memory, and
+        // projectFileLoader converts between them. Copying the manifest was the right
+        // instinct aimed at the wrong artifact, and the `as unknown as Project` cast
+        // at the bottom of this function is what stopped tsc from saying so.
+        created: new Date('2026-01-01T00:00:00.000Z'),
+        lastModified: new Date('2026-01-01T00:00:00.000Z'),
         status: 'ready',
         adobe: {
             organization: '285361',

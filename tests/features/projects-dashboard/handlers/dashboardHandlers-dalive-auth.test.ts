@@ -9,7 +9,7 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 
 // Explicit test timeout to prevent hanging
 jest.setTimeout(5000);
@@ -44,16 +44,17 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
     })),
 }));
 
-// Mock ServiceLocator (both import paths used in the code)
-jest.mock('@/core/di', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(),
-        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
-    },
-}));
+// Mock ServiceLocator. There used to be TWO of these — the comment here read
+// "both import paths used in the code", because the same class was reachable
+// through `@/core/di` and `@/core/di/serviceLocator`. The two factories had
+// DRIFTED: only one declared getCommandExecutor, and jest keeps the last
+// registration, so which one won depended on their order in this file. That is
+// precisely the defect ADR-022's rule names — a symbol reachable by two paths is
+// a symbol whose home nobody can name. One path now, so one mock.
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
+        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
     },
 }));
 
@@ -64,7 +65,6 @@ jest.mock('@/features/eds/services/helix/helixService');
 jest.mock('@/features/mesh/services/stalenessDetector');
 
 // Mock authentication
-jest.mock('@/features/authentication');
 
 // Mock showDaLiveAuthQuickPick result holder
 const mockQuickPickAuthResult: { success: boolean; cancelled?: boolean; email?: string; error?: string } = { success: false, cancelled: true };
@@ -113,24 +113,20 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
 }));
 
 // Mock core logging (prevents "Logger not initialized" error)
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        show: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 
 // Mock validation
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/PathSafetyValidator', () => ({
+    validateProjectPath: jest.fn(),
+}));
+
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
-    validateProjectPath: jest.fn(), // Allow all paths in tests
 }));
 
 // Mock GitHubAppService (dynamically imported for Code Sync verification)
@@ -177,7 +173,7 @@ jest.mock('@/features/eds/services/reset/edsResetService', () => ({
 
 import * as vscode from 'vscode';
 import { handleResetProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { ServiceLocator as ServiceLocatorDirect } from '@/core/di/serviceLocator';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';

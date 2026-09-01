@@ -27,6 +27,7 @@ import {
     handleRefreshBlockLibrary,
     handleRepublishContent,
 } from './edsContentHandlers';
+import { handleDeleteEventEntity, handleGetEventEntities } from './eventingHandlers';
 import { sendDemoStatusUpdate } from './meshStatusHelpers';
 import {
     handleOpenBrowser,
@@ -52,7 +53,6 @@ import {
 } from './projectManagementHandlers';
 import { handleRequestStatus, handleReAuthenticate, handleSwitchOrg } from './statusHandlers';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { handleDeleteEventEntity, handleGetEventEntities } from './eventingHandlers';
 import {
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,

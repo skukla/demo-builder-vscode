@@ -12,7 +12,7 @@
 
 import { logAiVerification } from '@/features/dashboard/handlers/aiHandlers';
 import { createAiHandlerContext } from './aiHandlers.testUtils';
-import type { AiVerificationResult } from '@/features/ai';
+import type { AiVerificationResult } from '@/features/ai/aiSetupVerifier';
 
 function resultWithMcpError(error: string): AiVerificationResult {
     return {

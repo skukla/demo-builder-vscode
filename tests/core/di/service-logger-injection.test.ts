@@ -23,7 +23,7 @@
 
 import type { Logger } from '@/types/logger';
 import { ToolManager } from '@/features/eds/services/toolManager';
-import type { CommandExecutor } from '@/core/shell';
+import { createMockCommandExecutor } from '../../helpers/commandExecutorFake';
 
 /**
  * Create a mock Logger for testing
@@ -52,9 +52,12 @@ const mockModuleLogger = {
 };
 
 // Mock all getLogger calls to verify they're not being used when logger is injected
-jest.mock('@/core/logging', () => ({
+// `Logger` was ALSO listed here as a mocked export. `@/core/logging` never
+// exported a `Logger` — only DebugLogger/ErrorLogger/StepLogger and the two
+// accessors — so that line faked a symbol that does not exist. Dropped 2026-08-31
+// (PL-31) when the barrel went and every key had to name its declaring module.
+jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: jest.fn(() => mockModuleLogger),
-    Logger: class {},
     StepLogger: class {},
 }));
 
@@ -237,7 +240,7 @@ describe('Service Logger Injection', () => {
          * A statically imported class is what makes the contract checkable.
          */
         it('requires the executor and still takes an optional logger', () => {
-            const executor = { execute: jest.fn() } as unknown as CommandExecutor;
+            const executor = createMockCommandExecutor({ execute: jest.fn() });
 
             const withoutLogger = new ToolManager(executor);
             expect(withoutLogger).toBeDefined();

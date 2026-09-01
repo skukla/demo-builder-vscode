@@ -2,6 +2,8 @@
  * Shared types for prerequisites module
  */
 
+import type { InstallStep } from '@/types/prerequisites';
+
 /**
  * Prerequisite version check configuration
  */
@@ -9,30 +11,6 @@ export interface PrerequisiteCheck {
     command: string;
     parseVersion?: string;
     contains?: string;
-}
-
-/**
- * Progress milestone for installation tracking
- */
-export interface ProgressMilestone {
-    pattern: string;
-    progress: number;
-    message?: string;
-}
-
-/**
- * Individual installation step configuration
- */
-export interface InstallStep {
-    name: string;
-    message: string;
-    commands?: string[];
-    commandTemplate?: string;
-    estimatedDuration?: number;
-    progressStrategy?: 'exact' | 'milestones' | 'synthetic' | 'immediate';
-    milestones?: ProgressMilestone[];
-    progressParser?: string;
-    continueOnError?: boolean;
 }
 
 /**

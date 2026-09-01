@@ -8,8 +8,9 @@
 
 import { handleCreateAdobeWorkspace } from '@/features/authentication/handlers/workspaceHandlers';
 import { ErrorCode } from '@/types/errorCodes';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/validators/AdobeResourceValidator');
 
 const WS = { id: 'ws-new', name: 'Stage', title: 'Stage' };
 
@@ -21,7 +22,7 @@ function createContext() {
     };
     return {
         authManager,
-        logger: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), trace: jest.fn() } as any,
+        logger: createMockLogger() as any,
         debugLogger: { trace: jest.fn(), debug: jest.fn() } as any,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: { isAuthenticating: false },

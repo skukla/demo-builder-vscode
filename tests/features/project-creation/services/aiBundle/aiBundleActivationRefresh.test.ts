@@ -74,15 +74,6 @@ jest.mock('child_process', () => ({
 
 // generateAIContextFiles (not under test) builds its writer via getLogger();
 // jest never calls initializeLogger, so the module must not reach the real one.
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 

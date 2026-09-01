@@ -27,14 +27,6 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 describe('GitHub OAuth Service', () => {
     // Import after mocks are set up
@@ -139,7 +131,7 @@ describe('GitHub OAuth Service', () => {
             const state = service.generateState();
 
             // Then: Should be valid hex string of correct length
-            expect(state.length).toBe(32);
+            expect(state).toHaveLength(32);
             expect(/^[0-9a-f]+$/i.test(state)).toBe(true);
         });
 

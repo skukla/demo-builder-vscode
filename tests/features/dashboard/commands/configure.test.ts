@@ -9,9 +9,10 @@
 
 import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock VS Code API
 
@@ -73,12 +74,7 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
         } as unknown as jest.Mocked<StateManager>;
 
         // Create mock logger
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         // Create command
         command = new ConfigureProjectWebviewCommand(

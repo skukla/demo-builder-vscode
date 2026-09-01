@@ -31,6 +31,7 @@ import {
     syncAndPublishMock,
     SyncStorefrontCommand,
 } from './syncStorefront.testUtils';
+import type { StateManager } from '@/core/state/stateManager';
 
 beforeEach(() => {
     resetSyncStorefrontMocks();
@@ -40,7 +41,7 @@ describe('SyncStorefrontCommand', () => {
     it('skips with a warning when no current project is loaded', async () => {
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
-            makeStateManager(null) as never,
+            makeStateManager(null) as unknown as StateManager,
             makeLogger() as never
         );
 
@@ -54,7 +55,7 @@ describe('SyncStorefrontCommand', () => {
         const project = { ...makeSyncTargetProject(), componentInstances: {} };
         const command = new SyncStorefrontCommand(
             makeSyncStorefrontContext(),
-            makeStateManager(project) as never,
+            makeStateManager(project) as unknown as StateManager,
             makeLogger() as never
         );
 

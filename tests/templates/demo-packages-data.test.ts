@@ -100,7 +100,7 @@ describe('demo-packages.json', () => {
     describe('structure validation - packages', () => {
         it('should have packages array with exactly 5 packages', () => {
             expect(Array.isArray(packagesConfig.packages)).toBe(true);
-            expect(packagesConfig.packages.length).toBe(5);
+            expect(packagesConfig.packages).toHaveLength(5);
         });
 
         it('should have unique package IDs', () => {
@@ -135,19 +135,19 @@ describe('demo-packages.json', () => {
         it('should have isle5 with 2 storefronts', () => {
             const isle5 = packagesConfig.packages.find(p => p.id === 'isle5');
             expect(isle5).toBeDefined();
-            expect(Object.keys(isle5!.storefronts).length).toBe(2);
+            expect(Object.keys(isle5!.storefronts)).toHaveLength(2);
         });
 
         it('should have citisignal with 3 storefronts', () => {
             const citisignal = packagesConfig.packages.find(p => p.id === 'citisignal');
             expect(citisignal).toBeDefined();
-            expect(Object.keys(citisignal!.storefronts).length).toBe(3);
+            expect(Object.keys(citisignal!.storefronts)).toHaveLength(3);
         });
 
         it('should have buildright with 1 storefront and coming-soon status', () => {
             const buildright = packagesConfig.packages.find(p => p.id === 'buildright');
             expect(buildright).toBeDefined();
-            expect(Object.keys(buildright!.storefronts).length).toBe(1);
+            expect(Object.keys(buildright!.storefronts)).toHaveLength(1);
             expect((buildright as unknown as Record<string, unknown>).status).toBe('coming-soon');
         });
 

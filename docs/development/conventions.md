@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **79** conventions, **62** enforced
+- **80** conventions, **64** enforced
 - **22** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -35,7 +35,7 @@ it means the rule rests on somebody noticing.
 |---|---|---|---|
 | Nothing under `src/core/` imports `@/features` or `@/commands`. Enforced by the `layerDirection` ledger in `tests/sop/architecture-rules.exemptions.json` — seven predate the rule and the set may only shrink. |  |  | *named in prose* |
 | Features do not import other features; commands may. enforced by eslint. |  |  | `eslint.config.mjs` |
-| `@/core/*` and `@/types` are imported through their barrel file. Features are imported directly, and get no barrel. Enforced by the `featureBarrels` ledger in `tests/sop/architecture-rules.exemptions.json` — five predate the rule and the set may only shrink. | [ADR](../architecture/adr/022-barrel-files.md) |  | *named in prose* |
+| A module is imported by the path that DEFINES the symbol. No re-export-only `index.ts` — not in `core/`, not in a feature. **The ledger is CLOSED**: all 43 that predated the rule were retired on 2026-08-31, so this is now a ban with nowhere to write an exception down. Enforced by the `reExportIndex` ledger in `tests/sop/architecture-rules.exemptions.json`, with the `featureBarrels` ledger — now empty — banning feature-level barrels outright. | [ADR](../architecture/adr/022-barrel-files.md) |  | *named in prose* |
 | Commands are `camelCase`, React components `PascalCase`, constants `UPPER_SNAKE_CASE`, and a file is named for what it exports — `WizardContainer.tsx`, `loadingHTML.ts`. |  |  | **—** |
 
 ## 3. Code gets what it needs handed to it
@@ -124,11 +124,12 @@ it means the rule rests on somebody noticing.
 | Before designing a way to hand a mocked collaborator in — or to share one between suites — delete the mock and run the suite. If it still passes, the mock was the whole problem. |  |  | **—** |
 | No test file over 750 lines. enforced by `npm run validate:test-file-sizes`. |  |  | *named in prose* |
 | No test file repeats another file's tests wholesale. |  |  | `duplicate-test-files.test.ts` |
+| A fake standing in for a real type comes from the builder for that type. `{...} as unknown as Project` is a fake with the type check switched off. Enforced by the `castCeilings` pins in `tests/sop/canonical-fakes.ledger.json` — nine types that already have a builder, and the count for each may only fall. |  |  | *named in prose* |
 | A test file lives at the path mirroring the source file it covers. |  |  | `mirror-placement.test.ts` |
 | A fixture builder name has exactly one definition. |  |  | `builder-uniqueness.test.ts` |
 | A fake that has a builder in `tests/helpers/` is imported, not written again inline. Enforced by `tests/sop/canonical-fakes.test.ts` — a shrink-only ledger grandfathers the files that already do, so it stops new copies rather than demanding a sweep. |  |  | `canonical-fakes.test.ts` |
 | A fake that a SECOND feature directory needs lives in `tests/helpers/`. A `*.testUtils.ts` beside a suite is for setup specific to that subject. | [ADR](../architecture/adr/016-test-strategy.md) |  | **—** |
-| A builder returns the REAL type. Never `as never`, never `as any` on the builder itself. Where the structural fake is partial, cast the object literal INTO the return type at the builder's boundary — once, where it is visible. | [ADR](../architecture/adr/016-test-strategy.md) |  | **—** |
+| No test erases a type. `as any` and `as never` are banned anywhere in `tests/`. A builder is declared as the REAL type it stands for; where the structural fake cannot satisfy that type honestly, cast the object literal INTO it at the builder's boundary as `as unknown as X` — once, where it is visible. | [ADR](../architecture/adr/016-test-strategy.md) |  | `type-erasing-casts.test.ts`<br>`eslint.config.mjs` |
 | A fixture's shape is READ, not remembered. A builder's method list comes from the real interface plus what callers actually use; a data fixture is copied from a real artifact on disk. And a domain fixture is CONTENT over a canonical shape, never a re-implementation of one the suite already has a builder for. | [ADR](../architecture/adr/016-test-strategy.md) |  | **—** |
 | Do not mock a configuration leaf. |  |  | `no-config-leaf-mocks.test.ts` |
 | Do not lower one test's timeout below the file's budget. |  |  | `no-lowered-test-timeout.test.ts` |

@@ -18,7 +18,7 @@
 
 import { z } from 'zod';
 import { asRawText, asText } from './mcpToolResult';
-import { dispatchHandler } from '@/core/handlers';
+import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 

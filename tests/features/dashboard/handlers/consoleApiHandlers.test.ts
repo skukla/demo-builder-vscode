@@ -18,8 +18,10 @@ import { ErrorCode } from '@/types/errorCodes';
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import { subscribeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
-import { withOrgContext } from '@/core/shell';
+import { withOrgContext } from '@/core/shell/orgContextEnv';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/features/dashboard/handlers/appBuilderComponentHandlers', () => ({
     runGuards: jest.fn().mockResolvedValue(undefined),
@@ -54,7 +56,7 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
     // missing `data` rather than as the real cause.
     getAppBuilderComponentEntry: jest.fn(() => undefined),
 }));
-jest.mock('@/core/shell', () => ({
+jest.mock('@/core/shell/orgContextEnv', () => ({
     buildOrgTargetFromProjectAdobe: jest.fn(() => ({ orgId: 'org-1' })),
     withOrgContext: jest.fn((_t: unknown, fn: () => Promise<unknown>) => fn()),
 }));
@@ -77,11 +79,11 @@ function makeProject(overrides: Record<string, unknown> = {}): Record<string, un
 
 function makeContext(project: Record<string, unknown> | null): HandlerContext {
     return {
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+        }),
+        logger: createMockLogger(),
         sendMessage: jest.fn(),
     } as unknown as HandlerContext;
 }

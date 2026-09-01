@@ -20,8 +20,12 @@
  * Map: docs/architecture/where-code-goes.md
  */
 
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
 import {
     ALL_FILES,
+    ROOT,
     accumulatesState,
     classBodies,
     expectCeiling,
@@ -388,22 +392,92 @@ describe('ADR-021: one dependency bundle per call, data as ordinary arguments', 
     });
 });
 
+describe('ADR-022: a module is imported by the path that DEFINES the symbol', () => {
+    /**
+     * No new re-export-only `index.ts`. The existing ones are a ledger that may
+     * only shrink.
+     *
+     * Ratified 2026-08-31 after research, and the research changed the shape of
+     * the rule. The accepted industry principle is that a barrel is the PUBLIC API
+     * of a unit — outside consumers go through it, files inside import each other
+     * directly. Measured against that rule this codebase is not split, it is
+     * already on the other side of it: 1,935 deep imports come from OUTSIDE the
+     * module they reach into, against 162 from inside. The convention here is not
+     * the one the barrels imply, and the barrels are the minority report.
+     *
+     * The performance case that drives this elsewhere does NOT apply here and was
+     * measured before deciding: `tsc` covers 2,202 files in 3.95s, and the full
+     * suite runs every time rather than selecting affected tests — so the
+     * mechanisms behind the published wins (dev-server graph resolution,
+     * affected-test selection) have nothing to bite on. This rule is adopted for
+     * ONE reason: a symbol reachable by two paths is a symbol whose home nobody can
+     * name. LedgerHQ, enforcing the same thing, called it "dual import paths for
+     * the same symbol, hiding true providers".
+     *
+     * What is NOT a barrel, and why the exclusion is computed rather than listed:
+     * the eight webview bundle entries are `index.tsx` by necessity — esbuild names
+     * them as entry points. They are read from `WEBVIEW_ENTRIES` in
+     * esbuild.config.js so this check cannot drift from the build.
+     */
+    const entrySource = readFileSync(join(ROOT, 'esbuild.config.js'), 'utf8');
+    const BUNDLE_ENTRIES = new Set(
+        [...entrySource.matchAll(/'(src\/[^']*\.tsx?)'/g)].map((m) => m[1]),
+    );
+
+    it('CONTROL: the bundle entries were actually read', () => {
+        // An empty set would silently turn every entry into a violation, and the
+        // ledger would then look like it needed eight more rows.
+        expect(BUNDLE_ENTRIES.size).toBeGreaterThanOrEqual(8);
+        expect(BUNDLE_ENTRIES.has('src/features/sidebar/ui/index.tsx')).toBe(true);
+    });
+
+    const reExporting = ALL_FILES.filter(
+        (f) =>
+            /(?:^|\/)index\.tsx?$/.test(f) &&
+            !BUNDLE_ENTRIES.has(f) &&
+            /^\s*export\s+(?:type\s+)?[{*]/m.test(readFileSync(join(ROOT, f), 'utf8')),
+    );
+
+    it('CONTROL: the detector distinguishes a re-export index from a plain one', () => {
+        // Literals, not the tree — a control that depends on a real violation stops
+        // working the day the codebase gets clean. That happened twice on
+        // 2026-08-31, to this file's own feature-barrel control and to the
+        // doc-reference check.
+        expect(/^\s*export\s+(?:type\s+)?[{*]/m.test("export { a } from './a';")).toBe(true);
+        expect(/^\s*export\s+(?:type\s+)?[{*]/m.test('export * from "./a";')).toBe(true);
+        expect(/^\s*export\s+(?:type\s+)?[{*]/m.test('export function a() {}')).toBe(false);
+        expect(ALL_FILES.length).toBeGreaterThan(500);
+    });
+
+    it('every re-exporting index file is a reasoned ledger entry', () => {
+        expectClean('reExportIndex', reExporting);
+    });
+});
+
 describe('ADR-022: features get no new barrel', () => {
     /**
      * `@/core/*` and `@/types` are imported through their barrels by design — 168
      * importers for `@/types` alone. Features are the other way round: import the
      * module that defines the symbol, and do not add a feature-level `index.ts`.
      *
-     * Five survive with importers between them, so this is a ledger rather than a
-     * ban: the set may only shrink. Deleting one means deleting its row too.
+     * Five predated the ruling and sat in the ledger; ALL FIVE were retired on
+     * 2026-08-31, so the ledger is empty and this is now a ban rather than a
+     * ratchet. A new feature barrel fails the build with nowhere to record it.
      */
     const barrels = FILES.filter((f) => /^src\/features\/[^/]+\/index\.tsx?$/.test(f));
 
     it('CONTROL: the detector distinguishes feature-level from nested barrels', () => {
+        // Asserted against LITERALS, not against the tree. This control used to end
+        // with `expect(barrels.length).toBeGreaterThan(0)` — a positive control that
+        // depended on a violation existing, so retiring the last barrel broke the
+        // check that was supposed to prove the rule was working. A control must
+        // survive the codebase becoming clean.
         const re = /^src\/features\/[^/]+\/index\.tsx?$/;
         expect(re.test('src/features/eds/index.ts')).toBe(true);
         expect(re.test('src/features/eds/handlers/index.ts')).toBe(false);
-        expect(barrels.length).toBeGreaterThan(0);
+        expect(re.test('src/core/ui/index.ts')).toBe(false);
+        // And the corpus is real, so an empty result means "none", not "never read".
+        expect(FILES.length).toBeGreaterThan(500);
     });
 
     it('every feature-level barrel is a reasoned ledger entry', () => {

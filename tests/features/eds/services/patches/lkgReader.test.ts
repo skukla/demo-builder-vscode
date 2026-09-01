@@ -11,15 +11,10 @@
 
 import { _clearExternalPatchCacheForTests } from '@/features/eds/services/patches/externalPatchFetcher';
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const mockLogger: Logger = {
-    trace: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-};
+const mockLogger: Logger = createMockLogger();
 
 const originalFetch = global.fetch;
 

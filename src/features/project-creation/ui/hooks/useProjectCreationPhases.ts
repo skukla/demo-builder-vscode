@@ -25,9 +25,9 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import type { EnsureResult } from '../components/integration-flow';
 import { webviewClient } from '@/core/ui/utils/vscode-api';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
+import type { EnsureResult } from '@/features/project-creation/ui/components/integration-flow/meshApiSubscription';
 import type { WizardSessionState, AdobeProject, WizardState, Workspace } from '@/types/webview';
 
 /** The flow's state machine. */

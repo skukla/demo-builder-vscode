@@ -23,16 +23,11 @@ import {
     _clearCodePatchCacheForTests,
     type CodePatch,
 } from '@/features/eds/services/patches/codePatchRegistry';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
 import type { CodePatchSource } from '@/types/demoPackages';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const mockLogger: Logger = {
-    trace: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-};
+const mockLogger: Logger = createMockLogger();
 
 const originalFetch = global.fetch;
 

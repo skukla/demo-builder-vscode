@@ -37,6 +37,8 @@ import {
     deployAppComponent,
     isToolchainStalenessError,
 } from '@/features/app-builder/services/appDeployment';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const mockFs = fs.promises as jest.Mocked<typeof fs.promises>;
 
@@ -58,7 +60,7 @@ const WORKSPACE_JSON = JSON.stringify({
 const GET_URL_JSON = JSON.stringify({ runtime: { 'web/action': 'https://ns-1.example/api' } });
 
 function makeLogger() {
-    return { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() };
+    return createMockLogger();
 }
 
 /**
@@ -113,7 +115,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
         const cm = makeHealableExecutor();
         const consent = jest.fn().mockResolvedValue(true);
 
-        const result = await deployAppComponent('/app', cm as never, makeLogger() as never, {
+        const result = await deployAppComponent('/app', cm as never, makeLogger(), {
             confirmToolchainRefresh: consent,
         });
 
@@ -129,7 +131,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
         const cm = makeHealableExecutor();
         const consent = jest.fn().mockResolvedValue(false);
 
-        const result = await deployAppComponent('/app', cm as never, makeLogger() as never, {
+        const result = await deployAppComponent('/app', cm as never, makeLogger(), {
             confirmToolchainRefresh: consent,
         });
 
@@ -143,7 +145,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
     it('no consent source at all: same hint, no prompt-shaped behaviour', async () => {
         const cm = makeHealableExecutor();
 
-        const result = await deployAppComponent('/app', cm as never, makeLogger() as never, {});
+        const result = await deployAppComponent('/app', cm as never, makeLogger(), {});
 
         expect(result.success).toBe(false);
         expect(result.error).toContain('out-of-date Adobe CLI toolchain');
@@ -164,8 +166,8 @@ describe('deployAppComponent — refresh-and-retry', () => {
 
         const result = await deployAppComponent(
             '/app',
-            { execute } as never,
-            makeLogger() as never,
+            createMockCommandExecutor({ execute }),
+            makeLogger(),
             {
                 confirmToolchainRefresh: consent,
             }
@@ -190,8 +192,8 @@ describe('deployAppComponent — refresh-and-retry', () => {
 
         const result = await deployAppComponent(
             '/app',
-            { execute } as never,
-            makeLogger() as never,
+            createMockCommandExecutor({ execute }),
+            makeLogger(),
             {
                 confirmToolchainRefresh: consent,
             }
@@ -215,8 +217,8 @@ describe('deployAppComponent — refresh-and-retry', () => {
 
         const result = await deployAppComponent(
             '/app',
-            { execute } as never,
-            makeLogger() as never,
+            createMockCommandExecutor({ execute }),
+            makeLogger(),
             {
                 confirmToolchainRefresh: async () => true,
             }

@@ -22,17 +22,7 @@
 
 import { extractConfigParamsFromConfigs } from '@/features/eds/services/configGenerator';
 import { getStorefrontEnvVars } from '@/features/eds/services/storefront/storefrontStalenessDetector';
-import * as ENV from '@/features/components/config/envVarKeys';
-
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    }),
-}));
+import * as ENV from '@/core/config/envVarKeys';
 
 /**
  * Every env key in the schema, each holding a distinct sentinel — passed through

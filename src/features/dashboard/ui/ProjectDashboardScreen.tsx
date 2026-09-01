@@ -21,9 +21,12 @@ import { useDashboardStatus, isMeshBusy } from './hooks/useDashboardStatus';
 import { useInlineRename } from './hooks/useInlineRename';
 import { useLiveDaLiveUrl } from './hooks/useLiveDaLiveUrl';
 import { useOrgSwitchFlow } from './hooks/useOrgSwitchFlow';
-import { InlineRenameField } from '@/core/ui/components/forms';
-import { PageLayout, PageHeader, ControlPanelLayout } from '@/core/ui/components/layout';
-import { useFocusTrap, useSingleTimer } from '@/core/ui/hooks';
+import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
+import { ControlPanelLayout } from '@/core/ui/components/layout/ControlPanelLayout';
+import { PageHeader } from '@/core/ui/components/layout/PageHeader';
+import { PageLayout } from '@/core/ui/components/layout/PageLayout';
+import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
+import { useSingleTimer } from '@/core/ui/hooks/useTimerCleanup';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { DashboardInitialData } from '@/types/webviewPayloads';
 

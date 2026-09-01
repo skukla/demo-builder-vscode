@@ -8,6 +8,7 @@
 
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 
 
@@ -39,7 +40,7 @@ describe('BaseCommand.createTerminal location option', () => {
         } as any;
 
         mockStateManager = { getCurrentProject: jest.fn(), setState: jest.fn() };
-        mockLogger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
+        mockLogger = createMockLogger();
     });
 
     it('passes location option through to vscode.window.createTerminal when provided', () => {

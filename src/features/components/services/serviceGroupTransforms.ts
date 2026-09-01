@@ -5,7 +5,7 @@
  * to named functions for improved readability and testability.
  */
 
-import * as K from '../config/envVarKeys';
+import * as K from '@/core/config/envVarKeys';
 
 /**
  * Service group definition interface

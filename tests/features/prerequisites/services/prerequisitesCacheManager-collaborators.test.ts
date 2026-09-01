@@ -36,10 +36,6 @@ const mockGetCacheTTLWithJitter = jest.fn((ttl: number) => ttl);
  * rather than on the assertion — a pass for the wrong reason. Stubbing it makes
  * the fallback succeed, so only the assertion below can tell the two apart.
  */
-const fallbackLogger = { trace: jest.fn(), debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => fallbackLogger,
-}));
 
 jest.mock('@/core/cache/cacheUtils', () => ({
     getCacheTTLWithJitter: (ttl: number) => mockGetCacheTTLWithJitter(ttl),
@@ -49,16 +45,11 @@ import { PrerequisitesCacheManager } from '@/features/prerequisites/services/pre
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 import { createMockStatus, setupMockTime } from './prerequisitesCacheManager.testUtils';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /** A logger whose calls we can see — the point of the second seam. */
 function makeLogger(): jest.Mocked<Logger> {
-    return {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    };
+    return createMockLogger();
 }
 
 beforeEach(() => {

@@ -1,24 +1,25 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from '@/core/base';
-import { WebviewCommunicationManager } from '@/core/communication';
-import { ServiceLocator } from '@/core/di';
-import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
-import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
+import { getLogger } from '@/core/logging/debugLogger';
+import { ErrorLogger } from '@/core/logging/errorLogger';
+import { StepLogger } from '@/core/logging/stepLogger';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
-import { ProgressUnifier } from '@/core/utils/progressUnifier';
-import { AuthenticationService } from '@/features/authentication';
+import { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
+import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 // Prerequisites checking is handled by PrerequisitesManager
 import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshEndpoint';
-import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 // Handler utilities and handlers
-import { projectCreationHandlers } from '@/features/project-creation/handlers';
-import {
-    formatGroupName as formatGroupNameHelper,
-} from '@/features/project-creation/helpers';
+import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
+import { formatGroupName as formatGroupNameHelper } from '@/features/project-creation/helpers/formatters';
 import { parseCustomBlockLibrarySettings } from '@/features/project-creation/services/customBlockLibraryUtils';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import type { SettingsFile } from '@/types/settingsFile';
@@ -86,7 +87,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
 
     constructor(
         context: vscode.ExtensionContext,
-        stateManager: import('@/core/state').StateManager,
+        stateManager: import('@/core/state/stateManager').StateManager,
         logger: import('@/types/logger').Logger,
     ) {
         super(context, stateManager, logger);
@@ -95,7 +96,14 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         this._instanceId = ++CreateProjectWebviewCommand.instanceCounter;
 
         // PrerequisitesManager is initialized with proper path
-        this.prereqManager = new PrerequisitesManager(context.extensionPath, logger, ServiceLocator.getCommandExecutor());
+        // The SESSION's manager, not a second one. Its cache is per-instance, so a
+        // command building its own gets an empty cache and re-checks every
+        // prerequisite the shared instance had already answered.
+        this.prereqManager = getPrerequisitesManager(
+            context.extensionPath,
+            logger,
+            ServiceLocator.getCommandExecutor(),
+        );
         this.authManager = ServiceLocator.getAuthenticationService();
         this.errorLogger = new ErrorLogger(context);
         this.progressUnifier = new ProgressUnifier(logger);

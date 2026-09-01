@@ -33,7 +33,7 @@ import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { vscode } from '@/core/ui/utils/vscode-api';
-import { GitHubAppInstallDialog } from '@/features/eds/ui/components';
+import { GitHubAppInstallDialog } from '@/features/eds/ui/components/GitHubAppInstallDialog';
 import type { WizardState } from '@/types/webview';
 import type {
     StorefrontGitHubAppRequiredPayload,

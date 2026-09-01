@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/core/base';
+import { BaseCommand } from '@/core/base/baseCommand';
 import { openUrl } from '@/core/utils/browserUtils';
 
 /** Web console URL for the AEM Experience Modernization Agent. */

@@ -7,14 +7,17 @@ import { withTiming } from '@/features/authentication/services/performanceTracke
 
 const mockDebug = jest.fn();
 
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: mockDebug,
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
+jest.mock('@/core/logging/debugLogger', () => {
+    const { createMockLogger } = require('../../../helpers/loggerFake');
+    // The captured mock is read on the FIRST getLogger() call, not when this
+    // factory runs — jest hoists the factory above `const mockX = jest.fn()`, so
+    // reading it eagerly here throws "cannot access before initialization".
+    // Memoised, so every caller still shares one logger.
+    let logger;
+    return { getLogger: () => (logger ??= createMockLogger({ debug: mockDebug })) };
+});
+
+
 
 describe('withTiming', () => {
     beforeEach(() => {

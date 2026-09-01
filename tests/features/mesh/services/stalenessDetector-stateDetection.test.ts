@@ -1,13 +1,4 @@
 // IMPORTANT: Mock must be declared before imports
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    }),
-}));
 
 import {
     getCurrentMeshState,
@@ -19,7 +10,7 @@ import {
     setupMockFileSystemWithHash,
     meshDeps,
 } from './stalenessDetector.testUtils';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 /**
  * StalenessDetector - State Detection Tests

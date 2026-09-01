@@ -14,7 +14,7 @@
  */
 
 import componentsJson from '@/features/components/config/components.json';
-import { SECRET_ENV_KEYS } from '@/features/components/config/envVarKeys';
+import { SECRET_ENV_KEYS } from '@/core/config/envVarKeys';
 
 /**
  * Names that read as a credential. Deliberately broad: a false positive costs

@@ -15,19 +15,20 @@
 
 import { handleDeleteApiMesh } from '@/features/mesh/handlers/deleteHandler';
 import { HandlerContext } from '@/types/handlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as _vscode from 'vscode';
 import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Record the target rather than stubbing it out — the assertion IS the target.
 // buildOrgTargetFromProjectAdobe is pure, so the real one is used.
 const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
+jest.mock('@/core/shell/orgContextEnv', () => ({
+    ...jest.requireActual('@/core/shell/orgContextEnv'),
     withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
 }));
 
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('@/core/utils/meshConfig', () => ({
     getMeshNodeVersion: () => '20',
 }));
@@ -51,7 +52,7 @@ describe('handleDeleteApiMesh — org targeting', () => {
 
         mockContext = {
             context: { globalStorageUri: { fsPath: '/tmp/test-storage' } } as any,
-            logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() } as any,
+            logger: createMockLogger() as any,
             debugLogger: { trace: jest.fn(), debug: jest.fn() } as any,
             stateManager: {
                 getCurrentProject: jest.fn().mockResolvedValue({

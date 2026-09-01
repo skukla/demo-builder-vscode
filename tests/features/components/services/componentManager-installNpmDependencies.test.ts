@@ -14,7 +14,7 @@
 import { ComponentManager } from '@/features/components/services/componentManager';
 import { TransformedComponentDefinition } from '@/types/components';
 import { Logger } from '@/types/logger';
-import { CommandExecutor } from '@/core/shell';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
 import {
     mockFileNotFound,
     mockFileExists,

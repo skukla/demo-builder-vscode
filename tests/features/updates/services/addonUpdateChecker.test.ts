@@ -8,9 +8,10 @@ import {
     BlockLibraryUpdateResult,
     InspectorSdkUpdateResult,
 } from '@/features/updates/services/addonUpdateChecker';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock modules
 jest.mock('vscode', () => ({}), { virtual: true });
@@ -38,13 +39,7 @@ describe('AddonUpdateChecker', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockLogger = {
-            trace: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         mockSecrets = {
             get: jest.fn().mockResolvedValue('fake-github-token'),

@@ -22,17 +22,18 @@ jest.mock('@/features/app-builder/services/appDeployment', () => ({
 import { applyIsolatedPackages } from '@/features/app-builder/services/appConfigPackages';
 import { deployAppComponent } from '@/features/app-builder/services/appDeployment';
 import { deployAppComponentIsolated } from '@/features/app-builder/services/deployAppIsolated';
-import type { CommandExecutor } from '@/core/shell';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const mockApply = applyIsolatedPackages as jest.MockedFunction<typeof applyIsolatedPackages>;
 const mockDeploy = deployAppComponent as jest.MockedFunction<typeof deployAppComponent>;
 
 function createLogger(): Logger {
-    return { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as never;
+    return createMockLogger();
 }
 
-const commandManager = { execute: jest.fn() } as unknown as CommandExecutor;
+const commandManager = createMockCommandExecutor({ execute: jest.fn() });
 
 describe('deployAppComponentIsolated', () => {
     let logger: Logger;

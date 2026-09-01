@@ -9,7 +9,7 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 
 jest.setTimeout(5000);
 
@@ -23,7 +23,7 @@ jest.mock('fs/promises', () => ({
 
 // validation - validateProjectNameSecurity throws on invalid
 const mockValidateName = jest.fn();
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/validators/ProjectNameValidator', () => ({
     validateProjectNameSecurity: (...args: unknown[]) => mockValidateName(...args),
 }));
 
@@ -31,11 +31,12 @@ jest.mock('@/core/validation', () => ({
 // Rename must re-run this so the MCP configs (which bake the absolute project path)
 // point at the new path instead of the old one.
 const mockGenerateAIContextFiles = jest.fn().mockResolvedValue({ skills: [] });
-jest.mock('@/features/project-creation/services', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
     generateAIContextFiles: (...args: unknown[]) => mockGenerateAIContextFiles(...args),
 }));
 
 import { renameProjectCore } from '@/features/projects-dashboard/services/projectRenameService';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 function createMockProject(overrides?: Partial<Project>): Project {
     return {
@@ -61,12 +62,7 @@ function createMockContext(): HandlerContext {
             saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
             removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
         } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
         context: { extensionPath: '/ext' } as unknown as HandlerContext['context'],
     } as unknown as HandlerContext;
 }

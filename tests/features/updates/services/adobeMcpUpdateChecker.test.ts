@@ -23,20 +23,15 @@ jest.mock('@/features/updates/services/githubApiClient', () => ({
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';
 import { getLatestRelease } from '@/features/updates/services/githubApiClient';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const readFileMock = fsPromises.readFile as jest.Mock;
 const getLatestReleaseMock = getLatestRelease as jest.Mock;
 
 function makeLogger(): Logger {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    } as Logger;
+    return createMockLogger() as Logger;
 }
 
 function makeProject(overrides: Partial<Project> = {}): Project {

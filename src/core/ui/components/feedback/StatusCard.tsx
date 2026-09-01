@@ -1,7 +1,6 @@
 import { Link } from '@adobe/react-spectrum';
 import React, { ReactNode } from 'react';
 import { StatusDot } from '../ui/StatusDot';
-
 import { cn } from '@/core/ui/utils/classNames';
 /**
  * Contextual remediation CTA rendered beside a status badge (a quiet Link).

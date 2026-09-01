@@ -6,15 +6,7 @@ import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeConsoleWhereResponse 
 
 // Mock getLogger
 export const mockLogger = () => {
-    jest.mock('@/core/logging', () => ({
-        getLogger: jest.fn(() => ({
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        })),
-    }));
-};
+    };
 
 // Mock data factories
 export const createMockOrg = (overrides?: Partial<AdobeOrg>): AdobeOrg => ({

@@ -9,6 +9,8 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Track component definitions passed to cloneAllComponents
 let componentDefinitionIds: string[] = [];
@@ -22,7 +24,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     fetchDeployedMeshConfig: jest.fn().mockResolvedValue({}),
 }));
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn().mockReturnValue({
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
@@ -111,7 +113,11 @@ jest.mock('vscode', () => ({
 }), { virtual: true });
 
 // Mock services to track what component definitions are used
-jest.mock('@/features/project-creation/services', () => ({
+jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
+    generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/features/project-creation/services/componentInstallationOrchestrator', () => ({
     cloneAllComponents: jest.fn().mockImplementation(({ componentDefinitions, project }) => {
         componentDefinitionIds = Array.from(componentDefinitions.keys());
         // Simulate component creation
@@ -130,13 +136,18 @@ jest.mock('@/features/project-creation/services', () => ({
         return Promise.resolve();
     }),
     installAllComponents: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@/features/project-creation/services/meshSetupService', () => ({
     deployNewMesh: jest.fn().mockResolvedValue(undefined),
     linkExistingMesh: jest.fn().mockResolvedValue(undefined),
     shouldConfigureExistingMesh: jest.fn().mockReturnValue(false),
+}));
+
+jest.mock('@/features/project-creation/services/projectFinalizationService', () => ({
     generateEnvironmentFiles: jest.fn().mockResolvedValue(undefined),
     finalizeProject: jest.fn().mockResolvedValue(undefined),
     sendCompletionAndCleanup: jest.fn().mockResolvedValue(undefined),
-    generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe('Executor - EDS Standard Flow', () => {
@@ -145,16 +156,11 @@ describe('Executor - EDS Standard Flow', () => {
     const createMockContext = (): Partial<HandlerContext> => {
         return {
             context: { extensionPath: '/test/extension' } as any,
-            logger: {
-                info: jest.fn(),
-                debug: jest.fn(),
-                warn: jest.fn(),
-                error: jest.fn(),
-            } as any,
-            stateManager: {
+            logger: createMockLogger() as any,
+            stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(null),
                 saveProject: jest.fn().mockResolvedValue(undefined),
-            } as any,
+            }) as any,
             sharedState: { isAuthenticating: false },
             sendMessage: jest.fn(),
             panel: { visible: false, dispose: jest.fn() } as any,
@@ -172,7 +178,9 @@ describe('Executor - EDS Standard Flow', () => {
         definitions: Map<string, any> | null;
     }> {
         const capture: { definitions: Map<string, any> | null } = { definitions: null };
-        const { cloneAllComponents } = await import('@/features/project-creation/services');
+        const { cloneAllComponents } = await import(
+            '@/features/project-creation/services/componentInstallationOrchestrator'
+        );
         // `project` is the cloner's OWN argument, not an outer binding — taking it
         // as a parameter is what broke the first version of this extraction.
         (cloneAllComponents as jest.Mock).mockImplementation(

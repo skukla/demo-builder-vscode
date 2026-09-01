@@ -10,6 +10,7 @@
 import { projectRequiresAppBuilder } from '@/features/components/services/projectAppBuilderPredicate';
 import type { Project, ComponentInstance } from '@/types/base';
 import type { ComponentRegistry, TransformedComponentDefinition } from '@/types/components';
+import { createMockProject } from '../../../helpers/projectFake';
 
 function makeDefinition(id: string): TransformedComponentDefinition {
     return { id, name: id } as TransformedComponentDefinition;
@@ -39,14 +40,14 @@ function makeInstance(id: string): ComponentInstance {
 function makeProject(componentIds: string[]): Project {
     const componentInstances: Record<string, ComponentInstance> = {};
     for (const id of componentIds) componentInstances[id] = makeInstance(id);
-    return {
+    return createMockProject({
         name: 'test',
         created: new Date(),
         lastModified: new Date(),
         path: '/test',
         status: 'ready',
         componentInstances,
-    } as unknown as Project;
+    });
 }
 
 describe('projectRequiresAppBuilder', () => {
@@ -55,7 +56,7 @@ describe('projectRequiresAppBuilder', () => {
     });
 
     it('returns false when project has no componentInstances', () => {
-        const project = { name: 't', status: 'ready' } as unknown as Project;
+        const project = createMockProject({ name: 't', status: 'ready' });
         expect(projectRequiresAppBuilder(project, makeRegistry())).toBe(false);
     });
 

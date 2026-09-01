@@ -23,14 +23,10 @@ import {
 import { ProjectConfigWriter, MANIFEST_FORMAT_VERSION } from '@/core/state/projectConfigWriter';
 import { ProjectFileLoader } from '@/core/state/projectFileLoader';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { createMockLogger } from '../../helpers/loggerFake';
 
-const silentLogger = {
-    info: jest.fn(),
-    debug: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-} as unknown as Logger;
+const silentLogger = createMockLogger() as unknown as Logger;
 
 /** A pre-stamp manifest carrying every legacy shape the sweep must retire. */
 function legacyManifest(name: string): Record<string, unknown> {

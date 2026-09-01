@@ -15,7 +15,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { renderApiCatalogFeedback } from '@/core/ui/components/feedback/ApiCatalogFeedback';
-import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection';
+import { ApiAccessPicker, type ApiAccessOption } from '@/core/ui/components/selection/ApiAccessPicker';
 import {
     useElapsedStage,
     ORG_SERVICES_LOADING_STAGES,

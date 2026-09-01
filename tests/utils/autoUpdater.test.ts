@@ -24,6 +24,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 import axios from 'axios';
 import * as vscode from 'vscode';
 import { AutoUpdater } from '@/utils/autoUpdater';
+import { createMockLogger } from '../helpers/loggerFake';
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
@@ -52,7 +53,7 @@ function makeContext(version: string): any {
 }
 
 function makeLogger(): any {
-    return { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
+    return createMockLogger();
 }
 
 function setChannel(channel: string): void {

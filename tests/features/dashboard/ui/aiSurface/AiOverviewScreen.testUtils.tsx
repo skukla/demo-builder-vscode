@@ -32,7 +32,31 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 }));
 
 // Mock the page chrome to keep tests focused on composition.
-jest.mock('@/core/ui/components/layout', () => ({
+jest.mock('@/core/ui/components/layout/PageFooter', () => ({
+    PageFooter: ({
+        leftContent,
+        rightContent,
+    }: {
+        leftContent?: React.ReactNode;
+        rightContent?: React.ReactNode;
+    }) => (
+        <div data-testid="page-footer">
+            <div data-testid="footer-left">{leftContent}</div>
+            <div data-testid="footer-right">{rightContent}</div>
+        </div>
+    ),
+}));
+
+jest.mock('@/core/ui/components/layout/PageHeader', () => ({
+    PageHeader: ({ title, subtitle }: { title: string; subtitle?: string }) => (
+        <div data-testid="page-header">
+            <h1>{title}</h1>
+            {subtitle && <h3 data-testid="page-header-subtitle">{subtitle}</h3>}
+        </div>
+    ),
+}));
+
+jest.mock('@/core/ui/components/layout/PageLayout', () => ({
     PageLayout: ({
         header,
         footer,
@@ -46,24 +70,6 @@ jest.mock('@/core/ui/components/layout', () => ({
             <div data-testid="page-layout-header">{header}</div>
             <div data-testid="page-layout-body">{children}</div>
             <div data-testid="page-layout-footer">{footer}</div>
-        </div>
-    ),
-    PageHeader: ({ title, subtitle }: { title: string; subtitle?: string }) => (
-        <div data-testid="page-header">
-            <h1>{title}</h1>
-            {subtitle && <h3 data-testid="page-header-subtitle">{subtitle}</h3>}
-        </div>
-    ),
-    PageFooter: ({
-        leftContent,
-        rightContent,
-    }: {
-        leftContent?: React.ReactNode;
-        rightContent?: React.ReactNode;
-    }) => (
-        <div data-testid="page-footer">
-            <div data-testid="footer-left">{leftContent}</div>
-            <div data-testid="footer-right">{rightContent}</div>
         </div>
     ),
 }));

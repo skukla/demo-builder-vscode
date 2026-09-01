@@ -8,13 +8,14 @@
  */
 
 import { AdobeEntitySelector } from '@/features/authentication/services/adobeEntitySelector';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 
 // Mock external dependencies
-jest.mock('@/core/logging');
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntitySelector', () => {
     let selector: AdobeEntitySelector;
@@ -23,18 +24,10 @@ describe('AdobeEntitySelector', () => {
 
     beforeEach(() => {
         // Setup logger mock
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
         // Create mocks
-        mockCommandExecutor = {
-            execute: jest.fn(),
-        } as unknown as jest.Mocked<CommandExecutor>;
+        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
 
         mockCacheManager = {
             clearConsoleWhereCache: jest.fn(),

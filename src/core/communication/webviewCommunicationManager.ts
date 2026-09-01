@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as vscode from 'vscode';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Message, PendingRequest } from '@/types/messages';

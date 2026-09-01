@@ -18,7 +18,7 @@ jest.mock(
 jest.mock('@/core/utils/writeFileAtomic', () => ({ writeFileAtomic: jest.fn() }));
 
 const mockAssertInside = jest.fn((p: string, _base: string) => p);
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/PathSafetyValidator', () => ({
     assertPathInsideSync: (target: string, base: string) => mockAssertInside(target, base),
 }));
 
@@ -43,12 +43,12 @@ import * as path from 'path';
 import { exportProjectSettingsToFile } from '@/features/projects-dashboard/services/settingsTransferService';
 import { createExportSettings } from '@/features/projects-dashboard/services/settingsSerializer';
 import { writeFileAtomic } from '@/core/utils/writeFileAtomic';
-import type { Project } from '@/types/base';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const writeMock = writeFileAtomic as jest.Mock;
 const createMock = createExportSettings as jest.Mock;
 
-const PROJECT = { name: 'My Demo', path: '/projects/my-demo' } as unknown as Project;
+const PROJECT = createMockProject({ name: 'My Demo', path: '/projects/my-demo' });
 
 describe('exportProjectSettingsToFile', () => {
     beforeEach(() => {

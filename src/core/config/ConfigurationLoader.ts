@@ -6,7 +6,7 @@
  */
 
 import * as fs from 'fs';
-import { sanitizeErrorForLogging } from '@/core/validation';
+import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 
 export interface LoadOptions {
     validationErrorMessage?: string;

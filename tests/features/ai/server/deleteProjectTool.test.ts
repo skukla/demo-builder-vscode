@@ -11,6 +11,7 @@ jest.mock('@/features/projects-dashboard/services/projectDeletionService', () =>
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectDeletionService';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const deleteProjectFilesMock = deleteProjectFiles as jest.Mock;
 
@@ -34,7 +35,7 @@ const ctxFactory = () =>
     ({
         stateManager: { getAllProjects, loadProjectFromPath },
         context: {},
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
     }) as unknown as HandlerContext;
 
 describe('delete_project', () => {

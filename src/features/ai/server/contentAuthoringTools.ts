@@ -47,7 +47,7 @@ import {
 } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { aemLiveBaseUrl } from '@/features/eds/services/storefront/storefrontProbe';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 import { getEdsDaLiveTarget, getEdsRepoParts, isEdsProject } from '@/types/typeGuards';
 
@@ -244,7 +244,7 @@ async function resolveTarget(
     if (opts.needsGitHub) {
         let githubOk = false;
         try {
-            githubOk = (await getGitHubServices(ctx).tokenService.validateToken()).valid;
+            githubOk = (await getGitHubServices(ctx.context.secrets).tokenService.validateToken()).valid;
         } catch {
             githubOk = false;
         }
@@ -294,7 +294,7 @@ function daLiveOps(ctx: HandlerContext): DaLiveContentOperations {
 function helixFor(ctx: HandlerContext): HelixService {
     return new HelixService(
         ctx.logger,
-        getGitHubServices(ctx).tokenService,
+        getGitHubServices(ctx.context.secrets).tokenService,
         createDaLiveServiceTokenProvider(getDaLiveAuthService(ctx.context)),
     );
 }

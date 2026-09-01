@@ -15,7 +15,7 @@
 
 import { Text, Button, ProgressCircle } from '@adobe/react-spectrum';
 import React from 'react';
-import { InlineNotice } from '@/core/ui/components/feedback';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
 import type { OrgCheckState } from '@/features/dashboard/ui/hooks/useDashboardStatus';
 

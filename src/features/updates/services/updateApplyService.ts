@@ -19,7 +19,7 @@
  */
 
 import * as vscode from 'vscode';
-import { sanitizeErrorForLogging } from '@/core/validation';
+import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { getTemplateSource, shouldSkipBlockLibrary } from '@/features/updates/commands/updateTypes';
 import { AddonUpdateChecker } from '@/features/updates/services/addonUpdateChecker';
 import { AdobeMcpUpdateChecker } from '@/features/updates/services/adobeMcpUpdateChecker';

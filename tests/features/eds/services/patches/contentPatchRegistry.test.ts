@@ -11,17 +11,12 @@ import {
     applyContentPatches,
     getContentPatches,
 } from '@/features/eds/services/patches/contentPatchRegistry';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
 import type { ContentPatchSource } from '@/types/demoPackages';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // Mock logger
-const mockLogger: Logger = {
-    trace: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-};
+const mockLogger: Logger = createMockLogger();
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -29,7 +24,7 @@ beforeEach(() => {
 
 describe('CONTENT_PATCHES', () => {
     it('loads all patches from config', () => {
-        expect(CONTENT_PATCHES.length).toBe(5);
+        expect(CONTENT_PATCHES).toHaveLength(5);
     });
 
     it('each patch has required fields', () => {

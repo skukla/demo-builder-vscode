@@ -31,22 +31,24 @@ import { isMeshBusy, useDashboardStatus } from '../hooks/useDashboardStatus';
 import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponents';
 import { useLiveDestination } from '../hooks/useLiveDestination';
 import { useRowStatusOverrides } from '../hooks/useRowStatusOverrides';
-import { EventingSection } from './EventingSection';
 import { AddIntegrationFlowAdapter } from './AddIntegrationFlowAdapter';
+import { EventingSection } from './EventingSection';
 import {
     getIdentifiedMeshAppBuilderComponent,
     getMeshAppBuilderComponent,
     listAppBuilderComponents,
 } from '@/core/state/appBuilderComponentState';
-import { CtaEmptyState, LoadingDisplay } from '@/core/ui/components/feedback';
-import { PageHeader, PageLayout } from '@/core/ui/components/layout';
+import { CtaEmptyState } from '@/core/ui/components/feedback/CtaEmptyState';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { FullScreenSurface } from '@/core/ui/components/layout/FullScreenSurface';
+import { PageHeader } from '@/core/ui/components/layout/PageHeader';
+import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { DestinationContext } from '@/core/ui/components/ui/DestinationContext';
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { Project } from '@/types/base';
 import type { IntegrationsInitialData } from '@/types/webviewPayloads';
 
 /** Module-level stable empty catalog — avoids a new array ref each render. */

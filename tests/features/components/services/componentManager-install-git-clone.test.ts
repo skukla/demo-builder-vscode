@@ -13,9 +13,9 @@
  */
 
 import { ComponentManager } from '@/features/components/services/componentManager';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { TransformedComponentDefinition } from '@/types/components';
-import { CommandExecutor } from '@/core/shell';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
 import {
     mockFileExists,
 } from './testHelpers';

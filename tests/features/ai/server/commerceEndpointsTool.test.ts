@@ -21,7 +21,7 @@
  */
 
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import { expectWithinCeiling } from './responseCeilings';
 
 function fakeServer() {

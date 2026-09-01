@@ -13,10 +13,10 @@ import {
     ShowProjectsListCommand,
 } from './showProjectsList.testUtils';
 import * as vscode from 'vscode';
-import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
+import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { StateManager } from '@/core/state';
-import type { Logger } from '@/types/logger';
+import { StateManager } from '@/core/state/stateManager';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
  * Create mock ExtensionContext
@@ -68,14 +68,6 @@ function createMockStateManager(): StateManager {
 /**
  * Create mock Logger
  */
-function createMockLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as any;
-}
 
 /**
  * Helper to create ShowProjectsListCommand instance

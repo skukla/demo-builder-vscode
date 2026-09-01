@@ -1,14 +1,16 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { BaseCommand, BaseWebviewCommand } from '@/core/base';
-import { ServiceLocator } from '@/core/di';
+import { BaseCommand } from '@/core/base/baseCommand';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
-import { updateFrontendState } from '@/core/state';
-import { ExecutionLock, TIMEOUTS } from '@/core/utils';
+import { updateFrontendState } from '@/core/state/projectStateSync';
+import { ExecutionLock } from '@/core/utils/executionLock';
 import { sleep } from '@/core/utils/sleep';
-import { validateNodeVersion } from '@/core/validation';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
 import { getComponentIds, getComponentInstancesByType, getComponentInstanceValues } from '@/types/typeGuards';
 import type { DemoStateChangedPayload } from '@/types/webviewPayloads';
 

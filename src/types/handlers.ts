@@ -5,17 +5,18 @@
  * Replaces `any` types in HandlerContext with specific types.
  */
 
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 import type { CustomBlockLibrary } from './blockLibraries';
-import { ComponentSelection, ComponentConfigs } from './components';
-import { Logger } from './logger';
-import { StateManager } from './state';
-import { WebviewCommunicationManager } from '@/core/communication';
-import { ErrorLogger, StepLogger } from '@/core/logging';
-import { ProgressUnifier } from '@/core/utils/progressUnifier';
-import { AuthenticationService } from '@/features/authentication';
-import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
-import {
+import type { ComponentSelection, ComponentConfigs } from './components';
+import type { Logger } from './logger';
+import type { StateManager } from './state';
+import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
+import type { ErrorLogger } from '@/core/logging/errorLogger';
+import type { StepLogger } from '@/core/logging/stepLogger';
+import type { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import type { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import type {
     PrerequisitesManager,
     PrerequisiteDefinition,
     PrerequisiteStatus,

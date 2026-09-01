@@ -19,7 +19,7 @@
  */
 
 import type { IntegrationRow } from './integrationRows';
-import type { CardAction, IntegrationCardModel } from '@/core/ui/components/integrations';
+import type { CardAction, IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 
 /**
  * Whether a row carries editable free API picks (custom/blank, not mesh/catalog).

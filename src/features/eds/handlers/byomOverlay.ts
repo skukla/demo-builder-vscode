@@ -10,7 +10,7 @@
  */
 
 import * as vscode from 'vscode';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { redactUrlUserParam } from '@/core/utils/maskEmail';
 import type { Logger } from '@/types/logger';
 

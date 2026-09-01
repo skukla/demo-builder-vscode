@@ -41,8 +41,8 @@ import type {
     WorkspaceCredential,
     WorkspaceS2SCredentialIds,
 } from './types';
-import { StepLogger } from '@/core/logging';
-import { type CommandExecutor } from '@/core/shell';
+import { StepLogger } from '@/core/logging/stepLogger';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
 
 /**

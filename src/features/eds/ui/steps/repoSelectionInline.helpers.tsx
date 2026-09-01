@@ -18,12 +18,12 @@ import {
     buildCodeSyncInstallSteps,
     buildCodeSyncInstallSummary,
 } from '../helpers/codeSyncInstallContent';
-import { InlineNotice } from '@/core/ui/components/feedback';
+import { InlineNotice } from '@/core/ui/components/feedback/InlineNotice';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { SuccessStateDisplay } from '@/core/ui/components/feedback/SuccessStateDisplay';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
 import { type ElapsedStage, useElapsedStage } from '@/core/ui/hooks/useElapsedStage';
 import { getValidationState } from '@/core/ui/utils/validationState';

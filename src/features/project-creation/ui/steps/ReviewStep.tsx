@@ -8,7 +8,7 @@ import {
 } from './reviewStepHelpers';
 import { COMPONENT_IDS, isMeshComponentId } from '@/core/constants';
 import { ContentColumn } from '@/core/ui/components/layout/ContentColumn';
-import { useCanProceed } from '@/core/ui/hooks';
+import { useCanProceed } from '@/core/ui/hooks/useCanProceed';
 import { cn } from '@/core/ui/utils/classNames';
 import { getStackById } from '@/features/components/services/demoPackageLoader';
 import type { DemoPackage } from '@/types/demoPackages';

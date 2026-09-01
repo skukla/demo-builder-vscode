@@ -40,7 +40,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     updateMeshState: (...args: unknown[]) => mockUpdateMeshState(...args),
 }));
 
-import { getActiveOrgContext, type OrgContextTarget } from '@/core/shell';
+import { getActiveOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { listAppBuilderComponents } from '@/core/state/appBuilderComponentState';
@@ -48,6 +48,8 @@ import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { fetchMeshInfoFromAdobeIO } from '@/features/mesh/services/meshVerifier';
 import { deployMeshHeadless } from '@/features/mesh/services/deployMeshHeadless';
 import type { AppBuilderComponentState, Project, ComponentInstance } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 const mockPreflight = ensureProjectAdobeContext as jest.Mock;
 const mockDeploy = deployMeshComponent as jest.MockedFunction<typeof deployMeshComponent>;
@@ -90,10 +92,10 @@ function deps(overrides: Record<string, unknown> = {}) {
     return {
         project: project(),
         authManager: currentAuthManager as never,
-        commandManager: { execute: jest.fn() } as never,
+        commandManager: createMockCommandExecutor(),
         secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn() } as never,
         stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) } as never,
-        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as never,
+        logger: createMockLogger(),
         extensionPath: '/ext',
         ...overrides,
     };

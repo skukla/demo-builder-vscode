@@ -122,10 +122,41 @@ export interface ActivityQuery {
     skip?: number;
 }
 
+/**
+ * Endpoints whose shape drift has already been reported, for the life of the host.
+ *
+ * MODULE level, not instance level, and that distinction IS the bug this fixes.
+ * `onDrift` is documented as firing "at most once per endpoint", and the dedupe was
+ * a field on the client — but the client is built fresh inside the handler guard,
+ * which runs on EVERY data-installer call. So the set was empty every time and a
+ * drifting endpoint warned on every single request, which is exactly the noise the
+ * field existed to prevent.
+ *
+ * Making the CLIENT shared was tried first and is wrong: two of its three
+ * dependencies (`getToken`, `onDrift`) close over the calling handler's context, so
+ * a cached client would keep the FIRST caller's logger — and the handler context
+ * factories take their logger as a parameter, so it is not guaranteed to be one
+ * object. The dedupe is the only part that should outlive a call, so it is the only
+ * part that does.
+ */
+const driftReported = new Set<string>();
+
+/**
+ * Forget which endpoints have already warned.
+ *
+ * For tests and the host-reload path. Without it, moving the dedupe to module scope
+ * makes SUITES share it: the first test to trip an endpoint's drift silences every
+ * later test for that endpoint, and an assertion like "the warning never contains a
+ * token value" then passes against an empty call list rather than against a real
+ * warning. That happened here the moment the set moved.
+ */
+export function resetDriftReported(): void {
+    driftReported.clear();
+}
+
 export class DataInstallerClient {
     private readonly fetchImpl: typeof fetch;
     private readonly timeoutMs: number;
-    private readonly driftReported = new Set<string>();
 
     constructor(private readonly deps: DataInstallerClientDeps) {
         this.fetchImpl = deps.fetchImpl ?? fetch;
@@ -371,7 +402,7 @@ export class DataInstallerClient {
     /** Report a moved response shape once per endpoint, by key name only. */
     private checkShape(action: string, body: unknown): void {
         const { onDrift } = this.deps;
-        if (!onDrift || this.driftReported.has(action)) {
+        if (!onDrift || driftReported.has(action)) {
             return;
         }
         const expected = EXPECTED_KEYS[action];
@@ -381,7 +412,7 @@ export class DataInstallerClient {
         const present = typeof body === 'object' && body !== null ? Object.keys(body) : [];
         const missing = expected.filter((key) => !present.includes(key));
         if (missing.length > 0) {
-            this.driftReported.add(action);
+            driftReported.add(action);
             onDrift(action, missing);
         }
     }

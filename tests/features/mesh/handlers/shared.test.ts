@@ -11,8 +11,9 @@
 
 import * as vscode from 'vscode';
 import { ensureAuthenticated, type AuthGuardResult } from '@/features/mesh/handlers/shared';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { ErrorCode } from '@/types/errorCodes';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock dependencies
 jest.mock('vscode', () => ({
@@ -24,7 +25,7 @@ jest.mock('vscode', () => ({
     },
 }));
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
     },
@@ -35,12 +36,7 @@ describe('ensureAuthenticated', () => {
         isAuthenticated: jest.fn(),
     };
 
-    const mockLogger = {
-        warn: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        error: jest.fn(),
-    };
+    const mockLogger = createMockLogger();
 
     beforeEach(() => {
         jest.clearAllMocks();

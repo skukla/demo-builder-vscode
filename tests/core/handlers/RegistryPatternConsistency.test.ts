@@ -11,11 +11,11 @@
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 
 // Import all handler maps
-import { dashboardHandlers } from '@/features/dashboard/handlers';
-import { projectsListHandlers } from '@/features/projects-dashboard/handlers';
-import { meshHandlers } from '@/features/mesh/handlers';
-import { edsHandlers } from '@/features/eds/handlers';
-import { prerequisitesHandlers } from '@/features/prerequisites/handlers';
+import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
+import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
+import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
+import { prerequisitesHandlers } from '@/features/prerequisites/handlers/prerequisitesHandlers';
 import { lifecycleHandlers } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 
 describe('Handler Map Pattern Consistency', () => {

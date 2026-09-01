@@ -29,27 +29,18 @@ jest.mock('@/features/prerequisites/handlers/shared', () => {
         getNodeVersionKeys: jest.fn(),
     };
 });
-jest.mock('@/core/di');
-jest.mock('@/features/prerequisites/services/versioning', () => ({
-    ...jest.requireActual('@/features/prerequisites/services/versioning'),
+jest.mock('@/core/di/serviceLocator');
+jest.mock('@/features/prerequisites/services/versioning/MultiVersionDetector', () => ({
+    ...jest.requireActual('@/features/prerequisites/services/versioning/MultiVersionDetector'),
     getInstalledNodeVersions: jest.fn(),
 }));
 jest.mock('vscode', () => ({
     env: { openExternal: jest.fn() },
     Uri: { parse: jest.fn((url: string) => ({ url })) },
 }));
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        trace: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
-import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning';
+import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';
 import type { HandlerContext } from '@/types/handlers';
 import {
     mockAioCliWithPlugin,

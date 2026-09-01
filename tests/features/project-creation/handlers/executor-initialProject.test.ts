@@ -17,6 +17,7 @@
 
 import { buildInitialProject } from '@/features/project-creation/handlers/executor';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const PROJECT_PATH = '/home/user/.demo-builder/projects/demo';
 
@@ -37,7 +38,7 @@ describe('buildInitialProject', () => {
 
     it('preserves the original creation date in edit mode', () => {
         const created = new Date('2024-01-15T00:00:00Z');
-        const existing = { created } as Project;
+        const existing = createMockProject({ created });
 
         const project = buildInitialProject(config(), PROJECT_PATH, existing);
 

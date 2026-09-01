@@ -3,13 +3,15 @@
  */
 
 import { createEntityServices, type EntityServices } from '@/features/authentication/services/adobeEntityService';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
-import type { StepLogger } from '@/core/logging';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import type { Logger } from '@/types/logger';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authentication/services/types';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 export const mockOrgs: AdobeOrg[] = [
     { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' },
@@ -59,9 +61,7 @@ export interface TestMocks {
 export function setupMocks(): TestMocks {
     jest.clearAllMocks();
 
-    const mockCommandExecutor: jest.Mocked<CommandExecutor> = {
-        execute: jest.fn(),
-    } as unknown as jest.Mocked<CommandExecutor>;
+    const mockCommandExecutor: jest.Mocked<CommandExecutor> = createMockCommandExecutor();
 
     const mockSDKClient: jest.Mocked<AdobeSDKClient> = {
         isInitialized: jest.fn().mockReturnValue(false),
@@ -91,12 +91,7 @@ export function setupMocks(): TestMocks {
         }),
     } as unknown as jest.Mocked<OrganizationValidator>;
 
-    const mockLogger: jest.Mocked<Logger> = {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as jest.Mocked<Logger>;
+    const mockLogger: jest.Mocked<Logger> = createMockLogger() as unknown as jest.Mocked<Logger>;
 
     const mockStepLogger: jest.Mocked<StepLogger> = {
         logTemplate: jest.fn(),

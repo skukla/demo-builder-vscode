@@ -201,7 +201,7 @@ describe('Component Registry Manager - Security Validation', () => {
             );
 
             // Then: Mapping returned without errors
-            expect(Object.keys(mapping).length).toBe(1);
+            expect(Object.keys(mapping)).toHaveLength(1);
             expect(mapping['24']).toBeDefined();  // headless
         });
     });

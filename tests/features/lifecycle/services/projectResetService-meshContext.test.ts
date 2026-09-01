@@ -20,11 +20,11 @@ jest.setTimeout(5000);
 const mockGetCachedOrganization = jest.fn().mockReturnValue(undefined);
 
 /** CONVERTED 2026-08-28 (ADR-015): the executor is handed in, not fetched. */
-const executor = { execute: jest.fn() } as never;
+const executor = createMockCommandExecutor({ execute: jest.fn() });
 /** ADR-015: the auth service is handed in too. */
 const authManagerFake = { getCachedOrganization: mockGetCachedOrganization } as never;
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             getCachedOrganization: mockGetCachedOrganization,
@@ -41,8 +41,8 @@ jest.mock('@/core/auth/adobeAuthGuard', () => ({
 const mockWithOrgContext = jest.fn(
     (_target: unknown, fn: () => Promise<unknown>) => fn(),
 );
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
+jest.mock('@/core/shell/orgContextEnv', () => ({
+    ...jest.requireActual('@/core/shell/orgContextEnv'),
     withOrgContext: (target: unknown, fn: () => Promise<unknown>) =>
         mockWithOrgContext(target, fn),
 }));
@@ -73,6 +73,8 @@ jest.mock('@/types/typeGuards', () => ({
 // =============================================================================
 
 import { handleMeshRedeployment } from '@/features/lifecycle/services/projectResetService';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // =============================================================================
 // Helpers
@@ -91,7 +93,7 @@ function createProject(): Project {
 
 function createContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
         stateManager: { saveProject: jest.fn().mockResolvedValue(undefined) },
     } as unknown as HandlerContext;
 }

@@ -19,7 +19,7 @@ import {
     type GitHubApiError,
 } from '../types';
 import { createAuthenticatedOctokit } from './githubHelpers';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 

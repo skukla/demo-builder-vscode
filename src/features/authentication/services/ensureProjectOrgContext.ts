@@ -19,7 +19,7 @@
 
 import * as vscode from 'vscode';
 import { detectProjectOrgMismatch, type OrgAwareAuthManager } from './detectProjectOrgMismatch';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /** Outcome of the gate. `reachable` true means the caller may proceed. */

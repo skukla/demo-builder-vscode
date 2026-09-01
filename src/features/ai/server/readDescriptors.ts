@@ -18,9 +18,9 @@ import { AGENT_PAGE_SIZE } from './projectors';
 import { defaultShape, type ToolDescriptor } from './toolDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
-import { dataInstallerHandlers } from '@/features/data-installer/handlers';
+import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
-import { meshHandlers } from '@/features/mesh/handlers';
+import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import type { HandlerResponse } from '@/types/handlers';
 
 /** Paging, shared by the Data Installer's list reads. */

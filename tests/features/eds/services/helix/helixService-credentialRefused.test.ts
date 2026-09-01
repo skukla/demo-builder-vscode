@@ -23,6 +23,7 @@ import { HelixService } from '@/features/eds/services/helix/helixService';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
@@ -42,12 +43,7 @@ describe('HelixService — a 403 is a refused credential', () => {
 
     beforeEach(() => {
         mockFetch.mockReset();
-        const logger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        const logger = createMockLogger() as unknown as Logger;
         const githubTokenService = {
             getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }),
         } as unknown as GitHubTokenService;

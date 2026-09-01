@@ -1,7 +1,8 @@
 import { DaLiveConfigOperations } from '@/features/eds/services/daLive/daLiveConfigOperations';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const makeLogger = () =>
-    ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() }) as never;
+    createMockLogger();
 
 const makeApiClient = () =>
     ({

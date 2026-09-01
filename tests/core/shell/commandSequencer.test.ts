@@ -1,15 +1,6 @@
 import { CommandSequencer } from '@/core/shell/commandSequencer';
 import type { CommandResult, CommandConfig } from '@/core/shell/types';
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
-
 describe('CommandSequencer', () => {
     let commandSequencer: CommandSequencer;
 

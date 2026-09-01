@@ -9,10 +9,10 @@
  * Step 9: Standardize DI patterns across the codebase
  */
 
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 
 // Mock dependencies
-jest.mock('@/core/shell', () => ({
+jest.mock('@/core/shell/commandExecutor', () => ({
     CommandExecutor: jest.fn().mockImplementation(() => ({
         execute: jest.fn(),
     })),
@@ -27,7 +27,7 @@ describe('DI Patterns', () => {
 
     describe('ServiceLocator - Singleton Behavior', () => {
         it('should return same CommandExecutor instance on multiple calls', () => {
-            const { CommandExecutor } = require('@/core/shell');
+            const { CommandExecutor } = require('@/core/shell/commandExecutor');
             const executor = new CommandExecutor();
             ServiceLocator.setCommandExecutor(executor);
 
@@ -45,7 +45,7 @@ describe('DI Patterns', () => {
         });
 
         it('should throw if CommandExecutor registered twice', () => {
-            const { CommandExecutor } = require('@/core/shell');
+            const { CommandExecutor } = require('@/core/shell/commandExecutor');
             const executor = new CommandExecutor();
             ServiceLocator.setCommandExecutor(executor);
 
@@ -57,7 +57,7 @@ describe('DI Patterns', () => {
         it('should report isInitialized correctly', () => {
             expect(ServiceLocator.isInitialized()).toBe(false);
 
-            const { CommandExecutor } = require('@/core/shell');
+            const { CommandExecutor } = require('@/core/shell/commandExecutor');
             ServiceLocator.setCommandExecutor(new CommandExecutor());
 
             expect(ServiceLocator.isInitialized()).toBe(true);
@@ -152,7 +152,7 @@ describe('DI Patterns', () => {
     describe('ServiceLocator - Reset Behavior', () => {
         it('should clear all services on reset', () => {
             // Given: All services registered
-            const { CommandExecutor } = require('@/core/shell');
+            const { CommandExecutor } = require('@/core/shell/commandExecutor');
             ServiceLocator.setCommandExecutor(new CommandExecutor());
             ServiceLocator.setAuthenticationService({ getTokenStatus: jest.fn() } as any);
             ServiceLocator.setSidebarProvider({ resolveWebviewView: jest.fn() } as any);
@@ -173,7 +173,7 @@ describe('DI Patterns', () => {
 
         it('should allow re-registration after reset', () => {
             // Given: A service was registered and then reset
-            const { CommandExecutor } = require('@/core/shell');
+            const { CommandExecutor } = require('@/core/shell/commandExecutor');
             const executor1 = new CommandExecutor();
             ServiceLocator.setCommandExecutor(executor1);
             ServiceLocator.reset();

@@ -59,6 +59,7 @@ import type {
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 const logger = createMockLogger() as unknown as Logger;
 
@@ -140,7 +141,7 @@ describe('findStorefrontNameMismatch', () => {
     });
 
     it('returns null for a project with no EDS storefront', () => {
-        expect(findStorefrontNameMismatch({ name: 'x', path: '/x' } as Project)).toBeNull();
+        expect(findStorefrontNameMismatch(createMockProject({ name: 'x', path: '/x' }))).toBeNull();
     });
 
     it('stamps the overlay with the NEW name, not the one being retired', () => {

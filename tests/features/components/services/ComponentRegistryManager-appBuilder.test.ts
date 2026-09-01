@@ -15,7 +15,7 @@
 
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { mockRawRegistry, getMockLoader } from './ComponentRegistryManager.testUtils';
-import type { RawComponentRegistry } from '@/types';
+import type { RawComponentRegistry } from '@/types/components';
 
 // Mock ConfigurationLoader (Jest hoisting requirement)
 jest.mock('@/core/config/ConfigurationLoader', () => {

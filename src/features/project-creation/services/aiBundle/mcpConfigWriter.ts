@@ -30,7 +30,7 @@ import {
     parseExistingSettings,
 } from './claudeSettingsWriter';
 import type { GeneratedFileWriter } from './generatedFileWriter';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import type { AiDefaults } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';

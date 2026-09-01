@@ -30,32 +30,34 @@ jest.mock(
 );
 
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
     },
 }));
 
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
 }));
 
 // Org targeting is ambient; the only way to observe it is the wrapper.
 const mockWithOrgContext = jest.fn((_t: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
+jest.mock('@/core/shell/orgContextEnv', () => ({
+    ...jest.requireActual('@/core/shell/orgContextEnv'),
     withOrgContext: (t: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(t, fn),
     buildOrgTargetFromProjectAdobe: (adobe?: { organization?: string }) => ({
         orgId: adobe?.organization ?? '',
     }),
 }));
 
-jest.mock('@/core/base', () => ({
+jest.mock('@/core/base/baseWebviewCommand', () => ({
     BaseWebviewCommand: {
         startWebviewTransition: jest.fn().mockResolvedValue(undefined),
         endWebviewTransition: jest.fn(),
@@ -64,9 +66,10 @@ jest.mock('@/core/base', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from '@/core/base';
-import { ServiceLocator } from '@/core/di';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { handleOpenIntegrations } from '@/features/dashboard/handlers/dashboardHandlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const mockExecuteCommand = vscode.commands.executeCommand as jest.Mock;
 const mockTransition = BaseWebviewCommand as unknown as {
@@ -86,7 +89,7 @@ function createMockContext(project: unknown = PROJECT) {
     return {
         logger: { info: jest.fn(), debug: jest.fn(), error: jest.fn() },
         sendMessage: jest.fn(),
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
     };
 }
 

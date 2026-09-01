@@ -9,14 +9,6 @@ import { DisposableStore } from '@/core/utils/disposableStore';
 import type * as vscode from 'vscode';
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 describe('DisposableStore - Basic Operations', () => {
     describe('Add and Dispose', () => {

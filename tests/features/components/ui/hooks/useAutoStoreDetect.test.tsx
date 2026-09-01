@@ -16,7 +16,7 @@ import {
     PAAS_ADMIN_USERNAME,
     PAAS_ADMIN_PASSWORD,
     ACCS_GRAPHQL_ENDPOINT,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import type { ComponentConfigs } from '@/types/webview';
 
 // URL validation always passes — we test request construction, not SSRF guards

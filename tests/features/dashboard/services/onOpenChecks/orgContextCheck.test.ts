@@ -18,17 +18,12 @@
  */
 import { createOrgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
 import { CHECK_IDS } from '@/types/messages';
-import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
-import type { Project } from '@/types';
+import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const mockLogger: Logger = {
-    trace: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-};
+const mockLogger: Logger = createMockLogger();
 
 /** Build a run context with a captured `post` spy. */
 function makeCtx(project: Project): { ctx: OnOpenCheckContext; post: jest.Mock } {

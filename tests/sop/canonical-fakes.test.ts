@@ -175,7 +175,9 @@ describe('a fake with a canonical builder is not hand-rolled again', () => {
     it('CONTROL: exempts a logger literal inside a jest.mock factory', () => {
         expect(
             handRolledFakes(
-                `jest.mock('@/core/logging', () => ({ getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }) }));`
+                `jest.mock('@/core/logging/debugLogger', () => ({
+    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+}));`
             )
         ).toEqual([]);
         // ...but a literal AFTER the factory closes is still caught.
@@ -225,5 +227,171 @@ describe('a fake with a canonical builder is not hand-rolled again', () => {
             stale: [],
             fix: 'delete these lines from canonical-fakes.ledger.json — the debt is paid',
         });
+    });
+});
+
+describe('a fake of a real type is not a literal the compiler was told to ignore', () => {
+    /**
+     * `{...} as unknown as Project` is a fake with the type check switched off. It
+     * is also where every defect this suite's siblings found on 2026-08-31 was
+     * hiding: 26 StateManager members faked for methods that do not exist, a whole
+     * HandlerContext that was `{}`, an argument passed `as never`, and
+     * `{ status: 'running' }` standing in for a Project.
+     *
+     * These nine types each have a builder in tests/helpers already, so the target
+     * for every one is ZERO — not a judgement about whether a fake is reasonable,
+     * just a count of places a builder exists and was not used.
+     *
+     * A CEILING rather than a file ledger, deliberately. 324 files carry one of
+     * these; that is too many rows for anyone to keep honest, while nine numbers
+     * maintain themselves. The assertion demands EXACT equality, so a conversion
+     * that lowers a count must lower the pin in the same commit — the ratchet
+     * cannot silently slacken, and a regression cannot hide under a stale pin.
+     *
+     * Casts to types with NO builder are deliberately not counted. Some are
+     * legitimate: a fetch `Response` stub carrying three of its twenty members is
+     * right when the code reads three. The rule is "use the builder that exists",
+     * not "never cast".
+     */
+    const CEILINGS = (LEDGER as unknown as { castCeilings: Record<string, number> })
+        .castCeilings;
+    const CAST = /\}\s*as\s+(?:unknown\s+as\s+)?([A-Za-z_][\w.]*(?:\[[^\]]*\])?(?:<[^>]*>)?)/g;
+
+    const counts: Record<string, number> = (() => {
+        const out: Record<string, number> = {};
+        for (const key of Object.keys(CEILINGS)) out[key] = 0;
+        for (const f of collectTestFiles(testsDir)) {
+            if (f.startsWith('tests/helpers/')) continue;
+            const body = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+            for (const m of body.matchAll(CAST)) {
+                if (m[1] in out) out[m[1]] += 1;
+            }
+        }
+        return out;
+    })();
+
+    it('CONTROL: the detector sees a cast and not a plain literal', () => {
+        const re = /\}\s*as\s+(?:unknown\s+as\s+)?([A-Za-z_][\w.]*)/;
+        expect(re.test('const p = {} as unknown as Project;')).toBe(true);
+        expect(re.test('const p = {} as Project;')).toBe(true);
+        expect(re.test('const p = { a: 1 };')).toBe(false);
+        // And the corpus was read, so a zero means "none left", not "never looked".
+        expect(collectTestFiles(testsDir).length).toBeGreaterThan(500);
+    });
+
+    it.each(Object.keys(CEILINGS))('%s: casts to it only ever fall', (type) => {
+        const ceiling = CEILINGS[type];
+        const count = counts[type];
+        expect({
+            type,
+            count,
+            verdict:
+                count > ceiling
+                    ? 'GREW — a new fake bypassed the builder'
+                    : count < ceiling
+                      ? 'LOWER THE PIN in canonical-fakes.ledger.json'
+                      : 'at',
+        }).toEqual({ type, count, verdict: 'at' });
+    });
+});
+
+describe('a jest.mock factory reaches the builder too', () => {
+    /**
+     * THE BLIND SPOT THIS CLOSES. The two checks above walk object literals in
+     * ordinary test code. Neither looks inside a `jest.mock` factory — so 23
+     * hand-rolled loggers sat in factories across 21 files and NOTHING counted
+     * them, which is exactly why they outlived every other group and became the
+     * last open item on PL-16. They were not hard; they were unmeasured.
+     *
+     * The excuse for them was real but only half true: a factory is hoisted above
+     * the imports, so it cannot reference an imported builder. The factory BODY,
+     * however, runs lazily — so `require()` inside it reaches the builder fine:
+     *
+     *     
+     *
+     * One trap, which cost a suite-load failure on 2026-08-31: if the factory
+     * captures a `mockX` from module scope, read it LAZILY (inside `getLogger`,
+     * memoised), never at factory-run time — the factory is hoisted above
+     * `const mockX = jest.fn()`, so an eager read throws "cannot access before
+     * initialization".
+     */
+    const LOGGER_METHODS = new Set([
+        'debug',
+        'error',
+        'info',
+        'warn',
+        'trace',
+        'show',
+        'clear',
+        'log',
+    ]);
+
+    /**
+     * The one legitimate hand-rolled logger in a factory: the shared node setup
+     * IS the canonical global mock, and it cannot import the builder to build
+     * itself. Every other factory has somewhere to import from.
+     */
+    const EXEMPT_FACTORIES = new Set(['tests/setup/node.ts']);
+
+    function factoryLoggerLiterals(body: string): number {
+        let found = 0;
+        const stripped = body.replace(/\/\*[\s\S]*?\*\//g, '');
+        for (const m of stripped.matchAll(/jest\.mock\(/g)) {
+            let depth = 0;
+            let j = m.index! + 'jest.mock'.length;
+            for (; j < stripped.length; j++) {
+                if (stripped[j] === '(') depth += 1;
+                else if (stripped[j] === ')') {
+                    depth -= 1;
+                    if (depth === 0) {
+                        j += 1;
+                        break;
+                    }
+                }
+            }
+            const call = stripped.slice(m.index!, j);
+            for (const lit of call.matchAll(/\{[^{}]*\}/g)) {
+                const keys = new Set([...lit[0].matchAll(/(\w+)\s*:/g)].map((k) => k[1]));
+                const loggerish = [...keys].filter((k) => LOGGER_METHODS.has(k)).length;
+                const onlyLoggerish = [...keys].every(
+                    (k) =>
+                        LOGGER_METHODS.has(k) || k === 'getLogger' || k === 'initializeLogger'
+                );
+                if (keys.size > 0 && loggerish >= 3 && onlyLoggerish) {
+                    found += 1;
+                    break;
+                }
+            }
+        }
+        return found;
+    }
+
+    it('CONTROL: the detector sees a factory logger, and not other factories', () => {
+        expect(
+            factoryLoggerLiterals(
+                "jest.mock('m', () => ({ getLogger: () => ({ debug: 1, info: 2, warn: 3 }) }));"
+            )
+        ).toBe(1);
+        // A factory that reaches the builder is not a hand-roll.
+        expect(
+            factoryLoggerLiterals(
+                "jest.mock('m', () => { const { createMockLogger } = require('x');" +
+                    ' return { getLogger: () => createMockLogger() }; });'
+            )
+        ).toBe(0);
+        // An unrelated factory is not a logger.
+        expect(
+            factoryLoggerLiterals("jest.mock('m', () => ({ read: 1, write: 2, seek: 3 }));")
+        ).toBe(0);
+        // A logger literal OUTSIDE a factory belongs to the checks above, not this one.
+        expect(factoryLoggerLiterals('const l = { debug: 1, info: 2, warn: 3 };')).toBe(0);
+    });
+
+    it('no jest.mock factory hand-rolls a logger', () => {
+        const offenders = collectTestFiles(testsDir)
+            .filter((f) => f !== path.relative(repoRoot, __filename).replace(/\\/g, '/'))
+            .filter((f) => !EXEMPT_FACTORIES.has(f))
+            .filter((f) => factoryLoggerLiterals(fs.readFileSync(path.join(repoRoot, f), 'utf8')) > 0);
+        expect(offenders).toEqual([]);
     });
 });

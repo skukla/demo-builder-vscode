@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { currentCallTag } from './callTagContext';
 import type { CommandResult } from '@/core/shell/types';
 import { slowCommandThreshold } from '@/core/utils/timeoutConfig';
-import { sanitizeErrorForLogging } from '@/core/validation';
+import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 
 /**
  * Extended CommandResult with additional context for logging

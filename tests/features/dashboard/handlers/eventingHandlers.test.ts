@@ -21,7 +21,7 @@ jest.mock('@/features/authentication/handlers/eventLifecycleDeps', () => ({
     createEventLifecycleDeps: jest.fn(() => ({ deps: 'stub' })),
 }));
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn(() => ({})) },
 }));
 
@@ -39,13 +39,14 @@ import {
     handleGetEventEntities,
 } from '@/features/dashboard/handlers/eventingHandlers';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const ADOBE = { organization: 'org-1', projectId: 'proj-1', workspace: 'ws-1' };
 
 function makeContext(adobe: unknown = ADOBE): HandlerContext {
     return {
         stateManager: { getCurrentProject: jest.fn(async () => ({ name: 'bodea', adobe })) },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
+        logger: createMockLogger(),
     } as unknown as HandlerContext;
 }
 

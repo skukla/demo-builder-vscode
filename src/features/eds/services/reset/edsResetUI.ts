@@ -16,6 +16,7 @@
  * @module features/eds/services/reset/edsResetUI
  */
 
+import type { GitHubAppService } from '../github/githubAppService';
 import type { MeshRedeployDeps } from './edsResetMeshHelper';
 import {
     executeEdsReset,
@@ -27,7 +28,6 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { GitHubAppService } from '../github/githubAppService';
 import type { Project, ProjectStatus } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -207,7 +207,7 @@ async function checkGitHubAppInstallation(
     injectedAppService?: GitHubAppService,
 ): Promise<EdsResetResult | null> {
     const { getGitHubServices } = await import('../../handlers/edsHelpers');
-    const { tokenService: preCheckTokenService } = getGitHubServices(context);
+    const { tokenService: preCheckTokenService } = getGitHubServices(context.context.secrets);
     const { GitHubAppService } = await import('../github/githubAppService');
     // The DA.live session rides along: a site carrying any `access.admin` role
     // refuses the GitHub token outright, and storefront setup now pins one on
@@ -322,7 +322,7 @@ async function showResetResultNotifications(
         }
     } else if (result.error) {
         if (showLogsOnError) {
-            const { getLogger } = await import('@/core/logging');
+            const { getLogger } = await import('@/core/logging/debugLogger');
             vscode.window
                 .showErrorMessage(`Failed to reset EDS project: ${result.error}`, 'Show Logs')
                 .then((sel) => {

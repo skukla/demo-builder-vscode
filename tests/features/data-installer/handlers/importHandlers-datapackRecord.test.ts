@@ -18,13 +18,11 @@ import { importHandlers } from '@/features/data-installer/handlers/importHandler
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
-}));
-jest.mock('@/core/logging/debugLogger', () => ({
-    ...jest.requireActual('@/core/logging/debugLogger'),
-    getLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
 }));
 jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
@@ -53,8 +51,8 @@ const PAAS_PROJECT = (): Partial<Project> => ({
 function makeImportHarness(project: Partial<Project>, saveProject = jest.fn()) {
     const mem = new Map<string, unknown>();
     const context = {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         authManager: {
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest
@@ -71,10 +69,10 @@ function makeImportHarness(project: Partial<Project>, saveProject = jest.fn()) {
             },
             secrets: { get: jest.fn(async () => undefined), store: jest.fn(), delete: jest.fn() },
         } as unknown as vscode.ExtensionContext,
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
-        },
+        }),
         sendMessage: jest.fn().mockResolvedValue(undefined),
     } as unknown as HandlerContext;
     return { context, saveProject };

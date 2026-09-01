@@ -7,7 +7,8 @@
 
 import { asDisplayName } from '@/core/utils/projectDisplayName';
 import type { OrgMismatchInfo } from '@/features/authentication/services/detectProjectOrgMismatch';
-import type { CheckOutcome, OrgContextCheckData } from '@/features/dashboard/services/onOpenChecks';
+import type { OrgContextCheckData } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
+import type { CheckOutcome } from '@/features/dashboard/services/onOpenChecks/types';
 import {
     routeCheckOutcome,
     type CheckRoutingActions,

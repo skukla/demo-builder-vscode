@@ -22,6 +22,6 @@ export interface ComponentInstallOptions {
  */
 export interface ComponentInstallResult {
     success: boolean;
-    component?: import('@/types').ComponentInstance;
+    component?: import('@/types/base').ComponentInstance;
     error?: string;
 }

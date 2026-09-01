@@ -28,7 +28,7 @@ import '@testing-library/jest-dom';
 import {
     ACCS_STORE_VIEW_CODE,
     PAAS_STORE_VIEW_CODE,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
 import type { ComponentConfigs, WizardState } from '@/types/webview';
 import {
     PAAS,
@@ -319,7 +319,7 @@ describe('CommerceStep (v7 tabs + dedicated views)', () => {
             const callsBefore = setCanProceed.mock.calls.length;
             fireEvent.click(screen.getByTestId('auth-noop'));
             // The auth body's setCanProceed is a NOOP — it must not reach the gate.
-            expect(setCanProceed.mock.calls.length).toBe(callsBefore);
+            expect(setCanProceed.mock.calls).toHaveLength(callsBefore);
         });
 
         it('should STAY on the pinned signin step when the user signs in (no skip)', () => {

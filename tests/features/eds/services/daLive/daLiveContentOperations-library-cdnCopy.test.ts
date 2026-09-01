@@ -36,6 +36,7 @@ import {
 } from './daLiveContentOperations.testUtils';
 import { DaLiveContentOperations, type TokenProvider } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 global.fetch = mockFetch;
 
@@ -52,12 +53,7 @@ describe('createBlockLibraryFromTemplate', () => {
             getAccessToken: jest.fn().mockResolvedValue('mock-ims-token'),
         };
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         service = new DaLiveContentOperations(mockTokenProvider, mockLogger);
         mockGetFileContent = jest.fn();

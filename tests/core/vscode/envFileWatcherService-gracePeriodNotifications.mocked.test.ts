@@ -18,6 +18,7 @@ import {
     mockLogger,
     resetMocks,
 } from './envFileWatcherService.testUtils';
+import { createMockProject } from '../../helpers/projectFake';
 
 describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () => {
     let mockContext: vscode.ExtensionContext;
@@ -65,9 +66,7 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             await vscode.commands.executeCommand('demoBuilder._internal.demoStarted');
 
             // Set demo as running
-            mockStateManager.getCurrentProject.mockResolvedValue({
-                status: 'running',
-            });
+            mockStateManager.getCurrentProject.mockResolvedValue(createMockProject({ status: 'running' }));
 
             // When: File changes within grace period (<10 seconds)
             const newContent = 'API_KEY=test456';
@@ -101,9 +100,7 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             );
 
             // Set demo as running
-            mockStateManager.getCurrentProject.mockResolvedValue({
-                status: 'running',
-            });
+            mockStateManager.getCurrentProject.mockResolvedValue(createMockProject({ status: 'running' }));
 
             // When: First file change
             content = 'API_KEY=test456';
@@ -147,9 +144,7 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
                 [filePath]
             );
 
-            mockStateManager.getCurrentProject.mockResolvedValue({
-                status: 'running',
-            });
+            mockStateManager.getCurrentProject.mockResolvedValue(createMockProject({ status: 'running' }));
 
             // Show notification
             content = 'API_KEY=test456';

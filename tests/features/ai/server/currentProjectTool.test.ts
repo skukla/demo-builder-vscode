@@ -7,6 +7,7 @@
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
 import type { HandlerContext } from '@/types/handlers';
 import { expectWithinCeiling } from './responseCeilings';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 function fakeServer() {
     const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
@@ -25,7 +26,7 @@ const ctxFactory = () =>
     ({
         stateManager: { getCurrentProject },
         context: {},
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
     }) as unknown as HandlerContext;
 
 describe('get_current_project', () => {

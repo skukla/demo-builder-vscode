@@ -23,7 +23,7 @@
  */
 
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 function project(overrides: Partial<Project> = {}): Project {
     return {

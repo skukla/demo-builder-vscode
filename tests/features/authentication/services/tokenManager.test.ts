@@ -23,16 +23,6 @@ import {
     type StoredTokenConfig,
 } from '@/features/authentication/services/tokenManager';
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 /** A token long enough to clear the 100-character floor. */
 const LONG_TOKEN = 'x'.repeat(150);
 const HOUR_MS = 60 * 60 * 1000;

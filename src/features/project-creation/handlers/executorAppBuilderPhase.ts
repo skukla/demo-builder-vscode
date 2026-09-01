@@ -11,7 +11,7 @@
 
 import { buildDeployOrgTarget } from './executorMeshPhase';
 import type { ProgressTracker } from './shared';
-import { withOrgContext } from '@/core/shell';
+import { withOrgContext } from '@/core/shell/orgContextEnv';
 import {
     getAppBuilderComponentEntry,
     buildCustomIntegrationEntry,
@@ -66,7 +66,7 @@ export async function ensureWorkspaceRuntimeReady(
     }
     // Local consts hold the narrowed strings into the closure below.
     const { organization, projectId, workspace } = adobe;
-    const { ServiceLocator } = await import('@/core/di');
+    const { ServiceLocator } = await import('@/core/di/serviceLocator');
     const { ensureWorkspaceRuntime } = await import(
         '@/features/app-builder/services/runtimeCredentials'
     );
@@ -96,7 +96,7 @@ export async function ensureWorkspaceRuntimeReady(
  */
 export async function executeAppBuilderIntegrationsPhase(
     context: HandlerContext,
-    project: import('@/types').Project,
+    project: import('@/types/base').Project,
     typedConfig: ProjectCreationConfig,
     progressTracker: ProgressTracker,
 ): Promise<void> {
@@ -106,7 +106,7 @@ export async function executeAppBuilderIntegrationsPhase(
         return;
     }
 
-    const { ServiceLocator } = await import('@/core/di');
+    const { ServiceLocator } = await import('@/core/di/serviceLocator');
     const permission = await ServiceLocator.getAuthenticationService().testDeveloperPermissions();
     if (!permission.hasPermissions) {
         throw new Error(

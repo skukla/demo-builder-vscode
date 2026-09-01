@@ -94,7 +94,8 @@ import {
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { getBlockLibrarySource, getBlockLibraryName } from '@/features/components/services/blockLibraryLoader';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
 // Cast imported mocks for type-safe access
 const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<typeof installBlockCollections>;
@@ -130,7 +131,7 @@ function createEdsConfig(overrides?: Partial<StorefrontSetupStartPayload['edsCon
  * is seeded per-test rather than mocked at the module level.
  */
 beforeEach(() => {
-    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
 });
 
 describe('Storefront Setup Phases - Block Library Install Tracking', () => {

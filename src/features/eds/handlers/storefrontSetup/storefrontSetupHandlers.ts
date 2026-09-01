@@ -33,7 +33,7 @@ import { executeStorefrontSetupPhases } from './storefrontSetupPhases';
 import type { StorefrontSetupResult } from './storefrontSetupTypes';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { hasMeshInDependencies } from '@/core/constants';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { redactUrlUserParam } from '@/core/utils/maskEmail';
 import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -434,7 +434,7 @@ async function createCleanupService(context: HandlerContext): Promise<CleanupSer
     // Both come from the cache — it builds the repo operations FROM the same
     // token service, so building them here produced a second pair with a cold
     // validation cache (D-2).
-    const { repoOperations: githubRepoOps } = getGitHubServices(context);
+    const { repoOperations: githubRepoOps } = getGitHubServices(context.context.secrets);
 
     // Create TokenProvider adapter from AuthenticationService if available
     const tokenProvider = createDaLiveTokenProvider(context.authManager);

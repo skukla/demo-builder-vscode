@@ -14,7 +14,7 @@
 
 import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 // Mock the GitHub API client used for the forked path
@@ -37,15 +37,10 @@ jest.mock('@/features/eds/services/patches/lkgReader', () => ({
 }));
 
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
+import { createMockLogger } from '../../../helpers/loggerFake';
 const mockReadLkgSha = readLkgSha as jest.Mock;
 
-const mockLogger: Logger = {
-    trace: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-};
+const mockLogger: Logger = createMockLogger();
 
 const mockSecrets = {} as never;
 

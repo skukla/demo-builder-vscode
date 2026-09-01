@@ -15,7 +15,7 @@ import { DaLiveContentOperations } from '../../services/daLive/daLiveContentOper
 import { type TokenProvider } from '../../services/daLive/daLiveOrgOperations';
 import { getEwCanvasBranch } from '../authoringExperience';
 import { maskEmail } from '@/core/utils/maskEmail';
-import type { AuthoringExperience } from '@/types';
+import type { AuthoringExperience } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /**

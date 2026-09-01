@@ -95,7 +95,7 @@ export async function refreshBlockLibraryHeadless(
     const tokenProvider = createDaLiveServiceTokenProvider(daLiveAuthService);
     const daLiveContentOps = new DaLiveContentOperations(tokenProvider, logger);
     const { tokenService: githubTokenService, fileOperations: githubFileOps } =
-        getGitHubServices(handlerContext);
+        getGitHubServices(handlerContext.context.secrets);
     const helixService =
         deps.helixService ?? new HelixService(logger, githubTokenService, tokenProvider);
 

@@ -12,9 +12,8 @@ import { migrateLegacyToAppBuilderComponents } from './appBuilderComponentMigrat
 import { migrateApiPicks } from './componentApiPicks';
 import { reconcileComponentSelections } from './componentSelectionReconcile';
 import { validateManifestShape } from './manifestValidation';
-import { stripDuplicateBackendOwnedScope } from '@/features/components/config/backendOwnedScope';
-import type { Project, ComponentInstance } from '@/types';
-import type { AiPrompt } from '@/types/base';
+import { stripDuplicateBackendOwnedScope } from '@/core/config/backendOwnedScope';
+import type { ComponentInstance, Project , AiPrompt } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import { getComponentInstancesByType, parseJSON } from '@/types/typeGuards';

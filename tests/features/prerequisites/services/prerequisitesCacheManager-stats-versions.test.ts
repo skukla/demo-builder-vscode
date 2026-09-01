@@ -16,15 +16,6 @@ import { createMockStatus, setupMockTime } from './prerequisitesCacheManager.tes
  */
 
 // Mock dependencies
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
-
 jest.mock('@/core/utils/timeoutConfig', () => ({
     CACHE_TTL: {
         MEDIUM: 300000, // 5 minutes - semantic category (replaces PREREQUISITE_CHECK)

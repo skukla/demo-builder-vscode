@@ -12,11 +12,11 @@
 
 import type * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { CommandExecutor } from '@/core/shell';
-import type { StateManager } from '@/core/state';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import type { StateManager } from '@/core/state/stateManager';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
-import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
@@ -153,7 +153,9 @@ async function reinstallBlockLibraryFiles(
     }
     const [destOwner, destRepo] = githubRepo.split('/');
 
-    const tokenService = new GitHubTokenService(ctx.secrets, ctx.logger);
+    // The SHARED instance: its validation cache is per-instance, so a fresh one
+    // would re-validate against GitHub.
+    const { tokenService } = getGitHubServices(ctx.secrets);
     const fileOps = new GitHubFileOperations(tokenService, ctx.logger);
 
     const result = await installBlockCollections(

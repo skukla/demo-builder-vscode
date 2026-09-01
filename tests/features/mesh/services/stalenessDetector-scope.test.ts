@@ -1,17 +1,8 @@
 // IMPORTANT: Mock must be declared before imports
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    }),
-}));
 
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { createStalenessProject, setupMockFileSystemWithHash, meshDeps } from './stalenessDetector.testUtils';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 
 /**
  * The mesh staleness detector is the THIRD resolver over `componentConfigs`, and

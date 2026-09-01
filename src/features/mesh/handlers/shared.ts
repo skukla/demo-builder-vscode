@@ -6,7 +6,7 @@
 
 import * as vscode from 'vscode';
 import { getEndpoint as getEndpointHelper } from '../services/meshEndpoint';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
 import { Logger } from '@/types/logger';

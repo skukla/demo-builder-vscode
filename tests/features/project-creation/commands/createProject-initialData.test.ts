@@ -10,8 +10,9 @@
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Factory mock keeping the real module: transitive deps (fetch-blob via the
 // auth service import chain) destructure fs.promises at load time, so a bare
@@ -22,7 +23,7 @@ jest.mock('fs', () => ({
     readFileSync: jest.fn(),
 }));
 jest.mock('@/core/logging/debugLogger');
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             isAuthenticated: jest.fn(),
@@ -63,15 +64,6 @@ function createMockStateManager(): StateManager {
         clearState: jest.fn(),
         getCurrentProject: jest.fn(),
         getAllProjects: jest.fn().mockResolvedValue([]),
-    } as any;
-}
-
-function createMockLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
     } as any;
 }
 

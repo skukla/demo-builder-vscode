@@ -33,7 +33,7 @@ jest.mock('fs/promises', () => ({
 }));
 
 // Mock BaseWebviewCommand (the handler disposes the projects list via viewType)
-jest.mock('@/core/base', () => ({
+jest.mock('@/core/base/baseWebviewCommand', () => ({
     BaseWebviewCommand: {
         disposePanel: jest.fn(),
     },
@@ -79,7 +79,7 @@ describe('lifecycleHandlers - Project Actions', () => {
         });
 
         it('should close existing Projects List webview', async () => {
-            const { BaseWebviewCommand } = require('@/core/base');
+            const { BaseWebviewCommand } = require('@/core/base/baseWebviewCommand');
             const context = createWizardLifecycleContext();
             context.stateManager.getCurrentProject = jest.fn().mockResolvedValue({
                 name: 'test-project',

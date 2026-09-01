@@ -22,6 +22,7 @@
 import { executeSampleDataPhase } from '@/features/project-creation/handlers/executor';
 import { installSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
     ...jest.requireActual('@/features/data-installer/services/sampleDataInstall'),
@@ -32,8 +33,8 @@ const mockedInstall = installSampleData as jest.MockedFunction<typeof installSam
 
 function makeContext() {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         sendMessage: jest.fn(),
         stateManager: { saveProject: jest.fn() },
         context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },

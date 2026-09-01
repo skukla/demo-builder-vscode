@@ -43,6 +43,7 @@ import { executePhaseCodeSync } from '@/features/eds/handlers/storefrontSetup/st
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import type { RepoInfo, SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const REPO: RepoInfo = {
     repoOwner: 'skukla',
@@ -55,13 +56,7 @@ let order: string[];
 
 function makeContext(): HandlerContext {
     return {
-        logger: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
-        },
+        logger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
     } as unknown as HandlerContext;
 }

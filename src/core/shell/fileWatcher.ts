@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { PollingService } from './pollingService';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**

@@ -11,18 +11,14 @@
 
 import * as fs from 'fs/promises';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 jest.mock('fs/promises');
 
 const mockFs = fs as jest.Mocked<typeof fs>;
 
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+const mockLogger = createMockLogger();
 
 const STRUCTURE = {
     websites: [{ id: 2, code: 'citisignal', name: 'CitiSignal' }],

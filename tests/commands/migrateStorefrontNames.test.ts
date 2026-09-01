@@ -11,17 +11,6 @@ import * as vscode from 'vscode';
 // Mocks — must precede imports.
 // ---------------------------------------------------------------------------
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    })),
-    initializeLogger: jest.fn(),
-}));
-
 jest.mock('@/features/eds/services/storefront/storefrontNameMigration', () => ({
     migrateStorefrontNamingIfNeeded: jest.fn(),
 }));
@@ -71,7 +60,7 @@ import { MigrateStorefrontNamesCommand } from '@/commands/migrateStorefrontNames
 import { migrateStorefrontNamingIfNeeded } from '@/features/eds/services/storefront/storefrontNameMigration';
 import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
 import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
-import type { StateManager } from '@/core/state';
+import type { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { COMPONENT_IDS } from '@/core/constants';

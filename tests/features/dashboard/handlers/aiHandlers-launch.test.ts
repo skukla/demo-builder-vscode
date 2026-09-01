@@ -14,6 +14,7 @@ import {
     makeScopedContext,
 } from './aiHandlers.testUtils';
 import type { HandlerContext } from './aiHandlers.testUtils';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 describe('aiHandlers — launch & save', () => {
     beforeEach(() => {
@@ -69,7 +70,7 @@ describe('aiHandlers — launch & save', () => {
             expect(result).toEqual({ success: true });
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.openInClaude');
             const call = vscode.commands.executeCommand.mock.calls[0];
-            expect(call.length).toBe(1);
+            expect(call).toHaveLength(1);
         });
 
         it('calls demoBuilder.openInClaude with no second argument when payload omits prompt', async () => {
@@ -83,7 +84,7 @@ describe('aiHandlers — launch & save', () => {
             expect(result).toEqual({ success: true });
             const call = vscode.commands.executeCommand.mock.calls[0];
             expect(call[0]).toBe('demoBuilder.openInClaude');
-            expect(call.length).toBe(1);
+            expect(call).toHaveLength(1);
         });
 
         // ----- No anchoring in the handler (moved to the command) -----
@@ -131,10 +132,10 @@ describe('aiHandlers — launch & save', () => {
             const saveProject = jest.fn().mockResolvedValue(undefined);
             const project = { name: 'p', path: '/projects/p', aiPrompts: [] as unknown[] };
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager(createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(project),
                     saveProject,
-                } as unknown as HandlerContext['stateManager'],
+                })) as unknown as HandlerContext['stateManager'],
             });
 
             const result = await handleSaveAiPrompt(context, {
@@ -179,7 +180,7 @@ describe('aiHandlers — launch & save', () => {
                 { id: 'b', title: 'B', prompt: 'b' },
             ]);
             expect(result.success).toBe(true);
-            expect((result.aiPrompts as unknown[]).length).toBe(2);
+            expect((result.aiPrompts as unknown[])).toHaveLength(2);
         });
 
         it('returns success: false when prompt payload is missing', async () => {
@@ -220,10 +221,10 @@ describe('aiHandlers — launch & save', () => {
 
         it('returns project-not-found when no current project is loaded', async () => {
             const context = createAiHandlerContext({
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
                     saveProject: jest.fn(),
-                } as unknown as HandlerContext['stateManager'],
+                }) as unknown as HandlerContext['stateManager'],
             });
             const result = await handleSaveAiPrompt(context, {
                 prompt: { id: 'x', title: 'T', prompt: 'B' },

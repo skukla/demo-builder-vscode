@@ -14,14 +14,10 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 
 import { ConfigurationService, buildSiteConfigParams } from '@/features/eds/services/configService/configurationService';
 import type { SiteRegistrationParams } from '@/features/eds/services/configService/configurationService';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // Test fixtures
-const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+const mockLogger = createMockLogger();
 
 const mockTokenProvider = {
     getAccessToken: jest.fn(),
@@ -352,7 +348,7 @@ describe('ConfigurationService', () => {
  * remedy the evidence contradicts.
  */
 describe('ConfigurationService — failure reporting', () => {
-    const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() };
+    const logger = createMockLogger();
     const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('ims-token') };
     const params: SiteRegistrationParams = {
         org: 'acme-corp',

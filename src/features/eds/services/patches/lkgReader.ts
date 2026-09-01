@@ -17,7 +17,7 @@
 
 import { resolvePatchRef } from './externalPatchFetcher';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
 
 /** Strict 40-hex SHA shape. */
 const SHA_PATTERN = /^[0-9a-f]{40}$/;

@@ -29,7 +29,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
-import { dataInstallerHandlers } from '@/features/data-installer/handlers';
+import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 
 const ROOT = path.resolve(__dirname, '../../../');
 

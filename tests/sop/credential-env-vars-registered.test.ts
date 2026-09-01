@@ -23,7 +23,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { SECRET_ENV_KEYS } from '@/features/components/config/envVarKeys';
+import { SECRET_ENV_KEYS } from '@/core/config/envVarKeys';
 
 const CATALOG = path.join(
     __dirname,

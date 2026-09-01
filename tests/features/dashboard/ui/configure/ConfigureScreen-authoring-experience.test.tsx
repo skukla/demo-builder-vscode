@@ -12,9 +12,12 @@ import {
 } from './ConfigureScreen.testUtils';
 
 // Mock hooks
-jest.mock('@/core/ui/hooks', () => ({
-    useSelectableDefault: jest.fn(() => ({})),
+jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
     useFocusTrap: jest.fn(() => ({ current: null })),
+}));
+
+jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
+    useSelectableDefault: jest.fn(() => ({})),
 }));
 
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
@@ -32,17 +35,20 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 
 // Mock layout components. The shell + rail are NOT mocked (direct-path imports) so the
 // Authoring tab these tests click is the real one.
-jest.mock('@/core/ui/components/layout', () => ({
-    PageHeader: ({ title, subtitle }: any) => (
-        <div data-testid="page-header">
-            <h1>{title}</h1>
-            {subtitle && <h3>{subtitle}</h3>}
-        </div>
-    ),
+jest.mock('@/core/ui/components/layout/PageFooter', () => ({
     PageFooter: ({ leftContent, rightContent }: any) => (
         <div data-testid="page-footer">
             <div data-testid="footer-left">{leftContent}</div>
             <div data-testid="footer-right">{rightContent}</div>
+        </div>
+    ),
+}));
+
+jest.mock('@/core/ui/components/layout/PageHeader', () => ({
+    PageHeader: ({ title, subtitle }: any) => (
+        <div data-testid="page-header">
+            <h1>{title}</h1>
+            {subtitle && <h3>{subtitle}</h3>}
         </div>
     ),
 }));

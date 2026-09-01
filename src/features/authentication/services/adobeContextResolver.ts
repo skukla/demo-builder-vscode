@@ -25,10 +25,10 @@ import type {
     AdobeContext,
     AdobeConsoleWhereResponse,
 } from './types';
-import { getLogger } from '@/core/logging';
-import type { CommandExecutor } from '@/core/shell';
-import { TIMEOUTS } from '@/core/utils';
+import { getLogger } from '@/core/logging/debugLogger';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { parseJSON } from '@/types/typeGuards';
 
 /**

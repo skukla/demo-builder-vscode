@@ -33,7 +33,7 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: mockEnsureAdobeIOAuth,
 }));
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => mockAuthService),
     },
@@ -58,15 +58,6 @@ jest.mock(
     }),
     { virtual: true }
 );
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         NORMAL: 30000,

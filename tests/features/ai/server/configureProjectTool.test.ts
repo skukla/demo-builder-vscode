@@ -11,8 +11,8 @@
  */
 
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
-import type { StateManager } from '@/core/state';
-import type { Project } from '@/types';
+import type { StateManager } from '@/core/state/stateManager';
+import type { Project } from '@/types/base';
 
 const getCurrentProject = jest.fn();
 const saveProject = jest.fn();

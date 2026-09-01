@@ -19,6 +19,15 @@ var mockEnabledValue: unknown;
 var mockWarn: jest.Mock;
 /* eslint-enable no-var */
 
+jest.mock('@/core/logging/debugLogger', () => {
+    const { createMockLogger } = require('../../../helpers/loggerFake');
+    mockWarn = jest.fn();
+    return {
+        getLogger: jest.fn().mockReturnValue(createMockLogger({ warn: mockWarn })),
+        initializeLogger: jest.fn(),
+    };
+});
+
 jest.mock('vscode', () => {
     mockSettingValue = '';
     mockEnabledValue = undefined;  // honor the default
@@ -38,18 +47,7 @@ jest.mock('vscode', () => {
     };
 }, { virtual: true });
 
-jest.mock('@/core/logging', () => {
-    mockWarn = jest.fn();
-    return {
-        getLogger: jest.fn().mockReturnValue({
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: mockWarn,
-        }),
-        initializeLogger: jest.fn(),
-    };
-});
+
 
 // Mock service imports required by byomOverlay module
 jest.mock('@/features/eds/services/github/githubTokenService');
@@ -72,6 +70,7 @@ import {
 } from '@/features/eds/handlers/byomOverlay';
 import * as vscode from 'vscode';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('resolveByomOverlayUrl', () => {
     beforeEach(() => {
@@ -355,9 +354,7 @@ describe('resolveByomOverlayConfig', () => {
 
 describe('surfaceOverlayRegistrationFailure', () => {
     function createLogger(): Logger {
-        return {
-            info: jest.fn(), debug: jest.fn(), error: jest.fn(), warn: jest.fn(), trace: jest.fn(),
-        } as unknown as Logger;
+        return createMockLogger() as unknown as Logger;
     }
 
     beforeEach(() => {

@@ -14,13 +14,13 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import { injectTokenIntoUrl } from '@/features/eds/services/github/githubHelpers';
-import { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
 
 /**
  * Options for template sync operation
@@ -163,7 +163,10 @@ export class TemplateSyncService {
         templateRepo: string,
         preserveFiles: string[],
     ): Promise<TemplateSyncResult> {
-        const githubTokenService = new GitHubTokenService(this.secrets, this.logger);
+        // The SHARED instance. NOTE: these two sites only call getToken() and never
+        // validate, so a fresh instance cost nothing here — this is consistency with
+        // the other 34 call sites, not a fix for a redundant round trip.
+        const { tokenService: githubTokenService } = getGitHubServices(this.secrets);
         const token = await githubTokenService.getToken();
         if (!token) {
             return {
@@ -320,7 +323,10 @@ export class TemplateSyncService {
         templateRepo: string,
         preserveFiles: string[],
     ): Promise<TemplateSyncResult> {
-        const githubTokenService = new GitHubTokenService(this.secrets, this.logger);
+        // The SHARED instance. NOTE: these two sites only call getToken() and never
+        // validate, so a fresh instance cost nothing here — this is consistency with
+        // the other 34 call sites, not a fix for a redundant round trip.
+        const { tokenService: githubTokenService } = getGitHubServices(this.secrets);
         const token = await githubTokenService.getToken();
         if (!token) {
             return {

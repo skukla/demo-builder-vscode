@@ -25,7 +25,7 @@
  * @see src/core/ui/hooks/useSelectionStep.ts — the interface this must satisfy
  */
 
-import type { UseSelectionStepResult } from '@/core/ui/hooks';
+import type { UseSelectionStepResult } from '@/core/ui/hooks/useSelectionStep';
 
 /**
  * Build a `useSelectionStep` return value with neutral defaults.

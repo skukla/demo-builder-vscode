@@ -16,8 +16,8 @@
  */
 
 import type { AuthCacheManager } from './authCacheManager';
-import { getLogger } from '@/core/logging';
-import type { CommandExecutor } from '@/core/shell';
+import { getLogger } from '@/core/logging/debugLogger';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 
 /**

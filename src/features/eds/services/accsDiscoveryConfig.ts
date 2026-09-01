@@ -14,7 +14,7 @@
  */
 
 import * as vscode from 'vscode';
-import { validateURL } from '@/core/validation';
+import { validateURL } from '@/core/validation/URLValidator';
 
 /** ACCS Discovery Service entry from VS Code settings. */
 export interface AccsDiscoveryService {

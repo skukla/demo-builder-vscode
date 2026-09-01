@@ -15,7 +15,7 @@
  */
 
 import * as vscode from 'vscode';
-import { validateURL } from '@/core/validation';
+import { validateURL } from '@/core/validation/URLValidator';
 
 /** Longest base URL we will accept from settings. */
 export const DATA_INSTALLER_MAX_URL_LENGTH = 2048;

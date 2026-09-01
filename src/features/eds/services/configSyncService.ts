@@ -11,17 +11,18 @@
  */
 
 import { promises as fsPromises } from 'fs';
-import type { HelixCodePreview } from './helix/helixCapabilities';
 import * as path from 'path';
 import type * as vscode from 'vscode';
 import { GitHubFileOperations } from './github/githubFileOperations';
-import { GitHubTokenService } from './github/githubTokenService';
+import type { GitHubTokenService } from './github/githubTokenService';
+import type { HelixCodePreview } from './helix/helixCapabilities';
 import { HelixService } from './helix/helixService';
 import type { PhaseProgressCallback } from './types';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { Logger } from '@/types';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
+import type { Logger } from '@/types/logger';
 
 // ==========================================================
 // Types
@@ -135,7 +136,9 @@ export async function syncConfigToRemote(params: ConfigSyncParams): Promise<Conf
         }
 
         // Step 2: Push to GitHub
-        const githubTokenService = new GitHubTokenService(secrets, logger);
+        // The SHARED instance: its validation cache is per-instance, so a fresh
+        // one would re-validate against GitHub.
+        const { tokenService: githubTokenService } = getGitHubServices(secrets);
         const githubFileOperations = new GitHubFileOperations(githubTokenService, logger);
 
         try {

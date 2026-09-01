@@ -17,6 +17,5 @@
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 
 // Mock dependencies
-jest.mock('@/core/logging/debugLogger');
 
 export { ShowProjectsListCommand };

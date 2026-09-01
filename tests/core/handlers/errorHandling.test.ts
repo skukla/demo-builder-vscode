@@ -8,15 +8,9 @@
 import { wrapHandler, createErrorResponse } from '@/core/handlers/errorHandling';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 // Mock logger for testing
-const createMockLogger = () => ({
-    error: jest.fn(),
-    warn: jest.fn(),
-    info: jest.fn(),
-    debug: jest.fn(),
-    trace: jest.fn(),
-});
 
 // Create minimal mock context
 const createMockContext = (): HandlerContext => ({

@@ -8,8 +8,11 @@ import { ProjectDashboardScreen } from '@/features/dashboard/ui/ProjectDashboard
 import '@testing-library/jest-dom';
 
 // Mock the webview-ui utilities and hooks
-jest.mock('@/core/ui/hooks', () => ({
+jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
     useFocusTrap: jest.fn(() => ({ current: null })),
+}));
+
+jest.mock('@/core/ui/hooks/useTimerCleanup', () => ({
     useSingleTimer: jest.fn(() => ({
         ref: { current: null },
         set: jest.fn(),
@@ -27,20 +30,7 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 }));
 
 // Mock layout components
-jest.mock('@/core/ui/components/layout', () => ({
-    GridLayout: ({ children }: any) => <div data-testid="grid-layout">{children}</div>,
-    PageLayout: ({ header, children }: any) => (
-        <div data-testid="page-layout">
-            <div data-testid="page-layout-header">{header}</div>
-            <div data-testid="page-layout-content">{children}</div>
-        </div>
-    ),
-    PageHeader: ({ title, subtitle }: any) => (
-        <div data-testid="page-header">
-            <h1>{title}</h1>
-            {subtitle && <h3>{subtitle}</h3>}
-        </div>
-    ),
+jest.mock('@/core/ui/components/layout/ControlPanelLayout', () => ({
     ControlPanelLayout: ({ masthead, primary, secondary }: any) => (
         <div data-testid="control-panel">
             <div data-testid="control-panel-masthead">{masthead}</div>
@@ -50,8 +40,30 @@ jest.mock('@/core/ui/components/layout', () => ({
     ),
 }));
 
+jest.mock('@/core/ui/components/layout/GridLayout', () => ({
+    GridLayout: ({ children }: any) => <div data-testid="grid-layout">{children}</div>,
+}));
+
+jest.mock('@/core/ui/components/layout/PageHeader', () => ({
+    PageHeader: ({ title, subtitle }: any) => (
+        <div data-testid="page-header">
+            <h1>{title}</h1>
+            {subtitle && <h3>{subtitle}</h3>}
+        </div>
+    ),
+}));
+
+jest.mock('@/core/ui/components/layout/PageLayout', () => ({
+    PageLayout: ({ header, children }: any) => (
+        <div data-testid="page-layout">
+            <div data-testid="page-layout-header">{header}</div>
+            <div data-testid="page-layout-content">{children}</div>
+        </div>
+    ),
+}));
+
 // Mock feedback components
-jest.mock('@/core/ui/components/feedback', () => ({
+jest.mock('@/core/ui/components/feedback/InlineNotice', () => ({
     // OrgContextNotice now renders through the shared InlineNotice (extracted
     // 2026-08-20). Stubbed to its structure — title, body, optional hint and
     // action — so the suite keeps asserting on CONTENT rather than on the
@@ -64,6 +76,9 @@ jest.mock('@/core/ui/components/feedback', () => ({
             {action}
         </div>
     ),
+}));
+
+jest.mock('@/core/ui/components/feedback/StatusCard', () => ({
     StatusCard: ({ label, status, color, action }: any) => (
         <div data-testid={`status-card-${label}`} data-color={color}>
             {label}: {status}

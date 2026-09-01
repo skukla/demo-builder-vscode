@@ -18,8 +18,9 @@
 import { deployMeshCreateOrUpdate } from './meshRedeploy';
 import { updateMeshState } from './stalenessDetector';
 import type { SecretStorageLike } from '@/core/di/serviceLocator';
-import { buildOrgTargetFromProjectAdobe, withOrgContext, type CommandExecutor } from '@/core/shell';
-import { sanitizeErrorForLogging } from '@/core/validation';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
+import { sanitizeErrorForLogging } from '@/core/validation/SensitiveDataRedactor';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';

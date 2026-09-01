@@ -8,17 +8,17 @@
  */
 
 import { ProgressTracker } from '../handlers/shared';
-import type { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { getMeshNodeVersion } from '@/core/utils/meshConfig';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
 import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
-import {
-    ProjectSetupContext,
-    generateComponentEnvFile,
-    deployMeshComponent,
-} from '@/features/project-creation/helpers';
-import type { Project, TransformedComponentDefinition, Logger } from '@/types';
+import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
+import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
+import type { Project } from '@/types/base';
+import type { TransformedComponentDefinition } from '@/types/components';
+import type { Logger } from '@/types/logger';
 import { getMeshComponentInstance, getMeshComponentId } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
 
@@ -111,7 +111,7 @@ async function handleMeshDeploySuccess(params: {
     attempt: number;
     setupContext: ProjectSetupContext;
     project: Project;
-    meshComponent: import('@/types').ComponentInstance;
+    meshComponent: import('@/types/base').ComponentInstance;
     meshComponentId: string;
     onMeshCreated?: (workspace: string | undefined) => void;
     updateMeshPhase: (state: Partial<MeshPhaseState> & { status: MeshPhaseState['status'] }) => void;

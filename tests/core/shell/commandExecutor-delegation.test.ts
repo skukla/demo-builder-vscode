@@ -6,15 +6,6 @@ import { setupMockDependencies } from './commandExecutor.testUtils';
 // Mock execa (no actual subprocess calls needed for delegation tests)
 jest.mock('execa');
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
-
 
 describe('CommandExecutor - Service Delegation', () => {
     let commandExecutor: CommandExecutor;

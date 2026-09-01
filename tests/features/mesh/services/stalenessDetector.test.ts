@@ -9,25 +9,13 @@
  */
 
 import { detectMeshChanges, calculateMeshSourceHash } from '@/features/mesh/services/stalenessDetector';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { createMeshDepsFake } from '../../../helpers/meshDepsFake';
 
 // Mock dependencies
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     ...jest.requireActual('@/features/mesh/services/stalenessDetector'),
     calculateMeshSourceHash: jest.fn(),
-}));
-
-const mockLogger = {
-    trace: jest.fn(),
-    info: jest.fn(),
-    debug: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
-jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => mockLogger),
-    getLogger: jest.fn(() => mockLogger),
 }));
 
 jest.mock('@/core/utils/timeoutConfig', () => ({

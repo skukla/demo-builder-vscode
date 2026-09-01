@@ -33,17 +33,7 @@
 
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import type { HandlerContext } from '@/types/handlers';
-
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        trace: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
+import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 
 jest.mock('@/features/eds/services/github/githubFileOperations', () => ({
     GitHubFileOperations: jest.fn().mockImplementation(() => ({
@@ -89,10 +79,10 @@ export function createSetupContext(
         panel: {
             webview: { postMessage: jest.fn() },
         } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(currentProject),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
+        }) as unknown as HandlerContext['stateManager'],
         context: {
             secrets: {},
             globalState: { get: jest.fn(), update: jest.fn() },

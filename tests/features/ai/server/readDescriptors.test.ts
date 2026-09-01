@@ -7,7 +7,7 @@
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
-import { meshHandlers } from '@/features/mesh/handlers';
+import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 
 function row(tool: string) {
     return READ_DESCRIPTORS.find((d) => d.tool === tool);

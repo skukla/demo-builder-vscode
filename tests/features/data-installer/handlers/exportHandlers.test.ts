@@ -20,6 +20,8 @@ import { resolveCommerceCredentials } from '@/features/data-installer/services/c
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types/base';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
     resolveCommerceCredentials: jest.fn(),
@@ -47,8 +49,8 @@ function accsProject(): Partial<Project> {
 
 function makeImportHarness(project: unknown = accsProject()) {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         authManager: {
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest.fn().mockReturnValue({
@@ -57,7 +59,7 @@ function makeImportHarness(project: unknown = accsProject()) {
         },
         panel: {},
         context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
         sendMessage: jest.fn(),
     } as unknown as HandlerContext;
 }

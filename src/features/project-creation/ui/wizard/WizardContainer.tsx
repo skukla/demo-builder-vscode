@@ -8,12 +8,6 @@ import {
 } from '../helpers/stackHelpers';
 import { buildAreaWalk } from './buildAreaWalk';
 import {
-    useWizardState,
-    useWizardNavigation,
-    useMessageListeners,
-    useWizardEffects,
-} from './hooks';
-import {
     getCompletedStepIndices,
     getNextButtonText,
     getNavigationDirection,
@@ -23,14 +17,19 @@ import {
 } from './wizardHelpers';
 import { renderWizardStep } from './wizardStepRouter';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
-import { LoadingOverlay } from '@/core/ui/components/feedback';
-import { PageHeader, PageFooter } from '@/core/ui/components/layout';
+import { LoadingOverlay } from '@/core/ui/components/feedback/LoadingOverlay';
+import { PageFooter } from '@/core/ui/components/layout/PageFooter';
+import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
-import { useFocusTrap } from '@/core/ui/hooks';
+import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { useMessageListeners } from '@/features/project-creation/ui/wizard/hooks/useMessageListeners';
+import { useWizardEffects } from '@/features/project-creation/ui/wizard/hooks/useWizardEffects';
+import { useWizardNavigation } from '@/features/project-creation/ui/wizard/hooks/useWizardNavigation';
+import { useWizardState } from '@/features/project-creation/ui/wizard/hooks/useWizardState';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';

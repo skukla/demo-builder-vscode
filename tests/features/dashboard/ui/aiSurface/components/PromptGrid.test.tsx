@@ -45,7 +45,7 @@ describe('PromptGrid', () => {
             ],
         });
         const cards = screen.getAllByTestId('ai-prompt-card');
-        expect(cards.length).toBe(2);
+        expect(cards).toHaveLength(2);
     });
 
     it('renders the "+ New prompt" tile alongside user cards', () => {
@@ -119,7 +119,7 @@ describe('PromptGrid', () => {
             const input = screen.getByPlaceholderText(/search prompts/i);
             fireEvent.change(input, { target: { value: 'hero' } });
             const cards = screen.getAllByTestId('ai-prompt-card');
-            expect(cards.length).toBe(1);
+            expect(cards).toHaveLength(1);
             expect(screen.getByText('Add hero block')).toBeInTheDocument();
         });
 
@@ -128,7 +128,7 @@ describe('PromptGrid', () => {
             const input = screen.getByPlaceholderText(/search prompts/i);
             fireEvent.change(input, { target: { value: 'github' } });
             const cards = screen.getAllByTestId('ai-prompt-card');
-            expect(cards.length).toBe(1);
+            expect(cards).toHaveLength(1);
             expect(screen.getByText('Sync storefront')).toBeInTheDocument();
         });
 
@@ -136,16 +136,16 @@ describe('PromptGrid', () => {
             renderGrid({ userPrompts: PROMPTS });
             const input = screen.getByPlaceholderText(/search prompts/i);
             fireEvent.change(input, { target: { value: 'hero' } });
-            expect(screen.getAllByTestId('ai-prompt-card').length).toBe(1);
+            expect(screen.getAllByTestId('ai-prompt-card')).toHaveLength(1);
             fireEvent.change(input, { target: { value: '' } });
-            expect(screen.getAllByTestId('ai-prompt-card').length).toBe(PROMPTS.length);
+            expect(screen.getAllByTestId('ai-prompt-card')).toHaveLength(PROMPTS.length);
         });
 
         it('renders zero cards when filter matches nothing — only the New tile remains', () => {
             renderGrid({ userPrompts: PROMPTS });
             const input = screen.getByPlaceholderText(/search prompts/i);
             fireEvent.change(input, { target: { value: 'xyznomatch' } });
-            expect(screen.queryAllByTestId('ai-prompt-card').length).toBe(0);
+            expect(screen.queryAllByTestId('ai-prompt-card')).toHaveLength(0);
             expect(screen.getByTestId('ai-new-prompt-tile')).toBeInTheDocument();
         });
     });

@@ -102,6 +102,56 @@
                 "mutation.noCoverage",
                 "mutation.highValueSurvivors"
             ]
+        },
+        {
+            "at": "2026-08-31",
+            "commit": "d9569b793",
+            "note": "",
+            "metrics": {
+                "dup.src.clones": 67,
+                "dup.tests.clones": 78,
+                "dup.tests.duplicatedLines": 4081,
+                "dup.tests.pct": 1.24,
+                "dup.tests.pairsWebview": 12,
+                "dup.tests.pairsService": 66,
+                "mutation.scoreWeighted": 71.23,
+                "mutation.modulesPinned": 12,
+                "mutation.highValueSurvivors": 165,
+                "mutation.noCoverage": 87,
+                "debt.testFamilies": 63,
+                "debt.loggerFakes": 295,
+                "debt.consoleNoise": 0,
+                "debt.archExemptions": 6,
+                "conventions.total": 79,
+                "conventions.enforced": 62,
+                "suite.testFiles": 1197
+            },
+            "_note": "Track 4 loop close. The one big move is debt.archExemptions 30 -> 6: the architecture exemption ledger, and every remaining row is ratified or an owner decision. Two categories emptied (constructionBoundary, featureBarrels). The duplication and logger-fake movements here are incidental \u2014 a few files deleted along the way \u2014 NOT a duplication pass. mutation is unchanged because nothing touched it this run."
+        },
+        {
+            "at": "2026-08-31",
+            "commit": "11ae51146",
+            "note": "",
+            "metrics": {
+                "dup.src.clones": 67,
+                "dup.tests.clones": 78,
+                "dup.tests.duplicatedLines": 4081,
+                "dup.tests.pct": 1.24,
+                "dup.tests.pairsWebview": 12,
+                "dup.tests.pairsService": 66,
+                "mutation.scoreWeighted": 71.23,
+                "mutation.modulesPinned": 12,
+                "mutation.highValueSurvivors": 165,
+                "mutation.noCoverage": 87,
+                "debt.testFamilies": 63,
+                "debt.loggerFakes": 295,
+                "debt.consoleNoise": 0,
+                "debt.archExemptions": 3,
+                "conventions.total": 79,
+                "conventions.enforced": 62,
+                "suite.testFiles": 1197
+            },
+            "_note": "PL-13 closed. debt.archExemptions 6 -> 3, and all three are RATIFIED permanent exceptions recorded in ADR-015 rather than debt \u2014 so this metric has reached its floor and should not be read as having 3 left to do. It was 30 at the start of 2026-08-31 and 75 when the item was written."
         }
     ],
     "_definitions": {

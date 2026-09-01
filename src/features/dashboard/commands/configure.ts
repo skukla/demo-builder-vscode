@@ -10,12 +10,12 @@ import { configureHandlers } from '../handlers/configureHandlers';
 import { mergeEnvValuesFromSources } from './configureEnvLoader';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
-import { BaseWebviewCommand } from '@/core/base';
-import { WebviewCommunicationManager } from '@/core/communication';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { COMPONENT_IDS } from '@/core/constants';
-import { ServiceLocator } from '@/core/di';
-import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
-import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
+import { buildOrgTargetFromProjectAdobe, withOrgContext } from '@/core/shell/orgContextEnv';
 import { getProvidedEnvVars } from '@/core/state/appBuilderComponentState';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { parseEnvFile } from '@/core/utils/envParser';
@@ -26,26 +26,27 @@ import {
     migrateDeclaredSecrets,
     reKeyProjectSecrets,
 } from '@/features/components/services/commerceSecretMigration';
-import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { withEnvVarKeys } from '@/features/components/services/componentTransforms';
-import { detectStorefrontChanges, isEdsProject, republishStorefrontConfig } from '@/features/eds';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
+import { getGitHubServices } from '@/features/eds/handlers/edsServiceCache';
 import {
     applyAuthoringExperienceFlip,
     type AuthoringExperienceFlipDeps,
 } from '@/features/eds/services/authoringExperienceFlip';
+import { republishStorefrontConfig } from '@/features/eds/services/storefront/storefrontRepublishService';
+import { detectStorefrontChanges } from '@/features/eds/services/storefront/storefrontStalenessDetector';
 import { markMeshUpdateDeclined } from '@/features/mesh/services/meshUpdateDecline';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers';
+import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileGenerator';
 import { handleRenameProject } from '@/features/projects-dashboard/handlers/dashboardHandlers';
-import { Project } from '@/types';
-import type { AuthoringExperience } from '@/types/base';
+import { Project, type AuthoringExperience } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
-import { getComponentInstanceEntries, getEdsDaLiveUrl } from '@/types/typeGuards';
+import { getComponentInstanceEntries, getEdsDaLiveUrl, isEdsProject } from '@/types/typeGuards';
 import type { DeploymentStatusPayload, ConfigureInitialData } from '@/types/webviewPayloads';
 
 const AUTHORING_EXPERIENCES: ReadonlySet<AuthoringExperience> = new Set<AuthoringExperience>([
@@ -73,6 +74,16 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
      * not run (ADR-016's wall).
      */
     public helixService?: AuthoringExperienceFlipDeps['helixService'];
+    /**
+     * GitHub token-service seam, same shape as `helixService` above.
+     *
+     * Production leaves it unset and the shared instance is resolved lazily at the
+     * call site. It exists because `getGitHubServices` calls `getLogger()`, which
+     * throws when no logger has been initialised — so resolving it eagerly here
+     * would make every test of this command depend on logger setup it does not
+     * otherwise need.
+     */
+    public githubTokenService?: AuthoringExperienceFlipDeps['githubTokenService'];
 
     /**
      * Static method to dispose any active Configure panel
@@ -164,7 +175,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
         }
 
         // Load and transform components data using ComponentRegistryManager
-        const registryManager = new ComponentRegistryManager(this.context.extensionPath);
+        const registryManager = getComponentRegistryManager(this.context.extensionPath);
         const registry = await registryManager.loadRegistry();
 
         // Send both the categorized components structure AND the top-level envVars
@@ -510,6 +521,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
                     logger: this.logger,
                     saveProject: (p) => this.stateManager.saveProject(p),
                     helixService: this.helixService,
+                    // The SHARED instance — a fresh one would re-validate against GitHub.
+                    githubTokenService:
+                        this.githubTokenService ??
+                        getGitHubServices(this.context.secrets).tokenService,
                 });
             },
         );
@@ -609,7 +624,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand<Configure
      * on saveProject.
      */
     private async regenerateEnvFiles(project: Project): Promise<void> {
-        const registryManager = new ComponentRegistryManager(this.context.extensionPath);
+        const registryManager = getComponentRegistryManager(this.context.extensionPath);
         const registry = await registryManager.loadRegistry();
         await regenerateProjectEnvFiles(project, registry, this.logger, this.context.secrets);
     }

@@ -19,6 +19,7 @@ import {
     type UninstallerClient,
 } from '@/features/app-builder/services/appManagementUninstaller';
 import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const NS_BASE = 'https://285361-kuklabodeamesh5ngv-stage.adobeioruntime.net/api/v1/web';
 
@@ -68,7 +69,7 @@ function makeDeps(
             accessToken: 'fake-test-pw-not-a-secret',
             imsOrgId: 'ABC@AdobeOrg',
         }),
-        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() } as never,
+        logger: createMockLogger(),
         clientFactory: () => client,
         wait: async () => undefined,
         ...overrides,

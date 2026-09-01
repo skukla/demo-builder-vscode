@@ -18,10 +18,10 @@
  */
 
 import { getGitHubServices, tryCreateDaLiveTokenProvider } from '@/features/eds/handlers/edsHelpers';
-import type { HelixCodePreview } from '@/features/eds/services/helix/helixCapabilities';
 import { buildUndeterminedAppCheckError } from '@/features/eds/services/appInstallationResolver';
-import { HelixService } from '@/features/eds/services/helix/helixService';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
+import type { HelixCodePreview } from '@/features/eds/services/helix/helixCapabilities';
+import { HelixService } from '@/features/eds/services/helix/helixService';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
 
@@ -191,7 +191,7 @@ export async function checkGitHubApp(
 
     try {
         // Get properly initialized GitHub services
-        const { tokenService } = getGitHubServices(context);
+        const { tokenService } = getGitHubServices(context.context.secrets);
 
         // Lazy-load GitHubAppService
         const { GitHubAppService } = await import('@/features/eds/services/github/githubAppService');

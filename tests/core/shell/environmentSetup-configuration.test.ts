@@ -6,7 +6,7 @@
  * - session management
  */
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import * as fsSync from 'fs';
 import * as os from 'os';
 import * as vscode from 'vscode';
@@ -27,7 +27,7 @@ jest.mock('child_process', () => ({
     execSync: jest.fn()
 }));
 jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => mockLogger
+    getLogger: () => mockLogger,
 }));
 
 describe('EnvironmentSetup - Configuration', () => {

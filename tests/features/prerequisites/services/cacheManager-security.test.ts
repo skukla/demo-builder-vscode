@@ -8,15 +8,6 @@ import { PrerequisitesCacheManager } from '@/features/prerequisites/services/pre
 import { createMockPrerequisiteStatus } from './cacheManager.testUtils';
 
 // Mock logger
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
-
 describe('PrerequisitesCacheManager - Security', () => {
     let cacheManager: PrerequisitesCacheManager;
 

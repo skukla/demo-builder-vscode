@@ -22,6 +22,7 @@
 import type { HandlerContext } from '@/types/handlers';
 import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Test data
 export const mockConfig = {
@@ -92,12 +93,7 @@ export function createCheckHandlerContext(overrides?: Partial<HandlerContext>): 
         stepLogger: {
             log: jest.fn(),
         } as any,
-        logger: {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as any,
+        logger: createMockLogger() as any,
         debugLogger: {
             debug: jest.fn(),
         } as any,

@@ -25,7 +25,7 @@ jest.mock(
 );
 
 const mockGetActivePanel = jest.fn();
-jest.mock('@/core/base', () => ({
+jest.mock('@/core/base/baseWebviewCommand', () => ({
     BaseWebviewCommand: class {
         static getActivePanel: (...a: unknown[]) => unknown = (...a) => mockGetActivePanel(...a);
         static startWebviewTransition = jest.fn();

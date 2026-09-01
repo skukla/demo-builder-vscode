@@ -9,11 +9,14 @@
  */
 
 import { ShowDataInstallerCommand } from '@/features/data-installer/commands/showDataInstaller';
-import { dataInstallerHandlers } from '@/features/data-installer/handlers';
+import { dataInstallerHandlers } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { getRegisteredTypes } from '@/core/handlers/dispatchHandler';
-import { importHandlers } from '@/features/data-installer/handlers';
+import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import type { DataInstallerInitialData } from '@/types/webviewPayloads';
 import * as vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import type { StateManager } from '@/core/state/stateManager';
 
 jest.mock('@/core/communication/webviewCommunicationManager');
 
@@ -28,17 +31,11 @@ function makeExtensionContext(): vscode.ExtensionContext {
     } as unknown as vscode.ExtensionContext;
 }
 
-function makeStateManager(): { getCurrentProject: jest.Mock } {
-    return { getCurrentProject: jest.fn().mockResolvedValue(null) };
+function makeStateManager(): ReturnType<typeof createMockStateManager> {
+    return createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(null) });
 }
 
-const logger = {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    trace: jest.fn(),
-};
+const logger = createMockLogger();
 
 /** Reach the protected members the way a subclass test must. */
 type Internals = {
@@ -52,7 +49,7 @@ type Internals = {
 function makeCommand(): ShowDataInstallerCommand & Internals {
     return new ShowDataInstallerCommand(
         makeExtensionContext(),
-        makeStateManager() as never,
+        makeStateManager() as unknown as StateManager,
         logger as never
     ) as ShowDataInstallerCommand & Internals;
 }

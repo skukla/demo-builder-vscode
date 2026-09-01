@@ -50,6 +50,7 @@ import {
     PLACEHOLDER_STUB_PATHS,
     buildPlaceholderStubJson,
 } from '@/features/eds/services/placeholderStubs';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const EDS_CONFIG = {
     daLiveOrg: 'acme',
@@ -61,7 +62,7 @@ const REPO_INFO = { repoOwner: 'me', repoName: 'shop' };
 
 function makeContext(): HandlerContext {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), debug: jest.fn(), error: jest.fn() },
+        logger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
     } as unknown as HandlerContext;
 }

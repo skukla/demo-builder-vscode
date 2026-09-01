@@ -24,7 +24,7 @@
  */
 
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/core/base';
+import { BaseCommand } from '@/core/base/baseCommand';
 import { openUrl } from '@/core/utils/browserUtils';
 import { maskEmail } from '@/core/utils/maskEmail';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

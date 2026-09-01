@@ -1,6 +1,6 @@
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { CommandExecutor } from '@/core/shell';
-import type { StepLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import type { Logger } from '@/types/logger';
 import {
     createMockCommandExecutor,
@@ -24,7 +24,6 @@ import {
  */
 
 // Only mock external dependencies
-jest.mock('@/core/logging');
 jest.mock('@/features/authentication/services/adobeSDKClient');
 jest.mock('@/features/authentication/services/adobeEntityService');
 
@@ -52,7 +51,7 @@ const validStoredToken = (expiry?: number) => ({
     expiry: expiry ?? Date.now() + 3600000,
 });
 
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import { createEntityServices } from '@/features/authentication/services/adobeEntityService';
 
@@ -77,7 +76,7 @@ describe('AuthenticationService - Authentication Checks', () => {
         (getLogger as jest.Mock).mockReturnValue(mockLogger);
 
         // Mock StepLogger.create
-        const StepLoggerMock = require('@/core/logging').StepLogger;
+        const StepLoggerMock = require('@/core/logging/stepLogger').StepLogger;
         StepLoggerMock.create = jest.fn().mockResolvedValue(mockStepLogger);
 
         // Setup mock SDK client

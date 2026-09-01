@@ -21,8 +21,8 @@
  * @module features/project-creation/services/catalogPrewarmPhase
  */
 
-import type { Project } from '@/types';
 import type { PdpPublisher } from '@/features/eds/services/catalogPrewarmService';
+import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
 /** Progress reporter shared with the executor's other phases. */
@@ -80,7 +80,7 @@ export async function executeCatalogPrewarmPhase(
             '@/features/eds/services/daLive/daLiveContentOperations'
         );
         const { getDaLiveAuthService } = await import('@/features/eds/handlers/edsHelpers');
-        const { GitHubTokenService } = await import('@/features/eds/services/github/githubTokenService');
+        const { getGitHubServices } = await import('@/features/eds/handlers/edsServiceCache');
         const { HelixService } = await import('@/features/eds/services/helix/helixService');
         const { prewarmCatalog } = await import('@/features/eds/services/catalogPrewarmService');
 
@@ -91,7 +91,10 @@ export async function executeCatalogPrewarmPhase(
             ? makeHelix(logger, context.context.secrets, daLiveTokenProvider)
             : new HelixService(
                   logger,
-                  new GitHubTokenService(context.context.secrets, logger),
+                  // The SHARED token service. Its validation cache is per-instance with
+                  // a five-minute TTL, so a fresh one here would send this publish
+                  // through a GitHub round trip the cache had already answered.
+                  getGitHubServices(context.context.secrets).tokenService,
                   daLiveTokenProvider,
               );
 

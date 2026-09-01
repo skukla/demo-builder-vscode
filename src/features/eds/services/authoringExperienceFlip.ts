@@ -17,19 +17,19 @@
  */
 
 import * as vscode from 'vscode';
-import type { HelixCodePreview } from './helix/helixCapabilities';
 import { applyDaLiveOrgConfigSettings, getDaLiveAuthService } from '../handlers/edsHelpers';
 import {
     DaLiveContentOperations,
     createDaLiveServiceTokenProvider,
 } from './daLive/daLiveContentOperations';
 import { GitHubFileOperations } from './github/githubFileOperations';
-import { GitHubTokenService } from './github/githubTokenService';
+import type { GitHubTokenService } from './github/githubTokenService';
+import type { HelixCodePreview } from './helix/helixCapabilities';
 import { HelixService } from './helix/helixService';
 import { installQuickEdit } from './quickEditPublisher';
 import { republishStorefrontConfig } from './storefront/storefrontRepublishService';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { AuthoringExperience, Project } from '@/types';
+import type { AuthoringExperience, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /**
@@ -68,6 +68,16 @@ export interface AuthoringExperienceFlipDeps {
      * publish went through.
      */
     helixService?: HelixCodePreview;
+    /**
+     * The GitHub token service, handed in rather than built here.
+     *
+     * It is STATEFUL — a five-minute per-instance validation cache — and that is the
+     * whole reason this is a parameter. A fresh instance starts with an empty cache,
+     * so every construction buys a round trip to GitHub that the shared instance from
+     * `getGitHubServices` would have answered locally. The stateless `HelixService`
+     * beside it stays constructed in place for exactly the opposite reason.
+     */
+    githubTokenService: GitHubTokenService;
 }
 
 /**
@@ -141,7 +151,7 @@ async function reapplyEditorPath(
  */
 async function ensureQuickEditVendored(
     project: Project,
-    { context, logger, helixService: injectedHelix }: AuthoringExperienceFlipDeps,
+    { context, logger, helixService: injectedHelix, githubTokenService }: AuthoringExperienceFlipDeps,
 ): Promise<'ok' | 'warn'> {
     try {
         const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];
@@ -156,8 +166,7 @@ async function ensureQuickEditVendored(
             return 'ok';
         }
 
-        const githubTokenService = new GitHubTokenService(context.secrets, logger);
-        const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
+            const githubFileOps = new GitHubFileOperations(githubTokenService, logger);
         await installQuickEdit(githubFileOps, repoOwner, repoName, logger);
 
         // Push the committed Quick Edit code live so the Experience Workspace

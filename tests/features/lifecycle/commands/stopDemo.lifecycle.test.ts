@@ -19,9 +19,10 @@ import {
     StopDemoCommand,
     mockCommandExecutor,
 } from './stopDemo.testUtils';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import * as vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const MockProcessCleanup = ProcessCleanup as jest.MockedClass<typeof ProcessCleanup>;
 
@@ -53,8 +54,7 @@ describe('StopDemoCommand - Lifecycle', () => {
         mockCommandExecutor.execute.mockResolvedValue({
             code: 0,
             stdout: '12345',
-            stderr: '',
-        });
+            stderr: '', duration: 0 });
 
         // Mock extension context
         mockContext = {
@@ -88,12 +88,7 @@ describe('StopDemoCommand - Lifecycle', () => {
         } as any;
 
         // Mock logger
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as any;
+        mockLogger = createMockLogger() as any;
 
         // Mock vscode.window.withProgress to execute task immediately
         (vscode.window as any).withProgress = jest.fn().mockImplementation(
@@ -174,8 +169,7 @@ describe('StopDemoCommand - Lifecycle', () => {
             mockCommandExecutor.execute.mockResolvedValue({
                 code: 1,
                 stdout: '',
-                stderr: 'No process found',
-            });
+                stderr: 'No process found', duration: 0 });
 
             // When: stopDemo command executes
             await command.execute();

@@ -10,26 +10,16 @@
  *   - concurrency (all checks post)
  */
 
-import {
-    runOnOpenChecks,
-    _resetOnOpenChecksGuardForTests,
-    armOnOpenChecks,
-    type OnOpenCheck,
-    type CheckOutcome,
-} from '@/features/dashboard/services/onOpenChecks';
+import { _resetOnOpenChecksGuardForTests, armOnOpenChecks, runOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
+import type { CheckOutcome, OnOpenCheck } from '@/features/dashboard/services/onOpenChecks/types';
 import { CHECK_RESULT_MESSAGE } from '@/types/messages';
-import type { Project } from '@/types';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
-const mockLogger: Logger = {
-    trace: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-};
+const mockLogger: Logger = createMockLogger();
 
-const project = { path: '/tmp/proj' } as Project;
+const project = createMockProject({ path: '/tmp/proj' });
 
 function makeDeps(isEds = true) {
     const postMessage = jest.fn();
@@ -246,7 +236,7 @@ describe('re-opening a project re-arms its checks (2026-08-06 regression)', () =
         // makeDeps shares ONE module-level project object, so a second project needs
         // its own — mutating the shared one changes both and the test proves nothing.
         const { deps: a } = makeDeps();
-        const b = { ...a, project: { path: '/projects/other' } as Project, postMessage: jest.fn() };
+        const b = { ...a, project: createMockProject({ path: '/projects/other' }), postMessage: jest.fn() };
         const runA = jest.fn(async () => ({ status: 'ok' as const }));
         const runB = jest.fn(async () => ({ status: 'ok' as const }));
 

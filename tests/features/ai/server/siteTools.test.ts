@@ -43,6 +43,7 @@ jest.mock('@/features/eds/services/storefront/storefrontNameMigrationForProject'
 import { expectWithinCeiling } from './responseCeilings';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 type Tool = (args: unknown) => Promise<{ content: Array<{ text: string }> }>;
 
@@ -55,7 +56,7 @@ const project = { name: 'demo', path: '/projects/demo', selectedStack: 'eds-accs
 /** A project these tools do not apply to. */
 const headlessProject = { name: 'headless', path: '/projects/headless', selectedStack: 'headless-accs' };
 const extensionContext = { secrets: {} };
-const logger = { warn: jest.fn() };
+const logger = createMockLogger();
 
 /** Projects the scan walks. Overwritten per test. */
 let allProjects: Array<{ name: string; path: string }> = [];

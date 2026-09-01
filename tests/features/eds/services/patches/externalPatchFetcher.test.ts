@@ -20,7 +20,8 @@ import {
     fetchExternalPatches,
     _clearExternalPatchCacheForTests,
 } from '@/features/eds/services/patches/externalPatchFetcher';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { PREREQUISITE_CHECK: 15000 },
@@ -30,7 +31,7 @@ const SOURCE = { owner: 'skukla', repo: 'eds-demo-patches', path: 'b2b' };
 const LEDGER = { patches: [{ id: 'x', target: 'scripts/a.js' }] };
 
 function makeLogger(): Logger {
-    return { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 /** Route by URL so each test reads as a scenario rather than a call sequence. */

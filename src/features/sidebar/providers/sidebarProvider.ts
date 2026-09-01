@@ -8,7 +8,7 @@
 import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import type { SidebarContext } from '../types';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { LAST_UPDATE_CHECK } from '@/core/constants';
 import type { StateManager } from '@/core/state/stateManager';
 import { toggleLogsPanel } from '@/features/lifecycle/services/lifecycleService';

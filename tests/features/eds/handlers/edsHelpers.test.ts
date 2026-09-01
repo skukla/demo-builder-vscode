@@ -18,7 +18,9 @@ import {
 } from '@/features/eds/handlers/edsHelpers';
 import type { HandlerContext } from '@/types/handlers';
 import type { ExtensionContext } from 'vscode';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock the extracted service classes
 jest.mock('@/features/eds/services/github/githubTokenService', () => ({
@@ -79,14 +81,6 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
 });
 
 // Mock logging
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 /**
  * Creates a mock HandlerContext for testing
@@ -111,12 +105,7 @@ function createMockHandlerContext(overrides?: Partial<HandlerContext>): HandlerC
 
     return {
         context: mockExtensionContext,
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        },
+        logger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
         authManager: {
             isAuthenticated: jest.fn(),
@@ -143,7 +132,7 @@ function createTestJwt(payload: Record<string, unknown>): string {
  * is seeded per-test rather than mocked at the module level.
  */
 beforeEach(() => {
-    ServiceLocator.setCommandExecutor({ execute: jest.fn() } as never);
+    ServiceLocator.setCommandExecutor(createMockCommandExecutor());
 });
 
 describe('edsHelpers', () => {
@@ -159,7 +148,7 @@ describe('edsHelpers', () => {
             const context = createMockHandlerContext();
 
             // When: Getting the GitHub services
-            const services = getGitHubServices(context);
+            const services = getGitHubServices(context.context.secrets);
 
             // Then: Should return an object with all GitHub services
             expect(services).toBeDefined();
@@ -172,10 +161,10 @@ describe('edsHelpers', () => {
         it('should return cached GitHub services on subsequent calls', () => {
             // Given: A context with previously created services
             const context = createMockHandlerContext();
-            const firstServices = getGitHubServices(context);
+            const firstServices = getGitHubServices(context.context.secrets);
 
             // When: Getting the services again
-            const secondServices = getGitHubServices(context);
+            const secondServices = getGitHubServices(context.context.secrets);
 
             // Then: Should return the same cached instance
             expect(secondServices).toBe(firstServices);
@@ -186,7 +175,7 @@ describe('edsHelpers', () => {
             const context = createMockHandlerContext();
 
             // When: Getting the GitHub services
-            const services = getGitHubServices(context);
+            const services = getGitHubServices(context.context.secrets);
 
             // Then: Should pass secrets to the token service
             expect((services.tokenService as unknown as { secrets: unknown }).secrets).toBe(
@@ -236,13 +225,13 @@ describe('edsHelpers', () => {
         it('should clear cached GitHubServices', () => {
             // Given: Cached GitHub services
             const context = createMockHandlerContext();
-            const firstServices = getGitHubServices(context);
+            const firstServices = getGitHubServices(context.context.secrets);
 
             // When: Clearing the cache
             clearServiceCache();
 
             // Then: Next call should create new instances
-            const secondServices = getGitHubServices(context);
+            const secondServices = getGitHubServices(context.context.secrets);
             expect(secondServices).not.toBe(firstServices);
         });
 

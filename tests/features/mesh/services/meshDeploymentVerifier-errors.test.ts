@@ -11,13 +11,13 @@ import {
 } from './meshDeploymentVerifier.testUtils';
 
 // Mock dependencies
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn(),
     },
 }));
 
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateMeshId: jest.fn(),
 }));
 

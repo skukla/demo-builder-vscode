@@ -1,18 +1,18 @@
 import { handleCreateProject } from '@/features/project-creation/handlers/createHandler';
-import * as validation from '@/core/validation';
+import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
 import * as executor from '@/features/project-creation/handlers/executor';
 import * as promiseUtils from '@/core/utils/promiseUtils';
-import { ServiceLocator as _ServiceLocator } from '@/core/di';
+import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import * as vscode from 'vscode';
 import * as _fs from 'fs';
 import { promises as _fsPromises } from 'fs';
 import { createProjectCreationContext, setupDefaultMocks, mockConfig } from './createHandler.testUtils';
 
 // Mock all dependencies
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/validators/ProjectNameValidator');
 jest.mock('@/features/project-creation/handlers/executor');
 jest.mock('@/core/utils/promiseUtils');
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 jest.mock('fs', () => ({
     existsSync: jest.fn(),
     promises: {
@@ -34,7 +34,7 @@ describe('Project Creation - Create Handler - Happy Path', () => {
             const result = await handleCreateProject(mockContext, mockConfig);
 
             expect(result.success).toBe(true);
-            expect(validation.validateProjectNameSecurity).toHaveBeenCalledWith('test-project');
+            expect(validateProjectNameSecurity).toHaveBeenCalledWith('test-project');
             expect(executor.executeProjectCreation).toHaveBeenCalledWith(mockContext, mockConfig);
             expect(mockContext.sendMessage).toHaveBeenCalledWith(
                 'creationProgress',

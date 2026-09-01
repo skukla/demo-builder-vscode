@@ -15,8 +15,8 @@
  * creation the ability to start an import, a reset, or an export.
  */
 
-import { projectCreationHandlers } from '@/features/project-creation/handlers';
-import { importHandlers } from '@/features/data-installer/handlers';
+import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
+import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 
 describe('the wizard handler map', () => {
     it('can read the datapack catalog', () => {

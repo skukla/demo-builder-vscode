@@ -15,11 +15,12 @@
 import { handleCheckApiMesh } from '@/features/mesh/handlers/checkHandler';
 import { handleDeleteApiMesh } from '@/features/mesh/handlers/deleteHandler';
 import { HandlerContext } from '@/types/handlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as _vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock dependencies
-jest.mock('@/core/di');
+jest.mock('@/core/di/serviceLocator');
 // Uses the real @/core/utils/timeoutConfig (pure constants) — a partial config-leaf
 // mock here would omit keys (e.g. UI.MIN_LOADING) that the @/core/shell import graph
 // reads at module load, and violates the no-config-leaf-mocks SOP.
@@ -46,13 +47,7 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
         jest.clearAllMocks();
 
         // Create mock logger to verify context-based injection
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
         // Mock authentication service
         mockAuthService = {

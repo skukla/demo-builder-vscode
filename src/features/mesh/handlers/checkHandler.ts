@@ -14,13 +14,9 @@ import {
     checkMeshExistence,
     fallbackMeshCheck,
 } from '../services/meshCheckHelpers';
-import { ServiceLocator } from '@/core/di';
-import {
-    buildOrgTargetFromProjectAdobe,
-    withOrgContext,
-    type OrgContextTarget,
-} from '@/core/shell';
-import { validateWorkspaceId } from '@/core/validation';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { buildOrgTargetFromProjectAdobe, withOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
+import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import { ensureAuthenticated, getEndpoint } from '@/features/mesh/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';

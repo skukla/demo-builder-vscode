@@ -12,11 +12,21 @@ import { installBlockCollections } from '@/features/eds/services/blockCollection
 import type { BlockLibraryUpdateItem } from '@/features/updates/commands/updateTypes';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // ─── Module mocks ────────────────────────────────────────────────────────────
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollections: jest.fn(),
+}));
+
+// The block-library update path reaches the shared GitHub services for a token.
+// The real accessor calls getLogger(), which throws in a suite that initialises
+// none — so the cache is mocked to the one thing this path reads.
+jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
+    getGitHubServices: jest.fn(() => ({
+        tokenService: { getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }) },
+    })),
 }));
 
 
@@ -95,25 +105,13 @@ function makeCtx(saveImpl?: () => Promise<void>): {
     secrets: vscode.SecretStorage;
     extensionPath: string;
     stateManager: { saveProject: jest.Mock };
-    logger: {
-        info: jest.Mock;
-        warn: jest.Mock;
-        error: jest.Mock;
-        debug: jest.Mock;
-        trace: jest.Mock;
-    };
+    logger: ReturnType<typeof createMockLogger>;
 } {
     return {
         secrets: {} as vscode.SecretStorage,
         extensionPath: '/ext',
         stateManager: { saveProject: jest.fn(saveImpl ?? (() => Promise.resolve())) },
-        logger: {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
-        },
+        logger: createMockLogger(),
     };
 }
 

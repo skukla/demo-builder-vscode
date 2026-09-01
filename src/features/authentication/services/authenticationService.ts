@@ -1,8 +1,9 @@
 import * as path from 'path';
 import { isValidTokenResponse } from './authPredicates';
 import { withOrgContext, type OrgContextTarget } from './orgContextEnv';
-import { getLogger, StepLogger } from '@/core/logging';
-import type { CommandExecutor } from '@/core/shell';
+import { getLogger } from '@/core/logging/debugLogger';
+import { StepLogger } from '@/core/logging/stepLogger';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { TIMEOUTS, CACHE_TTL } from '@/core/utils/timeoutConfig';
 import {
     createEntityServices,

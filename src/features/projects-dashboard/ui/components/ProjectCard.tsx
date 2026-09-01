@@ -13,7 +13,7 @@ import PinOn from '@spectrum-icons/workflow/PinOn';
 import React, { useMemo } from 'react';
 import { useProjectSelectHandlers } from '../hooks/useProjectSelectHandlers';
 import { ProjectActionsMenu, type ProjectActions } from './ProjectActionsMenu';
-import { InlineRenameField } from '@/core/ui/components/forms';
+import { InlineRenameField } from '@/core/ui/components/forms/InlineRenameField';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { getBrandStackSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';

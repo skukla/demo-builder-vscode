@@ -4,7 +4,7 @@
  * - findNpmGlobalPaths
  */
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import * as fsSync from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -12,7 +12,6 @@ import {
     createEnvironmentSetup,
     mockFnmInstallation,
     resetAllMocks,
-    mockLogger
 } from './environmentSetup.testUtils';
 
 jest.mock('fs');
@@ -22,9 +21,6 @@ jest.mock('os', () => ({
 }));
 jest.mock('child_process', () => ({
     execSync: jest.fn()
-}));
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => mockLogger
 }));
 
 describe('EnvironmentSetup - Path Discovery', () => {

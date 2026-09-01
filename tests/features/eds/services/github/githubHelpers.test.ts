@@ -35,7 +35,7 @@ describe('githubHelpers', () => {
     describe('generateOAuthState', () => {
         it('should generate 32-character hex string', () => {
             const state = generateOAuthState();
-            expect(state.length).toBe(32);
+            expect(state).toHaveLength(32);
             expect(/^[0-9a-f]+$/i.test(state)).toBe(true);
         });
 

@@ -13,10 +13,10 @@ core/
 ├── base/            # BaseCommand, BaseWebviewCommand, webviewPanelManager (→ base/README.md)
 ├── build/           # build stamp: which checkout is running
 ├── cache/           # TTL helpers with jitter
-├── commands/        # core-owned dev commands (ResetAll, ResetAiOnboarding)
 ├── communication/   # WebviewCommunicationManager (→ communication/README.md)
 ├── config/          # ConfigurationLoader, configFileGenerator
 ├── di/              # ServiceLocator
+├── errors/          # domain error classes and their builders (moved from src/types/ 2026-08-31)
 ├── handlers/        # dispatchHandler and friends
 ├── logging/         # DebugLogger, ErrorLogger, StepLogger (→ logging/README.md)
 ├── shell/           # CommandExecutor and the concurrency machinery (→ shell/README.md)

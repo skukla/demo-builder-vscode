@@ -19,7 +19,7 @@
  */
 
 import { BROWSER_ORG_SWITCH_TITLE, withBrowserSignInNotice } from '@/core/auth/browserSignInNotice';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { MessageHandler } from '@/types/handlers';
 
 /**

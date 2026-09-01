@@ -12,10 +12,11 @@ import {
     CreateProjectWebviewCommand,
 } from './createProject.testUtils';
 import * as vscode from 'vscode';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             isAuthenticated: jest.fn(),
@@ -55,7 +56,7 @@ let configChangeCallback: ((e: vscode.ConfigurationChangeEvent) => void) | undef
 const mockConfigListenerDispose = jest.fn();
 
 // Mock communication manager — define mocks inside factory to avoid @swc/jest hoisting TDZ
-jest.mock('@/core/communication', () => {
+jest.mock('@/core/communication/webviewCommunicationManager', () => {
     const mockComm = {
         on: jest.fn(),
         onStreaming: jest.fn(),
@@ -70,7 +71,9 @@ jest.mock('@/core/communication', () => {
         _mockComm: mockComm,
     };
 });
-const { _mockComm } = require('@/core/communication') as { _mockComm: { sendMessage: jest.Mock } };
+const { _mockComm } = require('@/core/communication/webviewCommunicationManager') as {
+    _mockComm: { sendMessage: jest.Mock };
+};
 const mockSendMessage = _mockComm.sendMessage;
 
 // Mock loading HTML utility
@@ -229,12 +232,7 @@ describe('CreateProjectWebviewCommand - Config Change Listener', () => {
             getState: jest.fn(),
         } as unknown as jest.Mocked<StateManager>;
 
-        mockLogger = {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as jest.Mocked<Logger>;
+        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
 
         command = new CreateProjectWebviewCommand(
             mockContext,

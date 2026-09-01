@@ -26,7 +26,7 @@
 
 import * as vscode from 'vscode';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import {
     getAppBuilderComponent,
     listAppBuilderComponents,
@@ -48,9 +48,8 @@ import {
     buildRunnerDepsContext,
 } from '@/features/project-creation/services/appBuilderComponentRunnerDeps';
 import { classifyEnvSchema } from '@/features/project-creation/services/envVarClassifier';
-import type { Project } from '@/types';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { AppBuilderComponentKind } from '@/types/base';
+import type { Project , AppBuilderComponentKind } from '@/types/base';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { AppBuilderComponentRowStatus } from '@/types/webviewPayloads';

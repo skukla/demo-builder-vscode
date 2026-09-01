@@ -10,7 +10,7 @@ import {
     ACCS_OAUTH_CLIENT_SECRET,
     PAAS_ADMIN_PASSWORD,
     PAAS_ADMIN_USERNAME,
-} from '../config/envVarKeys';
+} from '@/core/config/envVarKeys';
 
 /**
  * Derives the GraphQL endpoint from a Commerce URL.

@@ -11,7 +11,7 @@ import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/envFileGenerator';
 import { ComponentRegistry } from '@/types/components';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import { createMockLogger, sharedEnvVars } from './envFileGenerator.testUtils';
 
 jest.mock('fs', () => ({

@@ -29,9 +29,6 @@
 // Logging only. `parseJSON` is deliberately REAL here — the whole question is what
 // the parser does with the CLI's actual bytes, and a mocked parser would answer it
 // for us.
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
-}));
 
 import { setupMocks, type TestMocks } from './adobeEntityService.testUtils';
 

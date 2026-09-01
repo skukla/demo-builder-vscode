@@ -1,5 +1,5 @@
 import type { CommandResult, CommandConfig } from './types';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { slowCommandThreshold } from '@/core/utils/timeoutConfig';
 
 /**

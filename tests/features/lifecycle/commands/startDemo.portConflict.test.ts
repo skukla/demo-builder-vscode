@@ -16,10 +16,11 @@ import {
     MockProcessCleanup,
     mockCommandExecutor,
 } from './startDemo.testUtils';
-import { ServiceLocator as _ServiceLocator } from '@/core/di';
-import { StateManager } from '@/core/state';
+import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import * as vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('StartDemoCommand - Port Conflict', () => {
     let command: StartDemoCommand;
@@ -101,12 +102,7 @@ describe('StartDemoCommand - Port Conflict', () => {
         } as any;
 
         // Mock logger
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as any;
+        mockLogger = createMockLogger() as any;
 
         // Mock vscode.window.withProgress to execute task immediately
         (vscode.window as any).withProgress = jest.fn().mockImplementation(

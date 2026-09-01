@@ -12,6 +12,7 @@
 
 export const repoOwner = 'skukla';
 import type { MockGithub } from '../../../../helpers/githubFake';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 export type { MockGithub } from '../../../../helpers/githubFake';
 export const repoName = 'citisignal-b2b';
 export const daLiveOrg = 'skukla';
@@ -53,9 +54,4 @@ export function makePdp404Github(): MockGithub {
     };
 }
 
-export const mockLogger = {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+export const mockLogger = createMockLogger();

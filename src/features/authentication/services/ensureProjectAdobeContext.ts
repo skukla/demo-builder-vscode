@@ -19,7 +19,7 @@
 
 import { ensureProjectOrgContext, type OrgContextAuthManager } from './ensureProjectOrgContext';
 import { ensureAdobeIOAuth, type AdobeAuthManager } from '@/core/auth/adobeAuthGuard';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /** Combined outcome. `ready` true means authenticated AND org reachable — proceed. */

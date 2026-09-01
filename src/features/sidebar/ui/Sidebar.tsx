@@ -14,7 +14,7 @@ import { Flex } from '@adobe/react-spectrum';
 import React from 'react';
 import type { SidebarContext } from '../types';
 import { AiZone } from './components/AiZone';
-import { UtilityBar } from './views';
+import { UtilityBar } from '@/features/sidebar/ui/views/UtilityBar';
 
 export interface SidebarProps {
     /**

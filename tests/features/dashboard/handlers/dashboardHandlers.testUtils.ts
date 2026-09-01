@@ -3,13 +3,13 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock dependencies
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         // ADR-015 (2026-08-28): handlers resolve these when assembling runner
         // deps, so the default answer has to be usable rather than undefined.
@@ -21,11 +21,14 @@ jest.mock('@/core/di', () => ({
         getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
     },
 }));
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
 }));
 jest.mock('vscode', () => ({
     window: {
@@ -125,7 +128,7 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
     const mockProject = createDashboardProject(projectOverrides);
 
     // Setup auth service mock (used by handleRequestStatus)
-    const { ServiceLocator } = require('@/core/di');
+    const { ServiceLocator } = require('@/core/di/serviceLocator');
     ServiceLocator.getAuthenticationService.mockReturnValue({
         isAuthenticated: jest.fn().mockResolvedValue(true),
         getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 60 }),
@@ -152,12 +155,7 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
             saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
             markDirty: jest.fn(),
         } as any,
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as any,
+        logger: createMockLogger() as any,
         sendMessage: jest.fn(),
     } as any;
 

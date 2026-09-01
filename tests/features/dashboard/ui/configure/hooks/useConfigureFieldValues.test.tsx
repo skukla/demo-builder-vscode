@@ -14,9 +14,9 @@
 import { renderHook, act } from '@testing-library/react';
 import { useConfigureFieldValues } from '@/features/dashboard/ui/configure/hooks/useConfigureFieldValues';
 import type { UniqueField } from '@/features/dashboard/ui/configure/configureTypes';
-import type { Project } from '@/types/base';
+import { createMockProject } from '../../../../../helpers/projectFake';
 
-const project = { name: 'demo', path: '/tmp/demo' } as unknown as Project;
+const project = createMockProject({ name: 'demo', path: '/tmp/demo' });
 
 const urlField: UniqueField = {
     key: 'ADOBE_COMMERCE_URL',

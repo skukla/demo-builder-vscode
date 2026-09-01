@@ -25,7 +25,7 @@ import * as path from 'path';
 import { promisify } from 'util';
 import * as vscode from 'vscode';
 import { isManagedStorefrontFile } from './managedStorefrontFiles';
-import { BaseCommand } from '@/core/base';
+import { BaseCommand } from '@/core/base/baseCommand';
 import { COMPONENT_IDS } from '@/core/constants';
 import { PollingService } from '@/core/shell/pollingService';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -80,7 +80,7 @@ export class SyncStorefrontCommand extends BaseCommand {
         });
         if (!commitMessage) return; // user cancelled
 
-        const { tokenService } = getGitHubServices({ context: this.context });
+        const { tokenService } = getGitHubServices(this.context.secrets);
         const tokenEntry = await tokenService.getToken();
         const githubToken = tokenEntry?.token;
         const daLiveToken = await this.readDaLiveToken();

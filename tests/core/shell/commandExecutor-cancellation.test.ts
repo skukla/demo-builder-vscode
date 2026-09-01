@@ -12,15 +12,6 @@ import { createMockExecaSubprocess, setupMockDependencies } from './commandExecu
 jest.mock('execa');
 import execa from 'execa';
 
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
-}));
-
 
 // Helper to wait for setImmediate
 const waitForImmediate = () => new Promise(resolve => setImmediate(resolve));

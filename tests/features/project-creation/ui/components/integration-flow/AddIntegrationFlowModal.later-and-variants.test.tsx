@@ -281,35 +281,14 @@ describe('AddIntegrationFlowModal — phase-running bridge', () => {
     });
 });
 
-describe('integration-flow module index', () => {
-    it('exposes exactly the public runtime API', () => {
-        const index = require('@/features/project-creation/ui/components/integration-flow');
-        // Every integration card lists its APIs uniformly (no per-kind mesh slot), so
-        // the former MeshApiEnableRow export is gone; EnsureResult is a type-only export.
-        // buildReservedIds joined the surface for shell instancing: the HOST composes
-        // the blank-naming collision domain and threads it to the modal.
-        // RESERVED_EXISTING_KEY joined when the '__existing__' literal was
-        // deduplicated into flowStages: useWizardState (an OUTSIDE consumer)
-        // seeds edit-mode selectedConsoleApis with it via this surface.
-        // IntegrationResultRow and RenameIntegrationModal LEFT when the area
-        // adopted the shared IntegrationCard: the card replaced the row, and the
-        // card's inline pencil replaced the rename modal. toIntegrationCards and
-        // sublineFor took their place — the pure producer feeding that card.
-        expect(Object.keys(index).sort()).toEqual([
-            'AddIntegrationFlowModal',
-            'RESERVED_EXISTING_KEY',
-            'buildReservedIds',
-            'isApiEditable',
-            'resolveIntegrationRows',
-            'sublineFor',
-            'toIntegrationCards',
-        ]);
-        expect(typeof index.AddIntegrationFlowModal).toBe('function');
-        expect(typeof index.buildReservedIds).toBe('function');
-        expect(typeof index.resolveIntegrationRows).toBe('function');
-        expect(typeof index.toIntegrationCards).toBe('function');
-        expect(typeof index.sublineFor).toBe('function');
-        expect(typeof index.isApiEditable).toBe('function');
-        expect(index.RESERVED_EXISTING_KEY).toBe('__existing__');
-    });
-});
+/**
+ * `describe('integration-flow module index')` was DELETED here on 2026-08-31
+ * (PL-31). It required the barrel's export list to equal an exact array, and
+ * carried a long comment tracking what had entered and left "the public runtime
+ * API" over time.
+ *
+ * That surface no longer exists as a thing to pin. A module is imported by the
+ * path that DECLARES the symbol, so each file is its own public API and the
+ * `reExportIndex` ledger fails the build if a re-export index reappears. The
+ * component tests around it are what still measure behaviour.
+ */

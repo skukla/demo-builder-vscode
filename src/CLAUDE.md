@@ -28,7 +28,7 @@ relative.** Both halves are enforced by `no-restricted-imports` in
 `eslint.config.mjs`.
 
 ```typescript
-import { StateManager } from '@/core/state';                       // crossing a boundary
+import { StateManager } from '@/core/state/stateManager';          // crossing a boundary
 import { AuthCache } from './authCacheManager';                    // same directory
 import { StateManager } from '../../../core/state';                // ✗ eslint blocks this
 ```
@@ -55,8 +55,12 @@ three levels deep does not.
 - **`core/` imports neither.** Enforced by the `layerDirection` ledger, which holds
   seven pre-existing crossings and may only shrink.
 
-`@/core/*` and `@/types` are imported through their barrels; features are imported
-directly and get no barrel ([ADR-022](../docs/architecture/adr/022-barrel-files.md)).
+**Every module is imported by the path that DECLARES the symbol** — `@/core/*`
+included. This file said the opposite until 2026-08-31 ("`@/core/*` and `@/types`
+are imported through their barrels"); the rule was replaced when the curation that
+justified core barrels turned out not to be happening, and the re-export indexes
+are being retired against a shrink-only ledger
+([ADR-022](../docs/architecture/adr/022-barrel-files.md), amended 2026-08-31).
 
 ## Build
 

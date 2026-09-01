@@ -19,18 +19,18 @@
 import { selectDiscoveryService } from './accsDiscoveryConfig';
 import { discoverStoreStructure } from './commerceStoreDiscovery';
 import { extractConfigParams } from './configGenerator';
-import { validateURL } from '@/core/validation';
 import {
     ACCS_GRAPHQL_ENDPOINT,
     PAAS_URL,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
+import { validateURL } from '@/core/validation/URLValidator';
 import {
     resolvePaasAdminPair,
     type CommercePairDeps,
     type SecretReader,
 } from '@/features/components/services/commerceCredentialStore';
 import { lookupComponentConfigValue } from '@/features/components/services/envVarHelpers';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { CommerceStoreStructure, StoreDiscoveryParams } from '@/types/commerceStore';
 
 /** Whether a configured scope code was found in the discovered structure. */

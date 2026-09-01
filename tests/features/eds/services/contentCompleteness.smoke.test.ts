@@ -21,6 +21,7 @@ import {
 } from '@/features/eds/services/daLive/daLiveContentOperations';
 import { createPatchReport, getUnapplied } from '@/features/eds/services/patches/patchReportHelper';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/core/utils/timeoutConfig', () => ({ TIMEOUTS: { NORMAL: 30000, QUICK: 5000 } }));
 
@@ -112,7 +113,7 @@ describe('content-completeness smoke (per-package)', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        const logger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as unknown as Logger;
+        const logger = createMockLogger() as unknown as Logger;
         const tokenProvider: TokenProvider = { getAccessToken: jest.fn().mockResolvedValue('mock-ims-token') };
         service = new DaLiveContentOperations(tokenProvider, logger);
     });

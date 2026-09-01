@@ -46,9 +46,9 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
 
 // ---- DI (runGuards resolves the auth service through it) -------------------
 // Mocked HERE, not only via dashboardHandlers.testUtils: that module's own
-// jest.mock('@/core/di') registers after this spec's SUT import chain has
+// jest.mock('@/core/di/serviceLocator') registers after this spec's SUT import chain has
 // already required the real ServiceLocator.
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             getTokenManager: () => ({ inspectToken: jest.fn(async () => ({ valid: false })) }),
@@ -109,7 +109,7 @@ function kitProject(): Partial<Project> {
 }
 
 function mockDeveloperPermissions(): void {
-    const { ServiceLocator } = require('@/core/di');
+    const { ServiceLocator } = require('@/core/di/serviceLocator');
     ServiceLocator.getAuthenticationService().testDeveloperPermissions = jest
         .fn()
         .mockResolvedValue({ hasPermissions: true });

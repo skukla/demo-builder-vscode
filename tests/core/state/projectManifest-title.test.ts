@@ -19,19 +19,14 @@
 
 import * as fs from 'fs/promises';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { createMockLogger } from '../../helpers/loggerFake';
 
 jest.mock('fs/promises');
 
 const mockFs = fs as jest.Mocked<typeof fs>;
 
-const mockLogger = {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    trace: jest.fn(),
-};
+const mockLogger = createMockLogger();
 
 function createTestProject(overrides: Partial<Project> = {}): Project {
     return {

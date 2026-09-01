@@ -19,6 +19,7 @@ import {
 import { COMPONENT_IDS } from '@/core/constants';
 import type { HandlerContext } from '@/types/handlers';
 import { expectWithinCeiling } from './responseCeilings';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /** Minimal MCP server double: capture handlers, invoke by name, parse the JSON back. */
 function fakeServer() {
@@ -58,7 +59,7 @@ const ctxFactory = () =>
     ({
         stateManager: { getCurrentProject },
         context: { secrets: {} },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
     }) as unknown as HandlerContext;
 
 // ─── service doubles ─────────────────────────────────────────────────────────

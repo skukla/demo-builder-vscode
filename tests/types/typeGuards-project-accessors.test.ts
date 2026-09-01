@@ -22,6 +22,7 @@ import {
     getAdminPanelUrl,
 } from '@/types/typeGuards';
 import { Project } from '@/types/base';
+import { createMockProject } from '../helpers/projectFake';
 
 describe('typeGuards - Project Accessors', () => {
     // =================================================================
@@ -56,7 +57,7 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return undefined when componentVersions is undefined', () => {
-            const project = {} as Project;
+            const project = createMockProject();
             expect(getComponentVersion(project, 'headless')).toBeUndefined();
         });
     });
@@ -93,7 +94,7 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return undefined when componentInstances is undefined', () => {
-            const project = {} as Project;
+            const project = createMockProject();
             expect(getProjectFrontendPort(project)).toBeUndefined();
         });
     });
@@ -203,27 +204,27 @@ describe('typeGuards - Project Accessors', () => {
 
     describe('isEdsProject', () => {
         it('should return true for eds-dalive stack', () => {
-            const project = { selectedStack: 'eds-dalive' } as Project;
+            const project = createMockProject({ selectedStack: 'eds-dalive' });
             expect(isEdsProject(project)).toBe(true);
         });
 
         it('should return true for eds-github stack', () => {
-            const project = { selectedStack: 'eds-github' } as Project;
+            const project = createMockProject({ selectedStack: 'eds-github' });
             expect(isEdsProject(project)).toBe(true);
         });
 
         it('should return true for any eds- prefixed stack', () => {
-            const project = { selectedStack: 'eds-future-variant' } as Project;
+            const project = createMockProject({ selectedStack: 'eds-future-variant' });
             expect(isEdsProject(project)).toBe(true);
         });
 
         it('should return false for headless stack', () => {
-            const project = { selectedStack: 'headless' } as Project;
+            const project = createMockProject({ selectedStack: 'headless' });
             expect(isEdsProject(project)).toBe(false);
         });
 
         it('should return false for headless-paas stack', () => {
-            const project = { selectedStack: 'headless-paas' } as Project;
+            const project = createMockProject({ selectedStack: 'headless-paas' });
             expect(isEdsProject(project)).toBe(false);
         });
 
@@ -236,7 +237,7 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return false when selectedStack is undefined', () => {
-            const project = {} as Project;
+            const project = createMockProject();
             expect(isEdsProject(project)).toBe(false);
         });
     });
@@ -307,9 +308,9 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return undefined when componentInstances is undefined', () => {
-            const project = {
+            const project = createMockProject({
                 selectedStack: 'eds-dalive',
-            } as Project;
+            });
             expect(getEdsLiveUrl(project)).toBeUndefined();
         });
     });
@@ -369,7 +370,7 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return undefined when componentConfigs is undefined', () => {
-            const project = {} as Project;
+            const project = createMockProject();
             expect(getAdminPanelUrl(project)).toBeUndefined();
         });
 
@@ -443,9 +444,9 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return undefined when not an EDS project', () => {
-            const project = {
+            const project = createMockProject({
                 selectedStack: 'headless',
-            } as Project;
+            });
             expect(getEdsPreviewUrl(project)).toBeUndefined();
         });
 

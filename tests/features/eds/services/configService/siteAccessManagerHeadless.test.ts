@@ -38,6 +38,7 @@ import {
     revokeSiteAdmin,
 } from '@/features/eds/services/configService/configServiceAccess';
 import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockReadSiteAccess = readSiteAccess as jest.Mock;
 const mockReadOrgAdmins = readOrgAdmins as jest.Mock;
@@ -45,13 +46,7 @@ const mockEnsure = ensureSiteAdmin as jest.Mock;
 const mockRevoke = revokeSiteAdmin as jest.Mock;
 const mockProbe = probeConfigWriteAccess as jest.Mock;
 
-const logger = {
-    trace: jest.fn(),
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-};
+const logger = createMockLogger();
 
 const context = {} as never;
 

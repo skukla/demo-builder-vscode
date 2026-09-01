@@ -13,8 +13,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import { DeployMeshCommand } from './deployMesh.testUtils';
-import { StateManager } from '@/core/state';
-import { ServiceLocator } from '@/core/di';
+import { StateManager } from '@/core/state/stateManager';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { Logger } from '@/types/logger';
 import type { Project, ComponentInstance } from '@/types/base';
 
@@ -43,6 +43,8 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 
 // Import the mock after jest.mock hoisting
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // MUST stay in this file: this spec imports fs/promises directly, and a
 // jest.mock only hoists above the imports of the module it appears in. Moved to
@@ -106,18 +108,12 @@ describe('DeployMeshCommand - Auth Refactor (ensureAdobeIOAuth)', () => {
             extensionPath: '/test/extension',
         } as unknown as vscode.ExtensionContext;
 
-        mockStateManager = {
+        mockStateManager = createMockStateManager({
             getCurrentProject: jest.fn(),
             saveProject: jest.fn(),
-        } as unknown as jest.Mocked<StateManager>;
+        }) as unknown as jest.Mocked<StateManager>;
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            trace: jest.fn(),
-        } as jest.Mocked<Logger>;
+        mockLogger = createMockLogger() as jest.Mocked<Logger>;
 
         mockAuthManager = {
             isAuthenticated: jest.fn().mockResolvedValue(true),

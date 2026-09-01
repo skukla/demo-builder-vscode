@@ -11,10 +11,11 @@ import {
     handleSelectWorkspace
 } from '@/features/authentication/handlers/workspaceHandlers';
 import { HandlerContext } from '@/types/handlers';
-import * as securityValidation from '@/core/validation';
+import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock dependencies
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/validators/AdobeResourceValidator');
 
 describe('workspaceHandlers', () => {
     let mockContext: jest.Mocked<HandlerContext>;
@@ -32,12 +33,7 @@ describe('workspaceHandlers', () => {
         // Create mock context
         mockContext = {
             authManager: mockAuthManager,
-            logger: {
-                info: jest.fn(),
-                error: jest.fn(),
-                warn: jest.fn(),
-                debug: jest.fn()
-            } as any,
+            logger: createMockLogger() as any,
             debugLogger: {
                 trace: jest.fn(),
                 debug: jest.fn()
@@ -193,7 +189,7 @@ describe('workspaceHandlers', () => {
 
     describe('handleSelectWorkspace', () => {
         beforeEach(() => {
-            (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {
+            (validateWorkspaceId as jest.Mock).mockImplementation(() => {
                 // Valid by default
             });
             // The drift guard reads the CALLER'S project, not the CLI global.
@@ -217,13 +213,13 @@ describe('workspaceHandlers', () => {
 
             await handleSelectWorkspace(mockContext, { workspaceId, projectId: 'proj-123' });
 
-            expect(securityValidation.validateWorkspaceId).toHaveBeenCalledWith(workspaceId);
+            expect(validateWorkspaceId).toHaveBeenCalledWith(workspaceId);
         });
 
         it('should reject invalid workspace ID', async () => {
             const workspaceId = '../../../etc/passwd';
             const validationError = new Error('Invalid workspace ID');
-            (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {
+            (validateWorkspaceId as jest.Mock).mockImplementation(() => {
                 throw validationError;
             });
 
@@ -243,7 +239,7 @@ describe('workspaceHandlers', () => {
             const result = await handleSelectWorkspace(mockContext, { workspaceId, projectId: 'proj-123' });
 
             expect(result.success).toBe(true);
-            expect(securityValidation.validateWorkspaceId).toHaveBeenCalledWith(workspaceId);
+            expect(validateWorkspaceId).toHaveBeenCalledWith(workspaceId);
         });
 
         it('should handle very long workspace IDs', async () => {
@@ -299,7 +295,7 @@ describe('workspaceHandlers', () => {
             expect(getResult.data).toEqual(mockWorkspaces);
 
             // Select workspace (accepted without mutating the global)
-            (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {});
+            (validateWorkspaceId as jest.Mock).mockImplementation(() => {});
 
             const selectResult = await handleSelectWorkspace(mockContext, {
                 workspaceId: 'ws-1',
@@ -406,7 +402,7 @@ describe('workspaceHandlers', () => {
 
         it('should handle workspace selection with empty string ID', async () => {
             const workspaceId = '';
-            (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {
+            (validateWorkspaceId as jest.Mock).mockImplementation(() => {
                 throw new Error('Workspace ID cannot be empty');
             });
 
@@ -440,7 +436,7 @@ describe('workspaceHandlers', () => {
     describe('No Global Mutation', () => {
         it('should accept the selection and ack via sendMessage', async () => {
             const workspaceId = 'ws-123';
-            (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {});
+            (validateWorkspaceId as jest.Mock).mockImplementation(() => {});
 
             const result = await handleSelectWorkspace(mockContext, { workspaceId, projectId: 'proj-123' });
 

@@ -17,7 +17,7 @@
 
 import * as fs from 'fs/promises';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import * as path from 'path';
 
 // Mock fs/promises
@@ -363,6 +363,6 @@ describe('StateManager Save Chain Investigation', () => {
 
         // This chain is the source of the manifest error
         // The debug logging we added will reveal which step has invalid path
-        expect(callChain.length).toBe(7);
+        expect(callChain).toHaveLength(7);
     });
 });

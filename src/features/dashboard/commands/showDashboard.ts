@@ -3,25 +3,24 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
-import { BaseWebviewCommand } from '@/core/base';
-import { WebviewCommunicationManager } from '@/core/communication';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
-import { dispatchHandler, getRegisteredTypes } from '@/core/handlers';
+import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { getMeshAppBuilderComponent } from '@/core/state/appBuilderComponentState';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { getProjectDisplayName } from '@/core/utils/projectDisplayName';
 import { loadDemoPackages } from '@/features/components/services/demoPackageLoader';
-import { dashboardHandlers } from '@/features/dashboard/handlers';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
-import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks';
+import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
+import { armOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
 import { isDataInstallerConfigured } from '@/features/data-installer/services/dataInstallerConfig';
 import {
     getEwCanvasBranch,
     resolveProjectAuthoringExperience,
 } from '@/features/eds/handlers/edsHelpers';
-import { Project, ComponentInstance } from '@/types';
-import type { AppBuilderComponentState } from '@/types/base';
+import { ComponentInstance, Project, type AppBuilderComponentState } from '@/types/base';
 import type { DemoPackage } from '@/types/demoPackages';
 import { HandlerContext } from '@/types/handlers';
 import type { Stack, StacksConfig } from '@/types/stacks';
@@ -100,7 +99,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand<Dashboard
 
     constructor(
         context: vscode.ExtensionContext,
-        stateManager: import('@/core/state').StateManager,
+        stateManager: import('@/core/state/stateManager').StateManager,
         logger: import('@/types/logger').Logger,
     ) {
         super(context, stateManager, logger);

@@ -16,14 +16,6 @@ const mockTreeKill = jest.fn();
 jest.mock('tree-kill', () => mockTreeKill);
 
 // Mock logger to avoid side effects
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 

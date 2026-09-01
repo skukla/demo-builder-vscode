@@ -8,26 +8,21 @@
 import { setupMocks, mockProjects, type TestMocks } from './adobeEntityService.testUtils';
 
 // Mock external dependencies only
-jest.mock('@/core/logging');
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/SensitiveDataRedactor');
+jest.mock('@/core/validation/validators/AdobeResourceValidator');
 jest.mock('@/types/typeGuards');
 
-import { getLogger } from '@/core/logging';
-import { validateWorkspaceId } from '@/core/validation';
+import { getLogger } from '@/core/logging/debugLogger';
+import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import { parseJSON } from '@/types/typeGuards';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('AdobeEntityService - Workspaces', () => {
     let testMocks: TestMocks;
 
     beforeEach(() => {
         // Setup mocked module functions
-        (getLogger as jest.Mock).mockReturnValue({
-            trace: jest.fn(),
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
 
         // Mock validation functions (they should not throw by default)
         (validateWorkspaceId as jest.Mock).mockImplementation(() => {});

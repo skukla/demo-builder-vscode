@@ -21,6 +21,8 @@ jest.mock('@/core/auth/adobeAuthGuard', () => ({
 import { handleGetStoreStructure } from '@/features/eds/handlers/storeStructureHandler';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const PROJECT = {
     name: 'demo',
@@ -29,8 +31,8 @@ const PROJECT = {
 
 function ctx(project: unknown, token?: string, secrets?: unknown): HandlerContext {
     return {
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
-        logger: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
+        logger: createMockLogger(),
         authManager: {
             getTokenManager: () => ({
                 inspectToken: jest.fn().mockResolvedValue({ valid: !!token, token }),

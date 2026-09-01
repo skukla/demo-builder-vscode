@@ -13,7 +13,6 @@ import {
     byomRegistrationFailureMessage,
 } from '../../handlers/edsHelpers';
 import { logConfigAccessState } from '../configService/configAccessRecovery';
-import type { HelixCodePreview } from '../helix/helixCapabilities';
 import { buildSiteConfigParams, ConfigurationService } from '../configService/configurationService';
 import { lostGrantsMessage } from '../configService/lostGrantsMessage';
 import {
@@ -22,6 +21,7 @@ import {
 } from '../configService/siteConfigRegistrar';
 import type { TokenProvider } from '../daLive/daLiveOrgOperations';
 import type { GitHubTokenService } from '../github/githubTokenService';
+import type { HelixCodePreview } from '../helix/helixCapabilities';
 import { HelixService } from '../helix/helixService';
 import { DaLiveAuthError } from '../types';
 import type { EdsResetParams } from './edsResetParams';

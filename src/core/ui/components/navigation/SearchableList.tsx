@@ -2,8 +2,8 @@ import { Text, ListView, Item } from '@adobe/react-spectrum';
 import React, { useRef } from 'react';
 import { SearchHeader } from './SearchHeader';
 import { useScrollToSelectedRow } from './useScrollToSelectedRow';
-
 import { cn } from '@/core/ui/utils/classNames';
+
 export interface SearchableListItem {
     id: string;
     title?: string;

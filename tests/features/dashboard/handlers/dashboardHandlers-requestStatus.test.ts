@@ -6,7 +6,7 @@
  */
 
 // IMPORTANT: Mocks must be declared before imports
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
         // The on-open org-context check self-heals via the state manager on the
@@ -17,16 +17,18 @@ jest.mock('@/core/di', () => ({
     },
 }));
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
 jest.mock('@/features/mesh/services/meshVerifier', () => ({
     verifyMeshDeployment: jest.fn().mockResolvedValue(undefined),
     syncMeshStatus: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
 }));
 jest.mock(
     'vscode',
@@ -218,7 +220,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const { mockContext } = setupMocks();
 
         // Override auth mock AFTER setupMocks (which sets isAuthenticated=true)
-        const { ServiceLocator } = require('@/core/di');
+        const { ServiceLocator } = require('@/core/di/serviceLocator');
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(false),
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(false),
@@ -252,7 +254,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         detectFrontendChanges.mockReturnValue(false);
 
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
-        const { ServiceLocator } = require('@/core/di');
+        const { ServiceLocator } = require('@/core/di/serviceLocator');
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             // SDK-only read (the non-interactive on-open probe), never the CLI fallback.
@@ -274,7 +276,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
 
         // Auth returns false initially, then true after login
-        const { ServiceLocator } = require('@/core/di');
+        const { ServiceLocator } = require('@/core/di/serviceLocator');
         const mockAuthManager = {
             isAuthenticated: jest
                 .fn()

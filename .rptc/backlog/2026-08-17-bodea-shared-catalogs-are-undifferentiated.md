@@ -4,7 +4,8 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: backlog
+status: gated
+waiting-on: owner decision on which catalog-differentiation approach to take; the unattended re-measure is also blocked on a machine-scoped data-installer setting absent from the isolated dev-host profile
 ---
 # Bodea's shared catalogs assign identical categories — catalog-driven menus cannot be demoed
 
@@ -158,3 +159,4 @@ after the data ships and re-measures as differentiated.
 
 - 2026-08-28  Loop pickup 2026-08-28: re-measure attempted per the kickoff prompt, blocked unattended — the isolated dev-host profile lacks the machine-scoped demoBuilder.dataInstaller.apiBaseUrl (deliberately unbundled; public repo), and the real window's server is unreachable while the dev host holds the shared socket. The 2026-08-23 provenance check (pack unchanged since 2026-06-18) stands as the freshest evidence. Item is at its supervised edge: the decision is the drafted differentiation (path 1 — Admin change on one instance, prove the story; then path 2 — pack request to CoreTech). Queued for walkthrough.
 - 2026-08-28  docs(backlog): EDS-6 at its supervised edge — decision queued (`870c098b8`)
+- 2026-08-31  2026-08-31  Status corrected backlog -> gated (loop hygiene pass): it was picked up on 2026-08-28, hit a supervised edge and queued a decision, which is not 'not started'. waiting-on now names both blockers, per the rule that a gated item must say what it waits on.

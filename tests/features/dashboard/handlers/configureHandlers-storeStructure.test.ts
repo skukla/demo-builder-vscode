@@ -13,13 +13,16 @@
  */
 
 const mockDiscover = jest.fn();
-jest.mock('@/features/eds', () => ({
+jest.mock('@/features/eds/handlers/edsHandlers', () => ({
     handleDiscoverStoreStructure: (...args: unknown[]) => mockDiscover(...args),
 }));
 
 import { handleDiscoverStoreStructureAndPersist } from '@/features/dashboard/handlers/configureHandlers';
 import type { HandlerContext } from '@/types/handlers';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const STRUCTURE = {
     websites: [{ id: 2, code: 'citisignal', name: 'CitiSignal' }],
@@ -40,17 +43,17 @@ function makeContext(project: Project | null) {
     const sendMessage = jest.fn().mockResolvedValue(undefined);
     const context = {
         sendMessage,
-        logger: { warn: jest.fn(), error: jest.fn(), info: jest.fn(), debug: jest.fn(), trace: jest.fn() },
-        stateManager: {
+        logger: createMockLogger(),
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject,
-        },
+        }),
     } as unknown as HandlerContext;
     return { context, saveProject, sendMessage };
 }
 
 function projectFixture(): Project {
-    return { name: 'p', path: '/p' } as Project;
+    return createMockProject({ name: 'p', path: '/p' });
 }
 
 beforeEach(() => {

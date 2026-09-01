@@ -12,21 +12,29 @@
 
 import { resolveApiOwners } from '@/core/state/apiOwners';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../helpers/projectFake';
 
-jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
-    getAppBuilderComponentEntry: (id: string) =>
-        ({
-            'commerce-mesh': {
-                id: 'commerce-mesh',
-                name: 'Commerce Mesh',
-                requiredApis: ['GraphQLServiceSDK'],
-            },
-            'erp-sync': { id: 'erp-sync', name: 'ERP Sync', requiredApis: ['CommerceEventingSDK'] },
-        })[id],
-}));
+/**
+ * The catalog lookup, handed in rather than module-mocked.
+ *
+ * `resolveApiOwners` used to import the loader directly, so this suite could only
+ * control it with a `jest.mock` of a FEATURE module from a test of a CORE one —
+ * which is the coupling the module mock was standing in for. Now the function
+ * takes the lookup, so the fake is an argument.
+ */
+const lookup = (id: string) =>
+    ({
+        'commerce-mesh': {
+            id: 'commerce-mesh',
+            name: 'Commerce Mesh',
+            requiredApis: ['GraphQLServiceSDK'],
+        },
+        'erp-sync': { id: 'erp-sync', name: 'ERP Sync', requiredApis: ['CommerceEventingSDK'] },
+    })[id];
+
 
 function projectWith(components: Project['appBuilderComponents']): Project {
-    return { appBuilderComponents: components } as Project;
+    return createMockProject({ appBuilderComponents: components });
 }
 
 describe('resolveApiOwners', () => {
@@ -39,7 +47,7 @@ describe('resolveApiOwners', () => {
                     source: { owner: 'o', repo: 'r' },
                 },
             })
-        );
+        , lookup);
 
         expect(owners).toEqual([
             { id: 'commerce-mesh', name: 'Commerce Mesh', requiredApis: ['GraphQLServiceSDK'] },
@@ -58,7 +66,7 @@ describe('resolveApiOwners', () => {
                     source: { owner: 'o', repo: 'r' },
                 },
             })
-        );
+        , lookup);
 
         expect(owners[0].name).toBe('NetSuite');
         expect(owners[0].requiredApis).toEqual(['CommerceEventingSDK']);
@@ -75,7 +83,7 @@ describe('resolveApiOwners', () => {
                     source: { owner: 'o', repo: 'r' },
                 },
             })
-        );
+        , lookup);
 
         expect(owners).toEqual([
             { id: 'my-custom-thing', name: 'my-custom-thing', requiredApis: [] },
@@ -98,12 +106,12 @@ describe('resolveApiOwners', () => {
                     source: { owner: 'o', repo: 'r' },
                 },
             })
-        );
+        , lookup);
 
         expect(owners.map((o) => o.id).sort()).toEqual(['commerce-mesh', 'erp-sync']);
     });
 
     it('returns an empty list for a project with no integrations', () => {
-        expect(resolveApiOwners({} as Project)).toEqual([]);
+        expect(resolveApiOwners(createMockProject(), lookup)).toEqual([]);
     });
 });

@@ -10,14 +10,6 @@ import { spawn } from 'child_process';
 
 // Mock logger to capture error logs
 // Create mock functions inside the factory to avoid hoisting issues
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 /**
  * These suites drive REAL child processes, and `killProcessTree` observes exits

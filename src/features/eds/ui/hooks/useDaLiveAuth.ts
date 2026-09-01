@@ -12,11 +12,11 @@
  */
 
 import { type MutableRefObject, useEffect, useCallback, useRef, useState } from 'react';
+import { edsConfigStringDefaults } from '../helpers/edsConfigDefaults';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { WizardState, EDSConfig } from '@/types/webview';
 import type { DaLiveAuthStatusPayload, DaLiveLoginOpenedPayload, DaLiveTokenStoredPayload, DaLiveTokenWithOrgResultPayload } from '@/types/webviewPayloads';
-import { edsConfigStringDefaults } from '../helpers/edsConfigDefaults';
 
 const log = webviewLogger('useDaLiveAuth');
 

@@ -16,10 +16,12 @@ import {
 } from '@/features/project-creation/services/projectFinalizationService';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
-import type { Project, EnvVarDefinition } from '@/types';
-import type { Logger } from '@/types/logger';
+import type { Project } from '@/types/base';
+import type { EnvVarDefinition } from '@/types/components';
 import type { HandlerContext } from '@/types/handlers';
 import { TransformedComponentDefinition, ComponentRegistry } from '@/types/components';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock fs promises
 jest.mock('fs', () => ({
@@ -43,13 +45,6 @@ jest.mock('@/features/project-creation/helpers/formatters', () => ({
 // Let generateComponentConfigFiles run for real so it generates env files
 
 describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', () => {
-    const createMockLogger = (): Logger => ({
-        info: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-        debug: jest.fn(),
-        trace: jest.fn(),
-    });
 
     const createSharedEnvVars = (): Record<string, Omit<EnvVarDefinition, 'key'>> => ({
         MESH_ENDPOINT: {
@@ -81,10 +76,10 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
     const createMockHandlerContext = (): Partial<HandlerContext> => ({
         context: { extensionPath: '/test/extension' } as any,
         logger: createMockLogger(),
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(null),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as any,
+        }) as any,
         sharedState: { isAuthenticating: false },
         sendMessage: jest.fn(),
         panel: { visible: false, dispose: jest.fn() } as any,

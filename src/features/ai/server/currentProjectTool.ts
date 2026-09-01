@@ -46,7 +46,7 @@ import type { HandlerContext } from '@/types/handlers';
  *   "whatever the dashboard points at" (the tier-2 battery run measured an
  *   agent inspecting one project while its tools acted on another).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export function registerCurrentProjectTool(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server: any,

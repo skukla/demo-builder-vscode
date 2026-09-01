@@ -47,6 +47,8 @@ jest.mock('@/features/eds/services/reset/edsResetService', () => ({
 // =============================================================================
 
 import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
+import { createMockStateManager } from '../../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 /**
  * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
@@ -124,22 +126,12 @@ function createMockContext(): HandlerContext {
         panel: {
             webview: { postMessage: jest.fn() },
         } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn(),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
-        debugLogger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['debugLogger'],
+        }) as unknown as HandlerContext['stateManager'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
+        debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),
         context: { secrets: {} },
     } as unknown as HandlerContext;

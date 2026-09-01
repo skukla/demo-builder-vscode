@@ -11,7 +11,7 @@ import {
     determineMeshStatus,
 } from '@/features/mesh/services/meshStatusResolver';
 import { parseEnvFile } from '@/core/utils/envParser';
-import type { ComponentInstance, Project } from '@/types';
+import type { ComponentInstance, Project } from '@/types/base';
 
 // Mock fs/promises
 jest.mock('fs/promises');

@@ -9,7 +9,7 @@
 
 import { HELIX_ADMIN_URL } from '../helix/helixApiClient';
 import type { GitHubTokenService } from './githubTokenService';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 

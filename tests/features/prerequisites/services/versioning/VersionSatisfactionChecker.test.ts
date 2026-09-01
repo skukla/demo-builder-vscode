@@ -16,24 +16,21 @@ const mockExecute = jest.fn();
  * suite mocks NO modules — the registry mock it used to need is gone and the
  * fake is a plain object. Assertions are unchanged.
  */
-const executor = { execute: mockExecute } as never;
+const executor = createMockCommandExecutor({ execute: mockExecute });
 
 import { checkVersionSatisfaction } from '@/features/prerequisites/services/versioning/VersionSatisfactionChecker';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
 const FNM_LIST = ['* v18.20.8', '* v20.19.6 default', '* v22.21.1', '* v24.20.0', '* system'].join(
     '\n'
 );
 
 function makeLogger(): Logger {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 beforeEach(() => {

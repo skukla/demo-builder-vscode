@@ -36,8 +36,8 @@ import {
     mockSuccessfulExecution,
 } from './testHelpers';
 import { ComponentManager } from '@/features/components/services/componentManager';
-import type { CommandExecutor } from '@/core/shell';
-import type { Project } from '@/types';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 export { ComponentManager };

@@ -31,8 +31,8 @@ import type { DatapackGroup } from '../../services/datapackCatalog';
 import type { DatapackArt, DatapackId, DatapackSummary } from '../../types';
 import { SelectionCheck } from '@/core/ui/components/ui/SelectionCheck';
 import { useActivateOnKey } from '@/core/ui/hooks/useActivateOnKey';
-
 import { cn } from '@/core/ui/utils/classNames';
+
 export interface DatapackCardProps {
     /** Every version of one datapack, already ordered by the catalog service. */
     group: DatapackGroup;

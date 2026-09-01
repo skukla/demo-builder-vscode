@@ -29,6 +29,7 @@ import { checkGitHubAppForExistingRepo } from '@/features/eds/handlers/storefron
 import type { RepoInfo, SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 
 const REPO_INFO: RepoInfo = {
@@ -41,13 +42,7 @@ const INSTALL_URL = 'https://github.com/apps/aem-code-sync/installations/select_
 
 function makeContext(): HandlerContext {
     return {
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        } as unknown as Logger,
+        logger: createMockLogger() as unknown as Logger,
         sendMessage: jest.fn().mockResolvedValue(undefined),
     } as unknown as HandlerContext;
 }

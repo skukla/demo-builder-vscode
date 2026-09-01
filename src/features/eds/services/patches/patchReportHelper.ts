@@ -24,7 +24,7 @@
 import type { CodePatchResult } from './codePatchRegistry';
 import type { ContentPatchResult } from './contentPatchRegistry';
 import { OBSOLETE_MISS_THRESHOLD, trackPatchMisses } from './patchMissTracker';
-import type { Logger } from '@/types';
+import type { Logger } from '@/types/logger';
 
 /**
  * Normalized per-patch entry. Content and code results are merged onto

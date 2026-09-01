@@ -12,7 +12,7 @@
  *   diagnosticsChecks-parallelProbes.test.ts
  */
 
-jest.mock('@/core/logging', () => ({
+jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: jest.fn(() => ({
         info: jest.fn(),
         debug: jest.fn(),
@@ -21,7 +21,7 @@ jest.mock('@/core/logging', () => ({
         logCommand: jest.fn(),
     })),
 }));
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: () => ({ execute: (...a: unknown[]) => mockExecute(...a) }),
     },

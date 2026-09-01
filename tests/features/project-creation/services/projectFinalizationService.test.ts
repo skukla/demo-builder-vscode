@@ -10,16 +10,17 @@ import {
     type FinalizationContext,
 } from '@/features/project-creation/services/projectFinalizationService';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { ComponentDefinitionEntry } from '@/features/project-creation/services/componentInstallationOrchestrator';
 
 // Mock dependencies
-jest.mock('@/features/project-creation/helpers', () => ({
+jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
     generateComponentConfigFiles: jest.fn(),
 }));
 
 // Import mocked functions
-import * as helpers from '@/features/project-creation/helpers';
+import { generateComponentConfigFiles } from '@/features/project-creation/helpers/envFileGenerator';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('projectFinalizationService', () => {
     let mockSetupContext: ProjectSetupContext;
@@ -58,18 +59,8 @@ describe('projectFinalizationService', () => {
         };
 
         mockHandlerContext = {
-            logger: {
-                info: jest.fn(),
-                error: jest.fn(),
-                warn: jest.fn(),
-                debug: jest.fn(),
-            },
-            debugLogger: {
-                info: jest.fn(),
-                error: jest.fn(),
-                warn: jest.fn(),
-                debug: jest.fn(),
-            },
+            logger: createMockLogger(),
+            debugLogger: createMockLogger(),
             context: {
                 extensionPath: '/test/extension',
             },
@@ -140,8 +131,8 @@ describe('projectFinalizationService', () => {
             await generateEnvironmentFiles(context);
 
             // Should be called for eds-storefront but NOT for eds-commerce-mesh
-            expect(helpers.generateComponentConfigFiles).toHaveBeenCalledTimes(1);
-            expect(helpers.generateComponentConfigFiles).toHaveBeenCalledWith(
+            expect(generateComponentConfigFiles).toHaveBeenCalledTimes(1);
+            expect(generateComponentConfigFiles).toHaveBeenCalledWith(
                 '/test/project/components/eds-storefront',
                 'eds-storefront',
                 mockComponentDefinitions.get('eds-storefront')!.definition,
@@ -162,7 +153,7 @@ describe('projectFinalizationService', () => {
             await generateEnvironmentFiles(context);
 
             // Verify eds-commerce-mesh was NOT processed
-            const calls = (helpers.generateComponentConfigFiles as jest.Mock).mock.calls;
+            const calls = (generateComponentConfigFiles as jest.Mock).mock.calls;
             const meshCalls = calls.filter((call) => call[1] === 'eds-commerce-mesh');
             expect(meshCalls).toHaveLength(0);
         });
@@ -207,7 +198,7 @@ describe('projectFinalizationService', () => {
             await generateEnvironmentFiles(context);
 
             // Should not be called since eds-storefront has no path
-            expect(helpers.generateComponentConfigFiles).not.toHaveBeenCalled();
+            expect(generateComponentConfigFiles).not.toHaveBeenCalled();
         });
 
         it('should call progressTracker with correct message', async () => {
@@ -312,7 +303,7 @@ describe('projectFinalizationService', () => {
             await generateEnvironmentFiles(context);
 
             // Should be called for both eds-storefront and nextjs-storefront
-            expect(helpers.generateComponentConfigFiles).toHaveBeenCalledTimes(2);
+            expect(generateComponentConfigFiles).toHaveBeenCalledTimes(2);
         });
     });
 

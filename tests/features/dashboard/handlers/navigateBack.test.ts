@@ -25,25 +25,27 @@ jest.mock('vscode', () => ({
 jest.mock('@/features/mesh/services/stalenessDetector');
 
 // Mock authentication
-jest.mock('@/features/authentication');
 
 // Mock ServiceLocator
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
     },
 }));
 
 // Mock validation
-jest.mock('@/core/validation', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
+jest.mock('@/core/validation/URLValidator', () => ({
     validateURL: jest.fn(),
 }));
 
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
+    validateOrgId: jest.fn(),
+    validateProjectId: jest.fn(),
+    validateWorkspaceId: jest.fn(),
+}));
+
 // Mock BaseWebviewCommand (used by handleNavigateBack for panel transition)
-jest.mock('@/core/base', () => ({
+jest.mock('@/core/base/baseWebviewCommand', () => ({
     BaseWebviewCommand: {
         startWebviewTransition: jest.fn().mockResolvedValue(undefined),
         endWebviewTransition: jest.fn(),

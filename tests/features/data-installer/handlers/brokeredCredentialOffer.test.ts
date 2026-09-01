@@ -20,20 +20,18 @@ import { importHandlers } from '@/features/data-installer/handlers/importHandler
 import { clearSharedCredentialCache } from '@/features/data-installer/services/commerceCredentialBroker';
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
-}));
-jest.mock('@/core/logging/debugLogger', () => ({
-    ...jest.requireActual('@/core/logging/debugLogger'),
-    getLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
 }));
 jest.mock('@/features/data-installer/services/dataInstallerWriteClient');
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
     IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
 }));
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })) },
 }));
 
@@ -78,8 +76,8 @@ const boundProject = (): Partial<Project> => accsProject(FULL_BINDING);
 
 function makeImportHarness(project: unknown): HandlerContext {
     return {
-        logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-        debugLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+        logger: createMockLogger(),
+        debugLogger: createMockLogger(),
         authManager: {
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest.fn().mockReturnValue({
@@ -88,10 +86,10 @@ function makeImportHarness(project: unknown): HandlerContext {
         },
         panel: {} as vscode.WebviewPanel,
         context: { globalState: { get: jest.fn(), update: jest.fn() }, secrets: {} },
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn(),
-        },
+        }),
         sendMessage: jest.fn(),
     } as unknown as HandlerContext;
 }

@@ -13,8 +13,9 @@
  */
 
 import * as vscode from 'vscode';
-import type { CachedOrgRef, CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { ensureFnmNodeVersion } from '@/core/shell/ensureNodeVersion';
+import type { CachedOrgRef } from '@/core/shell/orgContextEnv';
 import { resolveDesiredApis } from '@/core/state/componentApiPicks';
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
 import {
@@ -38,9 +39,9 @@ import {
     calculateMeshSourceHash,
     readMeshEnvVarsFromFile,
 } from '@/features/mesh/services/stalenessDetector';
-import { regenerateComponentEnvFile } from '@/features/project-creation/helpers';
-import type { Project } from '@/types';
+import { regenerateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { Project } from '@/types/base';
 import type { ComponentRegistry } from '@/types/components';
 import type { HandlerContext } from '@/types/handlers';
 import type { Logger } from '@/types/logger';

@@ -9,8 +9,10 @@ import { ProjectSetupContext } from '@/features/project-creation/services/Projec
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import type { HandlerContext } from '@/types/handlers';
 import type { ComponentRegistry } from '@/types/components';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 describe('ProjectSetupContext', () => {
     let mockHandlerContext: jest.Mocked<HandlerContext>;
@@ -20,13 +22,7 @@ describe('ProjectSetupContext', () => {
     let mockConfig: ProjectCreationConfig;
 
     beforeEach(() => {
-        mockLogger = {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-            trace: jest.fn(),
-        };
+        mockLogger = createMockLogger();
 
         mockHandlerContext = {
             logger: mockLogger as any,
@@ -233,11 +229,11 @@ describe('ProjectSetupContext', () => {
         });
 
         it('should return undefined when no mesh endpoint exists', () => {
-            const projectWithoutMesh = {
+            const projectWithoutMesh = createMockProject({
                 ...mockProject,
                 componentInstances: undefined,
                 appBuilderComponents: undefined,
-            } as Project;
+            });
 
             const context = new ProjectSetupContext(
                 mockHandlerContext,

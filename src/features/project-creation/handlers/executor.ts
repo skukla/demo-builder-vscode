@@ -20,14 +20,6 @@ import * as fsPromises from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import {
-    cloneAllComponents,
-    installAllComponents,
-    generateEnvironmentFiles,
-    finalizeProject,
-    sendCompletionAndCleanup,
-    generateAIContextFiles,
-} from '../services';
-import {
     executeAppBuilderIntegrationsPhase,
     ensureWorkspaceRuntimeReady,
 } from './executorAppBuilderPhase';
@@ -43,11 +35,14 @@ import { handlePortConflicts, cleanupOrphanedDirectory } from './executorPreflig
 import { executeSampleDataPhase } from './executorSampleDataPhase';
 import { ProgressTracker } from './shared';
 import { COMPONENT_IDS } from '@/core/constants';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { getAppBuilderComponentEntry } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import { componentRegistryFrom } from '@/features/components/services/componentRegistryAccess';
+import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
+import { cloneAllComponents, installAllComponents } from '@/features/project-creation/services/componentInstallationOrchestrator';
+import { finalizeProject, generateEnvironmentFiles, sendCompletionAndCleanup } from '@/features/project-creation/services/projectFinalizationService';
 import { HandlerContext } from '@/types/handlers';
 import { isEdsStackId } from '@/types/typeGuards';
 import type { MeshPhaseState } from '@/types/webview';
@@ -59,7 +54,7 @@ import type { ProjectCreationConfig } from '@/types/webviewRequests';
 // ============================================================================
 
 /** Keys of a project's component instances (empty when none set). */
-function getComponentInstanceKeys(project: import('@/types').Project): string[] {
+function getComponentInstanceKeys(project: import('@/types/base').Project): string[] {
     return Object.keys(project.componentInstances || {});
 }
 
@@ -109,8 +104,8 @@ function selectedAppBuilderIds(typedConfig: ProjectCreationConfig): string[] {
 export function buildInitialProject(
     typedConfig: ProjectCreationConfig,
     projectPath: string,
-    existingProject?: import('@/types').Project,
-): import('@/types').Project {
+    existingProject?: import('@/types/base').Project,
+): import('@/types/base').Project {
     return {
         name: typedConfig.projectName,
         // Only when the user actually set one. Seeding it from the slug would
@@ -208,7 +203,7 @@ export async function executeProjectCreation(
 
     // Load existing project state if in edit mode (to preserve creation date);
     // otherwise clean up any orphaned/invalid directory (new project only).
-    let existingProject: import('@/types').Project | undefined;
+    let existingProject: import('@/types/base').Project | undefined;
     if (isEditMode) {
         existingProject = await loadExistingProjectForEdit(projectPath, context);
     } else {
@@ -229,7 +224,7 @@ export async function executeProjectCreation(
 
     progressTracker('Setting Up Project', 15, 'Initializing project configuration...');
 
-    const project: import('@/types').Project = buildInitialProject(
+    const project: import('@/types/base').Project = buildInitialProject(
         typedConfig,
         projectPath,
         existingProject,

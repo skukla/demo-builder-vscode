@@ -7,31 +7,18 @@
 
 import * as vscode from 'vscode';
 import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
-import { BaseWebviewCommand } from '@/core/base';
-import { StateManager } from '@/core/state';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // Mock VS Code API
 
 // Mock dependencies
-jest.mock('@/core/state');
 
 // Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-    Logger: jest.fn().mockImplementation(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 // Mock the AI handler map so we can verify wiring
 jest.mock('@/features/dashboard/handlers/aiHandlers', () => ({
@@ -84,18 +71,13 @@ describe('ShowAiCommand', () => {
         } as unknown as vscode.ExtensionContext;
 
         mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({
+            getCurrentProject: jest.fn().mockResolvedValue(createMockProject({
                 name: 'Test Project',
                 path: '/test/project',
-            } as Project),
+            })),
         } as unknown as jest.Mocked<StateManager>;
 
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
 
         command = new ShowAiCommand(
             mockContext,

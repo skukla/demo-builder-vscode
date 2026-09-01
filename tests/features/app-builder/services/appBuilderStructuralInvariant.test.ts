@@ -26,8 +26,8 @@ jest.setTimeout(5000);
 // =============================================================================
 
 const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell', () => ({
-    ...jest.requireActual('@/core/shell'),
+jest.mock('@/core/shell/orgContextEnv', () => ({
+    ...jest.requireActual('@/core/shell/orgContextEnv'),
     withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
 }));
 
@@ -43,6 +43,7 @@ import {
     removeAppBuilderComponent,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // =============================================================================
 // Fixtures — N integrations
@@ -90,13 +91,7 @@ function createDeps() {
         commandManager: {
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
         },
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            trace: jest.fn(),
-        },
+        logger: createMockLogger(),
         saveProject: jest.fn().mockResolvedValue(undefined),
         getCachedOrganization: jest.fn().mockReturnValue(undefined),
         deployMesh: jest.fn().mockResolvedValue({ success: true, data: {} }),

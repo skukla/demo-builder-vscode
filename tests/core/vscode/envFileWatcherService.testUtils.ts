@@ -6,16 +6,10 @@
  */
 
 import * as vscode from 'vscode';
+import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockStateManager } from '../../helpers/stateManagerFake';
 
 // Mock logger FIRST (before any imports that might use it)
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
 
 // Mock file system watchers
 export const mockWatchers: any[] = [];
@@ -125,18 +119,12 @@ jest.mock('@/core/vscode/workspaceWatcherManager', () => {
 });
 
 // Mock StateManager
-export const mockStateManager = {
+export const mockStateManager = createMockStateManager({
     getCurrentProject: jest.fn(),
-};
+});
 
 // Mock logger
-export const mockLogger = {
-    info: jest.fn(),
-    debug: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    trace: jest.fn(),
-};
+export const mockLogger = createMockLogger();
 
 /**
  * Reset all mocks and state

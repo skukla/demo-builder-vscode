@@ -13,16 +13,6 @@ jest.mock('vscode', () => ({
     EventEmitter: require('../../../../helpers/vscodeEventEmitter').VscodeEventEmitter,
 }));
 
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    })),
-}));
-
 jest.mock('@/features/eds/services/daAuthHelperToken', () => ({
     readDaAuthHelperToken: jest.fn(() => null),
     writeDaAuthHelperToken: jest.fn(() => true),

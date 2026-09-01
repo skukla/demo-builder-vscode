@@ -40,7 +40,7 @@ export async function handleCheckRepoReadiness(
     }
 
     try {
-        const { fileOperations } = getGitHubServices(context);
+        const { fileOperations } = getGitHubServices(context.context.secrets);
         const readiness = await classifyRepoForStorefront(
             fileOperations,
             owner,

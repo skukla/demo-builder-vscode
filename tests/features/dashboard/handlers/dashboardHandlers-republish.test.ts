@@ -7,7 +7,7 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 
 jest.setTimeout(5000);
 
@@ -32,15 +32,20 @@ jest.mock('vscode', () => ({
 }), { virtual: true });
 
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/features/authentication');
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/ProjectNameValidator', () => ({
     validateProjectNameSecurity: jest.fn(),
 }));
 jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
@@ -67,6 +72,8 @@ jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () =>
 
 import * as vscode from 'vscode';
 import { handleRepublishContent } from '@/features/dashboard/handlers/dashboardHandlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // =============================================================================
 // Utilities
@@ -99,16 +106,11 @@ function createMockEdsProject(overrides?: Partial<Project>): Project {
 function createMockContext(project: Project | undefined): HandlerContext {
     return {
         panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
-        logger: {
-            info: jest.fn(),
-            debug: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-        } as unknown as HandlerContext['logger'],
+        }) as unknown as HandlerContext['stateManager'],
+        logger: createMockLogger() as unknown as HandlerContext['logger'],
         sendMessage: jest.fn(),
         context: { secrets: {} },
     } as unknown as HandlerContext;

@@ -4,9 +4,10 @@
  * Shared mocks, factories, and utilities for mesh deployer test suite.
  */
 
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
  * Creates a test project with Commerce configuration
@@ -39,13 +40,7 @@ export { createMockCommandExecutor } from '../../../helpers/commandExecutorFake'
  * Creates a real Logger instance for testing (no mocking needed)
  */
 export function createTestLogger(): Logger {
-    return {
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        trace: jest.fn(),
-    };
+    return createMockLogger();
 }
 
 /**

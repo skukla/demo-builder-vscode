@@ -15,9 +15,10 @@ import {
     StopDemoCommand,
     mockCommandExecutor,
 } from './stopDemo.testUtils';
-import { StateManager } from '@/core/state';
+import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
 import * as vscode from 'vscode';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const MockProcessCleanup = ProcessCleanup as jest.MockedClass<typeof ProcessCleanup>;
 
@@ -49,8 +50,7 @@ describe('StopDemoCommand - Error Handling', () => {
         mockCommandExecutor.execute.mockResolvedValue({
             code: 0,
             stdout: '12345',
-            stderr: '',
-        });
+            stderr: '', duration: 0 });
 
         // Mock extension context
         mockContext = {
@@ -84,12 +84,7 @@ describe('StopDemoCommand - Error Handling', () => {
         } as any;
 
         // Mock logger
-        mockLogger = {
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-            debug: jest.fn(),
-        } as any;
+        mockLogger = createMockLogger() as any;
 
         // Mock vscode.window.withProgress to execute task immediately
         (vscode.window as any).withProgress = jest.fn().mockImplementation(
@@ -166,7 +161,7 @@ describe('StopDemoCommand - Error Handling', () => {
             const finalSaves = mockStateManager.saveProject.mock.calls.filter(
                 call => call[0].status === 'ready'
             );
-            expect(finalSaves.length).toBe(0);
+            expect(finalSaves).toHaveLength(0);
         });
     });
 
@@ -186,7 +181,7 @@ describe('StopDemoCommand - Error Handling', () => {
             const finalSaves = mockStateManager.saveProject.mock.calls.filter(
                 call => call[0].status === 'ready'
             );
-            expect(finalSaves.length).toBe(0);
+            expect(finalSaves).toHaveLength(0);
         });
 
         it('should allow retry after error', async () => {

@@ -16,17 +16,13 @@ import {
 } from '@/features/eds/services/configGenerator';
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('configGenerator', () => {
     let mockLogger: Logger;
 
     beforeEach(() => {
-        mockLogger = {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as unknown as Logger;
+        mockLogger = createMockLogger() as unknown as Logger;
     });
 
     describe('mapBackendToEnvironmentType', () => {
@@ -558,9 +554,7 @@ describe('configGenerator', () => {
 
         let mockLogger: Logger;
         beforeEach(() => {
-            mockLogger = {
-                debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(),
-            } as unknown as Logger;
+            mockLogger = createMockLogger() as unknown as Logger;
         });
 
         it('GOLDEN: migrated mesh project produces byte-identical config.json (snapshot guard)', () => {

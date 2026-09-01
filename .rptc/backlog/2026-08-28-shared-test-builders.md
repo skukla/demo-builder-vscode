@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # Give StateManager and Project fixtures a shared builder, the way HandlerContext has one
@@ -173,6 +173,112 @@ numbers are the whole measure; nothing here needs a subjective judgement.
 `node .claude/skills/test-divergence-scan/scan.mjs tests`, at release cuts. The
 table above is the baseline a later run is compared against.
 
+## Deliberately left — the standing list
+
+Every item here was a decision, not an omission. Recorded because a deferral that
+lives only in a commit message is a deferral nobody finds again.
+
+**Items 1, 2 and 3 are now CLOSED (2026-08-31).** Their entries are kept rather
+than deleted, because in all three cases the recorded reason for deferring turned
+out to be wrong, and how it was wrong is the useful part. What remains open is
+items 4-6, and 4 is a measured decision to build nothing.
+
+### 1. Logger literals inside `jest.mock` factories — CLOSED 2026-08-31
+
+Filed as "twenty-six, load-bearing, expect them to collapse when [[PL-31]] retires
+the logging barrel". The count was 23 across 21 files, and waiting for PL-31 turned
+out to be unnecessary — but the reason they survived is the part worth keeping.
+
+**Nothing was measuring them.** Both ratchets in `canonical-fakes.test.ts` walk
+object literals in ordinary test code; neither looks inside a `jest.mock` factory.
+So this group sat in a blind spot and outlived every other one — not because it was
+hard, but because it was invisible. A check now covers it, control-tested by
+planting a violation and confirming it is named.
+
+The stated blocker was also only half true. A factory is hoisted above the imports
+and cannot reference an imported builder — but the factory BODY runs lazily, so a
+`require()` inside it reaches the builder fine. That idiom had been proven on a real
+suite in August and then reverted "to keep the batch one shape", which is how a
+solved problem stayed filed as a blocked one for three days.
+
+What it actually split into, once probed rather than reasoned about:
+
+| | |
+|---|---|
+| Deleted — the global setup mock now covers them | 14 |
+| Converted to the builder via lazy `require` | 8 |
+| Deleted — dead, its suites pass without it | 1 |
+
+**Thirteen of the fourteen deletions came from one source line.**
+`prerequisitesCacheManager.ts` is the only file in `src/` that imports
+`@/core/logging/debugLogger` rather than the barrel, and the shared node setup
+mocked the barrel ALONE — so its whole suite family could not use the shared mock
+and each file re-implemented it. Covering the deep path in `tests/setup/node.ts`
+deleted all thirteen at once. That change also had to happen for PL-31 regardless:
+the old single-path mock would have stopped intercepting anything the moment the
+barrel was retired.
+
+Two mistakes, both caught by the suite:
+
+- The removal pattern `'@/core/logging[^']*'` also matched
+  `@/core/logging/errorLogger`, which stubs a CLASS rather than the accessor.
+  Restored.
+- A converted factory read its captured `mockDebug` at factory-run time instead of
+  on the first `getLogger()` call. The factory is hoisted above
+  `const mockDebug = jest.fn()`, so two suites failed to LOAD with "cannot access
+  before initialization" — and because they never ran, the summary read
+  "0 tests failed". Fixed by memoising inside `getLogger`.
+
+### 2 and 3. The `{ execute }` fakes — CLOSED 2026-08-31 (`10d77eb3b`)
+
+These were filed as two separate deferrals, "eleven cast `as never`" and "fifteen
+ambiguous". **Both descriptions were wrong, and reading the declared types is what
+showed it.**
+
+There were **42**, not 26. The counts came from a line-based scan that missed every
+multi-line literal.
+
+And none of them were ambiguous. Every consumer — `ServiceLocator.setCommandExecutor`,
+every `commandManager:` field, every constructor argument — declares `CommandExecutor`,
+and one `grep` of the signatures said so. "Not clearly a CommandExecutor" was a
+guess presented as a finding; the falsifying command took one call and was
+available before the deferral was written.
+
+The resolution, once the types were read:
+
+| | |
+|---|---|
+| A builder call with a redundant cast bolted on — the builder already returns the right type | 11 |
+| A bare `{ execute }` literal, which cannot satisfy a CLASS with private fields | 30 |
+| A pair of `as any` on a helper whose own interface declares what the builders return | 1 |
+
+All 42 gone, adopters 32 → 67, `as never` across tests 880 → 803. The general rule
+this exposed — that `as any` and `as never` are banned outright in tests — is now a
+convention with its own ratchet, tracked as [[PL-32]].
+
+### 4. Four one-method shapes NEED NO BUILDER — measured, not skipped
+`{ dispose }` (78), `{ getAccessToken }` (65), `{ report }` (41),
+`{ executeCommand }` (38). Each stands in for a ONE-METHOD interface —
+`vscode.Disposable`, `TokenProvider`, `vscode.Progress`, and the vscode commands
+bridge. A literal `{ dispose: jest.fn() }` is a COMPLETE fake of `Disposable`;
+there is nothing for a builder to supply and nothing to drift.
+
+This sharpens the convention rather than dodging it: the smell was never
+"hand-rolled", it is **incomplete relative to the real type**, and a one-method
+interface cannot be incomplete. The 222 literals in this group are correct as they
+stand. Do not build these four builders.
+
+### 5. The flaky socket test
+`inExtensionMcpServer.test.ts` → "reports the build label when one is supplied"
+timed out once under full-suite load, passed 3/3 alone, and passed with unrelated
+changes stashed. A binding race the suite's own comment says it makes visible
+rather than fixes. Not this item's, but nobody else has it.
+
+### 6. Component mutation coverage
+Needs a react-only Stryker config; blocked on the `@jest-environment` pragma vs
+sandbox interaction and on `user-event`'s clipboard teardown. Raised 2026-08-30 and
+never filed anywhere until now.
+
 ## Shipped so far
 
 - 2026-08-28  refactor(tests): type the builders that stand for real interfaces (`969e91786`)
@@ -209,3 +315,16 @@ table above is the baseline a later run is compared against.
 - 2026-08-31  test(sop): stop the hand-rolled-fake bleeding, rather than draining the pool (`24827cd9a`)
 - 2026-08-31  docs(loop): the wall conversion, written for someone who was not here (`c17385ed7`)
 - 2026-08-31  Slice done overnight 2026-08-31: rule 1 (one home per builder) verified already complete; canonical-fakes ratchet added and honestly re-measured (301 real, after excluding 107 jest.mock-factory literals the runtime forbids converting); logger ledger now 296. Remaining: the other fixture kinds PL-16 names (state manager, project, token provider), still convert-on-touch.
+- 2026-08-31  test(helpers): 121 logger fakes become calls to the builder that already existed (`9942fb1c6`)
+- 2026-08-31  test: 138 logging mocks were dead — probed as a set, then module by module (`5439928d1`)
+- 2026-08-31  test(setup): every suite gets a working getLogger, so none has to mock one to survive (`42e643835`)
+- 2026-08-31  test: 68 `as never` casts deleted outright, 10 more now name what they pretend to be (`b8c3d9a95`)
+- 2026-08-31  docs(backlog): capture what was deliberately left, and rule that four shapes need no builder (`4466bafaa`)
+- 2026-08-31  test(helpers): 29 command-executor fakes adopt the builder, and the typing found four invented shapes (`25a0a84b7`)
+- 2026-08-31  test(helpers): the canonical Project fixture was copied from the wrong artifact (`db07d4eb9`)
+- 2026-08-31  docs(tests): the global logger mock is aimed at a barrel we have scheduled for deletion (`f704df787`)
+- 2026-08-31  test(shell): three logging mocks my probe never looked at, and they were dead (`7bd437597`)
+- 2026-08-31  test: the 243 deferred loggers were 217 convertible and 26 real — 466 down to 30 (`d29a94838`)
+- 2026-08-31  feat(tests): the cast is the smell — nine ratcheting ceilings, target zero (`1b214a9ad`)
+- 2026-08-31  test(helpers): the StateManager fake covers the interface, and the typing caught four defects (`76190bd73`)
+- 2026-08-31  test(logging): the factory-logger group closes — 23 to zero, and the blind spot with it (`9371cc9be`)

@@ -86,12 +86,37 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > [src/features/CLAUDE.md](../../src/features/CLAUDE.md) · enforced by eslint.
 > *Why:* it keeps a feature replaceable. Cross-feature imports are how two features quietly become one.
 
-> **Convention.** `@/core/*` and `@/types` are imported through their barrel file.
-> Features are imported directly, and get no barrel.
-> [ADR-022](../architecture/adr/022-barrel-files.md) · Enforced by the `featureBarrels`
-> ledger in `tests/sop/architecture-rules.exemptions.json` — five predate the rule and the
-> set may only shrink.
-> *Why:* core is a shared surface worth curating; a feature barrel mostly makes cross-feature imports easy, which is the thing to discourage.
+> **Convention.** A module is imported by the path that DEFINES the symbol. No
+> re-export-only `index.ts` — not in `core/`, not in a feature. **The ledger is
+> CLOSED**: all 43 that predated the rule were retired on 2026-08-31, so this is now
+> a ban with nowhere to write an exception down.
+> [ADR-022](../architecture/adr/022-barrel-files.md) · Enforced by the `reExportIndex`
+> ledger in `tests/sop/architecture-rules.exemptions.json`, with the `featureBarrels`
+> ledger — now empty — banning feature-level barrels outright.
+> *Why:* a symbol reachable by two paths is a symbol whose home nobody can name. It is
+> also the rule this codebase already follows: **1,935 imports reach into a module from
+> outside it, against 162 from within**, so the barrels were the minority report, not the
+> convention. Seven of the eight webview bundle entries are `index.tsx` by necessity
+> and are read from `WEBVIEW_ENTRIES`, so the check cannot drift from the build. The
+> eighth — the dashboard — is `main.tsx`, because an `index.ts` barrel used to sit
+> beside it and tsc keeps only one file per basename. That barrel is gone, so the
+> constraint is too; the rename is simply not worth an entry-point change.
+>
+> **This replaced an earlier convention that said the opposite for `core/`, and the
+> correction is worth keeping.** The old rule — core is "a shared surface worth curating",
+> features get nothing — was measured on 2026-08-31 and the curation was not happening:
+> 103 of 165 named exports were never imported through their barrel. Research then found
+> the accepted industry rule is about PLACEMENT, not layer: a barrel is the public API of
+> a unit, and files inside it import each other directly. Against that rule this codebase
+> was not split between two conventions; it was already on the far side of the line, with
+> a dozen barrels that a minority of callers used.
+>
+> **The published performance case was checked and does NOT apply here** — that check is
+> the reason the rule is scoped to legibility. Atlassian measured -75% build minutes
+> removing barrels across 90,000 files; Angular removed them from its linker for 500ms-1s.
+> Our whole typecheck is 3.95s over 2,202 files, and the suite runs in full rather than
+> selecting affected tests, so the mechanism behind those wins has nothing to bite on.
+> Adopted for one reason, not three.
 
 > **Convention.** Commands are `camelCase`, React components `PascalCase`, constants
 > `UPPER_SNAKE_CASE`, and a file is named for what it exports —
@@ -626,6 +651,30 @@ remedy differs for each:
 Where a seam is the answer, type it to the methods the code actually calls rather than to
 the class. A parameter wider than the need is usually why the mock existed.
 
+**And it is usually why the DUPLICATION existed, which is the same finding pointed at
+production code.** When several files each build their own copy of something a shared
+accessor already provides, the question to ask first is not "how do I hand this to each
+of them?" but "why can none of them call the accessor?" Twice now the answer has been
+that the accessor asked for more than it reads:
+
+| Accessor | Asked for | Actually read | Files that built their own instead |
+|---|---|---|---|
+| `getGitHubServices` | a whole `HandlerContext` | `context.context.secrets` | 5 |
+| `componentRegistryFrom` | a whole `HandlerContext` | `.componentRegistry` | *(7 constructions exist; not yet adjudicated)* |
+
+In the first case the width was the whole cause: four of the five callers hold a
+`SecretStorage` and no context, so they *could not* call it. Narrowing the accessor
+turned four separate threading jobs into four one-line calls, and left exactly one
+construction in the codebase — inside the cache, where it belongs.
+
+This is a diagnostic, not a law, and deliberately so — at two instances it has not
+earned one. **Do not turn "reads one field of its parameter" into a check.** Ten
+functions here do that and most are correct: `MessageHandler` fixes the handler
+signature by contract, so a handler that reads one field cannot narrow without
+breaking the dispatch map. The signal worth acting on is the conjunction — a shared
+accessor exists AND files construct the thing anyway — which is what the architecture
+ledger already records.
+
 ---
 
 #### Also checked here
@@ -651,6 +700,39 @@ check says so and names the file.
 > looks like an extraction job rather than a deletion. Enforced by
 > `tests/sop/duplicate-test-files.test.ts`, which compares whole test sets within a
 > directory.
+
+> **Convention.** A fake standing in for a real type comes from the builder for that
+> type. `{...} as unknown as Project` is a fake with the type check switched off.
+> Enforced by the `castCeilings` pins in `tests/sop/canonical-fakes.ledger.json` —
+> nine types that already have a builder, and the count for each may only fall.
+> *Why:* every fixture defect found on 2026-08-31 was hiding behind one of these
+> casts, and none of them was visible to any check. Twenty-six StateManager members
+> faked for methods that DO NOT EXIST — three called nowhere in `src/`, one belonging
+> to the authentication service. A whole HandlerContext that was `{}`. An argument
+> passed `as never`. `{ status: 'running' }` standing in for a Project. Each one
+> typechecked, each one passed, because a cast is an instruction to stop checking.
+>
+> **The target is zero for these nine, and only these nine.** They are not the
+> reasonable-looking casts — they are the ones with a builder sitting next to them:
+> `Project` (198), `HandlerContext` (59), `Logger`, `StateManager`, and friends, 410
+> in total. A cast to a type with NO builder is not counted and is often right: a
+> fetch `Response` stub carrying three of its twenty members is correct when the code
+> reads three. The rule is *use the builder that exists*, not *never cast*.
+>
+> A ceiling rather than a file ledger, because 324 files carry one of these and that
+> is too many rows to keep honest, while nine numbers maintain themselves. The pin
+> demands EXACT equality: lowering a count means lowering the pin in the same commit,
+> so the ratchet cannot slacken and a regression cannot hide beneath a stale number.
+>
+> **And the inverse, so this is not read as "literals are bad".** A fake of a
+> ONE-METHOD interface is complete by construction and needs no builder. Measured
+> 2026-08-31: `{ dispose }` (78 uses), `{ getAccessToken }` (65), `{ report }` (41)
+> and `{ executeCommand }` (38) each stand in for an interface with exactly one
+> member — `vscode.Disposable`, `TokenProvider`, `vscode.Progress`, the vscode
+> commands bridge. 222 literals, all correct as written. The smell is
+> INCOMPLETENESS relative to the real type, not hand-writing; a one-method
+> interface cannot be incomplete, and building those four builders would add
+> indirection with nothing behind it.
 
 > **Convention.** A test file lives at the path mirroring the source file it covers.
 > *Why:* it is how you find the tests for a file without searching, and how a missing suite
@@ -678,23 +760,40 @@ check says so and names the file.
 > [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — where a
 > builder belongs is a judgement about who needs it.
 
-> **Convention.** A builder returns the REAL type. Never `as never`, never `as any` on
-> the builder itself. Where the structural fake is partial, cast the object literal INTO
-> the return type at the builder's boundary — once, where it is visible.
-> *Why:* a builder typed `(): Logger` stops compiling the day `Logger` gains a method —
-> one failure, one fix, at the one place that needs changing. A fake cast to `never`
-> fails nothing and silently ceases to resemble what it stands for. This is the repo's
-> standing "a cast at a call boundary is a silenced type error", applied to test code
-> where it had been ignored.
+> **Convention.** No test erases a type. `as any` and `as never` are banned anywhere in
+> `tests/`. A builder is declared as the REAL type it stands for; where the structural
+> fake cannot satisfy that type honestly, cast the object literal INTO it at the
+> builder's boundary as `as unknown as X` — once, where it is visible.
+> *Why:* `as any` and `as never` are not casts, they are the absence of one. Both leave
+> every DOWNSTREAM use unchecked as well, because what comes out has no type left to
+> check against. `as unknown as X` still names X, so the lie stays local to the
+> construction site and callers stay honest. `as never` is the worse of the pair:
+> `never` is assignable to every type, so it is a skeleton key that reads like a locked
+> door.
 >
-> Watched pay off on 2026-08-31: converting `publishKeyRegistrar`'s suite off its module
-> mock let it pass a typed logger, and typing it FAILED THE BUILD on `logger.debug.mock`
-> — a real `Logger` has no `.mock`. Eleven `as never` casts had been hiding that. The
-> answer is `jest.Mocked<Logger>`: assignable to `Logger`, so no cast at the call, with
-> the mock still reachable.
-> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced directly** —
-> `npm run typecheck:tests` catches it the moment a builder is honestly typed, which is
-> the point.
+> A builder typed `(): Logger` also stops compiling the day `Logger` gains a method —
+> one failure, one fix, at the one place that needs changing. A fake cast to `never`
+> fails nothing and silently ceases to resemble what it stands for.
+>
+> **Watched pay off on 2026-08-31.** Converting `publishKeyRegistrar`'s suite off its
+> module mock let it pass a typed logger, and typing it FAILED THE BUILD on
+> `logger.debug.mock` — a real `Logger` has no `.mock`. Eleven `as never` casts had been
+> hiding that. The answer is `jest.Mocked<Logger>`: assignable to `Logger`, so no cast at
+> the call, with the mock still reachable.
+>
+> The line is not a theory — the canonical builders already fake types no object literal
+> can satisfy (`CommandExecutor` and `StateManager` are CLASSES with private fields) and,
+> measured the same day, `tests/helpers/` contains ZERO of either banned form. The right
+> way was already in use; it had just never been written down, while
+> `@typescript-eslint/no-explicit-any` sat switched OFF for `tests/`.
+>
+> Enforced by `tests/sop/type-erasing-casts.test.ts` — a shrink-only ceiling, because
+> there were 1,916 across 341 files when the rule was adopted and a ban that emits 1,916
+> errors gets switched off within a week. `npm run typecheck:tests` catches the builder
+> half the moment a builder is honestly typed. When both counts reach zero, that suite is
+> deleted and replaced by a `no-restricted-syntax` ban, exactly as the feature-barrel
+> ledger became a ban when it emptied.
+> [ADR-016](../architecture/adr/016-test-strategy.md)
 
 > **Convention.** A fixture's shape is READ, not remembered. A builder's method list
 > comes from the real interface plus what callers actually use; a data fixture is copied
@@ -737,11 +836,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 10 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 25 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 26 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 79 conventions. 62 of them are enforced; 17 are not.**
+**This handbook states 80 conventions. 64 of them are enforced; 16 are not.**
 
 The fifteen that remain are not one thing, and treating them as one is what kept them
 open:

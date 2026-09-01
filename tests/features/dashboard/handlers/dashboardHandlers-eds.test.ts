@@ -6,7 +6,7 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 
 // Explicit test timeout to prevent hanging
 jest.setTimeout(5000);
@@ -41,7 +41,7 @@ jest.mock('vscode', () => ({
 }), { virtual: true });
 
 // Mock ServiceLocator
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
         getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
@@ -55,7 +55,6 @@ jest.mock('@/features/eds/services/helix/helixService');
 jest.mock('@/features/mesh/services/stalenessDetector');
 
 // Mock authentication
-jest.mock('@/features/authentication');
 
 // Mock edsHelpers - getGitHubServices
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
@@ -102,23 +101,20 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
 }));
 
 // Mock core logging (prevents "Logger not initialized" error)
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn().mockReturnValue({
-        info: jest.fn(),
-        debug: jest.fn(),
-        error: jest.fn(),
-        warn: jest.fn(),
-    }),
-    initializeLogger: jest.fn(),
-}));
 
 // Mock validation
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/PathSafetyValidator', () => ({
+    validateProjectPath: jest.fn(),
+}));
+
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
-    validateProjectPath: jest.fn(), // Allow all paths in tests
 }));
 
 // Mock GitHubAppService (dynamically imported for Code Sync verification)
@@ -157,10 +153,11 @@ jest.mock('@/features/eds/services/reset/edsResetService', () => ({
 
 import * as vscode from 'vscode';
 import { handleResetProject } from '@/features/dashboard/handlers/dashboardHandlers';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { HelixService } from '@/features/eds/services/helix/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // =============================================================================
 // Test Utilities
@@ -210,10 +207,10 @@ function createMockContext(project: Project | undefined): HandlerContext {
                 postMessage: jest.fn(),
             },
         } as unknown as HandlerContext['panel'],
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
             saveProject: jest.fn().mockResolvedValue(undefined),
-        } as unknown as HandlerContext['stateManager'],
+        }) as unknown as HandlerContext['stateManager'],
         logger: createMockLogger() as unknown as HandlerContext['logger'],
         debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),

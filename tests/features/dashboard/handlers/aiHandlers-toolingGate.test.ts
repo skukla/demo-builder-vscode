@@ -17,6 +17,7 @@ import {
 } from './aiHandlers.testUtils';
 import type { HandlerContext } from './aiHandlers.testUtils';
 import { COMPONENT_IDS } from '@/core/constants';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 describe('handleRegenerateAiFiles — tooling gate', () => {
     beforeEach(() => {
@@ -38,10 +39,10 @@ describe('handleRegenerateAiFiles — tooling gate', () => {
             },
         };
         const context = createAiHandlerContext({
-            stateManager: {
+            stateManager: createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(meshProject),
                 saveProjectConfigOnly: jest.fn(),
-            } as unknown as HandlerContext['stateManager'],
+            }) as unknown as HandlerContext['stateManager'],
         });
 
         await handleRegenerateAiFiles(context);

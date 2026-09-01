@@ -32,8 +32,8 @@
 
 import { fetchExternalPatches, _clearExternalPatchCacheForTests } from './externalPatchFetcher';
 import { checkPatchTarget } from './patchTargetPolicy';
-import type { Logger } from '@/types';
 import type { CodePatchSource } from '@/types/demoPackages';
+import type { Logger } from '@/types/logger';
 
 /**
  * Code patch definition (loaded from external `code-patches.json` ledger).

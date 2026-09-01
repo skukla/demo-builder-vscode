@@ -20,14 +20,6 @@ jest.mock('@octokit/core', () => ({
 
 
 // Mock logger
-jest.mock('@/core/logging', () => ({
-    getLogger: jest.fn(() => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
-}));
 
 describe('buildArchiveUrl', () => {
     // Test the SHA-vs-branch URL routing directly. The wider
@@ -553,7 +545,7 @@ describe('resetRepoToTemplate — chunked tree creation', () => {
         expect(perCall).toEqual([1, 1]);
         const huge = createTree.mock.calls[0][2][0];
         expect(huge.path).toBe('huge.js');
-        expect(huge.content.length).toBe(4096 * 1024); // intact, not truncated
+        expect(huge.content).toHaveLength(4096 * 1024); // intact, not truncated
     });
 });
 

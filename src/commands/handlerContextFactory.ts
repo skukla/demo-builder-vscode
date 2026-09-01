@@ -24,13 +24,14 @@
  */
 
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
-import { getLogger, getStepLogger } from '@/core/logging';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { getLogger } from '@/core/logging/debugLogger';
 import { ErrorLogger } from '@/core/logging/errorLogger';
-import { ProgressUnifier } from '@/core/utils/progressUnifier';
+import { getStepLogger } from '@/core/logging/stepLogger';
+import { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
+import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 import type { HandlerContext, SharedState } from '@/types/handlers';
-import { getComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 
 /** The panel-specific half — everything the factory cannot know. */
 export interface PanelContextParts {

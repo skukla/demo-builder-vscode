@@ -34,7 +34,7 @@ import { handleRefreshBlockLibraryHeadless } from './refreshBlockLibraryHandler'
 import { handleStartStorefrontSetup, handleCancelStorefrontSetup } from './storefrontSetup/storefrontSetupHandlers';
 import { handleGetStoreStructure } from './storeStructureHandler';
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
-import { validateURL } from '@/core/validation';
+import { validateURL } from '@/core/validation/URLValidator';
 import { resolvePaasAdminPair } from '@/features/components/services/commerceCredentialStore';
 import type { StoreDiscoveryParams } from '@/types/commerceStore';
 import { defineHandlers, type HandlerContext, type HandlerResponse } from '@/types/handlers';

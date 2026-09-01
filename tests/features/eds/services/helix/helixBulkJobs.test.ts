@@ -22,17 +22,12 @@ import {
 import { HELIX_ADMIN_URL } from '@/features/eds/services/helix/helixApiClient';
 import { sleep } from '@/core/utils/sleep';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockSleep = sleep as jest.Mock;
 
 function makeLogger(): Logger {
-    return {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-        trace: jest.fn(),
-    } as unknown as Logger;
+    return createMockLogger() as unknown as Logger;
 }
 
 function makeDeps(logger = makeLogger()): BulkJobDeps {

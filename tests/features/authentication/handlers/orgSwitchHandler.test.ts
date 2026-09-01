@@ -13,7 +13,7 @@
  * the sign-in itself.
  */
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
 jest.mock(
@@ -31,6 +31,8 @@ jest.mock(
 
 import { handleForcedOrgSwitch } from '@/features/authentication/handlers/orgSwitchHandler';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 const PROJECT_ADOBE = {
     organization: 'org123',
@@ -40,15 +42,15 @@ const PROJECT_ADOBE = {
 
 function makeContext(project: unknown = { adobe: PROJECT_ADOBE }): HandlerContext {
     return {
-        stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
-        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
+        logger: createMockLogger(),
         debugLogger: { debug: jest.fn(), trace: jest.fn() },
     } as unknown as HandlerContext;
 }
 
 function mockLogin(result: boolean): jest.Mock {
     const loginAndRestoreProjectContext = jest.fn().mockResolvedValue(result);
-    const { ServiceLocator } = require('@/core/di');
+    const { ServiceLocator } = require('@/core/di/serviceLocator');
     ServiceLocator.getAuthenticationService.mockReturnValue({ loginAndRestoreProjectContext });
     return loginAndRestoreProjectContext;
 }

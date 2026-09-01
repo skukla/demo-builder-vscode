@@ -5,16 +5,16 @@
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { formatGroupName } from './formatters';
+import { resolveBackendOwnedScopeValue } from '@/core/config/backendOwnedScope';
 import { generateConfigFile } from '@/core/config/configFileGenerator';
-import { COMPONENT_IDS } from '@/core/constants';
-import type { SecretStorageLike } from '@/core/di/serviceLocator';
-import { normalizeIfUrl } from '@/core/validation/Validator';
-import { resolveBackendOwnedScopeValue } from '@/features/components/config/backendOwnedScope';
 import {
     PAAS_CATALOG_SERVICE_ENDPOINT,
     CATALOG_SERVICE_ENDPOINT,
     ACCS_CATALOG_SERVICE_ENDPOINT,
-} from '@/features/components/config/envVarKeys';
+} from '@/core/config/envVarKeys';
+import { COMPONENT_IDS } from '@/core/constants';
+import type { SecretStorageLike } from '@/core/di/serviceLocator';
+import { normalizeIfUrl } from '@/core/validation/Validator';
 import { hydrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
 import type { ConfigMap } from '@/features/components/services/envVarHelpers';
 import {
@@ -23,13 +23,14 @@ import {
     type ConfigGeneratorParams,
 } from '@/features/eds/services/configGenerator';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
-import type { Logger, Project } from '@/types';
+import type { Project } from '@/types/base';
 import {
     TransformedComponentDefinition,
     EnvVarDefinition,
     ConfigFileDefinition,
     ComponentRegistry,
 } from '@/types/components';
+import type { Logger } from '@/types/logger';
 import { getMeshEndpointUrl } from '@/types/typeGuards';
 
 /**

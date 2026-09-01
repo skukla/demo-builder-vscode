@@ -13,15 +13,16 @@
 
 import { createMeshVerifyCheck } from '@/features/dashboard/services/onOpenChecks/meshVerifyCheck';
 import { CHECK_IDS } from '@/types/messages';
-import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks';
-import type { Project } from '@/types';
+import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks/types';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
-const mockLogger: Logger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn(), trace: jest.fn() };
+const mockLogger: Logger = createMockLogger();
 
 function makeCtx(): { ctx: OnOpenCheckContext; post: jest.Mock } {
     const post = jest.fn();
-    return { ctx: { project: { path: '/proj' } as Project, logger: mockLogger, post }, post };
+    return { ctx: { project: createMockProject({ path: '/proj' }), logger: mockLogger, post }, post };
 }
 
 function makeDeps(verifyResult: unknown) {

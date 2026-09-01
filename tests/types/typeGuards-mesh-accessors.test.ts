@@ -21,6 +21,7 @@ import {
     getMeshEndpointUrl,
 } from '@/types/typeGuards';
 import { Project, ComponentInstance } from '@/types/base';
+import { createMockProject } from '../helpers/projectFake';
 
 describe('typeGuards - Mesh Component Accessors', () => {
 
@@ -82,7 +83,7 @@ describe('typeGuards - Mesh Component Accessors', () => {
         });
 
         it('should return empty array when componentInstances is undefined', () => {
-            const project = {} as Project;
+            const project = createMockProject();
             expect(getComponentInstancesBySubType(project, 'mesh')).toEqual([]);
         });
 

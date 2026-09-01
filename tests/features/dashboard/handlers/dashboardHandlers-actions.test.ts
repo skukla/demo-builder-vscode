@@ -17,6 +17,7 @@ import {
 } from '@/features/dashboard/handlers/dashboardHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 import { setupMocks, createDashboardProject } from './dashboardHandlers.testUtils';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 // Mock vscode
 jest.mock(
@@ -44,21 +45,23 @@ jest.mock(
 jest.mock('@/features/mesh/services/stalenessDetector');
 
 // Mock authentication
-jest.mock('@/features/authentication');
 
 // Mock ServiceLocator
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
     },
 }));
 
 // Mock validation
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/URLValidator', () => ({
+    validateURL: jest.fn(),
+}));
+
+jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
     validateOrgId: jest.fn(),
     validateProjectId: jest.fn(),
     validateWorkspaceId: jest.fn(),
-    validateURL: jest.fn(),
 }));
 
 // Mock projectDeletionService to avoid deep dependency chain
@@ -68,9 +71,15 @@ jest.mock('@/features/projects-dashboard/services/projectDeletionService', () =>
 
 // Mock the projects-dashboard services barrel (dynamic-imported by the edit/
 // rename/export handlers) to avoid its deep dependency chain
-jest.mock('@/features/projects-dashboard/services', () => ({
-    extractSettingsFromProject: jest.fn(() => ({ selectedPackage: 'citisignal' })),
+jest.mock('@/features/projects-dashboard/services/projectRenameService', () => ({
     renameProjectCore: jest.fn().mockResolvedValue({ success: true }),
+}));
+
+jest.mock('@/features/projects-dashboard/services/settingsSerializer', () => ({
+    extractSettingsFromProject: jest.fn(() => ({ selectedPackage: 'citisignal' })),
+}));
+
+jest.mock('@/features/projects-dashboard/services/settingsTransferService', () => ({
     exportProjectSettings: jest.fn().mockResolvedValue({ success: true }),
 }));
 
@@ -142,9 +151,9 @@ describe('Dashboard Action Handlers', () => {
                 },
             });
             const mockContext = {
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(projectWithoutPort),
-                },
+                }),
                 logger: {
                     debug: jest.fn(),
                 },
@@ -158,9 +167,9 @@ describe('Dashboard Action Handlers', () => {
 
         it('should not open browser when no project', async () => {
             const mockContext = {
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
-                },
+                }),
                 logger: {
                     debug: jest.fn(),
                 },
@@ -186,9 +195,9 @@ describe('Dashboard Action Handlers', () => {
                 },
             });
             const mockContext = {
-                stateManager: {
+                stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(projectWithCustomPort),
-                },
+                }),
                 logger: {
                     debug: jest.fn(),
                 },
@@ -206,7 +215,7 @@ describe('Dashboard Action Handlers', () => {
             const { mockContext, mockProject } = setupMocks();
             const {
                 extractSettingsFromProject,
-            } = require('@/features/projects-dashboard/services');
+            } = require('@/features/projects-dashboard/services/settingsSerializer');
 
             const result = await handleEditProject(mockContext);
 
@@ -235,7 +244,7 @@ describe('Dashboard Action Handlers', () => {
     describe('handleOpenAdminPanel', () => {
         const mockShowInformationMessage = (vscode.window as any)
             .showInformationMessage as jest.Mock;
-        const { validateURL } = require('@/core/validation');
+        const { validateURL } = require('@/core/validation/URLValidator');
 
         /** Flush the fire-and-forget notification .then chain. */
         const flushPromises = () => new Promise((resolve) => setImmediate(resolve));

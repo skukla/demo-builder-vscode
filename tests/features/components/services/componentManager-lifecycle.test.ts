@@ -11,7 +11,7 @@
  */
 
 import { ComponentManager } from '@/features/components/services/componentManager';
-import { Project } from '@/types';
+import { Project } from '@/types/base';
 import { Logger } from '@/types/logger';
 import { setupComponentManager } from './componentManager.testUtils';
 

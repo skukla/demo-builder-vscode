@@ -15,7 +15,7 @@ import * as vscode from 'vscode';
 import { z } from 'zod';
 import { clearAdobeTarget } from './adobeTargetStore';
 import { asRawText, asText } from './mcpToolResult';
-import { dispatchHandler } from '@/core/handlers';
+import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import {
@@ -61,7 +61,7 @@ interface ProviderStatus {
  * that list.
  */
 async function githubStatus(ctx: HandlerContext): Promise<ProviderStatus> {
-    const { tokenService } = getGitHubServices(ctx);
+    const { tokenService } = getGitHubServices(ctx.context.secrets);
     const validation = await tokenService.validateToken();
     if (!validation.valid) return githubVsCodeSessionStatus();
 

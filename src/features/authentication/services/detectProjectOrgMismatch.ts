@@ -22,7 +22,7 @@
 
 import { ensureOrgContext } from './ensureOrgContext';
 import type { AdobeOrg } from './types';
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
 /**

@@ -10,10 +10,10 @@ import {
     CreateProjectWebviewCommand,
 } from './createProject.testUtils';
 import * as vscode from 'vscode';
-import { StateManager } from '@/core/state';
-import type { Logger } from '@/types/logger';
+import { StateManager } from '@/core/state/stateManager';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock('@/core/di', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
             isAuthenticated: jest.fn(),
@@ -73,14 +73,6 @@ function createMockStateManager(): StateManager {
 /**
  * Create mock Logger
  */
-function createMockLogger(): Logger {
-    return {
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    } as any;
-}
 
 /**
  * Helper to create wizard command instance

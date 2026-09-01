@@ -595,9 +595,16 @@ describe('module paths cited by current-tense documents resolve', () => {
         // A detector that has stopped detecting reports "all clear" in the same
         // words as one that verified. These are the four real shapes it must catch.
         expect(citationResolves('@/services/serviceLocator')).toBe(false); // moved to @/core/di
-        expect(citationResolves('@/core/errors')).toBe(false); // directory deleted
+        // Was `@/core/errors`, which stopped being an example on 2026-08-31 when
+        // src/types/errors.ts MOVED there and the directory started existing. A
+        // control that names a real absence has to be re-aimed when the absence
+        // ends; this is the other half of that same move, and is now the gone one.
+        expect(citationResolves('@/types/errors')).toBe(false); // moved to @/core/errors
         expect(importResolves('@/features/mesh')).toBe(false); // barrel deleted
-        expect(citationResolves('@/core/di')).toBe(true); // and a live one still passes
+        // Was `@/core/di`, whose re-export index was deleted on 2026-08-31 (PL-31).
+        // Same lesson as the line above, in the other direction: a control that
+        // names a real PRESENCE has to be re-aimed when the presence moves.
+        expect(citationResolves('@/core/di/serviceLocator')).toBe(true); // a live one still passes
     });
 
     it('CONTROL: a placeholder is not mistaken for a path', () => {

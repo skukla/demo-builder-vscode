@@ -26,6 +26,7 @@ import {
 } from '@/features/ai/server/agentOperationNotifier';
 import { AGENT_ALERT_COPY } from '@/features/ai/server/agentAlertCopy';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 jest.mock('vscode', () => ({
     window: { showWarningMessage: jest.fn(), setStatusBarMessage: jest.fn(), withProgress: jest.fn() },
@@ -35,12 +36,7 @@ jest.mock('vscode', () => ({
 
 const mockShow = vscode.window.showWarningMessage as unknown as jest.Mock;
 const mockConfig = vscode.workspace.getConfiguration as unknown as jest.Mock;
-const logger = {
-    info: jest.fn(),
-    debug: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-} as unknown as Logger;
+const logger = createMockLogger() as unknown as Logger;
 
 /** Consent required, which is the default. */
 function consentOn(): void {

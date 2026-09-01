@@ -16,7 +16,7 @@
 
 import React from 'react';
 import type { ServiceGroup, UniqueField } from '../hooks/useComponentConfig';
-import { ConfigSection } from '@/core/ui/components/forms';
+import { ConfigSection } from '@/core/ui/components/forms/ConfigSection';
 
 export interface ServiceGroupListProps {
     groups: ServiceGroup[];

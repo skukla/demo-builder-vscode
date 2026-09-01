@@ -20,6 +20,7 @@ import {
 } from '@/features/eds/services/patches/patchMissTracker';
 import { createPatchReport, addContentResult } from '@/features/eds/services/patches/patchReportHelper';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../../helpers/loggerFake';
 
 // Fail-safe nonexistent default (the jest.mock('os') house rule): a missed
 // override must not read or write the real ~/.demo-builder.
@@ -28,12 +29,7 @@ jest.mock('os', () => ({
     homedir: jest.fn(() => '/nonexistent-home-for-patch-miss-tests'),
 }));
 
-const logger = {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-} as unknown as Logger;
+const logger = createMockLogger() as unknown as Logger;
 
 let dir: string;
 

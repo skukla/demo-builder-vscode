@@ -32,6 +32,7 @@ jest.mock('@/features/mesh/services/deployMeshHeadless', () => ({
 
 import * as vscode from 'vscode';
 import { deployMeshWithFeedback } from '@/features/mesh/services/deployMeshWithFeedback';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /** Capture the reporter withProgress hands the task. */
 function stubWithProgress(): { report: jest.Mock; title: () => string } {
@@ -50,7 +51,7 @@ function deps() {
     return {
         project: { name: 'p', path: '/p' },
         stateManager: {},
-        logger: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() },
+        logger: createMockLogger(),
         extensionPath: '/ext',
     } as never;
 }

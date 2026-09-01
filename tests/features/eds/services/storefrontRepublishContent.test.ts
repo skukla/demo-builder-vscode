@@ -36,6 +36,7 @@ import { resolveByomOverlayConfig } from '@/features/eds/handlers/byomOverlay';
 import { prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
 import type { Logger } from '@/types/logger';
 import type { HelixService } from '@/features/eds/services/helix/helixService';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 /**
  * Helix arrives through `republishStorefrontContent`'s own params rather than by
@@ -49,7 +50,7 @@ const fakeHelix = {
     publishAllSiteContent: mockPublishAllSiteContent,
 } as unknown as HelixService;
 
-const logger = { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn(), trace: jest.fn() } as unknown as Logger;
+const logger = createMockLogger() as unknown as Logger;
 
 function params(overrides: Record<string, unknown> = {}) {
     return {

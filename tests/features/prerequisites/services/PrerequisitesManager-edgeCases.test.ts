@@ -4,15 +4,6 @@
  */
 
 // Mock debugLogger FIRST to prevent "Logger not initialized" errors
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
-}));
-
 jest.mock('@/core/config/ConfigurationLoader');
 
 // Mock the shared module's checkPerNodeVersionStatus function
@@ -30,6 +21,7 @@ import {
     createStandardPrerequisite,
     type TestMocks,
 } from './PrerequisitesManager.testUtils';
+import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
 
 describe('PrerequisitesManager - Edge Cases and Errors', () => {
     let manager: PrerequisitesManager;
@@ -38,7 +30,7 @@ describe('PrerequisitesManager - Edge Cases and Errors', () => {
     beforeEach(() => {
         mocks = setupMocks();
         setupConfigLoader();
-        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger, mocks.executor);
+        manager = new PrerequisitesManager('/mock/extension/path', mocks.logger, mocks.executor, new PrerequisitesCacheManager());
     });
 
     describe('checkPrerequisite - perNodeVersion detection consistency (Step 2)', () => {

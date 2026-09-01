@@ -5,8 +5,8 @@
  * componentManager test files.
  */
 
-import { Project } from '@/types';
-import { CommandExecutor } from '@/core/shell';
+import { Project } from '@/types/base';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 
 /** Canonical command-executor fake (ADR-016). */

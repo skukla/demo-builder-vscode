@@ -6,7 +6,9 @@
  * the dashboard-side status push that stayed behind.
  */
 
-import type { Project } from '@/types';
+import type { Project } from '@/types/base';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('meshStatusHelpers', () => {
     const mockMeshPath = '/projects/demo/components/commerce-mesh';
@@ -44,14 +46,8 @@ describe('meshStatusHelpers', () => {
             const postMessage = jest.fn();
             const context = {
                 panel: { webview: { postMessage } },
-                stateManager: { getCurrentProject: jest.fn().mockResolvedValue(project) },
-                logger: {
-                    debug: jest.fn(),
-                    info: jest.fn(),
-                    warn: jest.fn(),
-                    error: jest.fn(),
-                    trace: jest.fn(),
-                },
+                stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
+                logger: createMockLogger(),
             } as any;
 
             await sendDemoStatusUpdate(context);

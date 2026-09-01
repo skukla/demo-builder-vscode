@@ -16,6 +16,7 @@ import {
     makeOpenInClaudeContext,
     makeOpenInClaudeProject,
 } from './openInClaude.testkit';
+import type { StateManager } from '@/core/state/stateManager';
 
 // The home Chat always launches at the projects root. Pin the root so the
 // cwd-in-log assertion is deterministic.
@@ -52,7 +53,7 @@ describe('OpenInClaudeCommand', () => {
             const project = makeOpenInClaudeProject({ name: 'my-demo-project' });
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                makeStateManager(project) as never,
+                makeStateManager(project) as unknown as StateManager,
                 logger as never
             );
 

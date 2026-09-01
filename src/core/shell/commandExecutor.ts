@@ -11,10 +11,10 @@ import { isPortAvailable } from './portChecker';
 import { ResourceLocker } from './resourceLocker';
 import { RetryStrategyManager } from './retryStrategyManager';
 import type { CommandResult, ExecuteOptions, CommandConfig, PollOptions } from './types';
-import { getLogger } from '@/core/logging';
+import { getLogger } from '@/core/logging/debugLogger';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { validateNodeVersion } from '@/core/validation';
-import { DEFAULT_SHELL } from '@/types/shell';
+import { validateNodeVersion } from '@/core/validation/validators/NodeVersionValidator';
 
 /** The machinery a CommandExecutor runs on; assembled by createCommandExecutorDeps. */
 export interface CommandExecutorDeps {

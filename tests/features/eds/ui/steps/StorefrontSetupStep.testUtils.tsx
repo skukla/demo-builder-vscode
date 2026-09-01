@@ -39,7 +39,7 @@ jest.mock('@/core/ui/components/layout/CenteredFeedbackContainer', () => ({
 jest.mock('@/core/ui/components/layout/SingleColumnLayout', () => ({
     SingleColumnLayout: ({ children }: any) => <div>{children}</div>,
 }));
-jest.mock('@/features/eds/ui/components', () => ({
+jest.mock('@/features/eds/ui/components/GitHubAppInstallDialog', () => ({
     GitHubAppInstallDialog: () => <div data-testid="github-app-dialog" />,
 }));
 

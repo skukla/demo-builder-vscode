@@ -6,12 +6,12 @@
  * - select-workspace: Select a specific workspace
  */
 
+import { toAppError, isTimeout } from '@/core/errors';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { validateWorkspaceId } from '@/core/validation';
+import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import { isConsoleOpFailure, type AdobeWorkspace } from '@/features/authentication/services/types';
 import { ErrorCode } from '@/types/errorCodes';
-import { toAppError, isTimeout } from '@/types/errors';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import { DataResult, SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';

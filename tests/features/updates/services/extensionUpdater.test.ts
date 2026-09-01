@@ -7,6 +7,7 @@ import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock modules
 jest.mock('fs/promises');
@@ -18,7 +19,12 @@ jest.mock('vscode', () => ({
         Notification: 15,
     },
 }));
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/PathSafetyValidator');
+jest.mock('@/core/validation/SensitiveDataRedactor');
+jest.mock('@/core/validation/URLValidator');
+jest.mock('@/core/validation/Validator');
+jest.mock('@/core/validation/fieldValidation');
+jest.mock('@/core/validation/normalizers');
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         AUTH: {
@@ -39,12 +45,7 @@ describe('ExtensionUpdater', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockLogger = {
-            info: jest.fn(),
-            error: jest.fn(),
-            warn: jest.fn(),
-            debug: jest.fn(),
-        } as any;
+        mockLogger = createMockLogger() as any;
 
         updater = new ExtensionUpdater(mockLogger);
 
@@ -68,7 +69,7 @@ describe('ExtensionUpdater', () => {
 
         beforeEach(() => {
             // Mock security validation
-            const { validateGitHubDownloadURL } = require('@/core/validation');
+            const { validateGitHubDownloadURL } = require('@/core/validation/URLValidator');
             validateGitHubDownloadURL.mockImplementation(() => {});
 
             // Mock fetch
@@ -116,7 +117,7 @@ describe('ExtensionUpdater', () => {
         });
 
         it('should validate GitHub URL before downloading', async () => {
-            const { validateGitHubDownloadURL } = require('@/core/validation');
+            const { validateGitHubDownloadURL } = require('@/core/validation/URLValidator');
 
             await updater.updateExtension(downloadUrl, newVersion);
 
@@ -124,7 +125,7 @@ describe('ExtensionUpdater', () => {
         });
 
         it('should throw error if URL validation fails', async () => {
-            const { validateGitHubDownloadURL } = require('@/core/validation');
+            const { validateGitHubDownloadURL } = require('@/core/validation/URLValidator');
             validateGitHubDownloadURL.mockImplementation(() => {
                 throw new Error('Invalid URL');
             });
