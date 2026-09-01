@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **80** conventions, **68** enforced
+- **80** conventions, **69** enforced
 - **22** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -112,7 +112,7 @@ it means the rule rests on somebody noticing.
 | Every capability has a human surface. MCP tools are additional. Enforced by measurement — `.claude/skills/ai-coverage-scan` reports the gap at release cuts. | [ADR](../architecture/adr/012-diagnostic-surfaces.md) | [procedure](../../.claude/skills/ai-coverage-scan/SKILL.md) | *named in prose* |
 | A tool response is built by `mcpToolResult.ts`'s `asText`/`asRawText`, never by hand. Enforced by `tests/features/ai/server/responseEnvelope.test.ts`, which checks descriptor rows at runtime and every registrar module at the source, in both halves of the server. |  |  | `responseEnvelope.test.ts` |
 | A tool requires an explicit `confirm: true` when its effect is hard to walk back: it DELETES something, or it PUSHES to a live site. Merely mutating is deliberately not the bar — deploys, lifecycle and config writes stay ungated, because they are reversible and gating them would make the agent surface useless for routine work. Three irreversible tools go further and require the resource's name echoed back. |  |  | `tool-catalog-gating.test.ts` |
-| A tool needing credentials pre-flights and returns a structured `needsAuth` handoff rather than erroring, so the agent can drive sign-in and retry. |  |  | **—** |
+| A tool needing credentials pre-flights and returns a structured `needsAuth` handoff rather than erroring, so the agent can drive sign-in and retry. Every tool is REVIEWED against this, and the review is recorded. |  |  | `tool-auth-review.test.ts` |
 
 ## 9. Tests
 

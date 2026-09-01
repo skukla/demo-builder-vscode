@@ -64,10 +64,28 @@ what a tool author must supply and what future tools build on. Per the loop's
 design gate that is product intent, so it goes to the walkthrough queue with a
 recommendation rather than being built unattended.
 
-**Recommendation:** add `needsAuth?: 'adobe' | 'github' | 'dalive'` to the
-descriptor type and require every action descriptor to state it or `false`. The
-check then enforces the DECLARATION, and the judgement stays where it belongs —
-with the tool author, at the moment they write the row.
+**That recommendation was WRONG, and measuring the surface is what showed it.**
+A descriptor field reaches only the tools that HAVE a descriptor. The real split
+is 48 descriptor rows against 66 directly-registered tools — and the 66 include
+`adobeTools`, `cloudResourceTools`, `siteTools` and `storefrontTools`, precisely
+the ones most likely to need credentials. A field on the descriptor type would
+have covered a minority and missed the part that matters.
+
+**And the inventory itself was wrong three times.** 114 tools, not the 107 the
+`tool-verdicts` skill states, nor the 102 an earlier pass here counted. Both
+missed `dataInstallerDescriptors.ts` (8) and `statusDescriptors.ts` (4). Any
+enforcement built on a count nobody had verified would have had a hole the size of
+whichever file was forgotten.
+
+**Built instead (owner chose C, 2026-08-31):** a reviewed-tool ledger,
+`tests/sop/tool-auth-review.test.ts`. One row per tool with a verdict —
+NEEDS-AUTH / NO-AUTH / UNREVIEWED — and a reason. A new tool has no row, so the
+build fails and the question is asked at authoring time; a removed tool leaves a
+stale row, which also fails. All 114 are seeded UNREVIEWED, which is the honest
+state, and `unreviewedCeiling` may only fall.
+
+The owner's sequence is C then B: see what the ledger is like to live with before
+deciding whether the declaration is worth putting in the type.
 
 Lane A is therefore FOUR buildable checks, not five.
 
