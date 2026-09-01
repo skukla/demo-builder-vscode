@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **80** conventions, **64** enforced
+- **80** conventions, **65** enforced
 - **22** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -36,7 +36,7 @@ it means the rule rests on somebody noticing.
 | Nothing under `src/core/` imports `@/features` or `@/commands`. Enforced by the `layerDirection` ledger in `tests/sop/architecture-rules.exemptions.json` — seven predate the rule and the set may only shrink. |  |  | *named in prose* |
 | Features do not import other features; commands may. enforced by eslint. |  |  | `eslint.config.mjs` |
 | A module is imported by the path that DEFINES the symbol. No re-export-only `index.ts` — not in `core/`, not in a feature. **The ledger is CLOSED**: all 43 that predated the rule were retired on 2026-08-31, so this is now a ban with nowhere to write an exception down. Enforced by the `reExportIndex` ledger in `tests/sop/architecture-rules.exemptions.json`, with the `featureBarrels` ledger — now empty — banning feature-level barrels outright. | [ADR](../architecture/adr/022-barrel-files.md) |  | *named in prose* |
-| Commands are `camelCase`, React components `PascalCase`, constants `UPPER_SNAKE_CASE`, and a file is named for what it exports — `WizardContainer.tsx`, `loadingHTML.ts`. |  |  | **—** |
+| A PascalCase `.tsx` exports a component of that name, and an exported ALL-CAPS const is `UPPER_SNAKE_CASE`. Files are otherwise named for their SUBJECT — `WizardContainer.tsx`, `loadingHTML.ts`, `commerceSections.ts`. |  |  | `naming-conventions.test.ts` |
 
 ## 3. Code gets what it needs handed to it
 

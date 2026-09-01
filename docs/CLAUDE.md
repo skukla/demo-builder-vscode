@@ -12,15 +12,19 @@ What is left is the handful of things none of those own.
 
 | Kind | Form | Example |
 |---|---|---|
-| Commands | `camelCase` | `createProject` |
-| React components | `PascalCase` | `WizardContainer` |
-| Utilities | `camelCase` | `loadingHTML` |
-| Constants | `UPPER_SNAKE_CASE` | `MIN_DISPLAY_TIME` |
-| Files | matches the export | `WizardContainer.tsx`, `loadingHTML.ts` |
+| React components | `PascalCase`, and the file exports that name | `WizardContainer.tsx` |
+| Exported ALL-CAPS consts | `UPPER_SNAKE_CASE` | `MIN_DISPLAY_TIME` |
+| Everything else | named for its SUBJECT | `loadingHTML.ts`, `commerceSections.ts` |
 
-> Stated here and nowhere else — it is in neither the handbook nor the generated
-> conventions index, and nothing checks it. Tracked as a pending row in
-> `.rptc/backlog/unratified-rules-register.md`.
+> **Ratified and enforced 2026-08-31** by `tests/sop/naming-conventions.test.ts`,
+> and stated in [the handbook](development/handbook.md) §2.
+>
+> The four-row version that used to sit here — commands `camelCase`, components
+> `PascalCase`, constants `UPPER_SNAKE_CASE`, "files match the export" — could not
+> be enforced because the rows contradict each other: `ResetAllCommand.ts` exports a
+> class of that name, and eleven `.tsx` files export functions rather than
+> components. "Named for what it exports" held for 40% of `src/`. The handbook entry
+> carries the full measurement.
 
 ## Webview loading states
 

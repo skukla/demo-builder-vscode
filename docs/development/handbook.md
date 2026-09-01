@@ -118,14 +118,28 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > selecting affected tests, so the mechanism behind those wins has nothing to bite on.
 > Adopted for one reason, not three.
 
-> **Convention.** Commands are `camelCase`, React components `PascalCase`, constants
-> `UPPER_SNAKE_CASE`, and a file is named for what it exports —
-> `WizardContainer.tsx`, `loadingHTML.ts`.
-> *Why:* it is what makes a symbol findable from its filename and a filename guessable
-> from its symbol. Nobody has broken it, which is the argument for writing it down
-> rather than against: an unstated convention survives on everyone having absorbed it.
-> **Not enforced** — visibly followed at every site, and a linter for it would be
-> policing something that has never gone wrong.
+> **Convention.** A PascalCase `.tsx` exports a component of that name, and an
+> exported ALL-CAPS const is `UPPER_SNAKE_CASE`. Files are otherwise named for their
+> SUBJECT — `WizardContainer.tsx`, `loadingHTML.ts`, `commerceSections.ts`.
+> *Why:* the first makes a component findable from its filename and guessable from
+> its symbol, which is the part that actually pays. Enforced by
+> `tests/sop/naming-conventions.test.ts`; two files are exempt, each with its reason,
+> and the list may only shrink.
+>
+> **This replaced a four-row rule that contradicted itself, and the correction is the
+> interesting part.** It read "commands are `camelCase`, React components
+> `PascalCase`, constants `UPPER_SNAKE_CASE`, and a file is named for what it
+> exports", and claimed nobody had ever broken it. Measured 2026-08-31: nobody could,
+> because the rows disagree. `ResetAllCommand.ts` exports `class ResetAllCommand` —
+> PascalCase, which the commands row forbids and the export row requires. Eleven
+> `.tsx` files export functions rather than components, so camelCase is right by one
+> row and wrong by another. And "named for what it exports" holds for **40%** of
+> `src/` (343 of 848): most files are named for their subject and export several
+> related symbols, which is the real convention and was not what was written.
+>
+> A rule that cannot be broken because it contradicts itself reads like a guarantee
+> and holds nothing. That is the same failure `src/core/CLAUDE.md`'s "❌" already cost
+> once.
 
 ---
 
@@ -836,11 +850,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 10 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 26 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 27 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 80 conventions. 64 of them are enforced; 16 are not.**
+**This handbook states 80 conventions. 65 of them are enforced; 15 are not.**
 
 The fifteen that remain are not one thing, and treating them as one is what kept them
 open:
