@@ -54,7 +54,7 @@ function setupFs(tree: Record<string, 'dir' | string>): void {
                 tree[childPath] === 'dir' ||
                 Object.keys(tree).some((k) => k.startsWith(childPath + '/'));
             return { name, isFile: () => !isDir, isDirectory: () => isDir };
-        }) as never;
+        });
     });
 
     readFileMock.mockImplementation(async (filePath: string) => {

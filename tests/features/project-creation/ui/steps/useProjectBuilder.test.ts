@@ -283,7 +283,7 @@ describe('useProjectBuilder — edsConfig derivation on stack select', () => {
     it('clears edsConfig for a non-EDS (headless) stack', () => {
         const { result, updateState } = setup({
             selectedPackage: 'custom',
-            edsConfig: { templateOwner: 'stale', templateRepo: 'stale-repo' } as never,
+            edsConfig: { templateOwner: 'stale', templateRepo: 'stale-repo' },
         });
         act(() => {
             result.current.onStackSelect('headless-paas');

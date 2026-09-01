@@ -36,7 +36,7 @@ export function createComponentHandlerContext(): HandlerContext {
             isAuthenticating: false,
         } as any,
         sendMessage: jest.fn(),
-    } as never)
+    })
 }
 
 /** Build a mock ComponentRegistryManager with all queried methods stubbed. */

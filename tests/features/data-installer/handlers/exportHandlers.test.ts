@@ -88,7 +88,7 @@ beforeEach(() => {
     mockedCredentials.mockResolvedValue({
         ok: true,
         credentials: { kind: 'accs', clientId: 'cid', clientSecret: 'fake-test-secret-not-a-secret' },
-    } as never);
+    });
     listExportItems = jest.fn().mockResolvedValue({ items: [], totalCount: 0, excludedCount: 0 });
     startExport = jest.fn().mockResolvedValue({ success: true, perType: [] });
     MockedClient.mockImplementation(
@@ -206,7 +206,7 @@ describe('start-datapack-export', () => {
     });
 
     it('refuses when the project has no usable Commerce credentials', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' } as never);
+        mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' });
 
         const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
 

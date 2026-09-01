@@ -45,7 +45,7 @@ function makeCommand(): ShowDataInstallerCommand & Internals {
     return new ShowDataInstallerCommand(
         makeExtensionContext(),
         makeStateManager() as unknown as StateManager,
-        logger as never
+        logger
     ) as ShowDataInstallerCommand & Internals;
 }
 

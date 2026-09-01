@@ -37,7 +37,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             DA_ORG,
             DA_SITE,
             makePublisher(),
-            mockLogger as never
+            mockLogger
         );
 
         expect(result.skipped).toBe(true);
@@ -64,7 +64,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             DA_ORG,
             DA_SITE,
             makePublisher(),
-            mockLogger as never
+            mockLogger
         );
 
         // describeScope's exact shape: websiteCode / storeCode / storeViewCode.
@@ -98,7 +98,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             DA_ORG,
             DA_SITE,
             makePublisher(),
-            mockLogger as never
+            mockLogger
         );
 
         const warns = JSON.stringify((mockLogger.warn as jest.Mock).mock.calls);
@@ -121,7 +121,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             DA_ORG,
             DA_SITE,
             makePublisher(),
-            mockLogger as never
+            mockLogger
         );
 
         const warns = JSON.stringify((mockLogger.warn as jest.Mock).mock.calls);
@@ -141,7 +141,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             DA_ORG,
             DA_SITE,
             makePublisher(),
-            mockLogger as never
+            mockLogger
         );
 
         expect(result.skipped).toBe(true);
@@ -167,7 +167,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             DA_ORG,
             DA_SITE,
             makePublisher(),
-            mockLogger as never
+            mockLogger
         );
 
         expect(result.skipped).toBe(true);
@@ -198,7 +198,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             DA_ORG,
             DA_SITE,
             publisher,
-            mockLogger as never
+            mockLogger
         );
 
         expect(result).toEqual({ attempted: 3, succeeded: 1, failed: 2, skipped: false });
@@ -236,7 +236,7 @@ describe('prewarmCatalog — non-fatal failure modes', () => {
             DA_ORG,
             DA_SITE,
             makePublisher(),
-            mockLogger as never
+            mockLogger
         );
 
         // 2 valid items → 2 attempted, 2 succeeded

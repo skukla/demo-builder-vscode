@@ -75,5 +75,5 @@ export function createAuthHandlerContext(overrides?: Partial<HandlerContext>): j
             isAuthenticating: false,
         },
         ...overrides,
-    } as never)
+    })
 }

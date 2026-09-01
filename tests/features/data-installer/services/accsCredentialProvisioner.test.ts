@@ -77,7 +77,7 @@ describe('provisionAccsCredentials', () => {
     it('returns the pair from an end-to-end run', async () => {
         const { deps } = makeDeps();
 
-        const result = await provisionAccsCredentials(deps as never, TARGET);
+        const result = await provisionAccsCredentials(deps, TARGET);
 
         expect(result).toEqual({
             ok: true,
@@ -90,7 +90,7 @@ describe('provisionAccsCredentials', () => {
         const { deps } = makeDeps();
         (deps.auth.getWorkspaceS2SCredential as jest.Mock).mockResolvedValue(undefined);
 
-        await provisionAccsCredentials(deps as never, TARGET);
+        await provisionAccsCredentials(deps, TARGET);
 
         expect(deps.auth.createWorkspaceS2SCredentialFor).toHaveBeenCalledWith(
             TARGET.orgId,
@@ -102,7 +102,7 @@ describe('provisionAccsCredentials', () => {
     it('does not create when the credential already exists', async () => {
         const { deps } = makeDeps();
 
-        await provisionAccsCredentials(deps as never, TARGET);
+        await provisionAccsCredentials(deps, TARGET);
 
         expect(deps.auth.createWorkspaceS2SCredentialFor).not.toHaveBeenCalled();
     });
@@ -112,7 +112,7 @@ describe('provisionAccsCredentials', () => {
     it('subscribes the UNION of existing codes plus ACCS-REST-API', async () => {
         const { deps } = makeDeps();
 
-        await provisionAccsCredentials(deps as never, TARGET);
+        await provisionAccsCredentials(deps, TARGET);
 
         expect(deps.auth.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
             TARGET.orgId,
@@ -131,7 +131,7 @@ describe('provisionAccsCredentials', () => {
             'ACCS-REST-API',
         ]);
 
-        await provisionAccsCredentials(deps as never, TARGET);
+        await provisionAccsCredentials(deps, TARGET);
 
         expect(deps.auth.subscribeOAuthServerToServerIntegrationToServices).not.toHaveBeenCalled();
     });
@@ -142,7 +142,7 @@ describe('provisionAccsCredentials', () => {
             JSON.stringify({ project: { workspace: { details: { credentials: [] } } } }),
         );
 
-        const result = await provisionAccsCredentials(deps as never, TARGET);
+        const result = await provisionAccsCredentials(deps, TARGET);
 
         expect(result).toEqual({
             ok: false,
@@ -153,7 +153,7 @@ describe('provisionAccsCredentials', () => {
     it('never passes the secret to the logger', async () => {
         const { deps } = makeDeps();
 
-        await provisionAccsCredentials(deps as never, TARGET);
+        await provisionAccsCredentials(deps, TARGET);
 
         const logged = (deps.log as jest.Mock).mock.calls.flat().join('\n');
         expect(logged).not.toContain('fake-test-secret-not-a-secret');
@@ -169,7 +169,7 @@ describe('provisionAccsCredentials', () => {
             new Error('SDK not initialized'),
         );
 
-        const result = await provisionAccsCredentials(deps as never, TARGET);
+        const result = await provisionAccsCredentials(deps, TARGET);
 
         expect(result).toMatchObject({ ok: false });
     });
@@ -193,7 +193,7 @@ describe('a malformed workspace download', () => {
             log: (line: string) => lines.push(line),
         });
 
-        const result = await provisionAccsCredentials(deps as never, TARGET);
+        const result = await provisionAccsCredentials(deps, TARGET);
 
         expect(result.ok).toBe(false);
         expect(JSON.stringify(result)).not.toContain(secret);

@@ -72,7 +72,7 @@ describe('sleep', () => {
         const spy = jest.spyOn(global, 'setTimeout').mockImplementation(((fn: () => void) => {
             fn();
             return 1 as unknown as NodeJS.Timeout;
-        }) as never);
+        }));
         expect(() => sleep(1)).not.toThrow();
         spy.mockRestore();
     });

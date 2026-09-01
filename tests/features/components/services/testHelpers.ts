@@ -27,7 +27,7 @@ export function createComponentServiceProject(overrides?: Partial<Project>): Pro
         lastModified: new Date(),
         componentInstances: {},
         ...overrides
-    } as never)
+    })
 }
 
 /**

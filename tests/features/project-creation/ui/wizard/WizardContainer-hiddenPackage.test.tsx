@@ -68,7 +68,7 @@ describe('WizardContainer — a project on a hidden package', () => {
             <WizardContainer
                 componentDefaults={createMockComponentDefaults()}
                 wizardSteps={createMockWizardSteps()}
-                editProject={editProjectOn('hidden-brand') as never}
+                editProject={editProjectOn('hidden-brand')}
             />
         );
 
@@ -88,7 +88,7 @@ describe('WizardContainer — a project on a hidden package', () => {
             <WizardContainer
                 componentDefaults={createMockComponentDefaults()}
                 wizardSteps={createMockWizardSteps()}
-                editProject={editProjectOn('test-package') as never}
+                editProject={editProjectOn('test-package')}
             />
         );
 

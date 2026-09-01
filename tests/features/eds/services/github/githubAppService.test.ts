@@ -444,7 +444,7 @@ describe('GitHubAppService — access-protected sites', () => {
     // Same dynamic-import setup the suite above uses: the module is loaded after
     // `jest.resetModules()` so the mocked logger/timeouts take effect.
     let GitHubAppService: any;
-    const tokenService = { getToken: jest.fn() } as never;
+    const tokenService = { getToken: jest.fn() };
     const daLive = { getAccessToken: jest.fn() };
 
     const headersOfLastCall = () => mockFetch.mock.calls.at(-1)?.[1]?.headers ?? {};
@@ -467,7 +467,7 @@ describe('GitHubAppService — access-protected sites', () => {
     });
 
     it('sends the DA.live Bearer alongside the GitHub token', async () => {
-        const service = new GitHubAppService(tokenService, undefined, daLive as never);
+        const service = new GitHubAppService(tokenService, undefined, daLive);
 
         await service.isAppInstalled('skukla', 'demo-builder-test');
 
@@ -481,7 +481,7 @@ describe('GitHubAppService — access-protected sites', () => {
         // An unprotected site never needed the Bearer, and a signed-out user must
         // not have a working check turned into a hard failure.
         daLive.getAccessToken.mockResolvedValue(undefined);
-        const service = new GitHubAppService(tokenService, undefined, daLive as never);
+        const service = new GitHubAppService(tokenService, undefined, daLive);
 
         await service.isAppInstalled('skukla', 'foobar');
 
@@ -490,7 +490,7 @@ describe('GitHubAppService — access-protected sites', () => {
 
     it('degrades when the DA.live provider itself throws', async () => {
         daLive.getAccessToken.mockRejectedValue(new Error('keychain unavailable'));
-        const service = new GitHubAppService(tokenService, undefined, daLive as never);
+        const service = new GitHubAppService(tokenService, undefined, daLive);
 
         const result = await service.isAppInstalled('skukla', 'foobar');
 

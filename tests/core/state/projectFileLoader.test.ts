@@ -291,7 +291,7 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
                 status: 'deployed',
             },
         });
-        mockedFs.mkdir.mockResolvedValue(undefined as never);
+        mockedFs.mkdir.mockResolvedValue(undefined);
         mockedFs.rename.mockResolvedValue(undefined);
         mockedFs.unlink.mockResolvedValue(undefined);
 
@@ -350,7 +350,7 @@ describe('additionalConsoleApis — manifest persistence (§E)', () => {
 
     async function writeAndCaptureManifest(project: Project): Promise<Record<string, unknown>> {
         mockedFs.access.mockResolvedValue(undefined);
-        mockedFs.mkdir.mockResolvedValue(undefined as never);
+        mockedFs.mkdir.mockResolvedValue(undefined);
         mockedFs.writeFile.mockResolvedValue(undefined);
         mockedFs.rename.mockResolvedValue(undefined);
         mockedFs.unlink.mockResolvedValue(undefined);
@@ -503,7 +503,7 @@ describe('§E edit-mode round-trip — keyed instances → manifest → edit set
         };
 
         mockedFs.access.mockResolvedValue(undefined);
-        mockedFs.mkdir.mockResolvedValue(undefined as never);
+        mockedFs.mkdir.mockResolvedValue(undefined);
         mockedFs.writeFile.mockResolvedValue(undefined);
         mockedFs.rename.mockResolvedValue(undefined);
         mockedFs.unlink.mockResolvedValue(undefined);

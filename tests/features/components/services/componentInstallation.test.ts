@@ -75,7 +75,7 @@ function install(def = makeDef(), options = {}) {
         PROJECT,
         def,
         instance(),
-        options as never
+        options
     );
 }
 
@@ -89,7 +89,7 @@ beforeEach(() => {
     // Clone succeeds; version detection finds nothing (its own paths are
     // covered where they belong — this suite is about install + guards).
     mockExecute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 404 }) as never;
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 404 });
 });
 
 describe('installGitComponent — the shell-injection guards', () => {
@@ -193,7 +193,7 @@ describe('installGitComponent — tag resolution', () => {
             ok: true,
             status: 200,
             json: async () => [{ tag_name: 'v9.9.9', prerelease: true }],
-        }) as never;
+        });
         const def = makeDef({
             source: { url: 'https://github.com/skukla/kukla-bodea', gitOptions: { tag: 'v1.0.0' } },
         });

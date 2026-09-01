@@ -135,7 +135,7 @@ describe('helixApiClient', () => {
         });
 
         it('defaults path to "/" and branch to "main"', async () => {
-            await previewAndPublishPage('o', 's', undefined as never, undefined as never, TOKENS);
+            await previewAndPublishPage('o', 's', undefined, undefined, TOKENS);
 
             const previewUrl = mockFetch.mock.calls[0][0] as string;
             expect(previewUrl).toBe('https://admin.hlx.page/preview/o/s/main/');
@@ -229,7 +229,7 @@ describe('helixApiClient', () => {
         });
 
         it('defaults path to "/" and branch to "main"', async () => {
-            await unpublishPage('o', 's', undefined as never, undefined as never, TOKENS);
+            await unpublishPage('o', 's', undefined, undefined, TOKENS);
 
             expect(mockFetch.mock.calls[0][0]).toBe('https://admin.hlx.page/live/o/s/main/');
         });

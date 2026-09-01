@@ -70,7 +70,7 @@ describe('pickSampleSku', () => {
                 'Magento-Store-View-Code': 'default',
             });
 
-            const sample = await pickSampleSku(makeEdsProject('published'), mockLogger as never);
+            const sample = await pickSampleSku(makeEdsProject('published'), mockLogger);
 
             expect(sample?.scopeSource).toBe('served');
             expect(sample?.scopeDivergence).toBeUndefined();
@@ -86,7 +86,7 @@ describe('pickSampleSku', () => {
                 'Magento-Store-View-Code': 'citisignal_us',
             });
 
-            const sample = await pickSampleSku(makeEdsProject('stale'), mockLogger as never);
+            const sample = await pickSampleSku(makeEdsProject('stale'), mockLogger);
 
             expect(sample?.scopeSource).toBe('served');
             expect(sample?.scopeDivergence?.unexpected).toBe(false);
@@ -104,7 +104,7 @@ describe('pickSampleSku', () => {
                 'Magento-Store-View-Code': 'citisignal_us',
             });
 
-            const sample = await pickSampleSku(makeEdsProject('published'), mockLogger as never);
+            const sample = await pickSampleSku(makeEdsProject('published'), mockLogger);
 
             expect(sample?.scopeDivergence?.unexpected).toBe(true);
             expect(mockLogger.warn).toHaveBeenCalledWith(
@@ -116,7 +116,7 @@ describe('pickSampleSku', () => {
             // A CDN hiccup must not leave diagnostics with no answer at all.
             routeFetch(undefined);
 
-            const sample = await pickSampleSku(makeEdsProject('published'), mockLogger as never);
+            const sample = await pickSampleSku(makeEdsProject('published'), mockLogger);
 
             expect(sample?.scopeSource).toBe('manifest');
             expect(sample?.scopeDivergence).toBeUndefined();

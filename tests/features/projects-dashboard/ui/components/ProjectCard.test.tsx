@@ -252,7 +252,7 @@ describe('ProjectCard', () => {
                         source: { owner: 'acme', repo: 'widget' },
                     },
                 },
-            } as never);
+            });
             const { container } = renderWithProvider(
                 <ProjectCard project={project} onSelect={jest.fn()} />
             );

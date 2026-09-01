@@ -54,7 +54,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(project) as unknown as StateManager,
-                logger as never
+                logger
             );
 
             await command.execute(project as Project);
@@ -71,7 +71,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                logger as never
+                logger
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -89,7 +89,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                logger as never
+                logger
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -114,7 +114,7 @@ describe('OpenInClaudeCommand', () => {
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
                 makeStateManager(makeOpenInClaudeProject()) as unknown as StateManager,
-                logger as never
+                logger
             );
 
             await command.execute(makeOpenInClaudeProject() as Project);
@@ -140,8 +140,8 @@ describe('OpenInClaudeCommand', () => {
             const stateManager = makeStateManager(project);
             const command = new OpenInClaudeCommand(
                 makeOpenInClaudeContext(makeGlobalState()),
-                stateManager as never,
-                makeLogger() as never
+                stateManager,
+                makeLogger()
             );
 
             await command.execute();

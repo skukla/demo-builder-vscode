@@ -67,7 +67,7 @@ describe('mergeRuntimeSurfaces', () => {
 describe('getRuntimeSurfaces', () => {
     it('returns the static inventory when no source is given (no fetch)', async () => {
         const fetcher = jest.fn();
-        const result = await getRuntimeSurfaces(undefined, logger, { fetcher: fetcher as never });
+        const result = await getRuntimeSurfaces(undefined, logger, { fetcher: fetcher });
         expect(result).toBe(RUNTIME_SURFACES);
         expect(fetcher).not.toHaveBeenCalled();
     });
@@ -76,7 +76,7 @@ describe('getRuntimeSurfaces', () => {
         const fetcher = jest.fn().mockResolvedValue({
             derived: { fragments: ['/brand-new-fragment'] },
         } as GeneratedRuntimeSurfaces);
-        const result = await getRuntimeSurfaces(source, logger, { fetcher: fetcher as never });
+        const result = await getRuntimeSurfaces(source, logger, { fetcher: fetcher });
         expect(result.fragments).toContain('/brand-new-fragment');
         // floor preserved
         expect(result.fragments).toEqual(expect.arrayContaining(RUNTIME_SURFACES.fragments));
@@ -89,14 +89,14 @@ describe('getRuntimeSurfaces', () => {
         const fetcher = jest.fn().mockResolvedValue({
             derived: { placeholderSheets: ['placeholders/ghost'] },
         } as GeneratedRuntimeSurfaces);
-        const result = await getRuntimeSurfaces(source, logger, { fetcher: fetcher as never });
+        const result = await getRuntimeSurfaces(source, logger, { fetcher: fetcher });
         expect('placeholderSheets' in result).toBe(false);
         expect(result.fragments).toEqual(expect.arrayContaining(RUNTIME_SURFACES.fragments));
     });
 
     it('falls back to the static inventory when the fetch returns null', async () => {
         const fetcher = jest.fn().mockResolvedValue(null);
-        const result = await getRuntimeSurfaces(source, logger, { fetcher: fetcher as never });
+        const result = await getRuntimeSurfaces(source, logger, { fetcher: fetcher });
         expect(result).toEqual(RUNTIME_SURFACES);
     });
 });

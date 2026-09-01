@@ -24,7 +24,7 @@ const mockGetDaLiveAuthService = jest.fn((..._args: unknown[]) => 'dalive-auth')
  * whether or not the phase runs — so the laziness contract would stop being
  * observable. The factory answers both.
  */
-const makeHelix = jest.fn(() => ({ previewAndPublishPage: jest.fn() }) as never);
+const makeHelix = jest.fn(() => ({ previewAndPublishPage: jest.fn() }));
 
 jest.mock('@/features/eds/services/storefront/storefrontRepublishService', () => ({
     extractRepublishParams: (...a: unknown[]) => mockExtractRepublishParams(...a),

@@ -97,8 +97,8 @@ describe('MeshDeployment — create→update fallback', () => {
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never
+            mockCommandManager,
+            mockLogger
         );
 
         expect(commandsMatching('api-mesh:create')).toHaveLength(1);
@@ -115,8 +115,8 @@ describe('MeshDeployment — create→update fallback', () => {
 
         await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never,
+            mockCommandManager,
+            mockLogger,
             onProgress
         );
 
@@ -131,8 +131,8 @@ describe('MeshDeployment — create→update fallback', () => {
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never
+            mockCommandManager,
+            mockLogger
         );
 
         expect(commandsMatching('api-mesh:create')).toHaveLength(1);
@@ -147,8 +147,8 @@ describe('MeshDeployment — create→update fallback', () => {
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never,
+            mockCommandManager,
+            mockLogger,
             undefined,
             'mesh-123' // existing mesh → update strategy from the start
         );
@@ -165,8 +165,8 @@ describe('MeshDeployment — create→update fallback', () => {
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never
+            mockCommandManager,
+            mockLogger
         );
 
         expect(result.success).toBe(false);
@@ -224,8 +224,8 @@ describe('MeshDeployment — update→create fallback (remote mesh vanished)', (
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never,
+            mockCommandManager,
+            mockLogger,
             undefined,
             'stale-mesh-id', // stored id → update strategy from the start
         );
@@ -242,8 +242,8 @@ describe('MeshDeployment — update→create fallback (remote mesh vanished)', (
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never,
+            mockCommandManager,
+            mockLogger,
             undefined,
             'stale-mesh-id',
         );
@@ -264,8 +264,8 @@ describe('MeshDeployment — update→create fallback (remote mesh vanished)', (
 
         const result = await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never,
+            mockCommandManager,
+            mockLogger,
         );
 
         expect(commandsMatching('api-mesh:create')).toHaveLength(1);
@@ -282,8 +282,8 @@ describe('MeshDeployment — update→create fallback (remote mesh vanished)', (
 
         await deployMeshComponent(
             '/test/mesh',
-            mockCommandManager as never,
-            mockLogger as never,
+            mockCommandManager,
+            mockLogger,
             onProgress,
             'stale-mesh-id',
         );
