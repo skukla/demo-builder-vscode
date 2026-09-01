@@ -68,7 +68,7 @@ const STRUCTURE = {
         { id: 1, store_group_id: 1, website_id: 1, code: 'default', name: 'Default View' },
         { id: 2, store_group_id: 2, website_id: 2, code: 'bodea_view', name: 'Bodea View' },
     ],
-} as never;
+};
 
 function paasProject(): Partial<Project> {
     return {

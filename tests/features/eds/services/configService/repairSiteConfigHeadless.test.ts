@@ -55,7 +55,7 @@ const run = (over: Record<string, unknown> = {}) =>
     repairSiteConfig({
         project,
         configurationService: makeService('https://overlay.example/render-pdp'),
-        tokenProvider: {} as never,
+        tokenProvider: {},
         logger,
         userEmail: 'someone@adobe.com',
         resolveOverlayUrl: () => 'https://overlay.example/render-pdp',
@@ -110,7 +110,7 @@ describe('repairSiteConfig', () => {
         await run();
 
         expect(mockRegisterSiteConfig).toHaveBeenCalledWith(
-            expect.objectContaining({ retryOn403: true }),
+            expect.objectContaining({ retryOn403: true })
         );
     });
 
@@ -188,7 +188,7 @@ describe('repairSiteConfig', () => {
             expect.anything(),
             { owner: 'skukla', repo: 'demo-builder-test' },
             'someone@adobe.com',
-            expect.anything(),
+            expect.anything()
         );
     });
 });

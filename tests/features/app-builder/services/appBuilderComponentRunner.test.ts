@@ -461,7 +461,7 @@ describe('addAppBuilderComponent partial-failure', () => {
                     type: 'app-builder',
                     status: 'ready',
                     path: '/proj/components/erp-bridge',
-                } as never,
+                },
             },
         });
         const deps = createDeps();
@@ -523,7 +523,7 @@ describe('deployAppBuilderComponent (redeploy)', () => {
                     subType: 'mesh',
                     status: 'ready',
                     path: '/proj/components/commerce-mesh',
-                } as never,
+                },
             },
             appBuilderComponents: {
                 'commerce-mesh': {
@@ -569,7 +569,7 @@ describe('deployAppBuilderComponent (redeploy)', () => {
                     type: 'app-builder',
                     status: 'ready',
                     path: '/proj/components/erp-bridge',
-                } as never,
+                },
             },
             appBuilderComponents: {
                 'erp-bridge': {
@@ -632,7 +632,7 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
                 status: 'ready',
                 path: '/proj/components/erp',
                 lastUpdated: new Date(),
-            } as never,
+            },
         };
         const deps = createDeps();
         let errorDuringDeploy: string | undefined = 'unset';
@@ -667,7 +667,7 @@ describe('deploying marker and nodeVersion (live-test fixes)', () => {
                 status: 'ready',
                 path: '/proj/components/erp',
                 lastUpdated: new Date(),
-            } as never,
+            },
         };
         const deps = createDeps();
         (deps.deployApp as jest.Mock).mockResolvedValue({

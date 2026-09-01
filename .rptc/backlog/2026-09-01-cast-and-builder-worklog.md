@@ -146,3 +146,5 @@ conversion, which the enforcer requires anyway.
 - 2026-09-01  test(helpers): the two builders the compiler asked for, and a check that a fake mirrors its subject (`737b13f30`)
 - 2026-09-01  docs(backlog): PL-34 — every open finding from the toolchain day, in one list (`0247cdf43`)
 - 2026-09-01  refactor(tests): the codemod converts MEMBERS too — HandlerContext 38 -> 29 (`ddbd91347`)
+- 2026-09-01  refactor(tests): HandlerContext 29 -> 13, and most of the "reading work" was my own bug (`fe45c5d38`)
+- 2026-09-01  test(helpers): a WebviewPanel fake and ternary members — and the mechanical seam ends here (`6859d5589`)

@@ -43,7 +43,7 @@ function integrationProject(): Project {
                 subType: 'app',
                 status: 'deployed',
                 path: `/proj/components/${ID}`,
-            } as never,
+            },
         },
         appBuilderComponents: {
             [ID]: {
@@ -166,7 +166,7 @@ describe('post-undeploy runtime verification', () => {
                     subType: 'mesh',
                     status: 'ready',
                     path: '/proj/components/eds-accs-mesh',
-                } as never,
+                },
             },
             appBuilderComponents: {
                 'eds-accs-mesh': {
