@@ -12,7 +12,10 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     },
 }));
 
-import { ConfigurationService, buildSiteConfigParams } from '@/features/eds/services/configService/configurationService';
+import {
+    ConfigurationService,
+    buildSiteConfigParams,
+} from '@/features/eds/services/configService/configurationService';
 import type { SiteRegistrationParams } from '@/features/eds/services/configService/configurationService';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -34,15 +37,12 @@ describe('ConfigurationService', () => {
 
         mockTokenProvider.getAccessToken.mockResolvedValue(MOCK_IMS_TOKEN);
 
-        service = new ConfigurationService(
-            mockTokenProvider as any,
-            mockLogger as any,
-        );
+        service = new ConfigurationService(mockTokenProvider, mockLogger);
 
         // Mock global fetch
-        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
-            new Response(null, { status: 200 }),
-        );
+        fetchSpy = jest
+            .spyOn(global, 'fetch')
+            .mockResolvedValue(new Response(null, { status: 200 }));
     });
 
     afterEach(() => {
@@ -74,7 +74,7 @@ describe('ConfigurationService', () => {
                         Authorization: `Bearer ${MOCK_IMS_TOKEN}`,
                         'content-type': 'application/json',
                     }),
-                }),
+                })
             );
 
             // Verify request body
@@ -107,9 +107,7 @@ describe('ConfigurationService', () => {
         });
 
         it('should return error for 401 unauthorized', async () => {
-            fetchSpy.mockResolvedValueOnce(
-                new Response('Unauthorized', { status: 401 }),
-            );
+            fetchSpy.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }));
 
             const result = await service.registerSite(params);
 
@@ -119,9 +117,7 @@ describe('ConfigurationService', () => {
         });
 
         it('should return error for 403 forbidden', async () => {
-            fetchSpy.mockResolvedValueOnce(
-                new Response('Forbidden', { status: 403 }),
-            );
+            fetchSpy.mockResolvedValueOnce(new Response('Forbidden', { status: 403 }));
 
             const result = await service.registerSite(params);
 
@@ -131,9 +127,7 @@ describe('ConfigurationService', () => {
         });
 
         it('should return error for 409 conflict (site exists)', async () => {
-            fetchSpy.mockResolvedValueOnce(
-                new Response('Conflict', { status: 409 }),
-            );
+            fetchSpy.mockResolvedValueOnce(new Response('Conflict', { status: 409 }));
 
             const result = await service.registerSite(params);
 
@@ -214,7 +208,10 @@ describe('ConfigurationService', () => {
 
         it('includes contentOverlayUrl when an overlay URL is provided', () => {
             const params = buildSiteConfigParams(
-                'owner', 'repo', 'org', 'https://byom.example.com',
+                'owner',
+                'repo',
+                'org',
+                'https://byom.example.com'
             );
             expect(params.contentOverlayUrl).toBe('https://byom.example.com');
         });
@@ -252,7 +249,7 @@ describe('ConfigurationService', () => {
                 const params = buildSiteConfigParams('my-owner', 'my-repo', 'my-dalive-org');
 
                 expect(params.contentSourceUrl).toBe(
-                    'https://content.da.live/my-dalive-org/my-repo/',
+                    'https://content.da.live/my-dalive-org/my-repo/'
                 );
             });
         });
@@ -274,7 +271,7 @@ describe('ConfigurationService', () => {
                     headers: expect.objectContaining({
                         Authorization: `Bearer ${MOCK_IMS_TOKEN}`,
                     }),
-                }),
+                })
             );
         });
 
@@ -286,9 +283,7 @@ describe('ConfigurationService', () => {
         });
 
         it('should treat 404 as success (already deleted)', async () => {
-            fetchSpy.mockResolvedValueOnce(
-                new Response('Not Found', { status: 404 }),
-            );
+            fetchSpy.mockResolvedValueOnce(new Response('Not Found', { status: 404 }));
 
             const result = await service.deleteSiteConfig('test-user', 'my-site');
 
@@ -297,9 +292,7 @@ describe('ConfigurationService', () => {
         });
 
         it('should return error for non-404 failures', async () => {
-            fetchSpy.mockResolvedValueOnce(
-                new Response('Forbidden', { status: 403 }),
-            );
+            fetchSpy.mockResolvedValueOnce(new Response('Forbidden', { status: 403 }));
 
             const result = await service.deleteSiteConfig('test-user', 'my-site');
 
@@ -311,8 +304,6 @@ describe('ConfigurationService', () => {
     // ==========================================================
     // updateSiteConfig
     // ==========================================================
-
-
 
     // ==========================================================
     // Authentication
@@ -380,9 +371,9 @@ describe('ConfigurationService — failure reporting', () => {
     afterEach(() => fetchSpy?.mockRestore());
 
     it("records Adobe's stated reason from x-error", async () => {
-        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
-            forbidden({ 'x-error': '[admin] not authorized' }),
-        );
+        fetchSpy = jest
+            .spyOn(global, 'fetch')
+            .mockResolvedValue(forbidden({ 'x-error': '[admin] not authorized' }));
 
         await service.registerSite(params);
 
@@ -390,9 +381,9 @@ describe('ConfigurationService — failure reporting', () => {
     });
 
     it("records Adobe's request id, which is what support needs", async () => {
-        fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue(
-            forbidden({ 'x-invocation-id': 'abc-123' }),
-        );
+        fetchSpy = jest
+            .spyOn(global, 'fetch')
+            .mockResolvedValue(forbidden({ 'x-invocation-id': 'abc-123' }));
 
         await service.registerSite(params);
 

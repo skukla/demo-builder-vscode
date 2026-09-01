@@ -69,42 +69,26 @@ describe('SidebarProvider Registration', () => {
 
     describe('SidebarProvider Instantiation', () => {
         it('should have correct view ID', () => {
-            const provider = new SidebarProvider(
-                mockContext,
-                mockStateManager as any,
-                mockLogger as any
-            );
+            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
 
             expect(provider.viewId).toBe('demoBuilder.sidebar');
         });
 
         it('should be a WebviewViewProvider', () => {
-            const provider = new SidebarProvider(
-                mockContext,
-                mockStateManager as any,
-                mockLogger as any
-            );
+            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
 
             // Verify it has the required method
             expect(typeof provider.resolveWebviewView).toBe('function');
         });
 
         it('should have sendMessage method for communication', () => {
-            const provider = new SidebarProvider(
-                mockContext,
-                mockStateManager as any,
-                mockLogger as any
-            );
+            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
 
             expect(typeof provider.sendMessage).toBe('function');
         });
 
         it('should have updateContext method for sidebar context updates', () => {
-            const provider = new SidebarProvider(
-                mockContext,
-                mockStateManager as any,
-                mockLogger as any
-            );
+            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
 
             expect(typeof provider.updateContext).toBe('function');
         });
@@ -112,17 +96,10 @@ describe('SidebarProvider Registration', () => {
 
     describe('Provider Registration', () => {
         it('should be registerable with VS Code', () => {
-            const provider = new SidebarProvider(
-                mockContext,
-                mockStateManager as any,
-                mockLogger as any
-            );
+            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
 
             // Register the provider
-            const disposable = vscode.window.registerWebviewViewProvider(
-                provider.viewId,
-                provider
-            );
+            const disposable = vscode.window.registerWebviewViewProvider(provider.viewId, provider);
 
             expect(vscode.window.registerWebviewViewProvider).toHaveBeenCalledWith(
                 'demoBuilder.sidebar',
@@ -132,17 +109,10 @@ describe('SidebarProvider Registration', () => {
         });
 
         it('should add to subscriptions for cleanup', () => {
-            const provider = new SidebarProvider(
-                mockContext,
-                mockStateManager as any,
-                mockLogger as any
-            );
+            const provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
 
             // Register and add to subscriptions (as extension.ts would do)
-            const disposable = vscode.window.registerWebviewViewProvider(
-                provider.viewId,
-                provider
-            );
+            const disposable = vscode.window.registerWebviewViewProvider(provider.viewId, provider);
             mockContext.subscriptions.push(disposable);
 
             expect(mockContext.subscriptions).toHaveLength(1);

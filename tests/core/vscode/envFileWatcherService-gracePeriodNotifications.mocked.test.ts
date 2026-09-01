@@ -37,9 +37,9 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
 
         service = new EnvFileWatcherService(
             mockContext,
-            mockStateManager as any,
+            mockStateManager,
             mockWatcherManager,
-            mockLogger,
+            mockLogger
         );
 
         service.initialize();
@@ -57,16 +57,17 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             mockFileContents.set(filePath, initialContent);
 
             // Initialize hash
-            await vscode.commands.executeCommand(
-                'demoBuilder._internal.initializeFileHashes',
-                [filePath]
-            );
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                filePath,
+            ]);
 
             // Trigger demo start
             await vscode.commands.executeCommand('demoBuilder._internal.demoStarted');
 
             // Set demo as running
-            mockStateManager.getCurrentProject.mockResolvedValue(createMockProject({ status: 'running' }));
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ status: 'running' })
+            );
 
             // When: File changes within grace period (<10 seconds)
             const newContent = 'API_KEY=test456';
@@ -76,13 +77,11 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             mockWatchers[0]._simulateChange(uri);
 
             // Wait for async processing
-            await new Promise(resolve => process.nextTick(resolve));
+            await new Promise((resolve) => process.nextTick(resolve));
 
             // Then: No notification shown (within grace period)
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
-            expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('grace period'),
-            );
+            expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('grace period'));
         });
     });
 
@@ -94,13 +93,14 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             mockFileContents.set(filePath, content);
 
             // Initialize hash
-            await vscode.commands.executeCommand(
-                'demoBuilder._internal.initializeFileHashes',
-                [filePath]
-            );
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                filePath,
+            ]);
 
             // Set demo as running
-            mockStateManager.getCurrentProject.mockResolvedValue(createMockProject({ status: 'running' }));
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ status: 'running' })
+            );
 
             // When: First file change
             content = 'API_KEY=test456';
@@ -109,7 +109,7 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             let uri = vscode.Uri.file(filePath);
             mockWatchers[0]._simulateChange(uri);
 
-            await new Promise(resolve => process.nextTick(resolve));
+            await new Promise((resolve) => process.nextTick(resolve));
 
             // Then: First change shows notification
             expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(1);
@@ -124,13 +124,11 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             uri = vscode.Uri.file(filePath);
             mockWatchers[0]._simulateChange(uri);
 
-            await new Promise(resolve => process.nextTick(resolve));
+            await new Promise((resolve) => process.nextTick(resolve));
 
             // Then: Second change suppressed
             expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
-            expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('already shown'),
-            );
+            expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('already shown'));
         });
 
         it('should reset notification flag on action taken', async () => {
@@ -139,12 +137,13 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             let content = 'API_KEY=test123';
             mockFileContents.set(filePath, content);
 
-            await vscode.commands.executeCommand(
-                'demoBuilder._internal.initializeFileHashes',
-                [filePath]
-            );
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                filePath,
+            ]);
 
-            mockStateManager.getCurrentProject.mockResolvedValue(createMockProject({ status: 'running' }));
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ status: 'running' })
+            );
 
             // Show notification
             content = 'API_KEY=test456';
@@ -153,7 +152,7 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             let uri = vscode.Uri.file(filePath);
             mockWatchers[0]._simulateChange(uri);
 
-            await new Promise(resolve => process.nextTick(resolve));
+            await new Promise((resolve) => process.nextTick(resolve));
 
             expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(1);
 
@@ -170,7 +169,7 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
             uri = vscode.Uri.file(filePath);
             mockWatchers[0]._simulateChange(uri);
 
-            await new Promise(resolve => process.nextTick(resolve));
+            await new Promise((resolve) => process.nextTick(resolve));
 
             // Then: Notification shown again
             expect(vscode.window.showInformationMessage).toHaveBeenCalledTimes(1);
@@ -187,7 +186,7 @@ describe('EnvFileWatcherService - Grace Period and Notifications (Mocked)', () =
 
             // Then: Logger confirms disposal
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Service disposed'),
+                expect.stringContaining('Service disposed')
             );
         });
     });

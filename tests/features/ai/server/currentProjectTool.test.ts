@@ -92,7 +92,7 @@ describe('get_current_project', () => {
                 registered.push(name);
             },
         };
-        registerCurrentProjectTool(s as any, ctxFactory);
+        registerCurrentProjectTool(s, ctxFactory);
         expect(registered).toEqual(['get_current_project']);
     });
 });

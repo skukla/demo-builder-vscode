@@ -6,16 +6,14 @@
  * - handleBrowseFiles: Opens project in file explorer
  */
 
-import {
-    handleOpenProject,
-} from '@/features/project-creation/handlers/wizardLifecycleHandlers';
+import { handleOpenProject } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 import { createWizardLifecycleContext } from './wizardLifecycleHandlers.testUtils';
 
 // Mock vscode
 jest.mock('vscode', () => ({
     Uri: {
         file: jest.fn((path: string) => ({ fsPath: path, path })),
-        parse: jest.fn((uri: string) => ({ fsPath: uri, path: uri }))
+        parse: jest.fn((uri: string) => ({ fsPath: uri, path: uri })),
     },
     window: {
         showErrorMessage: jest.fn(),
@@ -56,7 +54,7 @@ describe('lifecycleHandlers - Project Actions', () => {
                 path: '/home/user/.demo-builder/projects/test-project',
             });
 
-            await handleOpenProject(context as any);
+            await handleOpenProject(context);
 
             expect(context.panel?.dispose).toHaveBeenCalled();
         });
@@ -69,12 +67,12 @@ describe('lifecycleHandlers - Project Actions', () => {
                 path: '/home/user/.demo-builder/projects/test-project',
             });
 
-            await handleOpenProject(context as any);
+            await handleOpenProject(context);
 
             expect(fsPromises.writeFile).toHaveBeenCalledWith(
                 expect.stringContaining('.open-dashboard-after-restart'),
                 expect.any(String),
-                'utf8',
+                'utf8'
             );
         });
 
@@ -86,16 +84,18 @@ describe('lifecycleHandlers - Project Actions', () => {
                 path: '/home/user/.demo-builder/projects/test-project',
             });
 
-            await handleOpenProject(context as any);
+            await handleOpenProject(context);
 
-            expect(BaseWebviewCommand.disposePanel).toHaveBeenCalledWith('demoBuilder.projectsList');
+            expect(BaseWebviewCommand.disposePanel).toHaveBeenCalledWith(
+                'demoBuilder.projectsList'
+            );
         });
 
         it('should log error when project is missing', async () => {
             const context = createWizardLifecycleContext();
             context.stateManager.getCurrentProject = jest.fn().mockResolvedValue(null);
 
-            const result = await handleOpenProject(context as any);
+            const result = await handleOpenProject(context);
 
             expect(result).toEqual({ success: true });
             expect(context.logger.error).toHaveBeenCalled();
@@ -108,7 +108,7 @@ describe('lifecycleHandlers - Project Actions', () => {
                 path: undefined,
             });
 
-            const result = await handleOpenProject(context as any);
+            const result = await handleOpenProject(context);
 
             expect(result).toEqual({ success: true });
             expect(context.logger.error).toHaveBeenCalled();
@@ -121,10 +121,9 @@ describe('lifecycleHandlers - Project Actions', () => {
                 path: '/home/user/.demo-builder/projects/test-project',
             });
 
-            const result = await handleOpenProject(context as any);
+            const result = await handleOpenProject(context);
 
             expect(result).toEqual({ success: true });
         });
     });
-
 });

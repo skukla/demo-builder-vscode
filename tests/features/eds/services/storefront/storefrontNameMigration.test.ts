@@ -79,9 +79,9 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const result = await migrateStorefrontNamingIfNeeded(
                 ctx,
                 project,
-                daOps as any,
-                configService as any,
-                mockLogger as any
+                daOps,
+                configService,
+                mockLogger
             );
 
             expect(result).toEqual({ skipped: true, migrated: false });
@@ -98,13 +98,7 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const daOps = makeDaOps();
             const configService = makeConfigService();
 
-            await migrateStorefrontNamingIfNeeded(
-                ctx,
-                project,
-                daOps as any,
-                configService as any,
-                mockLogger as any
-            );
+            await migrateStorefrontNamingIfNeeded(ctx, project, daOps, configService, mockLogger);
 
             expect(daOps.copyDaLiveSite).toHaveBeenCalledWith(
                 'skukla',
@@ -120,13 +114,7 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const daOps = makeDaOps();
             const configService = makeConfigService();
 
-            await migrateStorefrontNamingIfNeeded(
-                ctx,
-                project,
-                daOps as any,
-                configService as any,
-                mockLogger as any
-            );
+            await migrateStorefrontNamingIfNeeded(ctx, project, daOps, configService, mockLogger);
 
             expect(configService.updateSiteConfig).toHaveBeenCalledTimes(1);
             const passed = configService.updateSiteConfig.mock.calls[0][0];
@@ -145,9 +133,9 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             await migrateStorefrontNamingIfNeeded(
                 ctx,
                 project,
-                makeDaOps() as any,
-                makeConfigService() as any,
-                mockLogger as any
+                makeDaOps(),
+                makeConfigService(),
+                mockLogger
             );
 
             expect(ctx.daLiveSite).toBe('b2b-boilerplate');
@@ -160,9 +148,9 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             await migrateStorefrontNamingIfNeeded(
                 ctx,
                 project,
-                makeDaOps() as any,
-                makeConfigService() as any,
-                mockLogger as any
+                makeDaOps(),
+                makeConfigService(),
+                mockLogger
             );
 
             expect(
@@ -176,13 +164,7 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const daOps = makeDaOps();
             const configService = makeConfigService();
 
-            await migrateStorefrontNamingIfNeeded(
-                ctx,
-                project,
-                daOps as any,
-                configService as any,
-                mockLogger as any
-            );
+            await migrateStorefrontNamingIfNeeded(ctx, project, daOps, configService, mockLogger);
 
             expect(daOps.deleteSiteRoot).toHaveBeenCalledWith('skukla', 'b2b-boilerplate-content');
             // Verify ordering: deleteSiteRoot is the last call.
@@ -202,9 +184,9 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const result = await migrateStorefrontNamingIfNeeded(
                 ctx,
                 project,
-                makeDaOps() as any,
-                makeConfigService() as any,
-                mockLogger as any
+                makeDaOps(),
+                makeConfigService(),
+                mockLogger
             );
 
             expect(result).toEqual({ skipped: false, migrated: true });
@@ -218,9 +200,9 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             await migrateStorefrontNamingIfNeeded(
                 ctx,
                 project,
-                makeDaOps() as any,
-                configService as any,
-                mockLogger as any
+                makeDaOps(),
+                configService,
+                mockLogger
             );
 
             const passed = configService.updateSiteConfig.mock.calls[0][0];
@@ -235,9 +217,9 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             await migrateStorefrontNamingIfNeeded(
                 ctx,
                 project,
-                makeDaOps() as any,
-                configService as any,
-                mockLogger as any
+                makeDaOps(),
+                configService,
+                mockLogger
             );
 
             const passed = configService.updateSiteConfig.mock.calls[0][0];
@@ -257,9 +239,9 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const result = await migrateStorefrontNamingIfNeeded(
                 ctx,
                 project,
-                daOps as any,
-                configService as any,
-                mockLogger as any
+                daOps,
+                configService,
+                mockLogger
             );
 
             expect(result.skipped).toBe(false);
@@ -285,9 +267,9 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const result = await migrateStorefrontNamingIfNeeded(
                 ctx,
                 project,
-                daOps as any,
-                configService as any,
-                mockLogger as any
+                daOps,
+                configService,
+                mockLogger
             );
 
             expect(result.skipped).toBe(false);
@@ -312,9 +294,9 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const result = await migrateStorefrontNamingIfNeeded(
                 ctx,
                 project,
-                daOps as any,
-                configService as any,
-                mockLogger as any
+                daOps,
+                configService,
+                mockLogger
             );
 
             expect(result).toEqual({ skipped: false, migrated: true });
@@ -346,9 +328,9 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const result = await migrateStorefrontNamingIfNeeded(
                 makeCtx(),
                 makeProject('b2b-boilerplate-content'),
-                makeDaOps() as any,
-                configService as any,
-                mockLogger as any
+                makeDaOps(),
+                configService,
+                mockLogger
             );
 
             expect(result.migrated).toBe(true);
@@ -370,9 +352,9 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const result = await migrateStorefrontNamingIfNeeded(
                 makeCtx(),
                 makeProject('b2b-boilerplate-content'),
-                makeDaOps() as any,
-                configService as any,
-                mockLogger as any
+                makeDaOps(),
+                configService,
+                mockLogger
             );
 
             expect(result.migrated).toBe(false);
@@ -387,9 +369,9 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             const result = await migrateStorefrontNamingIfNeeded(
                 ctx,
                 project,
-                makeDaOps() as any,
-                makeConfigService() as any,
-                mockLogger as any
+                makeDaOps(),
+                makeConfigService(),
+                mockLogger
             );
 
             expect(result.migrated).toBe(true);

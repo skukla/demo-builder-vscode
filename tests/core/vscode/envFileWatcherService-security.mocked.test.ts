@@ -43,9 +43,9 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             // Given: Service initialized
             const service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
             service.initialize();
 
@@ -71,9 +71,9 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
 
             const _service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
 
             // When: Internal command called
@@ -95,9 +95,9 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             // Given: Service initialized
             const service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
             service.initialize();
 
@@ -105,10 +105,10 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             mockFileContents.set('/project1/.env', 'VALID=true');
 
             // When: Initialize hashes with mixed paths
-            await vscode.commands.executeCommand(
-                'demoBuilder._internal.initializeFileHashes',
-                ['/outside/workspace/.env', '/project1/.env']
-            );
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                '/outside/workspace/.env',
+                '/project1/.env',
+            ]);
 
             // Then: Only workspace path processed (outside path rejected)
             expect(mockLogger.warn).toHaveBeenCalledWith(
@@ -120,9 +120,9 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             // Given: Service initialized
             const service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
             service.initialize();
 
@@ -142,9 +142,9 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             // Given: Service initialized with workspace at /project1
             const service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
             service.initialize();
 
@@ -166,9 +166,9 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             // Given: Service initialized
             const service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
             service.initialize();
 
@@ -190,17 +190,16 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             // Given: Service with active timeouts
             const service = new EnvFileWatcherService(
                 mockContext,
-                mockStateManager as any,
+                mockStateManager,
                 mockWatcherManager,
-                mockLogger,
+                mockLogger
             );
             service.initialize();
 
             // Create programmatic write (triggers timeout)
-            vscode.commands.executeCommand(
-                'demoBuilder._internal.registerProgrammaticWrites',
-                ['/project1/.env']
-            );
+            vscode.commands.executeCommand('demoBuilder._internal.registerProgrammaticWrites', [
+                '/project1/.env',
+            ]);
 
             // When: Service disposed
             service.dispose();

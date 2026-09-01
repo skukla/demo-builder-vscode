@@ -20,7 +20,6 @@ jest.mock('@octokit/core', () => ({
     },
 }));
 
-
 // Mock logger
 
 describe('buildArchiveUrl', () => {
@@ -29,7 +28,6 @@ describe('buildArchiveUrl', () => {
     // Octokit + zip-buffer mocking that obscures this one load-bearing branch.
     // ADR-006 Step 4: thin-layer reset passes the LKG SHA, forked reset passes `main`.
 
-     
     let buildArchiveUrl: any;
 
     beforeEach(async () => {
@@ -47,7 +45,9 @@ describe('buildArchiveUrl', () => {
     it('uses the branch URL shape for any non-SHA ref (custom branches)', () => {
         const { url, isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', 'feature/x');
         expect(isSha).toBe(false);
-        expect(url).toBe('https://github.com/skukla/citisignal-b2b/archive/refs/heads/feature/x.zip');
+        expect(url).toBe(
+            'https://github.com/skukla/citisignal-b2b/archive/refs/heads/feature/x.zip'
+        );
     });
 
     it('uses the SHA URL shape for a full 40-hex commit SHA (lowercase)', () => {
@@ -83,7 +83,6 @@ describe('isStaleShaFailure', () => {
     // publishers (brandAssetPublisher, pdp404HandlerPublisher) for their
     // re-read-and-retry-once handling.
 
-
     let isStaleShaFailure: any;
 
     beforeEach(async () => {
@@ -118,9 +117,8 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
     // thin-layer reset before any file changed. The target branch is always `main`;
     // only the template download accepts a SHA.
 
-     
     let GitHubFileOperations: any;
-     
+
     let mockTokenService: any;
 
     const LKG_SHA = 'a1b2c3d4e5f6789012345678901234567890abcd';
@@ -142,26 +140,29 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
         // Stub the internals just enough: getBranchInfo + downloadRepoContents +
         // createTree + createCommit + updateBranchRef. We're asserting the
         // arguments passed to getBranchInfo, not exercising the full Tree API.
-        const getBranchInfoSpy = jest.spyOn(service, 'getBranchInfo')
+        const getBranchInfoSpy = jest
+            .spyOn(service, 'getBranchInfo')
             .mockResolvedValue({ commitSha: 'parent-sha', treeSha: 'parent-tree' });
-         
+
         // One file, not an empty Map: an empty template now throws rather than
         // committing a tree that would empty the repository.
         (service as any).downloadRepoContents = jest
             .fn()
             .mockResolvedValue(new Map([['index.html', '<html></html>']]));
-         
+
         (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
-         
+
         (service as any).createCommit = jest.fn().mockResolvedValue('new-commit-sha');
-         
+
         (service as any).updateBranchRef = jest.fn().mockResolvedValue(undefined);
 
         await service.resetRepoToTemplate(
-            'hlxsites', 'aem-boilerplate-commerce',
-            'user', 'user-storefront',
+            'hlxsites',
+            'aem-boilerplate-commerce',
+            'user',
+            'user-storefront',
             new Map(),
-            LKG_SHA, // <-- the LKG SHA, NOT 'main'
+            LKG_SHA // <-- the LKG SHA, NOT 'main'
         );
 
         // Target branch lookup MUST be 'main' even though templateRef is a SHA.
@@ -170,25 +171,29 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
 
     it('passes the templateRef (SHA-shaped or branch) through to downloadRepoContents', async () => {
         const service = new GitHubFileOperations(mockTokenService);
-        jest.spyOn(service, 'getBranchInfo')
-            .mockResolvedValue({ commitSha: 'parent-sha', treeSha: 'parent-tree' });
-         
+        jest.spyOn(service, 'getBranchInfo').mockResolvedValue({
+            commitSha: 'parent-sha',
+            treeSha: 'parent-tree',
+        });
+
         // Non-empty: an empty template now refuses rather than emptying the repo.
         const downloadSpy = jest.fn().mockResolvedValue(new Map([['index.html', '<html></html>']]));
-         
+
         (service as any).downloadRepoContents = downloadSpy;
-         
+
         (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
-         
+
         (service as any).createCommit = jest.fn().mockResolvedValue('new-commit-sha');
-         
+
         (service as any).updateBranchRef = jest.fn().mockResolvedValue(undefined);
 
         await service.resetRepoToTemplate(
-            'hlxsites', 'aem-boilerplate-commerce',
-            'user', 'user-storefront',
+            'hlxsites',
+            'aem-boilerplate-commerce',
+            'user',
+            'user-storefront',
             new Map(),
-            LKG_SHA,
+            LKG_SHA
         );
 
         expect(downloadSpy).toHaveBeenCalledWith('hlxsites', 'aem-boilerplate-commerce', LKG_SHA);
@@ -196,28 +201,32 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
 
     it('calls updateBranchRef with the target branch "main" — NOT the templateRef', async () => {
         const service = new GitHubFileOperations(mockTokenService);
-        jest.spyOn(service, 'getBranchInfo')
-            .mockResolvedValue({ commitSha: 'parent-sha', treeSha: 'parent-tree' });
-         
+        jest.spyOn(service, 'getBranchInfo').mockResolvedValue({
+            commitSha: 'parent-sha',
+            treeSha: 'parent-tree',
+        });
+
         // One file, not an empty Map: an empty template now throws rather than
         // committing a tree that would empty the repository.
         (service as any).downloadRepoContents = jest
             .fn()
             .mockResolvedValue(new Map([['index.html', '<html></html>']]));
-         
+
         (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
-         
+
         (service as any).createCommit = jest.fn().mockResolvedValue('new-commit-sha');
-         
+
         const updateRefSpy = jest.fn().mockResolvedValue(undefined);
-         
+
         (service as any).updateBranchRef = updateRefSpy;
 
         await service.resetRepoToTemplate(
-            'hlxsites', 'aem-boilerplate-commerce',
-            'user', 'user-storefront',
+            'hlxsites',
+            'aem-boilerplate-commerce',
+            'user',
+            'user-storefront',
             new Map(),
-            LKG_SHA,
+            LKG_SHA
         );
 
         // The trailing `true` is the force flag, which reset now passes EXPLICITLY
@@ -229,7 +238,7 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
             'user-storefront',
             'main',
             'new-commit-sha',
-            true,
+            true
         );
     });
 });
@@ -472,8 +481,9 @@ describe('resetRepoToTemplate — chunked tree creation', () => {
         (service as any).downloadRepoContents = jest.fn().mockResolvedValue(contents);
         const createTree = jest
             .fn()
-            .mockImplementation(async (_o: string, _r: string, entries: unknown[], base?: string) =>
-                `tree-after-${entries.length}-${base ?? 'none'}`,
+            .mockImplementation(
+                async (_o: string, _r: string, entries: unknown[], base?: string) =>
+                    `tree-after-${entries.length}-${base ?? 'none'}`
             );
         (service as any).createTree = createTree;
         const createCommit = jest.fn().mockResolvedValue('new-commit-sha');
@@ -526,11 +536,22 @@ describe('resetRepoToTemplate — chunked tree creation', () => {
         }
         // The commit uses the LAST tree, not the first.
         const finalTree = await createTree.mock.results[createTree.mock.calls.length - 1].value;
-        expect(createCommit).toHaveBeenCalledWith('u', 'u-repo', expect.any(String), finalTree, 'parent-sha');
+        expect(createCommit).toHaveBeenCalledWith(
+            'u',
+            'u-repo',
+            expect.any(String),
+            finalTree,
+            'parent-sha'
+        );
     });
 
     it('still issues a single request for a small template', async () => {
-        const { createTree } = await runReset(new Map([['a.js', 'hello'], ['b.js', 'world']]));
+        const { createTree } = await runReset(
+            new Map([
+                ['a.js', 'hello'],
+                ['b.js', 'world'],
+            ])
+        );
 
         expect(createTree).toHaveBeenCalledTimes(1);
         expect(createTree.mock.calls[0][3]).toBeUndefined();
@@ -573,7 +594,7 @@ describe('resetRepoToTemplate — empty template', () => {
         const service = new GitHubFileOperations({
             getToken: jest.fn().mockResolvedValue({ token: 'ghp_test' }),
             clearToken: jest.fn(),
-        } as any);
+        });
         jest.spyOn(service, 'getBranchInfo').mockResolvedValue({
             commitSha: 'parent-sha',
             treeSha: 'parent-tree',
@@ -586,7 +607,7 @@ describe('resetRepoToTemplate — empty template', () => {
         (service as any).updateBranchRef = updateBranchRef;
 
         await expect(
-            service.resetRepoToTemplate('t-o', 't-r', 'u', 'u-r', new Map(), 'main'),
+            service.resetRepoToTemplate('t-o', 't-r', 'u', 'u-r', new Map(), 'main')
         ).rejects.toThrow(/no files/i);
 
         // The branch must be untouched — this is the data-loss path.

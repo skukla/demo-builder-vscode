@@ -128,7 +128,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             expect(mockFetcher.createProject).toHaveBeenCalledWith(
                 'My Demo',
                 'A demo project',
-                undefined,
+                undefined
             );
         });
 
@@ -139,7 +139,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             expect(mockFetcher.createWorkspace).toHaveBeenCalledWith(
                 'Stage',
                 'A workspace',
-                undefined,
+                undefined
             );
         });
 
@@ -201,7 +201,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
                 stdout: 'x'.repeat(150),
                 stderr: '',
                 duration: 0,
-            } as any);
+            });
         });
 
         it('should succeed after login when restoring project context', async () => {
@@ -221,7 +221,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
                 stdout: '',
                 stderr: 'login failed',
                 duration: 0,
-            } as any);
+            });
 
             const result = await authService.loginAndRestoreProjectContext({
                 organization: 'org123',

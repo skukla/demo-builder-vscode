@@ -12,7 +12,11 @@ describe('dashboardHandlers - handleOpenDevConsole - Security Tests', () => {
         // Reset mocks and set default implementations
         jest.clearAllMocks();
 
-        const { validateOrgId, validateProjectId, validateWorkspaceId } = require('@/core/validation/validators/AdobeResourceValidator');
+        const {
+            validateOrgId,
+            validateProjectId,
+            validateWorkspaceId,
+        } = require('@/core/validation/validators/AdobeResourceValidator');
         const { validateURL } = require('@/core/validation/URLValidator');
 
         // Reset to default no-op implementations (valid by default)
@@ -32,13 +36,19 @@ describe('dashboardHandlers - handleOpenDevConsole - Security Tests', () => {
                 projectName: 'Test Project',
                 authenticated: true,
             },
-        } as any);
+        });
 
-        const { validateOrgId, validateProjectId, validateWorkspaceId } = require('@/core/validation/validators/AdobeResourceValidator');
+        const {
+            validateOrgId,
+            validateProjectId,
+            validateWorkspaceId,
+        } = require('@/core/validation/validators/AdobeResourceValidator');
         const { validateURL } = require('@/core/validation/URLValidator');
 
         // When: Handler is called
-        const result = await (await import('@/features/dashboard/handlers/dashboardHandlers')).handleOpenDevConsole(mockContext);
+        const result = await (
+            await import('@/features/dashboard/handlers/dashboardHandlers')
+        ).handleOpenDevConsole(mockContext);
 
         // Then: All IDs were validated before URL construction
         expect(validateOrgId).toHaveBeenCalledWith('valid-org-123');
@@ -58,7 +68,7 @@ describe('dashboardHandlers - handleOpenDevConsole - Security Tests', () => {
                 projectName: 'Test Project',
                 authenticated: true,
             },
-        } as any);
+        });
 
         const { validateOrgId } = require('@/core/validation/validators/AdobeResourceValidator');
         validateOrgId.mockImplementation(() => {
@@ -66,7 +76,9 @@ describe('dashboardHandlers - handleOpenDevConsole - Security Tests', () => {
         });
 
         // When: Handler is called
-        const result = await (await import('@/features/dashboard/handlers/dashboardHandlers')).handleOpenDevConsole(mockContext);
+        const result = await (
+            await import('@/features/dashboard/handlers/dashboardHandlers')
+        ).handleOpenDevConsole(mockContext);
 
         // Then: Request fails with validation error
         expect(result.success).toBe(false);
@@ -86,13 +98,18 @@ describe('dashboardHandlers - handleOpenDevConsole - Security Tests', () => {
                 projectName: 'Test Project',
                 authenticated: true,
             },
-        } as any);
+        });
 
-        const { validateOrgId, validateProjectId } = require('@/core/validation/validators/AdobeResourceValidator');
+        const {
+            validateOrgId,
+            validateProjectId,
+        } = require('@/core/validation/validators/AdobeResourceValidator');
         const { validateURL } = require('@/core/validation/URLValidator');
 
         // When: Handler is called
-        const result = await (await import('@/features/dashboard/handlers/dashboardHandlers')).handleOpenDevConsole(mockContext);
+        const result = await (
+            await import('@/features/dashboard/handlers/dashboardHandlers')
+        ).handleOpenDevConsole(mockContext);
 
         // Then: Org and project IDs validated (no workspace)
         expect(validateOrgId).toHaveBeenCalledWith('valid-org-123');
@@ -105,12 +122,14 @@ describe('dashboardHandlers - handleOpenDevConsole - Security Tests', () => {
         // Given: Project without Adobe configuration
         const { mockContext } = setupMocks({
             adobe: undefined,
-        } as any);
+        });
 
         const { validateURL } = require('@/core/validation/URLValidator');
 
         // When: Handler is called
-        const result = await (await import('@/features/dashboard/handlers/dashboardHandlers')).handleOpenDevConsole(mockContext);
+        const result = await (
+            await import('@/features/dashboard/handlers/dashboardHandlers')
+        ).handleOpenDevConsole(mockContext);
 
         // Then: Generic URL used (no ID validation needed)
         expect(validateURL).toHaveBeenCalledWith('https://developer.adobe.com/console');

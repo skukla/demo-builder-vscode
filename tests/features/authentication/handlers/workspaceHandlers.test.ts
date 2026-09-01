@@ -384,7 +384,7 @@ describe('workspaceHandlers', () => {
                 name: 'Test Project',
                 title: 'Test Project',
             });
-            mockAuthManager.getWorkspaces.mockResolvedValue(null as any);
+            mockAuthManager.getWorkspaces.mockResolvedValue(null);
 
             const result = await handleGetWorkspaces(mockContext);
 
@@ -399,7 +399,7 @@ describe('workspaceHandlers', () => {
                 name: 'Test Project',
                 title: 'Test Project',
             });
-            mockAuthManager.getWorkspaces.mockResolvedValue(undefined as any);
+            mockAuthManager.getWorkspaces.mockResolvedValue(undefined);
 
             const result = await handleGetWorkspaces(mockContext);
 

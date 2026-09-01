@@ -31,7 +31,7 @@ describe('ConfigurationService', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockTokenProvider.getAccessToken.mockResolvedValue(MOCK_IMS_TOKEN);
-        service = new ConfigurationService(mockTokenProvider as any, mockLogger as any);
+        service = new ConfigurationService(mockTokenProvider, mockLogger);
         fetchSpy = jest
             .spyOn(global, 'fetch')
             .mockResolvedValue(new Response(null, { status: 200 }));

@@ -31,7 +31,7 @@ const menuItemLabels = (): string[] =>
 
 /** An EDS project — isEdsProject keys off an `eds-` selectedStack. */
 const edsProject = (name = 'EDS Project') =>
-    createProjectsDashboardProject({ name, selectedStack: 'eds-dalive' } as any);
+    createProjectsDashboardProject({ name, selectedStack: 'eds-dalive' });
 
 /**
  * An EDS project (the resolved authoring experience no longer rides in the
@@ -40,7 +40,7 @@ const edsProject = (name = 'EDS Project') =>
 const edsProjectWithExperience = (
     _experience: 'da-live-classic' | 'experience-workspace',
     name = 'EDS Project'
-) => createProjectsDashboardProject({ name, selectedStack: 'eds-dalive' } as any);
+) => createProjectsDashboardProject({ name, selectedStack: 'eds-dalive' });
 
 describe('ProjectActionsMenu', () => {
     describe('rendering and gating', () => {
@@ -163,7 +163,7 @@ describe('ProjectActionsMenu', () => {
         });
 
         it('flips the pin label to Unpin when the project is pinned', () => {
-            const project = createProjectsDashboardProject({ name: 'Test', pinned: true } as any);
+            const project = createProjectsDashboardProject({ name: 'Test', pinned: true });
             renderWithProvider(
                 <ProjectActionsMenu project={project} actions={{ onPinToggle: jest.fn() }} />
             );
@@ -218,7 +218,10 @@ describe('ProjectActionsMenu', () => {
         it('offers no deploy actions either — those live on their own surfaces', () => {
             renderWithProvider(
                 <ProjectActionsMenu
-                    project={createProjectsDashboardProject({ name: 'Test', meshStatusSummary: 'stale' })}
+                    project={createProjectsDashboardProject({
+                        name: 'Test',
+                        meshStatusSummary: 'stale',
+                    })}
                     actions={
                         // onRedeployMesh is deliberately NOT in ProjectActions —
                         // the deploy surfaces own it now. The cast keeps this test

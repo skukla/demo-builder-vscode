@@ -114,10 +114,7 @@ describe('UpdateManager - Component Updates', () => {
             mockSecurityValidationPass();
 
             // When: checking all projects for updates
-            const results = await updateManager.checkAllProjectsForUpdates([
-                project1,
-                project2,
-            ] as any);
+            const results = await updateManager.checkAllProjectsForUpdates([project1, project2]);
 
             // Then: should detect update for the repoUrl-only component
             expect(results).toHaveLength(1);
@@ -139,7 +136,7 @@ describe('UpdateManager - Component Updates', () => {
                 ]),
             };
 
-            const results = await updateManager.checkAllProjectsForUpdates([project] as any);
+            const results = await updateManager.checkAllProjectsForUpdates([project]);
 
             // Then: should skip (no path registered)
             expect(results).toHaveLength(0);
@@ -172,7 +169,7 @@ describe('UpdateManager - Component Updates', () => {
 
             mockSecurityValidationPass();
 
-            const results = await updateManager.checkAllProjectsForUpdates([project] as any);
+            const results = await updateManager.checkAllProjectsForUpdates([project]);
 
             // Then: both components should have updates detected
             expect(results).toHaveLength(2);

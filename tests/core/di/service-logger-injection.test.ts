@@ -136,7 +136,7 @@ describe('Service Logger Injection', () => {
 
             // Set up a cache entry, then invalidate it (which will log)
             const mockStatus = { installed: true, version: '1.0.0' };
-            cacheManager2.setCachedResult('test-prereq', mockStatus as any);
+            cacheManager2.setCachedResult('test-prereq', mockStatus);
             cacheManager2.invalidate('test-prereq');
 
             // Verify the injected logger was called
