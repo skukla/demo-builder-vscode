@@ -1,10 +1,10 @@
 {
-    "_what": "Derived time series of codebase health. Each metric is READ from its real source (the ledgers, the mutation baseline, the handbook); this file is never authoritative. Append-only \u2014 a snapshot is a reading, not a target.",
+    "_what": "Derived time series of codebase health. Each metric is READ from its real source (the ledgers, the mutation baseline, the handbook); this file is never authoritative. Append-only — a snapshot is a reading, not a target.",
     "snapshots": [
         {
             "at": "2026-08-31",
             "commit": "b5b610003",
-            "note": "first snapshot \u2014 develop, immediately after the Track 3 merge. The floor everything after this is measured against.",
+            "note": "first snapshot — develop, immediately after the Track 3 merge. The floor everything after this is measured against.",
             "metrics": {
                 "dup.src.clones": 67,
                 "dup.tests.clones": 91,
@@ -96,7 +96,7 @@
                 "conventions.enforced": 62,
                 "suite.testFiles": 1198
             },
-            "_note": "MIXED ENTRY \u2014 read the two halves differently. The duplication metrics are real work: seven wholly redundant test files deleted (44 duplicated tests), which is the -11 clone pairs and -622 duplicated lines. The MUTATION metrics are a MEASUREMENT CORRECTION and must not be counted as progress at program end: jest.pl22.config.js had been naming 12 of installHandler's 13 test suites and 1 of integrationCardModel's 5, so the previous entry's 60.48 was computed over an incomplete test set. No test was written. scoreWeighted 60.48->71.23, noCoverage 232->87 and highValueSurvivors 173->165 are all that one config fix. reports/mutation/baseline.json carries the per-module _supersedes blocks.",
+            "_note": "MIXED ENTRY — read the two halves differently. The duplication metrics are real work: seven wholly redundant test files deleted (44 duplicated tests), which is the -11 clone pairs and -622 duplicated lines. The MUTATION metrics are a MEASUREMENT CORRECTION and must not be counted as progress at program end: jest.pl22.config.js had been naming 12 of installHandler's 13 test suites and 1 of integrationCardModel's 5, so the previous entry's 60.48 was computed over an incomplete test set. No test was written. scoreWeighted 60.48->71.23, noCoverage 232->87 and highValueSurvivors 173->165 are all that one config fix. reports/mutation/baseline.json carries the per-module _supersedes blocks.",
             "_correctionOf": [
                 "mutation.scoreWeighted",
                 "mutation.noCoverage",
@@ -126,7 +126,7 @@
                 "conventions.enforced": 62,
                 "suite.testFiles": 1197
             },
-            "_note": "Track 4 loop close. The one big move is debt.archExemptions 30 -> 6: the architecture exemption ledger, and every remaining row is ratified or an owner decision. Two categories emptied (constructionBoundary, featureBarrels). The duplication and logger-fake movements here are incidental \u2014 a few files deleted along the way \u2014 NOT a duplication pass. mutation is unchanged because nothing touched it this run."
+            "_note": "Track 4 loop close. The one big move is debt.archExemptions 30 -> 6: the architecture exemption ledger, and every remaining row is ratified or an owner decision. Two categories emptied (constructionBoundary, featureBarrels). The duplication and logger-fake movements here are incidental — a few files deleted along the way — NOT a duplication pass. mutation is unchanged because nothing touched it this run."
         },
         {
             "at": "2026-08-31",
@@ -151,21 +151,45 @@
                 "conventions.enforced": 62,
                 "suite.testFiles": 1197
             },
-            "_note": "PL-13 closed. debt.archExemptions 6 -> 3, and all three are RATIFIED permanent exceptions recorded in ADR-015 rather than debt \u2014 so this metric has reached its floor and should not be read as having 3 left to do. It was 30 at the start of 2026-08-31 and 75 when the item was written."
+            "_note": "PL-13 closed. debt.archExemptions 6 -> 3, and all three are RATIFIED permanent exceptions recorded in ADR-015 rather than debt — so this metric has reached its floor and should not be read as having 3 left to do. It was 30 at the start of 2026-08-31 and 75 when the item was written."
+        },
+        {
+            "at": "2026-09-01",
+            "commit": "fd56f7e4f",
+            "note": "after PL-33 merge — conventions 70 of 71 enforced, tool-auth review complete",
+            "metrics": {
+                "dup.src.clones": 67,
+                "dup.tests.clones": 75,
+                "dup.tests.duplicatedLines": 3884,
+                "dup.tests.pct": 1.19,
+                "dup.tests.pairsWebview": 15,
+                "dup.tests.pairsService": 60,
+                "mutation.scoreWeighted": 71.23,
+                "mutation.modulesPinned": 12,
+                "mutation.highValueSurvivors": 165,
+                "mutation.noCoverage": 87,
+                "debt.testFamilies": 63,
+                "debt.loggerFakes": 4,
+                "debt.consoleNoise": 0,
+                "debt.archExemptions": 3,
+                "conventions.total": 71,
+                "conventions.enforced": 70,
+                "suite.testFiles": 1200
+            }
         }
     ],
     "_definitions": {
-        "dup.src.clones": "bash .claude/skills/code-duplication-scan/scan.sh src  (min-lines 8, min-tokens 60, tests ignored) \u2014 ratchet 66",
-        "dup.tests.*": "npx jscpd tests --min-lines 20 --min-tokens 140 \u2014 ratchet 160 / 2.44%. Jitter is +/-1 between identical runs",
+        "dup.src.clones": "bash .claude/skills/code-duplication-scan/scan.sh src  (min-lines 8, min-tokens 60, tests ignored) — ratchet 66",
+        "dup.tests.*": "npx jscpd tests --min-lines 20 --min-tokens 140 — ratchet 160 / 2.44%. Jitter is +/-1 between identical runs",
         "dup.tests.pairsWebview|pairsService": "the same run, split by whether either side of the pair is a .tsx suite",
-        "mutation.*": "READ from reports/mutation/baseline.json, never re-measured here. scoreWeighted is killed/total mutants across pinned modules \u2014 NOT a mean of per-module percentages, which would weigh a 40-mutant module equally with a 400-mutant one",
+        "mutation.*": "READ from reports/mutation/baseline.json, never re-measured here. scoreWeighted is killed/total mutants across pinned modules — NOT a mean of per-module percentages, which would weigh a 40-mutant module equally with a 400-mutant one",
         "debt.*": "the length of each shrink-only ledger, read from the file that owns it",
         "conventions.*": "the sentence in docs/development/handbook.md that tests/sop pins",
         "suite.testFiles": "git ls-files over tests/**/*.test.ts(x)"
     },
     "_floors": {
         "dup.tests.pairsService": "78 as of 2026-08-31. Duplication BETWEEN files; none is a suite repeating itself. Shared setup wanting one home.",
-        "dup.tests.pairsWebview": "12 as of 2026-08-31. ADJUDICATED, not merely counted: of the three pairs that looked like a suite repeating itself, only AdobeAuthStep was a missing helper (fixed \u2014 15 identical render blocks became one renderStep). ProjectCard and ConfigureScreen-rendering ALREADY use a render helper; jscpd matches those files against themselves at an offset because twenty render-and-assert tests are structurally alike by nature. Those two are a legitimate floor, not debt.",
+        "dup.tests.pairsWebview": "12 as of 2026-08-31. ADJUDICATED, not merely counted: of the three pairs that looked like a suite repeating itself, only AdobeAuthStep was a missing helper (fixed — 15 identical render blocks became one renderStep). ProjectCard and ConfigureScreen-rendering ALREADY use a render helper; jscpd matches those files against themselves at an offset because twenty render-and-assert tests are structurally alike by nature. Those two are a legitimate floor, not debt.",
         "dup.src.clones": "67 as of 2026-08-31 (the skill says 66; +/-1 is jitter). 7 are JSON config structure, an inert floor.",
         "_why_two": "Judged apart because the defect differs. One number let a 2026-08-31 reading describe the whole tree from its five largest clones, which happened to be .tsx and were not representative."
     }
