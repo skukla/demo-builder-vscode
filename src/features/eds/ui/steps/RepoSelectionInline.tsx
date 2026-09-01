@@ -53,6 +53,9 @@ import '../styles/eds-steps.css';
 export type RepoSelectionPhase = 'repository' | 'code-sync';
 
 /** Props: state-driven like the parent step, but validity flows OUT to the parent. */
+/** Constant per call site — see PROJECT_SEARCH_FIELDS in AdobeProjectPicker. */
+const REPO_SEARCH_FIELDS: ReadonlyArray<keyof GitHubRepoItem> = ['name', 'fullName', 'description'];
+
 export interface RepoSelectionInlineProps extends Pick<BaseStepProps, 'state' | 'updateState'> {
     /** Which sub-step body to render: the repo pick/create UI or the Code Sync UI. */
     phase: RepoSelectionPhase;
@@ -165,7 +168,7 @@ export function RepoSelectionInline({
         selectedItem: selectedRepo,
         searchFilterKey: 'githubRepoSearchFilter',
         autoSelectSingle: false,
-        searchFields: ['name', 'fullName', 'description'],
+        searchFields: REPO_SEARCH_FIELDS,
         onSelect: (repo) => {
             updateState({
                 edsConfig: {

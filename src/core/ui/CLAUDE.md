@@ -60,14 +60,16 @@ webview: no Playwright, no screenshot, no reachable devtools. The global "verify
 browser" instinct does not apply, and nothing automatic replaces it — ask for a
 screenshot rather than reporting a visual result you did not see.
 
-## React's own rules, and the one nothing enforces
+## React's own rules, and the one that took a type checker to enforce
 
 Three of React's conventions fail the build here: `rules-of-hooks` (a hook called
 conditionally or below a return), `jsx-key`, and the a11y checks on `alt-text` and
 `aria-props`. `exhaustive-deps` is a WARNING, and CI allows warnings — the zero-warning
 bar in the `gate` skill is what actually catches it.
 
-**The one no tool catches: a value passed INTO a hook must be stable across renders.**
+**A value passed INTO a hook must be stable across renders.** This was listed here as
+"the one no tool catches" until 2026-09-01, when it turned out to be catchable and the
+corpus was emptied.
 
 ```tsx
 const EMPTY: never[] = [];              // module level — one reference, forever
@@ -77,10 +79,27 @@ useThing({ items: [] });                // a NEW array every render
 ```
 
 An inline `[]`, `{}` or arrow literal is a new reference on every render. An effect
-depending on it runs every render; one that sets state loops forever. `exhaustive-deps`
-reads the dependency array *inside* the hook and cannot see across the prop boundary to
-the caller that made the value, and the types are identical so the compiler sees nothing
-either. It has already happened in this codebase.
+depending on it runs every render; one that sets state loops forever.
+
+`exhaustive-deps` reads the dependency array *inside* the hook and cannot see across the
+prop boundary to the caller that made the value, and the types are identical so the
+compiler sees nothing either. **Both halves of that stay true — the mistake was
+concluding from them that nothing could check it.** A LINT RULE cannot cross the
+boundary; the TYPE CHECKER can, by resolving the call to the hook's declaration and
+reading the dependency arrays there. `tests/sop/stable-hook-arguments.test.ts` does
+exactly that and now bans it.
+
+Emptying it found twelve, none of them theoretical: `useSelectionStep` defaulted
+`messagePayload = {}` and `searchFields = []` *inside its destructure*, so both were
+rebuilt every render for every caller that omitted them, and it named three
+caller-written callbacks in dependency arrays, re-subscribing its message listener on
+every render of three wizard surfaces. `useActivateOnKey` handed all five tile call
+sites a new keydown handler every render.
+
+Three things are NOT violations: a **destructured** parameter (the object is torn apart
+in the signature, so nothing depends on it), a **spread** dependency (`[...conditions,
+setX]` depends on the elements), and React's own hooks — `useState([])` reads its
+argument once, and the `[]` in `useMemo(fn, [])` IS the dependency array.
 
 ## Before writing a new component
 

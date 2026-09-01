@@ -885,6 +885,31 @@ check says so and names the file.
 > also a production function, so every handler test calling the real one looked like a
 > consumer of the fake.
 
+> **Convention.** A value handed to a hook that DEPENDS on it must be stable
+> across renders.
+> *Why:* an inline `[]`, `{}` or `() => …` is a new reference every render. If the
+> hook names it in a dependency array, the effect re-runs every render — and one
+> that sets state never settles.
+>
+> This was listed for months as the rule nothing could enforce, and that was half
+> right. `exhaustive-deps` reads the dependency array from INSIDE the hook while the
+> value's freshness is decided OUTSIDE by the caller; neither end sees the other, and
+> the types are identical either way, so the compiler is silent too. But the TYPE
+> CHECKER crosses that boundary — it resolves the call to the hook's declaration, and
+> the dependency arrays are then plain text to read.
+>
+> Three things are NOT violations, and each was a false positive before it was a
+> rule: a **destructured** parameter (the object is torn apart in the signature, so
+> nothing depends on it), a **spread** dependency (`[...conditions, setX]` depends on
+> the elements), and **React's own hooks** — `useState([])` reads its argument once
+> and the `[]` in `useMemo(fn, [])` IS the dependency array (1,077 correct sites).
+>
+> The fix is one of three: hoist it to a module constant when it is genuinely
+> constant, memoise it when it derives from state, or hold it in a ref inside the
+> hook when what the hook wants is "whatever the caller means right now".
+> Enforced by `tests/sop/stable-hook-arguments.test.ts`; the corpus was emptied by
+> `scripts/codemod/survey-unstable-refs.mjs` (12 findings to zero).
+
 > **Convention.** A component is declared ONE way: `function Name(props: NameProps)`.
 > `React.FC` is banned.
 > *Why:* the repo had both — 98 files as plain functions, 31 as `React.FC` — and two
@@ -988,11 +1013,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 34 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 35 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 75 conventions. 74 of them are enforced; 1 is not.**
+**This handbook states 76 conventions. 75 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

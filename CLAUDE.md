@@ -178,7 +178,7 @@ red, and so is a registry entry for something deleted.
 | Cadence | What runs | Who triggers it |
 |---|---|---|
 | per-tool-call | 11 hook rules in `.claude/hooks/rules/` | automatic |
-| per-jest-run | 34 enforcer suites in `tests/sop/` | automatic |
+| per-jest-run | 35 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | periodic | 10 scripted checks + 9 guided reviews | **`npm run sweep`** |
 
@@ -249,7 +249,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 75 of them, 74 with an enforcer that fails the build — and
+this codebase holds itself to — 76 of them, 75 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent
@@ -514,10 +514,19 @@ are sure is present, re-Read rather than re-deriving it from memory.
 - **A value passed into a hook must be stable across renders.** An inline `[]`, `{}` or
   arrow literal as a prop is a NEW reference every render, so an effect depending on it
   runs every render and one that sets state loops forever. Hoist it to a module-level
-  constant (`const EMPTY: never[] = [];`). **No tool catches this** — `exhaustive-deps`
-  reads the dependency array inside the hook and cannot see across the prop boundary, and
-  the types are identical so the compiler sees nothing either. It has already happened
-  here.
+  constant (`const EMPTY: never[] = [];`), memoise it, or hold it in a ref inside the
+  hook. **`exhaustive-deps` cannot catch this** — it reads the dependency array inside
+  the hook and cannot see across the prop boundary, and the types are identical so the
+  compiler sees nothing either.
+
+  This entry said "**no tool** catches this" until 2026-09-01, and that was too strong
+  by exactly the distance that mattered: a LINT RULE cannot cross the boundary, but the
+  TYPE CHECKER can — it resolves the call to the hook's declaration, where the dependency
+  arrays are plain text. `tests/sop/stable-hook-arguments.test.ts` now bans it, and
+  emptying the corpus found twelve real ones, including two defaults written INSIDE a
+  shared hook's destructure (`messagePayload = {}`, `searchFields = []`) that rebuilt
+  themselves every render for every caller that omitted them. The sentence claiming it
+  was uncatchable is what stopped anyone looking.
 - **Adobe Spectrum Flex constrains width** (450px): use a standard HTML div with flex styles for critical wizard layouts.
 - **Layout components accept Spectrum design tokens**: `GridLayout`/`TwoColumnLayout` take `DimensionValue` props (`gap="size-300"`). See `.claude/skills/spectrum-webview-ui/` and `docs/development/styling-guide.md`.
 - **Never pipe jest through `tail`/`head`/`grep`** — output buffering makes it look hung. Redirect to a file instead (enforced by a PreToolUse hook; details in `tests/README.md`).
