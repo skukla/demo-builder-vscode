@@ -10,17 +10,21 @@ jest.mock('@/features/projects-dashboard/services/projectDeletionService', () =>
 
 import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectTool';
 import { deleteProjectFiles } from '@/features/projects-dashboard/services/projectDeletionService';
-import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const deleteProjectFilesMock = deleteProjectFiles as jest.Mock;
 
 function fakeServer() {
-
     const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
     return {
-
-        registerTool(name: string, _def: unknown, handler: (args: any) => Promise<{ content: Array<{ text: string }> }>) {
+        registerTool(
+            name: string,
+            _def: unknown,
+            handler: (args: any) => Promise<{ content: Array<{ text: string }> }>
+        ) {
             tools.set(name, handler);
         },
         async call(args?: unknown): Promise<any> {
@@ -32,11 +36,11 @@ function fakeServer() {
 const getAllProjects = jest.fn();
 const loadProjectFromPath = jest.fn();
 const ctxFactory = () =>
-    ({
-        stateManager: { getAllProjects, loadProjectFromPath },
-        context: {},
+    createMockHandlerContext({
+        stateManager: createMockStateManager({ getAllProjects, loadProjectFromPath }),
+        context: createMockExtensionContext(),
         logger: createMockLogger(),
-    }) as unknown as HandlerContext;
+    });
 
 describe('delete_project', () => {
     beforeEach(() => {
@@ -52,7 +56,9 @@ describe('delete_project', () => {
     it('requires a name', async () => {
         const s = fakeServer();
         registerDeleteProjectTool(s, ctxFactory);
-        expect(await s.call({ name: '' })).toMatchObject({ error: expect.stringMatching(/name is required/) });
+        expect(await s.call({ name: '' })).toMatchObject({
+            error: expect.stringMatching(/name is required/),
+        });
         expect(deleteProjectFilesMock).not.toHaveBeenCalled();
     });
 
@@ -77,7 +83,10 @@ describe('delete_project', () => {
         const s = fakeServer();
         registerDeleteProjectTool(s, ctxFactory);
         const res = await s.call({ name: 'gamma', confirm: true, confirmName: 'gamma' });
-        expect(res).toMatchObject({ error: expect.stringMatching(/No project named "gamma"/), projects: ['alpha', 'beta'] });
+        expect(res).toMatchObject({
+            error: expect.stringMatching(/No project named "gamma"/),
+            projects: ['alpha', 'beta'],
+        });
         expect(deleteProjectFilesMock).not.toHaveBeenCalled();
     });
 
@@ -86,8 +95,13 @@ describe('delete_project', () => {
         registerDeleteProjectTool(s, ctxFactory);
         const res = await s.call({ name: 'alpha', confirm: true, confirmName: 'alpha' });
         expect(res).toEqual({ deleted: true, name: 'alpha' });
-        expect(loadProjectFromPath).toHaveBeenCalledWith('/p/alpha', undefined, { persistAfterLoad: false });
-        expect(deleteProjectFilesMock).toHaveBeenCalledWith(expect.anything(), { name: 'alpha', path: '/p/alpha' });
+        expect(loadProjectFromPath).toHaveBeenCalledWith('/p/alpha', undefined, {
+            persistAfterLoad: false,
+        });
+        expect(deleteProjectFilesMock).toHaveBeenCalledWith(expect.anything(), {
+            name: 'alpha',
+            path: '/p/alpha',
+        });
     });
 
     it('returns deleted:false with the error when deletion throws', async () => {

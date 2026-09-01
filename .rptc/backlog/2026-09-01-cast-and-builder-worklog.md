@@ -111,3 +111,8 @@ conversion, which the enforcer requires anyway.
   recorded); eight unguarded corpus reads raced against a probe file (all fixed);
   `--stdin` linting is a dead end (eslint ignores the piped content — recorded in
   `tests/sop/eslint-type-aware.test.ts`).
+
+## Shipped so far
+
+- 2026-09-01  test(helpers): the two builders the compiler asked for, and a check that a fake mirrors its subject (`737b13f30`)
+- 2026-09-01  docs(backlog): PL-34 — every open finding from the toolchain day, in one list (`0247cdf43`)

@@ -16,29 +16,33 @@ jest.setTimeout(5000);
 // =============================================================================
 
 // Mock vscode
-jest.mock('vscode', () => ({
-    commands: {
-        executeCommand: jest.fn().mockResolvedValue(undefined),
-    },
-    window: {
-        activeColorTheme: { kind: 1 },
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        showInformationMessage: jest.fn(),
-        setStatusBarMessage: jest.fn(),
-        withProgress: jest.fn(),
-    },
-    ColorThemeKind: { Dark: 2, Light: 1 },
-    ProgressLocation: {
-        Notification: 15,
-    },
-    env: {
-        openExternal: jest.fn(),
-    },
-    Uri: {
-        parse: jest.fn((url: string) => ({ toString: () => url })),
-    },
-}), { virtual: true });
+jest.mock(
+    'vscode',
+    () => ({
+        commands: {
+            executeCommand: jest.fn().mockResolvedValue(undefined),
+        },
+        window: {
+            activeColorTheme: { kind: 1 },
+            showWarningMessage: jest.fn(),
+            showErrorMessage: jest.fn(),
+            showInformationMessage: jest.fn(),
+            setStatusBarMessage: jest.fn(),
+            withProgress: jest.fn(),
+        },
+        ColorThemeKind: { Dark: 2, Light: 1 },
+        ProgressLocation: {
+            Notification: 15,
+        },
+        env: {
+            openExternal: jest.fn(),
+        },
+        Uri: {
+            parse: jest.fn((url: string) => ({ toString: () => url })),
+        },
+    }),
+    { virtual: true }
+);
 
 // Mock ServiceLocator
 jest.mock('@/core/di/serviceLocator', () => ({
@@ -158,6 +162,9 @@ import { HelixService } from '@/features/eds/services/helix/helixService';
 import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // =============================================================================
 // Test Utilities
@@ -201,7 +208,7 @@ function createMockEdsProject(overrides?: Partial<Project>): Project {
  * Create mock handler context
  */
 function createMockContext(project: Project | undefined): HandlerContext {
-    return {
+    return createMockHandlerContext({
         panel: {
             webview: {
                 postMessage: jest.fn(),
@@ -214,10 +221,10 @@ function createMockContext(project: Project | undefined): HandlerContext {
         logger: createMockLogger() as unknown as HandlerContext['logger'],
         debugLogger: createMockLogger() as unknown as HandlerContext['debugLogger'],
         sendMessage: jest.fn(),
-        context: {
-            secrets: {},
-        },
-    } as unknown as HandlerContext;
+        context: createMockExtensionContext({
+            secrets: createMockSecretStorage().secrets,
+        }),
+    });
 }
 
 // =============================================================================

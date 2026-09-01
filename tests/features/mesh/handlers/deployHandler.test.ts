@@ -40,6 +40,8 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 /**
  * ADR-015 (2026-08-28): the handler resolves the auth manager and executor at
@@ -52,11 +54,13 @@ function seedRegistry(): void {
 }
 
 function ctx(project: unknown): HandlerContext {
-    return {
-        stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
+    return createMockHandlerContext({
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(project),
+        }),
         logger: createMockLogger(),
-        context: { extensionPath: '/ext' },
-    } as unknown as HandlerContext;
+        context: createMockExtensionContext({ extensionPath: '/ext' }),
+    });
 }
 
 describe('handleDeployApiMesh', () => {

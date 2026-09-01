@@ -17,23 +17,29 @@ import {
     registerContentAuthoringTools,
 } from './contentAuthoringTools.testUtils';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { HandlerContext } from '@/types/handlers';
 import { expectWithinCeiling } from './responseCeilings';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 /** Minimal MCP server double: capture handlers, invoke by name, parse the JSON back. */
 function fakeServer() {
-    const tools = new Map<string, (args: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+    const tools = new Map<
+        string,
+        (args: unknown) => Promise<{ content: Array<{ text: string }> }>
+    >();
     return {
         registerTool(
             name: string,
             _def: unknown,
-            handler: (args: unknown) => Promise<{ content: Array<{ text: string }> }>,
+            handler: (args: unknown) => Promise<{ content: Array<{ text: string }> }>
         ) {
             tools.set(name, handler);
         },
         names: () => [...tools.keys()],
-         
+
         async call(name: string, args: unknown = {}): Promise<any> {
             return JSON.parse((await tools.get(name)!(args)).content[0].text);
         },
@@ -56,11 +62,11 @@ const EDS_PROJECT = {
 };
 
 const ctxFactory = () =>
-    ({
-        stateManager: { getCurrentProject },
-        context: { secrets: {} },
+    createMockHandlerContext({
+        stateManager: createMockStateManager({ getCurrentProject }),
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
         logger: createMockLogger(),
-    }) as unknown as HandlerContext;
+    });
 
 // ─── service doubles ─────────────────────────────────────────────────────────
 
@@ -139,7 +145,7 @@ describe('response-size ceilings', () => {
                 name: `page-number-${i}`,
                 path: `/skukla/bodea/section/page-number-${i}.html`,
                 ext: 'html',
-            })),
+            }))
         );
 
         const res = await register().call('list_content', {});
@@ -151,7 +157,10 @@ describe('response-size ceilings', () => {
 
     it('read_page — the service cap survives the tool', async () => {
         daOps.readSource.mockResolvedValueOnce({
-            status: 200, body: 'x'.repeat(30_000), bytes: 5_000_000, truncated: true,
+            status: 200,
+            body: 'x'.repeat(30_000),
+            bytes: 5_000_000,
+            truncated: true,
         });
 
         const res = await register().call('read_page', { path: '/big' });

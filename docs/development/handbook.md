@@ -717,7 +717,7 @@ breaks the code on purpose and reports what nothing noticed.
 > `jest.Mocked<T>` catches the invented half at compile time, which is why every
 > builder is typed. It CANNOT catch the missing half, because each one ends in a cast
 > to satisfy the mock type. Enforced by
-> `tests/sop/builder-surface-coverage.test.ts`, which reads the subject from source
+> `tests/sop/fake-mirrors-subject.test.ts`, which reads the subject from source
 > and compares in both directions.
 
 > **Convention.** A split test family shares one `.testUtils` file, which owns the mocks

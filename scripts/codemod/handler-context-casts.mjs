@@ -48,6 +48,95 @@ function innermost(node) {
     }
 }
 
+/**
+ * Members whose type has a canonical fake, and the builder that makes one.
+ *
+ * WHY THIS EXISTS. The first run converted the OUTER literal only and 51 files then
+ * failed the typecheck — because `createMockHandlerContext`'s overrides are TYPED,
+ * so a member holding a partial fake is rejected where `as unknown as HandlerContext`
+ * had erased it. The compiler ranked the blockers, and this is the answer to the ones
+ * that need no new fake.
+ *
+ * `context` is the highest-value row and not obviously so: `createMockExtensionContext`
+ * already supplies a full `secrets`, so converting this ONE member should clear both
+ * the ExtensionContext failures (9) and the SecretStorage ones (21).
+ *
+ * `debugLogger` is deliberately absent — it is a different interface from `Logger`,
+ * and handing it the logger builder would be the wrong fake, which is exactly the
+ * mistake these builders exist to stop.
+ */
+const MEMBER_BUILDERS = {
+    logger: { fn: 'createMockLogger', from: 'tests/helpers/loggerFake', passLiteral: false },
+    stateManager: {
+        fn: 'createMockStateManager',
+        from: 'tests/helpers/stateManagerFake',
+        passLiteral: true,
+    },
+    context: {
+        fn: 'createMockExtensionContext',
+        from: 'tests/helpers/extensionContextFake',
+        passLiteral: true,
+    },
+    authManager: {
+        fn: 'createMockAuthenticationService',
+        from: 'tests/helpers/authenticationServiceFake',
+        passLiteral: true,
+    },
+
+    // NESTED members, inside the `context` literal. Converting `context` alone was
+    // NOT enough and the compiler said so: the literal handed to
+    // `createMockExtensionContext` as overrides still held a partial `secrets`, and
+    // `Partial<vscode.ExtensionContext>` wants a whole `SecretStorage`. SecretStorage
+    // stayed at 21 failures across that change — a hypothesis measured and refuted
+    // rather than assumed.
+    //
+    // Neither passes its literal through. Both are pure jest.fn bags in the corpus,
+    // and the builders supply working, REMEMBERING versions — strictly better than
+    // what is being replaced.
+    secrets: {
+        fn: 'createMockSecretStorage',
+        from: 'tests/helpers/secretStorageFake',
+        passLiteral: false,
+        suffix: '().secrets',
+    },
+    globalState: {
+        fn: 'createStatefulGlobalState',
+        from: 'tests/helpers/extensionContextFake',
+        passLiteral: false,
+        suffix: '().globalState',
+    },
+};
+
+/** Swap each known member's partial literal for its builder. Returns imports needed. */
+function convertMembers(objectLiteral) {
+    const needed = new Set();
+    // Reverse: replacing a property invalidates positions after it.
+    const props = objectLiteral.getProperties().slice().reverse();
+    for (const prop of props) {
+        if (prop.getKind() !== SyntaxKind.PropertyAssignment) continue;
+        const name = prop.getName?.();
+        const spec = MEMBER_BUILDERS[name];
+        if (!spec) continue;
+        const value = prop.getInitializer();
+        if (!value || value.getKind() !== SyntaxKind.ObjectLiteralExpression) continue;
+        // RECURSE FIRST. A member's own literal can hold another known member —
+        // `context` holds `secrets` and `globalState` — and the outer builder's
+        // overrides are typed, so the inside has to be right before the outside is
+        // built. Depth-first is the only order that converges.
+        for (const nested of convertMembers(value)) needed.add(nested);
+
+        const inner = value.getText().trim();
+        if (spec.suffix) {
+            value.replaceWithText(`${spec.fn}${spec.suffix}`);
+        } else {
+            const arg = spec.passLiteral && inner !== '{}' ? inner : '';
+            value.replaceWithText(`${spec.fn}(${arg})`);
+        }
+        needed.add(spec);
+    }
+    return needed;
+}
+
 const project = createProject();
 const files = addFiles(project, ['tests/**/*.ts', 'tests/**/*.tsx']);
 
@@ -58,6 +147,7 @@ const touchedFiles = new Set();
 for (const file of files) {
     const rel = path.relative(process.cwd(), file.getFilePath());
     let changedHere = 0;
+    const memberImports = new Set();
 
     // Reverse: replacing a node invalidates positions after it.
     const casts = file
@@ -71,6 +161,11 @@ for (const file of files) {
             skipped.push(`${rel}:${cast.getStartLineNumber()}  ${target.getKindName()}`);
             continue;
         }
+        // Members FIRST: the outer builder's overrides are typed, so a member
+        // holding a partial fake is rejected. Converting the inside before the
+        // outside is what makes the whole literal acceptable.
+        for (const spec of convertMembers(target)) memberImports.add(spec);
+
         const literal = target.getText().trim();
         const arg = literal === '{}' ? '' : literal;
         cast.replaceWithText(`${BUILDER}(${arg})`);
@@ -88,6 +183,15 @@ for (const file of files) {
             let spec = path.relative(path.dirname(rel), HELPER);
             if (!spec.startsWith('.')) spec = `./${spec}`;
             file.addImportDeclaration({ moduleSpecifier: spec, namedImports: [BUILDER] });
+        }
+        for (const m of memberImports) {
+            const has = file
+                .getImportDeclarations()
+                .some((d) => d.getModuleSpecifierValue().includes(path.basename(m.from)));
+            if (has) continue;
+            let spec = path.relative(path.dirname(rel), m.from);
+            if (!spec.startsWith('.')) spec = `./${spec}`;
+            file.addImportDeclaration({ moduleSpecifier: spec, namedImports: [m.fn] });
         }
     }
 }

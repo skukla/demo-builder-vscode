@@ -86,6 +86,9 @@ import {
 import { exportProjectSettings } from '@/features/projects-dashboard/services/settingsTransferService';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // =============================================================================
 // Test Utilities
@@ -104,7 +107,7 @@ function createMockProject(overrides?: Partial<Project>): Project {
 }
 
 function createMockContext(project: Project | undefined): HandlerContext {
-    return {
+    return createMockHandlerContext({
         panel: { webview: { postMessage: jest.fn() } } as unknown as HandlerContext['panel'],
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
@@ -113,8 +116,8 @@ function createMockContext(project: Project | undefined): HandlerContext {
         }),
         logger: createMockLogger() as unknown as HandlerContext['logger'],
         sendMessage: jest.fn(),
-        context: { secrets: {} },
-    } as unknown as HandlerContext;
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
+    });
 }
 
 // =============================================================================

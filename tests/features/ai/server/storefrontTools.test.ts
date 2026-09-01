@@ -31,9 +31,12 @@ import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers
 import { isEdsProject } from '@/types/typeGuards';
 import { ErrorCode } from '@/types/errorCodes';
 import { AuthError } from '@/core/errors';
-import type { HandlerContext } from '@/types/handlers';
 import { expectWithinCeiling } from './responseCeilings';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const republishMock = republishStorefrontConfig as jest.Mock;
 const republishContentMock = republishStorefrontContent as jest.Mock;
@@ -42,11 +45,13 @@ const getDaLiveAuthServiceMock = getDaLiveAuthService as jest.Mock;
 const isEdsProjectMock = isEdsProject as unknown as jest.Mock;
 
 function fakeServer() {
-
     const tools = new Map<string, () => Promise<{ content: Array<{ text: string }> }>>();
     return {
-
-        registerTool(name: string, _def: unknown, handler: () => Promise<{ content: Array<{ text: string }> }>) {
+        registerTool(
+            name: string,
+            _def: unknown,
+            handler: () => Promise<{ content: Array<{ text: string }> }>
+        ) {
             tools.set(name, handler);
         },
         async call(name: string): Promise<any> {
@@ -57,11 +62,11 @@ function fakeServer() {
 
 const getCurrentProject = jest.fn();
 const ctxFactory = () =>
-    ({
-        stateManager: { getCurrentProject },
-        context: { secrets: {} },
+    createMockHandlerContext({
+        stateManager: createMockStateManager({ getCurrentProject }),
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
         logger: createMockLogger(),
-    }) as unknown as HandlerContext;
+    });
 
 const EDS_PROJECT = { name: 'eds-proj', path: '/p/eds-proj' };
 
@@ -70,15 +75,24 @@ describe('republish', () => {
         jest.clearAllMocks();
         getCurrentProject.mockResolvedValue(EDS_PROJECT);
         isEdsProjectMock.mockReturnValue(true);
-        getGitHubServicesMock.mockReturnValue({ tokenService: { validateToken: jest.fn(async () => ({ valid: true })) } });
-        republishMock.mockResolvedValue({ success: true, githubPushed: true, cdnPublished: true, cdnVerified: true });
+        getGitHubServicesMock.mockReturnValue({
+            tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
+        });
+        republishMock.mockResolvedValue({
+            success: true,
+            githubPushed: true,
+            cdnPublished: true,
+            cdnVerified: true,
+        });
     });
 
     it('errors when no current project is open', async () => {
         getCurrentProject.mockResolvedValueOnce(undefined);
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('republish')).toMatchObject({ error: expect.stringMatching(/No current project/) });
+        expect(await s.call('republish')).toMatchObject({
+            error: expect.stringMatching(/No current project/),
+        });
         expect(republishMock).not.toHaveBeenCalled();
     });
 
@@ -86,12 +100,16 @@ describe('republish', () => {
         isEdsProjectMock.mockReturnValueOnce(false);
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('republish')).toMatchObject({ error: expect.stringMatching(/only to EDS/) });
+        expect(await s.call('republish')).toMatchObject({
+            error: expect.stringMatching(/only to EDS/),
+        });
         expect(republishMock).not.toHaveBeenCalled();
     });
 
     it('hands off to GitHub auth when not signed in', async () => {
-        getGitHubServicesMock.mockReturnValueOnce({ tokenService: { validateToken: jest.fn(async () => ({ valid: false })) } });
+        getGitHubServicesMock.mockReturnValueOnce({
+            tokenService: { validateToken: jest.fn(async () => ({ valid: false })) },
+        });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
         expect(await s.call('republish')).toMatchObject({ needsAuth: 'github' });
@@ -99,7 +117,13 @@ describe('republish', () => {
     });
 
     it('treats a token-validation throw as unauthenticated', async () => {
-        getGitHubServicesMock.mockReturnValueOnce({ tokenService: { validateToken: jest.fn(async () => { throw new Error('net'); }) } });
+        getGitHubServicesMock.mockReturnValueOnce({
+            tokenService: {
+                validateToken: jest.fn(async () => {
+                    throw new Error('net');
+                }),
+            },
+        });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
         expect(await s.call('republish')).toMatchObject({ needsAuth: 'github' });
@@ -118,7 +142,11 @@ describe('republish', () => {
             cdnStatus: expect.stringContaining('Confirmed live'),
         });
         expect(republishMock).toHaveBeenCalledWith(
-            expect.objectContaining({ project: EDS_PROJECT, secrets: expect.anything(), logger: expect.anything() }),
+            expect.objectContaining({
+                project: EDS_PROJECT,
+                secrets: expect.anything(),
+                logger: expect.anything(),
+            })
         );
     });
 
@@ -130,7 +158,11 @@ describe('republish', () => {
     });
 
     it('passes through a failure result with its error', async () => {
-        republishMock.mockResolvedValueOnce({ success: false, githubPushed: false, error: 'CDN verify failed' });
+        republishMock.mockResolvedValueOnce({
+            success: false,
+            githubPushed: false,
+            error: 'CDN verify failed',
+        });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
         const res = await s.call('republish');
@@ -161,7 +193,9 @@ describe('sync_content', () => {
         jest.clearAllMocks();
         getCurrentProject.mockResolvedValue(PROJECT);
         isEdsProjectMock.mockReturnValue(true);
-        getGitHubServicesMock.mockReturnValue({ tokenService: { validateToken: jest.fn(async () => ({ valid: true })) } });
+        getGitHubServicesMock.mockReturnValue({
+            tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
+        });
         getDaLiveAuthServiceMock.mockReturnValue({ isAuthenticated: jest.fn(async () => true) });
         republishContentMock.mockResolvedValue({ success: true, cdnVerified: true });
     });
@@ -170,7 +204,9 @@ describe('sync_content', () => {
         isEdsProjectMock.mockReturnValueOnce(false);
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content')).toMatchObject({ error: expect.stringMatching(/only to EDS/) });
+        expect(await s.call('sync_content')).toMatchObject({
+            error: expect.stringMatching(/only to EDS/),
+        });
         expect(republishContentMock).not.toHaveBeenCalled();
     });
 
@@ -178,12 +214,16 @@ describe('sync_content', () => {
         getCurrentProject.mockResolvedValueOnce({ name: 'p', path: '/p', componentInstances: {} });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content')).toMatchObject({ error: expect.stringMatching(/missing GitHub repo/) });
+        expect(await s.call('sync_content')).toMatchObject({
+            error: expect.stringMatching(/missing GitHub repo/),
+        });
         expect(republishContentMock).not.toHaveBeenCalled();
     });
 
     it('hands off to GitHub auth when not signed in', async () => {
-        getGitHubServicesMock.mockReturnValueOnce({ tokenService: { validateToken: jest.fn(async () => ({ valid: false })) } });
+        getGitHubServicesMock.mockReturnValueOnce({
+            tokenService: { validateToken: jest.fn(async () => ({ valid: false })) },
+        });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
         expect(await s.call('sync_content')).toMatchObject({ needsAuth: 'github' });
@@ -191,7 +231,9 @@ describe('sync_content', () => {
     });
 
     it('hands off to DA.live auth when GitHub is ok but DA.live is not', async () => {
-        getDaLiveAuthServiceMock.mockReturnValueOnce({ isAuthenticated: jest.fn(async () => false) });
+        getDaLiveAuthServiceMock.mockReturnValueOnce({
+            isAuthenticated: jest.fn(async () => false),
+        });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
         expect(await s.call('sync_content')).toMatchObject({ needsAuth: 'dalive' });
@@ -221,7 +263,12 @@ describe('sync_content', () => {
             cdnStatus: expect.stringContaining('Confirmed live'),
         });
         expect(republishContentMock).toHaveBeenCalledWith(
-            expect.objectContaining({ repoOwner: 'me', repoName: 'shop', daLiveOrg: 'acme', daLiveSite: 'shop' }),
+            expect.objectContaining({
+                repoOwner: 'me',
+                repoName: 'shop',
+                daLiveOrg: 'acme',
+                daLiveSite: 'shop',
+            })
         );
     });
 
@@ -236,22 +283,33 @@ describe('sync_content', () => {
         republishContentMock.mockResolvedValueOnce({ success: false, error: 'publish failed' });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content')).toMatchObject({ success: false, error: 'publish failed' });
+        expect(await s.call('sync_content')).toMatchObject({
+            success: false,
+            error: 'publish failed',
+        });
     });
 
     it('maps an ORG_MISMATCH error to a typed non-retryable result', async () => {
-        republishContentMock.mockRejectedValueOnce(new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org'));
+        republishContentMock.mockRejectedValueOnce(
+            new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org')
+        );
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content')).toMatchObject({ error_type: 'ORG_MISMATCH', non_retryable: true });
+        expect(await s.call('sync_content')).toMatchObject({
+            error_type: 'ORG_MISMATCH',
+            non_retryable: true,
+        });
     });
 });
 
 // ─── response-size ceilings (phase 2 audit) ──────────────────────────────────
 describe('response-size ceilings', () => {
-    it.each(['republish', 'sync_content'])('%s returns a per-step outcome, not a payload', async (tool) => {
-        const s = fakeServer();
-        registerStorefrontTools(s, ctxFactory);
-        expectWithinCeiling(tool, JSON.stringify(await s.call(tool)));
-    });
+    it.each(['republish', 'sync_content'])(
+        '%s returns a per-step outcome, not a payload',
+        async (tool) => {
+            const s = fakeServer();
+            registerStorefrontTools(s, ctxFactory);
+            expectWithinCeiling(tool, JSON.stringify(await s.call(tool)));
+        }
+    );
 });
