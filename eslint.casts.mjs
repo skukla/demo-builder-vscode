@@ -20,6 +20,19 @@ export default tseslint.config({
     extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
         parserOptions: {
+            // `project`, pointed at an EXPLICIT tsconfig — deliberately NOT the
+            // `projectService: true` that typescript-eslint v8 recommends.
+            //
+            // Measured here 2026-09-01, and the docs' advice loses badly: with
+            // `project: './tsconfig.test.json'` one feature directory lints in
+            // well under a minute; with `projectService: true` the same directory
+            // had not finished after TEN MINUTES and was killed. projectService
+            // resolves a project per file through the TS language service, which
+            // is the right trade for an editor and the wrong one for a repo with
+            // 1,200 test files and a single tsconfig that already lists them all.
+            //
+            // Never set both — "Enabling `project` does nothing when
+            // `projectService` is enabled" is a hard parser error, not a warning.
             project: './tsconfig.test.json',
             tsconfigRootDir: import.meta.dirname,
         },
