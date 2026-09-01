@@ -14,6 +14,7 @@
  */
 
 import * as vscode from 'vscode';
+import type { TokenManager } from '@/features/authentication/services/tokenManager';
 import { validateProjectId } from '@/core/validation/validators/AdobeResourceValidator';
 import {
     handleDeleteAdobeProject,
@@ -249,7 +250,12 @@ describe('handleDeleteAdobeProject', () => {
         it('rejects when no valid access token is available', async () => {
             mockContext.authManager.getTokenManager.mockReturnValue({
                 inspectToken: jest.fn().mockResolvedValue({ valid: false, expiresIn: 0 }),
-            });
+                // `TokenManager` is a CLASS with private fields, so no object
+                // literal can satisfy it and no builder is warranted for the three
+                // sites that stub it (PL-34). `as unknown as` is the allowed form:
+                // it NAMES what this is pretending to be, so every read below is
+                // still checked against the real class.
+            } as unknown as TokenManager);
 
             const result = await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
