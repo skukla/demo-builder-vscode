@@ -671,9 +671,22 @@ promising an agent that every response parses.
 > `needsAuth` marker for an agent — which is the rule `dataInstallerHandlers` had
 > already written down and the mesh handlers never got.
 >
-> Two still breach it: `promote_block_to_library` and `remove_block_from_library` THROW
-> when the DA.live token is missing. The message names the recovery, so an agent is not
-> stranded — but erroring is the one thing the rule asks tools not to do.
+> **The last two, fixed the same day: `promote_block_to_library` and
+> `remove_block_from_library` THREW** when the DA.live token was missing. The message
+> named the recovery, so an agent was not stranded — but erroring is the one thing the
+> rule asks tools not to do, and an MCP error is not a result a caller can branch on.
+> Both now answer with `needsAuth: 'dalive'`.
+>
+> Promote carried a second defect the throw hid: the token check ran AFTER
+> `applyComponentDefinitionEntry` had rewritten `component-definition.json`, so a
+> signed-out caller got the error with a half-done promotion left on disk. The check
+> runs first now. Its test asserts `writeFile` was never called — the old test could not
+> have caught this, because a rejected promise says nothing about what happened before
+> it. Restoring the old order fails that assertion, and only that one.
+>
+> **All 114 tools now satisfy this rule.** It went from a scan finding to a fact about
+> the surface in one day; what made that possible was reading every tool rather than
+> trying to detect the breaches statically, which failed three times.
 
 > **How to add one.** [mcp-tool-authoring](../../.claude/skills/mcp-tool-authoring/SKILL.md) ·
 > registration is pinned by `tests/features/ai/server/realSdkRegistration.test.ts`.
