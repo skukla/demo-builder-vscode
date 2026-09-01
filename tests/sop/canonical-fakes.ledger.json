@@ -15,5 +15,14 @@
         "HandlerContext['stateManager']",
         "CommandExecutor"
     ],
-    "_castBans_what": "Families that reached ZERO. They live here rather than as a ceiling of 0 because the ceiling test iterates the ceiling KEYS \u2014 deleting a key deleted its check, and on 2026-09-01 that left all five silently unenforced for the length of one session. A row here asserts both halves: no casts to the type anywhere outside tests/helpers/, and no ceiling row reopened for it. Entries are never removed."
+    "_castBans_what": "Families whose OBJECT-LITERAL casts reached zero. Read the scope precisely: the check is brace-anchored (`} as T`), so it bans a hand-rolled LITERAL standing in for T \u2014 the thing a builder replaces. It does NOT ban every `as T`. Measured by AST on 2026-09-01, casts of other expressions to these types remain: Logger 98, StateManager 63, CommandExecutor 9, ExtensionContext 0. Those are a different defect with a different fix (an argument cast is a silenced type error, not a missing builder) and are tracked by `astTotals` below, not by these bans. Entries are never removed.",
+    "astTotals": {
+        "_what": "Every `as T` anywhere in tests/, counted on the SYNTAX TREE by scripts/codemod/survey-casts.mjs \u2014 not the brace-anchored regex the ceilings use. Recorded 2026-09-01 because the two numbers differ a lot and reporting the smaller one as if it were the whole picture overstated what the bans achieved.",
+        "_measured": "2026-09-01",
+        "Logger": 98,
+        "StateManager": 63,
+        "CommandExecutor": 9,
+        "ExtensionContext": 0,
+        "HandlerContext": 100
+    }
 }

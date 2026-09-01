@@ -115,3 +115,5 @@ is currently `off` for `tests/` in `eslint.config.mjs`; that line goes too.
 - 2026-09-01  test(helpers): vscode.ExtensionContext 36 -> 6, decided by the compiler not by reading (`81f1232b5`)
 - 2026-09-01  test(helpers): a fourth cast family closes, and the last cast was load-bearing (`e76cc3e91`)
 - 2026-09-01  refactor(state): consumers depend on the StateManager INTERFACE, not the class (`d2aa49275`)
+- 2026-09-01  refactor(tests): HandlerContext casts 59 -> 38, done through the documented toolchain (`1fe31d699`)
+- 2026-09-01  feat(codemod): adopt ts-morph, with a harness tuned to this repo (`a60ab0379`)

@@ -79,6 +79,29 @@ function declaredIdentifiers(): Set<string> {
     return out;
 }
 
+/**
+ * Read a corpus file, or return empty if it vanished between the listing and the
+ * read.
+ *
+ * Jest runs suites in parallel, and another suite may create and delete a temporary
+ * file inside `tests/` while this one is walking it. `collectTestFiles` already
+ * tolerates that for DIRECTORIES and says so in a comment; the READS were left
+ * unguarded, and on 2026-09-01 that became a real ENOENT failure the moment a new
+ * suite started writing a probe file.
+ *
+ * Empty is the right answer, not a throw: this counts COMMITTED files, and a file
+ * that no longer exists is not one. The assertions are exact-equality against a
+ * pinned number, so a genuinely missing corpus file fails the count rather than
+ * slipping through.
+ */
+function readOrEmpty(rel: string): string {
+    try {
+        return fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+    } catch {
+        return '';
+    }
+}
+
 function walk(dir: string, ext: string): string[] {
     const out: string[] = [];
     let entries: fs.Dirent[];
@@ -145,7 +168,7 @@ describe('identifiers named by current-tense documents exist', () => {
     it('every demoBuilder.* identifier a current-tense document names is real', () => {
         const offenders: string[] = [];
         for (const f of currentTenseDocs) {
-            const body = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+            const body = readOrEmpty(f);
             for (const m of body.matchAll(/\bdemoBuilder\.[A-Za-z0-9_.]+/g)) {
                 const id = m[0].replace(/\.$/, '');
                 if (declared.has(id) || inSource.has(id)) continue;
@@ -183,7 +206,7 @@ describe('identifiers named by current-tense documents exist', () => {
 
         const offenders: string[] = [];
         for (const f of currentTenseDocs) {
-            const body = fs.readFileSync(path.join(repoRoot, f), 'utf8');
+            const body = readOrEmpty(f);
             for (const m of body.matchAll(/\bnpm run ([a-z0-9][a-z0-9:_-]*)/g)) {
                 const row = `${f}  npm run ${m[1]}`;
                 if (scripts.has(m[1]) || row in DELIBERATE) continue;
