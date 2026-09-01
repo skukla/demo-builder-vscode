@@ -14,6 +14,24 @@
 # because branching on them is wrong every time, with no legitimate case to weigh.
 # A rule that fires on good code gets disabled, and then it protects nothing.
 #
+# ...WITH ONE EXCEPTION, ADDED 2026-09-01: `grep -c`.
+#
+# The exemption above was too broad by exactly one flag, and the reasoning shows
+# why. With `-q`, grep's exit code IS the answer. With `-c` it is NOT: grep prints
+# a count AND exits 1 when that count is zero. So `grep -c ... || echo 0` fires the
+# fallback on a perfectly good "0", and the substitution captures TWO lines:
+#
+#     B=$(git show "$rev:$f" | grep -cE 'pattern' || echo 0)   # -> "0\n0"
+#
+# Every later `[ "$A" -lt "$B" ]` then died with "integer expression expected"
+# while the summary printed a clean zero — a verification that checked 80 files,
+# errored on every one, and reported all-clear. The script was written to confirm
+# no test had been weakened, so a false pass there is the worst possible place for
+# one.
+#
+# `-c` only. `-q`, `-l`, `-E` and the rest stay exempt, because their exit codes
+# mean what a branch expects them to mean.
+#
 # The fix is always the same shape: capture into a variable, then test that.
 #   n=$(cmd | wc -l | tr -d ' '); [ "$n" -gt 0 ] && ...
 #
@@ -29,7 +47,23 @@ rule_match() {
     # rule blocked a verification script whose pipe and branch were four lines apart
     # and unrelated — and then blocked the command that came to fix it. Excluding
     # newline keeps the match inside one command.
-    printf '%s' "$2" | grep -qE '\|[[:space:]]*(head|tail|wc)([ \t][^|\n]*)?[[:space:]]*(\|\||&&)'
+    # The span excludes COMMAND SEPARATORS, not a newline. It read [^|\n] until
+    # 2026-09-01, which on BSD grep is a bracket expression holding the literal
+    # characters backslash and "n" -- so it silently stopped at the first letter
+    # "n" in any argument. Control: grep -oE 'a[^|\n]*' on abcnxyz|end returns
+    # abc. Latent since 2026-08-30; surfaced when the grep arm below missed the
+    # word "pattern" and nothing else. Excluding |;& is what the original comment
+    # wanted -- keep the match inside ONE command -- and newlines never needed
+    # excluding, because the router turns them into spaces before any rule runs.
+    if printf '%s' "$2" | grep -qE '\|[[:space:]]*(head|tail|wc)([ \t][^|;&]*)?[[:space:]]*(\|\||&&)'
+    then
+        return 0
+    fi
+    # `grep -c` branched on. Requires the -c flag, so -q/-l/-E stay exempt; `-c`
+    # may sit inside a combined cluster (-cE), hence the character class either
+    # side. `--count` is spelled out because the cluster branch cannot reach it.
+    printf '%s' "$2" | grep -qE \
+        'grep[^|;&]*([[:space:]]-[a-zA-Z]*c[a-zA-Z]*|--count)([ \t][^|;&]*)?[[:space:]]*(\|\||&&)'
 }
 
 rule_message() {
@@ -44,7 +78,22 @@ Capture the value, then test it:
   n=$(cmd | wc -l | tr -d ' ')
   [ "$n" -gt 0 ] || echo "really none"
 
-grep is deliberately not blocked here — `cmd | grep -q x && ...` is correct,
+`grep -c` is blocked for a DIFFERENT reason, and it is the sneakier one:
+
+  n=$(cmd | grep -cE 'pattern' || echo 0)     ->  captures "0\n0"
+
+grep -c prints a count AND exits 1 when the count is zero, so the fallback fires
+on a perfectly good "0" and you get two lines. Every later `[ "$n" -gt 0 ]` then
+dies with "integer expression expected" while your summary still prints a clean
+zero. On 2026-09-01 that made a script check 80 files, error on every one, and
+report all-clear.
+
+  n=$(cmd | grep -cE 'pattern')      # no fallback needed — it already prints 0
+
+`grep -q` and `grep -l` are NOT blocked — `cmd | grep -q x && ...` is correct,
 because there grep's exit code is the answer you actually want.
+
+Doing real counting or comparison? Write it in Python and give it a positive
+control. Shell arithmetic over command output is where silent zeros come from.
 MSG
 }

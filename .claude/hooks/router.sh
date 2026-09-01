@@ -72,6 +72,18 @@ case "$payload" in
     # must be part of the token — a bare *head* would admit every path containing
     # the word. Both spacings, because `|wc` and `| wc` are equally common.
     *"| head"*|*"|head"*|*"| tail"*|*"|tail"*|*"| wc"*|*"|wc"*) ;;
+    # Same rule, its `grep -c` arm (added 2026-09-01). `grep -c` is a NECESSARY
+    # substring of every shape that arm matches, and it covers clusters like
+    # `grep -cE` too. `--count` spelled separately.
+    #
+    # THIRD time in one session that a rule was written, proved against its own
+    # harness, and found dead at this gate. Note what makes this one different and
+    # worse: rule 13 ALREADY had a passing probe in router.test.ts (the `| wc`
+    # case), so the reachability test stayed green while a whole new arm of the
+    # same rule was unreachable. That test proves one payload per RULE reaches it;
+    # it cannot prove every SHAPE does. The .proof.sh files are what cover that,
+    # which is the argument for running them rather than trusting them.
+    *"grep -c"*|*"grep --count"*) ;;
     *) exit 0 ;;
 esac
 
