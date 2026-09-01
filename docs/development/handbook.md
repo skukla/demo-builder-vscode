@@ -705,6 +705,21 @@ so when the point is *how* a collaborator was used, assert the arguments rather 
 result. And coverage does not tell you a test would catch a bug: `npm run test:mutation`
 breaks the code on purpose and reports what nothing noticed.
 
+> **Convention.** A canonical fake covers its subject's WHOLE public surface, and
+> invents nothing.
+> *Why:* both halves have failed here. A fake NARROWER than the need is one nobody
+> adopts — `stateManagerFake` answered a single method for months while fifty suites
+> hand-rolled their own in 22 distinct shapes, so the builder grew the divergence it
+> existed to stop. A fake with INVENTED members is worse because it is silent: five
+> appeared in hand-rolled StateManager fakes that are not on StateManager at all, and
+> two Logger fakes carried `setContext`, `with`, `show` and `dispose`, none of which
+> exist and none of which anything calls.
+> `jest.Mocked<T>` catches the invented half at compile time, which is why every
+> builder is typed. It CANNOT catch the missing half, because each one ends in a cast
+> to satisfy the mock type. Enforced by
+> `tests/sop/builder-surface-coverage.test.ts`, which reads the subject from source
+> and compares in both directions.
+
 > **Convention.** A split test family shares one `.testUtils` file, which owns the mocks
 > and the subject import. [webview-test-authoring](../../.claude/skills/webview-test-authoring/SKILL.md) ·
 > enforced by `tests/sop/test-family-setup.test.ts`.
@@ -934,11 +949,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 31 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 32 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 72 conventions. 71 of them are enforced; 1 is not.**
+**This handbook states 73 conventions. 72 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on
