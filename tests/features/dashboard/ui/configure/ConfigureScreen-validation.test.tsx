@@ -66,7 +66,7 @@ describe('ConfigureScreen - Validation', () => {
         it('should validate required fields on load', () => {
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={{}}
                 />
@@ -80,7 +80,7 @@ describe('ConfigureScreen - Validation', () => {
         it('should validate URL fields', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             selectSection('Adobe Commerce');
@@ -117,7 +117,7 @@ describe('ConfigureScreen - Validation', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />
@@ -156,7 +156,7 @@ describe('ConfigureScreen - Validation', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />
@@ -189,7 +189,7 @@ describe('ConfigureScreen - Validation', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={validConfig}
                 />

@@ -109,21 +109,21 @@ describe('ConfigureScreen - Rendering', () => {
     describe('Basic Rendering', () => {
         it('should render project name', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
             expect(screen.getByText('Test Project')).toBeInTheDocument();
         });
 
         it('should render "Configure Project" heading', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
             expect(screen.getByText('Configure Project')).toBeInTheDocument();
         });
 
         it('should render Save button', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
             expect(screen.getByText('Save Changes')).toBeInTheDocument();
         });
@@ -132,7 +132,7 @@ describe('ConfigureScreen - Rendering', () => {
     describe('Configuration Fields', () => {
         it("should render the active section's fields for selected components", () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             selectSection('Adobe Commerce');
@@ -151,7 +151,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('should display existing values from project config', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             selectSection('Adobe Commerce');
@@ -165,7 +165,7 @@ describe('ConfigureScreen - Rendering', () => {
     describe('Section rail', () => {
         it('renders one tab per configurable section, Project first', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             expect(railTabLabels()).toEqual(['Project', 'Adobe Commerce', 'Catalog Service']);
@@ -173,7 +173,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('starts on Project and marks the clicked tab selected', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             expect(railTab('Project')).toHaveAttribute('aria-selected', 'true');
@@ -185,7 +185,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('leaves every tab reachable — Configure is not a linear wizard', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             for (const tab of screen.getAllByRole('tab')) {
@@ -195,7 +195,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('no longer renders the Sections sidebar it replaced', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             expect(screen.queryByTestId('navigation-panel')).not.toBeInTheDocument();
@@ -205,7 +205,7 @@ describe('ConfigureScreen - Rendering', () => {
     describe('PageHeader Integration', () => {
         it('should render PageHeader with "Configure Project" title', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             const header = screen.getByTestId('page-header');
@@ -215,7 +215,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('should render PageHeader with project name as subtitle', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             const header = screen.getByTestId('page-header');
@@ -227,7 +227,7 @@ describe('ConfigureScreen - Rendering', () => {
     describe('PageFooter Integration', () => {
         it('should render PageFooter with Close button on left', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             const footer = screen.getByTestId('page-footer');
@@ -239,7 +239,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('should render PageFooter with Save Changes button on right', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             const footer = screen.getByTestId('page-footer');
@@ -258,7 +258,7 @@ describe('ConfigureScreen - Rendering', () => {
 
         it('does not render an AI tab or AI sidebar inside Configure', () => {
             renderWithProvider(
-                <ConfigureScreen project={mockProject as any} componentsData={mockComponentsData} />
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
             );
 
             expect(screen.queryByTestId('ai-setup-tab')).not.toBeInTheDocument();
@@ -271,7 +271,7 @@ describe('ConfigureScreen - Rendering', () => {
         it('should handle empty components data', () => {
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={{ frontends: [], backends: [], dependencies: [], envVars: {} }}
                 />
             );
@@ -284,7 +284,7 @@ describe('ConfigureScreen - Rendering', () => {
         it('should handle missing existing env values', () => {
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={undefined}
                 />
@@ -304,7 +304,7 @@ describe('ConfigureScreen - Rendering', () => {
 
             renderWithProvider(
                 <ConfigureScreen
-                    project={mockProject as any}
+                    project={mockProject}
                     componentsData={mockComponentsData}
                     existingEnvValues={configWithLongValue}
                 />

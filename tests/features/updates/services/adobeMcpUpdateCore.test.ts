@@ -14,6 +14,7 @@ import { generateAIContextFiles } from '@/features/project-creation/services/aiB
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
+import { createMockProject } from '../../../helpers/projectFake';
 const executeMock = jest.fn();
 
 jest.mock('vscode', () => ({ workspace: { getConfiguration: jest.fn() } }), { virtual: true });
@@ -35,7 +36,7 @@ jest.mock('@/features/project-creation/services/aiBundle/aiDefaultsInstaller', (
 const generateMock = generateAIContextFiles as jest.Mock;
 
 const PKG = '@adobe-commerce/commerce-extensibility-tools';
-const project = { name: 'demo', path: '/p/demo' } as never;
+const project = createMockProject({ name: 'demo', path: '/p/demo' });
 
 function makeCtx() {
     return {

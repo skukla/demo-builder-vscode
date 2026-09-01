@@ -30,6 +30,7 @@ import {
 } from '../../../helpers/extensionContextFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
+import { createMockProject } from '../../../helpers/projectFake';
 jest.mock('@/features/data-installer/services/sampleDataInstall', () => ({
     ...jest.requireActual('@/features/data-installer/services/sampleDataInstall'),
     installSampleData: jest.fn(),
@@ -51,7 +52,7 @@ function makeContext() {
 }
 
 function makeProject() {
-    return {
+    return createMockProject({
         name: 'demo-1',
         datapack: { name: 'bodea', version: 'main' },
         componentSelections: { backend: 'adobe-commerce-accs' },
@@ -61,7 +62,7 @@ function makeProject() {
                 ACCS_STORE_VIEW_CODE: 'default',
             },
         },
-    } as never;
+    }) as never;
 }
 
 beforeEach(() => {
