@@ -1,6 +1,6 @@
 {
     "_what": "PL-14 ledger: split test families (2+ suites for one subject) with NO shared testUtils, measured 2026-08-28. Each is a family where every suite re-declares its own setup \u2014 the pattern behind the tests-tree duplication and the bulk stale-mock breakages. This list may only SHRINK. A family NOT listed here fails the moment it appears, so new debt cannot be added.",
-    "_note": "Not every entry is a defect: some families are split for SIZE with genuinely different setup per suite. Those get adjudicated to a reason string when touched; until then they sit here as measured debt. 2026-08-28: four families were ADDED here \u2014 not new debt, but debt made visible. Their suites always covered one module from two separate test trees (tests/ and tests/unit/); merging the trees under the ADR-016 placement rule put them side by side, where the shared-setup rule can finally see them.",
+    "_note": "Not every entry is a defect: some families are split for SIZE with genuinely different setup per suite. Those get adjudicated to a reason string when touched; until then they sit here as measured debt. 2026-08-28: four families were ADDED here \u2014 not new debt, but debt made visible. Their suites always covered one module from two separate test trees (tests/ and tests/unit/); merging the trees under the ADR-016 placement rule put them side by side, where the shared-setup rule can finally see them. 2026-08-31: `tests/sop/tool` joins `tests/sop/credential` and `tests/sop/no` as a FALSE family \u2014 the detector takes everything before the first `-` as a subject, so tool-auth-review and tool-catalog-gating look like one split suite. Three of the sop rows are now this, which is a signal the subject rule is coarser than it reads.",
     "families": [
         "tests/commands/diagnostics",
         "tests/core/base/baseCommand",
@@ -58,6 +58,7 @@
         "tests/features/updates/commands/updateExecutor",
         "tests/sop/credential",
         "tests/sop/no",
+        "tests/sop/tool",
         "tests/templates/config",
         "tests/templates/demo",
         "tests/templates/manifest",
