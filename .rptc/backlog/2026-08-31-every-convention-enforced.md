@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: active
+status: built
 ---
 
 # Every convention is enforced, or it stops being a convention
@@ -149,6 +149,35 @@ enforced by a named hook, or is not in the convention list. The generated index
 computes "N conventions, N enforced" with the two numbers equal, and
 `tests/sop/tooling-registry.test.ts` pins it.
 
+### Amended 2026-09-01 — the criterion needed a third state
+
+"N conventions, N enforced, equal" cannot be reached while ONE rule is true-but-not-yet
+-applicable. The vendor-CSS layer rule is in the list, unenforced, and correctly so: no
+`@layer vendor` exists in `src/`, so a check would fail the build today rather than
+protect anything. It is not enforcement debt; it is a rule whose start date is PL-21.
+
+The criterion as written would have forced one of two dishonest moves — delete a rule
+the owner wants, or write a check that fails on purpose. Amended to: **every convention
+is enforced, or names the authorised work it waits on.** One rule qualifies under the
+second clause, and it names PL-21.
+
+## Outcome
+
+- **Conventions: 71 stated, 70 enforced.** Was 80 stated / 64 enforced / 16 unenforced
+  when this item was filed.
+- **Six new enforcers built** — naming conventions, fake placement, hook stability
+  (partial), cited identifiers, the tool-auth review, redundant automocks.
+- **Nine rules left the list** for §11 Working discipline. None deleted; each names a
+  dated defect it would have prevented.
+- **One rule remains unenforced by design**, gated on PL-21.
+- **Three real defects** found by the review the ledger forced, all fixed: a systemic
+  breach where a structured failure was flattened into prose before the caller saw it
+  (48 tools), two mesh tools that blocked on a notification an agent cannot click, and
+  two block tools that threw on a missing credential — one of which also wrote to disk
+  before failing.
+- **The `needsAuth` ledger was deleted** and replaced by a required field on the
+  registration type, so the compiler asks every new tool instead of a test counting rows.
+
 ## What to be careful of
 
 **Do not close the gap by weakening the rules.** The cheap way to make 16 → 0 is
@@ -187,3 +216,4 @@ is the current reference for the four-control pattern.
 - 2026-09-01  fix(mcp): the last two tools that errored on a missing credential now answer instead (`e33d583d0`)
 - 2026-09-01  fix(mesh): check_mesh and delete_mesh no longer block on a notification an agent cannot click (`909efe445`)
 - 2026-09-01  test(sop): the dead-mock rule was half a state in the tree, and nobody had built that half (`a38a6c93e`)
+- 2026-09-01  docs(handbook): the nine rules no check can make leave the conventions list (`3884bf0f9`)
