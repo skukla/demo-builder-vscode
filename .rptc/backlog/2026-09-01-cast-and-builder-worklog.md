@@ -133,6 +133,29 @@ covers.
 Also pre-existing and NOT from this work: one `import/order` warning in
 `src/core/state/apiOwners.ts`, a file no commit on this branch touches.
 
+## Open, unreproduced: `tests/hooks/router.test.ts` flaked once
+
+Observed 2026-09-01 during a full `npm run gate`: five failures, all in the
+once-per-session rules (`adobe-docs` x2, `reuse-first`, `webview-test`, and the
+reachability case for `adobe-docs`). Each expected exit 2 and got 0 — the router
+exiting early, which means either the pre-filter did not match or the session marker
+already existed.
+
+NOT caused by the change in flight. Reverting the router token and re-running gave
+69/69; restoring it gave 69/69; the next full gate was green. So it is an interaction
+under parallel execution, not a regression.
+
+What is already ruled out: `fresh()` returns `router-test-<pid>-<n>`, unique per
+worker and per call, and markers are keyed on it at
+`${TMPDIR}/.dbv-<rule>-<session>`. So a plain marker collision does not explain it.
+
+Deliberately NOT diagnosed further. One observation, no reproduction, and this repo's
+own rule is that a proposed cause needs a command that would falsify it — I do not
+have one. Recorded so the next occurrence is the SECOND data point rather than
+another first.
+
+A flaky enforcer is worse than a failing one: it teaches people to re-run.
+
 ## Done when
 
 Section A is empty, section B has the two large builders, and section C carries only

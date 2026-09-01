@@ -44,11 +44,25 @@ echo $MSG'
 NOSUBST='FILES="a.ts b.ts"
 npx eslint $FILES'
 
+# --- the LOOP shape, missed until 2026-09-01 and the costliest of the four ---
+# Six iterations each printed "removed 0", which read as "already done". Run
+# correctly the same six removed 263 casts.
+LOOP='for J in "a b" "c d"; do
+npx eslint --fix $J
+done'
+LOOP_QUOTED='for J in "a b" "c d"; do
+npx eslint --fix "$J"
+done'
+LOOP_ECHO='for J in a b; do
+echo $J
+done'
+
 echo "=== must BLOCK (the shape that silently does nothing) ==="
 run "$ESLINT"     "eslint --fix \$FILES"                        BLOCK
 run "$GITRM"      "git rm \$PATHS"                              BLOCK
 run "$PRETTIER"   "prettier --write \$F"                        BLOCK
 run "$RM"         "rm \$OLD"                                    BLOCK
+run "$LOOP"       "for J in ...; do tool \$J — the real incident" BLOCK
 
 echo
 echo "=== must PASS (correct, or out of scope) ==="
@@ -59,3 +73,5 @@ run "$COUNT_BARE" "[ \$n -gt 0 ] — bare, but not a file list"   pass
 run "$LITERAL"    "literal paths, no variable at all"           pass
 run "$ECHOVAR"    "echo \$MSG — not a file-taking tool"         pass
 run "$NOSUBST"    "var not from \$(...) — out of scope"         pass
+run "$LOOP_QUOTED" "loop var QUOTED — the correct form"         pass
+run "$LOOP_ECHO"  "loop var to echo — not a file-taking tool"   pass

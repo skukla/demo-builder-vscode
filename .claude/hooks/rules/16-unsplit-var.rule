@@ -47,8 +47,24 @@ rule_match() {
     # always a bug in zsh; anywhere else it may well be deliberate.
     local tools='(npx[[:space:]]+)?(eslint|prettier|tsc|jest|rm|cp|mv|chmod|cat|grep|wc|head|tail|git[[:space:]]+(rm|add|checkout|restore))'
 
-    # Every NAME in `NAME=$(` or `NAME="$(`.
-    for name in $(printf '%s' "$cmd" | grep -oE '\b[A-Za-z_][A-Za-z0-9_]*=\"?\$\(' | sed -E 's/=.*//'); do
+    # Every NAME that plausibly holds a LIST: assigned from a command substitution,
+    # or bound by a `for` loop.
+    #
+    # The LOOP case was missed until 2026-09-01 and cost the most of the four
+    # incidents. `for J in "never DECLARATION" "any DECLARATION"; do cmd $J` hands
+    # zsh ONE argument per iteration, so six runs each reported "removed 0" — a tidy
+    # column of zeros that read exactly like "this position is already done". Run
+    # correctly, the same six removed 263 casts.
+    #
+    # A loop is arguably worse than the assignment shape this rule was built from:
+    # it repeats the mistake once per iteration and formats the wrong answer neatly.
+    local names
+    names=$(printf '%s' "$cmd" | grep -oE '\b[A-Za-z_][A-Za-z0-9_]*=\"?\$\(' | sed -E 's/=.*//')
+    names="$names
+$(printf '%s' "$cmd" | grep -oE '\bfor[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+in\b' | sed -E 's/^for[[:space:]]+//; s/[[:space:]]+in$//')"
+
+    for name in $names; do
+        [ -n "$name" ] || continue
         # Bare `$NAME` (not "$NAME", not ${NAME}) somewhere after one of those
         # tools on the same line.
         # `)` and `[` are excluded from the span, and that is what keeps this

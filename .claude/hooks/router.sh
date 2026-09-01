@@ -67,7 +67,13 @@ case "$payload" in
     # The THIRD spelling is the JSON-escaped one. This gate reads the raw payload,
     # where a command containing F="$(ls)" arrives as F=\"$(ls)\" — so the plain
     # ="$( never appears and that case silently never reached the rule.
-    *'=$('*|*'="$('*|*'=\"$('*) ;;
+    #
+    # `; do` admits the LOOP form, which carries no command substitution at all and
+    # so matched none of the tokens above. That gap made this rule's own proof PASS
+    # a case it must block — the third time a rule has been silently unreachable at
+    # this gate. `tests/hooks/rule-proofs.test.ts` now runs every proof on each
+    # build, which turns a recurring surprise into a red test.
+    *'=$('*|*'="$('*|*'=\"$('*|*'; do'*) ;;
     # 13-piped-exit-code. The rule requires a pipe INTO head/tail/wc, so the pipe
     # must be part of the token — a bare *head* would admit every path containing
     # the word. Both spacings, because `|wc` and `| wc` are equally common.
