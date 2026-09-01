@@ -18,6 +18,7 @@ import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler'
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 /**
  * Create mock ExtensionContext
  */
@@ -46,7 +47,7 @@ function createMockExtensionContext(): vscode.ExtensionContext {
         storagePath: '/mock/storage',
         globalStoragePath: '/mock/global/storage',
         logPath: '/mock/logs',
-        secrets: {} as any,
+        secrets: createMockSecretStorage().secrets,
         extension: {} as any,
         languageModelAccessInformation: {} as any,
     };

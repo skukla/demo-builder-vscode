@@ -25,12 +25,11 @@ import {
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 /** Build a minimal mock HandlerContext (uses `as any` to avoid over-mocking). */
 export function createComponentHandlerContext(): HandlerContext {
     return createMockHandlerContextBase({
-        context: {
-            extensionPath: '/mock/extension/path',
-        } as any,
+        context: createMockExtensionContext({}, '/mock/extension/path'),
         logger: createMockLogger(),
         sharedState: {
             isAuthenticating: false,

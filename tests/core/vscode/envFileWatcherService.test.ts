@@ -13,6 +13,7 @@ import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
 import { createMockLogger } from '../../helpers/loggerFake';
 import { createMockStateManager } from '../../helpers/stateManagerFake';
 
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 // Mock vscode API
 jest.mock('vscode', () => ({
     workspace: {
@@ -62,10 +63,9 @@ describe('EnvFileWatcherService', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test',
-        } as any;
+        // The canonical fake, with this suite's path. The literal it replaces named
+        // two of ExtensionContext's twenty-one members and cast the difference away.
+        mockContext = createMockExtensionContext({ subscriptions: [] }, '/test');
 
         mockWatcherManager = new WorkspaceWatcherManager();
     });

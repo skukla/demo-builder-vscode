@@ -12,6 +12,7 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 // Mock dependencies
 
 /**
@@ -42,7 +43,7 @@ function createMockExtensionContext(): vscode.ExtensionContext {
         storagePath: '/mock/storage',
         globalStoragePath: '/mock/global/storage',
         logPath: '/mock/logs',
-        secrets: {} as any,
+        secrets: createMockSecretStorage().secrets,
         extension: {} as any,
         languageModelAccessInformation: {} as any,
     };

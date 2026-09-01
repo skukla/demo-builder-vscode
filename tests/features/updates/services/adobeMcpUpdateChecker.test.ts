@@ -27,6 +27,7 @@ import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 const readFileMock = fsPromises.readFile as jest.Mock;
 const getLatestReleaseMock = getLatestRelease as jest.Mock;
 
@@ -63,7 +64,7 @@ beforeEach(() => {
 describe('AdobeMcpUpdateChecker', () => {
     describe('skip conditions (return null)', () => {
         it('returns null when the project has no EDS storefront component', async () => {
-            const checker = new AdobeMcpUpdateChecker({} as never, makeLogger());
+            const checker = new AdobeMcpUpdateChecker(createMockSecretStorage().secrets, makeLogger());
 
             const result = await checker.checkForUpdates(makeProject({ componentInstances: {} }));
 
@@ -72,7 +73,7 @@ describe('AdobeMcpUpdateChecker', () => {
         });
 
         it('returns null when the EDS storefront component has no path', async () => {
-            const checker = new AdobeMcpUpdateChecker({} as never, makeLogger());
+            const checker = new AdobeMcpUpdateChecker(createMockSecretStorage().secrets, makeLogger());
             const project = makeProject({
                 componentInstances: {
                     [COMPONENT_IDS.EDS_STOREFRONT]: {
@@ -92,7 +93,7 @@ describe('AdobeMcpUpdateChecker', () => {
                 err.code = 'ENOENT';
                 throw err;
             });
-            const checker = new AdobeMcpUpdateChecker({} as never, makeLogger());
+            const checker = new AdobeMcpUpdateChecker(createMockSecretStorage().secrets, makeLogger());
 
             expect(await checker.checkForUpdates(makeProject())).toBeNull();
             expect(getLatestReleaseMock).not.toHaveBeenCalled();
@@ -100,14 +101,14 @@ describe('AdobeMcpUpdateChecker', () => {
 
         it('returns null when package.json is malformed JSON', async () => {
             readFileMock.mockResolvedValue('{ not valid json');
-            const checker = new AdobeMcpUpdateChecker({} as never, makeLogger());
+            const checker = new AdobeMcpUpdateChecker(createMockSecretStorage().secrets, makeLogger());
 
             expect(await checker.checkForUpdates(makeProject())).toBeNull();
         });
 
         it('returns null when package.json has no version field', async () => {
             readFileMock.mockResolvedValue(JSON.stringify({ name: ADOBE_MCP_PKG }));
-            const checker = new AdobeMcpUpdateChecker({} as never, makeLogger());
+            const checker = new AdobeMcpUpdateChecker(createMockSecretStorage().secrets, makeLogger());
 
             expect(await checker.checkForUpdates(makeProject())).toBeNull();
         });
@@ -115,7 +116,7 @@ describe('AdobeMcpUpdateChecker', () => {
         it('returns null when getLatestRelease fails (404, rate limit, network)', async () => {
             readFileMock.mockResolvedValue(JSON.stringify({ version: '3.4.0' }));
             getLatestReleaseMock.mockResolvedValue(null);
-            const checker = new AdobeMcpUpdateChecker({} as never, makeLogger());
+            const checker = new AdobeMcpUpdateChecker(createMockSecretStorage().secrets, makeLogger());
 
             expect(await checker.checkForUpdates(makeProject())).toBeNull();
         });
@@ -125,7 +126,7 @@ describe('AdobeMcpUpdateChecker', () => {
             // Only digit-free strings truly fail validation.
             readFileMock.mockResolvedValue(JSON.stringify({ version: 'rolling-tag' }));
             getLatestReleaseMock.mockResolvedValue({ tag: 'v3.5.0', version: '3.5.0' });
-            const checker = new AdobeMcpUpdateChecker({} as never, makeLogger());
+            const checker = new AdobeMcpUpdateChecker(createMockSecretStorage().secrets, makeLogger());
 
             expect(await checker.checkForUpdates(makeProject())).toBeNull();
         });
@@ -135,7 +136,7 @@ describe('AdobeMcpUpdateChecker', () => {
         it('returns hasUpdate=true when latest is greater than installed', async () => {
             readFileMock.mockResolvedValue(JSON.stringify({ version: '3.4.0' }));
             getLatestReleaseMock.mockResolvedValue({ tag: 'v3.5.0', version: '3.5.0' });
-            const checker = new AdobeMcpUpdateChecker({} as never, makeLogger());
+            const checker = new AdobeMcpUpdateChecker(createMockSecretStorage().secrets, makeLogger());
 
             const result = await checker.checkForUpdates(makeProject());
 
@@ -150,7 +151,7 @@ describe('AdobeMcpUpdateChecker', () => {
         it('returns hasUpdate=false when versions match', async () => {
             readFileMock.mockResolvedValue(JSON.stringify({ version: '3.5.0' }));
             getLatestReleaseMock.mockResolvedValue({ tag: 'v3.5.0', version: '3.5.0' });
-            const checker = new AdobeMcpUpdateChecker({} as never, makeLogger());
+            const checker = new AdobeMcpUpdateChecker(createMockSecretStorage().secrets, makeLogger());
 
             const result = await checker.checkForUpdates(makeProject());
 
@@ -160,7 +161,7 @@ describe('AdobeMcpUpdateChecker', () => {
         it('returns hasUpdate=false when installed is somehow newer than latest', async () => {
             readFileMock.mockResolvedValue(JSON.stringify({ version: '4.0.0' }));
             getLatestReleaseMock.mockResolvedValue({ tag: 'v3.5.0', version: '3.5.0' });
-            const checker = new AdobeMcpUpdateChecker({} as never, makeLogger());
+            const checker = new AdobeMcpUpdateChecker(createMockSecretStorage().secrets, makeLogger());
 
             const result = await checker.checkForUpdates(makeProject());
 
@@ -172,7 +173,7 @@ describe('AdobeMcpUpdateChecker', () => {
         it('reads the package.json from the storefront node_modules path', async () => {
             readFileMock.mockResolvedValue(JSON.stringify({ version: '3.4.0' }));
             getLatestReleaseMock.mockResolvedValue({ tag: 'v3.4.0', version: '3.4.0' });
-            const checker = new AdobeMcpUpdateChecker({} as never, makeLogger());
+            const checker = new AdobeMcpUpdateChecker(createMockSecretStorage().secrets, makeLogger());
 
             await checker.checkForUpdates(makeProject());
 

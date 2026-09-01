@@ -38,11 +38,15 @@ jest.mock('@/features/eds/services/patches/lkgReader', () => ({
 
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 const mockReadLkgSha = readLkgSha as jest.Mock;
 
 const mockLogger: Logger = createMockLogger();
 
-const mockSecrets = {} as never;
+// The canonical SecretStorage fake, Map-backed. `{} as never` claimed an
+// empty object was a SecretStorage and switched off checking of every call
+// it was passed to — eleven of them in this file.
+const mockSecrets = createMockSecretStorage().secrets;
 
 const OLD_SHA = 'a'.repeat(40);
 const NEW_SHA = 'b'.repeat(40);

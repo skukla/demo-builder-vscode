@@ -27,6 +27,7 @@ import type {
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 // Test data
 export const mockConfig = {
     version: '1.0',
@@ -102,7 +103,7 @@ export function createCheckHandlerContext(
         debugLogger: {
             debug: jest.fn(),
         },
-        context: {},
+        context: createMockExtensionContext(),
         panel: undefined,
         stateManager: {},
         communicationManager: undefined,

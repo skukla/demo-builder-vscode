@@ -19,6 +19,7 @@ import {
 } from './envFileWatcherService.testUtils';
 import { createMockProject } from '../../helpers/projectFake';
 
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
     let mockContext: vscode.ExtensionContext;
     let mockWatcherManager: WorkspaceWatcherManager;
@@ -27,10 +28,9 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
     beforeEach(() => {
         resetMocks();
 
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test',
-        } as any;
+        // The canonical fake, with this suite's path. The literal it replaces named
+        // two of ExtensionContext's twenty-one members and cast the difference away.
+        mockContext = createMockExtensionContext({ subscriptions: [] }, '/test');
 
         mockWatcherManager = new WorkspaceWatcherManager();
 
