@@ -662,10 +662,18 @@ promising an agent that every response parses.
 > that asserts the `needsAuth` marker survives, and a control that a plain failure still
 > gets the terse string.
 >
-> Two more breach it differently: `promote_block_to_library` and
-> `remove_block_from_library` THROW when the DA.live token is missing. The message names
-> the recovery, so an agent is not stranded — but erroring is the one thing the rule asks
-> tools not to do.
+> **A worse one, also fixed on 2026-09-01: `check_mesh` and `delete_mesh` BLOCKED.**
+> `ensureAuthenticated` in `features/mesh/handlers/shared.ts` always awaited
+> `showWarningMessage(..., 'Open Dashboard')`, so an unauthenticated call from an MCP
+> tool put a notification on the user's window and stopped the tool until somebody
+> dismissed it. An agent cannot click, and the user had no idea what was waiting on
+> them. It now branches on `context.panel` — prompt for a webview, return the
+> `needsAuth` marker for an agent — which is the rule `dataInstallerHandlers` had
+> already written down and the mesh handlers never got.
+>
+> Two still breach it: `promote_block_to_library` and `remove_block_from_library` THROW
+> when the DA.live token is missing. The message names the recovery, so an agent is not
+> stranded — but erroring is the one thing the rule asks tools not to do.
 
 > **How to add one.** [mcp-tool-authoring](../../.claude/skills/mcp-tool-authoring/SKILL.md) ·
 > registration is pinned by `tests/features/ai/server/realSdkRegistration.test.ts`.

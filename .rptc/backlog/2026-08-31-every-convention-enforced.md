@@ -181,3 +181,6 @@ is the current reference for the four-control pattern.
 - 2026-08-31  docs(mcp): 65 tools reviewed, and a systemic breach the ledger was built to find (`70686d71d`)
 - 2026-08-31  docs(mcp): 51 tool-auth verdicts, and the rule names one handoff shape of three (`f90d45134`)
 - 2026-09-01  docs(mcp): the tool-auth review is COMPLETE — 114 of 114, and three real defects (`43cd97128`)
+- 2026-09-01  feat(mcp): needsAuth is REQUIRED — the ledger is deleted, the compiler asks instead (`58e611e8f`)
+- 2026-09-01  fix(mcp): a structured failure survives the projector — the needsAuth handoff reaches agents (`9cd21be13`)
+- 2026-09-01  docs(mcp): correction — the best auth handoff in the repo is discarded by the projector (`36e30443c`)
