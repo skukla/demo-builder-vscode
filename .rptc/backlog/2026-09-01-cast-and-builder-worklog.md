@@ -296,3 +296,6 @@ conversion, which the enforcer requires anyway.
 - 2026-09-01  test: sweep AuthenticationService and WebviewPanel — the safe types are done (`c6e78eb06`)
 - 2026-09-01  test: sweep Logger and StateManager — and one mistake the suite caught, not the compiler (`cb5375a2a`)
 - 2026-09-01  test: sweep by TYPE, not by file — SecretStorage and ExtensionContext (`887422cd1`)
+- 2026-09-01  test(eds): the GitHub file-ops family — 31 casts become one, and a fourth builder gets used (`478b3a318`)
+- 2026-09-01  test: two more families — one cast in a helper replaces 42 at the call sites (`d698c5bb8`)
+- 2026-09-01  test(dashboard): route three handler contexts to the builder — and I was wrong about absence (`acfa19a48`)
