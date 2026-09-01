@@ -24,6 +24,7 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 // Mock fs promises
 jest.mock('fs', () => ({
     promises: {
@@ -83,7 +84,7 @@ describe('projectFinalizationService - Mesh Endpoint Single Source of Truth', ()
         }),
         sharedState: { isAuthenticating: false },
         sendMessage: jest.fn(),
-        panel: { visible: false, dispose: jest.fn() } as any,
+        panel: createMockWebviewPanel({ visible: false }),
     });
 
     const createFrontendComponentDefinition = (): TransformedComponentDefinition =>

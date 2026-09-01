@@ -13,6 +13,7 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 // Track component definitions passed to cloneAllComponents
 let componentDefinitionIds: string[] = [];
 const clonedComponents: Map<string, any> = new Map();
@@ -164,7 +165,7 @@ describe('Executor - EDS Standard Flow', () => {
             }),
             sharedState: { isAuthenticating: false },
             sendMessage: jest.fn(),
-            panel: { visible: false, dispose: jest.fn() } as any,
+            panel: createMockWebviewPanel({ visible: false }),
         };
     };
 

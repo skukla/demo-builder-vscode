@@ -28,6 +28,7 @@ import { createMockHandlerContext as createMockHandlerContextBase } from '../../
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 // Test data
 export const mockConfig = {
     version: '1.0',
@@ -92,7 +93,7 @@ export function createCheckHandlerContext(
                 clearAll: jest.fn(),
             }),
         },
-        authManager: {},
+        authManager: createMockAuthenticationService(),
         componentHandler: {},
         errorLogger: {},
         progressUnifier: {},

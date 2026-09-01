@@ -23,6 +23,8 @@ import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import { createMockAuthenticationService } from '../../../../helpers/authenticationServiceFake';
 const mockLogger: Logger = createMockLogger();
 
 /** Build a run context with a captured `post` spy. */
@@ -32,15 +34,22 @@ function makeCtx(project: Project): { ctx: OnOpenCheckContext; post: jest.Mock }
 }
 
 /** Auth manager whose interactive / CLI surfaces THROW if touched (P1 tripwire). */
-function makeAuth(overrides: Record<string, unknown>) {
-    return {
+function makeAuth(overrides: Partial<jest.Mocked<AuthenticationService>> = {}) {
+    // Built on the canonical fake so the members this suite does NOT name are
+    // present too — the literal it replaces had four, and the check under test
+    // reaches for more than four.
+    return createMockAuthenticationService({
         isAuthenticated: jest.fn().mockResolvedValue(true),
         getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
         // These MUST NOT be called on open — fail loudly if they are.
-        getOrganizations: jest.fn(() => { throw new Error('CLI fallback path used on open (P1 violation)'); }),
-        loginAndRestoreProjectContext: jest.fn(() => { throw new Error('interactive login used on open (P1 violation)'); }),
+        getOrganizations: jest.fn().mockImplementation(() => {
+            throw new Error('CLI fallback path used on open (P1 violation)');
+        }),
+        loginAndRestoreProjectContext: jest.fn().mockImplementation(() => {
+            throw new Error('interactive login used on open (P1 violation)');
+        }),
         ...overrides,
-    };
+    });
 }
 
 function projectWithOrg(organization?: string, extra: Record<string, unknown> = {}): Project {
@@ -51,9 +60,9 @@ function projectWithOrg(organization?: string, extra: Record<string, unknown> = 
 let saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
 
 /** Build the check with a handed-in auth manager (and the current save sink). */
-function checkWith(auth: unknown) {
+function checkWith(auth: jest.Mocked<AuthenticationService>) {
     return createOrgContextCheck({
-        authManager: auth as never,
+        authManager: auth,
         stateManager: () => ({ saveProjectConfigOnly }),
     });
 }

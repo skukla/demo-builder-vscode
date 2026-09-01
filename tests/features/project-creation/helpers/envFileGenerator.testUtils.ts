@@ -12,6 +12,7 @@ import { ProjectSetupContext } from '@/features/project-creation/services/Projec
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 export { createMockLogger };
 
 /**
@@ -41,7 +42,7 @@ export function createEnvFileGeneratorContext(
         sharedState: {
             isAuthenticating: false,
         },
-        authManager: {} as any,
+        authManager: createMockAuthenticationService(),
         ...overrides,
     })
 }

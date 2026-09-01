@@ -138,6 +138,7 @@ import { executeProjectCreation } from '@/features/project-creation/handlers/exe
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 describe('Executor - App Builder Component Loading', () => {
     let mockContext: Partial<HandlerContext>;
 
@@ -150,7 +151,7 @@ describe('Executor - App Builder Component Loading', () => {
         } as any,
         sharedState: { isAuthenticating: false },
         sendMessage: jest.fn(),
-        panel: { visible: false, dispose: jest.fn() } as any,
+        panel: createMockWebviewPanel({ visible: false }),
     });
 
     beforeEach(() => {
