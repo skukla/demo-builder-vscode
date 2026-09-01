@@ -81,7 +81,7 @@ export function makeAiOverviewProject(overrides: Partial<Project> = {}): Project
         name: 'My Demo Project',
         path: '/projects/my-demo',
         ...overrides,
-    } as never);
+    });
 }
 
 function makeSkill(overrides: Partial<SkillInventoryEntry> = {}): SkillInventoryEntry {

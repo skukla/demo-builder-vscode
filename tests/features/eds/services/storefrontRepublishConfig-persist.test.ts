@@ -75,7 +75,7 @@ function run(over: Record<string, unknown> = {}, project = edsProject()) {
             logger,
             persist,
             ...over,
-        } as never),
+        }),
     };
 }
 
@@ -127,9 +127,7 @@ describe('extractRepublishParams — daLiveSite fallback', () => {
 
         const result = extractRepublishParams(project);
 
-        expect(result).toEqual(
-            expect.objectContaining({ success: true, daLiveSite: 'shop' })
-        );
+        expect(result).toEqual(expect.objectContaining({ success: true, daLiveSite: 'shop' }));
     });
 
     it('an explicit daLiveSite (unmigrated legacy project) still wins over the repo name', () => {

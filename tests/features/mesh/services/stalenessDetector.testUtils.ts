@@ -14,7 +14,9 @@ jest.mock('@/core/di/serviceLocator', () => ({
             execute: jest.fn(),
         })),
         getAuthenticationService: jest.fn(() => ({
-            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
+            getTokenStatus: jest
+                .fn()
+                .mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
         })),
     },
 }));
@@ -78,7 +80,7 @@ export function createStalenessProject(overrides?: Partial<Project>): Project {
         lastModified: new Date('2024-01-01T00:00:00Z'),
         status: 'running',
         ...overrides,
-    } as never)
+    });
 }
 
 export function createMockProjectWithMesh(overrides?: Partial<Project>): Project {
@@ -97,12 +99,12 @@ export function createMockProjectWithMesh(overrides?: Partial<Project>): Project
                 kind: 'mesh',
                 status: 'deployed',
                 source: { owner: '', repo: '' },
-                    envVars: {
-                        ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
-                    },
-                    sourceHash: 'abc123',
-                    lastDeployed: '2024-01-01T00:00:00Z',
-                    },
+                envVars: {
+                    ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
+                },
+                sourceHash: 'abc123',
+                lastDeployed: '2024-01-01T00:00:00Z',
+            },
         },
         ...overrides,
     });
@@ -111,7 +113,7 @@ export function createMockProjectWithMesh(overrides?: Partial<Project>): Project
 export function createMockProjectWithFrontend(overrides?: Partial<Project>): Project {
     return createStalenessProject({
         componentInstances: {
-            'headless': {
+            headless: {
                 id: 'headless',
                 name: 'Frontend',
                 type: 'frontend',
@@ -120,7 +122,7 @@ export function createMockProjectWithFrontend(overrides?: Partial<Project>): Pro
             },
         },
         componentConfigs: {
-            'headless': {
+            headless: {
                 MESH_ENDPOINT: 'https://example.com',
                 OTHER_VAR: 'value',
             },
@@ -219,10 +221,7 @@ export function setupMockFileSystem(
     return { mockFs, mockCrypto, mockHash };
 }
 
-export function setupMockFileSystemWithHash(
-    hash: string | null,
-    fileContent: string = 'content'
-) {
+export function setupMockFileSystemWithHash(hash: string | null, fileContent: string = 'content') {
     const mockFs = fs as jest.Mocked<typeof fs>;
     const mockCrypto = crypto as jest.Mocked<typeof crypto>;
 

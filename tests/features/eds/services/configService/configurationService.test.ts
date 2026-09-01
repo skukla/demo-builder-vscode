@@ -365,7 +365,7 @@ describe('ConfigurationService — failure reporting', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-        service = new ConfigurationService(tokenProvider as never, logger as never);
+        service = new ConfigurationService(tokenProvider, logger);
     });
 
     afterEach(() => fetchSpy?.mockRestore());

@@ -70,7 +70,7 @@ describe('aiHandlers — launch & save', () => {
             const vscode = jest.requireMock('vscode');
             const context = createAiHandlerContext();
 
-            const result = await handleOpenInClaude(context, {} as never);
+            const result = await handleOpenInClaude(context, {});
 
             expect(result).toEqual({ success: true });
             const call = vscode.commands.executeCommand.mock.calls[0];
@@ -183,7 +183,7 @@ describe('aiHandlers — launch & save', () => {
 
         it('returns success: false when prompt payload is missing', async () => {
             const context = createAiHandlerContext();
-            const result = await handleSaveAiPrompt(context, undefined as never);
+            const result = await handleSaveAiPrompt(context, undefined);
             expect(result.success).toBe(false);
         });
 

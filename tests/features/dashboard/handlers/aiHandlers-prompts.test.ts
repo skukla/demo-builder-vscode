@@ -50,7 +50,7 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
         it('returns success: false when promptId is missing', async () => {
             const context = createAiHandlerContext();
-            const result = await handleDeleteAiPrompt(context, undefined as never);
+            const result = await handleDeleteAiPrompt(context, undefined);
             expect(result.success).toBe(false);
         });
 
@@ -195,9 +195,7 @@ describe('aiHandlers — prompt CRUD & scope', () => {
                     { id: 'p1', title: 'Project 1', prompt: 'p1' },
                     { id: 'p2', title: 'Project 2', prompt: 'p2' },
                 ],
-                globalPrompts: [
-                    { id: 'g1', title: 'Global 1', prompt: 'g1', pinned: true },
-                ],
+                globalPrompts: [{ id: 'g1', title: 'Global 1', prompt: 'g1', pinned: true }],
             });
             const result = await handleListAiPrompts(context);
             expect(result.success).toBe(true);
@@ -210,9 +208,7 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
         it('returns only global prompts when the project has no prompts', async () => {
             const { context } = makeScopedContext({
-                globalPrompts: [
-                    { id: 'g1', title: 'Global', prompt: 'g1', pinned: true },
-                ],
+                globalPrompts: [{ id: 'g1', title: 'Global', prompt: 'g1', pinned: true }],
             });
             const result = await handleListAiPrompts(context);
             expect(result.aiPrompts).toEqual([
@@ -222,9 +218,7 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
         it('dedups by id when the same id appears in both stores (global wins)', async () => {
             const { context } = makeScopedContext({
-                projectPrompts: [
-                    { id: 'dup', title: 'Stale project copy', prompt: 'stale' },
-                ],
+                projectPrompts: [{ id: 'dup', title: 'Stale project copy', prompt: 'stale' }],
                 globalPrompts: [
                     { id: 'dup', title: 'Fresh global copy', prompt: 'fresh', pinned: true },
                 ],
@@ -321,9 +315,7 @@ describe('aiHandlers — prompt CRUD & scope', () => {
 
             // 3. List returns it once, with pinned: true
             const listed = await handleListAiPrompts(context);
-            expect(listed.aiPrompts).toEqual([
-                { id: 'x', title: 'X', prompt: 'x', pinned: true },
-            ]);
+            expect(listed.aiPrompts).toEqual([{ id: 'x', title: 'X', prompt: 'x', pinned: true }]);
 
             // 4. Unpin → migrates back to current project
             await handleSaveAiPrompt(context, {
@@ -344,5 +336,4 @@ describe('aiHandlers — prompt CRUD & scope', () => {
     // ==========================================================
     // Surface-agnostic kebab + sessions browser handlers
     // ==========================================================
-
 });

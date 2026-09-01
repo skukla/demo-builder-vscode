@@ -107,7 +107,7 @@ describe('aiHandlers — copy & module helpers', () => {
                 projectPrompts: [{ id: 'p1', title: 'P1', prompt: 'p1' }],
                 globalPrompts: [{ id: 'g1', title: 'G1', prompt: 'g1', pinned: true }],
             });
-            const merged = readMergedAiPrompts(context, project as never);
+            const merged = readMergedAiPrompts(context, project);
             expect(merged).toEqual([
                 { id: 'g1', title: 'G1', prompt: 'g1', pinned: true },
                 { id: 'p1', title: 'P1', prompt: 'p1' },
@@ -138,7 +138,7 @@ describe('aiHandlers — copy & module helpers', () => {
                 globalPrompts: [{ id: 'g', title: 'G', prompt: 'g', pinned: true }],
             });
 
-            const remaining = await deleteAiPromptById(context, project as never, 'a');
+            const remaining = await deleteAiPromptById(context, project, 'a');
 
             expect(project.aiPrompts).toEqual([{ id: 'b', title: 'B', prompt: 'b' }]);
             expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([
@@ -156,7 +156,7 @@ describe('aiHandlers — copy & module helpers', () => {
                 globalPrompts: [{ id: 'g', title: 'G', prompt: 'g', pinned: true }],
             });
 
-            const remaining = await deleteAiPromptById(context, project as never, 'g');
+            const remaining = await deleteAiPromptById(context, project, 'g');
 
             expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
             expect(project.aiPrompts).toEqual([{ id: 'p', title: 'P', prompt: 'p' }]);
@@ -169,7 +169,7 @@ describe('aiHandlers — copy & module helpers', () => {
                 globalPrompts: [{ id: 'dup', title: 'Global', prompt: 'g', pinned: true }],
             });
 
-            const remaining = await deleteAiPromptById(context, project as never, 'dup');
+            const remaining = await deleteAiPromptById(context, project, 'dup');
 
             expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
             expect(project.aiPrompts).toEqual([]);

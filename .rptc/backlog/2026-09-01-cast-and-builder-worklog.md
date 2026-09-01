@@ -172,3 +172,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-01  refactor(tests): declaration-position `as any` — 1,065 to 1,000, and the yield is the finding (`4ae1bc20d`)
 - 2026-09-01  refactor(tests): declaration-position `as never` — 84% of them were load-bearing (`632df89d1`)
 - 2026-09-01  refactor(tests): 167 unnecessary assertions removed — and the filter built to prevent a regression caused one (`7ce4764cf`)
+- 2026-09-01  refactor(tests): argument-position `as any` 1,000 -> 852, and I had been avoiding the wrong thing (`7e77c174a`)
