@@ -641,10 +641,29 @@ promising an agent that every response parses.
 >   sign-in.
 >
 > So the rule is really *return a structured handoff naming what will fix it*, and
-> `needsAuth` is one of its shapes. Two tools DO breach it: `promote_block_to_library`
-> and `remove_block_from_library` THROW when the DA.live token is missing. The message
-> names the recovery, so an agent is not stranded — but it is an error, which is the one
-> thing the rule asks tools not to do.
+> `needsAuth` is one of its shapes.
+>
+> **A SYSTEMIC BREACH, found by the review on 2026-08-31 and not yet fixed.** Every
+> DESCRIPTOR-registered tool behind `runGuards` fails the rule, and it is one line that
+> does it. `runGuards` returns `{error, code: ErrorCode.AUTH_REQUIRED}` — typed on
+> purpose, so a UI can offer a sign-in button. `defaultShape` in `toolDescriptors.ts`
+> then renders any failure as the STRING `Error: <message> [CODE]`. So an agent calling
+> `add_console_apis` without Adobe auth receives prose to parse, never a handoff.
+>
+> `ErrorCode.AUTH_REQUIRED` appears **zero times** in `src/features/ai`. The webview
+> half translates it (`dataInstallerFailure.tsx` branches on it); the agent half does
+> not. The directly-registered tools — adobeTools, cloudResourceTools,
+> contentAuthoringTools, storefrontTools — all return proper handoffs, which is why the
+> gap is invisible unless you ask the question of every tool.
+>
+> The fix is small and belongs to whoever picks it up: teach `defaultShape` (or the
+> registrar) to turn `AUTH_REQUIRED` / `AUTH_EXPIRED` into the `needsAuth` shape. That
+> is a behaviour change to every descriptor tool at once, so it is not made here.
+>
+> Two more breach it differently: `promote_block_to_library` and
+> `remove_block_from_library` THROW when the DA.live token is missing. The message names
+> the recovery, so an agent is not stranded — but erroring is the one thing the rule asks
+> tools not to do.
 
 > **How to add one.** [mcp-tool-authoring](../../.claude/skills/mcp-tool-authoring/SKILL.md) ·
 > registration is pinned by `tests/features/ai/server/realSdkRegistration.test.ts`.
