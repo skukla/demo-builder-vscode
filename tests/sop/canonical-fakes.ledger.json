@@ -14,7 +14,6 @@
         "Logger": 2,
         "HandlerContext['stateManager']": 26,
         "StateManager": 13,
-        "CommandExecutor": 0,
         "ExtensionContext": 6
     }
 }

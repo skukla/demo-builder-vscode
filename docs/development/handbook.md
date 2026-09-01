@@ -90,9 +90,19 @@ close into a cycle and "move it to `core/`" stops being a safe answer.
 > re-export-only `index.ts` — not in `core/`, not in a feature. **The ledger is
 > CLOSED**: all 43 that predated the rule were retired on 2026-08-31, so this is now
 > a ban with nowhere to write an exception down.
-> [ADR-022](../architecture/adr/022-barrel-files.md) · Enforced by the `reExportIndex`
-> ledger in `tests/sop/architecture-rules.exemptions.json`, with the `featureBarrels`
-> ledger — now empty — banning feature-level barrels outright.
+> [ADR-022](../architecture/adr/022-barrel-files.md) · Enforced by
+> `tests/sop/architecture-rules.test.ts` through `expectBanned`, which asserts both
+> halves: no violations, AND no ledger key to write one into.
+>
+> That second half arrived on 2026-09-01, and this entry is why it was needed. It
+> already SAID "a ban with nowhere to write an exception down" while
+> `reExportIndex: {}` and `featureBarrels: {}` sat in the exemptions file — empty, but
+> still keys. An empty ledger already fails a new violation, so nothing was
+> undetected; what remained was the SLOT. The next person to trip the rule could add
+> a row with a reason and stay green, and the rule would quietly go back to being
+> negotiable. Seven rules that had reached zero were in that state; all seven are now
+> banned outright, and re-adding an exemption to any of them fails the build naming
+> the rule.
 > *Why:* a symbol reachable by two paths is a symbol whose home nobody can name. It is
 > also the rule this codebase already follows: **1,935 imports reach into a module from
 > outside it, against 162 from within**, so the barrels were the minority report, not the

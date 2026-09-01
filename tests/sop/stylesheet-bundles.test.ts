@@ -28,7 +28,7 @@
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { reportBundleClassUsage, type UsageReport } from './webviewBundleClasses';
-import { loadLedger, expectClean, expectCeiling } from './architectureScan';
+import { loadLedger, expectBanned, expectClean, expectCeiling } from './architectureScan';
 
 const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 const LEDGER = loadLedger('webview-architecture-rules.exemptions.json');
@@ -76,7 +76,7 @@ describe('ADR-017 §6: a class used in a bundle is styled by that bundle', () =>
         const violations = [...report.crossBundle.entries()]
             .flatMap(([cls, sites]) => [...sites].map((site) => `${cls} @ ${site}`))
             .sort();
-        expectClean(LEDGER, 'bundleStylesheets', violations);
+        expectBanned(LEDGER, 'bundleStylesheets', violations);
     });
 
     it('every class defined NOWHERE is a reasoned ledger entry', () => {
