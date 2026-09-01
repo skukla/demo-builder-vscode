@@ -178,7 +178,7 @@ red, and so is a registry entry for something deleted.
 | Cadence | What runs | Who triggers it |
 |---|---|---|
 | per-tool-call | 10 hook rules in `.claude/hooks/rules/` | automatic |
-| per-jest-run | 28 enforcer suites in `tests/sop/` | automatic |
+| per-jest-run | 29 enforcer suites in `tests/sop/` | automatic |
 | per-push | lint, both typecheckers, 2 validators | CI |
 | periodic | 10 scripted checks + 9 guided reviews | **`npm run sweep`** |
 
@@ -243,7 +243,7 @@ without producing a signal.
 ## The conventions live in one place
 
 **[docs/development/handbook.md](docs/development/handbook.md)** states every convention
-this codebase holds itself to — 80 of them, 69 with an enforcer that fails the build — and
+this codebase holds itself to — 80 of them, 70 with an enforcer that fails the build — and
 explains each one for a human reader. Read it once, start to finish.
 
 Some rules appear both there and here, deliberately: this file is loaded into every agent

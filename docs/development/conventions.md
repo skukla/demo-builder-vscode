@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **80** conventions, **69** enforced
+- **80** conventions, **70** enforced
 - **22** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -121,7 +121,7 @@ it means the rule rests on somebody noticing.
 | The three tiers, and which applies. **Not enforced** — which tier fits is a judgement about what you are testing. | [ADR](../architecture/adr/016-test-strategy.md) |  | **—** |
 | A split test family shares one `.testUtils` file, which owns the mocks and the subject import. enforced by `tests/sop/test-family-setup.test.ts`. |  | [procedure](../../.claude/skills/webview-test-authoring/SKILL.md) | `test-family-setup.test.ts` |
 | When you change a test's structure, diff the set of things it asserts before and after — and prove shared setup is load-bearing by breaking it on purpose and checking the right suites fail. |  |  | **—** |
-| Before designing a way to hand a mocked collaborator in — or to share one between suites — delete the mock and run the suite. If it still passes, the mock was the whole problem. |  |  | **—** |
+| Before designing a way to hand a mocked collaborator in — or to share one between suites — delete the mock and run the suite. If it still passes, the mock was the whole problem. |  |  | `redundant-automocks.test.ts` |
 | No test file over 750 lines. enforced by `npm run validate:test-file-sizes`. |  |  | *named in prose* |
 | No test file repeats another file's tests wholesale. |  |  | `duplicate-test-files.test.ts` |
 | A fake standing in for a real type comes from the builder for that type. `{...} as unknown as Project` is a fake with the type check switched off. Enforced by the `castCeilings` pins in `tests/sop/canonical-fakes.ledger.json` — nine types that already have a builder, and the count for each may only fall. |  |  | *named in prose* |

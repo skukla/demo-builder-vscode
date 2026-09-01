@@ -184,3 +184,5 @@ is the current reference for the four-control pattern.
 - 2026-09-01  feat(mcp): needsAuth is REQUIRED — the ledger is deleted, the compiler asks instead (`58e611e8f`)
 - 2026-09-01  fix(mcp): a structured failure survives the projector — the needsAuth handoff reaches agents (`9cd21be13`)
 - 2026-09-01  docs(mcp): correction — the best auth handoff in the repo is discarded by the projector (`36e30443c`)
+- 2026-09-01  fix(mcp): the last two tools that errored on a missing credential now answer instead (`e33d583d0`)
+- 2026-09-01  fix(mesh): check_mesh and delete_mesh no longer block on a notification an agent cannot click (`909efe445`)

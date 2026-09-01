@@ -740,7 +740,13 @@ breaks the code on purpose and reports what nothing noticed.
 > with nothing failing. Two working sessions went into designing seams for files that only
 > needed a deletion, because the question asked was "how would this suite hand the service
 > in?" rather than "does this mock change anything?". The check costs one suite run.
-> **Not enforced** — it is a question to ask, not a state to hold.
+> **Half enforced, and the half that is was buildable all along.** "A question to ask,
+> not a state to hold" is true of the probe — delete the mock, re-run, see if anything
+> notices — and false of the static rule underneath it: a BARE automock of a module
+> `moduleNameMapper` already redirects is dead by construction, and that is a state in
+> the tree. `tests/sop/redundant-automocks.test.ts` bans it outright (a flat ban, not a
+> ceiling — the corpus was already zero when it was written). The probe half stays a
+> habit, and stays in `dead-mock-scan` at the periodic cadence.
 >
 > Three things only that check shows. `jest.mock('vscode')` is a no-op here — `jest.config.js`
 > already maps it — and four families carried copies. Mocks can serve only each other: twice,
@@ -961,28 +967,32 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 10 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 28 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 29 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 80 conventions. 69 of them are enforced; 11 are not.**
+**This handbook states 80 conventions. 70 of them are enforced; 10 are not.**
 
-The fifteen that remain are not one thing, and treating them as one is what kept them
-open:
+The ten are not one thing, and treating them as one is what kept them open:
 
-- **Fourteen cannot have an enforcer.** Which test tier fits, whether a metric measures
-  the defect or only its shape, naming the command that would prove you wrong, diffing a
-  test's assertions after restructuring it, whether a comment about another module is
-  actually true, whether you aimed a check at the right question, whether a matching
-  string has been read back to its source, whether an identifier in prose was copied or
-  remembered, whether a destructive tool carries the flag its REACH deserves, whether a
-  tool hands off instead of erroring, whether a selection handler cleared its dependents,
-  whether a name follows a convention nobody has broken, where a shared fake belongs, and
-  whether a fixture's shape was read or invented. Each is a judgement about intent, and a
-  check that scored it would be measuring shape — the exact mistake two of them warn
-  about. These are written down for the reader, not pending work.
+- **Nine cannot have an enforcer, because they are rules about how the WORK is done,
+  not about the code.** Which test tier fits; whether a metric measures the defect or
+  only its shape; naming the command that would prove you wrong before naming a cause;
+  diffing a test's assertions after restructuring it; whether a comment about another
+  module is actually true; whether you aimed a check at the right question; whether a
+  matching string has been read back to its source; whether a selection handler cleared
+  its dependents; whether a fixture's shape was read or invented. Each is a judgement
+  about intent, and a check that scored it would be measuring shape — the exact mistake
+  two of them warn about. They are written down for the reader, not pending work.
 - **One is not yet true.** No `@layer vendor` exists in `src/`, so enforcing it today would
   fail the build rather than protect anything. It waits on the CSS migration (PL-21).
+
+**This paragraph is why the scorecard above it is generated.** It read "the fifteen that
+remain" and "fourteen cannot have an enforcer" while the count beside it said eleven, and
+it listed five rules that had since been enforced. Nothing caught that, because a number
+written in prose is not checked by anything — which is the same defect the conventions
+themselves keep warning about, in the document that warns about it. Counts here come from
+`npm run docs:conventions` now; sentences that quote them get pinned or rewritten.
 
 The count of unenforced conventions **tripled** across 2026-08-30/31, and that is the
 scorecard getting honest rather than the codebase getting worse. Every one of them was
