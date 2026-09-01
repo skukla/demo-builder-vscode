@@ -146,15 +146,15 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
 
         // One file, not an empty Map: an empty template now throws rather than
         // committing a tree that would empty the repository.
-        (service as any).downloadRepoContents = jest
+        service.downloadRepoContents = jest
             .fn()
             .mockResolvedValue(new Map([['index.html', '<html></html>']]));
 
-        (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
+        service.createTree = jest.fn().mockResolvedValue('new-tree-sha');
 
-        (service as any).createCommit = jest.fn().mockResolvedValue('new-commit-sha');
+        service.createCommit = jest.fn().mockResolvedValue('new-commit-sha');
 
-        (service as any).updateBranchRef = jest.fn().mockResolvedValue(undefined);
+        service.updateBranchRef = jest.fn().mockResolvedValue(undefined);
 
         await service.resetRepoToTemplate(
             'hlxsites',
@@ -179,13 +179,13 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
         // Non-empty: an empty template now refuses rather than emptying the repo.
         const downloadSpy = jest.fn().mockResolvedValue(new Map([['index.html', '<html></html>']]));
 
-        (service as any).downloadRepoContents = downloadSpy;
+        service.downloadRepoContents = downloadSpy;
 
-        (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
+        service.createTree = jest.fn().mockResolvedValue('new-tree-sha');
 
-        (service as any).createCommit = jest.fn().mockResolvedValue('new-commit-sha');
+        service.createCommit = jest.fn().mockResolvedValue('new-commit-sha');
 
-        (service as any).updateBranchRef = jest.fn().mockResolvedValue(undefined);
+        service.updateBranchRef = jest.fn().mockResolvedValue(undefined);
 
         await service.resetRepoToTemplate(
             'hlxsites',
@@ -208,17 +208,17 @@ describe('resetRepoToTemplate — target branch vs template ref separation', () 
 
         // One file, not an empty Map: an empty template now throws rather than
         // committing a tree that would empty the repository.
-        (service as any).downloadRepoContents = jest
+        service.downloadRepoContents = jest
             .fn()
             .mockResolvedValue(new Map([['index.html', '<html></html>']]));
 
-        (service as any).createTree = jest.fn().mockResolvedValue('new-tree-sha');
+        service.createTree = jest.fn().mockResolvedValue('new-tree-sha');
 
-        (service as any).createCommit = jest.fn().mockResolvedValue('new-commit-sha');
+        service.createCommit = jest.fn().mockResolvedValue('new-commit-sha');
 
         const updateRefSpy = jest.fn().mockResolvedValue(undefined);
 
-        (service as any).updateBranchRef = updateRefSpy;
+        service.updateBranchRef = updateRefSpy;
 
         await service.resetRepoToTemplate(
             'hlxsites',
@@ -478,17 +478,17 @@ describe('resetRepoToTemplate — chunked tree creation', () => {
             commitSha: 'parent-sha',
             treeSha: 'parent-tree',
         });
-        (service as any).downloadRepoContents = jest.fn().mockResolvedValue(contents);
+        service.downloadRepoContents = jest.fn().mockResolvedValue(contents);
         const createTree = jest
             .fn()
             .mockImplementation(
                 async (_o: string, _r: string, entries: unknown[], base?: string) =>
                     `tree-after-${entries.length}-${base ?? 'none'}`
             );
-        (service as any).createTree = createTree;
+        service.createTree = createTree;
         const createCommit = jest.fn().mockResolvedValue('new-commit-sha');
-        (service as any).createCommit = createCommit;
-        (service as any).updateBranchRef = jest.fn().mockResolvedValue(undefined);
+        service.createCommit = createCommit;
+        service.updateBranchRef = jest.fn().mockResolvedValue(undefined);
 
         await service.resetRepoToTemplate('t-owner', 't-repo', 'u', 'u-repo', new Map(), 'main');
         return { createTree, createCommit };
@@ -599,12 +599,12 @@ describe('resetRepoToTemplate — empty template', () => {
             commitSha: 'parent-sha',
             treeSha: 'parent-tree',
         });
-        (service as any).downloadRepoContents = jest.fn().mockResolvedValue(new Map());
+        service.downloadRepoContents = jest.fn().mockResolvedValue(new Map());
         const createCommit = jest.fn();
         const updateBranchRef = jest.fn();
-        (service as any).createTree = jest.fn().mockResolvedValue('t');
-        (service as any).createCommit = createCommit;
-        (service as any).updateBranchRef = updateBranchRef;
+        service.createTree = jest.fn().mockResolvedValue('t');
+        service.createCommit = createCommit;
+        service.updateBranchRef = updateBranchRef;
 
         await expect(
             service.resetRepoToTemplate('t-o', 't-r', 'u', 'u-r', new Map(), 'main')

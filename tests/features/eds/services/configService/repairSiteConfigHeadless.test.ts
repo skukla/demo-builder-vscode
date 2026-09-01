@@ -46,10 +46,9 @@ const project = {
     },
 } as unknown as Project;
 
-const makeService = (overlayUrl?: string, readable = true) =>
-    ({
-        readSiteOverlayUrl: jest.fn().mockResolvedValue({ readable, overlayUrl }),
-    }) as never;
+const makeService = (overlayUrl?: string, readable = true) => ({
+    readSiteOverlayUrl: jest.fn().mockResolvedValue({ readable, overlayUrl }),
+});
 
 const run = (over: Record<string, unknown> = {}) =>
     repairSiteConfig({

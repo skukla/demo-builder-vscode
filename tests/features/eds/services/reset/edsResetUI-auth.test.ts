@@ -118,7 +118,7 @@ function createProject(hasMesh = false): Project {
             subType: 'mesh',
             path: '/test/mesh',
             status: 'deployed',
-        } as any;
+        };
     }
 
     return project;

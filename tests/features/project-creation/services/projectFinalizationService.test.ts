@@ -64,7 +64,7 @@ describe('projectFinalizationService', () => {
             context: {
                 extensionPath: '/test/extension',
             },
-        } as any;
+        };
 
         const mockRegistry = {
             version: '1.0.0',
@@ -79,12 +79,9 @@ describe('projectFinalizationService', () => {
             services: {},
         };
 
-        mockSetupContext = new ProjectSetupContext(
-            mockHandlerContext,
-            mockRegistry,
-            mockProject,
-            { projectName: 'test-project' }
-        );
+        mockSetupContext = new ProjectSetupContext(mockHandlerContext, mockRegistry, mockProject, {
+            projectName: 'test-project',
+        });
 
         mockComponentDefinitions = new Map<string, ComponentDefinitionEntry>();
         mockComponentDefinitions.set('eds-storefront', {

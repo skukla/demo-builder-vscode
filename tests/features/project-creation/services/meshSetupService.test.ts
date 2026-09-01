@@ -93,7 +93,7 @@ describe('meshSetupService', () => {
             context: {
                 extensionPath: '/test/extension',
             },
-        } as any;
+        };
 
         const mockRegistry = {
             version: '1.0.0',
@@ -108,12 +108,9 @@ describe('meshSetupService', () => {
             services: {},
         };
 
-        mockSetupContext = new ProjectSetupContext(
-            mockHandlerContext,
-            mockRegistry,
-            mockProject,
-            { projectName: 'test-project' }
-        );
+        mockSetupContext = new ProjectSetupContext(mockHandlerContext, mockRegistry, mockProject, {
+            projectName: 'test-project',
+        });
 
         mockProgressTracker = jest.fn();
 

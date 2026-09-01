@@ -20,7 +20,8 @@ describe('ProgressUnifier - Timer Cleanup', () => {
     describe('Timer cleanup on operation complete', () => {
         it('should stop timer when operation finishes', async () => {
             const { onProgress, progressUpdates } = progressCollectorFactory();
-            const { progressUnifier, advanceTime, getActiveTimers, mocks, createMockProcess } = createTestableProgressUnifier(mockLogger);
+            const { progressUnifier, advanceTime, getActiveTimers, mocks, createMockProcess } =
+                createTestableProgressUnifier(mockLogger);
 
             const step = createMockStep(
                 'Quick Install',
@@ -36,12 +37,12 @@ describe('ProgressUnifier - Timer Cleanup', () => {
                 mocks.timers.setTimeout(async () => {
                     await process.triggerClose(0);
                 }, 1000);
-                return process as any;
+                return process;
             });
 
             // Execute step
             const executePromise = progressUnifier.executeStep(step, 0, 1, onProgress);
-            await new Promise(resolve => setImmediate(resolve));
+            await new Promise((resolve) => setImmediate(resolve));
             await advanceTime(2000);
             await executePromise;
 
@@ -66,7 +67,8 @@ describe('ProgressUnifier - Timer Cleanup', () => {
     describe('Timer cleanup on operation error', () => {
         it('should stop timer even if operation fails', async () => {
             const { onProgress, progressUpdates } = progressCollectorFactory();
-            const { progressUnifier, advanceTime, getActiveTimers, mocks, createMockProcess } = createTestableProgressUnifier(mockLogger);
+            const { progressUnifier, advanceTime, getActiveTimers, mocks, createMockProcess } =
+                createTestableProgressUnifier(mockLogger);
 
             const step = createMockStep(
                 'Failing Command',
@@ -82,7 +84,7 @@ describe('ProgressUnifier - Timer Cleanup', () => {
                 mocks.timers.setTimeout(async () => {
                     await process.triggerClose(1); // Exit code 1 (failure)
                 }, 1000);
-                return process as any;
+                return process;
             });
 
             // Execute step (will fail because command doesn't exist)
@@ -90,7 +92,7 @@ describe('ProgressUnifier - Timer Cleanup', () => {
             // Attach catch handler immediately to prevent unhandled rejection detection
             executePromise.catch(() => {});
 
-            await new Promise(resolve => setImmediate(resolve));
+            await new Promise((resolve) => setImmediate(resolve));
 
             try {
                 await advanceTime(2000);

@@ -20,7 +20,7 @@ jest.mock(
     () => ({
         window: {
             withProgress: (...a: unknown[]) =>
-                (mockWithProgress as never as (...x: unknown[]) => unknown)(...a),
+                (mockWithProgress as (...x: unknown[]) => unknown)(...a),
         },
         ProgressLocation: { Notification: 15 },
     }),
