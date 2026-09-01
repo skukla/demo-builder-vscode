@@ -408,6 +408,7 @@ const AUTHORING: readonly Instrument[] = (
         ['backlog-item', 'read and write the backlog through one CLI'],
         ['unattended-loop', 'the owner-away working mode'],
         ['reuse-first', 'find the house component before building a new one'],
+        ['ask-the-tool', 'let tsc, jest and eslint decide which sites a mechanical refactor must touch, instead of reading each one'],
     ] as const
 ).map(
     ([id, what]): Instrument => ({

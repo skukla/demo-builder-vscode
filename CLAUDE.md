@@ -216,6 +216,12 @@ without producing a signal.
 - `adobe-docs-lookup` — route an Adobe docs question to the source that has it (App Builder concepts live on developer.adobe.com, which NO doc MCP indexes) + recover from `-32002` / 401 MCP session failures
 - `component-extraction-scan` — find UI markup duplicated across ≥3 sites that should be one component (inverse of the SOP God-file scan)
 - `webview-visual-baseline` — prove a CSS/webview change moved exactly what it meant to: a computed-style fingerprint of every element on all eight surfaces, before and after, compared by exact string equality (not screenshots). The safety net PL-21 is gated on, and the instrument that measured ADR-018
+- `ask-the-tool` — do a mechanical refactor over many files by letting the COMPILER decide which
+  sites are real: change all of them, run `typecheck:tests` once, and the files that now error are
+  the ones where the thing you removed was load-bearing. Then the suite catches what tsc cannot see
+  (type-correct is not behaviour-preserving), and you read only the residue. Measured 2026-09-01:
+  a prior about which casts were redundant was wrong 29 times out of 36, and a hand-rolled
+  "is this import still used?" scan was wrong twice in one session where eslint's own output was right
 - `reuse-first` — the same question asked BEFORE the duplicate exists: find the house component/hook/pattern that already does the job. Enforced by a PreToolUse rule (`30-reuse-first.rule`), so it fires when you create a file under a `ui/` directory rather than at a release cut
 - `ai-coverage-scan` — which extension features an AGENT can actually reach: the gap between the human surface (handler types behind every webview button) and the agent surface (MCP tools), which dispatch into the same handler maps
 - `agent-gap-scan` — the same gap read from the other end: what agents ACTUALLY did in real session transcripts — tools nobody calls, jobs done with Bash because no tool existed, tools that failed. No instrumentation; it reads Claude Code's own transcripts
