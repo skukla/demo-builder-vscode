@@ -10,7 +10,11 @@
  * and the thing a regex cannot tell you:
  *
  *   handler(x as any)      ARGUMENT     — a silenced type error; read each one
- *   const y = x as any;    DECLARATION  — usually a fake; batchable
+ *   const y = x as any;    DECLARATION  — SAFE to attempt in bulk, which is not the
+ *                                   same as likely to succeed: measured 2026-09-01,
+ *                                   84% of `as never` and 69% of `as any` in this
+ *                                   position were load-bearing. The compiler catches
+ *                                   every one, so bulk is safe; expect a low yield.
  *   return x as any;       RETURN       — a silenced contract
  *   (x as any).foo         ACCESS       — reaching past the type to poke at it
  *
@@ -96,7 +100,7 @@ for (const [pos, n] of [...byPosition].sort((a, b) => b[1] - a[1])) {
         pos === 'ARGUMENT'
             ? 'read each — this shape has hidden four real defects'
             : pos === 'DECLARATION'
-              ? 'batchable against the compiler'
+              ? 'safe to ATTEMPT in bulk — most are still load-bearing'
               : 'inspect';
     console.log(`  ${String(n).padStart(4)}  ${pos.padEnd(12)} ${treatment}`);
 }

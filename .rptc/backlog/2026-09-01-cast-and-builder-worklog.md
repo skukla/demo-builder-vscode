@@ -113,6 +113,26 @@ What is left, and why each resists automation:
 another 40-method fake, and writing one to make a number move is the failure mode
 these builders exist to prevent.
 
+## Debt this work CREATED, recorded rather than left
+
+Converting a cast to a builder call makes files longer. Four crossed the 500-line
+warning threshold on this branch (the block is 750, so none is near failing):
+
+| file | before | after |
+|---|---|---|
+| `tests/sop/canonical-fakes.test.ts` | 476 | 560 |
+| `tests/features/ai/server/cloudResourceTools.test.ts` | 467 | 545 |
+| `tests/features/eds/services/reset/edsResetUI-sampleData.test.ts` | 500 | 517 |
+| `tests/features/ai/server/toolDescriptors.test.ts` | 390 | 515 |
+
+`canonical-fakes.test.ts` is the one to watch: it is an ENFORCER and most of its
+growth is mine — the ban list, the AST-total note, `readOrEmpty`. An enforcer that
+keeps growing is a candidate for splitting by rule, which the splitting playbook
+covers.
+
+Also pre-existing and NOT from this work: one `import/order` warning in
+`src/core/state/apiOwners.ts`, a file no commit on this branch touches.
+
 ## Done when
 
 Section A is empty, section B has the two large builders, and section C carries only
