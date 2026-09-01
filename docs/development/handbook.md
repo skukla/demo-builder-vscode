@@ -934,7 +934,7 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 29 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 30 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
@@ -997,7 +997,18 @@ not.
 > detector that has silently stopped detecting reports "all clear" in exactly the same
 > words as one that verified.
 > *Why:* a first sweep printed "clean" over a scan that had just measured a 34% gap.
-> Enforced by `tests/sop/every-scan-declares-a-control.test.ts`.
+> Enforced by `tests/sop/every-scan-declares-a-control.test.ts`, and — for the
+> instruments that live OUTSIDE the scan directory — by
+> `tests/hooks/rule-proofs.test.ts` and `tests/sop/type-aware-lint.test.ts`.
+>
+> Those two were added on 2026-09-01, after the same failure appeared three times in
+> one day: a hook rule that never reached its own guard, a blocking rule with no proof
+> harness at all, and a bracket expression that had silently stopped matching. All
+> three exited 0 and looked fine. An instrument whose dependencies live elsewhere —
+> a router pre-filter, a rule name owned by a third party, a tsconfig that must still
+> cover the tree — needs a planted defect it must find AND a clean case it must
+> ignore, or it can degrade into a command that reports nothing and reads as good
+> news.
 
 > **Convention.** Never publish an identifier you have not read from the source. Setting
 > keys, env vars, command ids, file paths and function names are cheap to grep and
@@ -1127,6 +1138,21 @@ The test for keeping one is the owner's, from the directive that started this: a
 that cannot be enforced AND that nobody can point at a defect for should be deleted, not
 preserved because it reads well. All nine pass the second half. If one ever stops
 passing it, delete it.
+
+> **Discipline.** Before writing a check, ask whether a tool here already performs
+> it. When a change repeats across more than about ten sites, drive it from a SYNTAX
+> TREE — never from a regex over source text.
+> *Why:* text cannot tell code from a string literal or a comment, and that is not a
+> care problem. On 2026-09-01 a regex converter deleted ` as never` from inside a
+> detector's own control fixtures — the strings that prove the argument-cast detector
+> can see a cast — silently disabling the proof while the enforcer kept passing. The
+> same day, a hand-rolled "is this import still used?" scan was wrong twice where
+> eslint's parsed output was right, and a prior about which casts were redundant was
+> wrong 29 times out of 36. A ts-morph probe over a file holding a cast in code, a
+> cast in a string and a cast in a comment returned exactly the two real ones.
+> [toolchain.md](toolchain.md) says which tool answers which question;
+> `ask-the-tool` is the procedure. **Not enforced** — no check can ask why you
+> reached for a regex.
 
 > **Discipline.** A comment describing what ANOTHER module does must cite the code that
 > makes it true. If you cannot cite it, write what you verified instead.
