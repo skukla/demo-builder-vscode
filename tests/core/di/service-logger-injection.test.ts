@@ -24,21 +24,8 @@
 import type { Logger } from '@/types/logger';
 import { ToolManager } from '@/features/eds/services/toolManager';
 import { createMockCommandExecutor } from '../../helpers/commandExecutorFake';
+import { createMockLogger } from '../../helpers/loggerFake';
 
-/**
- * Create a mock Logger for testing
- */
-function createMockLogger(): Logger {
-    return {
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        setContext: jest.fn(),
-        with: jest.fn(),
-    } as unknown as Logger;
-}
 
 // Track calls to getLogger to verify DI is working
 const mockModuleLogger = {

@@ -17,10 +17,11 @@ import {
     validateDaLiveToken,
 } from '@/features/eds/handlers/edsHelpers';
 import type { HandlerContext } from '@/types/handlers';
-import type { ExtensionContext } from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import type { ExtensionContext } from 'vscode';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // Mock the extracted service classes
 jest.mock('@/features/eds/services/github/githubTokenService', () => ({
@@ -93,15 +94,9 @@ function createMockHandlerContext(overrides?: Partial<HandlerContext>): HandlerC
         onDidChange: jest.fn(),
     };
 
-    const mockExtensionContext = {
-        secrets: mockSecrets,
-        globalState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn().mockReturnValue([]),
-        },
-        subscriptions: [],
-    } as unknown as ExtensionContext;
+    const mockExtensionContext = createMockExtensionContext({
+        secrets: mockSecrets as unknown as ExtensionContext['secrets'],
+    });
 
     return {
         context: mockExtensionContext,

@@ -23,23 +23,14 @@ import {
     readDaAuthHelperToken,
     writeDaAuthHelperToken,
 } from '@/features/eds/services/daAuthHelperToken';
-import type { ExtensionContext } from 'vscode';
+import { createMockExtensionContext, createStatefulGlobalState } from '../../../../helpers/extensionContextFake';
 
 const readMock = readDaAuthHelperToken as jest.Mock;
 const writeMock = writeDaAuthHelperToken as jest.Mock;
 
 function makeService(initial: Record<string, unknown> = {}) {
-    const store = new Map<string, unknown>(Object.entries(initial));
-    const context = {
-        globalState: {
-            get: jest.fn((key: string) => store.get(key)),
-            update: jest.fn((key: string, value: unknown) => {
-                if (value === undefined) store.delete(key);
-                else store.set(key, value);
-                return Promise.resolve();
-            }),
-        },
-    } as unknown as ExtensionContext;
+    const { globalState, store } = createStatefulGlobalState(initial);
+    const context = createMockExtensionContext({ globalState });
     return { service: new DaLiveAuthService(context), store };
 }
 

@@ -5,7 +5,6 @@
  * parameter validation, discovery service lookup, auth guard, and message sending.
  */
 
-import type { ExtensionContext } from 'vscode';
 import * as vscode from 'vscode';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -41,6 +40,7 @@ import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDis
 import { ensureAdobeIOAuth } from '@/core/auth/adobeAuthGuard';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 const mockDiscoverStoreStructure = discoverStoreStructure as jest.MockedFunction<typeof discoverStoreStructure>;
 const mockEnsureAdobeIOAuth = ensureAdobeIOAuth as jest.MockedFunction<typeof ensureAdobeIOAuth>;
@@ -68,11 +68,7 @@ function mockNoDiscoveryServices(): void {
 }
 
 function createMockContext(overrides?: Partial<HandlerContext>): HandlerContext {
-    const mockExtensionContext = {
-        secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn(), onDidChange: jest.fn() },
-        globalState: { get: jest.fn(), update: jest.fn(), keys: jest.fn().mockReturnValue([]) },
-        subscriptions: [],
-    } as unknown as ExtensionContext;
+    const mockExtensionContext = createMockExtensionContext();
 
     return {
         context: mockExtensionContext,
