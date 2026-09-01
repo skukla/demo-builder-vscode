@@ -33,7 +33,7 @@ These describe the tree. A check can read the tree. Build them.
 | # | Convention | The check |
 |---|---|---|
 | 1 | Commands `camelCase`, components `PascalCase`, constants `UPPER_SNAKE_CASE`, file named for its export | `@typescript-eslint/naming-convention` (verified present in the installed plugin) plus a filename-vs-default-export test |
-| 4 | Vendor CSS sits in the lowest cascade layer | Parse the stylesheets, assert `@layer` order. The entry says "not yet" itself |
+| 4 | Vendor CSS sits in the lowest cascade layer | **NOT Lane A — BLOCKED, see below** |
 | 6 | A tool needing credentials pre-flights and returns a structured `needsAuth` handoff | ~~A descriptor-level test~~ — **RECLASSIFIED 2026-08-31, see below** |
 | 10 | A fake a SECOND feature directory needs lives in `tests/helpers/` | Count distinct feature dirs defining or importing a builder name; ≥2 outside `helpers/` fails. `builder-uniqueness.test.ts` already does the adjacent half ("one definition"), not this one |
 | 3 | A value passed into a hook is stable across renders | The entry correctly says `exhaustive-deps` cannot see across the prop boundary. A targeted AST check can: flag an inline array/object/arrow JSX prop whose receiving component forwards it into a hook dependency array. Hardest of the five; possibly partial |
@@ -70,6 +70,25 @@ check then enforces the DECLARATION, and the judgement stays where it belongs �
 with the tool author, at the moment they write the row.
 
 Lane A is therefore FOUR buildable checks, not five.
+
+#### Row 4 is BLOCKED, not unbuilt — 2026-08-31
+
+Its entry already said so and I read past it: "**Not enforced — and not yet
+true.** No `@layer vendor` exists in `src/` today. This is the one rule here the
+code does not already follow; it waits on the CSS migration (PL-21), which is not
+authorised."
+
+There is nothing to enforce, because the rule is not true yet by design. Seven
+stylesheets use `@layer` (`reset`, `theme`); none declares a `vendor` layer. A
+check would be inert today and would fire only after work nobody has authorised.
+
+This is not a check nobody built; it is a rule waiting on a decision. It should
+not be counted as enforcement debt at all until PL-21 is authorised.
+
+**Lane A is THREE buildable checks, not five. Two of my five were misfiled — one
+needs a data-model change (row 6), one is blocked on unauthorised work (row 4).**
+Both were readable in the entries I was classifying from; I classified from the
+rule text and not from the note underneath it.
 
 ### Lane B — working discipline, not code conventions (11)
 
@@ -135,3 +154,4 @@ is the current reference for the four-control pattern.
 
 - 2026-08-31  docs(backlog): PL-33 — every convention is enforced, or it stops being one (`078fe1074`)
 - 2026-08-31  test(sop): the naming convention is enforced — after finding it contradicted itself (`d6e95a6e4`)
+- 2026-08-31  test(sop): fake placement is enforced, and row 6 is not Lane A after all (`e110ff934`)

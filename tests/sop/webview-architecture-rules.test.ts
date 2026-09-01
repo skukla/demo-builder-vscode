@@ -93,3 +93,55 @@ describe('ADR-017: one message channel per bundle, and it is a singleton', () =>
         expectClean('messageChannelOwners', callers);
     });
 });
+
+describe('ADR-017: a value passed into a hook is stable across renders', () => {
+    /**
+     * The React footgun this codebase has already been bitten by, and the one the
+     * handbook filed as unenforceable.
+     *
+     * WHAT IS ENFORCED, AND WHY IT IS A SUBSET. The full rule — "no inline array,
+     * object or arrow literal as a prop that will reach a dependency array" —
+     * genuinely cannot be checked here: knowing whether a prop REACHES a dependency
+     * array means following it into the receiving component and through whatever
+     * hook it is handed to. `exhaustive-deps` cannot see across that boundary and
+     * neither can this.
+     *
+     * The EMPTY literal can be. `prop={[]}` and `prop={{}}` carry no data, so the
+     * only reason to write one is "this component wants a collection and I have
+     * none" — and that is exactly the shape that loops: a new reference every
+     * render, feeding an effect that sets state. It is the case the root CLAUDE.md
+     * records as having already happened, with the fix named
+     * (`const EMPTY: never[] = []` at module scope).
+     *
+     * Measured 2026-08-31 before adopting: **zero** empty-literal props in `src/`,
+     * against 90 inline arrows (overwhelmingly event handlers, which are harmless
+     * and stay a judgement) and 34 non-empty array/object literals (presentational
+     * lists and `UNSAFE_style`, covered by their own rules). So this is a flat ban
+     * on the dangerous form with nothing to grandfather, not a ledger.
+     *
+     * @see .rptc/backlog/2026-08-31-every-convention-enforced.md
+     */
+    const EMPTY_LITERAL_PROP = /(\w+)=\{\s*(?:\[\s*\]|\{\s*\})\s*\}/g;
+
+    it('CONTROL: the detector sees an empty literal prop and not a filled one', () => {
+        const find = (s: string) => [...s.matchAll(/(\w+)=\{\s*(?:\[\s*\]|\{\s*\})\s*\}/g)].length;
+        expect(find('<Thing items={[]} />')).toBe(1);
+        expect(find('<Thing config={{}} />')).toBe(1);
+        expect(find('<Thing items={[a, b]} />')).toBe(0);
+        expect(find('<Thing config={{ a: 1 }} />')).toBe(0);
+        expect(find('<Thing onPress={() => go()} />')).toBe(0);
+        // and the corpus was actually read
+        expect(FILES.length).toBeGreaterThan(100);
+    });
+
+    it('no empty [] or {} literal is passed as a JSX prop', () => {
+        const offenders: string[] = [];
+        for (const [file, body] of src) {
+            if (!file.endsWith('.tsx')) continue;
+            for (const m of body.matchAll(EMPTY_LITERAL_PROP)) {
+                offenders.push(`${file}  ${m[0]}`);
+            }
+        }
+        expectClean('emptyLiteralProps', offenders);
+    });
+});

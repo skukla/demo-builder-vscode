@@ -403,10 +403,23 @@ Know the difference before relying on it.
 > module-level constant or wrap it.
 > *Why:* a literal is a NEW reference every render, so an effect that depends on it runs
 > every render, and one that sets state loops forever. It has already happened here.
-> **Not enforced, and it cannot be by the obvious rule** — `exhaustive-deps` reads the
-> dependency array inside the hook and cannot see across the prop boundary to the caller
-> that created the value. The compiler cannot see it either: the types are identical.
-> This is the React footgun in this codebase that no tool catches.
+> **The EMPTY form is enforced**; the rest is not, and cannot be by the obvious rule —
+> `exhaustive-deps` reads the dependency array inside the hook and cannot see across the
+> prop boundary to the caller that created the value. The compiler cannot see it either:
+> the types are identical.
+>
+> `prop={[]}` and `prop={{}}` carry no data, so the only reason to write one is "this
+> component wants a collection and I have none" — which is exactly the shape that loops.
+> That is checkable without following the prop anywhere, and it is the case this repo has
+> actually been bitten by. Enforced by `tests/sop/webview-architecture-rules.test.ts`
+> (`emptyLiteralProps`), seeded EMPTY on 2026-08-31 because `src/` had none: a flat ban,
+> not a ledger.
+>
+> What stays a judgement, with the counts that make it one: 90 inline arrows
+> (overwhelmingly event handlers, harmless) and 34 non-empty array/object literals
+> (presentational lists and `UNSAFE_style`, covered by their own rules). Whether one of
+> those reaches a dependency array cannot be decided without following it into the
+> receiving hook.
 
 > **Convention.** Vendor CSS sits in the lowest cascade layer.
 > *Why:* layers settle specificity by declaration order rather than by escalation, so
@@ -867,7 +880,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 80 conventions. 66 of them are enforced; 14 are not.**
+**This handbook states 80 conventions. 67 of them are enforced; 13 are not.**
 
 The fifteen that remain are not one thing, and treating them as one is what kept them
 open:
