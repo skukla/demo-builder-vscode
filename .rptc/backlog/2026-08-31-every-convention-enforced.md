@@ -34,7 +34,7 @@ These describe the tree. A check can read the tree. Build them.
 |---|---|---|
 | 1 | Commands `camelCase`, components `PascalCase`, constants `UPPER_SNAKE_CASE`, file named for its export | `@typescript-eslint/naming-convention` (verified present in the installed plugin) plus a filename-vs-default-export test |
 | 4 | Vendor CSS sits in the lowest cascade layer | Parse the stylesheets, assert `@layer` order. The entry says "not yet" itself |
-| 6 | A tool needing credentials pre-flights and returns a structured `needsAuth` handoff | A descriptor-level test. The repo already pins tool lists by name in `inExtensionMcpServer.test.ts` |
+| 6 | A tool needing credentials pre-flights and returns a structured `needsAuth` handoff | ~~A descriptor-level test~~ — **RECLASSIFIED 2026-08-31, see below** |
 | 10 | A fake a SECOND feature directory needs lives in `tests/helpers/` | Count distinct feature dirs defining or importing a builder name; ≥2 outside `helpers/` fails. `builder-uniqueness.test.ts` already does the adjacent half ("one definition"), not this one |
 | 3 | A value passed into a hook is stable across renders | The entry correctly says `exhaustive-deps` cannot see across the prop boundary. A targeted AST check can: flag an inline array/object/arrow JSX prop whose receiving component forwards it into a hook dependency array. Hardest of the five; possibly partial |
 
@@ -43,6 +43,33 @@ policing something that has never gone wrong." That reasoning should not survive
 this item. A rule nobody breaks is the CHEAPEST one to enforce, and enforcing it
 costs one config line; the argument only justifies not spending effort, and there
 is no effort to spend.
+
+#### Row 6 is NOT Lane A — reclassified 2026-08-31
+
+It was filed here on the reasoning that "the repo already pins tool lists by name",
+which conflates two different things: pinning a LIST is easy, deciding which tools
+NEED credentials is not.
+
+Measured before building: the claim in the convention still holds exactly (39
+sites in `src/`, 11 asserting suites). But there is no marker that says a tool
+touches credentials. Compliance is reached three different ways — `runGuards`,
+a bespoke pre-flight (`createProjectTool.ts:137`), or nothing because the tool
+needs none — across 70 `registerTool` calls and 36 descriptors, and no descriptor
+field carries anything about auth.
+
+Enforcing it means **adding a field to the descriptor contract** so every tool
+DECLARES its credential need, then checking the declaration exists. That is a
+change to the agent surface's data model, not a check over the tree: it changes
+what a tool author must supply and what future tools build on. Per the loop's
+design gate that is product intent, so it goes to the walkthrough queue with a
+recommendation rather than being built unattended.
+
+**Recommendation:** add `needsAuth?: 'adobe' | 'github' | 'dalive'` to the
+descriptor type and require every action descriptor to state it or `false`. The
+check then enforces the DECLARATION, and the judgement stays where it belongs —
+with the tool author, at the moment they write the row.
+
+Lane A is therefore FOUR buildable checks, not five.
 
 ### Lane B — working discipline, not code conventions (11)
 
@@ -107,3 +134,4 @@ is the current reference for the four-control pattern.
 ## Shipped so far
 
 - 2026-08-31  docs(backlog): PL-33 — every convention is enforced, or it stops being one (`078fe1074`)
+- 2026-08-31  test(sop): the naming convention is enforced — after finding it contradicted itself (`d6e95a6e4`)

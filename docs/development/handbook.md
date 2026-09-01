@@ -771,8 +771,21 @@ check says so and names the file.
 > 98 builder functions; the problem was never unwillingness to share but that 14 of those
 > NAMES are defined in more than one file, so there is no canonical one to find and
 > writing another is cheaper than searching.
-> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — where a
-> builder belongs is a judgement about who needs it.
+> [ADR-016](../architecture/adr/016-test-strategy.md) · Enforced by
+> `tests/sop/canonical-fakes.test.ts` § "a fake two feature directories need lives in
+> tests/helpers/".
+>
+> **It was filed as unenforceable — "where a builder belongs is a judgement about who
+> needs it" — and that was wrong.** The rule's own wording gives the test: *does a
+> SECOND feature directory need it?* is mechanical once you resolve imports instead of
+> matching names. Measured 2026-08-31: 139 builders live outside `tests/helpers/` and
+> ZERO are imported from a second feature directory, so it is a flat ban with nothing
+> to grandfather.
+>
+> Counting IMPORTS rather than CALLS is the whole check. A first pass matched call
+> sites by name and reported nine violations; the worst was `createProject`, which is
+> also a production function, so every handler test calling the real one looked like a
+> consumer of the fake.
 
 > **Convention.** No test erases a type. `as any` and `as never` are banned anywhere in
 > `tests/`. A builder is declared as the REAL type it stands for; where the structural
@@ -854,7 +867,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 80 conventions. 65 of them are enforced; 15 are not.**
+**This handbook states 80 conventions. 66 of them are enforced; 14 are not.**
 
 The fifteen that remain are not one thing, and treating them as one is what kept them
 open:

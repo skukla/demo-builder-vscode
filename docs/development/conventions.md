@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **80** conventions, **65** enforced
+- **80** conventions, **66** enforced
 - **22** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -128,7 +128,7 @@ it means the rule rests on somebody noticing.
 | A test file lives at the path mirroring the source file it covers. |  |  | `mirror-placement.test.ts` |
 | A fixture builder name has exactly one definition. |  |  | `builder-uniqueness.test.ts` |
 | A fake that has a builder in `tests/helpers/` is imported, not written again inline. Enforced by `tests/sop/canonical-fakes.test.ts` — a shrink-only ledger grandfathers the files that already do, so it stops new copies rather than demanding a sweep. |  |  | `canonical-fakes.test.ts` |
-| A fake that a SECOND feature directory needs lives in `tests/helpers/`. A `*.testUtils.ts` beside a suite is for setup specific to that subject. | [ADR](../architecture/adr/016-test-strategy.md) |  | **—** |
+| A fake that a SECOND feature directory needs lives in `tests/helpers/`. A `*.testUtils.ts` beside a suite is for setup specific to that subject. | [ADR](../architecture/adr/016-test-strategy.md) |  | `canonical-fakes.test.ts` |
 | No test erases a type. `as any` and `as never` are banned anywhere in `tests/`. A builder is declared as the REAL type it stands for; where the structural fake cannot satisfy that type honestly, cast the object literal INTO it at the builder's boundary as `as unknown as X` — once, where it is visible. | [ADR](../architecture/adr/016-test-strategy.md) |  | `type-erasing-casts.test.ts`<br>`eslint.config.mjs` |
 | A fixture's shape is READ, not remembered. A builder's method list comes from the real interface plus what callers actually use; a data fixture is copied from a real artifact on disk. And a domain fixture is CONTENT over a canonical shape, never a re-implementation of one the suite already has a builder for. | [ADR](../architecture/adr/016-test-strategy.md) |  | **—** |
 | Do not mock a configuration leaf. |  |  | `no-config-leaf-mocks.test.ts` |
