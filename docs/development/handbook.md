@@ -213,13 +213,6 @@ should be functions.
 > [tests/helpers/webviewFixtures.ts](../../tests/helpers/webviewFixtures.ts) is the worked
 > example · enforced by `npm run typecheck:tests` in CI for anything under `tests/`.
 
-> **Convention.** A comment describing what ANOTHER module does must cite the code that
-> makes it true. If you cannot cite it, write what you verified instead.
-> *Why:* nothing keeps such a comment true — not the compiler, not the tests — and it reads
-> to the next person as verified fact. Two comments once asserted a scheduled re-registration
-> that did not exist; they were false the day they were written, and they suppressed the
-> question that would have found a shipped bug. **Not enforced** — no check can read intent.
-
 ---
 
 #### Also checked here
@@ -538,18 +531,6 @@ check says so and names the file.
 > Enforced by the `dynamicClassSiteCeiling` ledger in
 > `tests/sop/webview-architecture-rules.exemptions.json`.
 
-> **Convention.** When a parent selection changes, clear the state that depends on it.
-> Change the Adobe project and the workspace selection goes with it.
-> *Why:* a stale child selection is how an operation targets a resource nobody chose —
-> the failure `withOrgContext` and the org-mismatch guard exist to catch downstream. The
-> place it belongs is the selection handler's `onSelect`, where `useSelectionStep` puts
-> it. Obeyed at 7 sites today.
-> **Not enforced**, and this one cannot be: 14 sites assign the parent field and reading
-> them shows most are not selections at all — one preserves a previous value, one builds
-> a display object, one assembles a payload from already-resolved context. A detector
-> written from the field name would report eight violations of which roughly none are
-> real, and a check that cries wolf gets switched off.
-
 ## 8. Agents are a second door, never the only one
 
 **Position.** Agents call the same functions the buttons call. Every capability has a human
@@ -714,22 +695,10 @@ so when the point is *how* a collaborator was used, assert the arguments rather 
 result. And coverage does not tell you a test would catch a bug: `npm run test:mutation`
 breaks the code on purpose and reports what nothing noticed.
 
-> **Convention.** The three tiers, and which applies.
-> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — which tier fits is
-> a judgement about what you are testing.
-> *Why:* matching the test to the risk. A live test for pure logic is slow and flaky; a unit test for a network contract proves nothing.
-
 > **Convention.** A split test family shares one `.testUtils` file, which owns the mocks
 > and the subject import. [webview-test-authoring](../../.claude/skills/webview-test-authoring/SKILL.md) ·
 > enforced by `tests/sop/test-family-setup.test.ts`.
 > *Why:* the copies drift otherwise, and a spec that keeps its own copy can silently stop mocking anything.
-
-> **Convention.** When you change a test's structure, diff the set of things it asserts
-> before and after — and prove shared setup is load-bearing by breaking it on purpose and
-> checking the right suites fail.
-> *Why:* the failure mode of a test refactor is a suite that still passes while checking
-> nothing. Nothing else catches that. **Not enforced** — it is a habit, and the only guard
-> is doing it.
 
 > **Convention.** Before designing a way to hand a mocked collaborator in — or to share
 > one between suites — delete the mock and run the suite. If it still passes, the mock was
@@ -926,18 +895,6 @@ check says so and names the file.
 > ledger became a ban when it emptied.
 > [ADR-016](../architecture/adr/016-test-strategy.md)
 
-> **Convention.** A fixture's shape is READ, not remembered. A builder's method list
-> comes from the real interface plus what callers actually use; a data fixture is copied
-> from a real artifact on disk. And a domain fixture is CONTENT over a canonical shape,
-> never a re-implementation of one the suite already has a builder for.
-> *Why:* an invented shape typechecks, parses, passes review, and fails only when a real
-> accessor touches it. `componentInstances` is the one that catches people — a record
-> keyed by component id, not an array, and a fixture inventing `components: [...]`
-> compiles cleanly because the field is optional.
-> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — the tell is
-> being able to state a shape without naming the file you read it from, which no check
-> can ask.
-
 > **Convention.** Do not mock a configuration leaf.
 > *Why:* the test then checks the mock rather than the shipped configuration.
 > Enforced by `tests/sop/no-config-leaf-mocks.test.ts`.
@@ -971,28 +928,32 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 80 conventions. 70 of them are enforced; 10 are not.**
+**This handbook states 71 conventions. 70 of them are enforced; 1 is not.**
 
-The ten are not one thing, and treating them as one is what kept them open:
+The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
+`src/`, so a check would fail the build today rather than protect anything. It waits on
+the CSS migration (PL-21), which is not authorised. That is a rule with a start date,
+not debt.
 
-- **Nine cannot have an enforcer, because they are rules about how the WORK is done,
-  not about the code.** Which test tier fits; whether a metric measures the defect or
-  only its shape; naming the command that would prove you wrong before naming a cause;
-  diffing a test's assertions after restructuring it; whether a comment about another
-  module is actually true; whether you aimed a check at the right question; whether a
-  matching string has been read back to its source; whether a selection handler cleared
-  its dependents; whether a fixture's shape was read or invented. Each is a judgement
-  about intent, and a check that scored it would be measuring shape — the exact mistake
-  two of them warn about. They are written down for the reader, not pending work.
-- **One is not yet true.** No `@layer vendor` exists in `src/`, so enforcing it today would
-  fail the build rather than protect anything. It waits on the CSS migration (PL-21).
+Everything else on this page has something that fails the build when it is broken.
 
-**This paragraph is why the scorecard above it is generated.** It read "the fifteen that
-remain" and "fourteen cannot have an enforcer" while the count beside it said eleven, and
-it listed five rules that had since been enforced. Nothing caught that, because a number
-written in prose is not checked by anything — which is the same defect the conventions
-themselves keep warning about, in the document that warns about it. Counts here come from
-`npm run docs:conventions` now; sentences that quote them get pinned or rewritten.
+**Nine rules left this list on 2026-09-01 and are now [§11 Working
+discipline](#11-working-discipline).** None was deleted. They turn on a judgement no
+check can make — whether you aimed a command at the right question, whether a matching
+string has been read back to its source, whether a fixture's shape was read or
+remembered — and counting them here made the score describe two different things at
+once. The owner's directive that started it was *"if it cannot be enforced, it probably
+shouldn't be a convention"*, and the honest reading of "probably" is the second half of
+the test: a rule that cannot be enforced AND prevents no defect anyone can name should
+go. All nine prevent one that is named and dated, so all nine stayed — under a heading
+that claims nothing about the build.
+
+**This paragraph is why the scorecard above it is generated.** It once read "the fifteen
+that remain" and "fourteen cannot have an enforcer" beside a count of eleven, and listed
+five rules that had since been enforced. Nothing caught that, because a number written
+in prose is checked by nothing — the same defect these rules keep warning about, in the
+document that warns about it. Counts come from `npm run docs:conventions` now, and
+`tests/sop/handbook-links.test.ts` fails when a sentence here disagrees with them.
 
 The count of unenforced conventions **tripled** across 2026-08-30/31, and that is the
 scorecard getting honest rather than the codebase getting worse. Every one of them was
@@ -1028,24 +989,6 @@ not.
 > *Why:* a first sweep printed "clean" over a scan that had just measured a 34% gap.
 > Enforced by `tests/sop/every-scan-declares-a-control.test.ts`.
 
-> **Convention.** A control proves the tool works, not that you aimed it right. Before
-> trusting a result of nothing, say where the answer would be if it existed, and confirm
-> the command actually reads there.
-> *Why:* a correct command pointed at the wrong place passes every control it has, because
-> the control shares the mistake. Five wrong answers in one day on 2026-08-11 were all this
-> — and on 2026-08-30 a status summary reported two tracks of work as "not started" because
-> it grepped for whether a backlog item was TITLED "Track 4", while seven ratified ADRs, a
-> 709-line handbook and twenty-four shipped test plans sat on disk. The grep was right; the
-> question it answered was not the question asked. **Not enforced** — no check can ask
-> whether you aimed at the right thing.
-
-> **Convention.** A named field in a response, a matching string, or a green check is a
-> LEAD. Read the source before it becomes a finding.
-> *Why:* `enabled: false` was read as "this org lacks the entitlement" and was wrong; a
-> `confirm: true` sitting eight lines past a grep window was read as "this destructive tool
-> is ungated" and was wrong. Both were one read away from correct. **Not enforced** — this
-> is a habit, and the cost of skipping it is a confident wrong answer.
-
 > **Convention.** Never publish an identifier you have not read from the source. Setting
 > keys, env vars, command ids, file paths and function names are cheap to grep and
 > expensive to get wrong in something a user reads.
@@ -1072,18 +1015,6 @@ not.
 > a pipe into `head`, `tail` or `wc` — those exit 0 whatever they were fed, so a failure
 > and an empty result are indistinguishable. `grep` is deliberately not blocked:
 > `cmd | grep -q x && …` is correct, because there grep's own exit code is the answer.
-
-> **Convention.** A count that measures what code *looks like* is not a count of what is
-> wrong with it. Before working a scan's list, ask what defect it would catch and whether
-> a clean file could score badly.
-> *Why:* three measures in this repo were found to describe style rather than defects.
-> Extracting duplicated setup into a helper — plainly an improvement — made one of them
-> worse. **Not enforced.** It is the question to ask, not a thing a test can check.
-
-> **Convention.** Before naming a cause, name the command that would prove you wrong, and
-> run that first.
-> *Why:* a cause is cheap to assert, expensive to retract, and the reader usually cannot
-> check it. **Not enforced.**
 
 > **Convention.** Quote glob arguments passed to `grep` or `find`. In zsh an unquoted
 > pattern is expanded before the command sees it, and an unquoted variable is not split
@@ -1148,6 +1079,100 @@ not.
 Every link in this file is checked by `tests/sop/handbook-links.test.ts`.
 
 ---
+
+## 11. Working discipline
+
+The nine rules below were counted as conventions until 2026-09-01, and the count was
+the problem. A convention here is a statement about the CODE, and every one of them is
+checked by something that fails the build. These nine turn on a judgement no check can
+make — mostly about how you investigate a question, once about the code but resting on
+the same kind of call. Averaging the two made "70 of 80 enforced" a number that
+described neither.
+
+**They are not weaker for being here, and none of them was deleted.** Each names a
+specific failure it would have prevented, with a date, and several were written the day
+that failure cost something. What changes is only the claim: nothing on this page fails
+the build, so nothing on this page is counted as if it did. The conventions list now
+means one thing — a rule stated there has an enforcer — and this list means another: a
+habit you have to keep yourself.
+
+The test for keeping one is the owner's, from the directive that started this: a rule
+that cannot be enforced AND that nobody can point at a defect for should be deleted, not
+preserved because it reads well. All nine pass the second half. If one ever stops
+passing it, delete it.
+
+> **Discipline.** A comment describing what ANOTHER module does must cite the code that
+> makes it true. If you cannot cite it, write what you verified instead.
+> *Why:* nothing keeps such a comment true — not the compiler, not the tests — and it reads
+> to the next person as verified fact. Two comments once asserted a scheduled re-registration
+> that did not exist; they were false the day they were written, and they suppressed the
+> question that would have found a shipped bug. **Not enforced** — no check can read intent.
+
+> **Discipline.** When a parent selection changes, clear the state that depends on it.
+> Change the Adobe project and the workspace selection goes with it.
+> *Why:* a stale child selection is how an operation targets a resource nobody chose —
+> the failure `withOrgContext` and the org-mismatch guard exist to catch downstream. The
+> place it belongs is the selection handler's `onSelect`, where `useSelectionStep` puts
+> it. Obeyed at 7 sites today.
+> **Not enforced**, and this one cannot be: 14 sites assign the parent field and reading
+> them shows most are not selections at all — one preserves a previous value, one builds
+> a display object, one assembles a payload from already-resolved context. A detector
+> written from the field name would report eight violations of which roughly none are
+> real, and a check that cries wolf gets switched off.
+
+> **Discipline.** The three tiers, and which applies.
+> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — which tier fits is
+> a judgement about what you are testing.
+> *Why:* matching the test to the risk. A live test for pure logic is slow and flaky; a unit test for a network contract proves nothing.
+
+> **Discipline.** When you change a test's structure, diff the set of things it asserts
+> before and after — and prove shared setup is load-bearing by breaking it on purpose and
+> checking the right suites fail.
+> *Why:* the failure mode of a test refactor is a suite that still passes while checking
+> nothing. Nothing else catches that. **Not enforced** — it is a habit, and the only guard
+> is doing it.
+
+> **Discipline.** A fixture's shape is READ, not remembered. A builder's method list
+> comes from the real interface plus what callers actually use; a data fixture is copied
+> from a real artifact on disk. And a domain fixture is CONTENT over a canonical shape,
+> never a re-implementation of one the suite already has a builder for.
+> *Why:* an invented shape typechecks, parses, passes review, and fails only when a real
+> accessor touches it. `componentInstances` is the one that catches people — a record
+> keyed by component id, not an array, and a fixture inventing `components: [...]`
+> compiles cleanly because the field is optional.
+> [ADR-016](../architecture/adr/016-test-strategy.md) · **Not enforced** — the tell is
+> being able to state a shape without naming the file you read it from, which no check
+> can ask.
+
+> **Discipline.** A control proves the tool works, not that you aimed it right. Before
+> trusting a result of nothing, say where the answer would be if it existed, and confirm
+> the command actually reads there.
+> *Why:* a correct command pointed at the wrong place passes every control it has, because
+> the control shares the mistake. Five wrong answers in one day on 2026-08-11 were all this
+> — and on 2026-08-30 a status summary reported two tracks of work as "not started" because
+> it grepped for whether a backlog item was TITLED "Track 4", while seven ratified ADRs, a
+> 709-line handbook and twenty-four shipped test plans sat on disk. The grep was right; the
+> question it answered was not the question asked. **Not enforced** — no check can ask
+> whether you aimed at the right thing.
+
+> **Discipline.** A named field in a response, a matching string, or a green check is a
+> LEAD. Read the source before it becomes a finding.
+> *Why:* `enabled: false` was read as "this org lacks the entitlement" and was wrong; a
+> `confirm: true` sitting eight lines past a grep window was read as "this destructive tool
+> is ungated" and was wrong. Both were one read away from correct. **Not enforced** — this
+> is a habit, and the cost of skipping it is a confident wrong answer.
+
+> **Discipline.** A count that measures what code *looks like* is not a count of what is
+> wrong with it. Before working a scan's list, ask what defect it would catch and whether
+> a clean file could score badly.
+> *Why:* three measures in this repo were found to describe style rather than defects.
+> Extracting duplicated setup into a helper — plainly an improvement — made one of them
+> worse. **Not enforced.** It is the question to ask, not a thing a test can check.
+
+> **Discipline.** Before naming a cause, name the command that would prove you wrong, and
+> run that first.
+> *Why:* a cause is cheap to assert, expensive to retract, and the reader usually cannot
+> check it. **Not enforced.**
 
 ## Where the reasoning lives
 
