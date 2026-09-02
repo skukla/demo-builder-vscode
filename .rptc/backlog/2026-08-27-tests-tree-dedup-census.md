@@ -233,3 +233,4 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  test(integrations): one Spectrum wall for the card and the panel it opens (`3de63819a`)
 - 2026-09-02  test(logging): five debugLogger suites drop a wall their shared file already had (`85dfb0403`)
 - 2026-09-02  test(dashboard): lifecycle drops four walls its shared file already installs (`f0e22d274`)
+- 2026-09-02  test(components): both componentHandlers suites share one setup — after fixing their import order (`711ea88c2`)
