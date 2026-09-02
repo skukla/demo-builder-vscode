@@ -323,3 +323,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  test(prerequisites): the plugin branch no test had ever entered (`43ba54811`)
 - 2026-09-02  feat(mutation): moving the measurement to the next module is one command (`c735dbe67`)
 - 2026-09-02  test(ai): what the site tools tell an agent about whether they are safe to call (`b494de862`)
+- 2026-09-02  test(ai): the site scan reads without writing, and the delete gate needs both halves (`4ca0a66df`)
