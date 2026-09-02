@@ -7,6 +7,7 @@
 
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { spawn } from 'child_process';
+import { once } from 'events';
 
 // Mock logger to capture error logs
 // Create mock functions inside the factory to avoid hoisting issues
@@ -48,10 +49,16 @@ describe('ProcessCleanup - Error Handling', () => {
                 }
             }
         }
+        // Wait for each child to actually go, rather than giving them 50ms and
+        // hoping. A survivor here leaks into the next test's PID space.
+        await Promise.all(
+            spawnedProcesses.map((child) =>
+                child.exitCode !== null || child.signalCode !== null
+                    ? Promise.resolve()
+                    : once(child, 'exit').catch(() => undefined)
+            )
+        );
         spawnedProcesses.length = 0;
-
-        // Give processes time to fully exit
-        await new Promise(resolve => setTimeout(resolve, 50));
     });
 
     describe('Permission Denied Errors (Mocked)', () => {
@@ -198,8 +205,12 @@ describe('ProcessCleanup - Error Handling', () => {
             spawnedProcesses.push(childProcess);
             const pid = childProcess.pid!;
 
-            // Wait a bit for it to exit
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Wait for the actual exit, not a guess at how long node takes to
+            // start and stop. This was `setTimeout(100)`; node's startup alone
+            // can exceed that on a busy machine, and the kill then ran against a
+            // process that had not exited yet — which is not what this test is
+            // about. Same defect class as the two MCP socket suites (2026-09-02).
+            await once(childProcess, 'exit');
 
             // When: Try to kill already-exited process
             await expect(

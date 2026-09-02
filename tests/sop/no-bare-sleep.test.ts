@@ -57,6 +57,20 @@ function walk(dir: string): string[] {
  * legitimate — fake-timer helpers, deliberate delays inside a mock, a polling
  * interval — so turning this on wholesale would be a project, not a fix.
  *
+ * THE FOUR THAT MATTER ARE KNOWN, and all four are now fixed. Triaged by asking
+ * which files sleep while holding a REAL resource — a spawned process, a bound
+ * socket — with no fake timers to make the wait instant:
+ *
+ *   inExtensionMcpServer.test.ts              2 waits, now poll for a refused connection
+ *   inExtensionMcpServer.socketOwnership.ts   1 wait, now polls for the successor answering
+ *   processCleanup.error.test.ts              2 waits, now await the child's exit event
+ *   processCleanup.test.ts                    1 wait, the parent now announces readiness
+ *
+ * Both suites that failed a full run that day were on that list, which is what
+ * makes the triage worth repeating rather than the count worth watching: a bare
+ * sleep beside a fake timer is free, and a bare sleep beside a real process is a
+ * flake waiting for a busy afternoon.
+ *
  * But the hole has a cost, and it was paid the same day: a flat
  * `setTimeout(50)` between disposing an MCP server and binding its successor
  * failed two full-suite runs while passing 8/8 in isolation, and nothing here
