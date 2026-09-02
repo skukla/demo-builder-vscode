@@ -20,37 +20,9 @@ jest.mock('vscode', () => {
         ...original,
         workspace: {
             ...original.workspace,
-            createFileSystemWatcher: jest.fn((pattern: string) => {
-                const watcher = {
-                    pattern,
-                    _disposed: false,
-                    _listeners: {
-                        onCreate: [] as ((...args: unknown[]) => unknown)[],
-                        onChange: [] as ((...args: unknown[]) => unknown)[],
-                        onDelete: [] as ((...args: unknown[]) => unknown)[]
-                    },
-                    onDidCreate: jest.fn((listener) => {
-                        watcher._listeners.onCreate.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    onDidChange: jest.fn((listener) => {
-                        watcher._listeners.onChange.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    onDidDelete: jest.fn((listener) => {
-                        watcher._listeners.onDelete.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    dispose: jest.fn(() => {
-                        watcher._disposed = true;
-                        const idx = mockWatchers.indexOf(watcher);
-                        if (idx !== -1) mockWatchers.splice(idx, 1);
-                    })
-                };
-
-                mockWatchers.push(watcher);
-                return watcher;
-            })
+            createFileSystemWatcher: (
+                require('./recordingFileWatcher') as typeof import('./recordingFileWatcher')
+            ).createRecordingWatcherFactory(() => mockWatchers)
         }
     };
 });
