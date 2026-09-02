@@ -235,3 +235,4 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  test(dashboard): lifecycle drops four walls its shared file already installs (`f0e22d274`)
 - 2026-09-02  test(components): both componentHandlers suites share one setup — after fixing their import order (`711ea88c2`)
 - 2026-09-02  test(eds): both auth-hook suites share one wall, and the divergence behind it is filed (`9041d174b`)
+- 2026-09-02  test(daLive): the enumeration and transform suites share their harness (`93434d669`)

@@ -14,43 +14,13 @@
  * - Add mesh type handling in the lookup logic
  */
 
+import './executorComponentLoading.testUtils';
 import * as meshDeployment from '@/features/mesh/services/meshDeployment';
 import * as stalenessDetector from '@/features/mesh/services/stalenessDetector';
 import { HandlerContext } from '@/types/handlers';
 
 // Track getComponentById calls to verify fallback is being used
 let getComponentByIdCalls: string[] = [];
-
-// Mock dependencies
-jest.mock('@/features/mesh/services/meshDeployment');
-jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: {
-        getCommandExecutor: jest.fn().mockReturnValue({
-            execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
-        }),
-        getAuthenticationService: jest.fn().mockReturnValue({
-            testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
-        }),
-    },
-}));
-
-// executeMeshPhase gates App Builder operations on projectRequiresAppBuilder.
-// These tests don't exercise the permission gate — stub the predicate so the
-// gate is a no-op and the flow under test proceeds.
-jest.mock('@/features/components/services/projectAppBuilderPredicate', () => ({
-    projectRequiresAppBuilder: jest.fn(() => false),
-}));
-
-// Mock fs/promises for file operations
-jest.mock('fs/promises', () => ({
-    mkdir: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    access: jest.fn().mockRejectedValue(new Error('Not found')),
-    readdir: jest.fn().mockResolvedValue([]),
-    rm: jest.fn().mockResolvedValue(undefined),
-    rmdir: jest.fn().mockResolvedValue(undefined),
-}));
 
 // Mock ComponentManager
 jest.mock('@/features/components/services/componentManager', () => ({
@@ -128,27 +98,6 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
         }),
     })),
 }));
-
-// Mock envFileGenerator
-jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
-    generateComponentEnvFile: jest.fn().mockResolvedValue(undefined),
-    generateComponentConfigFiles: jest.fn().mockResolvedValue(undefined),
-}));
-
-// Mock vscode
-jest.mock('vscode', () => ({
-    workspace: {
-        getConfiguration: jest.fn().mockReturnValue({
-            get: jest.fn().mockReturnValue(3000),
-        }),
-    },
-    window: {
-        setStatusBarMessage: jest.fn(),
-    },
-    commands: {
-        executeCommand: jest.fn(),
-    },
-}), { virtual: true });
 
 // Cast mocked modules for type safety
 const mockDeployMeshComponent = meshDeployment.deployMeshComponent as jest.Mock;
