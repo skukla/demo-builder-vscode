@@ -198,6 +198,24 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
 
     return createMockHandlerContextBase({
         prereqManager: {
+            /**
+             * The FULL manager surface. Four methods were missing until 2026-09-02 —
+             * `resolveDependencies`, `getPrerequisiteById`, `getRequiredPrerequisites`
+             * and `checkAllPrerequisites` — and the first one's absence is WHY the
+             * `prerequisiteId` install path had no test: reaching it throws
+             * "Cannot read properties of undefined" before the handler runs.
+             *
+             * A fake smaller than its subject does not fail; it makes a branch
+             * UNTESTABLE, and the branch then looks merely uncovered. The `as any`
+             * at the end of this object is what let it drift — with the real type
+             * named, a missing method is a compile error rather than a TypeError
+             * three layers into a handler.
+             */
+            resolveDependencies: jest.fn().mockReturnValue([]),
+            getPrerequisiteById: jest.fn(),
+            getRequiredPrerequisites: jest.fn().mockReturnValue([]),
+            checkAllPrerequisites: jest.fn().mockResolvedValue([]),
+            getLatestInFamily: jest.fn(),
             loadConfig: jest.fn(),
             getInstallSteps: jest.fn().mockReturnValue({
                 steps: [

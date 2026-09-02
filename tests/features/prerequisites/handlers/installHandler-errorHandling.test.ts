@@ -189,4 +189,88 @@ describe('Install Handler - Error Handling', () => {
             true
         );
     });
+
+    /**
+     * The message an UNRESOLVED install target produces.
+     *
+     * `describeUnresolvedTarget` has three branches and its own docstring says why —
+     * "the two addresses fail for unrelated reasons". Mutation testing found all three
+     * unconstrained: every string could be rewritten and both conditions flipped with
+     * this suite green, because the existing tests assert `status: 'error'` and never
+     * read the message.
+     *
+     * The message is not decoration. Two of the three tell an AGENT what to do next
+     * ("Run check_prerequisites and use a prereqId it reports"), and it is the only
+     * thing the caller gets — the throw is what pushes `prerequisite-status`, so a
+     * wrong message is the whole diagnosis.
+     *
+     * Each asserts the WHOLE string. A partial match would survive a mutation that
+     * dropped the id or the index, which is the part carrying the information.
+     */
+    describe('the unresolved-target message', () => {
+        /** The `message` of the last `prerequisite-status` the handler pushed. */
+        function lastStatusMessage(): string | undefined {
+            const calls = (mockContext.sendMessage as jest.Mock).mock.calls.filter(
+                ([type]: [string]) => type === 'prerequisite-status'
+            );
+            return calls.at(-1)?.[1]?.message;
+        }
+
+        it('names the id when a prerequisiteId resolves to nothing', async () => {
+            (mockContext.prereqManager!.loadConfig as jest.Mock).mockResolvedValue({
+                prerequisites: [],
+            });
+            (mockContext.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue([]);
+
+            const result = await handleInstallPrerequisite(mockContext, {
+                prerequisiteId: 'no-such-tool',
+            });
+
+            expect(result.success).toBe(false);
+            expect(lastStatusMessage()).toBe(
+                'No prerequisite with id "no-such-tool". Run check_prerequisites and use a prereqId it reports.'
+            );
+        });
+
+        it('names the INDEX when a numeric prereqId has no state', async () => {
+            // Distinct from the case above on purpose: the two addresses fail for
+            // unrelated reasons, and telling the caller which one they used is the
+            // entire job of this function.
+            const result = await handleInstallPrerequisite(mockContext, { prereqId: 99 });
+
+            expect(result.success).toBe(false);
+            expect(lastStatusMessage()).toBe(
+                'Prerequisite state not found for index 99. Run the prerequisites check first, or address it by prerequisiteId.'
+            );
+        });
+
+        it('asks for either address when the payload carries neither', async () => {
+            const result = await handleInstallPrerequisite(mockContext, {});
+
+            expect(result.success).toBe(false);
+            expect(lastStatusMessage()).toBe(
+                'Either prerequisiteId (preferred) or prereqId is required.'
+            );
+        });
+
+        it('prefers the prerequisiteId message when BOTH are present and neither resolves', async () => {
+            // The order of the two branches is load-bearing: `prerequisiteId` is the
+            // preferred address, so its failure is the one worth reporting. A flipped
+            // condition would report the index instead and send the caller to the
+            // wrong fix.
+            (mockContext.prereqManager!.loadConfig as jest.Mock).mockResolvedValue({
+                prerequisites: [],
+            });
+            (mockContext.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue([]);
+
+            const result = await handleInstallPrerequisite(mockContext, {
+                prerequisiteId: 'no-such-tool',
+                prereqId: 99,
+            });
+
+            expect(result.success).toBe(false);
+            expect(lastStatusMessage()).toContain('No prerequisite with id "no-such-tool"');
+        });
+    });
+
 });
