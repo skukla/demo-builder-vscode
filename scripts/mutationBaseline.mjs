@@ -12,7 +12,7 @@
  * instrument is RUN, and `tests/sop/mutation-config-pairing.test.ts` covers the
  * per-build half: that every mutated module has a baseline row and a test selected.
  */
-import { readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 
 /** A line that only feeds a logger is presentation. Mutating it proves nothing. */
 const LOGGY = /[Ll]ogger|\.log\(|\.debug\(|\.warn\(|\.info\(|\.error\(|\.trace\(/;
@@ -80,8 +80,23 @@ export function summarise(reportPath) {
     return rows;
 }
 
-export function writeBaseline(reportPath, baselinePath, note) {
-    const modules = summarise(reportPath);
+/**
+ * Pin a report's numbers as the new floor.
+ *
+ * @param merge  true when the report covers only SOME modules — a focused run. The
+ *   report's modules replace their baseline rows and every other row is kept as it
+ *   was. Without this the loop could CHECK against the floor after each focused
+ *   measurement but never RAISE it, so the floor sat two shipped improvements stale
+ *   and would have accepted a regression back to it as "held". Overwriting outright
+ *   instead would delete the rows the focused run never measured, which is worse.
+ */
+export function writeBaseline(reportPath, baselinePath, note, merge = false) {
+    const measured = summarise(reportPath);
+    const kept =
+        merge && existsSync(baselinePath)
+            ? JSON.parse(readFileSync(baselinePath, 'utf8')).modules
+            : {};
+    const modules = { ...kept, ...measured };
     writeFileSync(
         baselinePath,
         JSON.stringify(

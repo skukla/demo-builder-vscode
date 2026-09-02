@@ -19,6 +19,9 @@ import { compare, writeBaseline } from './mutationBaseline.mjs';
  * a module worse and nothing would notice until the next ~16-minute sample run. That
  * is the wrong safety net for the loop that uses focus as its measurement.
  *
+ * `--write` with `--report` MERGES: the measured module's row is replaced and the
+ * rest are kept, so a focused run can raise the floor it just cleared.
+ *
  * The baseline is shared on purpose. A module's row is a module's row whichever report
  * produced it, so a focus run checks the same pinned numbers the sample pinned — and
  * `compare` only looks at modules present in BOTH, so a focus report naturally checks
@@ -39,20 +42,13 @@ if (!existsSync(REPORT)) {
     process.exit(1);
 }
 
-if (write && reportFlag !== -1) {
-    // A focus report knows about ONE module. Writing it as the whole baseline would
-    // silently delete the other eleven rows — turning the ratchet off for everything
-    // this run did not measure, which is the opposite of what accepting a number
-    // should do.
-    console.error(
-        'Refusing to --write a baseline from a partial (--report) run: it would drop ' +
-            'every module this report does not contain. Re-baseline from the full sample.'
-    );
-    process.exit(1);
-}
+// A partial report is MERGED, never written wholesale: it holds real numbers for the
+// module it measured and knows nothing about the other eleven, so overwriting with it
+// would switch the ratchet off for everything it did not look at.
+const partial = reportFlag !== -1;
 
 if (write || !existsSync(BASELINE)) {
-    const modules = writeBaseline(REPORT, BASELINE, note);
+    const modules = writeBaseline(REPORT, BASELINE, note, partial);
     const n = Object.keys(modules).length;
     console.log(`${existsSync(BASELINE) ? 'Wrote' : 'Created'} ${BASELINE} — ${n} modules.`);
     for (const [p, r] of Object.entries(modules)) {
@@ -64,7 +60,7 @@ if (write || !existsSync(BASELINE)) {
     process.exit(0);
 }
 
-const { problems, now, base } = compare(REPORT, BASELINE, reportFlag !== -1);
+const { problems, now, base } = compare(REPORT, BASELINE, partial);
 
 console.log('module                          baseline    now   branch/block   uncovered');
 for (const [p, b] of Object.entries(base)) {

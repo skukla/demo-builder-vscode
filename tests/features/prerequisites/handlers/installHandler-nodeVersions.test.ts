@@ -38,6 +38,7 @@ import * as shared from '@/features/prerequisites/handlers/shared';
 import {
     mockNodePrereq,
     mockNpmPrereq,
+    mockAdobeCliPrereq,
     mockNodeResult,
     createInstallHandlerContext,
     setupMockCommandExecutor,
@@ -137,4 +138,93 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
             })
         );
     });
+
+    /**
+     * WHICH Node versions a per-version tool installs for when NOTHING requires one.
+     *
+     * `installHandler.ts:72` and `:142` both answer it, with the same expression
+     * written twice: `nodeVersions.length ? nodeVersions : [version || '20']`. Both
+     * were unconstrained — six mutants between them — because the shared setup always
+     * returns `['18', '20']`, so the empty case never ran in any test.
+     *
+     * The rule: with no Node version required by the project, fall back to the version
+     * the caller asked for, or to Node 20. Get it wrong and the tool installs against a
+     * runtime the user never chose — silently, since the install still succeeds.
+     *
+     * These assert the ARGUMENT handed to the collaborator rather than the outcome:
+     * the version list IS the decision, and an outcome assertion would pass whatever
+     * list was used.
+     */
+    describe('the default Node version when the project requires none', () => {
+        function usePerNodeWithNoRequiredVersions() {
+            const states = new Map();
+            states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
+            mockContext.sharedState.currentPrerequisiteStates = states;
+            (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue([]);
+            (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
+                perNodeVersionStatus: [],
+                perNodeVariantMissing: true,
+                missingVariantMajors: ['20'],
+            });
+        }
+
+        it('falls back to Node 20 when the caller names no version either', async () => {
+            usePerNodeWithNoRequiredVersions();
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            expect(shared.checkPerNodeVersionStatus).toHaveBeenCalledWith(
+                mockAdobeCliPrereq,
+                ['20'],
+                mockContext
+            );
+            // The SECOND copy of the same decision, read by the install planner.
+            expect(mockContext.prereqManager?.getInstallSteps).toHaveBeenCalledWith(
+                mockAdobeCliPrereq,
+                { nodeVersions: ['20'] }
+            );
+        });
+
+        it('uses the version the caller named, not the default', async () => {
+            usePerNodeWithNoRequiredVersions();
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0, version: '22' });
+
+            expect(shared.checkPerNodeVersionStatus).toHaveBeenCalledWith(
+                mockAdobeCliPrereq,
+                ['22'],
+                mockContext
+            );
+            expect(mockContext.prereqManager?.getInstallSteps).toHaveBeenCalledWith(
+                mockAdobeCliPrereq,
+                { nodeVersions: ['22'] }
+            );
+        });
+
+        it('uses the required versions when the project HAS them, ignoring the default', async () => {
+            const states = new Map();
+            states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
+            mockContext.sharedState.currentPrerequisiteStates = states;
+            (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue(['18', '20']);
+            (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
+                perNodeVersionStatus: [],
+                perNodeVariantMissing: true,
+                missingVariantMajors: ['18'],
+            });
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0, version: '22' });
+
+            // The named version must NOT win here: the project's requirements do.
+            expect(shared.checkPerNodeVersionStatus).toHaveBeenCalledWith(
+                mockAdobeCliPrereq,
+                ['18', '20'],
+                mockContext
+            );
+            expect(mockContext.prereqManager?.getInstallSteps).toHaveBeenCalledWith(
+                mockAdobeCliPrereq,
+                { nodeVersions: ['18', '20'] }
+            );
+        });
+    });
+
 });
