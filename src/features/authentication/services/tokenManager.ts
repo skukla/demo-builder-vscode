@@ -34,48 +34,82 @@ export type TokenConfigReader = () => StoredTokenConfig | undefined;
 export type SilentTokenRefresh = () => Promise<StoredTokenConfig | undefined>;
 
 /**
- * The real refresh: `aio-lib-ims.getToken('cli')` — the SAME call the `aio`
- * CLI makes on every invocation, which is why the CLI never asks anyone to
- * re-login while this extension did. With a live refresh token it mints a new
- * access token silently and persists it; the context read afterwards is the
- * library's own view of what it minted.
+ * How much life a stored token needs before it counts as usable: ten minutes,
+ * the same floor `aio-lib-ims`'s own `getTokenIfValid` applies.
+ */
+const IMS_TOKEN_VALIDITY_FLOOR_MS = 10 * 60 * 1000;
+
+/**
+ * The real refresh: the refresh-token exchange the `aio` CLI performs on every
+ * invocation, which is why the CLI never asks anyone to re-login while this
+ * extension did. With a live refresh token it mints a new access token and
+ * persists it exactly where the CLI looks for it.
  *
  * Measured 2026-08-27: with the stored access token 30+ minutes expired, the
- * context still held a refresh token valid for ~14 DAYS, and getToken('cli')
+ * context still held a refresh token valid for ~14 DAYS, and the exchange
  * restored the session in ~2s with no interaction — while the extension,
  * reading only the stored expiry, declared the user signed out and parked a
  * deploy on a Sign In prompt nobody saw. The owner's question was "why would
  * I need to log in?", and the answer was: you didn't.
  *
- * The refresh-token PRECHECK is load-bearing: with no live refresh token,
- * getToken('cli') falls back to the INTERACTIVE flow and opens a browser —
- * which a background auth check must never do. In that case this returns
- * undefined and the caller's prompt path takes over (the human chooses).
+ * WHY THIS CALLS THE EXCHANGE AND NOT `getToken`. It used to call
+ * `getToken('cli')` behind a precheck on the LOCAL refresh-token expiry, and
+ * a comment here called that precheck load-bearing. A local expiry is a CLAIM,
+ * not proof: when IMS rejects a refresh token the machine still believes in
+ * (revoked, org changed, password reset), `getToken`'s chain falls through to
+ * `_generateToken`, which runs the login plugins and OPENS A BROWSER. On
+ * 2026-09-02 that is what a project-load auth check did — an unrequested
+ * sign-in page, with no prompt in front of it. Read out of the library's own
+ * `src/token-helper.js`; the fallback cannot be switched off by any option.
+ *
+ * So the middle step is called on its own. `Ims#getAccessToken` with a refresh
+ * token does exactly the silent exchange and REJECTS instead of escalating to
+ * a human. A rejection returns undefined, and the caller's prompt path takes
+ * over — the human chooses, from a notification they can see.
  *
  * Dynamic import: aio-lib-ims is heavy and this path runs only when the
  * stored token is already unusable.
  */
 export const refreshStoredToken: SilentTokenRefresh = async () => {
     const ims = await import('@adobe/aio-lib-ims');
-    const readContext = async (): Promise<
-        { access_token?: StoredTokenConfig; refresh_token?: StoredTokenConfig } | undefined
-    > =>
-        ((await ims.context.get('cli'))?.data ?? undefined) as
-            | { access_token?: StoredTokenConfig; refresh_token?: StoredTokenConfig }
-            | undefined;
+    const stored = await ims.context.get('cli');
+    const config = stored?.data;
+    const refreshToken = config?.refresh_token;
 
-    const refreshToken = (await readContext())?.refresh_token;
+    // The library's own validity floor (`getTokenIfValid`): a token counts as
+    // usable only with at least ten minutes left. Matching it means this decides
+    // the same way the CLI would, rather than sending a nearly-dead token to IMS.
     const refreshable =
-        typeof refreshToken?.token === 'string' && (refreshToken.expiry ?? 0) > Date.now();
-    if (!refreshable) {
+        typeof refreshToken?.token === 'string' &&
+        (refreshToken.expiry ?? 0) > Date.now() + IMS_TOKEN_VALIDITY_FLOOR_MS;
+    if (!config || !refreshable) {
         return undefined;
     }
 
-    const token = await ims.getToken('cli');
-    if (typeof token !== 'string' || token.length === 0) {
+    const minted = await new ims.Ims(config.env).getAccessToken(
+        refreshToken.token as string,
+        config.client_id,
+        config.client_secret,
+        config.scope,
+    );
+    if (typeof minted?.access_token?.token !== 'string') {
         return undefined;
     }
-    return (await readContext())?.access_token;
+
+    // Persist the way the library's `_persistTokens` does, so the CLI and every
+    // later read of the stored config see the refreshed token instead of
+    // re-exchanging on each check. A rotated refresh token is written too when
+    // IMS returned one; failing to store either is not worth failing the refresh
+    // that already succeeded.
+    try {
+        await ims.context.set('cli.access_token', minted.access_token, stored?.local);
+        if (minted.refresh_token) {
+            await ims.context.set('cli.refresh_token', minted.refresh_token, stored?.local);
+        }
+    } catch {
+        // Left unstored: the caller still gets the live token for this session.
+    }
+    return minted.access_token;
 };
 
 /**

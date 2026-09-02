@@ -97,9 +97,11 @@ export class AdobeSDKClient {
      */
     private async doInitialize(): Promise<void> {
         try {
-            // CRITICAL FIX: Pre-check token validity before calling getToken('cli')
-            // This prevents Adobe IMS library from opening browser if token not ready
-            // getToken('cli') can trigger browser auth if token is missing/invalid/expired
+            // The token is INSPECTED, never fetched. `aio-lib-ims`'s getToken
+            // opens a browser when it cannot resolve a token silently, so an SDK
+            // init — which runs in the background — must never reach it. Nothing
+            // in this repo calls it any more (2026-09-02): it is not even in the
+            // library's local typings, so a reintroduction fails to compile.
             // Dynamic imports: deferred to avoid module loading chain in tests
             // (TokenManager → loadingHTML → vscode not available during test setup)
             const { TokenManager } = await import('./tokenManager');
@@ -112,10 +114,9 @@ export class AdobeSDKClient {
                 return;
             }
 
-            // CRITICAL FIX: Use token from disk (inspectToken) instead of Adobe IMS Context cache
-            // getToken('cli') reads from Adobe IMS Context memory cache which can be stale after login
-            // inspectToken() reads directly from Adobe CLI config file, always current
-            // Token is guaranteed to exist if valid=true
+            // From disk, not from the IMS Context memory cache: the cache can be
+            // stale right after a login, while inspectToken re-reads the CLI's
+            // config file. Guaranteed present when valid=true.
             const accessToken = tokenInspection.token;
             if (!accessToken) {
                 this.debugLogger.debug('[Auth SDK] Token valid but missing from inspection result');
