@@ -112,7 +112,7 @@ work on it.
 
 | Item | Finished when | Now |
 |---|---|---|
-| [[PL-9]] | Every test sits at its subject's mirror, and the enforcer checks SUBJECT rather than directory | 53 misplaced (35 `webview-ui`, 18 scattered) |
+| [[PL-9]] | Every test sits at its subject's mirror, and the enforcer checks SUBJECT rather than directory | **built** — 45 moved, allowlist row gone, half 3 added. Blind spot stated: the resolver cannot name a subject for 316 suites, so half 1 still carries those |
 | [[PL-14]] | Built. Closes when the seven artifacts are in use, not merely present | built |
 | [[PL-15]] | A full run emits zero act() warnings, zero prop warnings, zero stray error lines | 355 / 72 / 600+ at baseline |
 | [[PL-16]] | StateManager and Project each have ONE builder, and the literal-cast ledger for them is empty | 205 casts across 4 types; 63 split families without shared setup |
@@ -196,3 +196,4 @@ the state table above is the record until there is real work to hold.
 - 2026-09-01  test(sop): seven rules that reached zero are banned, not ledgered (`4413bb469`)
 - 2026-09-01  chore(health): snapshot 7 — after the PL-33 merge (`bbe320dda`)
 - 2026-09-02  docs(backlog): make the programme one closed roster that can actually finish (`6c45d15c5`)
+- 2026-09-02  fix(backlog): `set` stored a list field as a string, and refused with a nonsense reason (`f907f2aac`)
