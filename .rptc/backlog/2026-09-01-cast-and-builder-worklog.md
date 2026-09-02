@@ -336,3 +336,6 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  test(updates): the rollback that runs when a component update fails (`416a29552`)
 - 2026-09-02  docs(handoff): the state-manager finding, and the two refusals the gate made (`4858c521f`)
 - 2026-09-02  feat(mutation): measure the files this repo calls key, and pin them (`9e05861d9`)
+- 2026-09-02  test(updates): a successful update moves BOTH version records, not one (`922ce4b49`)
+- 2026-09-02  docs(handoff): mark the one approximate number as approximate (`c88fe72e5`)
+- 2026-09-02  docs(handoff): lead the report with what nobody had measured (`c622b347c`)

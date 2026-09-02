@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/updates/services/componentUpdater.ts"
+        "src/features/authentication/services/authenticationService.ts"
     ],
     "reporters": [
         "clear-text",
