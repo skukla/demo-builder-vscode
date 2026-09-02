@@ -40,11 +40,11 @@ export const mockNodePrereq: PrerequisiteDefinition = {
     check: { command: 'node --version' },
     install: {
         steps: [
-            { name: 'Install Node {version}', message: 'Installing Node {version}...', command: 'fnm install {version}' },
-            { name: 'Set Node {version} as default', message: 'Setting as default...', command: 'fnm default {version}' },
+            { name: 'Install Node {version}', message: 'Installing Node {version}...', commands: ['fnm install {version}'] },
+            { name: 'Set Node {version} as default', message: 'Setting as default...', commands: ['fnm default {version}'] },
         ],
     },
-} as any;
+};
 
 export const mockNpmPrereq: PrerequisiteDefinition = {
     id: 'npm',
@@ -53,10 +53,10 @@ export const mockNpmPrereq: PrerequisiteDefinition = {
     check: { command: 'npm --version' },
     install: {
         steps: [
-            { name: 'Install npm', message: 'Installing npm...', command: 'npm install -g npm' },
+            { name: 'Install npm', message: 'Installing npm...', commands: ['npm install -g npm'] },
         ],
     },
-} as any;
+};
 
 export const mockAdobeCliPrereq: PrerequisiteDefinition = {
     id: 'adobe-cli',
@@ -66,10 +66,10 @@ export const mockAdobeCliPrereq: PrerequisiteDefinition = {
     check: { command: 'aio --version', parseVersion: '@adobe/aio-cli/(\\S+)' },
     install: {
         steps: [
-            { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
+            { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', commands: ['npm install -g @adobe/aio-cli'] },
         ],
     },
-} as any;
+};
 
 export const mockAdobeCliPrereqNoVersion: PrerequisiteDefinition = {
     id: 'adobe-cli',
@@ -79,10 +79,10 @@ export const mockAdobeCliPrereqNoVersion: PrerequisiteDefinition = {
     check: { command: 'aio --version', parseVersion: '@adobe/aio-cli/(\\S+)' },
     install: {
         steps: [
-            { name: 'Install Adobe I/O CLI', message: 'Installing Adobe I/O CLI globally', command: 'npm install -g @adobe/aio-cli' },
+            { name: 'Install Adobe I/O CLI', message: 'Installing Adobe I/O CLI globally', commands: ['npm install -g @adobe/aio-cli'] },
         ],
     },
-} as any;
+};
 
 export const mockManualPrereq: PrerequisiteDefinition = {
     id: 'docker',
@@ -93,7 +93,7 @@ export const mockManualPrereq: PrerequisiteDefinition = {
         manual: true,
         url: 'https://www.docker.com/get-started',
     },
-} as any;
+};
 
 export const mockNodeResult: PrerequisiteStatus = {
     id: 'node',
@@ -219,7 +219,7 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
             loadConfig: jest.fn(),
             getInstallSteps: jest.fn().mockReturnValue({
                 steps: [
-                    { name: 'Install npm', message: 'Installing npm...', command: 'npm install -g npm' },
+                    { name: 'Install npm', message: 'Installing npm...', commands: ['npm install -g npm'] },
                 ],
             }),
             checkPrerequisite: jest.fn().mockResolvedValue(mockNodeResult),

@@ -43,3 +43,35 @@ the caller into producing the impossible combination.
 Note the imprecision if you do: Stryker's granularity is per-mutator-per-line, and this
 line also carries mutants that ARE killed. Disabling those mutators there ignores the
 killed ones too, lowering the denominator as well as the survivor count.
+
+## installHandler.ts:183 — `prereq.install?.dynamic` optional chaining (1 mutant)
+
+```ts
+const isDynamicInstall = prereq.id === 'node' && prereq.install?.dynamic;
+```
+
+Stryker replaces `?.` with `.`, which would throw if `prereq.install` were undefined.
+
+**Why no test can kill it without lying.** `install` IS optional on
+`PrerequisiteDefinition` (`src/features/prerequisites/services/types.ts:63`), so the
+compiler requires the `?.`. But a prerequisite with no `install` cannot REACH this line:
+`getInstallSteps` returns `null` for one
+(`src/features/prerequisites/services/installation/InstallStepBuilder.ts`, first
+statement), and the handler throws `No installation steps defined` on a null plan
+(`installHandler.ts:605`) well before `executeInstallSteps` runs.
+
+Killing it would mean mocking `getInstallSteps` to return a plan for a prerequisite that
+has no install block — a combination the real collaborator cannot produce. That is the
+contortion the mutation skill names, so it is recorded instead.
+
+**Nothing to decide here** — unlike the `:424` entry below, this needs no owner call and
+no code change. The `?.` is required by the type and correct as written.
+
+**What the same measurement DISPROVED, so it is not assumed again.** The neighbouring
+`prereq.id === 'node'` conjunct on this line LOOKED equivalent by the same argument
+(a non-Node prerequisite never gets `targetVersions`, so both branches of the step-count
+compute the same total). It is not: `isDynamicInstall` is read a second time at
+`installHandler.ts:211`, where the dynamic path runs the install steps and SKIPS the
+default step. A non-Node prerequisite declaring `dynamic` therefore loses its default
+step if the guard goes. That mutant is now killed by a test, and the equivalence claim
+was only avoided because the report was read per-mutant instead of reasoned about.
