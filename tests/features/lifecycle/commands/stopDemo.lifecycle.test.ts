@@ -18,108 +18,24 @@ import {
     ProcessCleanup,
     StopDemoCommand,
     mockCommandExecutor,
+    setupStopDemo,
 } from './stopDemo.testUtils';
-import { StateManager } from '@/core/state/stateManager';
-import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 import * as vscode from 'vscode';
-import { createMockLogger } from '../../../helpers/loggerFake';
 
 import {
     createMockTerminal,
-    mockCommands,
-    mockWindow,
-    mockWorkspace,
 } from '../../../helpers/vscodeMockViews';
-const MockProcessCleanup = ProcessCleanup as jest.MockedClass<typeof ProcessCleanup>;
 
 describe('StopDemoCommand - Lifecycle', () => {
     let command: StopDemoCommand;
-    let mockContext: jest.Mocked<vscode.ExtensionContext>;
     let mockStateManager: jest.Mocked<StateManager>;
-    let mockLogger: jest.Mocked<Logger>;
     let mockProcessCleanup: jest.Mocked<ProcessCleanup>;
     let mockTerminal: ReturnType<typeof createMockTerminal>;
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        // Setup mock terminal
-        mockTerminal = createMockTerminal({
-            name: 'test-project - Frontend',
-            dispose: jest.fn(),
-        });
-        mockWindow.terminals = [mockTerminal];
-
-        // Setup mock ProcessCleanup instance
-        mockProcessCleanup = {
-            killProcessTree: jest.fn().mockResolvedValue(undefined),
-        } as any;
-        MockProcessCleanup.mockImplementation(() => mockProcessCleanup);
-
-        // Setup mock CommandExecutor for lsof
-        mockCommandExecutor.execute.mockResolvedValue({
-            code: 0,
-            stdout: '12345',
-            stderr: '', duration: 0 });
-
-        // Mock extension context
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/mock/extension/path',
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn().mockResolvedValue(undefined),
-            },
-        } as any;
-
-        // Mock state manager
-        mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({
-                name: 'test-project',
-                path: '/test/path',
-                status: 'running',
-                created: new Date(),
-                lastModified: new Date(),
-                componentInstances: {
-                    eds: {
-                        id: 'eds',
-                        name: 'Edge Delivery Services',
-                        type: 'frontend',
-                        status: 'running',
-                        port: 3000,
-                    },
-                },
-            }),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as any;
-
-        // Mock logger
-        mockLogger = createMockLogger();
-
-        // Mock vscode.window.withProgress to execute task immediately
-        mockWindow.withProgress = jest.fn().mockImplementation(
-            async (_options: any, task: any) => {
-                return await task({ report: jest.fn() });
-            }
-        );
-
-        // Mock vscode.window.setStatusBarMessage
-        mockWindow.setStatusBarMessage = jest.fn();
-
-        // Mock vscode.commands.executeCommand
-        mockCommands.executeCommand = jest.fn().mockResolvedValue(undefined);
-
-        // Mock vscode.workspace.getConfiguration
-        mockWorkspace.getConfiguration = jest.fn().mockReturnValue({
-            get: jest.fn().mockReturnValue(3000),
-        });
-
-        // Create command instance
-        command = new StopDemoCommand(
-            mockContext,
-            mockStateManager,
-            mockLogger
-        );
+        ({ command, mockStateManager, mockProcessCleanup, mockTerminal } = setupStopDemo());
     });
 
     afterEach(() => {
@@ -190,6 +106,15 @@ describe('StopDemoCommand - Lifecycle', () => {
             expect(mockStateManager.saveProject).toHaveBeenCalledWith(
                 expect.objectContaining({ status: 'ready' })
             );
+
+            // And: the COMPONENT records itself stopped, not only the project.
+            // These are two different writes and the dashboard card reads the
+            // component one — a project saying "ready" beside a component still
+            // saying "running" is exactly the state the card renders wrong.
+            // Nothing asserted this until 2026-09-02: deleting the component
+            // write left the whole family green.
+            const saved = (mockStateManager.saveProject as jest.Mock).mock.calls.at(-1)?.[0];
+            expect(saved.componentInstances.eds.status).toBe('stopped');
 
             // And: No error shown to user
             expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
