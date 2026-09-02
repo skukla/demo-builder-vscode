@@ -107,6 +107,21 @@ pushing, match CI exactly:
 npm run gate     # all six, in order, stopping at the first failure
 ```
 
+**Step 5 was missing until 2026-09-02, and CI was red for two days because of it.**
+`Test File Size Check` is its own workflow, so a green `gate` said nothing about it — a
+suite grew to 880 lines against a 750 limit and the local run reported clean the whole
+time. If a check runs in CI it belongs in this list; that is the only rule that keeps the
+two in step, and `tests/sop/tooling-registry.test.ts` now fails when the table and the
+script disagree.
+
+**A pre-push hook runs all of this before a push is allowed** (`.githooks/pre-push`,
+switched on with `npm run hooks:git`). It is PRE-PUSH rather than pre-commit on purpose:
+several enforcers enumerate files with `git ls-files`, which lists tracked files only, so
+a brand-new file is invisible to them until it is committed. A pre-commit gate has that
+blind spot; a pre-push gate runs against committed state, which is exactly what CI sees.
+Both of 2026-09-02's breaks would have been caught. `git push --no-verify` skips it, for a
+genuine emergency.
+
 **One command, deliberately.** This used to be the six commands below, listed for
 you to run by hand — and a list of six is a memory test you eventually fail. The
 2026-07-30 dream run found a whole feature shipped after someone hand-ran a scoped
@@ -123,8 +138,9 @@ What `npm run gate` runs, so you can read a failure without opening package.json
 | 2 | `npx tsc --noEmit` | `src/` (tsconfig.json excludes tests) |
 | 3 | `npm run typecheck:tests` | the test tree; CI gates on this too |
 | 4 | `npm run validate:tsc-blindspots` | files tsc silently skips (basename shadowing) |
-| 5 | `npx jest --no-coverage` | full suite |
-| 6 | `dead-code-scan/scan.sh src` | ~5s — cruft the compiler cannot see |
+| 5 | `npm run validate:test-file-sizes` | the 750-line CI limit — its own workflow, and it was missing here |
+| 6 | `npx jest --no-coverage` | full suite |
+| 7 | `dead-code-scan/scan.sh src` | ~5s — cruft the compiler cannot see |
 
 It stops at the first failure, so fix and re-run rather than reading ahead. Run
 jest on its own if you need the output in a file — never pipe it through `tail`.

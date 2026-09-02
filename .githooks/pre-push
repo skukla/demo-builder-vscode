@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+#
+# Run the quality gate BEFORE a push is allowed.
+#
+# WHY PRE-PUSH RATHER THAN PRE-COMMIT. Two CI breaks on 2026-09-02, both from the same
+# shape: the local gate reported on a state that was not the one CI would see.
+#
+#   1. A test file grew past the 750-line limit. `npm run gate` did not run that check —
+#      it lives in its own workflow — so the gate was green and CI was red for two days.
+#      Fixed by adding the check to `gate`, which this hook then runs.
+#
+#   2. A NEW test file was invisible to every enforcer built on `git ls-files`, which
+#      lists tracked files only. The gate passed while the file was untracked and CI
+#      failed the moment it was committed. A pre-COMMIT hook would have the same blind
+#      spot; a pre-PUSH hook runs against committed state, which is exactly what CI sees.
+#
+# So the placement is the point, not a preference.
+#
+# ESCAPE HATCH: `git push --no-verify`. It exists for a genuine emergency — a revert that
+# must land now — and using it routinely turns this back into the situation it was written
+# for. CI still runs either way; the only thing skipping buys is finding out later.
+
+set -uo pipefail
+
+# Nothing to check when the push only deletes refs.
+only_deletes=1
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+    if [ "$local_sha" != "0000000000000000000000000000000000000000" ]; then
+        only_deletes=0
+    fi
+done
+if [ "$only_deletes" -eq 1 ]; then
+    exit 0
+fi
+
+echo "pre-push: running the quality gate (matches CI) — 'git push --no-verify' skips it"
+echo
+
+if npm run gate; then
+    echo
+    echo "pre-push: gate passed."
+    exit 0
+fi
+
+cat >&2 <<'MSG'
+
+pre-push: REFUSED — the gate failed, and CI would fail the same way.
+
+Fix it, or push with --no-verify if this is a genuine emergency.
+MSG
+exit 1

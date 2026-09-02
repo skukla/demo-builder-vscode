@@ -131,6 +131,32 @@ if [[ "$(awk '/^Backlog: $/{b=NR} /^# Please enter/{c=NR} END{print (b>0 && c>0 
 else bad "  ...above git own comments" "it landed below them"; fi
 
 echo
+echo "PRE-PUSH — the gate runs before a push, not after"
+# Not run against the REAL gate here: this harness works in a throwaway repo with no
+# node_modules, and a two-minute suite has no place in a hook test. What is asserted is
+# the hook's own logic — that it skips a delete-only push, and that a failing gate stops
+# the push — with the gate itself stubbed.
+PP="$SB/pre-push"
+sed 's|npm run gate|"$GATE_STUB"|' "$HOOKS/pre-push" > "$PP"
+chmod +x "$PP"
+
+GATE_STUB="$SB/gate-ok"; printf '#!/usr/bin/env bash\nexit 0\n' > "$GATE_STUB"; chmod +x "$GATE_STUB"
+export GATE_STUB
+if printf 'refs/heads/x 0000000000000000000000000000000000000000 refs/heads/x abc\n' | "$PP" >/dev/null 2>&1; then
+  ok "a delete-only push skips the gate"
+else bad "a delete-only push skips the gate" "it ran anyway"; fi
+
+if printf 'refs/heads/x deadbeef refs/heads/x abc\n' | "$PP" >/dev/null 2>&1; then
+  ok "a real push with a passing gate is allowed"
+else bad "a real push with a passing gate is allowed" "it was blocked"; fi
+
+GATE_STUB="$SB/gate-fail"; printf '#!/usr/bin/env bash\nexit 1\n' > "$GATE_STUB"; chmod +x "$GATE_STUB"
+export GATE_STUB
+if printf 'refs/heads/x deadbeef refs/heads/x abc\n' | "$PP" >/dev/null 2>&1; then
+  bad "a failing gate REFUSES the push" "the push was allowed"
+else ok "a failing gate REFUSES the push"; fi
+
+echo
 echo "CONTROL — proves this harness can see a failure"
 # Neuter the hook on purpose and require the suite to notice. Without this, a
 # harness whose commits were failing for some unrelated reason would report a

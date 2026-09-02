@@ -475,7 +475,7 @@
         "validate:test-guidelines": "node scripts/validate-test-guidelines.js",
         "validate:test-file-sizes": "node scripts/check-test-file-sizes.js",
         "validate:tsc-blindspots": "node scripts/check-tsc-blindspots.js",
-        "gate": "npm run lint && npx tsc --noEmit && npm run typecheck:tests && npm run validate:tsc-blindspots && npx jest --no-coverage && bash .claude/skills/dead-code-scan/scan.sh src",
+        "gate": "npm run lint && npx tsc --noEmit && npm run typecheck:tests && npm run validate:tsc-blindspots && npm run validate:test-file-sizes && npx jest --no-coverage && bash .claude/skills/dead-code-scan/scan.sh src",
         "analyze": "ANALYZE=true npm run compile:webview",
         "package": "vsce package",
         "publish": "vsce publish",
