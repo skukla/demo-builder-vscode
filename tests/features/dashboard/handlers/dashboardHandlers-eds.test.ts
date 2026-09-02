@@ -6,6 +6,7 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
+import { fakeExtractResetParams } from '../../../helpers/edsResetParamsFake';
 import { Project } from '@/types/base';
 
 // Explicit test timeout to prevent hanging
@@ -288,43 +289,7 @@ describe('handleResetProject', () => {
 
         // Setup edsResetService mocks
         // Default: extractResetParams returns success with valid params
-        mockExtractResetParams.mockImplementation((project: Project) => {
-            const edsInstance = project?.componentInstances?.['eds-storefront'];
-            const metadata = edsInstance?.metadata || {};
-
-            // Validate required fields (mirrors real implementation)
-            if (!metadata.githubRepo) {
-                return {
-                    success: false,
-                    error: 'Missing EDS metadata: GitHub repository not configured',
-                };
-            }
-            if (!metadata.daLiveOrg || !metadata.daLiveSite) {
-                return {
-                    success: false,
-                    error: 'Missing DA.live configuration: org and site are required',
-                };
-            }
-
-            const [repoOwner, repoName] = (metadata.githubRepo as string).split('/');
-            return {
-                success: true,
-                params: {
-                    repoOwner,
-                    repoName,
-                    daLiveOrg: metadata.daLiveOrg,
-                    daLiveSite: metadata.daLiveSite,
-                    templateOwner: 'skukla',
-                    templateRepo: 'citisignal-eds-boilerplate',
-                    contentSource: {
-                        org: 'demo-system-stores',
-                        site: 'accs-citisignal',
-                        indexPath: 'full-index.json',
-                    },
-                    project,
-                },
-            };
-        });
+        mockExtractResetParams.mockImplementation(fakeExtractResetParams);
 
         // Default: executeEdsReset returns success
         mockExecuteEdsReset.mockResolvedValue({
