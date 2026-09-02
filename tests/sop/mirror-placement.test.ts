@@ -10,11 +10,26 @@
  *
  * The trees were merged 2026-08-28. This check is what stops a third one.
  *
- * The rule has two halves, and both are checked:
+ * The rule has three halves, and all are checked:
  *   1. Every test file sits under a directory that mirrors `src/`.
  *   2. No directory named for a TIER exists. Tiers describe how a test is
  *      written, not where it lives, and one file routinely holds tests of more
  *      than one tier for the same subject.
+ *   3. The mirrored directory is the SUBJECT'S. Halves 1 and 2 only ask whether
+ *      the path resembles one under `src/` — so a suite for
+ *      `src/commands/openInClaude.ts` sitting in `tests/features/lifecycle/
+ *      commands/` passed both, because that source directory exists too. Seven
+ *      files were misplaced that way, invisibly, until this was added
+ *      (2026-09-02); the largest case, 38 shared webview suites, was not even
+ *      misplaced by this measure — it was excused by an allowlist row.
+ *
+ * WHAT HALF 3 CAN AND CANNOT SEE. It reads the suite's own `@/` imports and
+ * takes the one whose basename matches the filename stem (or, for a split
+ * family `subject-facet.test.ts`, the part before the first hyphen) as the
+ * subject. Where no import matches — the subject is imported by the family's
+ * `.testUtils` file, or the suite covers a type — it reports NOTHING rather
+ * than guessing. That is a deliberate hole, and it is why half 1 stays: half 3
+ * catches confidently-wrong placement, half 1 catches everything else.
  *
  * NAMED `mirror-placement` rather than `test-placement`: the split-family
  * detector groups suites by their first hyphen-separated token, so a
@@ -43,7 +58,6 @@ const NON_MIRROR_DIRS: Record<string, string> = {
     security: 'cross-cutting security checks that span subjects',
     sop: 'architecture and craft checks whose subject is the repo itself',
     templates: 'checks over generated template output, not over a source file',
-    'webview-ui': 'legacy shared webview UI suites (documented in tests/README.md)',
     // Subjects that genuinely live OUTSIDE src/ — a mirror is impossible.
     scripts: 'subject is the repo\'s scripts/ directory, not src/',
     hooks: 'subject is .claude/hooks/, not src/',
@@ -88,6 +102,47 @@ function walk(dir: string): string[] {
 
 const TEST_FILES = walk(TESTS_ROOT);
 
+/** `@/x/y` -> `x/y` under src/. The jest moduleNameMapper aliases, one rule. */
+const ALIAS = /^@\//;
+
+/** A suite's own imports, in source order. */
+const IMPORTS = /from\s+'(@\/[^']+)'/g;
+
+/**
+ * The src-relative DIRECTORY the suite's subject lives in, or undefined when no
+ * import names it — see "what half 3 can and cannot see" above.
+ */
+function subjectDirOf(file: string): string | undefined {
+    const base = path.basename(file);
+    const stem = base.slice(0, base.indexOf('.'));
+    // `subject-facet.test.ts` is one file of a split family for `subject`.
+    const family = stem.split('-')[0];
+    const source = fs.readFileSync(path.join(TESTS_ROOT, file), 'utf8');
+    for (const [, spec] of source.matchAll(IMPORTS)) {
+        const name = path.basename(spec);
+        if (name === stem || name === family) {
+            return path.dirname(spec.replace(ALIAS, ''));
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Does this suite sit somewhere other than its subject's mirrored directory?
+ *
+ * Only asked of files that CLAIM to be mirrors. A suite under a listed
+ * non-mirror directory has already declared it mirrors nothing — and the
+ * resolver will happily name a "subject" for one anyway, from whichever import
+ * happens to share its filename. `templates/ai-bundle-coherence.test.ts` is the
+ * live example: it checks generated bundle output and imports a same-named type
+ * from `src/types`, which is not its subject in any useful sense.
+ */
+function mismatch(file: string, subjectDir: string): boolean {
+    if (file.split(path.sep)[0] in NON_MIRROR_DIRS) return false;
+    if (file in PLACEMENT_EXEMPTIONS) return false;
+    return path.dirname(file) !== subjectDir;
+}
+
 describe('ADR-016 placement: tests mirror src/', () => {
     it('POSITIVE CONTROL: the walk finds the suite tree at all', () => {
         // If this ever reads zero, every assertion below passes vacuously.
@@ -124,6 +179,29 @@ describe('ADR-016 placement: tests mirror src/', () => {
             return fs.existsSync(mirrored); // now correctly placed
         });
         expect(stale).toEqual([]);
+    });
+
+    it('POSITIVE CONTROL: the subject resolver finds a subject for most suites', () => {
+        // If this collapses, the half-3 check below passes over an empty list.
+        const resolved = TEST_FILES.filter((f) => subjectDirOf(f) !== undefined);
+        expect(resolved.length).toBeGreaterThan(400);
+    });
+
+    it('POSITIVE CONTROL: a suite moved away from its subject is recognised', () => {
+        // The real openInClaude case, as it stood before 2026-09-02.
+        expect(
+            mismatch('features/lifecycle/commands/openInClaude.misc.test.ts', 'commands')
+        ).toBe(true);
+        expect(mismatch('commands/openInClaude.misc.test.ts', 'commands')).toBe(false);
+    });
+
+    it('every test whose subject can be resolved sits in that subject\'s directory', () => {
+        const offenders = TEST_FILES.map((f) => {
+            const subjectDir = subjectDirOf(f);
+            if (subjectDir === undefined) return undefined;
+            return mismatch(f, subjectDir) ? `${f} -> src/${subjectDir}` : undefined;
+        }).filter(Boolean);
+        expect(offenders).toEqual([]);
     });
 
     it('the non-mirror allowlist carries a reason for every entry, and may only shrink', () => {

@@ -35,8 +35,14 @@ module.exports = {
       cacheDirectory: '<rootDir>/.jest-cache/node',
       testMatch: [
         '**/tests/**/*.test.ts',
-        '!**/tests/webview-ui/**/*.test.ts',
-        '!**/tests/webview-ui/**/*.test.tsx'
+        // The whole `tests/core/ui` subtree is React: components, hooks and the
+        // utilities they call. It runs under the react project below, which owns
+        // jsdom and the fake-timer contract. Until 2026-09-02 the shared half of
+        // it lived in `tests/webview-ui/` and was excluded here by that name; the
+        // suites moved to their subjects' mirror, so the exclusion follows the
+        // subject instead of the old tree.
+        '!**/tests/core/ui/**/*.test.ts',
+        '!**/tests/core/ui/**/*.test.tsx'
       ],
       // `roots` (top-level) does not propagate into `projects`, so Jest would
       // otherwise crawl the whole repo — including agent worktrees under
@@ -97,9 +103,8 @@ module.exports = {
       cache: true,
       cacheDirectory: '<rootDir>/.jest-cache/react',
       testMatch: [
-        '**/tests/webview-ui/**/*.test.ts',
-        '**/tests/webview-ui/**/*.test.tsx',
         '**/tests/features/**/*.test.tsx',
+        '**/tests/core/ui/**/*.test.ts',
         '**/tests/core/ui/**/*.test.tsx',
         '**/src/features/**/*.test.tsx'
       ],

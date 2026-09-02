@@ -5,8 +5,11 @@ Tests mirror `src/`, named after their source file:
 `tests/core/shell/pollingService.test.ts`.
 
 Run `ls tests/` for the current layout rather than trusting a tree here — the tree
-this file used to carry is what went stale, and it described a `webview-ui/`
-directory that no longer exists.
+this file used to carry is what went stale.
+
+The mirror is now literal for the shared webview UI too: the 38 suites that lived in
+`tests/webview-ui/shared/` moved to `tests/core/ui/` on 2026-09-02, beside every
+other test of that source directory.
 
 ## Safe to run with an Extension Dev Host open — but only since 2026-08-10
 
@@ -23,15 +26,21 @@ off the live socket, and from the test's side the failure is completely silent.
 
 | Project | Environment | Matches |
 |---|---|---|
-| `node` | node | `**/tests/**/*.test.ts`, minus anything under `tests/webview-ui/` |
-| `react` | jsdom | `tests/webview-ui/**` (`.ts` and `.tsx`), `tests/features/**/*.test.tsx`, `tests/core/ui/**/*.test.tsx`, `src/features/**/*.test.tsx` |
+| `node` | node | `**/tests/**/*.test.ts`, minus anything under `tests/core/ui/` |
+| `react` | jsdom | `tests/core/ui/**` (`.ts` and `.tsx`), `tests/features/**/*.test.tsx`, `src/features/**/*.test.tsx` |
 
-**A React test does NOT have to live in `tests/webview-ui/`** — that is the legacy
-home and holds a small minority of them. Most sit beside their feature's other tests
-in `tests/features/**`, which the react project matches by `.tsx` extension. If you
-hit `ReferenceError: document is not defined`, the file is being picked up by the
-node project: check the extension is `.tsx` and the path matches a react pattern in
-`jest.config.js`.
+**The whole `tests/core/ui` subtree is React**, `.ts` files included — the hooks and
+the utilities the components call, not only the components. That is why the node
+project excludes the directory rather than an extension.
+
+**A React test does not only live there.** Most sit beside their feature's other
+tests in `tests/features/**`, which the react project matches by `.tsx` extension.
+If you hit `ReferenceError: document is not defined`, the file is being picked up by
+the node project: check the extension is `.tsx` or the path is under `tests/core/ui`.
+
+**Under jsdom, `window` is real — stub onto it, never over it.** `global.window = {...}`
+does nothing there, silently; the WebviewClient suite carried that line and only worked
+while it ran under node. Assign the property you need and spy on the listener.
 
 ```bash
 npm test                                  # everything

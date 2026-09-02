@@ -18,8 +18,8 @@ import * as vscode from 'vscode';
 
 import { hasConversation as hasClaudeConversation } from '@/commands/claudeSessionStore';
 import type { Project } from '@/types/base';
-import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
-import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
+import { createMockExtensionContext } from '../helpers/extensionContextFake';
+import { createMockProject as createMockProjectBase } from '../helpers/projectFake';
 
 // NOTE: each consuming test file MUST declare its own
 //   `jest.mock('@/commands/claudeSessionStore', () => ({ hasConversation: jest.fn(() => false) }))`
@@ -40,10 +40,10 @@ export interface MockLogger {
 }
 
 /** Canonical logger fake (ADR-016); local name kept so consumers are unchanged. */
-export { createMockLogger as makeLogger } from '../../../helpers/loggerFake';
+export { createMockLogger as makeLogger } from '../helpers/loggerFake';
 
 /** Canonical state-manager fake (ADR-016). */
-export { makeStateManager } from '../../../helpers/stateManagerFake';
+export { makeStateManager } from '../helpers/stateManagerFake';
 
 export interface MockGlobalState {
     get: jest.Mock;

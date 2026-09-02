@@ -122,3 +122,5 @@ coverage of split families) hold or improve across two release cuts.
 - 2026-08-30  docs(handbook): separate what you must understand from what the tools will tell you (`b3fd39aba`)
 - 2026-08-30  docs(handbook): capture the frontend and CSS conventions that were missing (`2dcf85a47`)
 - 2026-09-02  Pre-push gate + validate:test-file-sizes added to the gate; the git ls-files blind spot fixed in mutation-config-pairing and RECORDED for the other six (8b3961d14, b7ef3f920)
+- 2026-09-02  docs(backlog): record the six enforcers that cannot see an uncommitted file (`187c7467f`)
+- 2026-09-02  test: split the two suites over the 750-line limit — CI has been red since 2026-08-31 (`e1db680d7`)

@@ -36,7 +36,7 @@ import {
     makeOpenInClaudeContext,
     makeOpenInClaudeProject,
 } from './openInClaude.testkit';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockStateManager } from '../helpers/stateManagerFake';
 import type { StateManager } from '@/core/state/stateManager';
 
 const PROJECTS_ROOT = '/projects';

@@ -29,15 +29,23 @@ describe('WebviewClient - Handshake Reversal', () => {
             setState: jest.fn(),
         };
 
-        // Mock window.acquireVsCodeApi and addEventListener
-        (global as any).window = {
-            acquireVsCodeApi: jest.fn(() => mockVscodeApi),
-            addEventListener: jest.fn((event: string, handler: (event: MessageEvent) => void) => {
-                if (event === 'message') {
-                    messageHandlers.push(handler);
-                }
-            }),
-        };
+        // Stub ONTO the real window, never over it. This suite used to assign
+        // `global.window = {...}`, which worked only because it ran under the node
+        // project where no window exists. jsdom's window is a real global that the
+        // assignment cannot replace, so the stub was silently ignored: the client
+        // acquired no API, registered no listener, and the handshake tests hung on
+        // a promise nothing could resolve. Moved here with its subject 2026-09-02.
+        (window as unknown as { acquireVsCodeApi: unknown }).acquireVsCodeApi = jest.fn(
+            () => mockVscodeApi,
+        );
+        jest.spyOn(window, 'addEventListener').mockImplementation(((
+            event: string,
+            handler: (event: MessageEvent) => void,
+        ) => {
+            if (event === 'message') {
+                messageHandlers.push(handler);
+            }
+        }) as typeof window.addEventListener);
 
         // Load WebviewClient module (singleton created on import)
         const module = require('@/core/ui/utils/WebviewClient');
@@ -45,8 +53,9 @@ describe('WebviewClient - Handshake Reversal', () => {
     });
 
     afterEach(() => {
-        // Clean up global mocks
-        delete (global as any).window;
+        // Clean up: drop the stub property, restore the real addEventListener.
+        delete (window as unknown as { acquireVsCodeApi?: unknown }).acquireVsCodeApi;
+        jest.restoreAllMocks();
         jest.clearAllMocks();
     });
 

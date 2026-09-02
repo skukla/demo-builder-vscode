@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: med
-status: active
+status: built
 parent: PL-11
 ---
 
@@ -116,3 +116,6 @@ and the ratchet rests at that adjudicated floor.
 - 2026-08-31  test(sop): four test files were copies of other test files, and nothing could see it (`3e9eada9c`)
 - 2026-08-31  test(webview): one real missing helper, and two clones that are not debt (`ed2ad0176`)
 - 2026-08-31  test(sop): three more duplicate suites, and the mutation numbers were measuring the wrong test set (`6720005dd`)
+- 2026-09-02  test(sop): the placement rule now checks the SUBJECT, not just the shape (`db7f72790`)
+- 2026-09-02  refactor(tests): the shared webview UI suites move to their subject's mirror (`595272682`)
+- 2026-09-02  Both halves done: 45 suites moved to their subjects' mirrors (38 shared webview + 7 found by the new check), the webview-ui allowlist row deleted, and the enforcer gained a subject check with two positive controls. NOT closed: the subject resolver returns nothing for 316 suites whose subject is imported by a .testUtils, so half 1 still carries those.
