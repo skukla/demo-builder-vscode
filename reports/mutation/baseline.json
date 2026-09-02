@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "daLiveAuthPrompt: what a sign-in stores and for how long (81.27%)",
+    "_note": "daLiveAuthPrompt: the guard reports the real reason, or a generic one when there is none (82.77%)",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -43,20 +43,20 @@
             "highValueSurvivors": 7
         },
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts": {
-            "score": 81.27,
-            "killed": 217,
-            "survived": 48,
+            "score": 82.77,
+            "killed": 221,
+            "survived": 44,
             "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
+                "branch": 11,
                 "other": 7,
-                "branch": 14,
-                "string": 10,
+                "string": 9,
                 "logPresentation": 10,
                 "block": 3,
                 "optionalChain": 4
             },
-            "highValueSurvivors": 17
+            "highValueSurvivors": 14
         },
         "src/features/eds/services/patches/codePatchRegistry.ts": {
             "score": 84.54,

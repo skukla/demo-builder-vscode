@@ -197,3 +197,23 @@ been revisited.
 `tests/features/eds/handlers/daLive/daLiveAuthPrompt-tokenStorage.test.ts` and
 `daLiveAuthPrompt-tokenStrict.test.ts`, so whichever way this goes, the test that has to
 change is the one that says so in its own comment.
+
+## daLiveAuthPrompt.ts:218 — an early return the next check already covers (2 mutants)
+
+```ts
+const clipped = (await vscode.env.clipboard.readText())?.trim();
+if (!clipped) {
+    return undefined;
+}
+const validation = validateDaLiveTokenStrict(clipped);
+if (!validation.valid) { ...; return undefined; }
+```
+
+Deleting the empty-clipboard guard changes nothing observable: an empty string fails the
+strict check on the next line and returns `undefined` by the other route. The only
+difference is one debug log line, and asserting log text is exactly what the ratchet
+refuses to reward.
+
+**Nothing to decide.** The guard is not wrong — it skips a pointless validation call and
+says what it means. It simply cannot be distinguished by a test, and that is worth
+recording so the next person working this module does not spend an hour on it.
