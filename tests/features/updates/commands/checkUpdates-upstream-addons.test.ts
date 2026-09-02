@@ -17,15 +17,11 @@ import {
     ForkSyncService,
     TemplateSyncService,
     TemplateUpdateChecker,
-    UpdateManager,
+    projectWithAddons,
+    setupDefaultMocks,
 } from './checkUpdates.testUtils';
 import * as vscode from 'vscode';
-import { COMPONENT_IDS } from '@/core/constants';
-import type { Logger } from '@/types/logger';
-import type { StateManager } from '@/core/state/stateManager';
-import type { Project } from '@/types/base';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 // Mock VS Code API
@@ -66,99 +62,6 @@ jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
 // Test helpers
 // ---------------------------------------------------------------------------
 
-function makeProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        path: '/projects/test-project',
-        status: 'stopped',
-        componentInstances: {
-            [COMPONENT_IDS.EDS_STOREFRONT]: {
-                id: COMPONENT_IDS.EDS_STOREFRONT,
-                type: 'frontend',
-                version: '1.0.0',
-                metadata: {
-                    githubRepo: 'testuser/my-storefront',
-                    templateOwner: 'adobe',
-                    templateRepo: 'aem-boilerplate-commerce',
-                    edsRepoOwner: 'testuser',
-                    edsRepoName: 'my-storefront',
-                    edsBranch: 'main',
-                },
-            },
-        },
-        installedBlockLibraries: [
-            {
-                name: 'Demo Team Blocks',
-                source: { owner: 'adobe', repo: 'aem-boilerplate-commerce', branch: 'main' },
-                commitSha: 'abc123',
-                blockIds: ['hero', 'cards'],
-                installedAt: '2025-01-01T00:00:00Z',
-            },
-        ],
-        installedInspectorSdk: {
-            commitSha: 'sdk-abc123',
-            installedAt: '2025-01-01T00:00:00Z',
-        },
-        ...overrides,
-    } as unknown as Project;
-}
-
-function setupDefaultMocks(): {
-    mockProgress: { report: jest.Mock };
-    mockContext: any;
-    mockStateManager: jest.Mocked<StateManager>;
-    mockLogger: jest.Mocked<Logger>;
-} {
-    const mockProgress = { report: jest.fn() };
-
-    const mockContext = {
-        subscriptions: [],
-        extensionPath: '/ext',
-        globalState: { get: jest.fn(), update: jest.fn() },
-        secrets: { get: jest.fn(), store: jest.fn() },
-    };
-
-    const mockStateManager = {
-        getCurrentProject: jest.fn().mockResolvedValue(null),
-        saveProject: jest.fn().mockResolvedValue(undefined),
-        getAllProjects: jest.fn().mockResolvedValue([]),
-        loadProjectFromPath: jest.fn().mockResolvedValue(null),
-    } as any;
-
-    const mockLogger = createMockLogger();
-
-    (vscode.window.withProgress as jest.Mock).mockImplementation((_opts, cb) => cb(mockProgress));
-
-    const MockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
-    MockUpdateManager.prototype.checkExtensionUpdate = jest.fn().mockResolvedValue({
-        hasUpdate: false,
-        current: '1.0.0',
-        latest: '1.0.0',
-    });
-    MockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
-
-    const MockTemplateChecker = TemplateUpdateChecker as jest.MockedClass<typeof TemplateUpdateChecker>;
-    MockTemplateChecker.prototype.checkForUpdates = jest.fn().mockResolvedValue(null);
-
-    const MockForkSync = ForkSyncService as jest.MockedClass<typeof ForkSyncService>;
-    MockForkSync.prototype.checkForkStatus = jest.fn().mockResolvedValue(null);
-    MockForkSync.prototype.syncFork = jest.fn().mockResolvedValue({ success: true, message: 'Synced' });
-
-    const MockAddonChecker = AddonUpdateChecker as jest.MockedClass<typeof AddonUpdateChecker>;
-    MockAddonChecker.prototype.checkBlockLibraries = jest.fn().mockResolvedValue([]);
-    MockAddonChecker.prototype.checkInspectorSdk = jest.fn().mockResolvedValue(null);
-
-    const MockTemplateSync = TemplateSyncService as jest.MockedClass<typeof TemplateSyncService>;
-    MockTemplateSync.prototype.syncWithTemplate = jest.fn().mockResolvedValue({
-        success: true,
-        syncedCommit: 'new-commit-sha',
-        strategy: 'merge',
-    });
-    MockTemplateSync.prototype.updateLastSyncedCommit = jest.fn().mockResolvedValue(undefined);
-
-    return { mockProgress, mockContext, mockStateManager, mockLogger };
-}
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -186,7 +89,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
 
     it('should show block library update items in QuickPick', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject();
+        const project = projectWithAddons();
 
         mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
@@ -216,7 +119,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
 
     it('should show inspector SDK update items in QuickPick', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject();
+        const project = projectWithAddons();
 
         mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
@@ -245,7 +148,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
 
     it('should not show add-on items when no libraries or SDK installed', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject({
+        const project = projectWithAddons({
             installedBlockLibraries: undefined,
             installedInspectorSdk: undefined,
         });
@@ -267,7 +170,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
 
     it('should log error and continue when block library update fails', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject();
+        const project = projectWithAddons();
 
         mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
@@ -303,7 +206,7 @@ describe('CheckUpdatesCommand — Add-on Updates', () => {
 
     it('should save updated commitSha after successful block library update', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject();
+        const project = projectWithAddons();
 
         mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
@@ -349,7 +252,7 @@ describe('CheckUpdatesCommand — Dedup Logic', () => {
 
     it('should skip block library when source matches template AND template synced', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject({
+        const project = projectWithAddons({
             installedBlockLibraries: [
                 {
                     name: 'Template Blocks',
@@ -415,7 +318,7 @@ describe('CheckUpdatesCommand — Dedup Logic', () => {
 
     it('should NOT skip block library when source differs from template', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject({
+        const project = projectWithAddons({
             installedBlockLibraries: [
                 {
                     name: 'External Blocks',
@@ -474,7 +377,7 @@ describe('CheckUpdatesCommand — Dedup Logic', () => {
 
     it('should NOT skip block library when template sync was not selected', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject();
+        const project = projectWithAddons();
 
         mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
@@ -517,7 +420,7 @@ describe('CheckUpdatesCommand — Dedup Logic', () => {
 
     it('should NOT skip block library when template sync failed', async () => {
         const { mockContext, mockStateManager, mockLogger } = setupDefaultMocks();
-        const project = makeProject();
+        const project = projectWithAddons();
 
         mockStateManager.getAllProjects.mockResolvedValue([{ name: project.name, path: project.path, lastModified: new Date() }]);
         mockStateManager.loadProjectFromPath.mockResolvedValue(project);
