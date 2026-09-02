@@ -286,3 +286,53 @@ when one was written.
 defensive rather than wrong, and it reads as if the entry might be missing, which sent
 one test after a state the method forbids. The version SYNC on that line is real and is
 now tested; only the guard around it is unreachable.
+
+---
+
+# Measured, and deliberately NOT tested: updateManager's HTTP branches
+
+`updateManager.ts` sits at 51.40%, third-lowest of the sixteen pinned modules, and the
+single largest cluster of its survivors — 17 mutants across four lines — is the update
+check's handling of a bad answer from GitHub:
+
+```ts
+if (response.status === 404) return null;
+if (response.status === 403) throw new Error('GitHub rate limit exceeded. Try again later.');
+if (response.status >= 500)  throw new Error(`GitHub server error: HTTP ${response.status}`);
+throw new Error(`GitHub API error: HTTP ${response.status}`);
+```
+
+Tests for all four already exist. They survive anyway, and the reason is structural: every
+one of those throws is caught a few lines later by a deliberate catch-all —
+
+```ts
+} catch (error) {
+    // Graceful degradation: returning null means "no update available" which
+    // is better UX than showing errors for transient network issues or GitHub outages.
+    this.logger.debug(`[Updates] Release check failed for ${repo}: ${...message}`);
+    return null;
+}
+```
+
+— so all four produce the identical outcome, `hasUpdate: false`. The only thing that
+differs is the wording of one debug line. Killing those mutants means asserting log
+strings, which is the exact behaviour the ratchet exists to refuse to reward, so the
+tests were NOT written.
+
+**This is a case where a low score is the honest report of a design choice**, not a gap.
+Any module that funnels every failure into one swallowed log will score like this.
+
+## The product question underneath it
+
+Worth a moment even though it is not a test problem. Graceful degradation here means a
+rate-limited user sees "no updates available" — indefinitely, and identically to genuinely
+having no update. The only evidence anywhere is a debug-level log line they would have to
+know to go looking for.
+
+That is defensible for a transient blip and less so for a persistent one: GitHub rate
+limits unauthenticated requests per hour, so a user without a stored token can sit in that
+state for a long time believing they are current.
+
+**Not filed as a defect**, because the comment shows the trade-off was made on purpose.
+But if the extension should ever tell someone "I could not check", this is where that
+decision lives, and the existing tests would not notice either way.

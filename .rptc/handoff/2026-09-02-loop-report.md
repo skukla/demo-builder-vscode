@@ -231,6 +231,31 @@ write a configuration that would report a confident zero.
 
 ---
 
+### One file I measured and chose not to test
+
+The update manager sits at 51%, and its biggest single cluster of misses — seventeen of
+them — is how the update check reacts when GitHub answers badly: not found, rate limited,
+server error, anything else.
+
+Tests for all four already exist. They miss anyway, and the reason is by design: a few
+lines further down, every one of those failures is caught by a deliberate catch-all that
+logs a line and reports "no update available", because showing errors for a transient
+GitHub blip is worse for the user than staying quiet. So all four produce an identical
+outcome and differ only in the wording of a debug message. Testing them would mean
+asserting log text, which is precisely what the measurement is set up to refuse to reward.
+
+So I left them, and wrote down why. A file that funnels every failure into one swallowed
+log will always score like this, and that is the honest report of a design choice rather
+than a gap to close.
+
+**There is a product question underneath it, which I did not act on.** Rate-limited means
+the user sees "no updates available" indefinitely — identical to genuinely being up to
+date, with the only trace in a debug log they would have to know to look for. GitHub rate
+limits unauthenticated requests by the hour, so someone without a stored token can sit
+there a long time believing they are current. The comment shows the trade-off was made on
+purpose, so this is not a bug report; it is where that decision lives if you ever want to
+revisit it.
+
 ## Shipped
 
 Twenty commits on `loop/2026-09-01-top-files`, each one gated on the full suite,
