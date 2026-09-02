@@ -275,7 +275,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
     describe('field update propagation', () => {
         it('should call useComponentConfig.updateField when a field value changes', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -286,7 +286,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
         });
 
         it('should propagate componentConfigs changes via onComponentConfigsChange', () => {
-            mockUseComponentConfig.serviceGroups = [catalogServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [catalogServiceGroup];
             const onConfigsChange = jest.fn();
 
             renderWithProvider(
@@ -312,7 +312,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
     describe('validation propagation', () => {
         it('reports every section valid when the error map is empty', () => {
             const onValidationChange = jest.fn();
-            mockUseComponentConfig.serviceGroups = [catalogServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [catalogServiceGroup];
             mockUseComponentConfig.validationErrors = {};
 
             renderWithProvider(
@@ -338,7 +338,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
             // Connection incomplete, because Catalog is locked until Connection
             // completes and its fields render nowhere else.
             const onValidationChange = jest.fn();
-            mockUseComponentConfig.serviceGroups = [catalogServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [catalogServiceGroup];
             mockUseComponentConfig.validationErrors = {
                 ADOBE_CATALOG_API_KEY: 'Catalog API Key is required',
             };
@@ -356,7 +356,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
         });
 
         it('should show validation error on touched field', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             mockUseComponentConfig.validationErrors = {
                 [PAAS_URL]: 'Commerce URL is required',
             };
@@ -425,7 +425,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
 
     describe('auto-detect store structure', () => {
         it('should trigger store discovery when PaaS connection fields are all filled', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -446,7 +446,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
         });
 
         it('should trigger store discovery for ACCS when endpoint contains /graphql', () => {
-            mockUseComponentConfig.serviceGroups = [accsServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [accsServiceGroup];
             configureAccsLookup();
 
             renderWithProvider(
@@ -464,7 +464,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
         });
 
         it('should not trigger store discovery when connection fields are incomplete', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             mockUseComponentConfig.getFieldValue.mockReturnValue('');
 
             renderWithProvider(
@@ -480,7 +480,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
 
         it('should not re-trigger discovery when hasStoreData is already true', () => {
             mockUseStoreDiscovery.hasStoreData = true;
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -508,7 +508,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
     describe('URL normalization', () => {
         it('should call normalizeUrlField on blur for URL fields', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -557,7 +557,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
         it('should not re-trigger auto-detect when storeDiscoveryData is provided (hasStoreData starts true)', () => {
             const storeData = { websites: [], storeGroups: [], storeViews: [] };
             mockUseStoreDiscovery.hasStoreData = true;
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -586,7 +586,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
     describe('refresh button', () => {
         it('should show an enabled refresh button when hasStoreData is true and autoDetectKey is set', () => {
             mockUseStoreDiscovery.hasStoreData = true;
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -610,7 +610,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
             // The spinner stands in for the whole row during detection — the
             // Re-detect button only appears once the dropdowns are populated.
             mockUseStoreDiscovery.hasStoreData = false;
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -634,7 +634,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
         it('should call fetchStores when refresh button is clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockUseStoreDiscovery.hasStoreData = true;
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -665,7 +665,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
 
     describe('layout constraints', () => {
         it('should not render a navigation panel', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
             const { container } = renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -673,7 +673,7 @@ describe('ConnectStoreStepContent - Advanced Behaviors', () => {
         });
 
         it('should not use TwoColumnLayout', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
             const { container } = renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 

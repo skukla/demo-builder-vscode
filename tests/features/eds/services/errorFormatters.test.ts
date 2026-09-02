@@ -16,6 +16,26 @@ import {
     formatHelixError,
 } from '@/features/eds/services/errorFormatters';
 
+/**
+ * An `Error` carrying the extra fields the formatters actually read.
+ *
+ * Production names this shape itself, three times, so the tests can build it rather
+ * than attaching properties through `(error as any).code = …` — which was 13 casts
+ * here and told the compiler nothing about what the formatters go looking for.
+ *
+ * BOTH `status` AND `statusCode`, because production reads different names on
+ * different paths: `errorFormatters.ts:278` and `:469` declare `status`, while
+ * `:373` declares `statusCode`. That split is real and this type has to span it —
+ * noted here rather than silently picking one, because a fixture setting `status`
+ * for a formatter that reads `statusCode` would report "Status: N/A" and still
+ * look right.
+ */
+type CodedError = Error & { code?: string; status?: number; statusCode?: number };
+
+function codedError(message: string, extra: Partial<CodedError> = {}): CodedError {
+    return Object.assign(new Error(message), extra);
+}
+
 describe('EDS Error Formatters', () => {
     // ==========================================================
     // GitHub Error Formatting (7 tests)
@@ -23,8 +43,7 @@ describe('EDS Error Formatters', () => {
     describe('formatGitHubError', () => {
         it('should format OAuth cancelled error by code', () => {
             // Given: Error with OAUTH_CANCELLED code
-            const error = new Error('User cancelled the flow');
-            (error as any).code = 'OAUTH_CANCELLED';
+            const error = codedError('User cancelled the flow', { code: 'OAUTH_CANCELLED' });
 
             // When: Formatting the error
             const result = formatGitHubError(error);
@@ -49,9 +68,7 @@ describe('EDS Error Formatters', () => {
 
         it('should format auth expired error by code', () => {
             // Given: Error with AUTH_EXPIRED code
-            const error = new Error('Bad credentials');
-            (error as any).code = 'AUTH_EXPIRED';
-            (error as any).status = 401;
+            const error = codedError('Bad credentials', { code: 'AUTH_EXPIRED', status: 401 });
 
             // When: Formatting the error
             const result = formatGitHubError(error);
@@ -118,9 +135,7 @@ describe('EDS Error Formatters', () => {
     describe('formatDaLiveError', () => {
         it('should format access denied error by code', () => {
             // Given: Error with ACCESS_DENIED code
-            const error = new Error('Access forbidden');
-            (error as any).code = 'ACCESS_DENIED';
-            (error as any).statusCode = 403;
+            const error = codedError('Access forbidden', { code: 'ACCESS_DENIED', statusCode: 403 });
 
             // When: Formatting the error
             const result = formatDaLiveError(error);
@@ -145,8 +160,7 @@ describe('EDS Error Formatters', () => {
 
         it('should format network error by code', () => {
             // Given: Error with NETWORK_ERROR code
-            const error = new Error('The operation was aborted');
-            (error as any).code = 'NETWORK_ERROR';
+            const error = codedError('The operation was aborted', { code: 'NETWORK_ERROR' });
 
             // When: Formatting the error
             const result = formatDaLiveError(error);
@@ -195,9 +209,7 @@ describe('EDS Error Formatters', () => {
 
         it('should handle error with code and statusCode in technical details', () => {
             // Given: Error with explicit code and statusCode
-            const error = new Error('Server error');
-            (error as any).code = 'ACCESS_DENIED';
-            (error as any).statusCode = 403;
+            const error = codedError('Server error', { code: 'ACCESS_DENIED', statusCode: 403 });
 
             // When: Formatting the error
             const result = formatDaLiveError(error);
@@ -214,9 +226,7 @@ describe('EDS Error Formatters', () => {
     describe('formatHelixError', () => {
         it('should format service unavailable error by code', () => {
             // Given: Error with SERVICE_UNAVAILABLE code
-            const error = new Error('Service temporarily unavailable');
-            (error as any).code = 'SERVICE_UNAVAILABLE';
-            (error as any).status = 503;
+            const error = codedError('Service temporarily unavailable', { code: 'SERVICE_UNAVAILABLE', status: 503 });
 
             // When: Formatting the error
             const result = formatHelixError(error);
@@ -241,8 +251,7 @@ describe('EDS Error Formatters', () => {
 
         it('should format sync timeout error by code', () => {
             // Given: Error with SYNC_TIMEOUT code
-            const error = new Error('Code sync timeout');
-            (error as any).code = 'SYNC_TIMEOUT';
+            const error = codedError('Code sync timeout', { code: 'SYNC_TIMEOUT' });
 
             // When: Formatting the error
             const result = formatHelixError(error);
@@ -290,9 +299,7 @@ describe('EDS Error Formatters', () => {
 
         it('should handle error with code and status in technical details', () => {
             // Given: Error with explicit code and status
-            const error = new Error('Bad gateway');
-            (error as any).code = 'SERVICE_UNAVAILABLE';
-            (error as any).status = 502;
+            const error = codedError('Bad gateway', { code: 'SERVICE_UNAVAILABLE', status: 502 });
 
             // When: Formatting the error
             const result = formatHelixError(error);
