@@ -233,3 +233,28 @@ export function setupSuccessfulInstall(
     mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
     mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
 }
+
+/**
+ * The commit path, primed for a run that succeeds.
+ *
+ * Six lines that appeared fifteen times across the discovery and dedup suites,
+ * always in this order and always with these values. They are not what those
+ * suites are testing — both drive `listRepoFiles` themselves and assert on what
+ * reached `createTree` — so the repetition was scaffolding around the one line
+ * that varied.
+ *
+ * `getBranchInfo` is set to a fixed answer here. A test that needs it to vary
+ * per repository calls this first and overrides afterwards, which is what the
+ * two suites already did by hand.
+ */
+export function primeCommitPath(mockGithubFileOps: jest.Mocked<GitHubFileOperations>): void {
+    mockGithubFileOps.getBlobContent.mockResolvedValue('content');
+    mockGithubFileOps.getFileContent.mockResolvedValue(null);
+    mockGithubFileOps.getBranchInfo.mockResolvedValue({
+        treeSha: 'tree-sha',
+        commitSha: 'commit-sha',
+    });
+    mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
+    mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
+    mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+}

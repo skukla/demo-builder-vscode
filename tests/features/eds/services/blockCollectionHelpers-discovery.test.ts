@@ -13,9 +13,8 @@ import type { AddonSource } from '@/types/demoPackages';
 import {
     createDestComponentDef,
     createBlockFileEntries,
-    delegateCommitTreeToBranch,
+    setupBlockCollectionMocks,    primeCommitPath,
 } from './blockCollectionHelpers.testUtils';
-import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('installBlockCollections (single library)', () => {
     const TEST_SOURCE: AddonSource = {
@@ -29,22 +28,7 @@ describe('installBlockCollections (single library)', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
-
-        mockGithubFileOps = {
-            listRepoFiles: jest.fn(),
-            getBlobContent: jest.fn(),
-            getFileContent: jest.fn(),
-            getBranchInfo: jest.fn(),
-            createTree: jest.fn(),
-            createCommit: jest.fn(),
-            updateBranchRef: jest.fn(),
-            commitTreeToBranch: jest.fn(),
-        } as unknown as jest.Mocked<GitHubFileOperations>;
-        delegateCommitTreeToBranch(
-            mockGithubFileOps as unknown as Parameters<typeof delegateCommitTreeToBranch>[0]
-        );
+        ({ mockLogger, mockGithubFileOps } = setupBlockCollectionMocks());
     });
 
     /**
@@ -149,15 +133,7 @@ describe('installBlockCollections (single library)', () => {
                         sha: 'sha-4',
                     },
                 ]);
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({
-                treeSha: 'tree-sha',
-                commitSha: 'commit-sha',
-            });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+            primeCommitPath(mockGithubFileOps);
 
             // When
             const result = await installBlockCollections(
@@ -184,15 +160,7 @@ describe('installBlockCollections (single library)', () => {
                     { path: 'blocks/README.md', type: 'blob' as const, sha: 'sha-readme' },
                     { path: 'blocks/hero-cta/hero-cta.js', type: 'blob' as const, sha: 'sha-1' },
                 ]);
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({
-                treeSha: 'tree-sha',
-                commitSha: 'commit-sha',
-            });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+            primeCommitPath(mockGithubFileOps);
 
             // When
             const result = await installBlockCollections(
@@ -452,15 +420,7 @@ describe('installBlockCollections (single library)', () => {
                         sha: 'sha-4',
                     },
                 ]);
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({
-                treeSha: 'tree-sha',
-                commitSha: 'commit-sha',
-            });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+            primeCommitPath(mockGithubFileOps);
 
             // When
             const result = await installBlockCollections(
@@ -505,15 +465,7 @@ describe('installBlockCollections (single library)', () => {
                     { path: 'styles/global.css', type: 'blob' as const, sha: 'sha-3' },
                     { path: 'component-definition.json', type: 'blob' as const, sha: 'sha-4' },
                 ]);
-            mockGithubFileOps.getBlobContent.mockResolvedValue('content');
-            mockGithubFileOps.getFileContent.mockResolvedValue(null);
-            mockGithubFileOps.getBranchInfo.mockResolvedValue({
-                treeSha: 'tree-sha',
-                commitSha: 'commit-sha',
-            });
-            mockGithubFileOps.createTree.mockResolvedValue('new-tree-sha');
-            mockGithubFileOps.createCommit.mockResolvedValue('new-commit-sha');
-            mockGithubFileOps.updateBranchRef.mockResolvedValue(undefined);
+            primeCommitPath(mockGithubFileOps);
 
             // When
             const result = await installBlockCollections(
