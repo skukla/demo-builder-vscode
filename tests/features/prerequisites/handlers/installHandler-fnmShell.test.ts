@@ -23,7 +23,7 @@ import {
     mockNodeResult,
     createInstallHandlerContext,
     setupMockCommandExecutor,
-    setupSharedUtilityMocks,
+    setupSharedUtilityMocks,    arrangePerNodeAdobeCliInstall,
 } from './installHandler.testUtils';
 
 describe('Install Handler - FNM Shell Options', () => {
@@ -37,14 +37,7 @@ describe('Install Handler - FNM Shell Options', () => {
     });
 
     it('should execute fnm list with shell option', async () => {
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
-            steps: [
-                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
-            ],
-        });
+        arrangePerNodeAdobeCliInstall(mockContext);
 
         // Mock checkPerNodeVersionStatus to return all installed (no installation needed)
         (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValueOnce({
@@ -64,14 +57,7 @@ describe('Install Handler - FNM Shell Options', () => {
     });
 
     it('should successfully detect installed Node versions with shell context', async () => {
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
-            steps: [
-                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
-            ],
-        });
+        arrangePerNodeAdobeCliInstall(mockContext);
 
         // Mock checkPerNodeVersionStatus to return all installed
         (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValueOnce({
@@ -90,14 +76,7 @@ describe('Install Handler - FNM Shell Options', () => {
     });
 
     it('should handle fnm list failure gracefully', async () => {
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
-            steps: [
-                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
-            ],
-        });
+        arrangePerNodeAdobeCliInstall(mockContext);
 
         // Mock checkPerNodeVersionStatus to throw ENOENT error (fnm list failure)
         const enoentError: NodeJS.ErrnoException = new Error('spawn fnm ENOENT');
@@ -111,14 +90,7 @@ describe('Install Handler - FNM Shell Options', () => {
     });
 
     it('should detect partial installation correctly', async () => {
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
-            steps: [
-                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
-            ],
-        });
+        arrangePerNodeAdobeCliInstall(mockContext);
 
         // Mock checkPerNodeVersionStatus to return Node 18 installed, Node 20 not installed
         (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValueOnce({
@@ -140,14 +112,7 @@ describe('Install Handler - FNM Shell Options', () => {
 
     it('should install Adobe CLI for multiple missing versions in sorted order', async () => {
         // Given: Adobe CLI is NOT installed for Node 18 and 20 (in fnm)
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
-            steps: [
-                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
-            ],
-        });
+        arrangePerNodeAdobeCliInstall(mockContext);
 
         // Missing for versions 20, 18 (unsorted order) - matches fnm list which has 18 and 20
         (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValueOnce({
@@ -181,14 +146,7 @@ describe('Install Handler - FNM Shell Options', () => {
 
     it('should skip installation when all required versions have CLI installed', async () => {
         // Given: Adobe CLI is already installed for all required Node versions
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
-            steps: [
-                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
-            ],
-        });
+        arrangePerNodeAdobeCliInstall(mockContext);
 
         // All versions have CLI installed (none missing)
         (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValueOnce({

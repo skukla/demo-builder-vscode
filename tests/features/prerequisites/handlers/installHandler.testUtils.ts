@@ -316,3 +316,29 @@ export const mockAioCliWithPlugin: PrerequisiteDefinition = {
         },
     ],
 } as PrerequisiteDefinition;
+
+/**
+ * Arrange the per-Node Adobe I/O CLI install: the prerequisite state and the
+ * one install step whose name carries a `{version}` placeholder.
+ *
+ * Twelve tests across four suites in this family opened with these nine lines,
+ * byte-identical (counted 2026-09-02). None of them is testing the arrangement
+ * — they vary what `checkPerNodeVersionStatus` answers next, and assert on how
+ * many steps ran.
+ *
+ * @param context - the handler context to arrange, mutated in place
+ */
+export function arrangePerNodeAdobeCliInstall(context: jest.Mocked<HandlerContext>): void {
+    const states = new Map();
+    states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
+    context.sharedState.currentPrerequisiteStates = states;
+    (context.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
+        steps: [
+            {
+                name: 'Install Adobe I/O CLI (Node {version})',
+                message: 'Installing Adobe I/O CLI for Node {version}',
+                command: 'npm install -g @adobe/aio-cli',
+            },
+        ],
+    });
+}

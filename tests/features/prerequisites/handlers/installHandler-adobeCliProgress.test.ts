@@ -26,13 +26,12 @@ jest.mock('vscode', () => ({
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import * as shared from '@/features/prerequisites/handlers/shared';
 import {
-    mockAdobeCliPrereq,
     mockAdobeCliPrereqNoVersion,
     mockNodePrereq,
     mockNodeResult,
     createInstallHandlerContext,
     setupMockCommandExecutor,
-    setupSharedUtilityMocks,
+    setupSharedUtilityMocks,    arrangePerNodeAdobeCliInstall,
 } from './installHandler.testUtils';
 
 describe('Install Handler - Adobe I/O CLI Unified Progress Messages', () => {
@@ -65,14 +64,7 @@ describe('Install Handler - Adobe I/O CLI Unified Progress Messages', () => {
 
     it('should use unified format with version placeholder for single Node version', async () => {
         // Given: Adobe I/O CLI prerequisite with perNodeVersion: true
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
-            steps: [
-                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
-            ],
-        });
+        arrangePerNodeAdobeCliInstall(mockContext);
 
         // Mock checkPerNodeVersionStatus to return Node 20 not installed
         (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValueOnce({
@@ -101,14 +93,7 @@ describe('Install Handler - Adobe I/O CLI Unified Progress Messages', () => {
 
     it('should use unified format for multi-version Adobe I/O CLI installation', async () => {
         // Given: Node versions 18 and 20 require Adobe I/O CLI installation
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
-            steps: [
-                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
-            ],
-        });
+        arrangePerNodeAdobeCliInstall(mockContext);
 
         // Mock checkPerNodeVersionStatus to return both Node 18 and 20 not installed
         (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValueOnce({

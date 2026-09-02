@@ -31,7 +31,7 @@ import {
     setupSharedUtilityMocks,
     cacheInvalidateMock,
     mockNpmPrereq,
-    lastFinalStatus,
+    lastFinalStatus,    arrangePerNodeAdobeCliInstall,
 } from './installHandler.testUtils';
 
 describe('Install Handler - Happy Path', () => {
@@ -142,14 +142,7 @@ describe('Install Handler - Happy Path', () => {
     });
 
     it('should install per-node-version prerequisite (Adobe CLI)', async () => {
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
-            steps: [
-                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
-            ],
-        });
+        arrangePerNodeAdobeCliInstall(mockContext);
         // Note: Per-node version checking happens inside executeStep/checkPrerequisite which are mocked
 
         const result = await handleInstallPrerequisite(mockContext, { prereqId: 0, version: '20' });
@@ -197,14 +190,7 @@ describe('Install Handler - Happy Path', () => {
     });
 
     it('should return early if already installed for all Node versions', async () => {
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
-            steps: [
-                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
-            ],
-        });
+        arrangePerNodeAdobeCliInstall(mockContext);
         // Note: Per-node version checking happens inside checkPerNodeVersionStatus which uses CommandExecutor
 
         const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });

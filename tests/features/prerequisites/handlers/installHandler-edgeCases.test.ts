@@ -26,7 +26,7 @@ import {
     mockNodeResult,
     createInstallHandlerContext,
     setupMockCommandExecutor,
-    setupSharedUtilityMocks,
+    setupSharedUtilityMocks,    arrangePerNodeAdobeCliInstall,
 } from './installHandler.testUtils';
 
 describe('Install Handler - Edge Cases', () => {
@@ -80,14 +80,7 @@ describe('Install Handler - Edge Cases', () => {
     });
 
     it('should handle per-node prerequisite partially installed', async () => {
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
-            steps: [
-                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
-            ],
-        });
+        arrangePerNodeAdobeCliInstall(mockContext);
 
         // Mock checkPerNodeVersionStatus to return Node 18 installed, Node 20 not installed
         (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValueOnce({
