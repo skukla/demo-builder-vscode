@@ -38,6 +38,42 @@ Each measured, not hypothesized — most more than once:
 4. **Dead-or-broken shared helpers beside N clones of their job** (the
    PrerequisitesStep testUtils lesson).
 
+## Open: six enforcers cannot see an uncommitted file
+
+**Recorded 2026-09-02, not worked.** Fifteen enforcer call sites enumerate files with
+`git ls-files`, which lists TRACKED files only. `mutation-config-pairing` was fixed the
+day this was found, because it broke CI: a new suite was invisible to the local gate while
+it was untracked, the gate went green, and CI failed the moment the file was committed —
+the gate had been reporting on the previous commit.
+
+Six call sites still have it: `doc-module-refs`, `test-family-setup`,
+`duplicate-test-files`, `inline-styles`, `stylesheet-bundles`, `tool.testUtils`.
+
+**This is NOT a sweep of one change applied six times, which is why it was not done then.**
+
+The pre-push hook added the same day already closes the hole that matters: at push time
+everything being pushed is committed, so tracked-only is the CORRECT query there, and all
+fifteen sites are right at that moment. What the change buys is earlier warning during a
+mid-work `npm run gate`.
+
+And it costs something. An enforcer that can see untracked-but-not-ignored files can
+refuse a push over a file that is not being pushed — a half-written scratch suite in
+`tests/` would do it. That is defensible for the pairing check, where an untracked test
+for a mutated module is a real thing you would hit at commit anyway; it is less obviously
+right for `duplicate-test-files`, whose own comment shows someone already weighed this and
+chose tracked-only deliberately.
+
+So each of the six is a small judgement — is early warning worth a possible false block —
+and the answer may differ per enforcer. The correct incantation, where the answer is yes,
+is `git ls-files --cached --others --exclude-standard`, which `architectureScan.ts`
+already uses.
+
+**A separate, smaller gap, recorded so it is not rediscovered as news:** the pre-push gate
+is not perfectly equal to CI either. Enforcers read file CONTENT from disk, so a dirty
+working tree means the gate checks uncommitted content while CI checks committed. Closing
+that would mean running the gate against a temporary checkout — real cost for a rare case,
+and not obviously worth it.
+
 ## Done when
 
 A new suite's defects surface at WRITE time, not at review or in production:
@@ -85,3 +121,4 @@ coverage of split families) hold or improve across two release cuts.
 - 2026-08-30  docs(research): close both gaps — the fitness-function taxonomy, and how big a real one is (`3af4904d3`)
 - 2026-08-30  docs(handbook): separate what you must understand from what the tools will tell you (`b3fd39aba`)
 - 2026-08-30  docs(handbook): capture the frontend and CSS conventions that were missing (`2dcf85a47`)
+- 2026-09-02  Pre-push gate + validate:test-file-sizes added to the gate; the git ls-files blind spot fixed in mutation-config-pairing and RECORDED for the other six (8b3961d14, b7ef3f920)
