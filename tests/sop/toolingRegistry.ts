@@ -125,6 +125,14 @@ export interface Instrument {
  */
 const PERIODIC: readonly Instrument[] = [
     {
+        id: 'clones:check',
+        kind: 'npm-script',
+        cadence: 'periodic',
+        resultKind: 'gate',
+        what: 'the duplication burn-down: every duplicate block in tests/ is fixed or carries a written reason, and a reason for code that no longer duplicates has to leave',
+        runs: 'npm run clones:check',
+    },
+    {
         id: 'health',
         kind: 'npm-script',
         cadence: 'periodic',

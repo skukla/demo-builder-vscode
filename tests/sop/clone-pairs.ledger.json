@@ -1,0 +1,5 @@
+{
+  "_what": "The duplication burn-down, keyed to the scanner's own output. Every pair of files jscpd finds duplicating 20+ lines is an item; it leaves this list by being FIXED (the duplication goes, and the row must go with it) or stays with a written reason. The count of pairs in neither state is the burn-down number. See scripts/cloneLedger.mjs for why this replaced a proxy worklist.",
+  "_scan": "npx jscpd tests --min-lines 20 --min-tokens 140",
+  "adjudicated": {}
+}
