@@ -1,6 +1,9 @@
 /**
- * Group 6's site tools — the storefront's Configuration Service admin list, the
- * repair for a refused registration, and the DA.live handoff.
+ * Group 6's site tools — what each one DOES.
+ *
+ * The shared harness, mocks and fixtures live in `siteTools.testUtils.ts`; what these
+ * tools declare about themselves, and how big their answers are, live in
+ * `siteTools-contract.test.ts`. Split 2026-09-02 at the 750-line CI limit.
  *
  * What is pinned here, and why each would otherwise fail silently:
  *
@@ -8,147 +11,36 @@
  *   checking the service was never called, not just that an error came back — a
  *   gate that refuses after the write is not a gate.
  * - `repair_site_configuration` does NOT republish, and says `republish` is what
- *   remains. Registration writes a routing rule; an agent that stopped at
- *   `repaired` would report a storefront fixed that still serves the old config.
+ *   remains. An agent that stopped at `repaired` would report a storefront fixed
+ *   that still serves the old config.
  * - `set_site_admin` routes on `admin`, and the two directions are different
  *   services. Crossed, a grant would revoke.
- * - `connect_dalive` never dispatches. It is a handoff by construction, because
- *   the credential arrives by bookmarklet and paste.
+ * - `connect_dalive` never dispatches. It is a handoff by construction.
  */
 
-const mockListSiteAccess = jest.fn();
-const mockAddSiteAdmin = jest.fn();
-const mockRemoveSiteAdmin = jest.fn();
-const mockRepairSiteConfigForProject = jest.fn();
-
-jest.mock('@/features/eds/services/configService/siteAccessManagerHeadless', () => ({
-    listSiteAccess: (...a: unknown[]) => mockListSiteAccess(...a),
-    addSiteAdmin: (...a: unknown[]) => mockAddSiteAdmin(...a),
-    removeSiteAdmin: (...a: unknown[]) => mockRemoveSiteAdmin(...a),
-}));
-
-jest.mock('@/features/eds/services/configService/repairSiteConfigForProject', () => ({
-    repairSiteConfigForProject: (...a: unknown[]) => mockRepairSiteConfigForProject(...a),
-}));
-
-const mockFindStorefrontNameMismatch = jest.fn();
-const mockMigrateStorefrontNameForProject = jest.fn();
-
-jest.mock('@/features/eds/services/storefront/storefrontNameMigrationForProject', () => ({
-    findStorefrontNameMismatch: (...a: unknown[]) => mockFindStorefrontNameMismatch(...a),
-    migrateStorefrontNameForProject: (...a: unknown[]) =>
-        mockMigrateStorefrontNameForProject(...a),
-}));
-
-import { expectWithinCeiling } from './responseCeilings';
-import { registerSiteTools } from '@/features/ai/server/siteTools';
-import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
-import type { HandlerContext } from '@/types/handlers';
-import { createMockLogger } from '../../../helpers/loggerFake';
-
-type Tool = (args: unknown) => Promise<{ content: Array<{ text: string }> }>;
-
-// `selectedStack` is load-bearing, not decoration: site configuration is an EDS
-// concept (a Configuration Service entry keyed by the storefront's GitHub
-// owner/repo), and these tools now refuse a project that is not one. The fixture
-// previously carried only name+path, which describes a project with NO stack —
-// a shape these tools were never meant to answer for.
-const project = { name: 'demo', path: '/projects/demo', selectedStack: 'eds-accs' };
-/** A project these tools do not apply to. */
-const headlessProject = { name: 'headless', path: '/projects/headless', selectedStack: 'headless-accs' };
-const extensionContext = { secrets: {} };
-const logger = createMockLogger();
-
-/** Projects the scan walks. Overwritten per test. */
-let allProjects: Array<{ name: string; path: string }> = [];
-/** What `loadProjectFromPath` resolves to, keyed by path. */
-let projectsOnDisk: Record<string, unknown> = {};
-const loadProjectFromPath = jest.fn(
-    async (
-        path: string,
-        // The real signature, so a test can assert what it was HANDED. Narrower than
-        // the real thing, the tuple has no second element and the compiler says so —
-        // which is how the terminal provider below stopped being described as a
-        // "component list" it never was.
-        _terminalProvider?: () => readonly unknown[],
-        _options?: { persistAfterLoad?: boolean }
-    ) => projectsOnDisk[path]
-);
-const saveProject = jest.fn().mockResolvedValue(undefined);
-
-/**
- * Built with the current project passed explicitly rather than defaulted — a
- * default parameter treats an explicit `undefined` as "not supplied", so
- * `harnessWithNoProject()` would have quietly kept the project and the no-project
- * tests would have measured the happy path.
- */
-/**
- * The parts of a tool's registration that describe it to an AGENT rather than run it.
- *
- * The harness used to drop the definition on the floor (`_def: never`), so the
- * annotations were unobservable and nothing could assert them — twelve mutants sat on
- * those booleans, each one flipping what Claude Code is told about whether a tool is
- * safe to call.
- */
-function buildHarness(currentProject: unknown) {
-    const tools = new Map<string, Tool>();
-    const defs = new Map<string, McpToolSchema>();
-    const server = {
-        registerTool(name: string, def: McpToolSchema, handler: Tool) {
-            tools.set(name, handler);
-            defs.set(name, def);
-        },
-    };
-    registerSiteTools(
-        server,
-        () =>
-            ({
-                context: extensionContext,
-                logger,
-                stateManager: {
-                    getCurrentProject: async () => currentProject,
-                    getAllProjects: async () => allProjects,
-                    loadProjectFromPath,
-                    saveProject,
-                },
-            }) as unknown as HandlerContext,
-    );
-    return {
-        names: () => [...tools.keys()],
-        /** What `tools/list` hands the agent for this tool. */
-        definitionOf: (name: string): McpToolSchema => defs.get(name)!,
-        async callRaw(name: string, args: Record<string, unknown> = {}): Promise<string> {
-            return (await tools.get(name)!(args)).content[0].text;
-        },
-        async call(name: string, args: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
-            const out = await tools.get(name)!(args);
-            return JSON.parse(out.content[0].text);
-        },
-    };
-}
-
-const harness = () => buildHarness(project);
-/** `getCurrentProject()` resolves undefined when no project is open. */
-const harnessWithNoProject = () => buildHarness(undefined);
+import {
+    buildHarness,
+    candidate,
+    harness,
+    harnessWithNoProject,
+    headlessProject,
+    extensionContext,
+    logger,
+    loadProjectFromPath,
+    saveProject,
+    project,
+    resetSiteToolsMocks,
+    world,
+    mockListSiteAccess,
+    mockAddSiteAdmin,
+    mockRemoveSiteAdmin,
+    mockRepairSiteConfigForProject,
+    mockFindStorefrontNameMismatch,
+    mockMigrateStorefrontNameForProject,
+} from './siteTools.testUtils';
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    mockListSiteAccess.mockResolvedValue({ status: 'ok', site: 'acme/store', canManage: true });
-    mockAddSiteAdmin.mockResolvedValue({ status: 'ok', verified: true, canManage: true });
-    mockRemoveSiteAdmin.mockResolvedValue({ status: 'ok', verified: true, canManage: true });
-    mockRepairSiteConfigForProject.mockResolvedValue({ status: 'repaired', verified: true });
-    allProjects = [];
-    projectsOnDisk = {};
-    // Restored explicitly: `clearAllMocks` clears recorded calls but NOT an
-    // implementation set with `mockImplementation`, so the throwing one below
-    // would leak into every test after it.
-    loadProjectFromPath.mockImplementation(async (path: string) => projectsOnDisk[path]);
-    mockFindStorefrontNameMismatch.mockReturnValue(null);
-    mockMigrateStorefrontNameForProject.mockResolvedValue({
-        skipped: false,
-        migrated: true,
-        publishKeyRenewed: true,
-    });
+    resetSiteToolsMocks();
 });
 
 it('registers the six Group 6 tools', () => {
@@ -340,16 +232,6 @@ describe('repair_site_configuration', () => {
 });
 
 /** A candidate as `findStorefrontNameMismatch` returns it. */
-const candidate = {
-    project,
-    projectName: 'demo',
-    projectPath: '/projects/demo',
-    repoOwner: 'someone',
-    repoName: 'demo-builder-test',
-    daLiveOrg: 'someone',
-    daLiveSite: 'citisignal-one',
-};
-
 describe('project shape', () => {
     // These tools answer questions about a Configuration Service site entry,
     // which only EDS storefront projects have. `storefrontTools` already refused
@@ -382,8 +264,8 @@ describe('project shape', () => {
 
 describe('find_storefront_name_mismatches', () => {
     it('reports each mismatched project with where it moves from and to', async () => {
-        allProjects = [{ name: 'demo', path: '/projects/demo' }];
-        projectsOnDisk = { '/projects/demo': project };
+        world.allProjects = [{ name: 'demo', path: '/projects/demo' }];
+        world.projectsOnDisk = { '/projects/demo': project };
         mockFindStorefrontNameMismatch.mockReturnValue(candidate);
 
         const out = await harness().call('find_storefront_name_mismatches');
@@ -403,8 +285,8 @@ describe('find_storefront_name_mismatches', () => {
     });
 
     it('does not rewrite the manifests it inspects', async () => {
-        allProjects = [{ name: 'demo', path: '/projects/demo' }];
-        projectsOnDisk = { '/projects/demo': project };
+        world.allProjects = [{ name: 'demo', path: '/projects/demo' }];
+        world.projectsOnDisk = { '/projects/demo': project };
 
         await harness().call('find_storefront_name_mismatches');
 
@@ -424,14 +306,14 @@ describe('find_storefront_name_mismatches', () => {
     });
 
     it('skips a project whose manifest resolves to nothing, and keeps scanning', async () => {
-        allProjects = [
+        world.allProjects = [
             { name: 'gone', path: '/projects/gone' },
             { name: 'demo', path: '/projects/demo' },
         ];
         // '/projects/gone' is absent from the map, so the loader resolves undefined
         // rather than throwing — a different case from the unreadable manifest below,
         // and the one a deleted directory produces.
-        projectsOnDisk = { '/projects/demo': project };
+        world.projectsOnDisk = { '/projects/demo': project };
         mockFindStorefrontNameMismatch.mockReturnValue(candidate);
 
         const out = await harness().call('find_storefront_name_mismatches');
@@ -440,14 +322,14 @@ describe('find_storefront_name_mismatches', () => {
     });
 
     it('lists only the projects that actually mismatch', async () => {
-        allProjects = [
+        world.allProjects = [
             { name: 'fine', path: '/projects/fine' },
             { name: 'demo', path: '/projects/demo' },
         ];
         // Two DISTINCT projects, so the mismatch check can answer differently for each
         // without depending on call order.
         const alreadyCorrect = { ...project, name: 'fine' };
-        projectsOnDisk = { '/projects/fine': alreadyCorrect, '/projects/demo': project };
+        world.projectsOnDisk = { '/projects/fine': alreadyCorrect, '/projects/demo': project };
         mockFindStorefrontNameMismatch.mockImplementation((p: unknown) =>
             p === project ? candidate : undefined
         );
@@ -460,8 +342,8 @@ describe('find_storefront_name_mismatches', () => {
     });
 
     it('reports an empty list rather than an error when nothing needs migrating', async () => {
-        allProjects = [{ name: 'demo', path: '/projects/demo' }];
-        projectsOnDisk = { '/projects/demo': project };
+        world.allProjects = [{ name: 'demo', path: '/projects/demo' }];
+        world.projectsOnDisk = { '/projects/demo': project };
 
         const out = await harness().call('find_storefront_name_mismatches');
 
@@ -469,14 +351,14 @@ describe('find_storefront_name_mismatches', () => {
     });
 
     it('one unreadable project does not hide the others', async () => {
-        allProjects = [
+        world.allProjects = [
             { name: 'broken', path: '/projects/broken' },
             { name: 'demo', path: '/projects/demo' },
         ];
-        projectsOnDisk = { '/projects/demo': project };
+        world.projectsOnDisk = { '/projects/demo': project };
         loadProjectFromPath.mockImplementation(async (path: string) => {
             if (path === '/projects/broken') throw new Error('unreadable manifest');
-            return projectsOnDisk[path];
+            return world.projectsOnDisk[path];
         });
         mockFindStorefrontNameMismatch.mockReturnValue(candidate);
 
@@ -487,11 +369,11 @@ describe('find_storefront_name_mismatches', () => {
     });
 
     it('pages the list rather than trusting it to stay small', async () => {
-        allProjects = Array.from({ length: 25 }, (_, i) => ({
+        world.allProjects = Array.from({ length: 25 }, (_, i) => ({
             name: `p${i}`,
             path: `/projects/p${i}`,
         }));
-        projectsOnDisk = Object.fromEntries(allProjects.map((p) => [p.path, project]));
+        world.projectsOnDisk = Object.fromEntries(world.allProjects.map((p) => [p.path, project]));
         mockFindStorefrontNameMismatch.mockReturnValue(candidate);
 
         const out = await harness().call('find_storefront_name_mismatches');
@@ -505,7 +387,7 @@ describe('migrate_storefront_name', () => {
     const atDemo = { projectPath: '/projects/demo' };
 
     beforeEach(() => {
-        projectsOnDisk = { '/projects/demo': project };
+        world.projectsOnDisk = { '/projects/demo': project };
         mockFindStorefrontNameMismatch.mockReturnValue(candidate);
     });
 
@@ -685,97 +567,6 @@ describe('migrate_storefront_name', () => {
  * these back to `{status:'ok'}`; the roster and the overlay URL are what the
  * ceilings are actually about.
  */
-describe('response ceilings', () => {
-    it('get_site_access stays under its ceiling with both rosters populated', async () => {
-        mockListSiteAccess.mockResolvedValue({
-            status: 'ok',
-            site: 'someone/demo-builder-test',
-            siteAdmins: ['first.admin@example.test'],
-            orgAdmins: ['first.admin@example.test'],
-            canManage: true,
-        });
-
-        expectWithinCeiling('get_site_access', await harness().callRaw('get_site_access'));
-    });
-
-    it('set_site_admin stays under its ceiling', async () => {
-        mockAddSiteAdmin.mockResolvedValue({
-            status: 'ok',
-            site: 'someone/demo-builder-test',
-            siteAdmins: ['first.admin@example.test', 'mcp-probe@example.test'],
-            canManage: true,
-            verified: true,
-        });
-
-        const raw = await harness().callRaw('set_site_admin', {
-            email: 'mcp-probe@example.test',
-            admin: true,
-            confirm: true,
-        });
-        expectWithinCeiling('set_site_admin', raw);
-    });
-
-    it('repair_site_configuration stays under its ceiling, overlay URL and all', async () => {
-        mockRepairSiteConfigForProject.mockResolvedValue({
-            status: 'repaired',
-            verified: true,
-            org: 'someone',
-            site: 'demo-builder-test',
-            // Length matters more than the value: the overlay URL was most of
-            // the 241 bytes measured live.
-            overlayUrl:
-                'https://000000-exampleworkspace-stage.adobeioruntime.net/api/v1/web/' +
-                'accs-discovery/render-pdp?org=someone&site=demo-builder-test',
-        });
-
-        const raw = await harness().callRaw('repair_site_configuration', { confirm: true });
-        expectWithinCeiling('repair_site_configuration', raw);
-    });
-
-    it('connect_dalive stays under its ceiling', async () => {
-        expectWithinCeiling('connect_dalive', await harness().callRaw('connect_dalive'));
-    });
-
-    it('find_storefront_name_mismatches stays under its ceiling at a FULL page', async () => {
-        // The live measurement was 0 mismatches across 2 projects — 39 bytes,
-        // which proves nothing about the bound. This drives a full page of the
-        // widest realistic row instead.
-        allProjects = Array.from({ length: 25 }, (_, i) => ({
-            name: `project-${i}`,
-            path: `/Users/someone/.demo-builder/projects/a-fairly-long-project-name-${i}`,
-        }));
-        projectsOnDisk = Object.fromEntries(allProjects.map((p) => [p.path, project]));
-        mockFindStorefrontNameMismatch.mockImplementation((p: { path: string }) => ({
-            ...candidate,
-            projectName: 'a-fairly-long-project-name',
-            projectPath: p.path,
-        }));
-
-        const raw = await harness().callRaw('find_storefront_name_mismatches');
-        expectWithinCeiling('find_storefront_name_mismatches', raw);
-    });
-
-    it('migrate_storefront_name stays under its ceiling on the SUCCESS branch', async () => {
-        // The branch the live probe could NOT reach: no project with a name
-        // mismatch exists to run it against.
-        projectsOnDisk = { '/projects/demo': project };
-        mockFindStorefrontNameMismatch.mockReturnValue(candidate);
-        mockMigrateStorefrontNameForProject.mockResolvedValue({
-            skipped: false,
-            migrated: true,
-            publishKeyRenewed: true,
-            lostGrants: ['f***t@example.test', 's***d@example.test'],
-        });
-
-        const raw = await harness().callRaw('migrate_storefront_name', {
-            projectPath: '/projects/demo',
-            confirm: true,
-            confirmName: 'demo',
-        });
-        expectWithinCeiling('migrate_storefront_name', raw);
-    });
-});
-
 describe('connect_dalive', () => {
     it('always hands back, pointing at the bookmarklet setup command', async () => {
         const out = (await harness().call('connect_dalive')) as {
@@ -808,72 +599,3 @@ describe('connect_dalive', () => {
  * Flipping one is not a test failure anywhere else in this suite — it is an agent being
  * told that a tool which rewrites a project manifest is read-only.
  */
-describe('what these tools declare themselves to be', () => {
-    /** Tool -> [readOnlyHint, destructiveHint]. */
-    const DECLARED: [string, boolean, boolean][] = [
-        ['get_site_access', true, false],
-        ['find_storefront_name_mismatches', true, false],
-        ['set_site_admin', false, true],
-        ['migrate_storefront_name', false, true],
-        ['repair_site_configuration', false, false],
-        ['connect_dalive', false, false],
-    ];
-
-    it.each(DECLARED)('%s declares readOnly=%s destructive=%s', (name, readOnly, destructive) => {
-        expect(harness().definitionOf(name).annotations).toEqual({
-            readOnlyHint: readOnly,
-            destructiveHint: destructive,
-        });
-    });
-
-    it('covers every registered tool, so a new one cannot arrive unpinned', () => {
-        expect(DECLARED.map(([n]) => n).sort()).toEqual(harness().names().sort());
-    });
-
-    /**
-     * The pins above restate the source. These two tie the declaration to what the tool
-     * actually DOES, which is the part an agent is trusting.
-     */
-    /**
-     * Arguments that reach each destructive tool's gate. They must be VALID apart from
-     * the missing confirmation: `migrate_storefront_name` resolves its target before
-     * gating, so a bogus path fails earlier and the test would pass on the wrong
-     * refusal.
-     */
-    const ARGS_REACHING_THE_GATE: Record<string, Record<string, unknown>> = {
-        set_site_admin: { email: 'someone@example.test', admin: true },
-        migrate_storefront_name: { projectPath: '/projects/demo' },
-    };
-
-    beforeEach(() => {
-        // `migrate_storefront_name` resolves the project from disk before it gates, so
-        // that path has to resolve or the refusal under test never runs.
-        projectsOnDisk = { '/projects/demo': project };
-        mockFindStorefrontNameMismatch.mockReturnValue(candidate);
-    });
-
-    it('every tool calling itself destructive really does refuse without confirm', async () => {
-        const destructive = DECLARED.filter(([, , d]) => d).map(([n]) => n);
-        expect(destructive.sort()).toEqual(Object.keys(ARGS_REACHING_THE_GATE).sort());
-
-        for (const name of destructive) {
-            const out = await harness().call(name, ARGS_REACHING_THE_GATE[name]);
-
-            // Refused for the RIGHT reason, and nothing was written.
-            expect(String(out.error)).toMatch(/confirm/i);
-        }
-        expect(mockAddSiteAdmin).not.toHaveBeenCalled();
-        expect(mockRemoveSiteAdmin).not.toHaveBeenCalled();
-        expect(mockMigrateStorefrontNameForProject).not.toHaveBeenCalled();
-    });
-
-    it('no tool calling itself read-only asks for a confirmation it would not honour', () => {
-        const readOnly = DECLARED.filter(([, r]) => r).map(([n]) => n);
-        expect(readOnly.length).toBeGreaterThan(0);
-
-        for (const name of readOnly) {
-            const schema = harness().definitionOf(name).inputSchema ?? {};
-            expect(Object.keys(schema)).not.toContain('confirm');
-        }
-    });
-});
