@@ -66,6 +66,14 @@ jest.mock('fs/promises', () => {
  */
 const GATE_WAIT_MS = 300;
 
+/**
+ * Total time `waitForReachable` may spend, and it is now genuinely total.
+ *
+ * Kept below jest's 10s default so a failure here names the socket rather than
+ * the test.
+ */
+const REACHABLE_BUDGET_MS = 5_000;
+
 /** Let the socket close / cleanup callbacks settle before asserting. */
 const SETTLE_MS = 50;
 
@@ -81,11 +89,27 @@ const SETTLE_MS = 50;
  * on the clone list.
  */
 async function waitForReachable(socket: string): Promise<string[]> {
-    const deadline = Date.now() + 5_000;
+    const deadline = Date.now() + REACHABLE_BUDGET_MS;
     let lastError: unknown;
     while (Date.now() < deadline) {
+        const remaining = deadline - Date.now();
         try {
-            const names = await listToolsOverSocket(socket);
+            // Bound each ATTEMPT by the time actually left, not just the gap
+            // between attempts. One request may take up to the RPC ceiling (4s)
+            // before it gives up, so a deadline checked only at the top of the
+            // loop lets two attempts run 8s inside a 5s budget — which is how
+            // this test spent the whole 10s jest allowance and reported a bare
+            // "Exceeded timeout" naming nothing. It failed two full-suite runs
+            // that way on 2026-09-02 while passing alone every time.
+            const names = await Promise.race([
+                listToolsOverSocket(socket),
+                new Promise<never>((_, reject) =>
+                    setTimeout(
+                        () => reject(new Error(`attempt exceeded the remaining ${remaining}ms`)),
+                        remaining
+                    )
+                ),
+            ]);
             if (names.length > 0) return names;
         } catch (error) {
             lastError = error;
