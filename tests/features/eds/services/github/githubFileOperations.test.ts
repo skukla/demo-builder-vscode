@@ -8,17 +8,7 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 
 export {};
 
-// Mock Octokit
-const mockOctokitRequest = jest.fn();
-jest.mock('@octokit/core', () => ({
-    Octokit: {
-        plugin: jest.fn(() =>
-            jest.fn().mockImplementation(() => ({
-                request: mockOctokitRequest,
-            }))
-        ),
-    },
-}));
+import { mockRequest as mockOctokitRequest } from './githubFileOperations.testUtils';
 
 // Mock logger
 
