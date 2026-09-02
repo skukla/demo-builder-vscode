@@ -1,13 +1,10 @@
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import type { StepLogger } from '@/core/logging/stepLogger';
 import type { Logger } from '@/types/logger';
 import {
-    createMockCommandExecutor,
-    createMockLogger,
-    createMockStepLogger,
     createSuccessResult,
     mockOrg,
+    setupAuthServiceSuite,
 } from './authenticationService.testUtils';
 
 /**
@@ -39,39 +36,22 @@ describe('AuthenticationService - Login/Logout Operations', () => {
     let authService: AuthenticationService;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockLogger: jest.Mocked<Logger>;
-    let mockStepLogger: jest.Mocked<StepLogger>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        mockCommandExecutor = createMockCommandExecutor();
-        mockLogger = createMockLogger();
-        mockStepLogger = createMockStepLogger();
-
-        // Mock getLogger
-        (getLogger as jest.Mock).mockReturnValue(mockLogger);
-
-        // Mock StepLogger.create
-        const StepLoggerMock = require('@/core/logging/stepLogger').StepLogger;
-        StepLoggerMock.create = jest.fn().mockResolvedValue(mockStepLogger);
-
-        // Setup mock SDK client
-        mockSDKClient = {
-            initialize: jest.fn().mockResolvedValue(undefined),
-            ensureInitialized: jest.fn().mockResolvedValue(true),
-            clear: jest.fn(),
-        } as any;
-
-        // Mock constructors
-        (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(() => mockSDKClient);
-        (createEntityServices as jest.Mock).mockReturnValue({
-            fetcher: { getOrganizations: jest.fn().mockResolvedValue([mockOrg]) },
-            resolver: {},
-            selector: {},
-        });
-
-        authService = new AuthenticationService('/mock/extension/path', mockLogger, mockCommandExecutor);
+        ({
+            authService,
+            commandExecutor: mockCommandExecutor,
+            logger: mockLogger,
+            sdkClient: mockSDKClient,
+        } = setupAuthServiceSuite({
+            AdobeSDKClient: AdobeSDKClient as unknown as jest.MockedClass<
+                typeof AdobeSDKClient
+            >,
+            createEntityServices: createEntityServices as jest.Mock,
+            getLogger: getLogger as jest.Mock,
+        }));
     });
 
     describe('login', () => {

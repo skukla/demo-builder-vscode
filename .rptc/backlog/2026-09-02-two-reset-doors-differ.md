@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # Resetting the same EDS project does less from the dashboard than from the projects list
@@ -63,3 +63,7 @@ changed, which is why the difference had gone unnoticed.
   one definitive path? Today it has two, and they behave differently.
 - [[PL-35]] — the other finding from the same pair of suites.
 - [[PL-9]] — the burn-down that surfaced it.
+
+## Shipped so far
+
+- 2026-09-02  docs(backlog): resetting a project does less from the dashboard than from the projects list (EDS-12) (`0cdfbc505`)
