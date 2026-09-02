@@ -26,6 +26,33 @@
  * they do not; that is the durable fact. Several blocks between the same pair
  * collapse to one item, which is right — you fix them in one sitting.
  *
+ * BEFORE YOU FIX A PAIR, BREAK THE CODE IT TESTS.
+ *
+ * The first item worked through this ledger was two picker suites duplicating
+ * ~529 lines. They looked like the same tests written twice, and the obvious fix
+ * was to share them. Four deliberate miswirings of the component said otherwise:
+ * an emptied search-field list, a wrong cache key, and a `messageType` asking the
+ * backend for the WRONG ENTITY all left seventeen tests green.
+ *
+ * The suites mocked the collaborator, so every assertion about the screen was an
+ * assertion about what the mock had been told to return. They were duplicated
+ * BECAUSE they were shallow — two files saying nothing in the same shape — and
+ * sharing them would have made that permanent in one tidy helper.
+ *
+ * So the first step on any pair is a probe, not a plan:
+ *
+ *   1. Break something the duplicated tests claim to cover — one line in the
+ *      source, something a person could plausibly get wrong.
+ *   2. Run the suites. Caught?
+ *   3. Restore, and repeat two or three times.
+ *
+ * Caught every time  -> the duplication is real; share it.
+ * Survives           -> the tests are shallow. Fix what they assert FIRST; the
+ *                       duplication usually dissolves, because tests that assert
+ *                       what each caller actually does stop being copies.
+ *
+ * Two minutes per pair, and on item one it inverted the answer.
+ *
  * Usage:
  *   node scripts/cloneLedger.mjs list        every unadjudicated pair, biggest first
  *   node scripts/cloneLedger.mjs next        just the next one to work
