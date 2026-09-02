@@ -335,3 +335,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  test(state): a project's mesh status survives a reload, and does not travel to another (`efb58927e`)
 - 2026-09-02  test(updates): the rollback that runs when a component update fails (`416a29552`)
 - 2026-09-02  docs(handoff): the state-manager finding, and the two refusals the gate made (`4858c521f`)
+- 2026-09-02  feat(mutation): measure the files this repo calls key, and pin them (`9e05861d9`)

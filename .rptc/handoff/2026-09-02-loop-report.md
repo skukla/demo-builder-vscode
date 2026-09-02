@@ -2,12 +2,31 @@
 
 ## The short version
 
+**The headline is not a number that went up — it is a number nobody had looked at.**
+
+We measure how good the tests are by breaking the code on purpose and seeing whether the
+tests notice. That has been running against twelve files chosen as a representative
+sample, and they score well: a median of 84%.
+
+Tonight I measured the files this repository's own documentation calls "Key Files". Their
+median is 44%. The file that persists every project's state scored 56%. The one that
+updates components inside people's existing projects scored 45%. The extension's entry
+point scored 9%.
+
+The sample was not wrong to exist — a sample is a sample. But the figure we have been
+quoting for "how effective are our tests" is roughly double the truth for the code that
+matters most. Three of those files are now measured at every release check and pinned, so
+they cannot quietly get worse, and I started on the worst of them.
+
+
 I spent the night making the test suite better at catching bugs, measured rather than
 assumed. The tool for that breaks the code on purpose — changes a `true` to a `false`,
 deletes a line — and re-runs the tests. If the tests still pass, they would have shipped
 that bug.
 
-Four files got worked:
+### What moved
+
+Five files got worked:
 
 | What it does | Caught before | Caught after |
 |---|---|---|
@@ -15,6 +34,7 @@ Four files got worked:
 | The site tools an agent calls | 54% | 69% |
 | DA.live sign-in and token handling | 67% | 83% |
 | Persists every project's state | 56% | 67% |
+| Updates and rolls back components in a project | 40% | 45% |
 
 In the second, the number of missed bugs fell from 16 to 1. In the third, code that no
 test ran at all fell from 35 deliberate breakages to 2.
@@ -31,8 +51,8 @@ gate on a delete that could be bypassed by supplying half of what it asks for, a
 credential that one path refuses as unsafe and another accepts, and two faults in the
 measuring instrument itself which was calling genuine improvements "padding".
 
-**Nothing in the shipping extension changed.** Twenty commits, all tests, test helpers,
-measurement scripts and documentation. The full suite is green: 15,607 tests.
+**Nothing in the shipping extension changed.** Twenty-four commits, all tests, test
+helpers, measurement scripts and documentation. The full suite is green: 15,614 tests.
 
 ---
 
@@ -127,6 +147,24 @@ mode, because rewriting a file merely by looking at it is a write hiding inside 
 That was checked from the callers' side and never where it is actually honoured. And a
 project's mesh status, which exists only while the extension runs, now provably survives
 a reload of that project and provably does not get attached to a different one.
+
+### Updating a component, and putting it back when that fails
+
+An update replaces a component inside a project somebody is already using. If it fails
+half-way, a snapshot taken beforehand is the only thing between them and a broken
+project. This was the least-tested code measured all night.
+
+The clearest example of how that happens: two existing tests check that the snapshot was
+taken "with a filter" — and a filter that copies nothing would have passed them just as
+well, because nothing ever ran it. It now has to keep the component's files and skip its
+dependencies, which is the difference between a snapshot people keep and one that is slow
+enough that they turn it off.
+
+Six more tests cover the failure path: the snapshot goes back, the dependencies
+deliberately left out of it are reinstalled, the user is still told the ORIGINAL reason
+the update failed rather than the rollback's own noise, and a failed reinstall stays a
+warning — a component missing its dependencies can be fixed by hand, a half-restored one
+cannot.
 
 ### The measuring instrument
 
@@ -232,6 +270,10 @@ Two are decisions, not corrections:
 - I committed once with the wrong message — a stale scratch file from earlier in the
   session, because I reused its name. The files were right, the description was somebody
   else's work. Amended and re-pushed.
+- I reported one of the key-file scores as 40% when it was 45%. I had done the arithmetic
+  by hand over the raw report; the tool discards mutations that could not run at all, and
+  counting those as "missed" makes the tests look worse than they are. Corrected before it
+  went into the write-up. Every other number came from the tool.
 - My first version of the configuration syncer would have DELETED eight working entries,
   because it only recognised test files whose paths mirror the source exactly and the
   webview tree does not. That would have handed those modules a run with no tests, which
