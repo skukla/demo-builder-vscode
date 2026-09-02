@@ -94,3 +94,7 @@ its long tail correct?
 - [[PL-9]] — the clone-ledger burn-down that surfaced it. The ledger only sees
   byte-identical pairs, so it found the 2-file cluster and is blind to the
   other 31 versions.
+
+## Shipped so far
+
+- 2026-09-02  docs(backlog): our two most-mocked modules are faked 122 different ways (PL-38) (`72175f000`)
