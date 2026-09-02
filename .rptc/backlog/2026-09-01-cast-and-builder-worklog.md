@@ -321,3 +321,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  test(prerequisites): Node versions are ordered as numbers, not as text (`90c5f0aae`)
 - 2026-09-02  test(prerequisites): which Node version a plugin lands on, and an id lookup with no config (`442153779`)
 - 2026-09-02  test(prerequisites): the plugin branch no test had ever entered (`43ba54811`)
+- 2026-09-02  feat(mutation): moving the measurement to the next module is one command (`c735dbe67`)

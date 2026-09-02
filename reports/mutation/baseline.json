@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "installHandler: the plugin dependency branch and the no-result verification path are now covered (70.24%)",
+    "_note": "siteTools: every tool's agent-facing safety annotations are pinned and tied to behaviour (64.56%)",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -15,18 +15,18 @@
             "highValueSurvivors": 11
         },
         "src/features/ai/server/siteTools.ts": {
-            "score": 54.43,
-            "killed": 129,
-            "survived": 105,
+            "score": 64.56,
+            "killed": 153,
+            "survived": 81,
             "noCoverage": 3,
             "timeout": 0,
             "survivorCategories": {
-                "other": 27,
                 "string": 57,
-                "branch": 16,
-                "optionalChain": 5
+                "optionalChain": 5,
+                "other": 15,
+                "branch": 4
             },
-            "highValueSurvivors": 16
+            "highValueSurvivors": 4
         },
         "src/features/dashboard/ui/components/integrations/integrationCardModel.ts": {
             "score": 91.9,

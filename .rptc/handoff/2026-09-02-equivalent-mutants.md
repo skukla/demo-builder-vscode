@@ -119,3 +119,41 @@ It is a few minutes of work with the evidence above already gathered.
 prerequisite — "use the explicit version if given". Someone will re-add it. If it goes,
 the reason it CANNOT run belongs in a comment on the remaining function, or the deletion
 will be undone by the next person who notices Node is unhandled there.
+
+---
+
+# Not a mutant: a safety annotation two tools disagree about
+
+Found while writing tests for the annotations in `siteTools.ts`. Not a mutation finding
+and not urgent — but it is about what an AGENT is told before touching a live storefront,
+so it should not sit only in a session transcript.
+
+`src/features/ai/server/storefrontTools.ts` declares `republish` and `sync_content` with
+`annotations: { readOnlyHint: false, destructiveHint: true }`. Its own file comment
+explains they need no confirm gate because they are "idempotent (safe to re-run) … same
+class as the existing `sync_storefront` tool."
+
+`sync_storefront` is declared `destructiveHint: false`.
+
+So three tools the source calls one class carry two different answers to "is this
+destructive", and the two that say yes are the two with no confirmation gate. An agent
+reading `tools/list` is told these are destructive and simultaneously allowed to call
+them unprompted.
+
+**Two defensible fixes, and they point opposite ways** — which is exactly why this is
+the owner's call and not the loop's:
+
+1. If they really are idempotent, they match `sync_storefront`: `destructiveHint: false`,
+   plus `idempotentHint: true`, which is the MCP annotation for the claim the comment
+   already makes in prose and which no tool in this repo currently uses.
+2. If pushing config and content to a live CDN IS destructive, then the annotation is
+   right and `sync_storefront` is the one that is wrong — and the missing confirm gates
+   are a real gap rather than a deliberate omission.
+
+**Verified before writing this down:** descriptor-registered tools were checked first and
+are NOT affected — they derive `readOnlyHint` from `readOnly` and `destructiveHint` from
+`confirm` in `toolDescriptors.ts`, so the two vocabularies cannot drift there. A first
+pass that read `readOnlyHint` across all 114 tools reported 48 of them as declaring no
+annotations at all; that was the census reading the wrong field for the descriptor form,
+not a gap. Only the `registerTool` form writes the annotation block by hand, and only
+there can two tools of one class disagree.

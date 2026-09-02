@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/prerequisites/handlers/installHandler.ts"
+        "src/features/ai/server/siteTools.ts"
     ],
     "reporters": [
         "clear-text",

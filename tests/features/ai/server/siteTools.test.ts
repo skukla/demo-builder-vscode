@@ -42,6 +42,7 @@ jest.mock('@/features/eds/services/storefront/storefrontNameMigrationForProject'
 
 import { expectWithinCeiling } from './responseCeilings';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
+import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
@@ -71,11 +72,21 @@ const saveProject = jest.fn().mockResolvedValue(undefined);
  * `harnessWithNoProject()` would have quietly kept the project and the no-project
  * tests would have measured the happy path.
  */
+/**
+ * The parts of a tool's registration that describe it to an AGENT rather than run it.
+ *
+ * The harness used to drop the definition on the floor (`_def: never`), so the
+ * annotations were unobservable and nothing could assert them — twelve mutants sat on
+ * those booleans, each one flipping what Claude Code is told about whether a tool is
+ * safe to call.
+ */
 function buildHarness(currentProject: unknown) {
     const tools = new Map<string, Tool>();
+    const defs = new Map<string, McpToolSchema>();
     const server = {
-        registerTool(name: string, _def: never, handler: Tool) {
+        registerTool(name: string, def: McpToolSchema, handler: Tool) {
             tools.set(name, handler);
+            defs.set(name, def);
         },
     };
     registerSiteTools(
@@ -94,6 +105,8 @@ function buildHarness(currentProject: unknown) {
     );
     return {
         names: () => [...tools.keys()],
+        /** What `tools/list` hands the agent for this tool. */
+        definitionOf: (name: string): McpToolSchema => defs.get(name)!,
         async callRaw(name: string, args: Record<string, unknown> = {}): Promise<string> {
             return (await tools.get(name)!(args)).content[0].text;
         },
@@ -662,5 +675,87 @@ describe('connect_dalive', () => {
         };
 
         expect(out.needsUser).toBeDefined();
+    });
+});
+
+/**
+ * WHAT THESE TOOLS TELL AN AGENT ABOUT THEMSELVES.
+ *
+ * `annotations` is not decoration. It travels to the client in `tools/list`, so it is
+ * how Claude Code learns which of these tools are safe to call unprompted, and the dry
+ * run gates on `readOnlyHint`. Twelve mutants sat on these six booleans and every one
+ * survived: nothing asserted them, because the test harness discarded the definition
+ * and kept only the handler.
+ *
+ * Flipping one is not a test failure anywhere else in this suite — it is an agent being
+ * told that a tool which rewrites a project manifest is read-only.
+ */
+describe('what these tools declare themselves to be', () => {
+    /** Tool -> [readOnlyHint, destructiveHint]. */
+    const DECLARED: [string, boolean, boolean][] = [
+        ['get_site_access', true, false],
+        ['find_storefront_name_mismatches', true, false],
+        ['set_site_admin', false, true],
+        ['migrate_storefront_name', false, true],
+        ['repair_site_configuration', false, false],
+        ['connect_dalive', false, false],
+    ];
+
+    it.each(DECLARED)('%s declares readOnly=%s destructive=%s', (name, readOnly, destructive) => {
+        expect(harness().definitionOf(name).annotations).toEqual({
+            readOnlyHint: readOnly,
+            destructiveHint: destructive,
+        });
+    });
+
+    it('covers every registered tool, so a new one cannot arrive unpinned', () => {
+        expect(DECLARED.map(([n]) => n).sort()).toEqual(harness().names().sort());
+    });
+
+    /**
+     * The pins above restate the source. These two tie the declaration to what the tool
+     * actually DOES, which is the part an agent is trusting.
+     */
+    /**
+     * Arguments that reach each destructive tool's gate. They must be VALID apart from
+     * the missing confirmation: `migrate_storefront_name` resolves its target before
+     * gating, so a bogus path fails earlier and the test would pass on the wrong
+     * refusal.
+     */
+    const ARGS_REACHING_THE_GATE: Record<string, Record<string, unknown>> = {
+        set_site_admin: { email: 'someone@example.test', admin: true },
+        migrate_storefront_name: { projectPath: '/projects/demo' },
+    };
+
+    beforeEach(() => {
+        // `migrate_storefront_name` resolves the project from disk before it gates, so
+        // that path has to resolve or the refusal under test never runs.
+        projectsOnDisk = { '/projects/demo': project };
+        mockFindStorefrontNameMismatch.mockReturnValue(candidate);
+    });
+
+    it('every tool calling itself destructive really does refuse without confirm', async () => {
+        const destructive = DECLARED.filter(([, , d]) => d).map(([n]) => n);
+        expect(destructive.sort()).toEqual(Object.keys(ARGS_REACHING_THE_GATE).sort());
+
+        for (const name of destructive) {
+            const out = await harness().call(name, ARGS_REACHING_THE_GATE[name]);
+
+            // Refused for the RIGHT reason, and nothing was written.
+            expect(String(out.error)).toMatch(/confirm/i);
+        }
+        expect(mockAddSiteAdmin).not.toHaveBeenCalled();
+        expect(mockRemoveSiteAdmin).not.toHaveBeenCalled();
+        expect(mockMigrateStorefrontNameForProject).not.toHaveBeenCalled();
+    });
+
+    it('no tool calling itself read-only asks for a confirmation it would not honour', () => {
+        const readOnly = DECLARED.filter(([, r]) => r).map(([n]) => n);
+        expect(readOnly.length).toBeGreaterThan(0);
+
+        for (const name of readOnly) {
+            const schema = harness().definitionOf(name).inputSchema ?? {};
+            expect(Object.keys(schema)).not.toContain('confirm');
+        }
     });
 });
