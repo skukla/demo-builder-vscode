@@ -498,6 +498,14 @@ check says so and names the file.
 > violation condition, so it can have no enforcer: a bug fixed twice is evidence the
 > copies must agree, which is the thing the count of three is a proxy for.
 
+> **Convention.** A `HandlerContext` is built by a factory — `createPanelHandlerContext`
+> or `createHeadlessHandlerContext` — never assembled as an object literal at the surface.
+> *Why:* every manager on the type is optional, so a hand-built context typechecks while
+> missing one, and the miss surfaces only when some handler on that surface asks for it.
+> The wizard hand-listed its managers, so when `componentRegistry` was added to the factory
+> the wizard alone did not get it — its Connection view crashed on 2026-09-02.
+> Enforced by `tests/sop/handler-context-from-factory.test.ts`.
+
 > **Convention.** Modals are hosted in one place, not mounted wherever they are opened.
 > *Why:* ad-hoc mounting produces stacking and focus bugs that only appear in combination.
 > Enforced by `tests/sop/modal-hosting.test.ts`.
@@ -1050,11 +1058,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 37 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 38 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 78 conventions. 77 of them are enforced; 1 is not.**
+**This handbook states 79 conventions. 78 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

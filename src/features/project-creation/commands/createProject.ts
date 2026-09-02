@@ -1,22 +1,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { dispatchHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import { getLogger } from '@/core/logging/debugLogger';
-import { ErrorLogger } from '@/core/logging/errorLogger';
 import { StepLogger } from '@/core/logging/stepLogger';
 import { getBundleUri } from '@/core/utils/bundleUri';
 import { getWebviewHTML } from '@/core/utils/getWebviewHTMLWithBundles';
 import { showOneTimeTip } from '@/core/utils/oneTimeTip';
-import { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
-import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 // Prerequisites checking is handled by PrerequisitesManager
 import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshEndpoint';
-import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
-import { getPrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManagerInstance';
 // Handler utilities and handlers
 import { projectCreationHandlers } from '@/features/project-creation/handlers/ProjectCreationHandlerRegistry';
 import { formatGroupName as formatGroupNameHelper } from '@/features/project-creation/helpers/formatters';
@@ -62,12 +58,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
     private static instanceCounter = 0;
     private readonly _instanceId: number;
 
-    // Prerequisites are handled by PrerequisitesManager
-    private prereqManager: PrerequisitesManager;
-    private authManager: AuthenticationService;
-    private errorLogger: ErrorLogger;
+    // The prerequisites, auth, error-logging and progress managers are NOT held
+    // here: createPanelHandlerContext builds them, and the session's shared
+    // instances are the point — a second PrerequisitesManager starts with an
+    // empty cache and re-checks every prerequisite the shared one had answered.
     private debugLogger = getLogger();
-    private progressUnifier: ProgressUnifier;
     private stepLogger: StepLogger | null = null;
     private stepLoggerInitPromise: Promise<StepLogger> | null = null;
     private templatesPath: string;
@@ -94,19 +89,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
 
         // Track instance for debugging
         this._instanceId = ++CreateProjectWebviewCommand.instanceCounter;
-
-        // PrerequisitesManager is initialized with proper path
-        // The SESSION's manager, not a second one. Its cache is per-instance, so a
-        // command building its own gets an empty cache and re-checks every
-        // prerequisite the shared instance had already answered.
-        this.prereqManager = getPrerequisitesManager(
-            context.extensionPath,
-            logger,
-            ServiceLocator.getCommandExecutor(),
-        );
-        this.authManager = ServiceLocator.getAuthenticationService();
-        this.errorLogger = new ErrorLogger(context);
-        this.progressUnifier = new ProgressUnifier(logger);
 
         // Store templates path for lazy initialization
         this.templatesPath = path.join(
@@ -384,29 +366,30 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
      * and shared state (passed by reference for automatic synchronization).
      */
     private async createHandlerContext(): Promise<HandlerContext> {
-        const stepLogger = await this.ensureStepLogger();
-
+        // Built by the shared factory, not by hand. Hand-listing the managers is
+        // how this surface shipped WITHOUT `componentRegistry` (2026-09-02): the
+        // Connection view asks for `get-components-data`, the handler threw
+        // "HandlerContext carries no componentRegistry", the response came back
+        // with no `data`, and the webview crashed reading `.envVars` off it. Every
+        // other panel already used the factory; the wizard was the one that
+        // duplicated it, so it was the one that fell behind.
         return {
-            // Managers
-            prereqManager: this.prereqManager,
-            authManager: this.authManager,
-            errorLogger: this.errorLogger,
-            progressUnifier: this.progressUnifier,
-            stepLogger,
+            ...createPanelHandlerContext({
+                context: this.context,
+                panel: this.panel,
+                stateManager: this.stateManager,
+                communicationManager: this.communicationManager,
+                sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
+                // By reference — handler changes persist automatically.
+                sharedState: this.sharedState,
+            }),
 
-            // Loggers
+            // The three the wizard genuinely owns. Its step logger is NOT the
+            // factory's: it loads `wizard-steps.json` so log lines carry real step
+            // names, which no other surface has.
             logger: this.logger,
             debugLogger: this.debugLogger,
-
-            // VS Code integration
-            context: this.context,
-            panel: this.panel,
-            stateManager: this.stateManager,
-            communicationManager: this.communicationManager,
-            sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
-
-            // Shared state (by reference - changes persist automatically)
-            sharedState: this.sharedState,
+            stepLogger: await this.ensureStepLogger(),
         };
     }
 

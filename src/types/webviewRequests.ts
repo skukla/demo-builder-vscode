@@ -189,14 +189,32 @@ export interface ComponentsDataPayload {
 }
 
 /**
- * `get-components-data` — the wizard's registry read (success shape; failures
- * come back as the standard `{success: false, error}` handler envelope).
+ * `get-components-data` — the wizard's registry read, success shape.
  */
 export interface GetComponentsDataResponse {
     success: true;
     type: 'components-data';
     data: ComponentsDataPayload;
 }
+
+/**
+ * ...and its failure shape, the standard handler envelope.
+ *
+ * This used to be a COMMENT on the success interface saying failures come back
+ * this way, which is exactly as much protection as no type at all: callers read
+ * `response.data` and the compiler agreed it was always there. On 2026-09-02 it
+ * was not — the handler threw, the envelope arrived, and the Connection view
+ * crashed reading `.envVars` off the undefined. Request the union below and the
+ * compiler makes you handle both.
+ */
+export interface GetComponentsDataFailure {
+    success: false;
+    error?: string;
+    code?: string;
+    message?: string;
+}
+
+export type GetComponentsDataResult = GetComponentsDataResponse | GetComponentsDataFailure;
 
 /**
  * Partial state tracking for storefront setup operations

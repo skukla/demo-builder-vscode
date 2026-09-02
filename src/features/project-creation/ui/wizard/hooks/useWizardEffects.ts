@@ -6,7 +6,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { WizardState, WizardStep } from '@/types/webview';
-import type { GetComponentsDataResponse } from '@/types/webviewRequests';
+import type { GetComponentsDataResponse, GetComponentsDataResult } from '@/types/webviewRequests';
 
 const log = webviewLogger('useWizardEffects');
 
@@ -120,8 +120,20 @@ export function useWizardEffects({
             componentsRequestedRef.current = true;
 
             try {
-                const response = await vscode.request<GetComponentsDataResponse>('get-components-data');
+                const response =
+                    await vscode.request<GetComponentsDataResult>('get-components-data');
 
+                // A failure envelope is not component data. Storing it left every
+                // downstream reader (`componentsData.data.envVars`) holding an
+                // undefined, which is what crashed the Connection view on
+                // 2026-09-02. Leaving the state null keeps the steps on their
+                // not-loaded-yet path instead.
+                if (!response.success) {
+                    log.error(
+                        `Failed to load components data: ${response.error ?? 'no data returned'}`,
+                    );
+                    return;
+                }
                 setComponentsData(response);
             } catch (error) {
                 log.error(

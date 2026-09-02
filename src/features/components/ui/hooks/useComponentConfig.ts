@@ -18,7 +18,7 @@ import {
 import { collectStackComponents } from '@/features/components/services/stackComponentCollector';
 import type { EnvVarDefinition } from '@/types/components';
 import { ComponentConfigs } from '@/types/webview';
-import type { ComponentDataDTO, ComponentsDataPayload, GetComponentsDataResponse } from '@/types/webviewRequests';
+import type { ComponentDataDTO, ComponentsDataPayload, GetComponentsDataResult } from '@/types/webviewRequests';
 
 const log = webviewLogger('useComponentConfig');
 
@@ -210,8 +210,20 @@ export function useComponentConfig({
         const loadData = async () => {
             try {
                 registryInFlight ??= vscode
-                    .request<GetComponentsDataResponse>('get-components-data')
-                    .then((response) => response.data);
+                    .request<GetComponentsDataResult>('get-components-data')
+                    .then((response) => {
+                        // A FAILED response carries no `data`. Storing that
+                        // undefined is what crashed the Connection view on
+                        // 2026-09-02 — every later read of `componentsData.envVars`
+                        // threw, and the hook's own error state never rendered.
+                        // Throwing here routes it to that state instead.
+                        if (!response.success) {
+                            throw new Error(
+                                response.error ?? 'components-data returned no data',
+                            );
+                        }
+                        return response.data;
+                    });
                 const data = await registryInFlight;
                 registryCache = data;
                 if (cancelled) return;
