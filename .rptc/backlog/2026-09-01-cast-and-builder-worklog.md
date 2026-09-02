@@ -352,3 +352,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  fix(eds): refuse a DA.live token that states no expiry, on every path (`0e1c0ce84`)
 - 2026-09-02  docs(eds): say why republish overwrites config.json outright (`2c2a3c102`)
 - 2026-09-02  docs(mcp): reinvestigate whether republish and sync_content are destructive (`86f9f40a9`)
+- 2026-09-02  test(eds): the DA.live token check, and what the sign-in boxes reject as you type (`ef4d9ba95`)
