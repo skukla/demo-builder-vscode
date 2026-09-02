@@ -55,15 +55,26 @@ function getTargetNodeVersions(
 }
 
 /**
- * Determine which Node versions to pass to getInstallSteps
+ * Determine which Node versions to pass to getInstallSteps.
  *
- * Logic:
- * - Per-node-version prerequisites (e.g., Adobe CLI): Use all required Node versions
- * - Node.js prerequisite: Use explicit version if provided, otherwise all required versions
- * - Other prerequisites: No nodeVersions needed (undefined)
+ * - Per-node-version prerequisites (e.g. Adobe CLI): every required Node version, or a
+ *   single fallback when the project requires none
+ * - Everything else: no nodeVersions needed
+ *
+ * THE NODE PREREQUISITE NEVER REACHES HERE, which is why it has no case. Its only
+ * caller writes `targetVersions || determineNodeVersionsForInstall(...)`, and
+ * `targetVersions` is assigned in exactly one place — inside `if (prereq.id === 'node')`
+ * — from `resolveNodeTargetVersions`, which returns `earlyReturn` for every case where
+ * the list would be missing or empty. So for Node the left side is always a non-empty
+ * array and this function is never called; for anything else it is called and the id is
+ * never 'node'.
+ *
+ * It used to carry a Node case anyway. Mutation testing found it: five mutants there
+ * that no test could reach, because nothing can. Removed 2026-09-02 — do not re-add it
+ * without changing the caller first.
  */
 function determineNodeVersionsForInstall(
-    prereq: { id: string; perNodeVersion?: boolean },
+    prereq: { perNodeVersion?: boolean },
     nodeVersions: string[],
     version?: string,
 ): string[] | undefined {
@@ -72,15 +83,6 @@ function determineNodeVersionsForInstall(
         return nodeVersions.length ? nodeVersions : [version || '20'];
     }
 
-    // Node.js prerequisite: explicit version overrides, otherwise use all required versions
-    if (prereq.id === 'node') {
-        if (version) {
-            return [version];
-        }
-        return nodeVersions.length ? nodeVersions : undefined;
-    }
-
-    // Other prerequisites don't need nodeVersions
     return undefined;
 }
 
@@ -414,14 +416,19 @@ async function handleVerificationError(
 
 /**
  * Build the final status message after installation verification.
+ *
+ * `finalNodeVersionStatus` is only ever populated for the Node prerequisite — its single
+ * caller assigns it inside `if (prereq.id === 'node')` — so its presence already means
+ * "this is Node". A second `prereqId === 'node'` check used to say so again; it could not
+ * be independently false, and mutation testing found four mutants sitting behind it that
+ * no test could reach. Removed 2026-09-02 along with the parameter it was the only use of.
  */
 function buildFinalStatusMessage(
     prereqName: string,
-    prereqId: string,
     installResult: { installed: boolean; version?: string },
     finalNodeVersionStatus?: { version: string; component: string; installed: boolean }[],
 ): string {
-    if (prereqId === 'node' && finalNodeVersionStatus && finalNodeVersionStatus.length > 0) {
+    if (finalNodeVersionStatus && finalNodeVersionStatus.length > 0) {
         if (finalNodeVersionStatus.every(s => s.installed)) {
             const versions = finalNodeVersionStatus.map(s => s.version).join(', ');
             return `${prereqName} is installed: ${versions}`;
@@ -453,7 +460,7 @@ async function sendFinalInstallStatus(
         states.set(prereqId, { prereq, result: installResult, nodeVersionStatus: finalNodeVersionStatus });
     }
 
-    const finalMessage = buildFinalStatusMessage(prereq.name, prereq.id, installResult, finalNodeVersionStatus);
+    const finalMessage = buildFinalStatusMessage(prereq.name, installResult, finalNodeVersionStatus);
     const overallInstalled = prereq.perNodeVersion && finalPerNodeVersionStatus && finalPerNodeVersionStatus.length > 0
         ? finalPerNodeVersionStatus.every(s => s.installed)
         : installResult.installed;

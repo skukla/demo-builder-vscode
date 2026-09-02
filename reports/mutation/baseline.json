@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "authenticationService: getTokenStatus covered; the unreachable catches recorded (43.77%)",
+    "_note": "installHandler: the unreachable Node branch and the redundant conjunct are gone (71.16%)",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -72,20 +72,20 @@
             "highValueSurvivors": 6
         },
         "src/features/prerequisites/handlers/installHandler.ts": {
-            "score": 70.24,
-            "killed": 380,
-            "survived": 150,
-            "noCoverage": 11,
+            "score": 71.16,
+            "killed": 375,
+            "survived": 146,
+            "noCoverage": 6,
             "timeout": 0,
             "survivorCategories": {
                 "logPresentation": 57,
                 "optionalChain": 16,
-                "string": 7,
+                "string": 6,
                 "other": 12,
-                "branch": 48,
+                "branch": 45,
                 "block": 10
             },
-            "highValueSurvivors": 58
+            "highValueSurvivors": 55
         },
         "src/core/ui/utils/spectrumTokens.ts": {
             "score": 88.24,
