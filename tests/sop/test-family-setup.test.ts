@@ -43,9 +43,28 @@ import { existsSync, readFileSync } from 'fs';
 import { dirname, join, basename } from 'path';
 
 const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+/**
+ * Two lists, and the difference between them is the point.
+ *
+ * `families` is measured DEBT: a split family with no shared setup that nobody
+ * has looked at yet. Its length is the burn-down number.
+ *
+ * `adjudicated` is a family somebody READ and judged to be split for a reason —
+ * usually size, with genuinely different setup per suite, so extracting one
+ * would produce a helper that branches for its callers. Each carries the reason
+ * in its own words. A family stops counting as debt the moment it moves here,
+ * which is the only way this number ever reaches zero: some of these splits are
+ * correct and will never have a shared setup to write.
+ *
+ * Moving a row here is a claim about the code, so the reason has to say
+ * something checkable — what the suites differ on — not "split for size".
+ */
 const LEDGER = JSON.parse(
     readFileSync(join(__dirname, 'test-family-setup.ledger.json'), 'utf8'),
-) as { families: string[] };
+) as { families: string[]; adjudicated: Record<string, string> };
+
+/** Every family the ledger accounts for, by either route. */
+const LEDGERED = [...LEDGER.families, ...Object.keys(LEDGER.adjudicated)];
 
 /** A suite's `@/` imports, in source order. */
 const AT_IMPORT = /from\s+'(@\/[^']+)'/g;
@@ -173,10 +192,25 @@ describe('split test families share their setup', () => {
         expect(duplicated).toEqual([]);
     });
 
+    it('every adjudicated family carries a reason that says something', () => {
+        // A reason that restates the category explains nothing and would let a
+        // real target be filed away as legitimate. The bar is low on purpose —
+        // it cannot judge content — but an empty or one-word row fails.
+        const thin = Object.entries(LEDGER.adjudicated)
+            .filter(([, reason]) => reason.trim().split(/\s+/).length < 8)
+            .map(([family]) => family);
+        expect(thin).toEqual([]);
+    });
+
+    it('a family is debt OR adjudicated, never both', () => {
+        const both = LEDGER.families.filter((f) => f in LEDGER.adjudicated);
+        expect(both).toEqual([]);
+    });
+
     it('no NEW family arrives without a shared setup, and fixed families leave the ledger', () => {
-        const ledger = new Set(LEDGER.families);
+        const ledger = new Set(LEDGERED);
         const unlisted = current.filter((f) => !ledger.has(f));
-        const stale = [...ledger].filter((f) => !current.includes(f));
+        const stale = LEDGERED.filter((f) => !current.includes(f));
         expect({ newFamiliesWithoutSharedSetup: unlisted, fixedButStillLedgered: stale }).toEqual({
             newFamiliesWithoutSharedSetup: [],
             fixedButStillLedgered: [],
