@@ -16,23 +16,10 @@ import {
     generateHomeClaudeSettings,
     mergeClaudeSettings,
 } from '@/features/project-creation/services/aiBundle/claudeSettingsWriter';
-import { makeEdsProject, makeEdsStorefrontInstance, EDS_STOREFRONT_PATH } from './aiBundleFixtures';
+import { makeEdsProject, makeEdsStorefrontInstance, EDS_STOREFRONT_PATH, makeHeadlessProject } from './aiBundleFixtures';
 import type { Project, ComponentInstance } from '@/types/base';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function makeHeadlessProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'headless-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/headless-project',
-        status: 'ready',
-        selectedStack: 'headless-paas',
-        componentInstances: {},
-        ...overrides,
-    };
-}
 
 // Already-resolved Node binary threaded into the git-sync hook's `node -e`
 // tool-input extractor (see resolveNodePath / buildToolFileExtraction).

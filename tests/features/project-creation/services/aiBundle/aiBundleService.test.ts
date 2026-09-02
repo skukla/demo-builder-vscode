@@ -21,9 +21,9 @@
  *   generateAIContextFiles.test.ts.)
  */
 
+import { fsPromises } from './aiBundleFsMock';
 import { createHash } from 'crypto';
 import { makeEdsProject, makeEdsStorefrontInstance } from './aiBundleFixtures';
-import * as fsPromises from 'fs/promises';
 import * as childProcess from 'child_process';
 import { enoentError, makeTestWriter } from './generatedFileWriter.testUtils';
 import {
@@ -32,26 +32,6 @@ import {
     refreshMcpConfigs,
 } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import type { Project } from '@/types/base';
-
-jest.mock('fs/promises', () => {
-    const writeFile = jest.fn().mockResolvedValue(undefined);
-    return {
-        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        realpath: jest.fn(async (p: string) => p),
-        mkdir: jest.fn().mockResolvedValue(undefined),
-        writeFile,
-        readFile: jest.fn(),
-        appendFile: jest.fn().mockResolvedValue(undefined),
-        unlink: jest.fn().mockResolvedValue(undefined),
-        readdir: jest.fn(),
-        // O_NOFOLLOW writes go through open(); the returned handle delegates to
-        // the writeFile mock WITH the path, so path-based assertions keep working.
-        open: jest.fn(async (p: unknown) => ({
-            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
-            close: jest.fn(async () => undefined),
-        })),
-    };
-});
 
 // `resolveNodePath` shells out via promisify(execFile) when no nodePath is
 // supplied (the generateAIContextFiles path) — keep it deterministic. `exec`

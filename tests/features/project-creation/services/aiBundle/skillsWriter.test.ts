@@ -9,9 +9,9 @@
  * catalog.
  */
 
+import { fsPromises } from './aiBundleFsMock';
 import * as path from 'path';
-import { makeEdsProject } from './aiBundleFixtures';
-import * as fsPromises from 'fs/promises';
+import { makeEdsProject, makeHeadlessProject } from './aiBundleFixtures';
 import { enoentError, makeTestWriter, mcpToolsManifest } from './generatedFileWriter.testUtils';
 import {
     DEMO_BUILDER_SKILLS,
@@ -19,27 +19,6 @@ import {
 } from '@/features/project-creation/services/aiBundle/skillsWriter';
 import { DEMO_BUILDER_ALWAYS_ON_SKILLS } from '@/types/ai';
 import type { Project, ComponentInstance } from '@/types/base';
-
-jest.mock('fs/promises', () => {
-    const writeFile = jest.fn().mockResolvedValue(undefined);
-    return {
-        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        realpath: jest.fn(async (p: string) => p),
-        mkdir: jest.fn().mockResolvedValue(undefined),
-        // The ADR-013 removal path uses it; a bundle this project no longer
-        // qualifies for is reconciled away (AI-1o).
-        unlink: jest.fn().mockResolvedValue(undefined),
-        writeFile,
-        readdir: jest.fn(),
-        readFile: jest.fn(),
-        // O_NOFOLLOW writes go through open(); the returned handle delegates to
-        // the writeFile mock WITH the path, so path-based assertions keep working.
-        open: jest.fn(async (p: unknown) => ({
-            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
-            close: jest.fn(async () => undefined),
-        })),
-    };
-});
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -69,29 +48,6 @@ function makeAppBuilderProject(): Project {
             } as ComponentInstance,
         },
     });
-}
-
-function makeHeadlessProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'headless-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/headless-project',
-        status: 'ready',
-        selectedStack: 'headless-paas',
-        commerce: {
-            type: 'platform-as-a-service',
-            instance: {
-                url: 'https://commerce.example.com',
-                environmentId: 'env-123',
-                storeView: 'default',
-                websiteCode: 'base',
-                storeCode: 'main_website_store',
-            },
-        },
-        componentInstances: {},
-        ...overrides,
-    };
 }
 
 function writtenFiles(): string[] {

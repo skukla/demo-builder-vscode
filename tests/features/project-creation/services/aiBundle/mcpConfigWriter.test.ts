@@ -13,26 +13,13 @@
  */
 
 import { fsPromises, writeMcpConfigs } from './mcpConfigWriter.testUtils';
-import { makeEdsProject, EDS_STOREFRONT_PATH } from './aiBundleFixtures';
+import { makeEdsProject, EDS_STOREFRONT_PATH, makeHeadlessProject } from './aiBundleFixtures';
 import * as path from 'path';
 import { makeTestWriter } from './generatedFileWriter.testUtils';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
 import type { Project } from '@/types/base';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function makeHeadlessProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'headless-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/headless-project',
-        status: 'ready',
-        selectedStack: 'headless-paas',
-        componentInstances: {},
-        ...overrides,
-    };
-}
 
 const EXTENSION_DIST = '/path/to/extension/dist';
 

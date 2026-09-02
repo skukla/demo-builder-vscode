@@ -14,25 +14,26 @@
  * decision, deliberately not taken here.
  */
 
+import { fsPromises } from './aiBundleFsMock';
 import { writeMcpConfigs } from '@/features/project-creation/services/aiBundle/mcpConfigWriter';
 
-jest.mock('fs/promises', () => {
-    const writeFile = jest.fn().mockResolvedValue(undefined);
-    return {
-        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        realpath: jest.fn(async (p: string) => p),
-        mkdir: jest.fn().mockResolvedValue(undefined),
-        writeFile,
-        readFile: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        appendFile: jest.fn().mockResolvedValue(undefined),
-        // O_NOFOLLOW writes go through open(); the returned handle delegates to
-        // the writeFile mock WITH the path, so path-based assertions keep working.
-        open: jest.fn(async (p: unknown) => ({
-            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
-            close: jest.fn(async () => undefined),
-        })),
-    };
-});
-
-export * as fsPromises from 'fs/promises';
 export { writeMcpConfigs };
+
+/**
+ * THE ONE THING THIS FAMILY DOES NOT SHARE with the directory's `fs/promises`
+ * wall: a `readFile` that REJECTS with ENOENT rather than resolving undefined.
+ *
+ * `writeMcpConfigs` appends to `.gitignore`, and it reads the existing file
+ * first. Resolving undefined makes it call `.split` on undefined and throw;
+ * rejecting ENOENT is how it learns there is no `.gitignore` yet. That is
+ * behaviour, not a key set, and it is why this one line stays here instead of
+ * moving into the shared wall where five other suites would inherit a rejecting
+ * read they never asked for. Set once at module load: no suite in this family
+ * calls `jest.resetAllMocks`, and `clearAllMocks` clears calls rather than
+ * implementations.
+ */
+(fsPromises.readFile as jest.Mock).mockRejectedValue(
+    Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+);
+
+export { fsPromises };

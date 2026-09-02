@@ -23,9 +23,9 @@
  * source at the bottom, with a positive control on the loader import.
  */
 
+import { fsPromises } from './aiBundleFsMock';
 import { createHash } from 'crypto';
 import { makeEdsProject, makeEdsStorefrontInstance } from './aiBundleFixtures';
-import * as fsPromises from 'fs/promises';
 import * as childProcess from 'child_process';
 import * as path from 'path';
 import {
@@ -37,26 +37,6 @@ import { AI_CONTEXT_VERSION } from '@/core/constants';
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundle/aiBundleActivationRefresh';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-
-jest.mock('fs/promises', () => {
-    const writeFile = jest.fn().mockResolvedValue(undefined);
-    return {
-        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        realpath: jest.fn(async (p: string) => p),
-        mkdir: jest.fn().mockResolvedValue(undefined),
-        writeFile,
-        readFile: jest.fn(),
-        appendFile: jest.fn().mockResolvedValue(undefined),
-        unlink: jest.fn().mockResolvedValue(undefined),
-        readdir: jest.fn(),
-        // O_NOFOLLOW writes go through open(); the returned handle delegates to
-        // the writeFile mock WITH the path, so path-based assertions keep working.
-        open: jest.fn(async (p: unknown) => ({
-            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
-            close: jest.fn(async () => undefined),
-        })),
-    };
-});
 
 // `resolveNode` is injected in every test, so the sweep itself never shells
 // out — but `browserUtils` (loaded transitively via aiContextWriter)
