@@ -239,7 +239,7 @@ each item's own file; what has already landed against an item is in its
 | `EDS-9` | feature | [DA.live sign-in has no command palette entry](2026-08-26-dalive-sign-in-from-command-palette.md) | — | med | shipped |
 | `EDS-10` | feature | [Custom themes as savable entities](2026-08-28-custom-themes-as-savable-entities.md) | — | med | backlog |
 | `EDS-11` | fix | [RETRACTED — HelixService's optional credentials are not the hazard I described](2026-08-28-helix-auth-variance-unmodeled.md) | — | low | dropped |
-| `EDS-12` | fix | [Resetting the same EDS project does less from the dashboard than from the projects list](2026-09-02-two-reset-doors-differ.md) | — | med | backlog |
+| `EDS-12` | fix | [Resetting the same EDS project does less from the dashboard than from the projects list](2026-09-02-two-reset-doors-differ.md) | — | med | active |
 | `PL-35` | fix | [The extractResetParams stand-in has drifted from the real function](2026-09-02-eds-reset-params-fake-drift.md) | — | med | backlog |
 
 ### app-builder  (12)
@@ -311,7 +311,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-33` | chore | └ [Every convention is enforced, or it stops being a convention](2026-08-31-every-convention-enforced.md) | — | high | built |
 | `PL-34` | chore | └ [Every open finding from the 2026-09-01 toolchain day, in one list](2026-09-01-cast-and-builder-worklog.md) | — | high | active |
 | `PL-37` | chore | [The webview handshake's `stateVersion` is write-only](2026-09-02-webview-state-version-dead.md) | — | low | backlog |
-| `PL-38` | question | [47 files mock `WebviewClient`. There are 33 different versions of it.](2026-09-02-webviewclient-mock-divergence.md) | — | med | open |
+| `PL-38` | question | [Our two most-mocked modules are faked 122 different ways](2026-09-02-webviewclient-mock-divergence.md) | — | med | open |
 
 <!-- END GENERATED registry -->
 

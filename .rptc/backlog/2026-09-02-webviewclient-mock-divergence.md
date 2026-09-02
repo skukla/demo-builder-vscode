@@ -7,11 +7,24 @@ value: med
 status: open
 ---
 
-# 47 files mock `WebviewClient`. There are 33 different versions of it.
+# Our two most-mocked modules are faked 122 different ways
 
-Measured 2026-09-02 during the clone-ledger burn-down, by hashing every
-`jest.mock('@/core/ui/utils/WebviewClient', …)` body in `tests/` with comments
-stripped:
+Two measurements, same question. Both taken 2026-09-02 during the clone-ledger
+burn-down by hashing every `jest.mock` body for the module with comments
+stripped.
+
+## `vscode` — 101 files, 89 versions
+
+| identical copies | how many groups |
+|---|---|
+| 5 | 2 |
+| 2 | 4 |
+| 1 | **83** |
+
+One directory alone (`tests/features/dashboard/handlers`) holds 16 files with
+15 distinct walls.
+
+## `WebviewClient` — 47 files, 33 versions
 
 | identical copies | how many groups |
 |---|---|
@@ -22,10 +35,15 @@ stripped:
 | 2 | 5 |
 | 1 | 23 |
 
-47 files, 33 distinct bodies. Reproduce with the script in the commit that added
-`tests/features/eds/ui/hooks/edsAuthHooks.testUtils.tsx`, or by grouping
-`grep -rl "jest.mock('@/core/ui/utils/WebviewClient'" tests/` on a
-whitespace-and-comment-stripped hash of each body.
+Reproduce either by grouping `grep -rl "jest.mock('<module>'" tests/` on a
+whitespace-and-comment-stripped hash of each wall body.
+
+## The two are not the same case, and that is part of the question
+
+`vscode` is a huge surface and no suite needs all of it, so a long tail of
+one-offs there may be exactly right — mocking only what the tree renders is the
+directory convention. `WebviewClient` is one small client with one contract, so
+33 versions of it is harder to defend. A single answer may not fit both.
 
 ## Why this is a question, not a chore
 
@@ -44,7 +62,8 @@ is, and that is a judgement call with a real trade-off on both sides:
 So the question is: is there ONE shape with options (a `createWebviewClientMock({...})`
 in `tests/helpers/`), or a small number of named shapes (bare / with-handlers /
 with-request), or is this divergence fine and only the exact-duplicate clusters
-worth collapsing?
+worth collapsing? And separately, does `vscode` want the same treatment or is
+its long tail correct?
 
 ## What is already known
 
@@ -52,6 +71,14 @@ worth collapsing?
   hook suites were done on 2026-09-02 and their 17 tests did not move.
   The 7-file PrerequisitesStep group and the two 5-file groups are the same
   shape of work.
+- A suite's OWN wall wins over one it imports. Measured on
+  `dashboardHandlers-lifecycle`: deleting its `vscode` wall in favour of the
+  shared file's failed six tests. So a partial adoption is not available —
+  a suite either keeps its own wall or takes the shared one whole.
+- That is what blocks the `dashboardHandlers-actions` / `navigateBack` pair,
+  which is adjudicated in the clone ledger for this reason: they agree on four
+  walls the directory's testUtils already carries identically, and disagree on
+  the fifth.
 - Whatever is shared must be imported BEFORE the subject in every consumer —
   `jest.mock` hoists above the imports of the module it appears in, not across
   modules. `tests/sop/mock-wall-import-order.test.ts` enforces that and has
