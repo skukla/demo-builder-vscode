@@ -38,9 +38,17 @@ export function suitesFor(modulePath) {
     const stem = basename(modulePath).replace(/\.tsx?$/, '');
     const dir = join('tests', dirname(modulePath).slice('src/'.length));
     if (!existsSync(dir)) return [];
+    // A split suite is `<stem>-<topic>` or `<stem>.<topic>` — BOTH separators are in use
+    // (`stateManager.disposal.test.ts` against `stateManager-projects.test.ts`), and
+    // matching only the hyphen silently left one suite out of a run on 2026-09-02, which
+    // understates the score for a module rather than failing.
+    //
+    // The separator is required: without it `stateManagerFake.test.ts` would be swept in
+    // as though it tested the same subject.
+    const isSplitSuite = (f) =>
+        (f.startsWith(`${stem}-`) || f.startsWith(`${stem}.`)) && /\.test\.tsx?$/.test(f);
     return readdirSync(dir)
-        .filter((f) => f === `${stem}.test.ts` || f === `${stem}.test.tsx` ||
-                       f.startsWith(`${stem}-`) && /\.test\.tsx?$/.test(f))
+        .filter((f) => f === `${stem}.test.ts` || f === `${stem}.test.tsx` || isSplitSuite(f))
         .map((f) => join(dir, f))
         .sort();
 }
