@@ -343,3 +343,6 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  test(auth): how long is left on the token, and a config store that will not read (`ea908a5b7`)
 - 2026-09-02  docs(mutation): the update manager's HTTP branches, measured and left alone (`131e3824b`)
 - 2026-09-02  docs(handoff): the loop report, with where the sixteen measured files now stand (`06f05ae5a`)
+- 2026-09-02  refactor(prerequisites): remove a branch that cannot run and a condition that cannot be false (`66ad43d8d`)
+- 2026-09-02  Merge loop/2026-09-01-top-files: mutation-driven test effectiveness (`e49ffe305`)
+- 2026-09-02  docs(handoff): close the loop report (`9b9743394`)
