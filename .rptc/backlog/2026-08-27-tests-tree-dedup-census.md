@@ -239,3 +239,4 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  test(project-creation): the two executor component-loading suites share seven walls (`37db55a3e`)
 - 2026-09-02  test(auth): the context and operations suites share one AuthenticationService harness (`8abf3ee24`)
 - 2026-09-02  test(commands): both ResetAllCommand suites share one harness, built to the real types (`d59c4255c`)
+- 2026-09-02  test(ai): two site-tool tests were running twice, and a comment documented a describe that had moved (`07cffffa0`)
