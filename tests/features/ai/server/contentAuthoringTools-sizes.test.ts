@@ -15,6 +15,7 @@ import {
     getGitHubServicesMock,
     isEdsProjectMock,
     registerContentAuthoringTools,
+    fakeServer,
 } from './contentAuthoringTools.testUtils';
 import { COMPONENT_IDS } from '@/core/constants';
 import { expectWithinCeiling } from './responseCeilings';
@@ -23,28 +24,6 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
-
-/** Minimal MCP server double: capture handlers, invoke by name, parse the JSON back. */
-function fakeServer() {
-    const tools = new Map<
-        string,
-        (args: unknown) => Promise<{ content: Array<{ text: string }> }>
-    >();
-    return {
-        registerTool(
-            name: string,
-            _def: unknown,
-            handler: (args: unknown) => Promise<{ content: Array<{ text: string }> }>
-        ) {
-            tools.set(name, handler);
-        },
-        names: () => [...tools.keys()],
-
-        async call(name: string, args: unknown = {}): Promise<any> {
-            return JSON.parse((await tools.get(name)!(args)).content[0].text);
-        },
-    };
-}
 
 // `selectedStack` must start with "eds-": the module now uses the shared
 // getEdsRepoParts/getEdsDaLiveTarget getters, whose INTERNAL isEdsProject call
@@ -138,6 +117,14 @@ beforeEach(() => {
 // Driven with OVERSIZED payloads — a 900-entry directory, a body past the read
 // cap — because both bloat shapes this audit found (a list with no page size, a
 // field carried for the dashboard) are invisible at fixture scale.
+/** What `list_content` answers with — the fields these tests read. */
+interface ContentListing {
+    total: number;
+    skip: number;
+    limit: number;
+    entries: Array<{ path?: string; name?: string }>;
+}
+
 describe('response-size ceilings', () => {
     it('list_content — a 900-entry site root is paged, not dumped', async () => {
         daOps.listDirectory.mockResolvedValueOnce(
@@ -148,11 +135,33 @@ describe('response-size ceilings', () => {
             }))
         );
 
-        const res = await register().call('list_content', {});
+        const listing = register();
+        const res = await listing.call<ContentListing>('list_content', {});
 
         expectWithinCeiling('list_content', JSON.stringify(res));
         expect(res.total).toBe(900);
         expect(res.entries.length).toBeLessThan(900);
+    });
+
+    it('list_content — the SECOND page is not the first one again', async () => {
+        // The paging test above only proves the first page is short. Nothing asked
+        // for a later one, so a tool that ignored `skip` and always answered with
+        // entries 0..limit passed — measured 2026-09-02 by making it do exactly
+        // that, and the suite stayed green.
+        const entries = Array.from({ length: 900 }, (_, i) => ({
+            name: `page-number-${i}`,
+            path: `/skukla/bodea/section/page-number-${i}.html`,
+            ext: 'html',
+        }));
+        daOps.listDirectory.mockResolvedValue(entries);
+
+        const listing = register();
+        const first = await listing.call<ContentListing>('list_content', { limit: 10 });
+        const second = await listing.call<ContentListing>('list_content', { limit: 10, skip: 10 });
+
+        expect(second.skip).toBe(10);
+        expect(second.entries).not.toEqual(first.entries);
+        expect(second.entries[0]).not.toEqual(first.entries[0]);
     });
 
     it('read_page — the service cap survives the tool', async () => {

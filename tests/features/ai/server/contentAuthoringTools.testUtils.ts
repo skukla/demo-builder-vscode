@@ -62,3 +62,38 @@ export {
     getGitHubServicesMock,
     isEdsProjectMock,
 };
+
+/**
+ * Minimal MCP server double: capture handlers, invoke by name, parse the JSON back.
+ *
+ * Both suites in this family had their own identical copy. It lives here now — a
+ * tool suite's whole interface with the server is "register, then call", and one
+ * definition of that is enough.
+ */
+export function fakeServer(): {
+    registerTool(
+        name: string,
+        def: unknown,
+        handler: (args: unknown) => Promise<{ content: Array<{ text: string }> }>
+    ): void;
+    names(): string[];
+    call<T = Record<string, unknown>>(name: string, args?: unknown): Promise<T>;
+} {
+    const tools = new Map<
+        string,
+        (args: unknown) => Promise<{ content: Array<{ text: string }> }>
+    >();
+    return {
+        registerTool(name, _def, handler) {
+            tools.set(name, handler);
+        },
+        names: () => [...tools.keys()],
+        async call<T = Record<string, unknown>>(name: string, args: unknown = {}): Promise<T> {
+            const handler = tools.get(name);
+            if (!handler) {
+                throw new Error(`no tool registered as "${name}" — registered: ${[...tools.keys()]}`);
+            }
+            return JSON.parse((await handler(args)).content[0].text) as T;
+        },
+    };
+}

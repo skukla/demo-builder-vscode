@@ -17,6 +17,7 @@ import {
     getGitHubServicesMock,
     isEdsProjectMock,
     registerContentAuthoringTools,
+    fakeServer,
 } from './contentAuthoringTools.testUtils';
 import { COMPONENT_IDS } from '@/core/constants';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -24,28 +25,6 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
-
-/** Minimal MCP server double: capture handlers, invoke by name, parse the JSON back. */
-function fakeServer() {
-    const tools = new Map<
-        string,
-        (args: unknown) => Promise<{ content: Array<{ text: string }> }>
-    >();
-    return {
-        registerTool(
-            name: string,
-            _def: unknown,
-            handler: (args: unknown) => Promise<{ content: Array<{ text: string }> }>
-        ) {
-            tools.set(name, handler);
-        },
-        names: () => [...tools.keys()],
-
-        async call(name: string, args: unknown = {}): Promise<any> {
-            return JSON.parse((await tools.get(name)!(args)).content[0].text);
-        },
-    };
-}
 
 // `selectedStack` must start with "eds-": the module now uses the shared
 // getEdsRepoParts/getEdsDaLiveTarget getters, whose INTERNAL isEdsProject call
