@@ -20,6 +20,7 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
 
 
 
+import { internals } from '../../../helpers/commandInternals';
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAvailableAppBuilderComponents: jest.fn(() => []),
 }));
@@ -104,7 +105,12 @@ describe('ConfigureProjectWebviewCommand - getInitialData envVars', () => {
     });
 
     it('injects each record key into the envVars records it sends', async () => {
-        const data = await (command as any).getInitialData();
+        // Names what this test reads, so the nested access is CHECKED rather than
+        // waved through — the generic parameter is what the shared helper offers in
+        // place of the `as any` that used to sit here.
+        const data = await internals(command).getInitialData<{
+            componentsData: { envVars: Record<string, { key: string; label: string; type: string }> };
+        }>();
 
         const envVars = data.componentsData.envVars;
         expect(envVars.ACCS_WEBSITE_CODE.key).toBe('ACCS_WEBSITE_CODE');

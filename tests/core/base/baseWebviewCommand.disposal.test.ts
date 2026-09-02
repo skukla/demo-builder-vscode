@@ -19,6 +19,7 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { DisposableStore } from '@/core/utils/disposableStore';
 import { createMockLogger } from '../../helpers/loggerFake';
 
+import { internals } from '../../helpers/commandInternals';
 // Mock panel state for disposal testing
 let mockPanel: any;
 let mockDisposeCallback: (() => void) | undefined;
@@ -187,7 +188,7 @@ describe('BaseWebviewCommand Disposal', () => {
             );
 
             // Should not have webviewDisposables property
-            expect((command as any).webviewDisposables).toBeUndefined();
+            expect(internals(command).webviewDisposables).toBeUndefined();
         });
     });
 

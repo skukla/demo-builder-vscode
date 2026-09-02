@@ -16,6 +16,12 @@ import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/
 import { createMockLogger } from '../helpers/loggerFake';
 import { createMockExtensionContext } from '../helpers/extensionContextFake';
 
+/*
+ * These reaches deliberately do NOT use the shared `internals()` helper: they sit
+ * inside `jest.mock` FACTORIES, which babel hoists above this module's imports, so
+ * calling an imported function there fails with "Cannot access before
+ * initialization". A local named cast is hoisting-safe and still names its target.
+ */
 // Mock VS Code API
 
 // The sign-in commands (PL-5 / EDS-9). The locator hands back a controllable
@@ -43,7 +49,7 @@ jest.mock('@/features/projects-dashboard/commands/showProjectsList', () => {
     const MockShowProjectsListCommand = jest.fn().mockImplementation(function (this: any) {
         this.execute = jest.fn().mockResolvedValue(undefined);
     });
-    (MockShowProjectsListCommand as any).disposeActivePanel = jest.fn();
+    (MockShowProjectsListCommand as unknown as { disposeActivePanel: jest.Mock }).disposeActivePanel = jest.fn();
 
     return {
         ShowProjectsListCommand: MockShowProjectsListCommand,
@@ -55,7 +61,7 @@ jest.mock('@/features/dashboard/commands/configure', () => {
     const MockConfigureProjectWebviewCommand = jest.fn().mockImplementation(function (this: any) {
         this.execute = jest.fn().mockResolvedValue(undefined);
     });
-    (MockConfigureProjectWebviewCommand as any).disposeActivePanel = jest.fn();
+    (MockConfigureProjectWebviewCommand as unknown as { disposeActivePanel: jest.Mock }).disposeActivePanel = jest.fn();
 
     return {
         ConfigureProjectWebviewCommand: MockConfigureProjectWebviewCommand,
@@ -65,7 +71,7 @@ jest.mock('@/features/dashboard/commands/openAi', () => {
     const MockShowAiCommand = jest.fn().mockImplementation(function (this: any) {
         this.execute = jest.fn().mockResolvedValue(undefined);
     });
-    (MockShowAiCommand as any).disposeActivePanel = jest.fn();
+    (MockShowAiCommand as unknown as { disposeActivePanel: jest.Mock }).disposeActivePanel = jest.fn();
 
     return {
         ShowAiCommand: MockShowAiCommand,
