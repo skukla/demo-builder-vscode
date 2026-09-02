@@ -20,7 +20,10 @@
         "src/features/prerequisites/handlers/installHandler.ts",
         "src/features/project-creation/ui/helpers/buttonTextHelpers.ts",
         "src/features/updates/services/envMerge.ts",
-        "src/core/state/stateManager.ts"
+        "src/core/state/stateManager.ts",
+        "src/features/updates/services/componentUpdater.ts",
+        "src/features/updates/services/updateManager.ts",
+        "src/features/authentication/services/authenticationService.ts"
     ],
     "reporters": [
         "clear-text",

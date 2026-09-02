@@ -26,11 +26,18 @@ first time:
 |---|---|---|
 | `src/extension.ts` | **8.77%** | 135 of 228 |
 | `src/features/authentication/services/authenticationService.ts` | **39.25%** | 54 |
-| `src/features/updates/services/componentUpdater.ts` | **39.67%** | 44 |
+| `src/features/updates/services/componentUpdater.ts` | **44.60%** | 39 |
 | `src/features/updates/services/updateManager.ts` | **51.40%** | 12 |
 | `src/core/state/stateManager.ts` | **56.49%** | 11 |
 
-Median **39.67%**.
+Median **44.60%**.
+
+One of those numbers was corrected before this was written down. A first pass reported
+componentUpdater at 39.67%, from arithmetic done by hand over the report. Stryker marks
+some mutants `RuntimeError` — invalid mutations that could not run at all — and excludes
+them from the denominator, as our own summariser does; counting them as undetected
+understates the score. Thirteen of that file's 300 were in that state. Every other number
+here came from the summariser and needed no correction.
 
 The sixth key code file, `WizardContainer.tsx`, could NOT be measured: the focused runner
 uses the node Jest project, and a React component's tests need the react one. That is a
@@ -68,8 +75,10 @@ minutes.
 
 ## Recommended next targets, in order
 
-1. `componentUpdater.ts` (39.67%, 44 unreached) — it snapshots, updates and rolls back
+1. `componentUpdater.ts` (44.60%, 39 unreached) — it snapshots, updates and rolls back
    the components inside a user's project. A defect here damages work that already exists.
+   Started during this loop: the rollback path now has tests, and the score moved from
+   39.67% to 44.60%. The remaining 120 survivors are the largest single pool measured.
 2. `authenticationService.ts` (39.25%, 54 unreached) — every Adobe operation goes through
    it, and its failure modes are the ones users report.
 3. `updateManager.ts` (51.40%) — the other half of the update path.

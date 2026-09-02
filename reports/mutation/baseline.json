@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "stateManager: runtime-only state survives a reload of the SAME project only",
+    "_note": "pinned at its first measured score",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -168,6 +168,54 @@
                 "optionalChain": 5
             },
             "highValueSurvivors": 17
+        },
+        "src/features/updates/services/componentUpdater.ts": {
+            "score": 44.6,
+            "killed": 128,
+            "survived": 120,
+            "noCoverage": 39,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 18,
+                "block": 14,
+                "logPresentation": 28,
+                "branch": 39,
+                "other": 11,
+                "optionalChain": 10
+            },
+            "highValueSurvivors": 53
+        },
+        "src/features/updates/services/updateManager.ts": {
+            "score": 51.4,
+            "killed": 92,
+            "survived": 75,
+            "noCoverage": 12,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 12,
+                "branch": 43,
+                "optionalChain": 4,
+                "block": 9,
+                "logPresentation": 3,
+                "other": 4
+            },
+            "highValueSurvivors": 52
+        },
+        "src/features/authentication/services/authenticationService.ts": {
+            "score": 39.25,
+            "killed": 104,
+            "survived": 107,
+            "noCoverage": 54,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 36,
+                "logPresentation": 35,
+                "branch": 22,
+                "other": 4,
+                "block": 4,
+                "optionalChain": 6
+            },
+            "highValueSurvivors": 26
         }
     }
 }

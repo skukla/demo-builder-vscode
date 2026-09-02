@@ -333,3 +333,5 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  docs(handoff): bring the loop report up to date (`70198b301`)
 - 2026-09-02  test(state): an old state file still opens, and a scan still writes nothing (`a05b21032`)
 - 2026-09-02  test(state): a project's mesh status survives a reload, and does not travel to another (`efb58927e`)
+- 2026-09-02  test(updates): the rollback that runs when a component update fails (`416a29552`)
+- 2026-09-02  docs(handoff): the state-manager finding, and the two refusals the gate made (`4858c521f`)
