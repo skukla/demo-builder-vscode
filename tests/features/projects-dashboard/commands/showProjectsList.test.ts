@@ -18,42 +18,9 @@ import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler'
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { internals } from '../../../helpers/commandInternals';
-/**
- * Create mock ExtensionContext
- */
-function createMockExtensionContext(): vscode.ExtensionContext {
-    return {
-        subscriptions: [],
-        extensionPath: '/mock/extension/path',
-        globalState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-            setKeysForSync: jest.fn(),
-        } as any,
-        workspaceState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-        } as any,
-        extensionUri: vscode.Uri.file('/mock/extension/path'),
-        extensionMode: vscode.ExtensionMode.Test,
-        environmentVariableCollection: {} as any,
-        asAbsolutePath: (relativePath: string) => `/mock/extension/path/${relativePath}`,
-        storageUri: undefined,
-        globalStorageUri: vscode.Uri.file('/mock/storage'),
-        logUri: vscode.Uri.file('/mock/logs'),
-        storagePath: '/mock/storage',
-        globalStoragePath: '/mock/global/storage',
-        logPath: '/mock/logs',
-        secrets: createMockSecretStorage().secrets,
-        extension: {} as any,
-        languageModelAccessInformation: {} as any,
-    };
-}
-
 
 /**
  * Create mock Logger
@@ -63,7 +30,12 @@ function createMockExtensionContext(): vscode.ExtensionContext {
  * Helper to create ShowProjectsListCommand instance
  */
 function createCommand(): ShowProjectsListCommand {
-    const mockContext = createMockExtensionContext();
+    const mockContext = createMockExtensionContext(
+        // The one thing this suite needs beyond the canonical defaults: a real
+        // SecretStorage fake, because the command reads credentials through it.
+        { secrets: createMockSecretStorage().secrets },
+        '/mock/extension/path'
+    );
     const mockStateManager = createMockStateManager();
     const mockLogger = createMockLogger();
 

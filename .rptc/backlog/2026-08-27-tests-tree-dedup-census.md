@@ -228,3 +228,4 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  docs(backlog): PL-9's remaining work, with the three things the numbers hid (`2b789e364`)
 - 2026-09-02  test(sop): 26 split families adjudicated — debt and correct splits now differ (`260df7956`)
 - 2026-09-02  docs(backlog): re-measure PL-9 — the baseline was four days stale (`fe9abe1d2`)
+- 2026-09-02  test(ai-bundle): one fs/promises wall for six suites, and an enforcer for the order it depends on (`86ed3f3c3`)
