@@ -331,3 +331,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  test(eds): what a DA.live sign-in stores, and for how long (`4db3eea23`)
 - 2026-09-02  feat(mutation): measure the file every project's state passes through (`6e6770348`)
 - 2026-09-02  docs(handoff): bring the loop report up to date (`70198b301`)
+- 2026-09-02  test(state): an old state file still opens, and a scan still writes nothing (`a05b21032`)
