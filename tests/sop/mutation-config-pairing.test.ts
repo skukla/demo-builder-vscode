@@ -109,10 +109,20 @@ describe('every mutated module has a test selected to cover it', () => {
         // 42.96%. Neither number described the tests that exist; they described the tests
         // the runner happened to load, and both were read as findings about test quality.
         const p = load(c);
-        const onDisk = execSync('git ls-files "tests/**/*.test.ts" "tests/**/*.test.tsx"', {
-            cwd: ROOT,
-            encoding: 'utf8',
-        })
+        // `--cached --others --exclude-standard` = tracked PLUS untracked-not-ignored.
+        // Tracked-only makes this check blind to a test file that has not been committed
+        // yet, which is exactly when it matters: on 2026-09-02 a new suite passed the
+        // local gate and failed CI the instant it was committed, because the gate ran
+        // while the file was still untracked. A check that cannot see new work is a
+        // check that reports on the previous commit. `architectureScan.ts` already does
+        // it this way.
+        const onDisk = execSync(
+            'git ls-files --cached --others --exclude-standard "tests/**/*.test.ts" "tests/**/*.test.tsx"',
+            {
+                cwd: ROOT,
+                encoding: 'utf8',
+            }
+        )
             .trim()
             .split('\n');
 
@@ -122,7 +132,7 @@ describe('every mutated module has a test selected to cover it', () => {
             // A suite belongs to a module when its filename before `.test.` matches the
             // module, allowing the `-slice` split this repo uses for large families.
             const siblings = onDisk.filter(
-                (t) => basename(t).split('.test.')[0].split('-')[0] === subject,
+                (t) => basename(t).split('.test.')[0].split('-')[0] === subject
             );
             const absent = siblings.filter((t) => !p.testFiles.some((sel) => sel.endsWith(t)));
             for (const a of absent) gaps.push(`${m}  <-  ${a}`);
@@ -186,9 +196,7 @@ describe('the mutation baseline covers what the config mutates', () => {
     });
 
     it('the baseline and the sample config agree, in both directions', () => {
-        const modules: Record<string, unknown> = JSON.parse(
-            readFileSync(BASELINE, 'utf8')
-        ).modules;
+        const modules: Record<string, unknown> = JSON.parse(readFileSync(BASELINE, 'utf8')).modules;
         const mutate: string[] = JSON.parse(
             readFileSync(join(ROOT, 'stryker.pl22.config.json'), 'utf8')
         ).mutate;

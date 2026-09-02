@@ -26,6 +26,7 @@ module.exports = {
     displayName: 'stryker-pl22',
     rootDir: __dirname,
     testMatch: [
+        '**/tests/features/ai/server/siteTools-contract.test.ts',
         '**/tests/features/authentication/services/authenticationService-checks.test.ts',
         '**/tests/features/authentication/services/authenticationService-context.test.ts',
         '**/tests/features/authentication/services/authenticationService-entities.test.ts',
