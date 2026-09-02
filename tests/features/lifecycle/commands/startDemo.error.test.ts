@@ -18,6 +18,9 @@ import {
     mockCommands,
     mockWindow,
     mockWorkspace,
+    fakeTerminal,
+    startDemoExtensionContext,
+    startableStateManager,
 } from './startDemo.testUtils';
 import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state/stateManager';
@@ -36,13 +39,7 @@ describe('StartDemoCommand - Error Handling', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        // Setup mock terminal
-        mockTerminal = {
-            name: 'test-project - Frontend',
-            dispose: jest.fn(),
-            sendText: jest.fn(),
-            show: jest.fn(),
-        };
+                mockTerminal = fakeTerminal();
         mockWindow.terminals = [];
         mockWindow.createTerminal = jest.fn().mockReturnValue(mockTerminal);
 
@@ -59,38 +56,9 @@ describe('StartDemoCommand - Error Handling', () => {
             stdout: '',
             stderr: '', duration: 0 });
 
-        // Mock extension context
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/mock/extension/path',
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn().mockResolvedValue(undefined),
-            },
-        } as any;
+                mockContext = startDemoExtensionContext();
 
-        // Mock state manager with valid project
-        mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({
-                name: 'test-project',
-                path: '/test/path',
-                status: 'ready',
-                created: new Date(),
-                lastModified: new Date(),
-                componentInstances: {
-                    'headless': {
-                        id: 'headless',
-                        name: 'CitiSignal Frontend',
-                        type: 'frontend',
-                        status: 'ready',
-                        path: '/test/path/frontend',
-                        port: 3000,
-                        metadata: { nodeVersion: '20' },
-                    },
-                },
-            }),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        } as any;
+                mockStateManager = startableStateManager() as jest.Mocked<StateManager>;
 
         // Mock logger
         mockLogger = createMockLogger();

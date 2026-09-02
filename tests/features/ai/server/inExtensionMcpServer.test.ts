@@ -8,6 +8,7 @@
  */
 
 import * as fs from 'fs';
+import { waitForCondition } from '../../../testUtils/async';
 import * as net from 'net';
 import * as os from 'os';
 import * as path from 'path';
@@ -27,6 +28,35 @@ import {
 } from './inExtensionMcpServer.testUtils';
 import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+
+/**
+ * Resolves once nothing answers on `socketPath` — the previous listener is gone.
+ *
+ * Two tests waited a flat 50ms for this instead. That is a guess: the successor's
+ * bind loses to a listener the OS has not torn down yet, and the test fails on a
+ * busy moment rather than on a defect. Measured 2026-09-02 — twice in full-suite
+ * runs, 8/8 green in isolation, which is the signature of a fixed delay.
+ *
+ * Note the socket FILE outlives dispose; only the listener goes. So the signal is
+ * a refused connection, not an absent file.
+ */
+async function waitForListenerGone(path: string): Promise<void> {
+    await waitForCondition(
+        () =>
+            new Promise<boolean>((resolve) => {
+                const probe = net.connect(path);
+                probe.once('connect', () => {
+                    probe.destroy();
+                    resolve(false);
+                });
+                probe.once('error', () => {
+                    probe.destroy();
+                    resolve(true);
+                });
+            }),
+        { timeout: 5_000, interval: 10, message: `something still answers on ${path}` }
+    );
+}
 
 describe('InExtensionMcpServer', () => {
     let socketPath: string;
@@ -231,7 +261,7 @@ describe('InExtensionMcpServer', () => {
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         await server.start();
         server.dispose();
-        await new Promise((r) => setTimeout(r, 50));
+        await waitForListenerGone(socketPath);
 
         await expect(
             new Promise((resolve, reject) => {
@@ -291,7 +321,14 @@ describe('InExtensionMcpServer', () => {
         const outgoing = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         await outgoing.start();
         outgoing.dispose();
-        await new Promise((r) => setTimeout(r, 50));
+
+        // WAIT FOR THE SOCKET TO GO, do not guess at how long that takes. This was
+        // `setTimeout(50)`, and 50ms is a number somebody hoped was enough: the
+        // successor's bind loses to a socket the OS has not released yet, and the
+        // test fails on an unrelated machine-busy moment. It failed twice on
+        // 2026-09-02 in full-suite runs and passed 8/8 in isolation, which is the
+        // signature of a fixed delay rather than of a defect.
+        await waitForListenerGone(socketPath);
 
         server = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         await server.start();

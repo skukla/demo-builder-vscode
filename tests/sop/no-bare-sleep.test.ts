@@ -50,6 +50,20 @@ function walk(dir: string): string[] {
     });
 }
 
+/**
+ * SCOPE: `src/` ONLY, and that is a stated hole rather than an oversight.
+ *
+ * Measured 2026-09-02: 23 files under `tests/` contain a bare sleep. Most are
+ * legitimate — fake-timer helpers, deliberate delays inside a mock, a polling
+ * interval — so turning this on wholesale would be a project, not a fix.
+ *
+ * But the hole has a cost, and it was paid the same day: a flat
+ * `setTimeout(50)` between disposing an MCP server and binding its successor
+ * failed two full-suite runs while passing 8/8 in isolation, and nothing here
+ * could see it because it lived in a test. It is now a poll for a refused
+ * connection. If you are extending this check, that file is the worked example
+ * of the difference between a guess and a signal.
+ */
 describe('SOP: sleeps route through the shared sleep()', () => {
     const files = walk(SRC).filter((f) => !ALLOWED.includes(f));
 

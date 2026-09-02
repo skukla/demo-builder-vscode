@@ -60,3 +60,69 @@ export { ProcessCleanup, MockProcessCleanup, mockCommandExecutor };
  * specs keep importing from here.
  */
 export { mockWindow, mockCommands, mockWorkspace } from '../../../helpers/vscodeMockViews';
+
+import type { Project } from '@/types/base';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import type * as vscode from 'vscode';
+import type { StateManager } from '@/types/state';
+
+/**
+ * The project the start-demo suites drive: one frontend component, ready, on 3000.
+ *
+ * Built on the canonical `createMockProject` rather than a literal — the
+ * canonical-fakes enforcer caught the first version of this helper doing exactly
+ * what it exists to stop, "a new fake bypassed the builder", and it was right.
+ * Only the component instance is specific to these suites.
+ */
+export function startableProject(overrides: Partial<Project> = {}): Project {
+    return createMockProject({
+        name: 'test-project',
+        path: '/test/path',
+        status: 'ready',
+        componentInstances: {
+            headless: {
+                id: 'headless',
+                name: 'CitiSignal Frontend',
+                type: 'frontend',
+                status: 'ready',
+                path: '/test/path/frontend',
+                port: 3000,
+                metadata: { nodeVersion: '20' },
+            },
+        } as unknown as Project['componentInstances'],
+        ...overrides,
+    });
+}
+
+/** A state manager holding {@link startableProject}. */
+export function startableStateManager(project: Project = startableProject()): StateManager {
+    return createMockStateManager({
+        getCurrentProject: jest.fn().mockResolvedValue(project),
+        saveProject: jest.fn().mockResolvedValue(undefined),
+    });
+}
+
+/**
+ * The extension context these suites hand the command.
+ *
+ * Built from the canonical fake rather than the four-field literal each suite had
+ * behind an `as any` — the cast was load-bearing precisely because the literal was
+ * not an ExtensionContext.
+ */
+export function startDemoExtensionContext(): jest.Mocked<vscode.ExtensionContext> {
+    return createMockExtensionContext({
+        extensionPath: '/mock/extension/path',
+    }) as unknown as jest.Mocked<vscode.ExtensionContext>;
+}
+
+/** The terminal the command creates, with the calls these suites assert on. */
+export function fakeTerminal(name = 'test-project - Frontend'): {
+    name: string;
+    dispose: jest.Mock;
+    sendText: jest.Mock;
+    show: jest.Mock;
+} {
+    return { name, dispose: jest.fn(), sendText: jest.fn(), show: jest.fn() };
+}
