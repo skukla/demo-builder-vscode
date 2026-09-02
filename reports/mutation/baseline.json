@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "pinned at its first measured score",
+    "_note": "componentUpdater: the installed component's version is kept in step with the record (46.34%)",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -170,20 +170,20 @@
             "highValueSurvivors": 17
         },
         "src/features/updates/services/componentUpdater.ts": {
-            "score": 44.6,
-            "killed": 128,
-            "survived": 120,
-            "noCoverage": 39,
+            "score": 46.34,
+            "killed": 133,
+            "survived": 116,
+            "noCoverage": 38,
             "timeout": 0,
             "survivorCategories": {
                 "string": 18,
-                "block": 14,
-                "logPresentation": 28,
-                "branch": 39,
                 "other": 11,
+                "branch": 36,
+                "logPresentation": 28,
+                "block": 13,
                 "optionalChain": 10
             },
-            "highValueSurvivors": 53
+            "highValueSurvivors": 49
         },
         "src/features/updates/services/updateManager.ts": {
             "score": 51.4,

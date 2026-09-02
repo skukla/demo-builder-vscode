@@ -157,6 +157,30 @@ describe('ComponentUpdater - Extended Coverage', () => {
             });
         });
 
+        it('keeps the INSTALLED component in step with the version record', async () => {
+            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+
+            await updater.updateComponent(mockProject, 'test-component', downloadUrl, '1.0.0');
+
+            // Two places record a version and the project loader PREFERS this one. If it
+            // is not moved, a successful update leaves the dashboard showing the old
+            // version while the version record says the new one — and nothing fails.
+            expect(mockProject.componentInstances?.['test-component']?.version).toBe('1.0.0');
+        });
+
+        it('updates a project that has no version record yet', async () => {
+            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            // Older projects predate the field entirely. The default fixture already has
+            // an empty one, so the branch that CREATES it was never taken.
+            delete (mockProject as { componentVersions?: unknown }).componentVersions;
+
+            await updater.updateComponent(mockProject, 'test-component', downloadUrl, '1.0.0');
+
+            expect(mockProject.componentVersions?.['test-component']).toMatchObject({
+                version: '1.0.0',
+            });
+        });
+
         it('should NOT update version when verification fails', async () => {
             const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
             const newVersion = '1.0.0';

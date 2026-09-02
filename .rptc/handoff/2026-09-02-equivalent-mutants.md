@@ -262,3 +262,27 @@ to reward.
 
 **Nothing to decide.** The guard earns its place by being explicit rather than by
 changing behaviour — the reader should not have to know the catch is there.
+
+## componentUpdater.ts:124 — a guard for a state the method already refused (3 mutants)
+
+```ts
+async updateComponent(project, componentId, ...) {
+    const component = project.componentInstances?.[componentId];
+    if (!component?.path) {
+        throw new Error(`Component ${componentId} not found in project state`);   // line ~60
+    }
+    ...
+    if (project.componentInstances?.[componentId]) {                              // line 124
+        project.componentInstances[componentId].version = newVersion;
+    }
+```
+
+The method reads the component out of `componentInstances` in its first statement and
+throws if it is not there, so by line 124 the entry is guaranteed to exist. A test that
+removed it never reaches this line — it gets the refusal instead, which is what happened
+when one was written.
+
+**Nothing to decide, but worth a comment if anyone touches it.** The re-check is
+defensive rather than wrong, and it reads as if the entry might be missing, which sent
+one test after a state the method forbids. The version SYNC on that line is real and is
+now tested; only the guard around it is unreachable.

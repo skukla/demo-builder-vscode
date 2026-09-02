@@ -26,7 +26,7 @@
  * Lines are ranked by how many survivors sit on them: a line with five is one
  * decision nothing constrains from five directions, and is usually one test.
  */
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 
 const reportPath = process.argv.find((a) => a.endsWith('.json') && !a.startsWith('--'))
     ?? 'reports/mutation/focus.json';
@@ -65,6 +65,32 @@ function bodyIsOnlyLogging(lines, startLine) {
 }
 
 const report = JSON.parse(readFileSync(reportPath, 'utf8'));
+
+/**
+ * Say so when the report is about a DIFFERENT module than the focused run is aimed at.
+ *
+ * `focus.json` is overwritten by whichever run last finished, and switching modules does
+ * not re-measure. So it is entirely possible — and happened twice on 2026-09-02 — to
+ * switch the focus to one file and then read a worklist for another, which looks like a
+ * perfectly good worklist and is about the wrong code.
+ *
+ * A warning rather than a refusal: reading an older report on purpose is legitimate, and
+ * the default report path is not always the focused one.
+ */
+if (reportPath.includes('focus.json') && existsSync('stryker.focus.config.json')) {
+    const aimedAt = JSON.parse(readFileSync('stryker.focus.config.json', 'utf8')).mutate ?? [];
+    const measured = Object.keys(report.files);
+    const missing = aimedAt.filter((m) => !measured.some((f) => f.endsWith(m) || m.endsWith(f)));
+    if (missing.length) {
+        console.error(
+            `WARNING: the focused config is aimed at ${missing.join(', ')}, but this report ` +
+                `covers ${measured.map((f) => f.split('/').pop()).join(', ')}.\n` +
+                `         Run \`npm run test:mutation:focus\` — this worklist is about the ` +
+                `previous module.\n`
+        );
+    }
+}
+
 const out = [];
 
 for (const [path, file] of Object.entries(report.files)) {
