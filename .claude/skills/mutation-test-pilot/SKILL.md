@@ -120,6 +120,27 @@ This used to read "editing TWO files together", which is a rule you follow until
 night you do not: on 2026-09-02 a new suite went into the focused config and not the
 sample one, and only an enforcer caught it.
 
+**When a survivor looks like the suite SHOULD catch it, check before writing a test.**
+A survivor is a claim by the tool, and the tool can be wrong in two ways that both cost
+an hour if you believe them:
+
+1. **Break the line by hand and run the suite.** Comment the condition out, or force it,
+   and see whether anything fails. On 2026-09-02 a confirm gate on a tool that deletes a
+   live DA.live site root showed as an unconstrained survivor; disabling the gate failed
+   three tests immediately. The gate was constrained and the report was mis-attributing.
+2. **Re-run with `coverageAnalysis` set to `all`.** The focused config uses `perTest`,
+   which is faster and can under-attribute which tests reach a mutant. Switching to `all`
+   on that same line turned three of its four survivors into kills and left exactly one —
+   which was a REAL gap worth a test: the gate takes a confirmation flag AND a name echo,
+   and nothing covered supplying the echo while omitting the flag. An agent that has read
+   the refusal knows the exact name to echo, so that combination is the one to worry
+   about.
+
+Related: several mutants on one line can share the same replacement TEXT — each is a
+different sub-expression of the same condition — so a report showing "one survived, two
+killed" for the identical string cannot tell you WHICH. That is when step 1 is the only
+way to find out.
+
 **When a mutant cannot be killed**, do not contort a test to fake it. Some are
 EQUIVALENT — the mutated code behaves identically, and no test can tell. Record it
 where it belongs:

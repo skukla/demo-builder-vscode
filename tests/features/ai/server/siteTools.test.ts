@@ -63,7 +63,17 @@ const logger = createMockLogger();
 let allProjects: Array<{ name: string; path: string }> = [];
 /** What `loadProjectFromPath` resolves to, keyed by path. */
 let projectsOnDisk: Record<string, unknown> = {};
-const loadProjectFromPath = jest.fn(async (path: string) => projectsOnDisk[path]);
+const loadProjectFromPath = jest.fn(
+    async (
+        path: string,
+        // The real signature, so a test can assert what it was HANDED. Narrower than
+        // the real thing, the tuple has no second element and the compiler says so —
+        // which is how the terminal provider below stopped being described as a
+        // "component list" it never was.
+        _terminalProvider?: () => readonly unknown[],
+        _options?: { persistAfterLoad?: boolean }
+    ) => projectsOnDisk[path]
+);
 const saveProject = jest.fn().mockResolvedValue(undefined);
 
 /**
@@ -301,6 +311,17 @@ describe('repair_site_configuration', () => {
         expect(out.lostGrants).toEqual(['o***r@example.test']);
     });
 
+    it('hands the repair a way to persist the project it changed', async () => {
+        await harness().call('repair_site_configuration', { confirm: true });
+
+        // The repair updates the project as it goes and cannot save it itself. If the
+        // callback it is handed does nothing, the repair appears to succeed and the
+        // change is gone at the next reload.
+        const persist = mockRepairSiteConfigForProject.mock.calls[0][3] as (p: unknown) => unknown;
+        persist(project);
+        expect(saveProject).toHaveBeenCalledWith(project);
+    });
+
     it('does not republish', async () => {
         const out = await harness().call('repair_site_configuration', { confirm: true });
 
@@ -393,6 +414,49 @@ describe('find_storefront_name_mismatches', () => {
             persistAfterLoad: false,
         });
         expect(saveProject).not.toHaveBeenCalled();
+
+        // `expect.any(Function)` passes for ANY function, so it does not check what the
+        // second argument ANSWERS. It is the loader's terminal provider, and a headless
+        // MCP tool has no VS Code terminals to hand back — its default reaches for
+        // `vscode.window.terminals`, which does not exist here.
+        const [, terminals] = loadProjectFromPath.mock.calls[0];
+        expect(terminals!()).toEqual([]);
+    });
+
+    it('skips a project whose manifest resolves to nothing, and keeps scanning', async () => {
+        allProjects = [
+            { name: 'gone', path: '/projects/gone' },
+            { name: 'demo', path: '/projects/demo' },
+        ];
+        // '/projects/gone' is absent from the map, so the loader resolves undefined
+        // rather than throwing — a different case from the unreadable manifest below,
+        // and the one a deleted directory produces.
+        projectsOnDisk = { '/projects/demo': project };
+        mockFindStorefrontNameMismatch.mockReturnValue(candidate);
+
+        const out = await harness().call('find_storefront_name_mismatches');
+
+        expect(out).toMatchObject({ scanned: 2, total: 1 });
+    });
+
+    it('lists only the projects that actually mismatch', async () => {
+        allProjects = [
+            { name: 'fine', path: '/projects/fine' },
+            { name: 'demo', path: '/projects/demo' },
+        ];
+        // Two DISTINCT projects, so the mismatch check can answer differently for each
+        // without depending on call order.
+        const alreadyCorrect = { ...project, name: 'fine' };
+        projectsOnDisk = { '/projects/fine': alreadyCorrect, '/projects/demo': project };
+        mockFindStorefrontNameMismatch.mockImplementation((p: unknown) =>
+            p === project ? candidate : undefined
+        );
+
+        const out = await harness().call('find_storefront_name_mismatches');
+
+        // Both scanned, one reported — a scan that listed every project it read would
+        // send the user migrating things that are already correct.
+        expect(out).toMatchObject({ scanned: 2, total: 1 });
     });
 
     it('reports an empty list rather than an error when nothing needs migrating', async () => {
@@ -454,6 +518,19 @@ describe('migrate_storefront_name', () => {
         expect(mockMigrateStorefrontNameForProject).not.toHaveBeenCalled();
     });
 
+    it('refuses when the name echo is right but confirm was never given', async () => {
+        // Both halves of the gate have to hold. An agent that has read the refusal
+        // knows the exact name to echo, so the echo alone is not evidence a human
+        // agreed — and this is the call that deletes the old DA.live site root.
+        const out = await harness().call('migrate_storefront_name', {
+            ...atDemo,
+            confirmName: 'demo',
+        });
+
+        expect(String(out.error)).toMatch(/confirm/i);
+        expect(mockMigrateStorefrontNameForProject).not.toHaveBeenCalled();
+    });
+
     it('refuses when the name echo does not match', async () => {
         const out = await harness().call('migrate_storefront_name', {
             ...atDemo,
@@ -484,6 +561,23 @@ describe('migrate_storefront_name', () => {
         expect(out.migrated).toBe(true);
         expect(out.publishKeyRenewed).toBe(true);
         expect(out.to).toBe('someone/demo-builder-test');
+    });
+
+    it('hands the migration a way to persist the project it renamed', async () => {
+        await harness().call('migrate_storefront_name', {
+            ...atDemo,
+            confirm: true,
+            confirmName: 'demo',
+        });
+
+        // Same rule as the repair: the rename changes the project and the tool owns
+        // saving it. A callback that drops the update loses the new site name.
+        const persist = mockMigrateStorefrontNameForProject.mock.calls[0][3] as (
+            p: unknown
+        ) => unknown;
+        const renamed = { ...project, name: 'renamed' };
+        persist(renamed);
+        expect(saveProject).toHaveBeenCalledWith(renamed);
     });
 
     it('reports a publish key that was NOT re-minted', async () => {
@@ -521,6 +615,30 @@ describe('migrate_storefront_name', () => {
         });
 
         expect(out.lostGrants).toEqual(['o***r@example.test']);
+    });
+
+    it('reads the target manifest without rewriting it', async () => {
+        await harness().call('migrate_storefront_name', atDemo);
+
+        // Same rule as the scan: resolving WHICH project to migrate must not persist
+        // the manifest as a side effect of reading it.
+        expect(loadProjectFromPath).toHaveBeenCalledWith('/projects/demo', expect.any(Function), {
+            persistAfterLoad: false,
+        });
+        const [, terminals] = loadProjectFromPath.mock.calls[0];
+        expect(terminals!()).toEqual([]);
+    });
+
+    it('accepts a project path with stray whitespace around it', async () => {
+        // Paths arrive from an agent, which may well have copied one out of prose with
+        // a trailing newline. Untrimmed, this resolves to nothing and the tool reports
+        // the project as missing.
+        const out = await harness().call('migrate_storefront_name', {
+            projectPath: '  /projects/demo\n',
+        });
+
+        expect(String(out.error ?? '')).not.toMatch(/No project found/);
+        expect(out.from).toBe('someone/citisignal-one');
     });
 
     it('says "nothing to do" rather than erroring on an already-correct project', async () => {
