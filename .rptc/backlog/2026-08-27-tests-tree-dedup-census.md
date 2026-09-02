@@ -246,3 +246,4 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  test(configure): five shared walls for two ConfigureScreen suites — and which jest.mock actually wins (`013e90a52`)
 - 2026-09-02  test(dashboard): one definition of the two validator walls, for twelve suites (`fb31d7edc`)
 - 2026-09-02  chore(clone-ledger): two adjudicated pairs stopped duplicating, so they leave the list (`69318b7d8`)
+- 2026-09-02  test(sop): three enforcers stop hand-rolling a file walker and use the one that exists (`77c90a886`)

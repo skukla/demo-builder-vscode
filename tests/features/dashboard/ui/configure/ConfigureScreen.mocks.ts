@@ -6,11 +6,13 @@
  * module it appears in, not across modules. Pinned by
  * `tests/sop/mock-wall-import-order.test.ts`.
  *
- * WHY FIVE AND NOT EIGHT. Four suites in this directory mock the same eight
- * modules. Comparing the BODIES with comments stripped (2026-09-02) says they
- * agree on only some of them, and which ones depends on the pair. These two
- * agree on all five below and differ on PageHeader, PageFooter and
- * StoreConfigFieldRow, which stay in each suite.
+ * WHY THREE AND NOT EIGHT. Four suites here mock the same eight modules and
+ * agree on far fewer than that list suggests. These three are the ones all four
+ * install identically (bodies compared with comments stripped, 2026-09-02).
+ * PageHeader, PageFooter and StoreConfigFieldRow differ per suite. The two
+ * store-discovery hooks were briefly here and came out: `validation` mocks
+ * neither, so this file would have imposed two doubles on a suite whose tree
+ * uses the real hooks.
  *
  * A SUITE CANNOT OVERRIDE WHAT THIS FILE DECLARES. Whichever `jest.mock`
  * registration runs last wins, and a suite's own calls hoist to the very top —
@@ -34,10 +36,6 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
         request: jest.fn(),
         onMessage: jest.fn(() => jest.fn()),
     },
-}));
-
-jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
-    useAutoStoreDetect: () => ({ autoDetectKey: undefined, forceFetch: jest.fn() }),
 }));
 
 /**
