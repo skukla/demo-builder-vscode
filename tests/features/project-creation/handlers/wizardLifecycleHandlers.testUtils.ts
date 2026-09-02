@@ -8,28 +8,6 @@ import { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-// Mock VS Code
-export const mockVSCode = {
-    Uri: {
-        file: jest.fn((path: string) => ({ fsPath: path, path })),
-        parse: jest.fn((uri: string) => ({ fsPath: uri, path: uri }))
-    },
-    window: {
-        showErrorMessage: jest.fn(),
-        showInformationMessage: jest.fn(),
-        showWarningMessage: jest.fn()
-    },
-    workspace: {
-        updateWorkspaceFolders: jest.fn()
-    },
-    commands: {
-        executeCommand: jest.fn()
-    },
-    env: {
-        openExternal: jest.fn()
-    }
-};
-
 /**
  * Creates a mock HandlerContext for testing
  *
@@ -72,16 +50,3 @@ export function createWizardLifecycleContext() {
     return context as jest.Mocked<HandlerContext>;
 }
 
-/**
- * Setup common mocks for lifecycle handler tests
- */
-export function setupMocks() {
-    jest.mock('vscode', () => mockVSCode, { virtual: true });
-    jest.mock('@/core/validation/validators/NodeVersionValidator');
-    jest.mock('@/features/components/handlers/componentHandlers', () => ({
-        handleLoadComponents: jest.fn().mockResolvedValue({
-            success: true,
-            data: { components: [] }
-        })
-    }));
-}
