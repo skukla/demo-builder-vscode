@@ -43,6 +43,48 @@ import {
 const mockUseSelectionStep = useSelectionStep as jest.Mock;
 
 describe('AdobeWorkspacePicker', () => {
+
+    /**
+     * WHAT THE PICKER HANDS THE HOOK. See the twin block in
+     * AdobeProjectPicker.test.tsx for the measurement that prompted these: with
+     * `useSelectionStep` mocked, every test that asserts the SCREEN is asserting
+     * what the mock was told to return, so a picker asking the backend for the
+     * wrong entity passed its whole suite.
+     */
+    describe('the configuration it hands useSelectionStep', () => {
+        function configPassed(state = baseState): Record<string, unknown> {
+            mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn({}));
+            render(
+                <Provider theme={defaultTheme}>
+                    <AdobeWorkspacePicker
+                        state={state as WizardState}
+                        updateState={mockUpdateState}
+                    />
+                </Provider>
+            );
+            return mockUseSelectionStep.mock.calls[0][0] as Record<string, unknown>;
+        }
+
+        it('asks the backend for WORKSPACES, and caches them under the workspaces key', () => {
+            const config = configPassed();
+            expect(config.messageType).toBe('get-workspaces');
+            expect(config.cacheKey).toBe('workspacesCache');
+            expect(config.errorMessageType).toBe('workspace-error');
+        });
+
+        it('threads the selected org and project so the backend targets THEM', () => {
+            // Not cached — threaded per request. A stale in-memory cache would
+            // otherwise decide which project's workspaces come back.
+            expect(configPassed().messagePayload).toEqual({
+                orgId: baseState.adobeOrg?.id,
+                projectId: baseState.adobeProject?.id,
+            });
+        });
+
+        it('searches title and name', () => {
+            expect(configPassed().searchFields).toEqual(['title', 'name']);
+        });
+    });
     const mockUpdateState = jest.fn();
 
     beforeEach(() => {

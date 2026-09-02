@@ -45,6 +45,49 @@ import { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
 const mockUseSelectionStep = useSelectionStep as jest.Mock;
 
 describe('AdobeProjectPicker', () => {
+
+    /**
+     * WHAT THE PICKER HANDS THE HOOK.
+     *
+     * Everything else in this file mocks `useSelectionStep` and asserts what came
+     * back on screen — which the mock decides, not the component. Measured
+     * 2026-09-02 by breaking the wiring four ways: an emptied `searchFields`, a
+     * wrong `cacheKey`, and a `messageType` asking the backend for WORKSPACES all
+     * left seventeen tests green. Only the inverted auto-select flag was caught,
+     * and only because one test reads the config off the mock rather than the
+     * screen.
+     *
+     * A mock cannot see a malformed call. So the config is asserted directly.
+     */
+    describe('the configuration it hands useSelectionStep', () => {
+        function configPassed(): Record<string, unknown> {
+            mockUseSelectionStep.mockReturnValue(createMockSelectionStep({}));
+            render(
+                <Provider theme={defaultTheme}>
+                    <AdobeProjectPicker
+                        state={baseState as WizardState}
+                        updateState={mockUpdateState}
+                    />
+                </Provider>
+            );
+            return mockUseSelectionStep.mock.calls[0][0] as Record<string, unknown>;
+        }
+
+        it('asks the backend for PROJECTS, and caches them under the projects key', () => {
+            const config = configPassed();
+            expect(config.messageType).toBe('get-projects');
+            expect(config.cacheKey).toBe('projectsCache');
+            expect(config.errorMessageType).toBe('project-error');
+        });
+
+        it('searches the fields a person would type into — title, name, description', () => {
+            expect(configPassed().searchFields).toEqual(['title', 'name', 'description']);
+        });
+
+        it('stores the search text under the project search key', () => {
+            expect(configPassed().searchFilterKey).toBe('projectSearchFilter');
+        });
+    });
     const mockUpdateState = jest.fn();
 
     beforeEach(() => {
