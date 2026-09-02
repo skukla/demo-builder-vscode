@@ -48,6 +48,7 @@ import {
     setupSharedUtilityMocks,
     cacheInvalidateMock,
     mockNpmPrereq,
+    lastFinalStatus,
 } from './installHandler.testUtils';
 
 describe('Install Handler - Happy Path', () => {
@@ -458,14 +459,6 @@ describe('Install Handler - Happy Path', () => {
      * Install button would be disabled so the user could not fix it.
      */
     describe('overall success for a per-Node-version prerequisite', () => {
-        /** The last `prerequisite-status` payload the handler pushed. */
-        function finalStatus(): Record<string, unknown> | undefined {
-            const calls = (mockContext.sendMessage as jest.Mock).mock.calls.filter(
-                ([type]: [string]) => type === 'prerequisite-status'
-            );
-            return calls.at(-1)?.[1];
-        }
-
         /** Drive a per-Node-version prereq whose POST-install check returns `after`. */
         function usePerNodePrereq(after: { version: string; component: string; installed: boolean }[]) {
             const states = new Map();
@@ -495,7 +488,7 @@ describe('Install Handler - Happy Path', () => {
 
             await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
-            expect(finalStatus()).toEqual(
+            expect(lastFinalStatus(mockContext)).toEqual(
                 expect.objectContaining({ installed: true, canInstall: false })
             );
         });
@@ -511,7 +504,7 @@ describe('Install Handler - Happy Path', () => {
 
             await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
-            expect(finalStatus()).toEqual(
+            expect(lastFinalStatus(mockContext)).toEqual(
                 expect.objectContaining({ installed: false, canInstall: true })
             );
         });
@@ -524,7 +517,7 @@ describe('Install Handler - Happy Path', () => {
 
             await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
-            expect(finalStatus()).toEqual(
+            expect(lastFinalStatus(mockContext)).toEqual(
                 expect.objectContaining({ installed: mockNodeResult.installed })
             );
         });

@@ -26,6 +26,7 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
+import type { PrerequisiteStatusPayload } from '@/types/webviewPayloads';
 import { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
@@ -282,6 +283,24 @@ export function cacheInvalidateMock(context: HandlerContext): jest.Mock {
         invalidate: jest.Mock;
     };
     return manager.invalidate;
+}
+
+/**
+ * The LAST `prerequisite-status` payload the handler pushed.
+ *
+ * This is the handler's answer: the webview renders the row from it, so every
+ * decision `sendFinalInstallStatus` makes — installed or not, which per-version
+ * status list to attach, whether Install stays offered — is readable here and
+ * nowhere else.
+ *
+ * Returns `undefined` when no status was sent, which is itself a real outcome:
+ * an early return sends `prerequisite-install-complete` instead.
+ */
+export function lastFinalStatus(context: HandlerContext): PrerequisiteStatusPayload | undefined {
+    const calls = (context.sendMessage as jest.Mock).mock.calls.filter(
+        ([type]: [string]) => type === 'prerequisite-status'
+    );
+    return calls.at(-1)?.[1] as PrerequisiteStatusPayload | undefined;
 }
 
 /**

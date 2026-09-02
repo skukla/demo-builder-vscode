@@ -316,3 +316,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-01  test: four more files, and a scanner that could not survive its neighbours (`8ff774a85`)
 - 2026-09-01  test(helpers): the mocked-vscode views become canonical — 33 casts across 10 files (`e449e0e76`)
 - 2026-09-01  test: three families cleared — 56 casts, and most of them were never load-bearing (`8d44aa414`)
+- 2026-09-02  test(prerequisites): how many steps the progress bar counts, and five fixtures that lied (`29cb30c10`)
