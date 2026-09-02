@@ -41,11 +41,12 @@ export function sourceFiles(root = 'src') {
 /**
  * Every suite ANYWHERE in the test tree whose filename names this module.
  *
- * Deliberately NOT the path mirror. The tests do not mirror `src` reliably: everything
- * under `src/core/ui` is tested from `tests/webview-ui/shared`, and dozens of handlers
- * are tested from a sibling feature's folder. A path-mirror census reported 232 files as
- * untested, and the first control caught one that has a suite and a pinned mutation
- * score — `spectrumTokens.ts`, tested from `tests/webview-ui/shared/utils`.
+ * Deliberately NOT the path mirror. The tests do not mirror `src` reliably: dozens of
+ * handlers are tested from a sibling feature's folder. A path-mirror census reported 232
+ * files as untested, and the first control caught one that has a suite and a pinned
+ * mutation score — `spectrumTokens.ts`, then tested from `tests/webview-ui/shared/utils`
+ * (that whole tree moved to its subjects' mirror under `tests/core/ui` on 2026-09-02;
+ * the handler scatter is what still makes the strict mirror the wrong question here).
  *
  * The looser question is the right one HERE ("is this module tested at all"), and the
  * strict path mirror stays the right one in `focusModule.mjs`, which must select the

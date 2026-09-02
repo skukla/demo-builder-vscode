@@ -43,7 +43,6 @@ const NON_MIRROR_DIRS: Record<string, string> = {
     security: 'cross-cutting security checks that span subjects',
     sop: 'architecture and craft checks whose subject is the repo itself',
     templates: 'checks over generated template output, not over a source file',
-    'webview-ui': 'legacy shared webview UI suites (documented in tests/README.md)',
     // Subjects that genuinely live OUTSIDE src/ — a mirror is impossible.
     scripts: 'subject is the repo\'s scripts/ directory, not src/',
     hooks: 'subject is .claude/hooks/, not src/',

@@ -84,7 +84,7 @@ module.exports = {
         // added 2026-08-31 with the sample's widening — UI-LAYER LOGIC, which runs
         // under the node project. Components (.tsx) are not here: see the stryker
         // config's comment for the two tooling blockers that stop them being measured.
-        '**/tests/webview-ui/shared/utils/spectrumTokens.test.ts',
+        '**/tests/core/ui/utils/spectrumTokens.test.ts',
         '**/tests/features/dashboard/ui/components/integrations/integrationCardModel.test.ts',
         '**/tests/features/data-installer/ui/importProgress.test.ts',
         '**/tests/features/project-creation/ui/helpers/buttonTextHelpers.test.ts',
