@@ -45,17 +45,19 @@ const getDaLiveAuthServiceMock = getDaLiveAuthService as jest.Mock;
 const isEdsProjectMock = isEdsProject as unknown as jest.Mock;
 
 function fakeServer() {
-    const tools = new Map<string, () => Promise<{ content: Array<{ text: string }> }>>();
+    // The handler takes ARGS. It did not need to until these tools gained a `confirm`
+    // field, and a fake narrower than its subject cannot see a call it would reject —
+    // the compiler said so the moment the tests started passing one.
+    type ToolHandler = (args?: Record<string, unknown>) => Promise<{
+        content: Array<{ text: string }>;
+    }>;
+    const tools = new Map<string, ToolHandler>();
     return {
-        registerTool(
-            name: string,
-            _def: unknown,
-            handler: () => Promise<{ content: Array<{ text: string }> }>
-        ) {
+        registerTool(name: string, _def: unknown, handler: ToolHandler) {
             tools.set(name, handler);
         },
-        async call(name: string): Promise<any> {
-            return JSON.parse((await tools.get(name)!()).content[0].text);
+        async call(name: string, args: Record<string, unknown> = {}): Promise<any> {
+            return JSON.parse((await tools.get(name)!(args)).content[0].text);
         },
     };
 }
@@ -90,7 +92,7 @@ describe('republish', () => {
         getCurrentProject.mockResolvedValueOnce(undefined);
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('republish')).toMatchObject({
+        expect(await s.call('republish', { confirm: true })).toMatchObject({
             error: expect.stringMatching(/No current project/),
         });
         expect(republishMock).not.toHaveBeenCalled();
@@ -100,7 +102,7 @@ describe('republish', () => {
         isEdsProjectMock.mockReturnValueOnce(false);
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('republish')).toMatchObject({
+        expect(await s.call('republish', { confirm: true })).toMatchObject({
             error: expect.stringMatching(/only to EDS/),
         });
         expect(republishMock).not.toHaveBeenCalled();
@@ -112,7 +114,7 @@ describe('republish', () => {
         });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('republish')).toMatchObject({ needsAuth: 'github' });
+        expect(await s.call('republish', { confirm: true })).toMatchObject({ needsAuth: 'github' });
         expect(republishMock).not.toHaveBeenCalled();
     });
 
@@ -126,14 +128,14 @@ describe('republish', () => {
         });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('republish')).toMatchObject({ needsAuth: 'github' });
+        expect(await s.call('republish', { confirm: true })).toMatchObject({ needsAuth: 'github' });
         expect(republishMock).not.toHaveBeenCalled();
     });
 
     it('republishes and passes through the per-step result on success', async () => {
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        const res = await s.call('republish');
+        const res = await s.call('republish', { confirm: true });
         expect(res).toEqual({
             success: true,
             githubPushed: true,
@@ -153,7 +155,7 @@ describe('republish', () => {
     it('runs the republish under the stored session org context', async () => {
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        await s.call('republish');
+        await s.call('republish', { confirm: true });
         expect(runWithAdobeTarget).toHaveBeenCalled();
     });
 
@@ -165,7 +167,7 @@ describe('republish', () => {
         });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        const res = await s.call('republish');
+        const res = await s.call('republish', { confirm: true });
         expect(res).toMatchObject({ success: false, error: 'CDN verify failed' });
     });
 
@@ -173,7 +175,7 @@ describe('republish', () => {
         republishMock.mockRejectedValueOnce(new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org'));
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        const res = await s.call('republish');
+        const res = await s.call('republish', { confirm: true });
         expect(res).toMatchObject({ error_type: 'ORG_MISMATCH', non_retryable: true });
     });
 });
@@ -204,7 +206,7 @@ describe('sync_content', () => {
         isEdsProjectMock.mockReturnValueOnce(false);
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content')).toMatchObject({
+        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
             error: expect.stringMatching(/only to EDS/),
         });
         expect(republishContentMock).not.toHaveBeenCalled();
@@ -214,7 +216,7 @@ describe('sync_content', () => {
         getCurrentProject.mockResolvedValueOnce({ name: 'p', path: '/p', componentInstances: {} });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content')).toMatchObject({
+        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
             error: expect.stringMatching(/missing GitHub repo/),
         });
         expect(republishContentMock).not.toHaveBeenCalled();
@@ -226,7 +228,7 @@ describe('sync_content', () => {
         });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content')).toMatchObject({ needsAuth: 'github' });
+        expect(await s.call('sync_content', { confirm: true })).toMatchObject({ needsAuth: 'github' });
         expect(republishContentMock).not.toHaveBeenCalled();
     });
 
@@ -236,7 +238,7 @@ describe('sync_content', () => {
         });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content')).toMatchObject({ needsAuth: 'dalive' });
+        expect(await s.call('sync_content', { confirm: true })).toMatchObject({ needsAuth: 'dalive' });
         expect(republishContentMock).not.toHaveBeenCalled();
     });
 
@@ -247,7 +249,7 @@ describe('sync_content', () => {
 
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        const res = await s.call('sync_content');
+        const res = await s.call('sync_content', { confirm: true });
 
         expect(res.cdnStatus).toMatch(/not\s+lost work/i);
         expect(res.cdnStatus).toMatch(/git log/i);
@@ -256,7 +258,7 @@ describe('sync_content', () => {
     it('publishes content with the resolved targets on success', async () => {
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        const res = await s.call('sync_content');
+        const res = await s.call('sync_content', { confirm: true });
         expect(res).toEqual({
             success: true,
             cdnVerified: true,
@@ -275,7 +277,7 @@ describe('sync_content', () => {
     it('runs the content publish under the stored session org context', async () => {
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        await s.call('sync_content');
+        await s.call('sync_content', { confirm: true });
         expect(runWithAdobeTarget).toHaveBeenCalled();
     });
 
@@ -283,7 +285,7 @@ describe('sync_content', () => {
         republishContentMock.mockResolvedValueOnce({ success: false, error: 'publish failed' });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content')).toMatchObject({
+        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
             success: false,
             error: 'publish failed',
         });
@@ -295,7 +297,7 @@ describe('sync_content', () => {
         );
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content')).toMatchObject({
+        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
             error_type: 'ORG_MISMATCH',
             non_retryable: true,
         });
@@ -312,4 +314,51 @@ describe('response-size ceilings', () => {
             expectWithinCeiling(tool, JSON.stringify(await s.call(tool)));
         }
     );
+});
+
+/**
+ * THE CONFIRM GATE. Both tools replace what visitors are currently served — republish
+ * the storefront's config, sync_content every page — so neither runs on an unconfirmed
+ * call. Added 2026-09-02 after a reinvestigation found them ungated while every other
+ * tool that writes to a live Adobe, GitHub or DA.live resource was gated.
+ *
+ * The gate is not a human-presence check: `confirm` is a parameter the AGENT supplies,
+ * and an unattended run passes it. What it buys is that the first call answers with what
+ * WOULD happen, and that the call carries the marker the extension's consent layer keys
+ * on when the user has asked to be asked.
+ */
+describe('the confirm gate on the two publishing tools', () => {
+    it('republish refuses without confirm, naming the storefront it would overwrite', async () => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+
+        const res = await s.call('republish');
+
+        expect(String(res.error)).toMatch(/confirm:true/);
+        // A prompt that says only "Republish" tells nobody what is about to change.
+        expect(String(res.error)).toMatch(/config\.json/);
+        expect(String(res.error)).toMatch(/live on the CDN/i);
+    });
+
+    it('sync_content refuses without confirm, naming the site it would republish', async () => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+
+        const res = await s.call('sync_content');
+
+        expect(String(res.error)).toMatch(/confirm:true/);
+        expect(String(res.error)).toMatch(/every page/i);
+    });
+
+    it('refuses BEFORE asking for credentials, so the refusal explains itself', async () => {
+        // Gating after the auth guards would answer "sign in first" to someone who has
+        // not yet been told what the tool does.
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+
+        const res = await s.call('republish');
+
+        expect(res.needsAuth).toBeUndefined();
+        expect(String(res.error)).toMatch(/confirm:true/);
+    });
 });

@@ -247,8 +247,8 @@ server IS — transport, lifecycle, scoping, security — is in
 
 | Tool | | What it does |
 |---|---|---|
-| `republish` |  | Regenerate and republish the EDS storefront config.json to GitHub and the CDN |
-| `sync_content` |  | Publish all EDS storefront content (config + code + DA.live pages) to the CDN |
+| `republish` | **confirm** | Regenerate this project's EDS storefront config.json and publish it to |
+| `sync_content` | **confirm** | Publish ALL of this project's EDS storefront content — config, code and |
 
 ## `src/features/ai/server/validateSelectionTool.ts`
 
