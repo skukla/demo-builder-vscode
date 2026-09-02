@@ -5,72 +5,10 @@
 import type { Project } from '@/types/base';
 import * as os from 'os';
 import * as path from 'path';
-import {
-    handleGetProjects,
-    handleSelectProject,
-    handleCreateProject,
-    handleOpenAiForProject,
-    handleOpenLiveSite,
-    handleOpenDaLive,
-} from '@/features/projects-dashboard/handlers/dashboardHandlers';
+import { handleGetProjects, handleSelectProject, handleCreateProject, handleOpenAiForProject, handleOpenLiveSite, handleOpenDaLive, } from './dashboardHandlers.testUtils';
 import { createProjectsDashboardProject, createMockProjects, createProjectsDashboardContext } from '../testUtils';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
-
-// Mock mesh staleness detection
-jest.mock('@/core/state/appBuilderComponentState', () => ({
-    ...jest.requireActual('@/core/state/appBuilderComponentState'),
-    hasMeshDeploymentRecord: jest.fn().mockReturnValue(false),
-}));
-jest.mock('@/features/mesh/services/meshStatusResolver', () => ({
-    determineMeshStatus: jest.fn().mockResolvedValue('deployed'),
-}));
-
-// Make filesystem path-safety checks deterministic and independent of the host.
-// validateProjectPath() canonicalizes via fs.realpathSync; on a machine without
-// a real ~/.demo-builder/projects directory the validator would reject otherwise
-// valid in-tree paths. Identity realpathSync keeps the security prefix check
-// intact (traversal paths still resolve outside the base) while letting valid
-// project paths through regardless of what exists on disk.
-jest.mock('fs', () => ({
-    ...jest.requireActual('fs'),
-    realpathSync: jest.fn((p: string) => p),
-}));
-
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
-}));
-
-
-// Mock vscode
-jest.mock(
-    'vscode',
-    () => ({
-        commands: {
-            executeCommand: jest.fn(),
-        },
-        workspace: {
-            getConfiguration: jest.fn().mockReturnValue({
-                get: jest.fn().mockReturnValue('cards'),
-            }),
-        },
-        Uri: {
-            file: jest.fn((p: string) => ({ fsPath: p, path: p })),
-            parse: jest.fn((s: string) => ({ toString: () => s, url: s })),
-        },
-        env: {
-            clipboard: {
-                writeText: jest.fn(),
-            },
-            openExternal: jest.fn(),
-        },
-        window: {
-            showInformationMessage: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
-
 
 /**
  * ADR-015 (2026-08-28): this boundary resolves its collaborators from the

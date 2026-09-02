@@ -5,28 +5,16 @@
  * site registration, folder mapping, and site deletion.
  */
 
-// Mock timeoutConfig
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-    },
-}));
-
 import {
     ConfigurationService,
     buildSiteConfigParams,
-} from '@/features/eds/services/configService/configurationService';
-import type { SiteRegistrationParams } from '@/features/eds/services/configService/configurationService';
+    MOCK_IMS_TOKEN,
+    mockLogger,
+    mockTokenProvider,
+    spyOnFetch,
+} from './configurationService.testUtils';
 import { createMockLogger } from '../../../../helpers/loggerFake';
-
-// Test fixtures
-const mockLogger = createMockLogger();
-
-const mockTokenProvider = {
-    getAccessToken: jest.fn(),
-};
-
-const MOCK_IMS_TOKEN = 'eyJhbGciOiJSUzI1NiIsIng1dSI6Imltc19uYTEta2V5LWF0LTEuY2VyIn0.mock-ims-token';
+import type { SiteRegistrationParams } from './configurationService.testUtils';
 
 describe('ConfigurationService', () => {
     let service: ConfigurationService;
@@ -40,9 +28,7 @@ describe('ConfigurationService', () => {
         service = new ConfigurationService(mockTokenProvider, mockLogger);
 
         // Mock global fetch
-        fetchSpy = jest
-            .spyOn(global, 'fetch')
-            .mockResolvedValue(new Response(null, { status: 200 }));
+        fetchSpy = spyOnFetch();
     });
 
     afterEach(() => {

@@ -21,6 +21,7 @@ import type {
 } from '@/features/project-creation/ui/components/integration-flow/useIntegrationFlow';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { WizardState } from '@/types/webview';
+import { makeFlowHarness } from './useIntegrationFlow.testUtils';
 
 // The picker fetch (list-org-console-apis) is issued by ApiPickerStage, not the
 // hook — the hook never calls webviewClient in api-edit — but the module is
@@ -47,24 +48,10 @@ interface Setup {
 }
 
 function setup(editTarget: ApiEditTarget, initial: Partial<WizardState> = {}): Setup {
-    const stateRef: { current: WizardState } = {
-        current: {
-            currentStep: 'build-your-project',
-            projectName: '',
-            selectedPackage: 'citisignal',
-            selectedStack: 'headless-paas',
-            ...SIGNED_IN,
-            ...initial,
-        } as WizardState,
-    };
-    const updateState = jest.fn((partial: Partial<WizardState>) => {
-        stateRef.current = { ...stateRef.current, ...partial };
+    const { stateRef, updateState, builder, onClose } = makeFlowHarness({
+        ...SIGNED_IN,
+        ...initial,
     });
-    const builder = {
-        onAppBuilderComponentToggle: jest.fn(),
-        onAddCustomAppBuilderComponent: jest.fn(),
-    };
-    const onClose = jest.fn();
     const { result } = renderHook(() =>
         useIntegrationFlow({
             state: stateRef.current,
