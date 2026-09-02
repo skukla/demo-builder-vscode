@@ -18,6 +18,7 @@
  * Shared factories live in appBuilderComponentRunner.testUtils.ts.
  */
 
+import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
 import type { Project } from '@/types/base';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
@@ -26,12 +27,6 @@ jest.setTimeout(5000);
 // =============================================================================
 // Mocks — defined before imports
 // =============================================================================
-
-const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell/orgContextEnv', () => ({
-    ...jest.requireActual('@/core/shell/orgContextEnv'),
-    withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
-}));
 
 // Standalone-ness is filesystem-read at the add door; default to standalone so the
 // integration happy paths run, override for the layout-mismatch rejection tests.

@@ -28,12 +28,6 @@ jest.setTimeout(5000);
 // Mocks — defined before imports (same preamble as appBuilderComponentRunner.test.ts)
 // =============================================================================
 
-const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell/orgContextEnv', () => ({
-    ...jest.requireActual('@/core/shell/orgContextEnv'),
-    withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
-}));
-
 const mockDetectAppLayout = jest.fn().mockResolvedValue('standalone');
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
     listDeclaredPackageNames: jest.fn().mockResolvedValue([]),
@@ -45,6 +39,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 // Imports (after mocks)
 // =============================================================================
 
+import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
 import { addAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
 import {
     MESH_ENTRY,
