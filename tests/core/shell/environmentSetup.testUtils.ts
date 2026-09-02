@@ -10,6 +10,14 @@ import { createMockLogger } from '../../helpers/loggerFake';
 /**
  * Mock logger instance
  */
+/** The private statics `EnvironmentSetup` memoises, for per-test reset. */
+function envSetupStatics(): { telemetryConfigured: boolean; checkingTelemetry: boolean } {
+    return EnvironmentSetup as unknown as {
+        telemetryConfigured: boolean;
+        checkingTelemetry: boolean;
+    };
+}
+
 export const mockLogger = createMockLogger();
 
 /**
@@ -42,8 +50,11 @@ export function createEnvironmentSetup(mockHomeDir: string = '/mock/home'): Envi
     (os.homedir as jest.Mock).mockReturnValue(mockHomeDir);
 
     // Reset static flags in EnvironmentSetup
-    (EnvironmentSetup as any).telemetryConfigured = false;
-    (EnvironmentSetup as any).checkingTelemetry = false;
+    // The two private statics this module memoises. Named rather than erased: a
+    // typo in either would otherwise create a NEW static and leave the real one
+    // set, so the next test would inherit the previous one's telemetry state.
+    envSetupStatics().telemetryConfigured = false;
+    envSetupStatics().checkingTelemetry = false;
     (EnvironmentSetup as any).nodeVersionConfigured = false;
     (EnvironmentSetup as any).checkingNodeVersion = false;
 

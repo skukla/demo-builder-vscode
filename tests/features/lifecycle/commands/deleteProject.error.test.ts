@@ -20,13 +20,14 @@ jest.mock('fs/promises', () => ({
 }));
 import * as fs from 'fs/promises';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 const mockRm = fs.rm as jest.Mock;
 
 // Import vscode after mock
 
 describe('DeleteProjectCommand - Error Handling', () => {
     let command: DeleteProjectCommand;
-    let mockContext: jest.Mocked<vscode.ExtensionContext>;
+    let mockContext: ReturnType<typeof createMockExtensionContext>;
     let mockStateManager: jest.Mocked<StateManager>;
     let mockLogger: jest.Mocked<Logger>;
     const testProjectPath = '/tmp/test-project-error';
@@ -42,14 +43,9 @@ describe('DeleteProjectCommand - Error Handling', () => {
         mockRm.mockResolvedValue(undefined);
 
         // Mock extension context
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/mock/extension/path',
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn().mockResolvedValue(undefined),
-            },
-        } as any;
+        // The canonical fake. The literal it replaces named three of
+        // ExtensionContext's twenty-one members.
+        mockContext = createMockExtensionContext({ subscriptions: [] }, '/mock/extension/path');
 
         // Mock state manager
         mockStateManager = {

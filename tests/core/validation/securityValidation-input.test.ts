@@ -24,6 +24,22 @@ import { validateProjectPath } from '@/core/validation/PathSafetyValidator';
 import { validateAdobeResourceId, validateMeshId, validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import { validateProjectNameSecurity } from '@/core/validation/validators/ProjectNameValidator';
 
+/**
+ * A value that CLAIMS to be a `T` and is not.
+ *
+ * These validators declare typed parameters and then check the type anyway —
+ * `validateAdobeResourceId(id: string)` opens with `typeof id !== 'string'`. That
+ * guard is deliberate: the values arrive from webview messages and JSON, where the
+ * declared type is a promise nobody kept. Testing it means handing over a liar.
+ *
+ * `lyingAbout(null)` said that badly. It disabled checking of the WHOLE call, including
+ * the second argument, so a typo there would have gone unnoticed too. This names
+ * exactly one lie and leaves the rest of the call checked.
+ */
+function lyingAbout<T>(value: unknown): T {
+    return value as T;
+}
+
 describe('securityValidation - Input Validation', () => {
 
     // =================================================================
@@ -129,14 +145,14 @@ describe('securityValidation - Input Validation', () => {
             });
 
             it('should reject null/undefined', () => {
-                expect(() => validateAdobeResourceId(null as any, 'test'))
+                expect(() => validateAdobeResourceId(lyingAbout(null), 'test'))
                     .toThrow(/must be a non-empty string/);
-                expect(() => validateAdobeResourceId(undefined as any, 'test'))
+                expect(() => validateAdobeResourceId(lyingAbout(undefined), 'test'))
                     .toThrow(/must be a non-empty string/);
             });
 
             it('should reject non-string values', () => {
-                expect(() => validateAdobeResourceId(123 as any, 'test'))
+                expect(() => validateAdobeResourceId(lyingAbout(123), 'test'))
                     .toThrow(/must be a non-empty string/);
                 expect(() => validateAdobeResourceId({} as any, 'test'))
                     .toThrow(/must be a non-empty string/);
@@ -325,9 +341,9 @@ describe('securityValidation - Input Validation', () => {
             });
 
             it('should reject null/undefined', () => {
-                expect(() => validateProjectNameSecurity(null as any))
+                expect(() => validateProjectNameSecurity(lyingAbout(null)))
                     .toThrow(/must be a non-empty string/);
-                expect(() => validateProjectNameSecurity(undefined as any))
+                expect(() => validateProjectNameSecurity(lyingAbout(undefined)))
                     .toThrow(/must be a non-empty string/);
             });
 
@@ -407,9 +423,9 @@ describe('securityValidation - Input Validation', () => {
             });
 
             it('should reject null/undefined', () => {
-                expect(() => validateProjectPath(null as any))
+                expect(() => validateProjectPath(lyingAbout(null)))
                     .toThrow(/must be a non-empty string/);
-                expect(() => validateProjectPath(undefined as any))
+                expect(() => validateProjectPath(lyingAbout(undefined)))
                     .toThrow(/must be a non-empty string/);
             });
 
