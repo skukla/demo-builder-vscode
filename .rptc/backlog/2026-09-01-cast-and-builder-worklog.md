@@ -318,3 +318,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-01  test: three families cleared — 56 casts, and most of them were never load-bearing (`8d44aa414`)
 - 2026-09-02  test(prerequisites): how many steps the progress bar counts, and five fixtures that lied (`29cb30c10`)
 - 2026-09-02  test(prerequisites): the payload the prerequisites row is drawn from (`b42c9856b`)
+- 2026-09-02  test(prerequisites): Node versions are ordered as numbers, not as text (`90c5f0aae`)

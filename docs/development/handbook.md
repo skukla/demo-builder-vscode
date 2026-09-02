@@ -716,7 +716,7 @@ breaks the code on purpose and reports what nothing noticed.
 > survivors and a comparator is neither. The two instruments had also drifted apart:
 > the worklist that steers the work ranked those same comparators as decisions worth
 > constraining, so the loop was aimed at work the ratchet then refused to credit.
-> Enforced by `tests/sop/mutation-ratchet-selftest.test.ts`, which runs the controls in
+> Enforced by `tests/sop/ratchet-controls.test.ts`, which runs the controls in
 > `scripts/mutationBaseline.selftest.mjs`; breaking the rule makes one of them print
 > FAIL and exit non-zero, which is how the file's own value was checked.
 

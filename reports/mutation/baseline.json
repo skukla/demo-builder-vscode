@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "installHandler: Node versions ordered as numbers, not text (66.54%)",
+    "_note": "installHandler: plugin version fallback, non-per-version plugins, empty-config id lookup (68.02%)",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -72,20 +72,20 @@
             "highValueSurvivors": 6
         },
         "src/features/prerequisites/handlers/installHandler.ts": {
-            "score": 66.54,
-            "killed": 360,
-            "survived": 148,
-            "noCoverage": 33,
+            "score": 68.02,
+            "killed": 368,
+            "survived": 143,
+            "noCoverage": 30,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 51,
-                "string": 6,
                 "logPresentation": 56,
-                "optionalChain": 16,
-                "other": 12,
+                "optionalChain": 15,
+                "string": 7,
+                "other": 11,
+                "branch": 47,
                 "block": 7
             },
-            "highValueSurvivors": 58
+            "highValueSurvivors": 54
         },
         "src/core/ui/utils/spectrumTokens.ts": {
             "score": 88.24,

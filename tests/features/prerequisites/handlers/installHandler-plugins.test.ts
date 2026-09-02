@@ -214,4 +214,54 @@ describe('Install Handler - plugins', () => {
         );
         expect(call?.[1]).toEqual(expect.objectContaining({ useNodeVersion: '18' }));
     });
+
+    /**
+     * WHICH Node version a plugin lands on when nothing says.
+     *
+     * The shipped `api-mesh` plugin declares no `requiredFor`, so no Node version maps
+     * to it and the resolver falls through to the first version being installed. That
+     * fallback is the branch production actually takes; without it the plugin installs
+     * against the ambient Node rather than the one just set up.
+     */
+    it('installs a plugin with no version mapping against the first version being installed', async () => {
+        (mockContext.prereqManager!.getPluginInstallCommands as jest.Mock).mockResolvedValue(
+            PLUGIN_COMMANDS
+        );
+        // The shipped shape: no `requiredFor`. Node 18 is the one missing, so it is the
+        // version the install targets.
+        await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+        const call = mockExecute.mock.calls.find(([cmd]) =>
+            (cmd as string).includes('plugins:install')
+        );
+        expect(call?.[1]).toEqual(expect.objectContaining({ useNodeVersion: '18' }));
+    });
+
+    /**
+     * A prerequisite that is NOT installed per Node version has one copy, so its plugin
+     * has one copy too — installed against whatever Node is active, with no version
+     * pinned. Sending a version here would install it somewhere nothing looks.
+     */
+    it('installs a plugin once, with no Node version, when the tool is not per-version', async () => {
+        (mockContext.prereqManager!.getPluginInstallCommands as jest.Mock).mockResolvedValue(
+            PLUGIN_COMMANDS
+        );
+        const states = new Map();
+        states.set(0, {
+            prereq: { ...mockAioCliWithPlugin, perNodeVersion: false },
+            result: mockNodeResult,
+        });
+        mockContext.sharedState.currentPrerequisiteStates = states;
+
+        await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+        const calls = mockExecute.mock.calls.filter(([cmd]) =>
+            (cmd as string).includes('plugins:install')
+        );
+        expect(calls).toHaveLength(1);
+        expect(calls[0][1]).toEqual(
+            expect.objectContaining({ useNodeVersion: undefined })
+        );
+    });
+
 });

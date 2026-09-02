@@ -116,7 +116,7 @@ it means the rule rests on somebody noticing.
 
 | Rule | Why | How | Enforced by |
 |---|---|---|---|
-| The mutation ratchet's "score rose without constraining anything" rule keeps controls in both directions, and they run with the suite. |  |  | `mutation-ratchet-selftest.test.ts` |
+| The mutation ratchet's "score rose without constraining anything" rule keeps controls in both directions, and they run with the suite. |  |  | `ratchet-controls.test.ts` |
 | A canonical fake covers its subject's WHOLE public surface, and invents nothing. |  |  | `fake-mirrors-subject.test.ts` |
 | A split test family shares one `.testUtils` file, which owns the mocks and the subject import. enforced by `tests/sop/test-family-setup.test.ts`. |  | [procedure](../../.claude/skills/webview-test-authoring/SKILL.md) | `test-family-setup.test.ts` |
 | Before designing a way to hand a mocked collaborator in — or to share one between suites — delete the mock and run the suite. If it still passes, the mock was the whole problem. |  |  | `redundant-automocks.test.ts` |
