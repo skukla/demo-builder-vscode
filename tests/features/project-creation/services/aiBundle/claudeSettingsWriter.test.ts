@@ -16,38 +16,10 @@ import {
     generateHomeClaudeSettings,
     mergeClaudeSettings,
 } from '@/features/project-creation/services/aiBundle/claudeSettingsWriter';
+import { makeEdsProject, makeEdsStorefrontInstance, EDS_STOREFRONT_PATH } from './aiBundleFixtures';
 import type { Project, ComponentInstance } from '@/types/base';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const EDS_STOREFRONT_PATH = '/projects/test/components/eds-storefront';
-
-function makeEdsInstance(): ComponentInstance {
-    return {
-        id: 'eds-storefront',
-        name: 'EDS Storefront',
-        status: 'ready',
-        path: EDS_STOREFRONT_PATH,
-        metadata: {
-            githubRepo: 'owner/my-repo',
-        },
-    };
-}
-
-function makeEdsProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/test-project',
-        status: 'ready',
-        selectedStack: 'eds-paas',
-        componentInstances: {
-            'eds-storefront': makeEdsInstance(),
-        },
-        ...overrides,
-    };
-}
 
 function makeHeadlessProject(overrides: Partial<Project> = {}): Project {
     return {
@@ -206,7 +178,7 @@ describe('generateClaudeSettings', () => {
         const dangerousPath = '/projects/test;rm -rf /';
         const project = makeEdsProject({
             componentInstances: {
-                'eds-storefront': { ...makeEdsInstance(), path: dangerousPath },
+                'eds-storefront': { ...makeEdsStorefrontInstance(), path: dangerousPath },
             },
         });
         const settings = generateClaudeSettings(project, NODE_PATH);
@@ -218,7 +190,7 @@ describe('generateClaudeSettings', () => {
         const dangerousPath = '/projects/test\\injected';
         const project = makeEdsProject({
             componentInstances: {
-                'eds-storefront': { ...makeEdsInstance(), path: dangerousPath },
+                'eds-storefront': { ...makeEdsStorefrontInstance(), path: dangerousPath },
             },
         });
         const settings = generateClaudeSettings(project, NODE_PATH);
@@ -325,7 +297,7 @@ describe('generateClaudeSettings', () => {
             const pathWithSpaces = '/Users/Some User/projects/test/components/eds-storefront';
             const project = makeEdsProject({
                 componentInstances: {
-                    'eds-storefront': { ...makeEdsInstance(), path: pathWithSpaces },
+                    'eds-storefront': { ...makeEdsStorefrontInstance(), path: pathWithSpaces },
                 },
             });
 
@@ -339,7 +311,7 @@ describe('generateClaudeSettings', () => {
             const pathWithSpaces = '/Users/Some User/projects/test/components/eds-storefront';
             const project = makeEdsProject({
                 componentInstances: {
-                    'eds-storefront': { ...makeEdsInstance(), path: pathWithSpaces },
+                    'eds-storefront': { ...makeEdsStorefrontInstance(), path: pathWithSpaces },
                 },
             });
 
@@ -352,7 +324,7 @@ describe('generateClaudeSettings', () => {
         it('still rejects paths with shell metacharacters other than whitespace', () => {
             const project = makeEdsProject({
                 componentInstances: {
-                    'eds-storefront': { ...makeEdsInstance(), path: '/projects/test;rm -rf /' },
+                    'eds-storefront': { ...makeEdsStorefrontInstance(), path: '/projects/test;rm -rf /' },
                 },
             });
             const settings = generateClaudeSettings(project, NODE_PATH);
@@ -454,7 +426,6 @@ describe('generateHomeClaudeSettings', () => {
         expect(settings.hooks?.PostToolUse).toBeUndefined();
     });
 });
-
 
 // ─── PreToolUse aio-global guard (ai-surface phase 6) ─────────────────────────
 

@@ -17,6 +17,7 @@
  */
 
 import { createHash } from 'crypto';
+import { makeEdsProject } from './aiBundleFixtures';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 import {
@@ -69,34 +70,12 @@ function templateFor(name: string): string {
     return entry.content;
 }
 
-function makeEdsProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: PROJECT_PATH,
-        status: 'ready',
-        selectedStack: 'eds-paas',
-        componentInstances: {
-            'eds-storefront': {
-                id: 'eds-storefront',
-                name: 'EDS Storefront',
-                status: 'ready',
-                path: '/projects/test/components/eds-storefront',
-                metadata: { githubRepo: 'owner/my-repo' },
-            },
-        },
-        ...overrides,
-    };
-}
-
 function makeBareHeadlessProject(): Project {
-    return makeEdsProject({ selectedStack: 'headless-paas', componentInstances: {} });
+    return makeEdsProject({ path: PROJECT_PATH, selectedStack: 'headless-paas', componentInstances: {} });
 }
 
 function makeMeshOnlyProject(): Project {
-    return makeEdsProject({
-        selectedStack: 'headless-paas',
+    return makeEdsProject({ path: PROJECT_PATH, selectedStack: 'headless-paas',
         componentInstances: {
             'headless-commerce-mesh': {
                 id: 'headless-commerce-mesh',
@@ -152,7 +131,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
         it('writes all fourteen skills when @playwright/mcp is installed (pins hold)', async () => {
             mockDisk(playwrightInstalled());
 
-            await writeSkillFiles(PROJECT_PATH, makeEdsProject(), makeTestWriter(PROJECT_PATH));
+            await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), makeTestWriter(PROJECT_PATH));
 
             // 15 → 14 (AI-1o): extend-app-builder-app follows App Builder work,
             // and a storefront alone is not doing any.
@@ -165,7 +144,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
         it('writes three fewer skills when @playwright/mcp is not in the manifest', async () => {
             mockDisk({ [MANIFEST_PATH]: mcpToolsManifest(['@some/other-package']) });
 
-            await writeSkillFiles(PROJECT_PATH, makeEdsProject(), makeTestWriter(PROJECT_PATH));
+            await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), makeTestWriter(PROJECT_PATH));
 
             expect(writtenFiles()).toHaveLength(11);
             for (const filename of PLAYWRIGHT_SKILLS) {
@@ -176,7 +155,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
         it('gates the playwright skills out when no tools manifest exists at all', async () => {
             mockDisk(); // nothing on disk — nothing installed
 
-            await writeSkillFiles(PROJECT_PATH, makeEdsProject(), makeTestWriter(PROJECT_PATH));
+            await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), makeTestWriter(PROJECT_PATH));
 
             expect(writtenFiles()).toHaveLength(11);
         });
@@ -186,7 +165,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             const summary = await writeSkillFiles(
                 PROJECT_PATH,
-                makeEdsProject(),
+                makeEdsProject({ path: PROJECT_PATH }),
                 makeTestWriter(PROJECT_PATH)
             );
 
@@ -204,7 +183,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             const summary = await writeSkillFiles(
                 PROJECT_PATH,
-                makeEdsProject(),
+                makeEdsProject({ path: PROJECT_PATH }),
                 makeTestWriter(PROJECT_PATH)
             );
 
@@ -216,7 +195,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
             mockDisk();
             const writer = makeTestWriter(PROJECT_PATH);
 
-            await writeSkillFiles(PROJECT_PATH, makeEdsProject(), writer);
+            await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), writer);
 
             for (const filename of PLAYWRIGHT_SKILLS) {
                 expect(writer.hashes()).not.toHaveProperty([`.claude/skills/${filename}/SKILL.md`]);
@@ -266,7 +245,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             const summary = await writeSkillFiles(
                 PROJECT_PATH,
-                makeEdsProject(),
+                makeEdsProject({ path: PROJECT_PATH }),
                 makeTestWriter(PROJECT_PATH)
             );
 
@@ -291,7 +270,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
 
             const summary = await writeSkillFiles(
                 PROJECT_PATH,
-                makeEdsProject(),
+                makeEdsProject({ path: PROJECT_PATH }),
                 makeTestWriter(PROJECT_PATH)
             );
 
@@ -315,7 +294,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
                 [GATED_REL]: sha256(lastGenerated),
             });
 
-            await writeSkillFiles(PROJECT_PATH, makeEdsProject(), writer);
+            await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), writer);
 
             expect(unlinkedFiles()).toContain(GATED_ABS);
             expect(writer.report().removed).toContain(GATED_REL);
@@ -328,7 +307,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
                 [GATED_REL]: sha256('what we generated last time'),
             });
 
-            await writeSkillFiles(PROJECT_PATH, makeEdsProject(), writer);
+            await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), writer);
 
             expect(unlinkedFiles()).not.toContain(GATED_ABS);
             expect(writer.report().skipped).toContain(GATED_REL);
@@ -340,7 +319,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
             mockDisk({ [GATED_ABS]: '# an old or edited copy, provenance unknown' });
             const writer = makeTestWriter(PROJECT_PATH); // no recorded hashes
 
-            await writeSkillFiles(PROJECT_PATH, makeEdsProject(), writer);
+            await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), writer);
 
             expect(unlinkedFiles()).not.toContain(GATED_ABS);
             expect(writer.report().skipped).toContain(GATED_REL);
@@ -350,7 +329,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
             mockDisk({ [GATED_ABS]: templateFor('scrape-reference-site') });
             const writer = makeTestWriter(PROJECT_PATH); // no recorded hashes
 
-            await writeSkillFiles(PROJECT_PATH, makeEdsProject(), writer);
+            await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), writer);
 
             expect(unlinkedFiles()).toContain(GATED_ABS);
             expect(writer.report().removed).toContain(GATED_REL);
@@ -362,7 +341,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
                 [GATED_REL]: sha256('what we generated last time'),
             });
 
-            await writeSkillFiles(PROJECT_PATH, makeEdsProject(), writer);
+            await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), writer);
 
             expect(writer.hashes()).not.toHaveProperty([GATED_REL]);
             expect(writer.report().removed).not.toContain(GATED_REL);
@@ -374,7 +353,7 @@ describe('skillsWriter — playwright-skill gating on tool availability', () => 
             mockDisk(playwrightInstalled());
             const writer = makeTestWriter(PROJECT_PATH);
 
-            await writeSkillFiles(PROJECT_PATH, makeEdsProject(), writer);
+            await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), writer);
 
             expect(unlinkedFiles()).toHaveLength(0);
             expect(writer.report().removed).toHaveLength(0);
@@ -400,7 +379,7 @@ describe('skillsWriter — the App Builder skill set follows the work, not the t
     it('writes no extend-app-builder-app for a storefront that builds no app', async () => {
         const summary = await writeSkillFiles(
             PROJECT_PATH,
-            makeEdsProject(),
+            makeEdsProject({ path: PROJECT_PATH }),
             makeTestWriter(PROJECT_PATH)
         );
 
@@ -429,7 +408,7 @@ describe('skillsWriter — the App Builder skill set follows the work, not the t
             '.claude/skills/appbuilder-architect/SKILL.md': sha256(ourCopy),
         });
 
-        await writeSkillFiles(PROJECT_PATH, makeEdsProject(), writer);
+        await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), writer);
 
         expect(writer.report().removed).toEqual([
             '.claude/skills/appbuilder-architect/SKILL.md',
@@ -449,7 +428,7 @@ describe('skillsWriter — the App Builder skill set follows the work, not the t
             '.claude/skills/appbuilder-architect/SKILL.md': sha256('what we wrote last time'),
         });
 
-        await writeSkillFiles(PROJECT_PATH, makeEdsProject(), writer);
+        await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), writer);
 
         expect(writer.report().removed).toEqual([]);
         expect(writer.report().skipped).toContain(

@@ -10,6 +10,7 @@
  */
 
 import * as path from 'path';
+import { makeEdsProject } from './aiBundleFixtures';
 import * as fsPromises from 'fs/promises';
 import { enoentError, makeTestWriter, mcpToolsManifest } from './generatedFileWriter.testUtils';
 import {
@@ -50,29 +51,6 @@ jest.mock('fs/promises', () => {
  */
 function writeSkills(projectPath: string, project: Project): ReturnType<typeof writeSkillFiles> {
     return writeSkillFiles(projectPath, project, makeTestWriter(projectPath));
-}
-
-function makeEdsInstance(): ComponentInstance {
-    return {
-        id: 'eds-storefront',
-        name: 'EDS Storefront',
-        status: 'ready',
-        path: '/projects/test/components/eds-storefront',
-        metadata: { githubRepo: 'owner/my-repo', daLiveOrg: 'my-org', daLiveSite: 'my-site' },
-    };
-}
-
-function makeEdsProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/test-project',
-        status: 'ready',
-        selectedStack: 'eds-paas',
-        componentInstances: { 'eds-storefront': makeEdsInstance() },
-        ...overrides,
-    };
 }
 
 /**

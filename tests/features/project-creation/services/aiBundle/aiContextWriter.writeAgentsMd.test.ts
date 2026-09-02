@@ -21,7 +21,7 @@ import {
     makeEdsProject,
     makeEdsStorefrontInstance,
     makeHeadlessProject,
-} from './aiContextWriter.testUtils';
+} from './aiBundleFixtures';
 
 jest.mock('fs/promises', () => {
     const writeFile = jest.fn().mockResolvedValue(undefined);

@@ -22,6 +22,7 @@
  */
 
 import { createHash } from 'crypto';
+import { makeEdsProject, makeEdsStorefrontInstance } from './aiBundleFixtures';
 import * as fsPromises from 'fs/promises';
 import * as childProcess from 'child_process';
 import { enoentError, makeTestWriter } from './generatedFileWriter.testUtils';
@@ -93,19 +94,6 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     };
 }
 
-function makeEdsProject(): Project {
-    return makeProject({
-        componentInstances: {
-            'eds-storefront': {
-                id: 'eds-storefront',
-                name: 'EDS Storefront',
-                status: 'ready',
-                path: '/projects/test/components/eds-storefront',
-                metadata: { githubRepo: 'owner/my-repo' },
-            },
-        },
-    });
-}
 
 /** All paths absent (ENOENT) unless a suffix matcher supplies content. */
 function mockDisk(contentBySuffix: Record<string, string> = {}): void {
@@ -154,7 +142,7 @@ describe('refreshMcpConfigs', () => {
             '.claude/settings.json': 'hash-that-does-not-match-disk',
         });
 
-        await refreshMcpConfigs(PROJECT_PATH, makeEdsProject(), EXTENSION_PATH, writer, NODE_PATH);
+        await refreshMcpConfigs(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH, componentInstances: { 'eds-storefront': makeEdsStorefrontInstance({}, `${PROJECT_PATH}/components/eds-storefront`) } }), EXTENSION_PATH, writer, NODE_PATH);
 
         const report = writer.report();
         expect(report.written).toContain('.claude/settings.json');

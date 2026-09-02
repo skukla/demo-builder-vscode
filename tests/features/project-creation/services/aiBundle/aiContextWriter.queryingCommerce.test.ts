@@ -17,7 +17,7 @@ import {
     STACKS,
     makeEdsProject,
     makeHeadlessProject,
-} from './aiContextWriter.testUtils';
+} from './aiBundleFixtures';
 
 // ─── Helpers (the parent suite's, copied so each spec stands alone) ──────────
 

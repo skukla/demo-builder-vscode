@@ -13,41 +13,13 @@
  */
 
 import { fsPromises, writeMcpConfigs } from './mcpConfigWriter.testUtils';
+import { makeEdsProject, EDS_STOREFRONT_PATH } from './aiBundleFixtures';
 import * as path from 'path';
 import { makeTestWriter } from './generatedFileWriter.testUtils';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
-import type { Project, ComponentInstance } from '@/types/base';
+import type { Project } from '@/types/base';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const EDS_STOREFRONT_PATH = '/projects/test/components/eds-storefront';
-
-function makeEdsInstance(): ComponentInstance {
-    return {
-        id: 'eds-storefront',
-        name: 'EDS Storefront',
-        status: 'ready',
-        path: EDS_STOREFRONT_PATH,
-        metadata: {
-            githubRepo: 'owner/my-repo',
-        },
-    };
-}
-
-function makeEdsProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/test-project',
-        status: 'ready',
-        selectedStack: 'eds-paas',
-        componentInstances: {
-            'eds-storefront': makeEdsInstance(),
-        },
-        ...overrides,
-    };
-}
 
 function makeHeadlessProject(overrides: Partial<Project> = {}): Project {
     return {

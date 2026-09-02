@@ -15,7 +15,7 @@ import {
     makeEdsProject,
     makeEdsStorefrontInstance,
     makeHeadlessProject,
-} from './aiContextWriter.testUtils';
+} from './aiBundleFixtures';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

@@ -1,5 +1,14 @@
 /**
- * Shared fixtures for the `aiContextWriter` suite family (4 suites).
+ * Shared fixtures for the whole aiBundle directory (11 suites).
+ *
+ * SCOPE, AND WHY IT WIDENED. This started as the `aiContextWriter` family's
+ * fixtures on 2026-08-31. Seven more suites in this directory were each carrying
+ * their own copy of the same EDS project — not because they wanted a different
+ * one, but because they were written on 2026-08-24, a week before this file
+ * existed. A second shared copy was briefly created here on 2026-09-02 before
+ * the builder-uniqueness enforcer pointed out there was already one; that is the
+ * failure this consolidation fixes, and the enforcer is the reason it was caught
+ * in the same turn rather than becoming the third copy.
  *
  * UNUSUAL FOR THIS BATCH: nothing here is a mock. Three of the four suites mock
  * nothing at all — `generateAgentsMd` is a pure function of a project and a stack
@@ -56,14 +65,18 @@ export function makeStack(overrides: Partial<Stack> = {}): Stack {
     };
 }
 
+/** Where `makeEdsProject`'s default project keeps its storefront component. */
+export const EDS_STOREFRONT_PATH = '/projects/test-project/components/eds-storefront';
+
 export function makeEdsStorefrontInstance(
-    metaOverrides: Record<string, unknown> = {}
+    metaOverrides: Record<string, unknown> = {},
+    instancePath = EDS_STOREFRONT_PATH
 ): ComponentInstance {
     return {
         id: 'eds-storefront',
         name: 'EDS Storefront',
         status: 'ready',
-        path: '/projects/test-project/components/eds-storefront',
+        path: instancePath,
         metadata: {
             githubRepo: 'owner/my-repo',
             liveUrl: 'https://main--my-repo--owner.aem.live',
@@ -75,19 +88,29 @@ export function makeEdsStorefrontInstance(
     };
 }
 
+/**
+ * An EDS project and the storefront instance inside it.
+ *
+ * The instance path is DERIVED from the project path rather than fixed, so a
+ * caller overriding `path` cannot end up with a project at one root holding a
+ * component at another. Seven suites in this directory each carried their own
+ * copy of this shape for exactly that reason — their project root differs from
+ * this file's default — and deriving it is what let them share one builder.
+ */
 export function makeEdsProject(overrides: Partial<Project> = {}): Project {
+    const projectPath = overrides.path ?? '/projects/test-project';
     return {
         name: 'test-project',
         created: new Date('2026-01-01'),
         lastModified: new Date('2026-01-01'),
-        path: '/projects/test-project',
         status: 'ready',
         selectedStack: 'eds-paas',
         selectedPackage: 'isle5',
         componentInstances: {
-            'eds-storefront': makeEdsStorefrontInstance(),
+            'eds-storefront': makeEdsStorefrontInstance({}, `${projectPath}/components/eds-storefront`),
         },
         ...overrides,
+        path: projectPath,
     };
 }
 

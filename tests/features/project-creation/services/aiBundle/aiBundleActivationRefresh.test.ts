@@ -24,6 +24,7 @@
  */
 
 import { createHash } from 'crypto';
+import { makeEdsProject, makeEdsStorefrontInstance } from './aiBundleFixtures';
 import * as fsPromises from 'fs/promises';
 import * as childProcess from 'child_process';
 import * as path from 'path';
@@ -99,16 +100,15 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     };
 }
 
-function makeEdsProject(overrides: Partial<Project> = {}): Project {
-    return makeProject({
+function makeEdsProjectAtA(overrides: Partial<Project> = {}): Project {
+    return makeEdsProject({
+        name: 'demo-a',
+        path: PROJECT_A,
         componentInstances: {
-            'eds-storefront': {
-                id: 'eds-storefront',
-                name: 'EDS Storefront',
-                status: 'ready',
-                path: `${PROJECT_A}/components/eds-storefront`,
-                metadata: { githubRepo: 'owner/my-repo' },
-            },
+            'eds-storefront': makeEdsStorefrontInstance(
+                { githubRepo: 'owner/my-repo' },
+                `${PROJECT_A}/components/eds-storefront`
+            ),
         },
         ...overrides,
     });
@@ -445,7 +445,7 @@ describe('stale aiContextVersion stamp', () => {
                 '@playwright/mcp',
             ]),
         });
-        const deps = makeDeps({ [PROJECT_A]: makeEdsProject({ aiContextVersion: 3 }) });
+        const deps = makeDeps({ [PROJECT_A]: makeEdsProjectAtA({ aiContextVersion: 3 }) });
 
         await refreshAiBundlesOnActivation(EXTENSION_PATH, makeMockLogger(), deps);
 
@@ -461,7 +461,7 @@ describe('stale aiContextVersion stamp', () => {
         const skillRel = '.claude/skills/scrape-reference-site/SKILL.md';
         const skillAbs = path.join(PROJECT_A, skillRel);
         mockDisk({ [skillAbs]: 'previously generated content' });
-        const project = makeEdsProject({
+        const project = makeEdsProjectAtA({
             aiContextVersion: 3,
             aiFileHashes: { [skillRel]: sha256('previously generated content') },
         });

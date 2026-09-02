@@ -12,6 +12,7 @@
  */
 
 import { createHash } from 'crypto';
+import { makeEdsProject } from './aiBundleFixtures';
 import * as path from 'path';
 import * as fsPromises from 'fs/promises';
 import {
@@ -20,7 +21,6 @@ import {
     mcpToolsManifest,
 } from './generatedFileWriter.testUtils';
 import { writeSkillFiles } from '@/features/project-creation/services/aiBundle/skillsWriter';
-import type { Project, ComponentInstance } from '@/types/base';
 
 jest.mock('fs/promises', () => {
     const writeFile = jest.fn().mockResolvedValue(undefined);
@@ -45,29 +45,6 @@ jest.mock('fs/promises', () => {
 
 function sha256(content: string): string {
     return createHash('sha256').update(content, 'utf-8').digest('hex');
-}
-
-function makeEdsInstance(): ComponentInstance {
-    return {
-        id: 'eds-storefront',
-        name: 'EDS Storefront',
-        status: 'ready',
-        path: '/projects/test/components/eds-storefront',
-        metadata: { githubRepo: 'owner/my-repo', daLiveOrg: 'my-org', daLiveSite: 'my-site' },
-    };
-}
-
-function makeEdsProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/test-project',
-        status: 'ready',
-        selectedStack: 'eds-paas',
-        componentInstances: { 'eds-storefront': makeEdsInstance() },
-        ...overrides,
-    };
 }
 
 function writtenFiles(): string[] {
