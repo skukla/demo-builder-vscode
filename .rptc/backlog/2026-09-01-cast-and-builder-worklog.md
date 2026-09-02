@@ -339,3 +339,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  test(updates): a successful update moves BOTH version records, not one (`922ce4b49`)
 - 2026-09-02  docs(handoff): mark the one approximate number as approximate (`c88fe72e5`)
 - 2026-09-02  docs(handoff): lead the report with what nobody had measured (`c622b347c`)
+- 2026-09-02  test(auth): the cached sign-in answer, in both places that read it (`90a1d268e`)
