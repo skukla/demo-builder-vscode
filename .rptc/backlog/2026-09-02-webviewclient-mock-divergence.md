@@ -71,10 +71,18 @@ its long tail correct?
   hook suites were done on 2026-09-02 and their 17 tests did not move.
   The 7-file PrerequisitesStep group and the two 5-file groups are the same
   shape of work.
-- A suite's OWN wall wins over one it imports. Measured on
-  `dashboardHandlers-lifecycle`: deleting its `vscode` wall in favour of the
-  shared file's failed six tests. So a partial adoption is not available —
-  a suite either keeps its own wall or takes the shared one whole.
+- **Whichever `jest.mock` registration runs LAST wins**, and a suite's own calls
+  are hoisted to the very top of the suite — so a wall file the suite imports
+  runs after them and takes precedence. Measured directly on 2026-09-02 with a
+  throwaway suite that declared one factory and imported a file declaring
+  another: the imported file's value is what the subject saw.
+
+  An earlier line here said the opposite, on weaker evidence: deleting
+  `dashboardHandlers-lifecycle`'s own `vscode` wall failed six tests, which
+  shows only that the two walls DIFFER, not which one wins. The corrected rule
+  is the one to build on — a shared wall cannot be partially overridden by a
+  suite that imports it, so anything a suite needs different has to stay out of
+  the shared file rather than be re-declared beside it.
 - That is what blocks the `dashboardHandlers-actions` / `navigateBack` pair,
   which is adjudicated in the clone ledger for this reason: they agree on four
   walls the directory's testUtils already carries identically, and disagree on
