@@ -6,41 +6,19 @@
  * jest.mock + constructor wiring is re-declared here (jest.mock is hoisted).
  */
 
+import { ComponentRegistryManager, setupComponentHandlerSuite } from './componentHandlers.testUtils';
 import { handleGetComponentsData } from '@/features/components/handlers/componentHandlers';
 import { HandlerContext } from '@/types/handlers';
-import {
-    ComponentRegistryManager,
-    DependencyResolver,
-} from './componentHandlers.testUtils';
-import {
-    createComponentHandlerContext,
-    createMockRegistryManager,
-    createMockDependencyResolver,
-} from './componentHandlers.testUtils';
 
 describe('componentHandlers - Pattern B (request-response)', () => {
     let mockContext: HandlerContext;
     let mockRegistryManager: jest.Mocked<ComponentRegistryManager>;
-    let mockDependencyResolver: jest.Mocked<DependencyResolver>;
 
     beforeEach(() => {
-        mockContext = createComponentHandlerContext();
-        mockRegistryManager = createMockRegistryManager();
-        // The handler reads the registry off the context now (ADR-015); it no
-        // longer constructs one, so hand this suite's fake in directly. The
-        // constructor mock below stays for DependencyResolver's sake.
-        mockContext.componentRegistry = mockRegistryManager;
-        mockDependencyResolver = createMockDependencyResolver();
-
-        // Mock the ComponentRegistryManager constructor
-        (
-            ComponentRegistryManager as jest.MockedClass<typeof ComponentRegistryManager>
-        ).mockImplementation(() => mockRegistryManager);
-
-        // Mock the DependencyResolver constructor
-        (DependencyResolver as jest.MockedClass<typeof DependencyResolver>).mockImplementation(
-            () => mockDependencyResolver
-        );
+        ({
+            context: mockContext,
+            registryManager: mockRegistryManager,
+        } = setupComponentHandlerSuite());
     });
 
     afterEach(() => {

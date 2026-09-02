@@ -60,5 +60,48 @@ export function createMockDependencyResolver(): jest.Mocked<DependencyResolver> 
     } as any;
 }
 
+/** The three doubles both componentHandlers suites drive, already wired up. */
+export interface ComponentHandlerSuite {
+    context: HandlerContext;
+    registryManager: jest.Mocked<ComponentRegistryManager>;
+    dependencyResolver: jest.Mocked<DependencyResolver>;
+}
+
+/**
+ * Everything both suites did in their `beforeEach`, which was byte-identical in
+ * both (hashed 2026-09-02 with comments stripped).
+ *
+ * The registry is HANDED IN on the context, because under ADR-015 the handler
+ * reads it there rather than constructing one. The two CONSTRUCTOR mocks are
+ * installed here too — but only because the suites' import order was fixed in
+ * the same change, and that is worth knowing.
+ *
+ * Moving these two calls here FAILED first, with
+ * `this.registryManager.getComponentById is not a function` — the real
+ * DependencyResolver running against the partial registry fake above. Both
+ * suites were importing `@/features/components/handlers/componentHandlers`
+ * ABOVE this file, so the handler bound before this file's automock registered,
+ * and the class this file installed an implementation on was not the class the
+ * handler had. Moving this import to the top of both suites made all 24 pass
+ * with the wiring shared. `tests/sop/mock-wall-import-order.test.ts` is what
+ * named the two files; without it this would have been recorded as an
+ * unexplained "these two lines cannot be shared".
+ */
+export function setupComponentHandlerSuite(): ComponentHandlerSuite {
+    const context = createComponentHandlerContext();
+    const registryManager = createMockRegistryManager();
+    context.componentRegistry = registryManager;
+    const dependencyResolver = createMockDependencyResolver();
+
+    (ComponentRegistryManager as jest.MockedClass<typeof ComponentRegistryManager>).mockImplementation(
+        () => registryManager
+    );
+    (DependencyResolver as jest.MockedClass<typeof DependencyResolver>).mockImplementation(
+        () => dependencyResolver
+    );
+
+    return { context, registryManager, dependencyResolver };
+}
+
 // Re-exported so specs never import the (mocked) module directly.
 export { ComponentRegistryManager, DependencyResolver };
