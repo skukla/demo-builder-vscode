@@ -885,6 +885,28 @@ check says so and names the file.
 > also a production function, so every handler test calling the real one looked like a
 > consumer of the fake.
 
+> **Convention.** Every MCP tool declares which sign-ins it needs, and the declared
+> providers are real ones.
+> *Why:* `needsAuth` is what an agent reads to decide which sign-in to offer before
+> calling a tool. A wrong or dropped provider is the sign-in the agent then fails to
+> offer — which is the failure the field was introduced to prevent.
+>
+> The compiler already requires the field to be PRESENT. It cannot check the VALUE,
+> and for a while nothing did: the 114 declarations were transcribed from a review
+> ledger, verified against it row by row, and then the ledger was deleted on the
+> reasoning that a required field beats a list. True for presence, silent for
+> correctness — after that, nothing knew the right answers.
+>
+> The gap was found by the mutation pilot, not by review: `siteTools.ts` fell from
+> 57.33% to 54.33% with its mutant count unchanged, and the survivors were exactly the
+> six `needsAuth` lines that had just been added.
+>
+> What is enforced is the checkable part — every provider named is one the extension
+> can actually offer, each tool is declared exactly once, and the per-provider totals
+> move only deliberately. It does NOT prove a tool asks for the sign-in it truly
+> needs; that judgement was in the ledger and is not recoverable from the source.
+> Enforced by `tests/sop/tool-auth-declarations.test.ts`.
+
 > **Convention.** A value handed to a hook that DEPENDS on it must be stable
 > across renders.
 > *Why:* an inline `[]`, `{}` or `() => …` is a new reference every render. If the
@@ -1013,11 +1035,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 35 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 36 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 76 conventions. 75 of them are enforced; 1 is not.**
+**This handbook states 77 conventions. 76 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

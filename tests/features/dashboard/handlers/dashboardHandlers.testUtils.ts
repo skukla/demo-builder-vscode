@@ -7,6 +7,11 @@ import { Project } from '@/types/base';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 // Mock dependencies
 jest.mock('@/features/mesh/services/stalenessDetector');
 jest.mock('@/core/di/serviceLocator', () => ({
@@ -144,26 +149,30 @@ export function setupMocks(projectOverrides?: Partial<Project>): TestMocks {
         getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
     });
 
-    const mockContext = {
-        panel: {
-            webview: {
-                postMessage: jest.fn(),
-            },
-        } as any,
+    /**
+     * FOUR erasures lived in this one object — `panel`, `context`, `stateManager`
+     * and the whole thing — so a handler could read anything off any of them and
+     * nothing said so. Every one of the four has a canonical builder.
+     */
+    const stateManager = createMockStateManager({
+        getCurrentProject: jest.fn().mockResolvedValue(mockProject),
+        saveProject: jest.fn().mockResolvedValue(undefined),
+        saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
+        markDirty: jest.fn(),
+    });
+    const base = createMockHandlerContext({
+        panel: createMockWebviewPanel(),
         // The VS Code ExtensionContext seam (secrets used by the appBuilderComponent runner deps).
-        context: {
-            extensionPath: '/ext',
-            secrets: { get: jest.fn(), store: jest.fn(), delete: jest.fn() },
-        } as any,
-        stateManager: {
-            getCurrentProject: jest.fn().mockResolvedValue(mockProject),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-            saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
-            markDirty: jest.fn(),
-        } as any,
+        context: createMockExtensionContext(
+            { secrets: createMockSecretStorage().secrets },
+            '/ext'
+        ),
+        stateManager,
         logger: createMockLogger(),
         sendMessage: jest.fn(),
-    } as any;
+    });
+    // Re-attached so its MOCK type survives the read back through HandlerContext.
+    const mockContext = { ...base, stateManager };
 
     return {
         mockContext,

@@ -14,6 +14,11 @@
  * decision, deliberately not taken here.
  */
 
+import type {
+    ServiceGroup,
+    UniqueField,
+} from '@/features/components/ui/hooks/useComponentConfig';
+
 jest.mock('@/features/components/services/envVarHelpers', () => ({
     lookupComponentConfigValue: (...args: any[]) => mockLookupComponentConfigValue(...args),
     // Derived from the mocked lookup rather than stubbed separately, so this cannot
@@ -45,24 +50,23 @@ export {
  * not run it directly. Contains no jest.mock wiring (kept in the test files).
  */
 
-export interface MockServiceGroup {
-    id: string;
-    label: string;
-    fields: MockField[];
-}
+/**
+ * The REAL `ServiceGroup`, not a hand-written stand-in.
+ *
+ * `MockServiceGroup` and `MockField` were declared here — shapes invented beside
+ * the component that consumes them, which is exactly the case the compiler cannot
+ * hold production to. Every fixture then needed `as any` to reach the component:
+ * 56 casts across three suites, all paying for a type this file could import.
+ *
+ * `import type` is erased at runtime, so this does NOT defeat the specs' inline
+ * mock of `useComponentConfig` — it borrows the module's TYPES only.
+ *
+ * Aliased rather than deleted so the fixture annotations below keep reading
+ * naturally; the names now resolve to the production types.
+ */
+export type MockServiceGroup = ServiceGroup;
 
-export interface MockField {
-    key: string;
-    label: string;
-    type: string;
-    required?: boolean;
-    placeholder?: string;
-    description?: string;
-    componentIds: string[];
-    options?: Array<{ value: string; label: string }>;
-    default?: string | boolean;
-    validation?: { pattern?: string; message?: string };
-}
+export type MockField = UniqueField;
 
 // ---------------------------------------------------------------------------
 // Env var key constants (matching real values from envVarKeys.ts)

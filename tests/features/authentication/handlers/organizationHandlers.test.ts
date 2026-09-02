@@ -8,6 +8,8 @@
 import { handleReDetectContext } from '@/features/authentication/handlers/organizationHandlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 interface MockCacheManager {
     clearSessionCaches: jest.Mock;
     clearConsoleWhereCache: jest.Mock;
@@ -27,19 +29,20 @@ const createMockCacheManager = (): MockCacheManager => ({
 });
 
 const createMockContext = (cacheManager: MockCacheManager) => {
-    const authManager = {
+    const authManager = createMockAuthenticationService({
         getCurrentContext: jest.fn().mockResolvedValue({}),
         getCacheManager: jest.fn().mockReturnValue(cacheManager),
         // GUARD: must never be called by this handler
         login: jest.fn(),
-    };
-    return {
+    });
+    const base = createMockHandlerContext({
         authManager,
         logger: createMockLogger(),
-        debugLogger: { debug: jest.fn(), trace: jest.fn() },
+        debugLogger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
-        sharedState: { isAuthenticating: false },
-    } as any;
+    });
+    // Re-attached so the guard assertion can read `.login` as a mock.
+    return { ...base, authManager };
 };
 
 describe('organizationHandlers', () => {

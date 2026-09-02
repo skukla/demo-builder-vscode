@@ -200,7 +200,7 @@ describe('ConnectStoreStepContent', () => {
 
         it('should not render service groups while loading', () => {
             mockUseComponentConfig.isLoading = true;
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -223,7 +223,7 @@ describe('ConnectStoreStepContent', () => {
 
         it('should not render service groups when there is an error', () => {
             mockUseComponentConfig.loadError = 'Some error';
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -253,7 +253,7 @@ describe('ConnectStoreStepContent', () => {
 
     describe('service group rendering', () => {
         it('should render PaaS service group heading', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -261,7 +261,7 @@ describe('ConnectStoreStepContent', () => {
         });
 
         it('should render ACCS service group heading', () => {
-            mockUseComponentConfig.serviceGroups = [accsServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [accsServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -270,8 +270,8 @@ describe('ConnectStoreStepContent', () => {
 
         it('should render multiple service groups when store selection is complete', () => {
             mockUseComponentConfig.serviceGroups = [
-                paasServiceGroup as any,
-                catalogServiceGroup as any,
+                paasServiceGroup,
+                catalogServiceGroup,
             ];
             // Non-connection groups only visible after store view code is filled
             mockLookupComponentConfigValue.mockImplementation((_configs: any, key: string) => {
@@ -287,8 +287,8 @@ describe('ConnectStoreStepContent', () => {
 
         it('should hide non-connection groups until store selection is complete', () => {
             mockUseComponentConfig.serviceGroups = [
-                paasServiceGroup as any,
-                catalogServiceGroup as any,
+                paasServiceGroup,
+                catalogServiceGroup,
             ];
             mockUseComponentConfig.componentConfigs = {};
 
@@ -300,8 +300,8 @@ describe('ConnectStoreStepContent', () => {
 
         it('should render divider between service groups when store selection is complete', () => {
             mockUseComponentConfig.serviceGroups = [
-                paasServiceGroup as any,
-                catalogServiceGroup as any,
+                paasServiceGroup,
+                catalogServiceGroup,
             ];
             mockLookupComponentConfigValue.mockImplementation((_configs: any, key: string) => {
                 if (key === PAAS_STORE_VIEW_CODE) return 'default';
@@ -324,7 +324,7 @@ describe('ConnectStoreStepContent', () => {
 
     describe('connection fields', () => {
         it('should render PaaS connection fields (URL, username, password)', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -334,7 +334,7 @@ describe('ConnectStoreStepContent', () => {
         });
 
         it('should render ACCS connection field (endpoint)', () => {
-            mockUseComponentConfig.serviceGroups = [accsServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [accsServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -342,7 +342,7 @@ describe('ConnectStoreStepContent', () => {
         });
 
         it('should render non-store group fields when store selection is complete', () => {
-            mockUseComponentConfig.serviceGroups = [catalogServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [catalogServiceGroup];
             mockLookupComponentConfigValue.mockImplementation((_configs: any, key: string) => {
                 if (key === PAAS_STORE_VIEW_CODE) return 'default';
                 return undefined;
@@ -354,7 +354,7 @@ describe('ConnectStoreStepContent', () => {
         });
 
         it('should hide non-connection group fields before store selection', () => {
-            mockUseComponentConfig.serviceGroups = [catalogServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [catalogServiceGroup];
             mockUseComponentConfig.componentConfigs = {};
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
@@ -369,7 +369,7 @@ describe('ConnectStoreStepContent', () => {
 
     describe('progressive disclosure', () => {
         it('should hide store fields when auto-detect key is not set', () => {
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -383,7 +383,7 @@ describe('ConnectStoreStepContent', () => {
         });
 
         it('should hide ACCS store fields when auto-detect key is not set', () => {
-            mockUseComponentConfig.serviceGroups = [accsServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [accsServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -397,7 +397,7 @@ describe('ConnectStoreStepContent', () => {
         });
 
         it('should hide dependent non-store fields in store groups when no autoDetectKey', () => {
-            mockUseComponentConfig.serviceGroups = [accsServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [accsServiceGroup];
 
             renderWithProvider(<ConnectStoreStepContent {...defaultProps} />);
 
@@ -414,7 +414,7 @@ describe('ConnectStoreStepContent', () => {
     describe('store discovery in progress', () => {
         it('should show detecting spinner when isFetching is true and autoDetectKey is set', () => {
             mockUseStoreDiscovery.isFetching = true;
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -442,7 +442,7 @@ describe('ConnectStoreStepContent', () => {
     describe('store data loaded', () => {
         it('should show StoreSelectionRow when hasStoreData is true', () => {
             mockUseStoreDiscovery.hasStoreData = true;
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -464,7 +464,7 @@ describe('ConnectStoreStepContent', () => {
 
         it('should show dependent fields (Customer Group) after autoDetectKey is set', () => {
             mockUseStoreDiscovery.hasStoreData = true;
-            mockUseComponentConfig.serviceGroups = [accsServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [accsServiceGroup];
             configureAccsLookup();
 
             renderWithProvider(
@@ -489,7 +489,7 @@ describe('ConnectStoreStepContent', () => {
     describe('store discovery error', () => {
         it('should show fetch error message and fallback fields on discovery failure', () => {
             mockUseStoreDiscovery.fetchError = 'Connection refused';
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(
@@ -513,7 +513,7 @@ describe('ConnectStoreStepContent', () => {
 
         it('should show fallback store/view text inputs on discovery error', () => {
             mockUseStoreDiscovery.fetchError = 'Timeout';
-            mockUseComponentConfig.serviceGroups = [paasServiceGroup as any];
+            mockUseComponentConfig.serviceGroups = [paasServiceGroup];
             configurePaasLookup();
 
             renderWithProvider(

@@ -50,7 +50,7 @@ describe('buildComponent', () => {
         it('should be a no-op when package.json is missing', async () => {
             mockFs.access.mockRejectedValue(new Error('ENOENT'));
 
-            await buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any);
+            await buildComponent('/p', cm, { nodeVersion: '20' }, logger);
 
             expect(cm.execute).not.toHaveBeenCalled();
         });
@@ -59,7 +59,7 @@ describe('buildComponent', () => {
             mockFs.access.mockResolvedValue(undefined);
             mockFs.readFile.mockResolvedValue(PKG_NO_BUILD);
 
-            await buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any);
+            await buildComponent('/p', cm, { nodeVersion: '20' }, logger);
 
             expect(cm.execute).not.toHaveBeenCalled();
         });
@@ -74,7 +74,7 @@ describe('buildComponent', () => {
         it('should run npm install with the exact mesh install flags', async () => {
             cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '', duration: 0 });
 
-            await buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any);
+            await buildComponent('/p', cm, { nodeVersion: '20' }, logger);
 
             expect(cm.execute).toHaveBeenNthCalledWith(1, INSTALL_CMD, expect.any(Object));
         });
@@ -82,7 +82,7 @@ describe('buildComponent', () => {
         it('should pass useNodeVersion and enhancePath to install', async () => {
             cm.execute.mockResolvedValue({ code: 0, stdout: '', stderr: '', duration: 0 });
 
-            await buildComponent('/p', cm as any, { nodeVersion: '22' }, logger as any);
+            await buildComponent('/p', cm, { nodeVersion: '22' }, logger);
 
             expect(cm.execute).toHaveBeenNthCalledWith(
                 1,
@@ -103,7 +103,7 @@ describe('buildComponent', () => {
                 .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '', duration: 0 });
 
             await expect(
-                buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any)
+                buildComponent('/p', cm, { nodeVersion: '20' }, logger)
             ).resolves.toBeUndefined();
 
             expect(logger.warn).toHaveBeenCalled();
@@ -122,9 +122,9 @@ describe('buildComponent', () => {
         it('should issue byte-identical mesh build command with buildArgs "-- --force"', async () => {
             await buildComponent(
                 '/p',
-                cm as any,
+                cm,
                 { nodeVersion: '20', buildArgs: '-- --force' },
-                logger as any
+                logger
             );
 
             expect(cm.execute).toHaveBeenNthCalledWith(
@@ -135,13 +135,13 @@ describe('buildComponent', () => {
         });
 
         it('should issue plain "npm run build" when buildArgs is undefined (app case)', async () => {
-            await buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any);
+            await buildComponent('/p', cm, { nodeVersion: '20' }, logger);
 
             expect(cm.execute).toHaveBeenNthCalledWith(2, 'npm run build', expect.any(Object));
         });
 
         it('should pass useNodeVersion and enhancePath to build', async () => {
-            await buildComponent('/p', cm as any, { nodeVersion: '18' }, logger as any);
+            await buildComponent('/p', cm, { nodeVersion: '18' }, logger);
 
             expect(cm.execute).toHaveBeenNthCalledWith(
                 2,
@@ -162,7 +162,7 @@ describe('buildComponent', () => {
                 .mockResolvedValueOnce({ code: 1, stdout: '', stderr: 'boom', duration: 0 });
 
             await expect(
-                buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any)
+                buildComponent('/p', cm, { nodeVersion: '20' }, logger)
             ).rejects.toThrow('boom');
         });
 
@@ -172,7 +172,7 @@ describe('buildComponent', () => {
                 .mockResolvedValueOnce({ code: 1, stdout: 'stdout boom', stderr: '', duration: 0 });
 
             await expect(
-                buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any)
+                buildComponent('/p', cm, { nodeVersion: '20' }, logger)
             ).rejects.toThrow('stdout boom');
         });
 
@@ -201,7 +201,16 @@ describe('buildComponent', () => {
                 "Error: Cannot find module 'dotenv'",
             ].join('\n');
 
-            function dumpFor(logger: { debug: jest.Mock }): Record<string, unknown> | undefined {
+            /**
+ * Takes the LOGGER FAKE, not a narrower `{ debug: jest.Mock }`.
+ *
+ * The narrow parameter is why every call site wrote `dumpFor(logger)`: the
+ * canonical fake is a full `jest.Mocked<Logger>` and does not match a one-method
+ * shape. Naming the real thing removes four casts and keeps the read checked.
+ */
+function dumpFor(
+    logger: ReturnType<typeof createMockLogger>
+): Record<string, unknown> | undefined {
                 const call = logger.debug.mock.calls.find(
                     (c: unknown[]) => typeof c[1] === 'object' && c[1] !== null
                 );
@@ -219,10 +228,10 @@ describe('buildComponent', () => {
                     });
 
                 await expect(
-                    buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any)
+                    buildComponent('/p', cm, { nodeVersion: '20' }, logger)
                 ).rejects.toThrow();
 
-                const dump = dumpFor(logger as any);
+                const dump = dumpFor(logger);
                 expect(dump).toBeDefined();
                 // The line the thrown message can never carry.
                 expect(JSON.stringify(dump)).toContain("Cannot find module 'dotenv'");
@@ -239,10 +248,10 @@ describe('buildComponent', () => {
                     });
 
                 await expect(
-                    buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any)
+                    buildComponent('/p', cm, { nodeVersion: '20' }, logger)
                 ).rejects.toThrow();
 
-                expect(dumpFor(logger as any)?.code).toBe(1);
+                expect(dumpFor(logger)?.code).toBe(1);
             });
 
             it('dumps stdout too — npm puts the useful half there', async () => {
@@ -256,10 +265,10 @@ describe('buildComponent', () => {
                     });
 
                 await expect(
-                    buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any)
+                    buildComponent('/p', cm, { nodeVersion: '20' }, logger)
                 ).rejects.toThrow();
 
-                expect(JSON.stringify(dumpFor(logger as any))).toContain('the real reason');
+                expect(JSON.stringify(dumpFor(logger))).toContain('the real reason');
             });
 
             it('names the exit code in the thrown message, which redaction cannot erase', async () => {
@@ -273,7 +282,7 @@ describe('buildComponent', () => {
                     });
 
                 await expect(
-                    buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any)
+                    buildComponent('/p', cm, { nodeVersion: '20' }, logger)
                 ).rejects.toThrow(/exit 1/);
             });
 
@@ -282,9 +291,9 @@ describe('buildComponent', () => {
                     .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '', duration: 0 })
                     .mockResolvedValueOnce({ code: 0, stdout: 'built', stderr: '', duration: 0 });
 
-                await buildComponent('/p', cm as any, { nodeVersion: '20' }, logger as any);
+                await buildComponent('/p', cm, { nodeVersion: '20' }, logger);
 
-                expect(dumpFor(logger as any)).toBeUndefined();
+                expect(dumpFor(logger)).toBeUndefined();
             });
         });
     });
@@ -301,9 +310,9 @@ describe('buildComponent', () => {
 
             await buildComponent(
                 '/p',
-                cm as any,
+                cm,
                 { nodeVersion: '20', buildArgs: '-- --force' },
-                logger as any,
+                logger,
                 onProgress
             );
 
@@ -313,9 +322,9 @@ describe('buildComponent', () => {
         it('should use the provided logPrefix in debug logs', async () => {
             await buildComponent(
                 '/p',
-                cm as any,
+                cm,
                 { nodeVersion: '20', logPrefix: '[App Builder]' },
-                logger as any
+                logger
             );
 
             const calledWithPrefix = logger.debug.mock.calls.some(
@@ -340,9 +349,9 @@ describe('buildComponent', () => {
 
             await buildComponent(
                 '/p',
-                cm as any,
+                cm,
                 { nodeVersion: '20', kind: 'integration' },
-                logger as any
+                logger
             );
 
             expect(cm.execute).toHaveBeenCalledWith(INTEGRATION_INSTALL_CMD, expect.any(Object));
@@ -355,9 +364,9 @@ describe('buildComponent', () => {
 
             await buildComponent(
                 '/p',
-                cm as any,
+                cm,
                 { nodeVersion: '20', kind: 'integration' },
-                logger as any
+                logger
             );
 
             const installCmd = cm.execute.mock.calls[0][0];
@@ -371,9 +380,9 @@ describe('buildComponent', () => {
 
             await buildComponent(
                 '/p',
-                cm as any,
+                cm,
                 { nodeVersion: '20', kind: 'integration' },
-                logger as any
+                logger
             );
 
             expect(cm.execute).toHaveBeenCalledTimes(1);
@@ -392,9 +401,9 @@ describe('buildComponent', () => {
 
             await buildComponent(
                 '/p',
-                cm as any,
+                cm,
                 { nodeVersion: '22', kind: 'integration' },
-                logger as any
+                logger
             );
 
             expect(cm.execute).toHaveBeenCalledWith(
@@ -414,9 +423,9 @@ describe('buildComponent', () => {
 
             await buildComponent(
                 '/p',
-                cm as any,
+                cm,
                 { nodeVersion: '20', kind: 'integration' },
-                logger as any
+                logger
             );
 
             expect(cm.execute).not.toHaveBeenCalled();
@@ -435,9 +444,9 @@ describe('buildComponent', () => {
             await expect(
                 buildComponent(
                     '/p',
-                    cm as any,
+                    cm,
                     { nodeVersion: '20', kind: 'integration' },
-                    logger as any
+                    logger
                 )
             ).resolves.toBeUndefined();
 
@@ -459,9 +468,9 @@ describe('buildComponent', () => {
         it('should issue the byte-identical mesh install then build commands', async () => {
             await buildComponent(
                 '/p',
-                cm as any,
+                cm,
                 { nodeVersion: '20', kind: 'mesh', buildArgs: '-- --force' },
-                logger as any
+                logger
             );
 
             expect(cm.execute).toHaveBeenNthCalledWith(1, INSTALL_CMD, expect.any(Object));
@@ -477,9 +486,9 @@ describe('buildComponent', () => {
 
             await buildComponent(
                 '/p',
-                cm as any,
+                cm,
                 { nodeVersion: '20', kind: 'mesh', buildArgs: '-- --force' },
-                logger as any
+                logger
             );
 
             expect(cm.execute).not.toHaveBeenCalled();
@@ -490,9 +499,9 @@ describe('buildComponent', () => {
 
             await buildComponent(
                 '/p',
-                cm as any,
+                cm,
                 { nodeVersion: '20', kind: 'mesh' },
-                logger as any
+                logger
             );
 
             expect(cm.execute).not.toHaveBeenCalled();
