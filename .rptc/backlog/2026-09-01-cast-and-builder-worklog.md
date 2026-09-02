@@ -299,3 +299,7 @@ conversion, which the enforcer requires anyway.
 - 2026-09-01  test(eds): the GitHub file-ops family — 31 casts become one, and a fourth builder gets used (`478b3a318`)
 - 2026-09-01  test: two more families — one cast in a helper replaces 42 at the call sites (`d698c5bb8`)
 - 2026-09-01  test(dashboard): route three handler contexts to the builder — and I was wrong about absence (`acfa19a48`)
+- 2026-09-01  test(sop): an enforcer caught me duplicating an extraction — so it got extracted (`f4cbcb552`)
+- 2026-09-01  test(mcp): the mutation pilot found an unconstrained field, hours after being repaired (`90ed1cb67`)
+- 2026-09-01  test(auth): the same impossible-input test, in the sibling handler (`275af509f`)
+- 2026-09-01  fix(mutation): the effectiveness instrument was unusable — 12GB of its own leftovers (`5abbfe897`)
