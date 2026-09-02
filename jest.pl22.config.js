@@ -26,6 +26,9 @@ module.exports = {
     displayName: 'stryker-pl22',
     rootDir: __dirname,
     testMatch: [
+        '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-inputValidation.test.ts',
+        '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-tokenStorage.test.ts',
+        '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-tokenStrict.test.ts',
         '**/tests/commands/claudeCodeFootprint.test.ts',
         '**/tests/commands/commandManager.test.ts',
         '**/tests/core/utils/mcpSocketPath.test.ts',

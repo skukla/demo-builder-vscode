@@ -26,6 +26,8 @@ import { dirname, basename, join } from 'path';
 
 const STRYKER = 'stryker.focus.config.json';
 const JEST = 'jest.focus.config.js';
+const SAMPLE_STRYKER = 'stryker.pl22.config.json';
+const SAMPLE_JEST = 'jest.pl22.config.js';
 const INCREMENTAL = 'reports/mutation/focus-incremental.json';
 
 /** Every suite that mirrors `modulePath`, sorted, as repo-relative paths. */
@@ -63,8 +65,52 @@ ${lines}
 `;
 }
 
+/**
+ * Add any MISSING suite to the SAMPLE config's list. Never removes.
+ *
+ * The sample covers twelve modules and its suite list is hand-maintained, so adding a
+ * test file for any of them silently leaves it out. That happened TWICE on 2026-09-02,
+ * both times caught by an enforcer rather than by anyone noticing.
+ *
+ * ADD-ONLY is not timidity, it is correctness. The mirror convention finds most suites
+ * and not all of them — the webview tree, for one, does not mirror `src/` path for path.
+ * A rewrite that dropped what it could not derive would remove EIGHT working entries
+ * (measured, the first time this ran) and hand each of those modules a run with no tests,
+ * which reports 0% and reads like a catastrophe. Entries it cannot account for are
+ * REPORTED, so a genuinely stale one is still visible to a human.
+ */
+function syncSample() {
+    const stryker = JSON.parse(readFileSync(SAMPLE_STRYKER, 'utf8'));
+    const derived = [...new Set(stryker.mutate.flatMap((m) => suitesFor(m)))].sort();
+
+    const src = readFileSync(SAMPLE_JEST, 'utf8');
+    const listed = [...src.matchAll(/'\*\*\/([^']+)'/g)].map((m) => m[1]);
+    const missing = derived.filter((s2) => !listed.includes(s2));
+    const unexplained = listed.filter((s2) => !derived.includes(s2));
+
+    if (missing.length) {
+        const insertion = missing.map((s2) => `        '**/${s2}',`).join('\n');
+        const anchor = `        '**/${listed[0]}',`;
+        if (!src.includes(anchor)) {
+            console.error(`Could not find an anchor entry in ${SAMPLE_JEST} to insert beside.`);
+            process.exit(1);
+        }
+        writeFileSync(SAMPLE_JEST, src.replace(anchor, `${insertion}\n${anchor}`));
+    }
+
+    console.log(`${SAMPLE_JEST}: ${listed.length} listed, ${derived.length} derived from ${stryker.mutate.length} module(s).`);
+    for (const a of missing) console.log(`  + ${a}`);
+    for (const u of unexplained) console.log(`  ? ${u}   (listed but not derivable — left alone)`);
+    if (!missing.length) console.log('  nothing missing.');
+}
+
 function main() {
     const arg = process.argv[2];
+
+    if (arg === '--sync-sample') {
+        syncSample();
+        return;
+    }
     const stryker = JSON.parse(readFileSync(STRYKER, 'utf8'));
 
     if (arg === '--check') {
@@ -85,7 +131,9 @@ function main() {
     }
 
     if (!arg) {
-        console.error(`Usage: node scripts/focusModule.mjs <src/path/to/module.ts> | --check`);
+        console.error(
+            'Usage: node scripts/focusModule.mjs <src/path/to/module.ts> | --check | --sync-sample'
+        );
         process.exit(1);
     }
     if (!existsSync(arg)) {

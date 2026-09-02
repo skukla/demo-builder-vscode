@@ -33,6 +33,7 @@ module.exports = {
         '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-guard.test.ts',
         '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-inputValidation.test.ts',
         '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-signIn.test.ts',
+        '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-tokenStorage.test.ts',
         '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-tokenStrict.test.ts',
     ],
 };

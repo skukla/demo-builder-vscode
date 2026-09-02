@@ -325,3 +325,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  test(ai): what the site tools tell an agent about whether they are safe to call (`b494de862`)
 - 2026-09-02  test(ai): the site scan reads without writing, and the delete gate needs both halves (`4ca0a66df`)
 - 2026-09-02  docs(handoff): the overnight loop report (`d63ceacf6`)
+- 2026-09-02  test(eds): the DA.live token check, and what the sign-in boxes reject as you type (`53c8d26cc`)

@@ -157,3 +157,43 @@ pass that read `readOnlyHint` across all 114 tools reported 48 of them as declar
 annotations at all; that was the census reading the wrong field for the descriptor form,
 not a gap. Only the `registerTool` form writes the annotation block by hand, and only
 there can two tools of one class disagree.
+
+---
+
+# Not a mutant: a DA.live token is refused one way and accepted the other
+
+Found while testing what a successful DA.live sign-in actually stores. Like the tool
+annotations above, this is a decision rather than a defect — but it is about a
+credential, so it should not live only in a transcript.
+
+A DA.live token can arrive two ways, and they disagree about a token that states no
+lifetime:
+
+- **From the clipboard**, `validateDaLiveTokenStrict` refuses it, in those words: "This
+  DA.live token carries no expiry, so it cannot be stored safely."
+- **Typed into the box**, `validateAndStoreToken` uses the LENIENT
+  `validateDaLiveToken`, which accepts it, and then stores it with an invented lifetime
+  of 24 hours (`daLiveAuthPrompt.ts:503`).
+
+So the same token is called unsafe on one path and given a made-up expiry on the other.
+The clipboard path was hardened deliberately — there is a whole "clipboard token
+identity" section of tests behind it — and the typed path appears simply not to have
+been revisited.
+
+**The options:**
+
+1. **Use the strict check on both paths.** Consistent, and the refusal message already
+   explains itself to the user. It would REJECT tokens that are accepted today, which is
+   a behaviour change for anyone whose token genuinely carries no lifetime — worth
+   knowing whether that happens in practice before choosing it.
+2. **Keep the 24-hour default and drop the strict refusal**, on the grounds that a
+   conservative default expiry is safer than refusing a working credential. Then the
+   strict check's message is wrong and should go.
+3. **Leave it**, if the clipboard path deserves to be stricter precisely because the user
+   never looked at what they pasted. That is defensible — but it is currently implicit,
+   and worth a comment saying so.
+
+**Today's behaviour is now pinned on both paths** by
+`tests/features/eds/handlers/daLive/daLiveAuthPrompt-tokenStorage.test.ts` and
+`daLiveAuthPrompt-tokenStrict.test.ts`, so whichever way this goes, the test that has to
+change is the one that says so in its own comment.
