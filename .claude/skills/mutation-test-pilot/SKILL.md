@@ -39,6 +39,11 @@ Both configs now carry `ignorePatterns`. After deleting the two directories the
 pilot ran in **29s and reproduced 93.37% exactly**, module for module — which is
 also what proves the ignore list did not change what gets mutated.
 
+A KILLED RUN ORPHANS ITS WHOLE SANDBOX. Interrupting the sample (Ctrl-C, a session
+ending, a timeout) left **1.0GB** behind in one go — so this is not slow accumulation
+over months, it is one gigabyte per interrupted run. Delete the temp dir before
+re-running after any interruption.
+
 The directories are gitignored, so nothing warns you they are growing. If a run
 feels slow, look there first:
 

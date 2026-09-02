@@ -9,6 +9,9 @@
 import { handleCheckRepoReadiness } from '@/features/eds/handlers/checkRepoReadinessHandler';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 const classify = jest.fn();
 jest.mock('@/features/eds/services/storefront/repoStorefrontReadiness', () => ({
     classifyRepoForStorefront: (...args: unknown[]) => classify(...args),
@@ -20,11 +23,16 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 }));
 
 function ctx() {
-    return {
+    // `context: { secrets: {} }` claimed an empty object was an ExtensionContext AND
+    // that an empty object inside it was a SecretStorage — two claims in one line,
+    // both erased by the cast at the call sites.
+    return createMockHandlerContext({
         logger: createMockLogger(),
-        context: { secrets: {} },
+        context: createMockExtensionContext({
+            secrets: createMockSecretStorage().secrets,
+        }),
         sendMessage: jest.fn(),
-    };
+    });
 }
 
 describe('handleCheckRepoReadiness', () => {
@@ -34,7 +42,7 @@ describe('handleCheckRepoReadiness', () => {
         classify.mockResolvedValue({ kind: 'storefront' });
 
         const result = await handleCheckRepoReadiness(
-            ctx() as never,
+            ctx(),
             { owner: 'skukla', repo: 'b2b-tester' },
         );
 
@@ -51,7 +59,7 @@ describe('handleCheckRepoReadiness', () => {
         });
 
         const result = await handleCheckRepoReadiness(
-            ctx() as never,
+            ctx(),
             { owner: 'skukla', repo: 'demo-builder-test' },
         );
 
@@ -68,7 +76,7 @@ describe('handleCheckRepoReadiness', () => {
         classify.mockRejectedValue(new Error('rate limited'));
 
         const result = await handleCheckRepoReadiness(
-            ctx() as never,
+            ctx(),
             { owner: 'skukla', repo: 'b2b-tester' },
         );
 
@@ -77,7 +85,7 @@ describe('handleCheckRepoReadiness', () => {
     });
 
     it('refuses a request without both owner and repo', async () => {
-        const result = await handleCheckRepoReadiness(ctx() as never, { owner: 'skukla' });
+        const result = await handleCheckRepoReadiness(ctx(), { owner: 'skukla' });
 
         expect(result.success).toBe(false);
         expect(classify).not.toHaveBeenCalled();

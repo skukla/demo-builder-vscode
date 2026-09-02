@@ -10,23 +10,35 @@ import { handleCreateAdobeWorkspace } from '@/features/authentication/handlers/w
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 jest.mock('@/core/validation/validators/AdobeResourceValidator');
 
 const WS = { id: 'ws-new', name: 'Stage', title: 'Stage' };
 
 function createContext() {
-    const authManager: any = {
+    /**
+     * `authManager` was declared `any` and the whole context cast `as any` — two
+     * erasures in one twelve-line factory, which is why nine calls in this suite
+     * were checked against nothing.
+     *
+     * It is re-attached below so its MOCK type survives: read back through
+     * `HandlerContext` the members are plain functions, and these tests call
+     * `.mockResolvedValue` on them.
+     */
+    const authManager = createMockAuthenticationService({
         testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
         createWorkspace: jest.fn().mockResolvedValue(WS),
         getWorkspaces: jest.fn().mockResolvedValue([WS]),
-    };
-    return {
+    });
+    const base = createMockHandlerContext({
         authManager,
         logger: createMockLogger(),
-        debugLogger: { trace: jest.fn(), debug: jest.fn() },
+        // The DEBUG logger is `Logger`-shaped — the same builder is the right fake.
+        debugLogger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
-        sharedState: { isAuthenticating: false },
-    } as any;
+    });
+    return { ...base, authManager };
 }
 
 describe('workspaceHandlers - Create', () => {
@@ -66,13 +78,30 @@ describe('workspaceHandlers - Create', () => {
         expect(mockContext.authManager.createWorkspace).not.toHaveBeenCalled();
     });
 
-    it('returns a failure message when createWorkspace returns undefined (quota/failure)', async () => {
-        mockContext.authManager.createWorkspace.mockResolvedValue(undefined);
+    /**
+     * REPLACES a test that fed `undefined` and called it "quota/failure" — the exact
+     * twin of the one removed from `projectHandlers-create` earlier today, down to
+     * the wording.
+     *
+     * `createWorkspace` returns `AdobeWorkspace | ConsoleOpFailure` and cannot return
+     * undefined. That test passed because the handler has no undefined guard, so a
+     * property read threw and the outer catch turned it into a generic failure —
+     * making it a duplicate of "returns an error when createWorkspace throws" below,
+     * while appearing to cover something else.
+     *
+     * The failure path production ACTUALLY implements had no test here either.
+     * Production's own comment says the quota guess was replaced by Console's
+     * reason; this asserts that reason reaches the user.
+     */
+    it("surfaces Console's own reason when createWorkspace reports a failure", async () => {
+        mockContext.authManager.createWorkspace.mockResolvedValue({
+            error: 'Workspace limit reached for this project',
+        });
 
         const result = await handleCreateAdobeWorkspace(mockContext, { name: 'Stage' });
 
         expect(result.success).toBe(false);
-        expect(result.error).toBeTruthy();
+        expect(result.error).toContain('Workspace limit reached for this project');
     });
 
     it('returns the refreshed list ON THE RESPONSE (the caller is unmounted, a push is lost)', async () => {

@@ -23,12 +23,17 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => {
 
 import { setupMocks, createDashboardProject } from './dashboardHandlers.testUtils';
 import type { Project } from '@/types/base';
+import type { HandlerContext } from '@/types/handlers';
 
-async function run(context: unknown) {
+/**
+ * `context: unknown` erased the argument at every call — the fifth instance of that
+ * exact shape on this programme. Typed to the real context, the cast is unnecessary.
+ */
+async function run(context: HandlerContext) {
     const { handleGetProjectUrls } = await import(
         '@/features/dashboard/handlers/dashboardHandlers'
     );
-    return handleGetProjectUrls(context as never);
+    return handleGetProjectUrls(context);
 }
 
 function urlsOf(result: { data?: unknown }): Record<string, string> {
