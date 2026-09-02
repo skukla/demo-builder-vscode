@@ -5,6 +5,7 @@ area: platform
 needs: []
 value: high
 status: active
+parent: PL-30
 ---
 
 # Every open finding from the 2026-09-01 toolchain day, in one list

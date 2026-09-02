@@ -91,6 +91,80 @@ what remains in each is finishing an application, not writing a rule.
 Reading either as "write the rules" would restate rules that exist. That is the
 mistake this entry is here to prevent, and the reason it is stated twice.
 
+## The burn-down roster
+
+**This is the whole program.** Every item below is a child of this one, so the checker
+will not let this epic close while any of them is unfinished — the relationship is
+mechanical, not a promise in prose.
+
+Each row says what FINISHED means, because an item without a done-condition is how a
+programme runs forever. Where a row says *needs a done-condition*, that is the first
+work on it.
+
+### Track 2 — documentation
+
+| Item | Finished when | Now |
+|---|---|---|
+| [[PL-29]] | The two provisional documents are final — they cannot be, until track 3 settles the strategy they describe | 2 provisional |
+| [[PL-26]] | *needs a done-condition* — a glossary exists and something checks the words are used | no glossary |
+
+### Track 3 — test strategy (epic: [[PL-11]])
+
+| Item | Finished when | Now |
+|---|---|---|
+| [[PL-9]] | Every test sits at its subject's mirror, and the enforcer checks SUBJECT rather than directory | 53 misplaced (35 `webview-ui`, 18 scattered) |
+| [[PL-14]] | Built. Closes when the seven artifacts are in use, not merely present | built |
+| [[PL-15]] | A full run emits zero act() warnings, zero prop warnings, zero stray error lines | 355 / 72 / 600+ at baseline |
+| [[PL-16]] | StateManager and Project each have ONE builder, and the literal-cast ledger for them is empty | 205 casts across 4 types; 63 split families without shared setup |
+| [[PL-22]] | Every included module is measured and ratcheted; thresholds ratified | 16 of 507 (3.2%) |
+| [[PL-32]] | Both forms are zero and the ban replaces the ceiling | `as any` 286, `as never` 190 |
+
+### Track 4 — architecture and conventions
+
+| Item | Finished when | Now |
+|---|---|---|
+| [[PL-13]] | The ADR-015 exemption ledger is empty | ~8 rows |
+| [[PL-19]] | The sidebar uses the shared webview client like the other seven | 1 outlier |
+| [[PL-20]] | Each of the 19 classes is either styled or removed | 19 |
+| [[PL-21]] | ADR-018 decides the CSS question it deliberately parked | parked |
+| [[PL-27]] | Every skill that is doing a check's job has been adjudicated | *needs a count* |
+| [[PL-31]] | No re-export index file remains, or the survivors are ledgered with reasons | 8 |
+| [[PL-33]] | Built — every convention enforced or removed | 78 conventions, 77 enforced |
+
+### Cross-cutting
+
+| Item | Finished when | Now |
+|---|---|---|
+| [[PL-34]] | Every finding from the 2026-09-01 toolchain day is closed or dropped | active |
+
+## What is deliberately NOT in this program
+
+Naming these matters more than naming what is in, because the way a burn-down never
+finishes is by quietly absorbing everything.
+
+- **The agent-surface track** — [[AI-1]], [[AI-2]], [[AI-3]] and their children. It is
+  active and it is substantial, and it does not belong here: [[AI-1]] is a `question`,
+  which by definition has no "done". Folding open questions into a burn-down guarantees
+  the burn-down never closes.
+- **Product work** — every `EDS-*`, `AB-*`, `DI-*`, `PR-*` item, and the platform
+  features ([[PL-3]], [[PL-23]], [[PL-24]]). Different programme, different cadence.
+
+## The rule that keeps this finite
+
+**The roster above is CLOSED. It may shrink and it may not grow.**
+
+New findings during the burn-down do not join it. They go to the backlog unparented, and
+they are worked after this programme closes — unless one of them BLOCKS a track, which is
+a decision to record here with the reason.
+
+That is the whole discipline, and it exists because this repo's failure mode is not
+carelessness, it is accretion: 51 live items, of which this programme is 17. Without a
+closed roster the other 34 arrive one plausible item at a time.
+
+**Measuring it:** every item is a child of this epic, `backlog.mjs check` refuses to let
+the epic ship while a child is unfinished, and the count of unfinished children IS the
+burn-down number. Nothing else needs tracking.
+
 ## Why an epic
 
 It has children and outlives any sitting. It closes when all four tracks do — and

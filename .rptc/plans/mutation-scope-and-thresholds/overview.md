@@ -133,20 +133,28 @@ whatever they score and ratcheted later.
 
 ## 3. The plan
 
-### The cadence problem, and the fix
+### Cadence: different while we burn it down, different once we have
 
-The existing instruments run "at release cuts". **We have not cut a release in two and a
-half weeks**, so in practice that means never. Everything below is time- or change-based.
+This was the confusing part of the first draft, so it is stated as two phases.
+
+**While the burn-down runs — measure as we work.** Not at release cuts: no release has been
+cut in two and a half weeks, so anything hung on one would run never, and the burn-down
+needs feedback in minutes rather than at some future tag.
 
 | When | What | Cost |
 |---|---|---|
 | **Every change** | Focused run on the modules the diff touches; the ratchet must hold | 1–3 min per module |
-| **Weekly (cron)** | Sweep the whole pinned set | Long; unattended |
-| **Once** | Baseline every included module | Hours; unattended |
+| **Weekly (cron)** | Sweep the pinned set | Long; unattended |
+| **Once, up front** | Baseline every included module | Hours; unattended |
 
 The per-change gate is the one that matters and it is newly affordable: the focused runner
-does one module in 1–3 minutes, so a PR touching two modules costs minutes, not hours. That
-is a real gate on new work rather than a periodic audit that arrives after the fact.
+does one module in 1–3 minutes, so a change touching two modules costs minutes.
+
+**Once every included module is measured and ratcheted — release cuts are the right
+cadence**, and [[PL-22]] closes. At that point the ratchet is doing the work continuously
+and the periodic sweep is a check on the instrument rather than on the code: it catches a
+module that stopped being measured, not a module that got worse. Release cuts are exactly
+the right rhythm for that, and the burn-down phase is what earns the right to slow down.
 
 ### Steps
 

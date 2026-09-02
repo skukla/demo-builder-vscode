@@ -6,6 +6,7 @@ needs: []
 value: med
 status: backlog
 title: 19 CSS classes are used but no stylesheet defines them — triage each
+parent: PL-30
 ---
 
 # 19 classes a component asks for that nothing styles

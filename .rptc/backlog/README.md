@@ -283,30 +283,30 @@ each item's own file; what has already landed against an item is in its
 | `PL-6` | fix | [aio CLI tree staleness is invisible to version checks](2026-08-27-aio-cli-tree-staleness-invisible-to-version-checks.md) | — | med | shipped |
 | `PL-7` | fix | [rptc-hygiene-scan check 5 parses zero active entries](2026-08-27-rptc-hygiene-scan-section5-broken.md) | — | low | shipped |
 | `PL-8` | fix | [Dedup pass over the pre-boundary clones the sweeps filed](2026-08-27-dedup-pass-pre-boundary-clones.md) | — | med | shipped |
-| `PL-11` | epic | [Test health and optimization](2026-08-28-test-health-epic.md) | — | med | active |
 | `PL-9` | chore | └ [Tests-tree dedup — the census after the first-ever scan](2026-08-27-tests-tree-dedup-census.md) | — | med | active |
 | `PL-10` | question | └ [Testing approach audit — do the tests need the same scan toolkit the code got?](2026-08-28-testing-approach-audit.md) | — | med | shipped |
 | `PL-14` | chore | └ [ADR-016 enforcement tooling — the seven artifacts](2026-08-28-adr-016-enforcement-tooling.md) | — | high | built |
 | `PL-15` | chore | └ [Run-noise burn-down to zero](2026-08-28-noise-burndown.md) | PL-14 | med | active |
+| `PL-16` | fix | └ [Give StateManager and Project fixtures a shared builder, the way HandlerContext has one](2026-08-28-shared-test-builders.md) | — | high | active |
 | `PL-22` | question | └ [Does the 93% mutation score hold outside the modules we already trusted?](2026-08-30-mutation-score-beyond-confident-modules.md) | — | med | open |
+| `PL-32` | chore | └ [Work the type-erasing casts in tests to zero](2026-08-31-type-erasing-casts.md) | — | med | active |
 | `PL-12` | question | [Pattern-conformance audit — one architecture, or one per feature?](2026-08-28-pattern-conformance-audit.md) | — | med | shipped |
-| `PL-13` | chore | [ADR-015 convergence — empty the exemption ledger](2026-08-28-adr-015-convergence.md) | — | high | built |
-| `PL-16` | fix | [Give StateManager and Project fixtures a shared builder, the way HandlerContext has one](2026-08-28-shared-test-builders.md) | — | high | active |
 | `PL-17` | question | [The architecture is written for the extension host only; the frontend has rules but no document](2026-08-28-adr015-webview-jurisdiction.md) | — | high | shipped |
 | `PL-18` | feature | [ADR-017 §6 is stated but unenforced — the check that closes it](2026-08-29-adr017-stylesheet-bundle-check.md) | — | high | shipped |
-| `PL-19` | fix | [The sidebar is the only webview not using the shared client](2026-08-29-sidebar-converge-on-webview-client.md) | — | med | backlog |
-| `PL-20` | fix | [19 classes a component asks for that nothing styles](2026-08-29-triage-classes-defined-nowhere.md) | — | med | backlog |
-| `PL-21` | question | [CSS: understand it, then get a safety net, then rule on it — refactor last, if at all](2026-08-29-css-architecture-understand-before-refactor.md) | — | high | active |
 | `PL-25` | chore | [Skill descriptions should trigger, not describe](skill-description-triggers.md) | — | med | dropped |
 | `PL-26` | feature | [A glossary, so the agent describes things back in our words](project-glossary.md) | — | med | active |
-| `PL-27` | question | [Is any of our 37 skills doing a job a check should hold?](skills-vs-enforcement-layer.md) | — | low | open |
 | `PL-28` | question | [Rules stated as law that no handbook, ADR or check backs](unratified-rules-register.md) | — | high | shipped |
 | `PL-30` | epic | [The four-track program — enforceable conventions, in sequence](four-track-program.md) | — | high | active |
+| `PL-11` | epic | └ [Test health and optimization](2026-08-28-test-health-epic.md) | — | med | active |
+| `PL-13` | chore | └ [ADR-015 convergence — empty the exemption ledger](2026-08-28-adr-015-convergence.md) | — | high | built |
+| `PL-19` | fix | └ [The sidebar is the only webview not using the shared client](2026-08-29-sidebar-converge-on-webview-client.md) | — | med | backlog |
+| `PL-20` | fix | └ [19 classes a component asks for that nothing styles](2026-08-29-triage-classes-defined-nowhere.md) | — | med | backlog |
+| `PL-21` | question | └ [CSS: understand it, then get a safety net, then rule on it — refactor last, if at all](2026-08-29-css-architecture-understand-before-refactor.md) | — | high | active |
+| `PL-27` | question | └ [Is any of our 37 skills doing a job a check should hold?](skills-vs-enforcement-layer.md) | — | low | open |
 | `PL-29` | epic | └ [Track 2 — documentation synthesis, and every document enforced](doc-synthesis-track.md) | — | high | active |
-| `PL-31` | chore | [Retire the 43 re-export index files, module by module](2026-08-31-core-barrels-are-not-curated.md) | — | med | built |
-| `PL-32` | chore | [Work the type-erasing casts in tests to zero](2026-08-31-type-erasing-casts.md) | — | med | active |
-| `PL-33` | chore | [Every convention is enforced, or it stops being a convention](2026-08-31-every-convention-enforced.md) | — | high | built |
-| `PL-34` | chore | [Every open finding from the 2026-09-01 toolchain day, in one list](2026-09-01-cast-and-builder-worklog.md) | — | high | active |
+| `PL-31` | chore | └ [Retire the 43 re-export index files, module by module](2026-08-31-core-barrels-are-not-curated.md) | — | med | built |
+| `PL-33` | chore | └ [Every convention is enforced, or it stops being a convention](2026-08-31-every-convention-enforced.md) | — | high | built |
+| `PL-34` | chore | └ [Every open finding from the 2026-09-01 toolchain day, in one list](2026-09-01-cast-and-builder-worklog.md) | — | high | active |
 
 <!-- END GENERATED registry -->
 

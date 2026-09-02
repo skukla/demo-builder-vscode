@@ -6,6 +6,7 @@ needs: []
 value: med
 status: backlog
 title: The sidebar acquires the VS Code API itself — a latent double-acquire crash
+parent: PL-30
 ---
 
 # The sidebar is the only webview not using the shared client
