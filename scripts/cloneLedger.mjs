@@ -53,6 +53,16 @@
  *
  * Two minutes per pair, and on item one it inverted the answer.
  *
+ * AND CHECK THE BODIES, NOT THE NAMES. On 2026-09-02 an extraction was built on
+ * "all three suites mock the same five modules" — true, and useless. Hashing the
+ * mock BODIES showed only one of the five agreed across even two of the three:
+ * one suite's hook double captures callbacks off the props because that is what
+ * that suite is about, and the three component stubs each render what their own
+ * suite queries. The extraction broke six tests before it was reverted and the
+ * pair adjudicated as variants.
+ *
+ * Comparing module names is the cheap check that feels like the real one.
+ *
  * Usage:
  *   node scripts/cloneLedger.mjs list        every unadjudicated pair, biggest first
  *   node scripts/cloneLedger.mjs next        just the next one to work
