@@ -100,15 +100,38 @@ moved; one family was already done. Paths corrected in the worklist the same
 day, because a row pointing at a deleted directory looks exactly like a row
 nobody has worked.
 
-**What is genuinely left:**
+**What is genuinely left — updated later the same day:**
 
-1. **`helixService` — the last real lane-C target.** 7 suites, no shared setup,
-   ~90 removable lines. The largest single remaining piece.
-2. **21 of the 27 small targets** (10–39 lines each). These are explicitly
-   opportunistic: do them when a batch is already in that area, not as a sweep.
-3. **The 42 legitimate size-splits need written reasons.** Until each carries
-   one they keep counting as debt, which is the whole reason the number never
-   looks finished.
+1. ~~`helixService`~~ — **done** (`9e3e2c301`). Four of its seven suites shared a
+   50-line preamble; 92 tests before and after, 266 lines removed. That closes
+   lane C's real targets at 20 of 20.
+2. **23 families with measured duplicated setup.** What used to be "21 small
+   targets" plus rows the ranking never scored. Still opportunistic: do them when
+   a batch is already in that area, not as a sweep.
+3. ~~The 42 legitimate size-splits need written reasons.~~ **Done** — the ledger
+   now carries two lists, measured debt and adjudicated splits, and 31 families
+   have a written reason. Two enforcers hold it: a reason must be at least eight
+   words, and no family may sit in both lists.
+
+**Three things the numbers were hiding, all found by reading rather than
+measuring:**
+
+- **Seven ledger rows were never families.** The detector groups suites by a
+  filename's first hyphen-token, so `no-bare-sleep`, `no-config-leaf-mocks` and
+  `no-lowered-test-timeout` read as one family, and `securityValidation-*` as
+  another covering six different validators. They were debt nobody could ever
+  pay — there is no shared setup to extract from files that share nothing. Fixed
+  in the detector (`c5e4a10b4`), which now requires a real subject.
+- **The line count alone misleads, in both directions.** `dashboardHandlers`
+  measures ZERO removable lines and reads as a correct split; its four suites in
+  fact share five mocked modules and one is mocked by all four. It stays as debt.
+  `processCleanup` measures the largest remaining saving, 36 lines, and is NOT
+  debt: its five suites split by strategy — three drive real child processes, two
+  mock tree-kill — and its "duplication" is a ten-line comment repeated three
+  times. Reading the per-suite mock sets is what separates these.
+- **The ledger listed one family twice**, so its row count overstated the work.
+  The assertion reads it into a Set, so a duplicate changed nothing it could see.
+  Now checked.
 4. **Lane B is not this item's work** — it melts as PL-13's ADR-015 conversions
    land, and PL-13 is down to ~8 ledger rows.
 5. **The clone count needs an adjudicated floor.** 160 was frozen as "cannot
@@ -164,3 +187,4 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  helixService extracted — lane C's 20 real targets are now all done (9e3e2c301). Clones 72->70. Ledger had a duplicate row for that family, so its count was overstated; added a uniqueness check whose first version was itself broken (Set.add in a filter) and was caught by its positive control.
 - 2026-09-02  Seven ledger rows were never families — the detector groups by a filename's first hyphen-token, so three unrelated 'no-*' enforcers read as one family and securityValidation-* as another (c5e4a10b4). Detector now requires a real subject; ledger 61 -> 54.
 - 2026-09-02  Ledger split into measured debt vs adjudicated splits, each with a written reason grounded in the removable-lines ranking AND the per-suite mock sets. 26 adjudicated; debt 54 -> 28. dashboardHandlers looked legitimate by line count but its 4 suites share 5 mocked modules — kept as debt.
+- 2026-09-02  Adjudication complete: 31 families carry written reasons, 23 remain as measured debt (ae71936df). processCleanup adjudicated despite the largest measured saving — its duplication is an explanatory comment and its suites split real-vs-mocked.
