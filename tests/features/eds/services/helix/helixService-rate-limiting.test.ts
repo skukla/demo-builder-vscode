@@ -9,52 +9,24 @@
  * Regression: unbounded Promise.all for preview DELETEs exceeds
  * the 10 req/s per-project Admin API rate limit when sites have
  * more than 10 pages.
+ *
+ * The mock wall, the type alias and the fetch swap live in
+ * `helixService.testUtils` — shared with the other three suites that mock this
+ * service's module boundary. It owns the service import so the mocks are
+ * registered before the service is loaded; do not import the service here.
  */
 
-import { createMockLogger } from '../../../../helpers/loggerFake';
-
-export {};
-
-// Mock vscode module
-
-// Mock logging
-const mockLogger = createMockLogger();
-// `Logger` was ALSO listed here as a mocked export. `@/core/logging` never
-// exported a `Logger` — only DebugLogger/ErrorLogger/StepLogger and the two
-// accessors — so that line faked a symbol that does not exist. Dropped 2026-08-31
-// (PL-31) when the barrel went and every key had to name its declaring module.
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: jest.fn(() => mockLogger),
-}));
-
-// Mock timeout config
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        QUICK: 5000,
-        NORMAL: 30000,
-        LONG: 180000,
-        VERY_LONG: 300000,
-    },
-    CACHE_TTL: {
-        SHORT: 60000,
-        MEDIUM: 300000,
-        LONG: 3600000,
-    },
-}));
-
-// Mock DA.live content operations
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        listDirectory: jest.fn(),
-    })),
-}));
-
-type HelixServiceType = import('@/features/eds/services/helix/helixService').HelixService;
+import {
+    createHelixService,
+    installFetchMock,
+    mockLogger,
+    restoreFetch,
+    type HelixServiceType,
+} from './helixService.testUtils';
 
 describe('HelixService - Rate Limiting', () => {
     let service: HelixServiceType;
     let mockFetch: jest.Mock;
-    const originalFetch = global.fetch;
 
     /** Create a mock 429 Too Many Requests response */
     function make429(retryAfter: string = '0'): Partial<Response> {
@@ -75,24 +47,11 @@ describe('HelixService - Rate Limiting', () => {
 
     beforeEach(async () => {
         jest.clearAllMocks();
-
-        mockFetch = jest.fn();
-        global.fetch = mockFetch;
-
-        const module = await import('@/features/eds/services/helix/helixService');
-        service = new module.HelixService(
-            undefined,
-            {
-                getToken: jest.fn().mockResolvedValue({ token: 'ghtoken', tokenType: 'bearer', scopes: ['repo'] }),
-                validateToken: jest.fn().mockResolvedValue({ valid: true }),
-            } as any,
-            { getAccessToken: jest.fn().mockResolvedValue('dalive-token') } as any,
-        );
+        mockFetch = installFetchMock();
+        service = await createHelixService();
     });
 
-    afterEach(() => {
-        global.fetch = originalFetch;
-    });
+    afterEach(restoreFetch);
 
     describe('429 retry handling', () => {
         it('should retry on 429 and succeed on subsequent attempt', async () => {

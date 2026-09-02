@@ -12,54 +12,19 @@
  * - Legacy globalState migration
  */
 
-import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
-import { createMockLogger } from '../../../../helpers/loggerFake';
-
-// Mock vscode module
-
-// Mock logging
-const mockLogger = createMockLogger();
-// `Logger` was ALSO listed here as a mocked export. `@/core/logging` never
-// exported a `Logger` — only DebugLogger/ErrorLogger/StepLogger and the two
-// accessors — so that line faked a symbol that does not exist. Dropped 2026-08-31
-// (PL-31) when the barrel went and every key had to name its declaring module.
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: jest.fn(() => mockLogger),
-}));
-
-// Mock timeout config
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        QUICK: 5000,
-        NORMAL: 30000,
-        LONG: 180000,
-        VERY_LONG: 300000,
-    },
-    CACHE_TTL: {
-        SHORT: 60000,
-        MEDIUM: 300000,
-        LONG: 3600000,
-    },
-}));
-
-// Mock DA.live content operations
-const mockListDirectory = jest.fn();
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        listDirectory: mockListDirectory,
-    })),
-}));
-
-type HelixServiceType = import('@/features/eds/services/helix/helixService').HelixService;
-
-interface MockGitHubTokenService {
-    getToken: jest.Mock;
-    validateToken: jest.Mock;
-}
-
-interface MockDaLiveTokenProvider {
-    getAccessToken: jest.Mock<Promise<string | null>>;
-}
+import {
+    createHelixService,
+    installFetchMock,
+    loadHelixServiceModule,
+    makeDaLiveTokenProvider,
+    makeGitHubTokenService,
+    mockListDirectory,
+    mockLogger,
+    restoreFetch,
+    type HelixServiceType,
+    type MockDaLiveTokenProvider,
+    type MockGitHubTokenService,
+} from './helixService.testUtils';
 
 describe('HelixService - Persistent Key Store', () => {
     let service: HelixServiceType;
@@ -74,40 +39,24 @@ describe('HelixService - Persistent Key Store', () => {
         onDidChange: jest.Mock;
     };
     let secretStore: Record<string, string>;
-    const originalFetch = global.fetch;
 
     beforeEach(async () => {
         jest.clearAllMocks();
         mockListDirectory.mockReset();
+        mockGitHubTokenService = makeGitHubTokenService();
+        mockDaLiveTokenProvider = makeDaLiveTokenProvider();
+        mockFetch = installFetchMock();
 
-        mockGitHubTokenService = {
-            getToken: jest
-                .fn()
-                .mockResolvedValue({
-                    token: 'valid-github-token',
-                    tokenType: 'bearer',
-                    scopes: ['repo'],
-                }),
-            validateToken: jest.fn().mockResolvedValue({ valid: true }),
-        };
-
-        mockDaLiveTokenProvider = {
-            getAccessToken: jest.fn().mockResolvedValue('valid-dalive-ims-token'),
-        };
-
-        mockFetch = jest.fn();
-        global.fetch = mockFetch;
-
-        const module = await import('@/features/eds/services/helix/helixService');
-        HelixServiceClass = module.HelixService;
+        // The class, not just an instance: these tests drive its static key
+        // cache, and each case must start from an empty one.
+        HelixServiceClass = (await loadHelixServiceModule()).HelixService;
         HelixServiceClass.clearApiKeyCache();
         HelixServiceClass.clearKeyStore();
 
-        service = new module.HelixService(
-            undefined,
-            mockGitHubTokenService as unknown as GitHubTokenService,
-            mockDaLiveTokenProvider
-        );
+        service = await createHelixService({
+            githubTokenService: mockGitHubTokenService,
+            daLiveTokenProvider: mockDaLiveTokenProvider,
+        });
 
         secretStore = {};
         mockSecretStorage = {
@@ -126,7 +75,7 @@ describe('HelixService - Persistent Key Store', () => {
 
     afterEach(() => {
         HelixServiceClass.clearKeyStore();
-        global.fetch = originalFetch;
+        restoreFetch();
     });
 
     it('should restore key from persistent store on cache miss', async () => {

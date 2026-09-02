@@ -242,7 +242,7 @@
       "suites": 2
     },
     {
-      "family": "tests/features/lifecycle/commands/openInClaude",
+      "family": "tests/commands/openInClaude",
       "removableLines": 15,
       "sharedLines": 5,
       "suites": 4
@@ -518,7 +518,7 @@
       "suites": 2
     },
     {
-      "family": "tests/features/project-creation/ui/components/ConfigurationSummary",
+      "family": "tests/core/ui/components/wizard/ConfigurationSummary",
       "removableLines": 0,
       "sharedLines": 0,
       "suites": 2

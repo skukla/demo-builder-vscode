@@ -35,7 +35,7 @@ import {
     makeGlobalState,
     makeOpenInClaudeContext,
     makeOpenInClaudeProject,
-} from './openInClaude.testkit';
+} from './openInClaude.testUtils';
 import { createMockStateManager } from '../helpers/stateManagerFake';
 import type { StateManager } from '@/core/state/stateManager';
 

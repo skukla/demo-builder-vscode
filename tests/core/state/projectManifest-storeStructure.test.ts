@@ -9,16 +9,13 @@
  * Project type is silently dropped by EACH unless it is named in both.
  */
 
-import * as fs from 'fs/promises';
-import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
-import type { Project } from '@/types/base';
-import { createMockLogger } from '../../helpers/loggerFake';
-
-jest.mock('fs/promises');
-
-const mockFs = fs as jest.Mocked<typeof fs>;
-
-const mockLogger = createMockLogger();
+import {
+    ProjectConfigWriter,
+    createTestProject,
+    mockLogger,
+    resetFsMocks,
+    writtenManifest,
+} from './projectManifest.testUtils';
 
 const STRUCTURE = {
     websites: [{ id: 2, code: 'citisignal', name: 'CitiSignal' }],
@@ -43,33 +40,7 @@ const STRUCTURE = {
     ],
 };
 
-function createTestProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        path: '/test/path',
-        created: new Date('2026-01-01T00:00:00Z'),
-        componentSelections: {},
-        componentInstances: [],
-        componentConfigs: {},
-        componentVersions: {},
-        ...overrides,
-    } as Project;
-}
-
-/** The JSON the writer actually handed to disk. */
-function writtenManifest(): Record<string, unknown> {
-    const call = mockFs.writeFile.mock.calls.at(-1);
-    return JSON.parse(String(call?.[1]));
-}
-
-beforeEach(() => {
-    jest.clearAllMocks();
-    mockFs.access.mockResolvedValue(undefined);
-    mockFs.mkdir.mockResolvedValue(undefined);
-    mockFs.writeFile.mockResolvedValue(undefined);
-    mockFs.rename.mockResolvedValue(undefined);
-    mockFs.unlink.mockResolvedValue(undefined);
-});
+beforeEach(resetFsMocks);
 
 describe('manifest carries commerceStoreStructure', () => {
     it('writes the structure when the project has one', async () => {

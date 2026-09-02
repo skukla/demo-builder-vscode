@@ -16,7 +16,7 @@ import {
     makeGlobalState,
     makeOpenInClaudeContext,
     makeOpenInClaudeProject,
-} from './openInClaude.testkit';
+} from './openInClaude.testUtils';
 // The CLASS, not the interface of the same name in `@/types/state`. This
 // consumer declares the class (private fields and all), which is exactly what
 // the `as never` here was hiding: the cast named nothing, so nothing said which

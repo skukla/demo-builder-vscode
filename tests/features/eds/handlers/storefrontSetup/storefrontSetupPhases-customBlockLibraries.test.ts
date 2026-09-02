@@ -7,6 +7,15 @@
  * TDD RED Phase: Tests written BEFORE implementation.
  */
 
+// FIRST, before the family harness: that file re-exports the subject, so requiring
+// it loads the subject and binds its collaborators. These mocks must be registered
+// before that happens (measured 2026-09-02 — five tests fail the other way round).
+import {
+    mockGetBlockLibraryName,
+    mockGetBlockLibrarySource,
+    mockInstallBlockCollections,
+} from './storefrontSetupPhases.blockLibraries.testUtils';
+
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 
 // =============================================================================
@@ -18,60 +27,9 @@ import type { CustomBlockLibrary } from '@/types/blockLibraries';
 // calls `getLogger()`, which throws unless the logger is initialised. Same mock
 // the other suites of getGitHubServices consumers use.
 
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn(),
-}));
-
-jest.mock('@/features/components/services/blockLibraryLoader', () => ({
-    getBlockLibrarySource: jest.fn(),
-    getBlockLibraryName: jest.fn(),
-    isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
-}));
-
-jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
-    GitHubRepoOperations: jest.fn().mockImplementation(() => ({
-        createFromTemplate: jest
-            .fn()
-            .mockResolvedValue({
-                fullName: 'owner/repo',
-                htmlUrl: 'https://github.com/owner/repo',
-            }),
-        waitForContent: jest.fn().mockResolvedValue(undefined),
-    })),
-}));
-
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
-
-// NOT mocked, and it does not need to be: the collaborator is constructed on this
-// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
-// stripping it and re-running this suite.
-
-// NOT mocked, and it does not need to be: the collaborator is constructed on this
-// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
-// stripping it and re-running this suite.
-
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    configureDaLivePermissions: jest.fn().mockResolvedValue({ success: true }),
-    ensureDaLiveAuth: jest.fn().mockResolvedValue({ authenticated: true }),
-    getDaLiveAuthService: jest.fn().mockReturnValue({
-        getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    }),
-}));
-
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, UI: { MIN_LOADING: 200 } },
-}));
-
-jest.mock('@/features/eds/services/edsPipeline', () => ({
-    executeEdsPipeline: jest.fn().mockResolvedValue({
-        success: true,
-        contentFilesCopied: 0,
-        libraryPaths: [],
-    }),
-}));
 
 // Mock fetch for code sync verification
 global.fetch = jest.fn().mockResolvedValue({ ok: true });
@@ -84,25 +42,9 @@ import {
     createSetupContext,
     executeStorefrontSetupPhases,
 } from './storefrontSetupPhases.testUtils';
-import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
-import {
-    getBlockLibrarySource,
-    getBlockLibraryName,
-} from '@/features/components/services/blockLibraryLoader';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
-
-// Cast imported mocks for type-safe access
-const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<
-    typeof installBlockCollections
->;
-const mockGetBlockLibrarySource = getBlockLibrarySource as jest.MockedFunction<
-    typeof getBlockLibrarySource
->;
-const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<
-    typeof getBlockLibraryName
->;
 
 // =============================================================================
 // Helpers

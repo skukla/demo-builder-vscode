@@ -22,6 +22,37 @@ own socket over yours and kill the running MCP session.
 `DEMO_BUILDER_MCP_SOCKET_DIR`. **Do not remove that.** Nothing else keeps a test run
 off the live socket, and from the test's side the failure is completely silent.
 
+## A full-suite failure in one of two suites is probably starvation
+
+`processCleanup` spawns real child processes and polls for their exit;
+`inExtensionMcpServer` binds real sockets. They are the two suites that fail
+first when jest is not getting the CPU it expects, and both fail with
+"Exceeded timeout", never with a wrong value.
+
+**The measured cause is a CONCURRENT jest run**, not a busy machine — see
+`.claude/hooks/rules/15-jest-concurrent.rule`, which recorded 10 clean solo runs
+against 6 failing overlapping ones on this 16-core box, naming these same
+suites. Sibling worktrees symlink `node_modules` back here, so a second session's
+run overlaps without announcing itself. The hook blocks the second run when it
+can see it.
+
+**Do not diagnose this from load average.** A 16-core machine sits at 5-8 while
+comfortably idle; that number says nothing. On 2026-09-02 two gate runs each
+failed one of these suites, and this file briefly blamed "load average 5.8" —
+which was a third of capacity, with four runnable processes and nothing blocked
+on I/O. Wrong number, wrong mechanism.
+
+What to actually do:
+
+```bash
+ps aux | python3 -c "import sys; print(sum('node_modules/.bin/jest' in l for l in sys.stdin))"
+```
+
+Non-zero means a run is already in flight — wait. Zero, and the failure still
+reproduces when you run that suite alone, means it is yours. Zero and it passes
+solo means something transient had the cores and did not stay to explain itself;
+re-run the gate rather than raising a timeout, which would hide the real kind too.
+
 ## Two projects, and which one runs your file
 
 | Project | Environment | Matches |

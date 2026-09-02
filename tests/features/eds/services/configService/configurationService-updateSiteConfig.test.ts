@@ -12,17 +12,14 @@
  * they cannot be handed back.
  */
 
-import { ConfigurationService } from '@/features/eds/services/configService/configurationService';
-import type { SiteRegistrationParams } from '@/features/eds/services/configService/configurationService';
-import { createMockLogger } from '../../../../helpers/loggerFake';
-
-const mockLogger = createMockLogger();
-
-const mockTokenProvider = {
-    getAccessToken: jest.fn(),
-};
-
-const MOCK_IMS_TOKEN = 'eyJhbGciOiJSUzI1NiIsIng1dSI6Imltc19uYTEta2V5LWF0LTEuY2VyIn0.mock-ims-token';
+import {
+    ConfigurationService,
+    MOCK_IMS_TOKEN,
+    mockLogger,
+    mockTokenProvider,
+    spyOnFetch,
+} from './configurationService.testUtils';
+import type { SiteRegistrationParams } from './configurationService.testUtils';
 
 describe('ConfigurationService', () => {
     let service: ConfigurationService;
@@ -32,9 +29,7 @@ describe('ConfigurationService', () => {
         jest.clearAllMocks();
         mockTokenProvider.getAccessToken.mockResolvedValue(MOCK_IMS_TOKEN);
         service = new ConfigurationService(mockTokenProvider, mockLogger);
-        fetchSpy = jest
-            .spyOn(global, 'fetch')
-            .mockResolvedValue(new Response(null, { status: 200 }));
+        fetchSpy = spyOnFetch();
     });
 
     afterEach(() => {

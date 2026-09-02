@@ -17,19 +17,11 @@
  */
 
 import { IoEventsClient, type EventsAuth } from '@/features/authentication/services/ioEventsClient';
+import { jsonResponse } from './ioEventsClient.testUtils';
 
 const FAKE_TOKEN = 'fake-test-token-not-a-secret';
 const FAKE_API_KEY = 'fake-test-client-id-not-a-secret';
 const AUTH: EventsAuth = { accessToken: FAKE_TOKEN, apiKey: FAKE_API_KEY };
-
-function jsonResponse(status: number, body: unknown): Response {
-    return {
-        ok: status >= 200 && status < 300,
-        status,
-        statusText: 'Stub',
-        json: jest.fn().mockResolvedValue(body),
-    } as unknown as Response;
-}
 
 function makeClient(mockFetch: jest.Mock): IoEventsClient {
     return new IoEventsClient(AUTH, mockFetch as unknown as typeof fetch);

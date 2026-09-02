@@ -25,32 +25,8 @@
 
 import * as os from 'os';
 import * as path from 'path';
-import { handleGetProjects } from '@/features/projects-dashboard/handlers/dashboardHandlers';
+import { handleGetProjects } from './dashboardHandlers.testUtils';
 import { createProjectsDashboardProject, createProjectsDashboardContext } from '../testUtils';
-
-// Mock mesh staleness detection
-jest.mock('@/core/state/appBuilderComponentState', () => ({
-    ...jest.requireActual('@/core/state/appBuilderComponentState'),
-    hasMeshDeploymentRecord: jest.fn().mockReturnValue(false),
-}));
-jest.mock('@/features/mesh/services/meshStatusResolver', () => ({
-    determineMeshStatus: jest.fn().mockResolvedValue('deployed'),
-}));
-
-// Make filesystem path-safety checks deterministic and independent of the host.
-// validateProjectPath() canonicalizes via fs.realpathSync; on a machine without
-// a real ~/.demo-builder/projects directory the validator would reject otherwise
-// valid in-tree paths. Identity realpathSync keeps the security prefix check
-// intact (traversal paths still resolve outside the base) while letting valid
-// project paths through regardless of what exists on disk.
-jest.mock('fs', () => ({
-    ...jest.requireActual('fs'),
-    realpathSync: jest.fn((p: string) => p),
-}));
-
-jest.mock('@/features/mesh/services/stalenessDetector', () => ({
-    detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
-}));
 
 // Org targeting is ambient (AsyncLocalStorage), so the only way to observe it is
 // to watch the wrapper. Pass-through, so the wrapped work still runs.
@@ -64,36 +40,6 @@ jest.mock('@/core/shell/orgContextEnv', () => ({
     buildOrgTargetFromProjectAdobe: (adobe?: { organization?: string }) =>
         mockBuildOrgTarget(adobe),
 }));
-
-
-// Mock vscode
-jest.mock(
-    'vscode',
-    () => ({
-        commands: {
-            executeCommand: jest.fn(),
-        },
-        workspace: {
-            getConfiguration: jest.fn().mockReturnValue({
-                get: jest.fn().mockReturnValue('cards'),
-            }),
-        },
-        Uri: {
-            file: jest.fn((p: string) => ({ fsPath: p, path: p })),
-            parse: jest.fn((s: string) => ({ toString: () => s, url: s })),
-        },
-        env: {
-            clipboard: {
-                writeText: jest.fn(),
-            },
-            openExternal: jest.fn(),
-        },
-        window: {
-            showInformationMessage: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
 
 describe('handleGetProjects — org targeting', () => {
     describe('mesh staleness enrichment', () => {

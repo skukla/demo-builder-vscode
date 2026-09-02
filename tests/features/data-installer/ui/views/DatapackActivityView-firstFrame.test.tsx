@@ -58,9 +58,7 @@ jest.mock('@/core/ui/hooks/useVSCodeRequest', () => ({
     }),
 }));
 
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: jest.fn(), postMessage: jest.fn() },
-}));
+import './DatapackActivityView.testUtils';
 
 // Below the mocks on purpose — see webview-test-authoring §3.
 import { DatapackActivityView } from '@/features/data-installer/ui/views/DatapackActivityView';

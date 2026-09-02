@@ -32,119 +32,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
-// Mock communication manager
-jest.mock('@/core/communication/webviewCommunicationManager', () => ({
-    createWebviewCommunication: jest.fn().mockResolvedValue({
-        on: jest.fn(),
-        onStreaming: jest.fn(),
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-        request: jest.fn().mockResolvedValue({}),
-        dispose: jest.fn(),
-        incrementStateVersion: jest.fn(),
-        getStateVersion: jest.fn().mockReturnValue(1),
-    }),
-}));
-
-// Mock loading HTML utility
-jest.mock('@/core/utils/loadingHTML', () => ({
-    setLoadingState: jest.fn().mockResolvedValue(undefined),
-}));
-
-// Mock panel creation
-let mockPanel: any;
-let mockDisposeCallback: (() => void) | undefined;
-
-jest.mock('vscode', () => ({
-    window: {
-        createWebviewPanel: jest.fn(() => {
-            mockPanel = {
-                webview: {
-                    html: '',
-                    postMessage: jest.fn().mockResolvedValue(true),
-                    onDidReceiveMessage: jest.fn(() => ({ dispose: jest.fn() })),
-                    asWebviewUri: jest.fn((uri: any) => uri),
-                    cspSource: 'vscode-webview://test',
-                },
-                onDidDispose: jest.fn((callback) => {
-                    mockDisposeCallback = callback;
-                    return { dispose: jest.fn() };
-                }),
-                onDidChangeViewState: jest.fn(() => ({ dispose: jest.fn() })),
-                dispose: jest.fn(() => {
-                    if (mockDisposeCallback) {
-                        mockDisposeCallback();
-                    }
-                }),
-                reveal: jest.fn(),
-                visible: true,
-            };
-            return mockPanel;
-        }),
-        onDidChangeActiveColorTheme: jest.fn(() => ({
-            dispose: jest.fn(),
-        })),
-        setStatusBarMessage: jest.fn(),
-        withProgress: jest.fn((options, task) => task({ report: jest.fn() })),
-        activeColorTheme: {
-            kind: 2, // Dark theme
-        },
-        showErrorMessage: jest.fn().mockResolvedValue(undefined),
-        showInformationMessage: jest.fn().mockResolvedValue(undefined),
-        showWarningMessage: jest.fn().mockResolvedValue(undefined),
-        createStatusBarItem: jest.fn(() => ({
-            text: '',
-            tooltip: '',
-            command: '',
-            show: jest.fn(),
-            hide: jest.fn(),
-            dispose: jest.fn(),
-        })),
-    },
-    ViewColumn: {
-        One: 1,
-    },
-    Uri: {
-        file: (path: string) => ({ fsPath: path, path }),
-    },
-    ColorThemeKind: {
-        Dark: 2,
-        Light: 1,
-    },
-    commands: {
-        registerCommand: jest.fn(() => ({ dispose: jest.fn() })),
-        executeCommand: jest.fn().mockResolvedValue(undefined),
-    },
-    StatusBarAlignment: {
-        Left: 1,
-        Right: 2,
-    },
-    languages: {
-        createDiagnosticCollection: jest.fn(() => ({
-            set: jest.fn(),
-            clear: jest.fn(),
-            delete: jest.fn(),
-            dispose: jest.fn(),
-        })),
-    },
-    EventEmitter: class {
-        private _listeners: Array<(data: any) => void> = [];
-        get event() {
-            return (listener: (data: any) => void) => {
-                this._listeners.push(listener);
-                return { dispose: jest.fn() };
-            };
-        }
-        fire(data?: any) {
-            this._listeners.forEach(listener => listener(data));
-        }
-        dispose() {
-            this._listeners = [];
-        }
-    },
-    ExtensionMode: {
-        Test: 3,
-    },
-}));
+import { lastMintedPanel, resetPanelState } from '../../../helpers/webviewCommandMocks';
 
 /**
  * Create mock ExtensionContext
@@ -180,7 +68,6 @@ function createMockExtensionContext(): vscode.ExtensionContext {
     };
 }
 
-
 /**
  * Create mock Logger
  */
@@ -203,7 +90,7 @@ function createWizardCommand(): CreateProjectWebviewCommand {
 describe('CreateProjectWebviewCommand - Context Variables', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockDisposeCallback = undefined;
+        resetPanelState();
     });
 
     describe('execute()', () => {
@@ -217,7 +104,7 @@ describe('CreateProjectWebviewCommand - Context Variables', () => {
             const command = createWizardCommand();
 
             // Mock the methods that normally throw to allow execution to proceed
-            internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(mockPanel);
+            internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(lastMintedPanel());
             internals(command).initializeCommunication = jest.fn().mockResolvedValue({
                 on: jest.fn(),
                 sendMessage: jest.fn().mockResolvedValue(undefined),

@@ -20,7 +20,6 @@
  */
 
 import { executePhaseGitHubRepo } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhase1';
-import type { HandlerContext } from '@/types/handlers';
 import type {
     RepoInfo,
     SetupServices,
@@ -34,26 +33,9 @@ jest.mock('@/features/eds/services/patches/lkgPinHelper', () => ({
     pinRepoToLkg: jest.fn().mockResolvedValue(true),
 }));
 import { pinRepoToLkg } from '@/features/eds/services/patches/lkgPinHelper';
-import { createMockLogger } from '../../../../helpers/loggerFake';
-import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
-import {
-    createStatefulGlobalState,
-    createMockExtensionContext,
-} from '../../../../helpers/extensionContextFake';
-import { createMockSecretStorage } from '../../../../helpers/secretStorageFake';
+import { makeContext, TEMPLATE } from './storefrontSetupPhase1.testUtils';
 
 const mockPinRepoToLkg = pinRepoToLkg as jest.Mock;
-
-function makeContext(): HandlerContext {
-    return createMockHandlerContext({
-        logger: createMockLogger(),
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-        context: createMockExtensionContext({
-            secrets: createMockSecretStorage().secrets,
-            globalState: createStatefulGlobalState().globalState,
-        }),
-    });
-}
 
 function makeServices(): SetupServices {
     return {
@@ -77,7 +59,6 @@ const THIN_LAYER_CONFIG_PATCH_FIELDS = {
 };
 
 const FRESH_REPO_INFO: RepoInfo = { repoOwner: '', repoName: '', repoUrl: '' };
-const TEMPLATE = { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' };
 
 beforeEach(() => {
     jest.clearAllMocks();

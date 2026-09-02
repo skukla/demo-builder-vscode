@@ -24,6 +24,7 @@ import type { FlowMode } from '@/features/project-creation/ui/components/integra
 import type { SelectableAppBuilderComponent } from '@/features/project-creation/services/appBuilderComponentSelection';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
+import { makeFlowHarness } from './useIntegrationFlow.testUtils';
 
 /**
  * The webview client is mocked so a test can assert the modal NEVER subscribes
@@ -119,24 +120,10 @@ function setup(options: SetupOptions = {}): Setup {
         catalog = EMPTY_CATALOG,
         reservedIds = new Set(['app-builder-shell']),
     } = options;
-    const stateRef: { current: WizardState } = {
-        current: {
-            currentStep: 'build-your-project',
-            projectName: '',
-            selectedPackage: 'citisignal',
-            selectedStack: 'headless-paas',
-            ...SIGNED_IN,
-            ...initial,
-        } as WizardState,
-    };
-    const updateState = jest.fn((partial: Partial<WizardState>) => {
-        stateRef.current = { ...stateRef.current, ...partial };
+    const { stateRef, updateState, builder, onClose } = makeFlowHarness({
+        ...SIGNED_IN,
+        ...initial,
     });
-    const builder = {
-        onAppBuilderComponentToggle: jest.fn(),
-        onAddCustomAppBuilderComponent: jest.fn(),
-    };
-    const onClose = jest.fn();
 
     const { result, rerender } = renderHook(
         ({ state }: { state: WizardState }) =>

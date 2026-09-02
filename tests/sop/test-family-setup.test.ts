@@ -43,9 +43,79 @@ import { existsSync, readFileSync } from 'fs';
 import { dirname, join, basename } from 'path';
 
 const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+/**
+ * Two lists, and the difference between them is the point.
+ *
+ * `families` is measured DEBT: a split family with no shared setup that nobody
+ * has looked at yet. Its length is the burn-down number.
+ *
+ * `adjudicated` is a family somebody READ and judged to be split for a reason —
+ * usually size, with genuinely different setup per suite, so extracting one
+ * would produce a helper that branches for its callers. Each carries the reason
+ * in its own words. A family stops counting as debt the moment it moves here,
+ * which is the only way this number ever reaches zero: some of these splits are
+ * correct and will never have a shared setup to write.
+ *
+ * Moving a row here is a claim about the code, so the reason has to say
+ * something checkable — what the suites differ on — not "split for size".
+ */
 const LEDGER = JSON.parse(
     readFileSync(join(__dirname, 'test-family-setup.ledger.json'), 'utf8'),
-) as { families: string[] };
+) as { families: string[]; adjudicated: Record<string, string> };
+
+/** Every family the ledger accounts for, by either route. */
+const LEDGERED = [...LEDGER.families, ...Object.keys(LEDGER.adjudicated)];
+
+/** A suite's `@/` imports, in source order. */
+const AT_IMPORT = /from\s+'(@\/[^']+)'/g;
+
+/**
+ * The module a suite is about, or undefined when its imports do not say — the
+ * subject arrives via a `.testUtils`, or the suite has no `@/` import at all
+ * (the enforcer and template suites, whose subject is the repo itself).
+ */
+function subjectOf(file: string): string | undefined {
+    const source = readFileSync(join(ROOT, file), 'utf8');
+    for (const [, spec] of source.matchAll(AT_IMPORT)) {
+        if (!spec.includes('/types/')) return spec;
+    }
+    return undefined;
+}
+
+/**
+ * Is this group of suites really a SPLIT FAMILY — several suites for one thing?
+ *
+ * The grouping keys on the first hyphen-separated token of a filename, which is
+ * cheap and mostly right, and sometimes invents a family out of unrelated files.
+ * `no-bare-sleep`, `no-config-leaf-mocks` and `no-lowered-test-timeout` are three
+ * separate enforcers that share the word "no". `securityValidation-*` is six
+ * different validators behind one legacy prefix. Seven such rows sat in the
+ * ledger as debt nobody could ever pay, because there is no shared setup to
+ * extract from files that share nothing — found 2026-09-02.
+ *
+ * A family needs ONE of two things to be true:
+ *   1. A source file is named for it — `src/<family>.ts(x)` exists. This is the
+ *      normal case and covers every family whose suites import their subject
+ *      through a helper, so tightening the rule costs no reach there.
+ *   2. Failing that, every subject the members DO name agrees. `projectManifest`
+ *      and `codeSyncStatusView` qualify this way: no source file carries their
+ *      name, but each one's suites all point at the same module.
+ *
+ * Neither holding means the token grouped unrelated files.
+ */
+function isRealFamily(key: string, members: string[]): boolean {
+    const relative = key.startsWith('tests/') ? key.slice('tests/'.length) : key;
+    const hasSource = ['.ts', '.tsx'].some((ext) =>
+        existsSync(join(ROOT, 'src', relative + ext)),
+    );
+    if (hasSource) return true;
+
+    // EVERY member must name a subject, and they must agree. "Some of them
+    // agree" is not enough: `sop/credential` has two suites, one naming a module
+    // and one naming none, and a one-element set trivially agrees with itself.
+    const named = members.map(subjectOf).filter(Boolean);
+    return named.length === members.length && new Set(named).size === 1;
+}
 
 function familiesWithoutSharedSetup(): string[] {
     const files = execSync(
@@ -66,6 +136,7 @@ function familiesWithoutSharedSetup(): string[] {
     const offenders: string[] = [];
     for (const [key, members] of families) {
         if (members.length < 2) continue;
+        if (!isRealFamily(key, members)) continue;
         const dir = dirname(members[0]);
         const subject = key.slice(dir.length + 1);
         const hasUtilsFile = ['.testUtils.ts', '.testUtils.tsx'].some((ext) =>
@@ -92,10 +163,54 @@ describe('split test families share their setup', () => {
         expect(Number(shared)).toBeGreaterThan(0);
     });
 
+    it('CONTROL: a real family is kept and a token-collision group is rejected', () => {
+        // Without this the tightening above could quietly stop detecting everything
+        // and the ledger would read clean. helixService is a real family (a source
+        // file carries its name); the three `no-*` enforcers share only a word.
+        expect(
+            isRealFamily('tests/features/eds/services/helix/helixService', [
+                'tests/features/eds/services/helix/helixService.test.ts',
+                'tests/features/eds/services/helix/helixService-auth-keys.test.ts',
+            ]),
+        ).toBe(true);
+        expect(
+            isRealFamily('tests/sop/no', [
+                'tests/sop/no-bare-sleep.test.ts',
+                'tests/sop/no-config-leaf-mocks.test.ts',
+            ]),
+        ).toBe(false);
+    });
+
+    it('the ledger lists each family once — a duplicate row inflates the count', () => {
+        // Found 2026-09-02: `helixService` was listed TWICE. The assertion below
+        // reads the ledger into a Set, so a duplicate changes nothing it can see —
+        // it passes cleanly while the row count, which is the number quoted as
+        // remaining work, is overstated. Nothing else checks the file's shape.
+        const counts = new Map<string, number>();
+        for (const f of LEDGER.families) counts.set(f, (counts.get(f) ?? 0) + 1);
+        const duplicated = [...counts].filter(([, n]) => n > 1).map(([f]) => f);
+        expect(duplicated).toEqual([]);
+    });
+
+    it('every adjudicated family carries a reason that says something', () => {
+        // A reason that restates the category explains nothing and would let a
+        // real target be filed away as legitimate. The bar is low on purpose —
+        // it cannot judge content — but an empty or one-word row fails.
+        const thin = Object.entries(LEDGER.adjudicated)
+            .filter(([, reason]) => reason.trim().split(/\s+/).length < 8)
+            .map(([family]) => family);
+        expect(thin).toEqual([]);
+    });
+
+    it('a family is debt OR adjudicated, never both', () => {
+        const both = LEDGER.families.filter((f) => f in LEDGER.adjudicated);
+        expect(both).toEqual([]);
+    });
+
     it('no NEW family arrives without a shared setup, and fixed families leave the ledger', () => {
-        const ledger = new Set(LEDGER.families);
+        const ledger = new Set(LEDGERED);
         const unlisted = current.filter((f) => !ledger.has(f));
-        const stale = [...ledger].filter((f) => !current.includes(f));
+        const stale = LEDGERED.filter((f) => !current.includes(f));
         expect({ newFamiliesWithoutSharedSetup: unlisted, fixedButStillLedgered: stale }).toEqual({
             newFamiliesWithoutSharedSetup: [],
             fixedButStillLedgered: [],

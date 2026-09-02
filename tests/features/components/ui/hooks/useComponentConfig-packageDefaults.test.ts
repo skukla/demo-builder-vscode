@@ -24,14 +24,7 @@ import type { ComponentConfigs } from '@/types/webview';
 // stay REAL so resolveWriteTargets/backend-owned-scope behaviour is exercised)
 // ---------------------------------------------------------------------------
 
-const mockRequest = jest.fn();
-jest.mock('@/core/ui/utils/vscode-api', () => ({
-    vscode: {
-        postMessage: jest.fn(),
-        request: (...args: unknown[]) => mockRequest(...args),
-        onMessage: jest.fn(() => jest.fn()),
-    },
-}));
+import { mockRequest } from './useComponentConfig.testUtils';
 
 
 jest.mock('@/features/components/services/envVarHelpers', () => ({

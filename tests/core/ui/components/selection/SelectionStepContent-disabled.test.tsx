@@ -1,54 +1,6 @@
-import { render, screen } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
-import React from 'react';
-import { SelectionStepContent } from '@/core/ui/components/selection/SelectionStepContent';
-import type { SelectableItem } from '@/core/ui/components/selection/SelectionStepContent';
+import { screen } from '@testing-library/react';
+import { renderContent } from './SelectionStepContent.testUtils';
 import '@testing-library/jest-dom';
-
-interface OrgItem extends SelectableItem {
-    id: string;
-    name: string;
-}
-
-const items: OrgItem[] = [
-    { id: 'o1', name: 'Selectable Org' },
-    { id: 'o2', name: 'Filtered Org' },
-];
-
-const baseLabels = {
-    heading: '',
-    loadingMessage: 'Loading organizations...',
-    errorTitle: 'Error Loading Organizations',
-    emptyTitle: 'No Organizations',
-    emptyMessage: 'No organizations found.',
-    searchPlaceholder: 'Type to filter organizations...',
-    itemNoun: 'organization',
-    ariaLabel: 'Adobe Organizations',
-};
-
-function renderContent(extra: Record<string, unknown>) {
-    return render(
-        <Provider theme={defaultTheme}>
-            <SelectionStepContent
-                items={items}
-                filteredItems={items}
-                showLoading={false}
-                isLoading={false}
-                isRefreshing={false}
-                hasLoadedOnce={true}
-                error={null}
-                searchQuery=""
-                onSearchChange={jest.fn()}
-                onLoad={jest.fn()}
-                onRefresh={jest.fn()}
-                selectedId={undefined}
-                onSelect={jest.fn()}
-                labels={baseLabels}
-                {...extra}
-            />
-        </Provider>,
-    );
-}
 
 describe('SelectionStepContent - disabled items', () => {
     it('renders all items when no disabledIds are provided (back-compat)', () => {

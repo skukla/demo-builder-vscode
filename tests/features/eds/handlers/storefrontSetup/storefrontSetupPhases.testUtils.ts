@@ -22,11 +22,23 @@
  *   edsPipeline               NEEDED (12 fail) — SPEC-imported, cannot move
  *   edsHelpers                NEEDED           — SPEC-imported, cannot move
  *
- * "SPEC-imported, cannot move" is the rule the deployMesh family taught by failing
+ * "SPEC-imported, cannot move" was the rule the deployMesh family taught by failing
  * 23 tests: a `jest.mock` only hoists above the imports of the module it appears in,
- * so a mock for something the SPEC itself imports has to stay in that spec. Four of
- * these are in that position, which is why this harness is smaller than the raw
- * duplication count suggests.
+ * not across modules.
+ *
+ * CORRECTED 2026-09-02: the rule is real, the conclusion was one step too strong.
+ * Such a mock CAN live in a shared file — it just has to be imported BEFORE the
+ * harness that loads the subject. This file re-exports
+ * `executeStorefrontSetupPhases`, so requiring it loads the subject and binds its
+ * collaborators; a mock registered after that arrives too late. Import order in the
+ * spec is the whole difference, and it failed five tests the wrong way round before
+ * passing 125 the right way.
+ *
+ * The four "cannot move" mocks now live in
+ * `storefrontSetupPhases.blockLibraries.testUtils.ts` for the two suites whose
+ * bodies agree, imported ahead of this one. They stay out of THIS file because the
+ * four suites' bodies only agree in pairs — configService and recovery each differ,
+ * so a family-wide version would be wrong for half its callers.
  *
  * @see tests/sop/test-family-setup.test.ts
  */

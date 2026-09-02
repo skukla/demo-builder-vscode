@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeWorkspacePicker } from '@/features/authentication/ui/components/AdobeWorkspacePicker';
@@ -37,12 +37,53 @@ import {
     baseState,
     createMockUseSelectionStepReturn,
     createStateWithoutProject,
-    createManyWorkspaces,
 } from './AdobeWorkspacePicker.testUtils';
 
 const mockUseSelectionStep = useSelectionStep as jest.Mock;
 
 describe('AdobeWorkspacePicker', () => {
+
+    /**
+     * WHAT THE PICKER HANDS THE HOOK. See the twin block in
+     * AdobeProjectPicker.test.tsx for the measurement that prompted these: with
+     * `useSelectionStep` mocked, every test that asserts the SCREEN is asserting
+     * what the mock was told to return, so a picker asking the backend for the
+     * wrong entity passed its whole suite.
+     */
+    describe('the configuration it hands useSelectionStep', () => {
+        function configPassed(state = baseState): Record<string, unknown> {
+            mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn({}));
+            render(
+                <Provider theme={defaultTheme}>
+                    <AdobeWorkspacePicker
+                        state={state as WizardState}
+                        updateState={mockUpdateState}
+                    />
+                </Provider>
+            );
+            return mockUseSelectionStep.mock.calls[0][0] as Record<string, unknown>;
+        }
+
+        it('asks the backend for WORKSPACES, and caches them under the workspaces key', () => {
+            const config = configPassed();
+            expect(config.messageType).toBe('get-workspaces');
+            expect(config.cacheKey).toBe('workspacesCache');
+            expect(config.errorMessageType).toBe('workspace-error');
+        });
+
+        it('threads the selected org and project so the backend targets THEM', () => {
+            // Not cached — threaded per request. A stale in-memory cache would
+            // otherwise decide which project's workspaces come back.
+            expect(configPassed().messagePayload).toEqual({
+                orgId: baseState.adobeOrg?.id,
+                projectId: baseState.adobeProject?.id,
+            });
+        });
+
+        it('searches title and name', () => {
+            expect(configPassed().searchFields).toEqual(['title', 'name']);
+        });
+    });
     const mockUpdateState = jest.fn();
 
     beforeEach(() => {
@@ -169,23 +210,6 @@ describe('AdobeWorkspacePicker', () => {
             expect(screen.getByRole('grid', { name: /workspaces/i })).toBeInTheDocument();
         });
 
-        it('should display all workspaces in list', async () => {
-            mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeWorkspacePicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(await screen.findByText('Stage')).toBeInTheDocument();
-            expect(screen.getByText('Production')).toBeInTheDocument();
-            expect(screen.getByText('Development')).toBeInTheDocument();
-        });
-
         it('should write adobeWorkspace to state on select', () => {
             mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
 
@@ -259,125 +283,9 @@ describe('AdobeWorkspacePicker', () => {
     });
 
     describe('Loading States', () => {
-        it('should display loading indicator when loading workspaces', () => {
-            mockUseSelectionStep.mockReturnValue(
-                createMockUseSelectionStepReturn({
-                    items: [],
-                    filteredItems: [],
-                    isLoading: true,
-                    showLoading: true,
-                    hasLoadedOnce: false,
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeWorkspacePicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByTestId('loading-display')).toBeInTheDocument();
-            expect(screen.getByText('Loading workspaces...')).toBeInTheDocument();
-        });
-
-        it('should indicate refreshing state without hiding list', () => {
-            mockUseSelectionStep.mockReturnValue(
-                createMockUseSelectionStepReturn({
-                    isLoading: true,
-                    showLoading: false,
-                    isRefreshing: true,
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeWorkspacePicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByText('Stage')).toBeInTheDocument();
-        });
     });
 
     describe('Error Handling', () => {
-        it('should display error message when loading fails', () => {
-            mockUseSelectionStep.mockReturnValue(
-                createMockUseSelectionStepReturn({
-                    items: [],
-                    filteredItems: [],
-                    hasLoadedOnce: false,
-                    error: 'Failed to load workspaces',
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeWorkspacePicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByText('Error Loading Workspaces')).toBeInTheDocument();
-            expect(screen.getByText('Failed to load workspaces')).toBeInTheDocument();
-        });
-
-        it('should provide retry button on error', () => {
-            const mockLoad = jest.fn();
-            mockUseSelectionStep.mockReturnValue(
-                createMockUseSelectionStepReturn({
-                    items: [],
-                    filteredItems: [],
-                    hasLoadedOnce: false,
-                    error: 'Failed to load workspaces',
-                    load: mockLoad,
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeWorkspacePicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            fireEvent.click(screen.getByText('Try Again'));
-
-            expect(mockLoad).toHaveBeenCalled();
-        });
-
-        it('should display empty state when no workspaces available', () => {
-            mockUseSelectionStep.mockReturnValue(
-                createMockUseSelectionStepReturn({
-                    items: [],
-                    filteredItems: [],
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeWorkspacePicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByText('No Workspaces Found')).toBeInTheDocument();
-            expect(
-                screen.getByText(/create a workspace in Adobe Console first/)
-            ).toBeInTheDocument();
-        });
-
         it('should validate project before loading', () => {
             const stateWithoutProject = createStateWithoutProject();
 
@@ -408,85 +316,8 @@ describe('AdobeWorkspacePicker', () => {
     });
 
     describe('Search and Filter', () => {
-        it('should filter workspaces based on search query', () => {
-            mockUseSelectionStep.mockReturnValue(
-                createMockUseSelectionStepReturn({
-                    filteredItems: [mockWorkspaces[0]], // Filtered to "Stage"
-                    searchQuery: 'Stage',
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeWorkspacePicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByText('Showing 1 of 3 workspaces')).toBeInTheDocument();
-        });
-
-        it('should show search field when more than 5 workspaces', () => {
-            const manyWorkspaces = createManyWorkspaces(10);
-
-            mockUseSelectionStep.mockReturnValue(
-                createMockUseSelectionStepReturn({
-                    items: manyWorkspaces,
-                    filteredItems: manyWorkspaces,
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeWorkspacePicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByPlaceholderText('Type to filter workspaces...')).toBeInTheDocument();
-        });
     });
 
     describe('Refresh Functionality', () => {
-        it('should provide refresh button', () => {
-            mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn());
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeWorkspacePicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByLabelText('Refresh workspaces')).toBeInTheDocument();
-        });
-
-        it('should call refresh when refresh button is clicked', () => {
-            const mockRefresh = jest.fn();
-            mockUseSelectionStep.mockReturnValue(
-                createMockUseSelectionStepReturn({
-                    refresh: mockRefresh,
-                })
-            );
-
-            render(
-                <Provider theme={defaultTheme}>
-                    <AdobeWorkspacePicker
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                    />
-                </Provider>
-            );
-
-            fireEvent.click(screen.getByLabelText('Refresh workspaces'));
-
-            expect(mockRefresh).toHaveBeenCalled();
-        });
     });
 });

@@ -5,78 +5,46 @@
  * - DA.live Token Provider
  * - Admin API Key Caching
  * - unpublishPages retry on auth failure
+ *
+ * The mock wall, the type alias and the fetch swap live in
+ * `helixService.testUtils`, shared with the other three suites that mock this
+ * service's module boundary. It owns the service import so the mocks are
+ * registered before the service is loaded; do not import the service here.
  */
 
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
-
-// Mock vscode module
-
-// Mock logging
-
-// Mock timeout config
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        QUICK: 5000,
-        NORMAL: 30000,
-        LONG: 180000,
-        VERY_LONG: 300000,
-    },
-    CACHE_TTL: {
-        SHORT: 60000,
-        MEDIUM: 300000,
-        LONG: 3600000,
-    },
-}));
-
-// Mock DA.live content operations
-const mockListDirectory = jest.fn();
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        listDirectory: mockListDirectory,
-    })),
-}));
-
-type HelixServiceType = import('@/features/eds/services/helix/helixService').HelixService;
-
-interface MockGitHubTokenService {
-    getToken: jest.Mock;
-    validateToken: jest.Mock;
-}
-
-interface MockDaLiveTokenProvider {
-    getAccessToken: jest.Mock<Promise<string | null>>;
-}
+import {
+    createHelixService,
+    loadHelixServiceModule,
+    installFetchMock,
+    makeDaLiveTokenProvider,
+    makeGitHubTokenService,
+    mockListDirectory,
+    restoreFetch,
+    type HelixServiceType,
+    type MockDaLiveTokenProvider,
+    type MockGitHubTokenService,
+} from './helixService.testUtils';
 
 describe('HelixService - Auth & Keys', () => {
     let service: HelixServiceType;
     let mockGitHubTokenService: MockGitHubTokenService;
     let mockDaLiveTokenProvider: MockDaLiveTokenProvider;
     let mockFetch: jest.Mock;
-    const originalFetch = global.fetch;
 
     beforeEach(async () => {
         jest.clearAllMocks();
         mockListDirectory.mockReset();
-
-        mockGitHubTokenService = {
-            getToken: jest.fn().mockResolvedValue({ token: 'valid-github-token', tokenType: 'bearer', scopes: ['repo'] }),
-            validateToken: jest.fn().mockResolvedValue({ valid: true }),
-        };
-
-        mockDaLiveTokenProvider = {
-            getAccessToken: jest.fn().mockResolvedValue('valid-dalive-ims-token'),
-        };
-
-        mockFetch = jest.fn();
-        global.fetch = mockFetch;
-
-        const module = await import('@/features/eds/services/helix/helixService');
-        service = new module.HelixService(undefined, mockGitHubTokenService as unknown as GitHubTokenService, mockDaLiveTokenProvider);
+        mockGitHubTokenService = makeGitHubTokenService();
+        mockDaLiveTokenProvider = makeDaLiveTokenProvider();
+        mockFetch = installFetchMock();
+        service = await createHelixService({
+            githubTokenService: mockGitHubTokenService,
+            daLiveTokenProvider: mockDaLiveTokenProvider,
+        });
     });
 
-    afterEach(() => {
-        global.fetch = originalFetch;
-    });
+    afterEach(restoreFetch);
 
     describe('DA.live Token Provider', () => {
         it('should use DA.live token for x-content-source-authorization when provided', async () => {
@@ -101,7 +69,7 @@ describe('HelixService - Auth & Keys', () => {
         });
 
         it('should throw error when DA.live token provider not configured', async () => {
-            const module = await import('@/features/eds/services/helix/helixService');
+            const module = await loadHelixServiceModule();
             const serviceWithoutDaLiveProvider = new module.HelixService(undefined, mockGitHubTokenService as unknown as GitHubTokenService);
             await expect(serviceWithoutDaLiveProvider.previewPage('testuser', 'my-site', '/products')).rejects.toThrow(
                 /DA\.live token provider not configured/i,
@@ -144,7 +112,7 @@ describe('HelixService - Auth & Keys', () => {
         let HelixServiceClass: typeof import('@/features/eds/services/helix/helixService').HelixService;
 
         beforeEach(async () => {
-            const module = await import('@/features/eds/services/helix/helixService');
+            const module = await loadHelixServiceModule();
             HelixServiceClass = module.HelixService;
             HelixServiceClass.clearApiKeyCache();
         });
@@ -356,7 +324,7 @@ describe('HelixService - default DA.live token provider', () => {
 
     beforeEach(async () => {
         jest.clearAllMocks();
-        HelixSvc = (await import('@/features/eds/services/helix/helixService')).HelixService;
+        HelixSvc = (await loadHelixServiceModule()).HelixService;
         global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200, text: async () => '' });
     });
 

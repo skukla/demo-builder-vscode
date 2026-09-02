@@ -29,22 +29,10 @@
  * applies silently to every other is the whole defect.
  */
 
-import { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 import type { GitHubTreeInput } from '@/features/eds/services/types';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 
-const mockRequest = jest.fn();
-
-// `@octokit/core`, wrapped in the retry plugin — `Octokit.plugin(retry)` returns
-// the constructor the service actually news up, so the mock has to provide it.
-jest.mock('@octokit/core', () => ({
-    Octokit: {
-        plugin: () =>
-            jest.fn().mockImplementation(() => ({
-                request: (...args: unknown[]) => mockRequest(...args),
-            })),
-    },
-}));
+import { GitHubFileOperations, mockRequest } from './githubFileOperations.testUtils';
 
 const tokenService = {
     getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }),
