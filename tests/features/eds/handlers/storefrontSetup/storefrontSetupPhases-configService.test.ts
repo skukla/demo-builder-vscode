@@ -26,7 +26,6 @@ const mockUpdateSiteConfig = jest.fn();
 // calls `getLogger()`, which throws unless the logger is initialised. Same mock
 // the other suites of getGitHubServices consumers use.
 
-
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ensureDaLiveAuth: jest.fn(),
     configureDaLivePermissions: jest.fn().mockResolvedValue({ success: true }),
@@ -77,9 +76,6 @@ jest.mock(
     { virtual: true }
 );
 
-
-
-
 jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     GitHubRepoOperations: jest.fn().mockImplementation(() => ({
         createFromTemplate: jest.fn(),
@@ -87,12 +83,9 @@ jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     })),
 }));
 
-
-
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
-
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -119,6 +112,7 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 import {
     createSetupContext,
     executeStorefrontSetupPhases,
+    createEdsConfig,
 } from './storefrontSetupPhases.testUtils';
 import type { SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import {
@@ -137,28 +131,9 @@ const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.Mock
 // Helpers
 // =============================================================================
 
-function createEdsConfig() {
-    return {
-        repoName: 'test-repo',
-        repoMode: 'new' as const,
-        daLiveOrg: 'test-org',
-        daLiveSite: 'test-site',
-        githubOwner: 'test-owner',
-        templateOwner: 'tmpl-owner',
-        templateRepo: 'tmpl-repo',
-        createdRepo: {
-            owner: 'test-owner',
-            name: 'test-repo',
-            url: 'https://github.com/test-owner/test-repo',
-            fullName: 'test-owner/test-repo',
-        },
-    };
-}
-
 // =============================================================================
 // Tests
 // =============================================================================
-
 
 /**
  * ADR-015 (2026-08-28): this boundary resolves the shell executor from the

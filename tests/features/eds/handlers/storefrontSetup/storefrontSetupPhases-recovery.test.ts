@@ -75,6 +75,7 @@ import { DaLiveAuthError } from '@/features/eds/services/types';
 import {
     createSetupContext,
     executeStorefrontSetupPhases,
+    createEdsConfig,
 } from './storefrontSetupPhases.testUtils';
 import type { SetupServices } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 import { ensureDaLiveAuth, configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
@@ -90,24 +91,6 @@ const mockConfigurePerms = configureDaLivePermissions as jest.MockedFunction<typ
 // =============================================================================
 // Helpers
 // =============================================================================
-
-function createEdsConfig() {
-    return {
-        repoName: 'test-repo',
-        repoMode: 'new' as const,
-        daLiveOrg: 'test-org',
-        daLiveSite: 'test-site',
-        githubOwner: 'test-owner',
-        templateOwner: 'tmpl-owner',
-        templateRepo: 'tmpl-repo',
-        createdRepo: {
-            owner: 'test-owner',
-            name: 'test-repo',
-            url: 'https://github.com/test-owner/test-repo',
-            fullName: 'test-owner/test-repo',
-        },
-    };
-}
 
 // =============================================================================
 // Tests
