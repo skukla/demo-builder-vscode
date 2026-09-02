@@ -249,3 +249,4 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  test(sop): three enforcers stop hand-rolling a file walker and use the one that exists (`77c90a886`)
 - 2026-09-02  test(configure): the shared wall narrows to three, and all four suites take it (`fbb1adf76`)
 - 2026-09-02  test(configure): the two store-discovery walls get their own file rather than two copies (`7d58154e7`)
+- 2026-09-02  test(wizard): the ConnectStoreStepContent family, extracted on bodies this time (`283732063`)

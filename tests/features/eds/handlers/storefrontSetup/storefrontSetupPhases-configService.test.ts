@@ -10,6 +10,7 @@
  *   via client-side routing)
  */
 
+import './storefrontSetupPhases.sharedMocks';
 import type { HandlerContext } from '@/types/handlers';
 
 jest.setTimeout(5000);
@@ -61,10 +62,6 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ).BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE,
 }));
 
-jest.mock('@/features/eds/services/edsPipeline', () => ({
-    executeEdsPipeline: jest.fn(),
-}));
-
 jest.mock(
     'vscode',
     () => ({
@@ -86,17 +83,6 @@ jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
-
-jest.mock('@/features/components/services/blockLibraryLoader', () => ({
-    getBlockLibrarySource: jest.fn(),
-    getBlockLibraryName: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest
-        .fn()
-        .mockResolvedValue({ success: true, blocksCount: 0, blockIds: [] }),
-}));
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000, CONFIG_SERVICE_RETRY_DELAY: 0 },
