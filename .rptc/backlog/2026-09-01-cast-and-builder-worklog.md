@@ -332,3 +332,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  feat(mutation): measure the file every project's state passes through (`6e6770348`)
 - 2026-09-02  docs(handoff): bring the loop report up to date (`70198b301`)
 - 2026-09-02  test(state): an old state file still opens, and a scan still writes nothing (`a05b21032`)
+- 2026-09-02  test(state): a project's mesh status survives a reload, and does not travel to another (`efb58927e`)

@@ -7,16 +7,23 @@ assumed. The tool for that breaks the code on purpose — changes a `true` to a 
 deletes a line — and re-runs the tests. If the tests still pass, they would have shipped
 that bug.
 
-Three files got worked:
+Four files got worked:
 
 | What it does | Caught before | Caught after |
 |---|---|---|
 | Installs Node, the Adobe CLI and their plugins | 57% | 70% |
 | The site tools an agent calls | 54% | 69% |
 | DA.live sign-in and token handling | 67% | 83% |
+| Persists every project's state | 56% | 67% |
 
 In the second, the number of missed bugs fell from 16 to 1. In the third, code that no
 test ran at all fell from 35 deliberate breakages to 2.
+
+**The fourth is the one to notice.** The twelve files being measured were chosen as a
+representative sample, and they did not include the file that stores every project's
+state — which this repo's own documentation lists as a key file. Measured for the first
+time tonight, it scored lower than anything else, including the file that had been picked
+as the worst. It is now part of the release check.
 
 Along the way the tests found real things: five test fixtures that used a field name
 that does not exist, a branch of the installer that cannot run at all, a confirmation
@@ -24,8 +31,8 @@ gate on a delete that could be bypassed by supplying half of what it asks for, a
 credential that one path refuses as unsafe and another accepts, and two faults in the
 measuring instrument itself which was calling genuine improvements "padding".
 
-**Nothing in the shipping extension changed.** Sixteen commits, all tests, test helpers,
-measurement scripts and documentation. The full suite is green: 15,597 tests.
+**Nothing in the shipping extension changed.** Twenty commits, all tests, test helpers,
+measurement scripts and documentation. The full suite is green: 15,607 tests.
 
 ---
 
@@ -102,6 +109,25 @@ secure storage. Three rounds:
   covered: a failure to store now reports failure, rather than telling someone they are
   signed in when they are not.
 
+### Project state
+
+`state.json` is written by whichever version of the extension last ran, and it outlives
+them all — which is why a project made months ago still opens. Every field in it is
+optional when read, and each has a fallback. None of those fallbacks was tested: the
+existing test checks the file was READ, the process tests check something was WRITTEN,
+and nothing looked at what the state became.
+
+One fallback matters more than it looks. A file with no process list does not merely
+produce an empty list without it — reading it throws, the whole load is abandoned, and
+everything else in the file is silently lost.
+
+Also covered: loading a project can either adopt it and write that to disk, or read it
+and leave the disk alone. Every scan over other people's projects depends on the second
+mode, because rewriting a file merely by looking at it is a write hiding inside a read.
+That was checked from the callers' side and never where it is actually honoured. And a
+project's mesh status, which exists only while the extension runs, now provably survives
+a reload of that project and provably does not get attached to a different one.
+
 ### The measuring instrument
 
 Three fixes, because the tool that judges the work was wrong twice in one night and each
@@ -131,13 +157,14 @@ write a configuration that would report a confident zero.
 
 ## Shipped
 
-Sixteen commits on `loop/2026-09-01-top-files`, each one gated on the full suite,
-typechecks and lint before it was made. The branch is 25 commits ahead of `develop`
-(nine from earlier in the same session, sixteen from tonight).
+Twenty commits on `loop/2026-09-01-top-files`, each one gated on the full suite,
+typechecks and lint before it was made. The branch is 29 commits ahead of `develop`
+(nine from earlier in the same session, twenty from tonight).
 
-The gate refused a commit once, exactly as it is supposed to: adding test files left a
-second configuration stale, and it would not let that through. The switcher can now top
-that list up itself.
+The gate refused a commit twice, exactly as it is supposed to. Once because adding test
+files left a second configuration stale — the switcher can now top that list up itself.
+Once because a fixture used a shortcut this repo is deliberately retiring; the right
+answer was a builder that needed no shortcut at all.
 
 No production code changed, tonight or in the nine earlier commits — so the code-shape
 scans that look for duplicate implementations and dead code are not triggered. The
@@ -224,7 +251,7 @@ Two are decisions, not corrections:
 
 ## Your decisions
 
-1. **Merge `loop/2026-09-01-top-files` into `develop`?** 25 commits, no production code,
+1. **Merge `loop/2026-09-01-top-files` into `develop`?** 29 commits, no production code,
    full suite green.
 2. **The DA.live token with no stated expiry** (item 6) — refuse it everywhere, accept it
    everywhere, or keep the clipboard stricter on purpose and say so in a comment?
