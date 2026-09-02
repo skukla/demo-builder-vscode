@@ -17,51 +17,14 @@
  *    later rename would move the folder and leave that stale title on screen.
  */
 
-import * as fs from 'fs/promises';
-import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
-import type { Project } from '@/types/base';
-import { createMockLogger } from '../../helpers/loggerFake';
+import {
+    createTestProject,
+    resetFsMocks,
+    write,
+    writtenManifest,
+} from './projectManifest.testUtils';
 
-jest.mock('fs/promises');
-
-const mockFs = fs as jest.Mocked<typeof fs>;
-
-const mockLogger = createMockLogger();
-
-function createTestProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'bodea-demo',
-        path: '/test/path',
-        created: new Date('2026-01-01T00:00:00Z'),
-        componentSelections: {},
-        componentInstances: [],
-        componentConfigs: {},
-        componentVersions: {},
-        ...overrides,
-    } as Project;
-}
-
-/** The JSON the writer actually handed to disk. */
-function writtenManifest(): Record<string, unknown> {
-    const call = mockFs.writeFile.mock.calls.at(-1);
-    return JSON.parse(String(call?.[1]));
-}
-
-async function write(project: Project): Promise<void> {
-    const writer = new ProjectConfigWriter(mockLogger) as unknown as {
-        writeManifest(project: unknown): Promise<void>;
-    };
-    await writer.writeManifest(project);
-}
-
-beforeEach(() => {
-    jest.clearAllMocks();
-    mockFs.access.mockResolvedValue(undefined);
-    mockFs.mkdir.mockResolvedValue(undefined);
-    mockFs.writeFile.mockResolvedValue(undefined);
-    mockFs.rename.mockResolvedValue(undefined);
-    mockFs.unlink.mockResolvedValue(undefined);
-});
+beforeEach(resetFsMocks);
 
 describe('a project with a title', () => {
     it('writes the title alongside the slug, not instead of it', async () => {

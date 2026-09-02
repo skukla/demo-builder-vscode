@@ -30,7 +30,6 @@ import type {
     RepoInfo,
     SetupServices,
 } from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
-import type { HandlerContext } from '@/types/handlers';
 
 jest.mock('@/features/eds/services/patches/lkgPinHelper', () => ({
     pinRepoToLkg: jest.fn().mockResolvedValue(true),
@@ -44,30 +43,13 @@ jest.mock('@/features/eds/services/appInstallationResolver', () => ({
     resolveAppInstallation: jest.fn(),
 }));
 import { resolveAppInstallation } from '@/features/eds/services/appInstallationResolver';
-import { createMockLogger } from '../../../../helpers/loggerFake';
-import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
-import {
-    createStatefulGlobalState,
-    createMockExtensionContext,
-} from '../../../../helpers/extensionContextFake';
-import { createMockSecretStorage } from '../../../../helpers/secretStorageFake';
+import { makeContext, TEMPLATE } from './storefrontSetupPhase1.testUtils';
 
 const mockPin = pinRepoToLkg as jest.Mock;
 const mockResolve = resolveAppInstallation as jest.Mock;
 
 /** Records the order of the operations whose sequence is the thing under test. */
 let callOrder: string[];
-
-function makeContext(): HandlerContext {
-    return createMockHandlerContext({
-        logger: createMockLogger(),
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-        context: createMockExtensionContext({
-            secrets: createMockSecretStorage().secrets,
-            globalState: createStatefulGlobalState().globalState,
-        }),
-    });
-}
 
 function makeServices(): SetupServices {
     return {
@@ -88,8 +70,6 @@ const EXISTING_REPO_CONFIG = {
     existingRepo: 'acme-corp/storefront-demo',
     resetToTemplate: true,
 } as unknown as StorefrontSetupStartPayload['edsConfig'];
-
-const TEMPLATE = { owner: 'adobe-commerce', repo: 'boilerplate-b2b-template' };
 
 function freshRepoInfo(): RepoInfo {
     return { repoOwner: '', repoName: '', repoUrl: '' };

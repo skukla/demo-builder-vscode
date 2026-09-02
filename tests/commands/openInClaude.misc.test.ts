@@ -15,7 +15,7 @@ import {
     makeGlobalState,
     makeOpenInClaudeContext,
     makeOpenInClaudeProject,
-} from './openInClaude.testkit';
+} from './openInClaude.testUtils';
 import type { StateManager } from '@/core/state/stateManager';
 
 // The home Chat always launches at the projects root. Pin the root so the
