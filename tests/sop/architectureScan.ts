@@ -38,6 +38,28 @@ export const ALL_FILES = (() => {
 })();
 
 /**
+ * Absolute paths to the source files under `dir`, excluding tests.
+ *
+ * Three enforcer suites in this directory hand-rolled a recursive `readdirSync`
+ * walker for this, in two byte-identical copies and one that differed only in
+ * how it spelled the same filters (found 2026-09-02). They now share this,
+ * which is built on `ALL_FILES` and therefore inherits the property those
+ * walkers did not have: `git ls-files --cached --others --exclude-standard`
+ * excludes files git is ignoring, so a build artefact left under `src/` is not
+ * judged as source.
+ *
+ * @param dir - absolute path to scan under; files outside it are dropped
+ * @param extensions - which suffixes count, defaulting to both TypeScript ones
+ */
+export function sourceFilesUnder(dir: string, extensions: string[] = ['.ts', '.tsx']): string[] {
+    const prefix = dir.endsWith('/') ? dir : `${dir}/`;
+    return ALL_FILES.map((file) => join(ROOT, file))
+        .filter((file) => file.startsWith(prefix))
+        .filter((file) => extensions.some((ext) => file.endsWith(ext)))
+        .filter((file) => !file.includes('.test.') && !file.includes('.spec.'));
+}
+
+/**
  * Does this file run in a webview bundle rather than the extension host?
  *
  * A `ui/` path segment, or a `.tsx` extension. Verified 2026-08-29: every `.tsx` in `src/` is already

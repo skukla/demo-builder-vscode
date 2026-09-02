@@ -8,6 +8,7 @@
  */
 
 import * as fs from 'fs';
+import { sourceFilesUnder } from './architectureScan';
 import * as path from 'path';
 
 describe('SOP: Magic Timeout Constants', () => {
@@ -67,27 +68,6 @@ describe('SOP: Magic Timeout Constants', () => {
         return violations;
     }
 
-    function getTypeScriptFiles(dir: string): string[] {
-        const files: string[] = [];
-
-        function walkDir(currentDir: string) {
-            const entries = fs.readdirSync(currentDir, { withFileTypes: true });
-            for (const entry of entries) {
-                const fullPath = path.join(currentDir, entry.name);
-                if (entry.isDirectory()) {
-                    walkDir(fullPath);
-                } else if (entry.isFile() && /\.tsx?$/.test(entry.name) && !entry.name.includes('.test.')) {
-                    files.push(fullPath);
-                }
-            }
-        }
-
-        if (fs.existsSync(dir)) {
-            walkDir(dir);
-        }
-        return files;
-    }
-
     it('CONTROL: the scan sees a corpus worth scanning', () => {
         // Every "should not have X" assertion below passes vacuously if the walk
         // returns nothing — a broken path, a changed layout, a glob that stopped
@@ -95,7 +75,7 @@ describe('SOP: Magic Timeout Constants', () => {
         // from a zero from a probe that found nothing, which is the failure this
         // repo keeps paying for.
         const src = path.resolve(__dirname, '../../src');
-        expect(getTypeScriptFiles(src).length).toBeGreaterThan(300);
+        expect(sourceFilesUnder(src).length).toBeGreaterThan(300);
     });
 
     describe('FRONTEND_TIMEOUTS constants exist', () => {
@@ -128,7 +108,7 @@ describe('SOP: Magic Timeout Constants', () => {
         });
 
         it('should not have magic timeout numbers in core UI components', () => {
-            const files = getTypeScriptFiles(uiComponentsDir);
+            const files = sourceFilesUnder(uiComponentsDir);
             const allViolations: { file: string; violations: { line: number; content: string }[] }[] = [];
 
             for (const file of files) {
