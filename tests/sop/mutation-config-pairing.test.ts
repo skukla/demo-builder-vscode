@@ -23,13 +23,22 @@
  * nothing about the mutated code.
  */
 import { execSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync } from 'fs';
 import { basename, join } from 'path';
 
 const ROOT = join(__dirname, '..', '..');
 
-/** Every Stryker config in the repo, paired with the jest config it names. */
-const CONFIGS = ['stryker.config.json', 'stryker.pl22.config.json'];
+/**
+ * Every Stryker config in the repo, paired with the jest config it names.
+ *
+ * DISCOVERED, not listed. This was a hand-written array of two until 2026-09-02, and
+ * a hand-written list of the things a check covers is a check that silently narrows:
+ * adding `stryker.focus.config.json` would have left the newest config — the one
+ * being actively edited — as the only one nobody verified.
+ */
+const CONFIGS = readdirSync(ROOT)
+    .filter((f) => /^stryker(\..+)?\.config\.json$/.test(f))
+    .sort();
 
 interface Pairing {
     strykerConfig: string;

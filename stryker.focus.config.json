@@ -1,0 +1,36 @@
+{
+    "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+    "_comment": "FOCUSED SCOPE \u2014 ONE module, so a fix can be measured in minutes rather than the sample's ~16. Keep `mutate` in step with testMatch in jest.focus.config.js; tests/sop/mutation-config-pairing.test.ts fails the build when they disagree.",
+    "packageManager": "npm",
+    "testRunner": "jest",
+    "jest": {
+        "configFile": "jest.focus.config.js",
+        "enableFindRelatedTests": true
+    },
+    "mutate": [
+        "src/features/prerequisites/handlers/installHandler.ts"
+    ],
+    "reporters": [
+        "clear-text",
+        "json"
+    ],
+    "jsonReporter": {
+        "fileName": "reports/mutation/focus.json"
+    },
+    "coverageAnalysis": "perTest",
+    "concurrency": 4,
+    "timeoutMS": 20000,
+    "disableTypeChecks": true,
+    "tempDirName": ".stryker-tmp-focus",
+    "cleanTempDir": "always",
+    "ignorePatterns": [
+        ".stryker-tmp",
+        ".stryker-tmp-pl22",
+        ".stryker-tmp-focus",
+        "reports",
+        "coverage",
+        "dist"
+    ],
+    "incremental": true,
+    "incrementalFile": "reports/mutation/focus-incremental.json"
+}

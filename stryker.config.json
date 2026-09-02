@@ -29,6 +29,7 @@
     "ignorePatterns": [
         ".stryker-tmp",
         ".stryker-tmp-pl22",
+        ".stryker-tmp-focus",
         "reports",
         "coverage",
         "dist"

@@ -238,6 +238,22 @@ const JUDGEMENT: readonly Instrument[] = [
         resultKind: 'report',
     },
     {
+        id: 'test:mutation:focus',
+        kind: 'npm-script',
+        cadence: 'periodic',
+        what: 'Stryker over ONE module — 3 minutes instead of the sample\'s 16, so a survivor can be killed and re-measured inside a working session rather than a release cut',
+        runs: 'npm run test:mutation:focus',
+        resultKind: 'report',
+    },
+    {
+        id: 'test:mutation:worklist',
+        kind: 'npm-script',
+        cadence: 'periodic',
+        what: 'turns a Stryker report into the ranked list of DECISIONS nothing constrains — dropping log lines, log-only branches and non-decisions, because a score is not a thing anyone can act on',
+        runs: 'npm run test:mutation:worklist',
+        resultKind: 'report',
+    },
+    {
         id: 'test-strategy-scan',
         kind: 'skill',
         cadence: 'periodic',

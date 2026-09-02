@@ -496,6 +496,8 @@
         "docs:tools:check": "node scripts/generate-tool-catalog.mjs --check",
         "docs:conventions:check": "node scripts/generate-convention-index.mjs --check",
         "test:mutation": "stryker run",
+        "test:mutation:focus": "stryker run stryker.focus.config.json",
+        "test:mutation:worklist": "node scripts/mutationWorklist.mjs",
         "test:mutation:sample": "stryker run stryker.pl22.config.json && node scripts/checkMutationBaseline.mjs",
         "test:mutation:baseline": "node scripts/checkMutationBaseline.mjs --write",
         "test:mutation:selftest": "node scripts/mutationBaseline.selftest.mjs",
