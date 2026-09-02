@@ -161,3 +161,4 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  test(sop): the placement rule now checks the SUBJECT, not just the shape (`db7f72790`)
 - 2026-09-02  refactor(tests): the shared webview UI suites move to their subject's mirror (`595272682`)
 - 2026-09-02  Both halves done: 45 suites moved to their subjects' mirrors (38 shared webview + 7 found by the new check), the webview-ui allowlist row deleted, and the enforcer gained a subject check with two positive controls. NOT closed: the subject resolver returns nothing for 316 suites whose subject is imported by a .testUtils, so half 1 still carries those.
+- 2026-09-02  helixService extracted — lane C's 20 real targets are now all done (9e3e2c301). Clones 72->70. Ledger had a duplicate row for that family, so its count was overstated; added a uniqueness check whose first version was itself broken (Set.add in a filter) and was caught by its positive control.

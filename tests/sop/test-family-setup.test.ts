@@ -47,6 +47,57 @@ const LEDGER = JSON.parse(
     readFileSync(join(__dirname, 'test-family-setup.ledger.json'), 'utf8'),
 ) as { families: string[] };
 
+/** A suite's `@/` imports, in source order. */
+const AT_IMPORT = /from\s+'(@\/[^']+)'/g;
+
+/**
+ * The module a suite is about, or undefined when its imports do not say — the
+ * subject arrives via a `.testUtils`, or the suite has no `@/` import at all
+ * (the enforcer and template suites, whose subject is the repo itself).
+ */
+function subjectOf(file: string): string | undefined {
+    const source = readFileSync(join(ROOT, file), 'utf8');
+    for (const [, spec] of source.matchAll(AT_IMPORT)) {
+        if (!spec.includes('/types/')) return spec;
+    }
+    return undefined;
+}
+
+/**
+ * Is this group of suites really a SPLIT FAMILY — several suites for one thing?
+ *
+ * The grouping keys on the first hyphen-separated token of a filename, which is
+ * cheap and mostly right, and sometimes invents a family out of unrelated files.
+ * `no-bare-sleep`, `no-config-leaf-mocks` and `no-lowered-test-timeout` are three
+ * separate enforcers that share the word "no". `securityValidation-*` is six
+ * different validators behind one legacy prefix. Seven such rows sat in the
+ * ledger as debt nobody could ever pay, because there is no shared setup to
+ * extract from files that share nothing — found 2026-09-02.
+ *
+ * A family needs ONE of two things to be true:
+ *   1. A source file is named for it — `src/<family>.ts(x)` exists. This is the
+ *      normal case and covers every family whose suites import their subject
+ *      through a helper, so tightening the rule costs no reach there.
+ *   2. Failing that, every subject the members DO name agrees. `projectManifest`
+ *      and `codeSyncStatusView` qualify this way: no source file carries their
+ *      name, but each one's suites all point at the same module.
+ *
+ * Neither holding means the token grouped unrelated files.
+ */
+function isRealFamily(key: string, members: string[]): boolean {
+    const relative = key.startsWith('tests/') ? key.slice('tests/'.length) : key;
+    const hasSource = ['.ts', '.tsx'].some((ext) =>
+        existsSync(join(ROOT, 'src', relative + ext)),
+    );
+    if (hasSource) return true;
+
+    // EVERY member must name a subject, and they must agree. "Some of them
+    // agree" is not enough: `sop/credential` has two suites, one naming a module
+    // and one naming none, and a one-element set trivially agrees with itself.
+    const named = members.map(subjectOf).filter(Boolean);
+    return named.length === members.length && new Set(named).size === 1;
+}
+
 function familiesWithoutSharedSetup(): string[] {
     const files = execSync(
         `git ls-files 'tests/**/*.test.ts' 'tests/**/*.test.tsx' 'tests/*.test.ts' 'tests/*.test.tsx'`,
@@ -66,6 +117,7 @@ function familiesWithoutSharedSetup(): string[] {
     const offenders: string[] = [];
     for (const [key, members] of families) {
         if (members.length < 2) continue;
+        if (!isRealFamily(key, members)) continue;
         const dir = dirname(members[0]);
         const subject = key.slice(dir.length + 1);
         const hasUtilsFile = ['.testUtils.ts', '.testUtils.tsx'].some((ext) =>
@@ -90,6 +142,24 @@ describe('split test families share their setup', () => {
             cwd: ROOT,
         }).trim();
         expect(Number(shared)).toBeGreaterThan(0);
+    });
+
+    it('CONTROL: a real family is kept and a token-collision group is rejected', () => {
+        // Without this the tightening above could quietly stop detecting everything
+        // and the ledger would read clean. helixService is a real family (a source
+        // file carries its name); the three `no-*` enforcers share only a word.
+        expect(
+            isRealFamily('tests/features/eds/services/helix/helixService', [
+                'tests/features/eds/services/helix/helixService.test.ts',
+                'tests/features/eds/services/helix/helixService-auth-keys.test.ts',
+            ]),
+        ).toBe(true);
+        expect(
+            isRealFamily('tests/sop/no', [
+                'tests/sop/no-bare-sleep.test.ts',
+                'tests/sop/no-config-leaf-mocks.test.ts',
+            ]),
+        ).toBe(false);
     });
 
     it('the ledger lists each family once — a duplicate row inflates the count', () => {
