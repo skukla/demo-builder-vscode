@@ -21,15 +21,6 @@ jest.mock('@/features/mesh/services/meshVerifier', () => ({
     verifyMeshDeployment: jest.fn().mockResolvedValue(undefined),
     syncMeshStatus: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock('@/core/validation/URLValidator', () => ({
-    validateURL: jest.fn(),
-}));
-
-jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
-}));
 jest.mock(
     'vscode',
     () => ({
@@ -50,6 +41,7 @@ jest.mock(
     { virtual: true }
 );
 
+import './dashboardValidatorMocks';
 import { handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
 import { setupMocks } from './dashboardHandlers.testUtils';
 

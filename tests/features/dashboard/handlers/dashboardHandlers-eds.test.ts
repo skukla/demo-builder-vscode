@@ -5,6 +5,7 @@
  * - handleResetProject: Reset EDS project (reset repo contents to template, recopy content)
  */
 
+import './dashboardValidatorMocks';
 import { HandlerContext } from '@/types/handlers';
 import { fakeExtractResetParams } from '../../../helpers/edsResetParamsFake';
 import { Project } from '@/types/base';
@@ -110,16 +111,6 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => ({
 // Mock validation
 jest.mock('@/core/validation/PathSafetyValidator', () => ({
     validateProjectPath: jest.fn(),
-}));
-
-jest.mock('@/core/validation/URLValidator', () => ({
-    validateURL: jest.fn(),
-}));
-
-jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
 }));
 
 // Mock GitHubAppService (dynamically imported for Code Sync verification)

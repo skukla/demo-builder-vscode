@@ -21,21 +21,12 @@ jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
 jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/core/validation/URLValidator', () => ({
-    validateURL: jest.fn(),
-}));
-
-jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
-}));
-
 const mockExportToFile = jest.fn();
 jest.mock('@/features/projects-dashboard/services/settingsTransferService', () => ({
     exportProjectSettingsToFile: (...args: unknown[]) => mockExportToFile(...args),
 }));
 
+import './dashboardValidatorMocks';
 import { handleExportProjectSettings } from '@/features/dashboard/handlers/dashboardHandlers';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';

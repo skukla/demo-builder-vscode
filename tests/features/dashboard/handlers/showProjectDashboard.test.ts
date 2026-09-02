@@ -29,16 +29,6 @@ jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
 
-jest.mock('@/core/validation/URLValidator', () => ({
-    validateURL: jest.fn(),
-}));
-
-jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
-}));
-
 jest.mock('@/core/base/baseWebviewCommand', () => ({
     BaseWebviewCommand: {
         startWebviewTransition: jest.fn().mockResolvedValue(undefined),
@@ -47,6 +37,7 @@ jest.mock('@/core/base/baseWebviewCommand', () => ({
     },
 }));
 
+import './dashboardValidatorMocks';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { handleShowProjectDashboard } from '@/features/dashboard/handlers/dashboardHandlers';

@@ -20,11 +20,6 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
     },
 }));
 
-// Mock validateURL (used by handleOpenExternal and transitive imports)
-jest.mock('@/core/validation/URLValidator', () => ({
-    validateURL: jest.fn(),
-}));
-
 // Mock store discovery service
 jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
     discoverStoreStructure: jest.fn(),
@@ -44,6 +39,7 @@ jest.mock('vscode', () => ({
     },
 }));
 
+import './dashboardValidatorMocks';
 import * as vscode from 'vscode';
 import {
     configureHandlers,

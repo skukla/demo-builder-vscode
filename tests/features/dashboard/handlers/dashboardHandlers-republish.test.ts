@@ -6,6 +6,17 @@
  * republishStorefrontContent + the same EDS metadata reads + DA.live auth.
  */
 
+import './dashboardValidatorMocks';
+
+jest.mock('@/core/validation/validators/ProjectNameValidator', () => ({
+    validateProjectNameSecurity: jest.fn(),
+}));
+
+// Imported by the dashboardHandlers module, so it has to answer even when unused.
+jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
+    deleteProject: jest.fn().mockResolvedValue({ success: true }),
+}));
+
 import { HandlerContext } from '@/types/handlers';
 import { Project } from '@/types/base';
 
@@ -39,23 +50,6 @@ jest.mock('@/features/mesh/services/stalenessDetector');
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
-jest.mock('@/core/validation/URLValidator', () => ({
-    validateURL: jest.fn(),
-}));
-
-jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
-}));
-
-jest.mock('@/core/validation/validators/ProjectNameValidator', () => ({
-    validateProjectNameSecurity: jest.fn(),
-}));
-jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
-    deleteProject: jest.fn().mockResolvedValue({ success: true }),
-}));
-
 // edsHelpers - DA.live auth + github services (dynamically imported)
 const mockEnsureDaLiveAuth = jest.fn();
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({

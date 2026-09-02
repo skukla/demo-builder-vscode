@@ -8,6 +8,17 @@
  * - handleRenameProject: rename current project (reuses shared rename core)
  */
 
+import './dashboardValidatorMocks';
+
+jest.mock('@/core/validation/validators/ProjectNameValidator', () => ({
+    validateProjectNameSecurity: jest.fn(),
+}));
+
+// Imported by the dashboardHandlers module, so it has to answer even when unused.
+jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
+    deleteProject: jest.fn().mockResolvedValue({ success: true }),
+}));
+
 import { HandlerContext } from '@/types/handlers';
 import { Project } from '@/types/base';
 
@@ -44,20 +55,6 @@ jest.mock('@/features/mesh/services/stalenessDetector');
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },
 }));
-jest.mock('@/core/validation/URLValidator', () => ({
-    validateURL: jest.fn(),
-}));
-
-jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
-}));
-
-jest.mock('@/core/validation/validators/ProjectNameValidator', () => ({
-    validateProjectNameSecurity: jest.fn(),
-}));
-
 // The export and rename handlers each dynamically import the module that
 // DECLARES what they need. These were one mock of a shared barrel until
 // 2026-08-31 (PL-31) — which is why the two unrelated services were fused here.
@@ -68,11 +65,6 @@ jest.mock('@/features/projects-dashboard/services/settingsTransferService', () =
 
 jest.mock('@/features/projects-dashboard/services/projectRenameService', () => ({
     renameProjectCore: (...args: unknown[]) => mockRenameProjectCore(...args),
-}));
-
-// Mock deletion service (imported by dashboardHandlers module)
-jest.mock('@/features/projects-dashboard/services/projectDeletionService', () => ({
-    deleteProject: jest.fn().mockResolvedValue({ success: true }),
 }));
 
 // =============================================================================

@@ -243,3 +243,4 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  test(wizard): the addons suite uses the shared fixtures its two siblings already use (`4a7d6a07e`)
 - 2026-09-02  test(wizard): two redundant vscode walls go, and the dead setupMocks they were hiding (`626eee3e0`)
 - 2026-09-02  test(eds): the discovery and dedup suites use the block-collection helpers their siblings already use (`7baaa1385`)
+- 2026-09-02  test(configure): five shared walls for two ConfigureScreen suites — and which jest.mock actually wins (`013e90a52`)
