@@ -13,27 +13,10 @@
  * - Default steps optimization (only for last version)
  */
 
+// Registers the shared module wall — must precede every other import here.
+import './installHandler.mocks';
+
 // Mock all dependencies (MUST be at top before imports)
-jest.mock('@/features/prerequisites/handlers/shared', () => {
-    const actual = jest.requireActual('@/features/prerequisites/handlers/shared');
-    return {
-        ...actual,
-        getRequiredNodeVersions: jest.fn(),
-        getNodeVersionMapping: jest.fn(),
-        checkPerNodeVersionStatus: jest.fn(),
-        hasNodeVersions: jest.fn(),
-        getNodeVersionKeys: jest.fn(),
-    };
-});
-jest.mock('@/core/di/serviceLocator');
-jest.mock('vscode', () => ({
-    env: {
-        openExternal: jest.fn(),
-    },
-    Uri: {
-        parse: jest.fn((url: string) => ({ url })),
-    },
-}));
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import * as shared from '@/features/prerequisites/handlers/shared';
@@ -330,7 +313,6 @@ describe('Install Handler - Happy Path', () => {
         });
     });
 
-
     /**
      * The final status message the user reads when an install finishes.
      *
@@ -369,7 +351,6 @@ describe('Install Handler - Happy Path', () => {
                 .mockResolvedValueOnce(before)
                 .mockResolvedValue(after);
         }
-
 
         it('lists every version when all required Node versions are present', async () => {
             useNodePrereq(
@@ -439,7 +420,6 @@ describe('Install Handler - Happy Path', () => {
             expect(finalStatusMessage()).toBe('npm is not installed');
         });
     });
-
 
     /**
      * Whether the install SUCCEEDED, for a per-Node-version tool.

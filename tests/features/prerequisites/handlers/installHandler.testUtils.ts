@@ -1,28 +1,16 @@
 /**
- * Shared test utilities for installHandler tests
+ * Shared test utilities for installHandler tests.
  *
- * IMPORTANT: Each test file using these utilities must include the following at the top:
+ * The wall of `jest.mock` calls these suites need lives in
+ * `./installHandler.mocks` — import that FIRST in a spec and the mocks are
+ * registered. This docblock used to say "each test file using these utilities
+ * must include the following at the top" and then list the wall, which is an
+ * instruction to duplicate; five suites duly carried it verbatim until
+ * 2026-09-02.
  *
- * // Mock all dependencies (must be before imports)
- * jest.mock('@/features/prerequisites/handlers/shared');
- * jest.mock('@/core/di/serviceLocator');
- * jest.mock('vscode', () => ({
- *     env: {
- *         openExternal: jest.fn(),
- *     },
- *     Uri: {
- *         parse: jest.fn((url: string) => ({ url })),
- *     },
- * }));
- * jest.mock('@/core/logging/debugLogger', () => ({
- *     getLogger: () => ({
- *         debug: jest.fn(),
- *         trace: jest.fn(),
- *         info: jest.fn(),
- *         warn: jest.fn(),
- *         error: jest.fn(),
- *     }),
- * }));
+ * Two suites deliberately differ and do NOT import that module:
+ * `installHandler-byId` mocks nothing, and `installHandler-plugins` declares its
+ * own set.
  */
 
 import { HandlerContext } from '@/types/handlers';
