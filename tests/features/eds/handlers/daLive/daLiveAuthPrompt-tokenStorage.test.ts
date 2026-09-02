@@ -5,16 +5,12 @@
  * still good. Nothing asserted it: the existing success test checks the email and the
  * namespace and passes whatever expiry the code chose.
  *
- * This also pins an ASYMMETRY between the two ways a token arrives, which is recorded in
- * .rptc/handoff/2026-09-02-equivalent-mutants.md as a decision rather than a defect:
- *
- *   - from the CLIPBOARD, the strict check refuses a token that states no lifetime, on
- *     the grounds that it cannot be stored safely
- *   - TYPED into the box, the same token is accepted and stored with an invented
- *     24-hour lifetime
- *
- * The tests below describe today's behaviour on both paths. If the typed path is
- * tightened to match, the second one is the test to change, and it says so.
+ * BOTH WAYS A TOKEN ARRIVES NOW APPLY THE SAME CHECK. They did not always: a token
+ * stating no lifetime was refused when pasted from the clipboard and accepted when typed,
+ * then stored with an invented 24-hour expiry. That expiry was load-bearing in the wrong
+ * direction — everything downstream reads it to decide when to re-authenticate, so a
+ * token with minutes left was treated as good for a day and operations failed mid-flight
+ * instead of prompting a clean sign-in. Tightened 2026-09-02 on the owner's call.
  */
 
 let showInputBoxResponses: Array<string | undefined> = [];
@@ -57,8 +53,6 @@ import {
     makeDaLiveToken,
 } from './daLiveAuthPrompt.testUtils';
 
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
 /** Type an org and then a token into the two boxes. */
 async function signInWith(token: string) {
     showInputBoxIndex = 0;
@@ -90,17 +84,17 @@ describe('the expiry a stored DA.live token carries', () => {
         expect(stored().expiresAt).toBe(9999999999999 + 3600000);
     });
 
-    it('invents a 24-hour lifetime for a typed token that states none', async () => {
-        // See the file header: the CLIPBOARD path refuses this same token outright. This
-        // test describes the typed path as it is today — change it if that is tightened.
+    it('refuses a typed token that states no lifetime, storing nothing', async () => {
+        // The same answer the clipboard path has always given. Storing it would mean
+        // inventing an expiry, and an invented expiry is worse than no credential: it is
+        // believed.
         const noLifetime = makeDaLiveToken({ client_id: 'darkalley', email: 'user@example.com' });
-        const before = Date.now();
 
-        await signInWith(noLifetime);
+        const result = await signInWith(noLifetime);
 
-        const expiry = stored().expiresAt;
-        expect(expiry).toBeGreaterThanOrEqual(before + ONE_DAY_MS);
-        expect(expiry).toBeLessThanOrEqual(Date.now() + ONE_DAY_MS);
+        expect(mockStoreToken).not.toHaveBeenCalled();
+        expect(result).toMatchObject({ success: false });
+        expect(String((result as { error?: string }).error)).toMatch(/no expiry/i);
     });
 
     it('stores the namespace and the identity alongside the expiry', async () => {

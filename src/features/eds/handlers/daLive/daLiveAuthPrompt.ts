@@ -30,6 +30,18 @@ type DaLiveAuthContext = Pick<HandlerContext, 'context' | 'logger'>;
 /**
  * Result of DA.live token validation
  */
+/**
+ * What the STRICT check answers.
+ *
+ * The narrowing is the point: strict refuses a token that states no expiry, so an
+ * accepted one always has a real `expiresAt` and callers need no fallback. Both callers
+ * carried `validation.expiresAt || Date.now() + 24h` before this type existed, and both
+ * fallbacks were already unreachable — the compiler now says so instead of a comment.
+ */
+export type StrictTokenValidation =
+    | { valid: false; error?: string }
+    | { valid: true; expiresAt: number; email?: string };
+
 export interface DaLiveTokenValidationResult {
     /** Whether the token is valid */
     valid: boolean;
@@ -261,10 +273,13 @@ async function readTokenFromClipboard(logger: Logger): Promise<string | undefine
  * @param token - The candidate token, already trimmed
  * @returns The lenient result when it passes, or a reason the user can act on
  */
-export function validateDaLiveTokenStrict(token: string): DaLiveTokenValidationResult {
+export function validateDaLiveTokenStrict(token: string): StrictTokenValidation {
     const validation = validateDaLiveToken(token);
     if (!validation.valid) {
-        return validation;
+        // No default message: the ordinary check always states a reason, and inventing a
+        // fallback here would add a branch nothing can reach — which is what the mutation
+        // ratchet caught when this was first written that way.
+        return { valid: false, error: validation.error };
     }
     if (parseJwtPayload(token)?.client_id !== 'darkalley') {
         return {
@@ -278,7 +293,7 @@ export function validateDaLiveTokenStrict(token: string): DaLiveTokenValidationR
             error: 'This DA.live token carries no expiry, so it cannot be stored safely. Use the bookmarklet on da.live to copy a fresh one.',
         };
     }
-    return validation;
+    return { valid: true, expiresAt: validation.expiresAt, email: validation.email };
 }
 
 /**
@@ -486,7 +501,14 @@ async function validateAndStoreToken(
         const trimmedToken = token.trim();
         const trimmedOrg = orgName.trim();
 
-        const validation = validateDaLiveToken(trimmedToken);
+        // The SAME check the clipboard path uses. A token that states no expiry was
+        // previously accepted here and stored with an invented 24-hour lifetime — so the
+        // identical token was refused as unsafe when pasted and accepted when typed. The
+        // invented expiry was also load-bearing in the wrong direction: everything
+        // downstream reads it to decide when to re-authenticate, so a token that really
+        // had minutes left was treated as good for a day, and operations failed mid-flight
+        // instead of prompting a clean sign-in. (Owner, 2026-09-02.)
+        const validation = validateDaLiveTokenStrict(trimmedToken);
         if (!validation.valid) {
             context.logger.warn(`[DA.live Auth] Token validation failed: ${validation.error}`);
             await vscode.window.showErrorMessage(validation.error ?? 'Token validation failed');
@@ -499,11 +521,11 @@ async function validateAndStoreToken(
         // Phase 3 of the create pipeline. Genuine write failures surface
         // at the actual write site with contextual error messaging.
 
-        // Store token with the entered org
-        const tokenExpiry = validation.expiresAt || Date.now() + 24 * 60 * 60 * 1000;
+        // Store token with the entered org. No expiry fallback: the strict check above
+        // refuses a token that does not state one.
         const authService = getDaLiveAuthService(context.context);
         await authService.storeToken(trimmedToken, {
-            expiresAt: tokenExpiry,
+            expiresAt: validation.expiresAt,
             email: validation.email,
             orgName: trimmedOrg,
         });

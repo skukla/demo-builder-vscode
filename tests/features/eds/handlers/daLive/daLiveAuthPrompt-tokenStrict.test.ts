@@ -37,12 +37,33 @@ const liveToken = makeDaLiveToken({
     email: 'user@example.com',
 });
 
+/**
+ * Narrowing helpers.
+ *
+ * The strict check returns a union — refused carries an `error`, accepted carries an
+ * `expiresAt` — so a test cannot read either field without saying which case it expects.
+ * That is the type's whole purpose (it is what removed the invented 24-hour fallback at
+ * both call sites), and these keep the tests reading as sentences rather than as casts.
+ */
+function refusalFor(token: string): string {
+    const result = validateDaLiveTokenStrict(token);
+    if (result.valid) throw new Error('Expected the token to be refused, but it was accepted.');
+    if (!result.error) throw new Error('Refused without saying why — every refusal states a reason.');
+    return result.error;
+}
+
+function acceptanceOf(token: string): { expiresAt: number; email?: string } {
+    const result = validateDaLiveTokenStrict(token);
+    if (!result.valid) throw new Error(`Expected the token to be accepted: ${result.error}`);
+    return result;
+}
+
 describe('validateDaLiveTokenStrict', () => {
     it('accepts a DA.live token that states when it expires', () => {
-        const result = validateDaLiveTokenStrict(liveToken);
+        const accepted = acceptanceOf(liveToken);
 
-        expect(result).toMatchObject({ valid: true, email: 'user@example.com' });
-        expect(result.expiresAt).toBeGreaterThan(Date.now());
+        expect(accepted.email).toBe('user@example.com');
+        expect(accepted.expiresAt).toBeGreaterThan(Date.now());
     });
 
     it('refuses a token issued by something other than DA.live', () => {
@@ -52,8 +73,7 @@ describe('validateDaLiveTokenStrict', () => {
             expires_in: '3600000',
         });
 
-        expect(validateDaLiveTokenStrict(otherService)).toMatchObject({ valid: false });
-        expect(validateDaLiveTokenStrict(otherService).error).toMatch(/bookmarklet on da\.live/i);
+        expect(refusalFor(otherService)).toMatch(/bookmarklet on da\.live/i);
     });
 
     it('refuses a DA.live token that never says when it expires', () => {
@@ -62,8 +82,7 @@ describe('validateDaLiveTokenStrict', () => {
         const noLifetime = makeDaLiveToken({ client_id: 'darkalley', email: 'user@example.com' });
 
         expect(validateDaLiveToken(noLifetime)).toMatchObject({ valid: true });
-        expect(validateDaLiveTokenStrict(noLifetime)).toMatchObject({ valid: false });
-        expect(validateDaLiveTokenStrict(noLifetime).error).toMatch(/no expiry/i);
+        expect(refusalFor(noLifetime)).toMatch(/no expiry/i);
     });
 
     it('refuses a token carrying only half a lifetime', () => {
@@ -72,8 +91,7 @@ describe('validateDaLiveTokenStrict', () => {
         // because the two fields are read by one condition.
         const halfLifetime = makeDaLiveToken({ client_id: 'darkalley', created_at: '9999999999999' });
 
-        expect(validateDaLiveTokenStrict(halfLifetime)).toMatchObject({ valid: false });
-        expect(validateDaLiveTokenStrict(halfLifetime).error).toMatch(/no expiry/i);
+        expect(refusalFor(halfLifetime)).toMatch(/no expiry/i);
     });
 
     it('passes the ordinary check refusal through rather than replacing it', () => {
@@ -81,9 +99,9 @@ describe('validateDaLiveTokenStrict', () => {
         // DA.live token has no expiry.
         const notAJwt = 'this-is-not-a-token';
 
-        const strict = validateDaLiveTokenStrict(notAJwt);
-        expect(strict).toEqual(validateDaLiveToken(notAJwt));
-        expect(strict.error).toMatch(/token format/i);
+        // The ordinary check's own wording, carried through rather than replaced.
+        expect(refusalFor(notAJwt)).toBe(validateDaLiveToken(notAJwt).error);
+        expect(refusalFor(notAJwt)).toMatch(/token format/i);
     });
 
     it('refuses an expired DA.live token', () => {
@@ -93,6 +111,6 @@ describe('validateDaLiveTokenStrict', () => {
             expires_in: '1000',
         });
 
-        expect(validateDaLiveTokenStrict(expired).error).toMatch(/expired/i);
+        expect(refusalFor(expired)).toMatch(/expired/i);
     });
 });

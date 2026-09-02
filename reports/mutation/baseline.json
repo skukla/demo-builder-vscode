@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "installHandler: the unreachable Node branch and the redundant conjunct are gone (71.16%)",
+    "_note": "daLiveAuthPrompt 82.77% -> 82.58%: three KILLED mutants removed with the invented 24-hour expiry fallback, survivors and uncovered both unchanged. The ratio fell because tested code was deleted, not because anything became less constrained.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -43,8 +43,8 @@
             "highValueSurvivors": 7
         },
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts": {
-            "score": 82.77,
-            "killed": 221,
+            "score": 82.58,
+            "killed": 218,
             "survived": 44,
             "noCoverage": 2,
             "timeout": 0,
@@ -52,9 +52,9 @@
                 "branch": 11,
                 "other": 7,
                 "string": 9,
-                "logPresentation": 10,
+                "optionalChain": 4,
                 "block": 3,
-                "optionalChain": 4
+                "logPresentation": 10
             },
             "highValueSurvivors": 14
         },
