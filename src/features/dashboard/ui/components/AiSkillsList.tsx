@@ -251,7 +251,15 @@ export function AiSkillsList({
         );
     }
 
-    if (skills.length === 0) {
+    // Nothing to show means NEITHER installed skills nor gated ones. Testing only
+    // `skills` broke the modal twice over (2026-09-02): the capabilities modal
+    // mounts one of these purely to carry the gated list, with `skills` hard-wired
+    // empty, so this early return fired every time — printing "No skills yet"
+    // directly under sections that were listing the project's skills and MCP
+    // servers, and swallowing the gated list, which could therefore never render
+    // at all.
+    const hasGated = (gatedSkills?.length ?? 0) > 0;
+    if (skills.length === 0 && !hasGated) {
         return (
             <Text UNSAFE_className="text-gray-700" data-testid="ai-skills-empty">
                 No skills yet. Regenerate AI files to set them up.

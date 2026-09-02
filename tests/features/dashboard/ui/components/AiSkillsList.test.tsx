@@ -298,4 +298,38 @@ describe('loading vs empty (2026-08-06)', () => {
         expect(screen.getByTestId('ai-skills-error')).toBeInTheDocument();
         expect(screen.queryByTestId('ai-skills-loading')).not.toBeInTheDocument();
     });
+
+    describe('Gated skills are not "no skills"', () => {
+        // REGRESSION 2026-09-02. The capabilities modal mounts one of these purely
+        // to carry the gated list, with `skills` hard-wired empty. The empty state
+        // tested only `skills`, so it fired every time: "No skills yet" printed
+        // under sections that were listing the project's skills and MCP servers,
+        // and the gated list it was mounted for could never render at all.
+        const GATED = [
+            { file: 'querying-commerce.md', toolId: 'commerce', reason: 'tool-missing' as const },
+        ];
+
+        it('does NOT claim "no skills yet" when it is carrying gated skills', () => {
+            renderList({ skills: [], gatedSkills: GATED, flat: true });
+
+            expect(screen.queryByTestId('ai-skills-empty')).not.toBeInTheDocument();
+        });
+
+        it('renders the gated group even with no installed skills of its own', () => {
+            renderList({ skills: [], gatedSkills: GATED, flat: true });
+
+            expect(screen.getByTestId('ai-skills-group-gated')).toHaveTextContent(
+                'Not available · 1'
+            );
+            expect(screen.getByTestId('ai-skill-gated-row')).toHaveTextContent(
+                'querying-commerce.md'
+            );
+        });
+
+        it('still claims "no skills yet" when there is genuinely nothing (control)', () => {
+            renderList({ skills: [], gatedSkills: [] });
+
+            expect(screen.getByTestId('ai-skills-empty')).toBeInTheDocument();
+        });
+    });
 });
