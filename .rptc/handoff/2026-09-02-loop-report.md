@@ -1,4 +1,4 @@
-# Overnight loop — 2026-09-02, 00:45 to 02:25
+# Overnight loop — 2026-09-02, from 00:45
 
 ## The short version
 
@@ -7,18 +7,25 @@ assumed. The tool for that breaks the code on purpose — changes a `true` to a 
 deletes a line — and re-runs the tests. If the tests still pass, they would have shipped
 that bug.
 
-Two files got worked. The prerequisites installer went from catching 57% of introduced
-bugs to 70%. The site tools an agent uses went from 54% to 69%, with the number of
-missed bugs there dropping from 16 to 1.
+Three files got worked:
+
+| What it does | Caught before | Caught after |
+|---|---|---|
+| Installs Node, the Adobe CLI and their plugins | 57% | 70% |
+| The site tools an agent calls | 54% | 69% |
+| DA.live sign-in and token handling | 67% | 83% |
+
+In the second, the number of missed bugs fell from 16 to 1. In the third, code that no
+test ran at all fell from 35 deliberate breakages to 2.
 
 Along the way the tests found real things: five test fixtures that used a field name
 that does not exist, a branch of the installer that cannot run at all, a confirmation
-gate on a delete that could be bypassed by supplying half of what it asks for, and two
-faults in the measuring instrument itself which was calling genuine improvements
-"padding".
+gate on a delete that could be bypassed by supplying half of what it asks for, a
+credential that one path refuses as unsafe and another accepts, and two faults in the
+measuring instrument itself which was calling genuine improvements "padding".
 
-**Nothing in the shipping extension changed.** Twelve commits, all tests, test helpers,
-measurement scripts and documentation. The full suite is green: 15,578 tests.
+**Nothing in the shipping extension changed.** Sixteen commits, all tests, test helpers,
+measurement scripts and documentation. The full suite is green: 15,597 tests.
 
 ---
 
@@ -76,6 +83,25 @@ These are the tools an agent calls to inspect and repair a storefront's configur
 
 Result: missed bugs went from 16 to 1.
 
+### DA.live sign-in
+
+This is how a consultant's DA.live credential gets from a browser bookmarklet into
+secure storage. Three rounds:
+
+- **The strict token check** is the only guard on two separate paths — the clipboard
+  read during sign-in, and the token-store call an agent or the extension's own screens
+  make. No test called it directly. It refuses a token that is not DA.live's, and one
+  that never says when it expires.
+- **What the sign-in boxes reject as you type.** The message VS Code shows under the box
+  is the only feedback between pasting the wrong thing and being told, several steps
+  later, that it was invalid. Twenty-four deliberate breakages there went unnoticed,
+  because every test reads the options a box was OPENED with and none ever calls the
+  check inside it. Exactly one test file in the whole repository mentions that callback.
+- **What actually gets stored, and for how long.** The stored expiry is what every later
+  check reads to decide whether the session is still good, and nothing asserted it. Also
+  covered: a failure to store now reports failure, rather than telling someone they are
+  signed in when they are not.
+
 ### The measuring instrument
 
 Three fixes, because the tool that judges the work was wrong twice in one night and each
@@ -105,9 +131,13 @@ write a configuration that would report a confident zero.
 
 ## Shipped
 
-Twelve commits on `loop/2026-09-01-top-files`, each one gated on the full suite,
-typechecks and lint before it was made. The branch is 21 commits ahead of `develop`
-(nine from earlier in the same session, twelve from tonight).
+Sixteen commits on `loop/2026-09-01-top-files`, each one gated on the full suite,
+typechecks and lint before it was made. The branch is 25 commits ahead of `develop`
+(nine from earlier in the same session, sixteen from tonight).
+
+The gate refused a commit once, exactly as it is supposed to: adding test files left a
+second configuration stale, and it would not let that through. The switcher can now top
+that list up itself.
 
 No production code changed, tonight or in the nine earlier commits — so the code-shape
 scans that look for duplicate implementations and dead code are not triggered. The
@@ -120,7 +150,7 @@ Every item reached a finished, committed state. Nothing is half-done.
 
 ## Filed rather than fixed
 
-All four are written up with their evidence in
+All six are written up with their evidence in
 `.rptc/handoff/2026-09-02-equivalent-mutants.md`.
 
 Three are cases where the tests cannot be improved and the honest answer is a record:
@@ -137,13 +167,23 @@ Three are cases where the tests cannot be improved and the honest answer is a re
 3. **A defensive `?.` that the type system requires and no test can exercise**, because
    the value can never be missing by the time that line runs.
 
-The fourth is a decision, not a correction:
+A fourth needs nothing from you: an empty-clipboard check that no test can tell apart,
+because the very next line rejects an empty string anyway. Written down so nobody spends
+an hour on it.
 
-4. **Two tools tell agents they are destructive while their own file explains they are
+Two are decisions, not corrections:
+
+5. **Two tools tell agents they are destructive while their own file explains they are
    safe to re-run** and the "same class" as a third tool that says it is NOT destructive.
    Three tools of one class, two answers — and the two saying "destructive" are the two
    an agent may call without confirmation. Both fixes are defensible and they point in
    opposite directions, which is why it is yours.
+6. **A DA.live token that states no expiry is refused one way and accepted the other.**
+   Pasted from the clipboard, it is rejected in as many words as unsafe to store. Typed
+   into the box, it is accepted and given an invented 24-hour life. The clipboard path
+   was deliberately hardened; the typed one looks simply never to have been revisited.
+   Both behaviours are now pinned by tests, so whichever way you settle it, the test that
+   has to change is the one that explains itself.
 
 ## Corrected along the way
 
@@ -162,6 +202,14 @@ The fourth is a decision, not a correction:
 - Two tests I wrote passed for the wrong reason and I only found out by measuring: one
   checked that a value existed which the test itself had put there, and one claimed to
   test a path the code never reaches.
+- I committed once with the wrong message — a stale scratch file from earlier in the
+  session, because I reused its name. The files were right, the description was somebody
+  else's work. Amended and re-pushed.
+- My first version of the configuration syncer would have DELETED eight working entries,
+  because it only recognised test files whose paths mirror the source exactly and the
+  webview tree does not. That would have handed those modules a run with no tests, which
+  reports zero and reads like a catastrophe — the precise failure the check exists to
+  prevent. It only adds now, and reports what it cannot account for.
 
 ## Environment facts
 
@@ -176,8 +224,10 @@ The fourth is a decision, not a correction:
 
 ## Your decisions
 
-1. **Merge `loop/2026-09-01-top-files` into `develop`?** 21 commits, no production code,
+1. **Merge `loop/2026-09-01-top-files` into `develop`?** 25 commits, no production code,
    full suite green.
-2. **The two tools that call themselves destructive** (item 4 above) — which way?
-3. **The dead branch and the redundant condition** (items 1 and 2) — remove them, or
+2. **The DA.live token with no stated expiry** (item 6) — refuse it everywhere, accept it
+   everywhere, or keep the clipboard stricter on purpose and say so in a comment?
+3. **The two tools that call themselves destructive** (item 5) — which way?
+4. **The dead branch and the redundant condition** (items 1 and 2) — remove them, or
    leave them and I will stop reporting them?
