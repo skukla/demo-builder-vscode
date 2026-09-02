@@ -93,3 +93,45 @@ export function cleanupTimers(): void {
 // verbatim. Re-exporting removes the ordering question.
 export { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication/webviewCommunicationManager';
 export * as vscode from 'vscode';
+
+export interface HandshakenMocks extends TestMocks {
+    /**
+     * The listener the manager registered — read through a function, not held as
+     * a value.
+     *
+     * `setupMocks` returns `messageListener` by value, captured before
+     * `initialize()` runs. Two suites therefore could not use it: they need the
+     * listener AFTER the handshake, and the value they would have got is the
+     * empty default. That is the same by-value trap the PrerequisitesStep helper
+     * hit — a dead helper beside N copies of its job usually means the helper is
+     * broken, not unwanted.
+     */
+    listener: () => (message: Message) => void;
+}
+
+/**
+ * A manager that has completed its handshake and forgotten the messages that took.
+ *
+ * The sequence is the real one: initialize, let the webview announce itself, wait
+ * for the handshake to settle, then clear `postMessage` so a test asserts only
+ * what IT caused.
+ */
+export async function setupHandshakenManager(): Promise<HandshakenMocks> {
+    const mocks = setupMocks();
+    let live: (message: Message) => void = () => {};
+    (mocks.mockWebview.onDidReceiveMessage as jest.Mock).mockImplementation((l) => {
+        live = l;
+        return { dispose: jest.fn() };
+    });
+
+    const manager = new WebviewCommunicationManager(mocks.mockPanel);
+    const initPromise = manager.initialize();
+    await Promise.resolve();
+
+    live({ id: 'webview-1', type: '__webview_ready__', timestamp: Date.now() } as Message);
+    await initPromise;
+
+    (mocks.mockWebview.postMessage as jest.Mock).mockClear();
+
+    return { ...mocks, manager, listener: () => live };
+}
