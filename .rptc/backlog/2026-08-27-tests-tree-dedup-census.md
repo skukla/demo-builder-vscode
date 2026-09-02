@@ -229,3 +229,4 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  test(sop): 26 split families adjudicated — debt and correct splits now differ (`260df7956`)
 - 2026-09-02  docs(backlog): re-measure PL-9 — the baseline was four days stale (`fe9abe1d2`)
 - 2026-09-02  test(ai-bundle): one fs/promises wall for six suites, and an enforcer for the order it depends on (`86ed3f3c3`)
+- 2026-09-02  test(commands): two hand-rolled ExtensionContexts become the canonical fake (`9b8792b44`)
