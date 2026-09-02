@@ -76,18 +76,49 @@ node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
 npm run gate                       # and only then commit
 ```
 
-**The ratchet is the safety net, and it reads BOTH numbers.** A score that falls is a
-regression. A score that RISES while branch/block survivors stay put is also flagged —
-that combination is the signature of a score raised by asserting log strings, and it is
-the failure mode to fear in an unattended run, because it looks like progress.
+**The ratchet is the safety net, and it reads THREE numbers.** A score that falls is a
+regression. A score that RISES while nothing got better tested is also flagged — that
+combination is the signature of a score raised by asserting log strings, and it is the
+failure mode to fear in an unattended run, because it looks like progress.
 
-**Moving to the next module means editing TWO files together**:
-`stryker.focus.config.json`'s `mutate` and `jest.focus.config.js`'s `testMatch`.
-`tests/sop/mutation-config-pairing.test.ts` fails the build if they disagree — it
-exists because a run where they disagreed once reported 0% for seven modules in 19
-seconds, which reads as a devastating result and was a run that never executed the
-tests. List test paths explicitly; that enforcer verifies each one exists and a glob
-is not a path it can check.
+"Nothing got better tested" is narrower than it sounds, and both narrowings were paid
+for on 2026-09-02, when the rule flagged real work twice in one session:
+
+- It compares **behavioural** survivors — every kind except log lines and string
+  literals — not just branch and block. Killing six mutants on two `.sort()` comparators
+  (as text, Node 8 sorts after Node 20) moved neither branch nor block, and the run was
+  reported as padding.
+- It **exempts a run whose uncovered count fell**. Bringing unreachable code under test
+  RAISES the survivor count, because a mutant with no coverage becomes either killed or
+  surviving — and the ones that survive are newly visible work, not new debt.
+
+Both exemptions are safe because padding moves neither number. `npm run
+test:mutation:selftest` holds the controls in both directions, and they run with the
+suite via `tests/sop/ratchet-controls.test.ts`. Change the rule and run them; breaking
+it on purpose is how they were checked rather than assumed.
+
+**Moving to the next module is one command:**
+
+```bash
+npm run test:mutation:focus:on -- src/features/eds/services/siteTools.ts
+```
+
+It writes BOTH files — `stryker.focus.config.json`'s `mutate` and
+`jest.focus.config.js`'s `testMatch` — finds the suites by this repo's mirror convention — a
+module under src is tested by the same path under tests, plus any suite split from it
+with a hyphenated suffix — and clears the incremental cache, which belongs to the module
+it was built for.
+
+It **refuses** when no suite mirrors the module, and writes nothing in that case. That
+refusal is the point: a focused run with no suites reports 0% in seconds and reads
+exactly like a catastrophic result. `tests/sop/mutation-config-pairing.test.ts` still
+fails the build if the two files disagree — it exists because a run where they DID
+disagree reported 0% for seven modules in 19 seconds, and was a run that never executed
+the tests.
+
+This used to read "editing TWO files together", which is a rule you follow until the
+night you do not: on 2026-09-02 a new suite went into the focused config and not the
+sample one, and only an enforcer caught it.
 
 **When a mutant cannot be killed**, do not contort a test to fake it. Some are
 EQUIVALENT — the mutated code behaves identically, and no test can tell. Record it

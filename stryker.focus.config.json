@@ -1,6 +1,6 @@
 {
     "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-    "_comment": "FOCUSED SCOPE \u2014 ONE module, so a fix can be measured in minutes rather than the sample's ~16. Keep `mutate` in step with testMatch in jest.focus.config.js; tests/sop/mutation-config-pairing.test.ts fails the build when they disagree.",
+    "_comment": "FOCUSED SCOPE — ONE module, so a fix can be measured in minutes rather than the sample's ~16. `mutate` here and testMatch in jest.focus.config.js are GENERATED together by `node scripts/focusModule.mjs <module>`; run that to switch modules rather than editing either by hand. tests/sop/mutation-config-pairing.test.ts fails the build when they disagree.",
     "packageManager": "npm",
     "testRunner": "jest",
     "jest": {
