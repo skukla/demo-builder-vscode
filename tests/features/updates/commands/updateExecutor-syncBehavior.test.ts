@@ -6,6 +6,7 @@
  * instead of silently bumping `commitSha`.
  */
 
+import './updateExecutor.testUtils';
 import * as vscode from 'vscode';
 import { performAddonUpdates } from '@/features/updates/commands/updateExecutor';
 import type { UpdateContext } from '@/features/updates/services/updateCore';
@@ -20,10 +21,6 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 // ─── Module mocks ────────────────────────────────────────────────────────────
 
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn(),
-}));
-
 // The block-library update path reaches the shared GitHub services for a token.
 // The real accessor calls getLogger(), which throws in a suite that initialises
 // none — so the cache is mocked to the one thing this path reads.
@@ -32,22 +29,6 @@ jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
         tokenService: { getToken: jest.fn().mockResolvedValue({ token: 'gh-token' }) },
     })),
 }));
-
-
-
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            showInformationMessage: jest.fn(),
-            showErrorMessage: jest.fn(),
-        },
-        workspace: {
-            getConfiguration: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
 
 const installMock = installBlockCollections as jest.Mock;
 const showInfoMock = vscode.window.showInformationMessage as jest.Mock;

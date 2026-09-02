@@ -17,15 +17,7 @@ import type { ComponentConfigs } from '@/types/webview';
 // Mocks
 // ---------------------------------------------------------------------------
 
-// Mock vscode API used by the hook
-const mockRequest = jest.fn();
-jest.mock('@/core/ui/utils/vscode-api', () => ({
-    vscode: {
-        postMessage: jest.fn(),
-        request: (...args: any[]) => mockRequest(...args),
-        onMessage: jest.fn(() => jest.fn()),
-    },
-}));
+import { mockRequest } from './useComponentConfig.testUtils';
 
 // Mock Validator
 

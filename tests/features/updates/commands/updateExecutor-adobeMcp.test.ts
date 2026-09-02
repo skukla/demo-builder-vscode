@@ -11,6 +11,7 @@
  * the contract.
  */
 
+import './updateExecutor.testUtils';
 import * as vscode from 'vscode';
 import {
     performAdobeMcpUpdates,
@@ -20,27 +21,8 @@ import type { AdobeMcpUpdateItem } from '@/features/updates/commands/updateTypes
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            withProgress: jest.fn((_opts: unknown, cb: (p: { report: jest.Mock }) => unknown) =>
-                cb({ report: jest.fn() })
-            ),
-            showWarningMessage: jest.fn(),
-            showErrorMessage: jest.fn(),
-            showInformationMessage: jest.fn(),
-        },
-        workspace: { getConfiguration: jest.fn() },
-        ProgressLocation: { Notification: 15 },
-    }),
-    { virtual: true }
-);
 jest.mock('@/features/updates/services/adobeMcpUpdateCore', () => ({
     applyAdobeMcpUpdate: jest.fn(),
-}));
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn(),
 }));
 
 const coreMock = applyAdobeMcpUpdate as jest.Mock;

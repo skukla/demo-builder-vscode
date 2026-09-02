@@ -16,14 +16,7 @@
 
 import { renderHook, waitFor } from '@testing-library/react';
 
-const mockRequest = jest.fn();
-jest.mock('@/core/ui/utils/vscode-api', () => ({
-    vscode: {
-        postMessage: jest.fn(),
-        request: (...args: any[]) => mockRequest(...args),
-        onMessage: jest.fn(() => jest.fn()),
-    },
-}));
+import { mockRequest } from './useComponentConfig.testUtils';
 
 // Real validators are irrelevant here — every field under test is `text`.
 

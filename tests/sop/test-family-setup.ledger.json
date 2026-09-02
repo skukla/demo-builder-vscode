@@ -8,8 +8,6 @@
     "tests/core/utils/disposableStore",
     "tests/features/authentication/services/ioEventsClient",
     "tests/features/authentication/services/tokenManager",
-    "tests/features/components/ui/hooks/useComponentConfig",
-    "tests/features/data-installer/ui/views/DatapackActivityView",
     "tests/features/eds/handlers/edsHandlers",
     "tests/features/eds/services/github/githubAppService",
     "tests/features/eds/services/github/githubFileOperations",
@@ -17,8 +15,7 @@
     "tests/features/project-creation/services/aiBundle/aiBundleService",
     "tests/features/project-creation/services/projectFinalizationService",
     "tests/features/project-creation/ui/steps/WelcomeStep",
-    "tests/features/projects-dashboard/services/settingsSerializer",
-    "tests/features/updates/commands/updateExecutor"
+    "tests/features/projects-dashboard/services/settingsSerializer"
   ],
   "adjudicated": {
     "tests/types/typeGuards": "Eight suites, and not one has a beforeEach or a jest.mock \u2014 these are pure predicates and accessors split by concern (project, mesh, App Builder, EDS, utility). There is no setup to share; the two that need a Project already use the canonical projectFake helper, which is the shared thing.",
