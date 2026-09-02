@@ -44,6 +44,11 @@ sample completed normally and left nothing behind. So residue is not the normal
 state, and finding some means a previous run did not finish. That is the useful
 reading: gigabytes in a temp dir are a record of interruptions, not of usage.
 
+`cleanTempDir` is `'always'` in both configs since 2026-09-02 — the docs define `true`
+as "delete after a SUCCESSFUL run", so a failed run used to leave its sandbox behind.
+`'always'` covers failure; it cannot cover a hard kill, so the next paragraph still
+holds.
+
 A KILLED RUN ORPHANS ITS WHOLE SANDBOX. Interrupting the sample (Ctrl-C, a session
 ending, a timeout) left **1.0GB** behind in one go — so this is not slow accumulation
 over months, it is one gigabyte per interrupted run. Delete the temp dir before
@@ -221,3 +226,16 @@ it did not until the same day, so the trap was live for this pilot too.
 - `test-strategy-scan` — the census-based read of the suite; this is the empirical one
 - `gate` — do the tests pass (run first; a red suite makes the score meaningless)
 - ADR-016 — the three-tier test strategy, which names mutation testing as the measure
+
+## Getting more out of it — the 2026-09-02 research
+
+`.rptc/research/stryker-for-this-repo/research.md` is the sourced pass over what
+StrykerJS offers that we do not use, checked against our own numbers. The headline:
+**mutants can be IGNORED, not just excluded** — a `// Stryker disable <mutator>: reason`
+comment keeps the mutant visible in the report while removing it from the score, which
+is the honest answer for declaration tables whose values are constrained by a
+source-scanning enforcer instead of a unit test.
+
+It also records, with the doc quote that proves it, why those enforcers CANNOT simply
+be added to the mutation run: the sandbox never contains `.git`, both derive their file
+list from `git ls-files`, and a throwing test counts as a killed mutant.
