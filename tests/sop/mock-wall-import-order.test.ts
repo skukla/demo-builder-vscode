@@ -63,7 +63,19 @@ function misorderedSuites(walls: Set<string>): string[] {
             .filter((i) => i !== -1);
         if (wallLines.length === 0) continue;
         const lastWallAt = Math.max(...wallLines);
-        const subjectAt = lines.findIndex((l) => /^import (?!type )[^\n]* from '@\//.test(l));
+        // A MULTI-LINE import puts its `from '@/...'` on a later line that does not
+        // start with `import`, so a line-anchored check misses it entirely. That
+        // gap hid `dashboardHandlers-lifecycle` from the first run of this check
+        // (2026-09-02) — the subject import spanned five lines. Walk the file
+        // statement by statement instead.
+        const subjectAt = lines.findIndex((l, i) => {
+            if (/^import type /.test(l)) return false;
+            if (/^import [^\n]* from '@\//.test(l)) return true;
+            // an opening `import {` whose matching `} from '@/...'` comes later
+            if (!/^import \{\s*$/.test(l)) return false;
+            const close = lines.slice(i).findIndex((n) => /^\} from '/.test(n));
+            return close !== -1 && /^\} from '@\//.test(lines[i + close]);
+        });
         if (subjectAt !== -1 && subjectAt < lastWallAt) offenders.push(suite);
     }
     return offenders.sort();
@@ -88,6 +100,7 @@ function misorderedSuites(walls: Set<string>): string[] {
  */
 const LEDGERED = [
     'tests/features/dashboard/handlers/aiHandlers.logAiVerification.test.ts',
+    'tests/features/dashboard/handlers/appManagementInstallHandlers.test.ts',
     'tests/features/dashboard/handlers/dashboardHandlers-actions.test.ts',
     'tests/features/dashboard/handlers/dashboardHandlers-deployMesh.test.ts',
     'tests/features/dashboard/handlers/dashboardHandlers-requestStatus.test.ts',
