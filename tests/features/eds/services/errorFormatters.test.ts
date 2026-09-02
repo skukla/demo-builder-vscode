@@ -16,26 +16,8 @@ import {
     formatHelixError,
 } from '@/features/eds/services/errorFormatters';
 
-/**
- * An `Error` carrying the extra fields the formatters actually read.
- *
- * Production names this shape itself, three times, so the tests can build it rather
- * than attaching properties through `(error as any).code = …` — which was 13 casts
- * here and told the compiler nothing about what the formatters go looking for.
- *
- * BOTH `status` AND `statusCode`, because production reads different names on
- * different paths: `errorFormatters.ts:278` and `:469` declare `status`, while
- * `:373` declares `statusCode`. That split is real and this type has to span it —
- * noted here rather than silently picking one, because a fixture setting `status`
- * for a formatter that reads `statusCode` would report "Status: N/A" and still
- * look right.
- */
-type CodedError = Error & { code?: string; status?: number; statusCode?: number };
 
-function codedError(message: string, extra: Partial<CodedError> = {}): CodedError {
-    return Object.assign(new Error(message), extra);
-}
-
+import { codedError } from '../../../helpers/codedErrorFake';
 describe('EDS Error Formatters', () => {
     // ==========================================================
     // GitHub Error Formatting (7 tests)

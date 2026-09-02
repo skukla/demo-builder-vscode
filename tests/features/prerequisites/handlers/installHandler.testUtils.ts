@@ -31,6 +31,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockDebugLogger } from '../../../helpers/debugLoggerFake';
 // Mock prerequisite definitions
 export const mockNodePrereq: PrerequisiteDefinition = {
     id: 'node',
@@ -220,7 +221,7 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
         } as any,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         logger: createMockLogger(),
-        debugLogger: createMockLogger() as any,
+        debugLogger: createMockDebugLogger(),
         stepLogger: {
             log: jest.fn(),
         } as any,
