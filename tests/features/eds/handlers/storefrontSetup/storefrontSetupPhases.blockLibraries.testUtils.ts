@@ -58,12 +58,37 @@ jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     })),
 }));
 
-// Below the factories on purpose — they hoist above these, so each handle a spec
-// drives is already the mocked one. `import/first` is not a registered rule here.
-export { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
-export {
+// Below the factories on purpose — they hoist above these, so each handle is
+// already the mocked one. `import/first` is not a registered rule here.
+import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
+import {
     getBlockLibrarySource,
     getBlockLibraryName,
     isBlockLibraryAvailableForPackage,
 } from '@/features/components/services/blockLibraryLoader';
-export { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
+import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
+
+/**
+ * Exported ALREADY TYPED as mocks.
+ *
+ * Both suites otherwise repeat the same block of
+ * `x as jest.MockedFunction<typeof x>` casts to reach `mockResolvedValue`. Doing
+ * it once here removes that block and the six casts in it.
+ */
+export const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<
+    typeof installBlockCollections
+>;
+export const mockGetBlockLibrarySource = getBlockLibrarySource as jest.MockedFunction<
+    typeof getBlockLibrarySource
+>;
+export const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<
+    typeof getBlockLibraryName
+>;
+export const mockIsBlockLibraryAvailableForPackage =
+    isBlockLibraryAvailableForPackage as jest.MockedFunction<
+        typeof isBlockLibraryAvailableForPackage
+    >;
+export const mockExecuteEdsPipeline = executeEdsPipeline as jest.MockedFunction<
+    typeof executeEdsPipeline
+>;
+

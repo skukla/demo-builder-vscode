@@ -208,9 +208,14 @@ function main() {
         }
 
         const left = outstanding(pairs, ledger);
+        // LINES as well as pairs. A pair that shrinks stays on the list — two files
+        // either duplicate or they do not — so the pair count alone reports no
+        // movement for an item that removed 40 lines. Both numbers, or the loop
+        // looks stalled while it is working (2026-09-02).
+        const lines = left.reduce((sum, p) => sum + p.lines, 0);
         console.log(
             `${pairs.length} duplicate pair(s); ${pairs.length - left.length} adjudicated; ` +
-                `${left.length} outstanding`
+                `${left.length} outstanding (${lines} duplicated lines)`
         );
         if (problems.length) {
             console.error(`\nclone ledger check FAILED:\n\n${problems.join('\n\n')}`);

@@ -11,9 +11,9 @@
 // it loads the subject and binds its collaborators. These mocks must be registered
 // before that happens (measured 2026-09-02 — five tests fail the other way round).
 import {
-    getBlockLibraryName,
-    getBlockLibrarySource,
-    installBlockCollections,
+    mockGetBlockLibraryName,
+    mockGetBlockLibrarySource,
+    mockInstallBlockCollections,
 } from './storefrontSetupPhases.blockLibraries.testUtils';
 
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
@@ -36,14 +36,6 @@ jest.mock('@/features/eds/services/inspectorHelpers', () => ({
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
 
-// NOT mocked, and it does not need to be: the collaborator is constructed on this
-// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
-// stripping it and re-running this suite.
-
-// NOT mocked, and it does not need to be: the collaborator is constructed on this
-// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
-// stripping it and re-running this suite.
-
 // Mock fetch for code sync verification
 global.fetch = jest.fn().mockResolvedValue({ ok: true });
 
@@ -58,17 +50,6 @@ import {
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
-
-// Cast imported mocks for type-safe access
-const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<
-    typeof installBlockCollections
->;
-const mockGetBlockLibrarySource = getBlockLibrarySource as jest.MockedFunction<
-    typeof getBlockLibrarySource
->;
-const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<
-    typeof getBlockLibraryName
->;
 
 // =============================================================================
 // Helpers

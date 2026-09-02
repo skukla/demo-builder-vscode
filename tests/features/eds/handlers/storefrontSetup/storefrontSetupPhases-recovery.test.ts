@@ -40,10 +40,6 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
     executeEdsPipeline: jest.fn(),
 }));
 
-
-
-
-
 jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     GitHubRepoOperations: jest.fn().mockImplementation(() => ({
         createFromTemplate: jest.fn(),
@@ -51,16 +47,9 @@ jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     })),
 }));
 
-
-
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
-
-// NOT mocked, and it does not need to be: the collaborator is constructed on this
-// path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
-// stripping it and re-running this suite.
-
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -123,7 +112,6 @@ function createEdsConfig() {
 // =============================================================================
 // Tests
 // =============================================================================
-
 
 /**
  * ADR-015 (2026-08-28): this boundary resolves the shell executor from the
