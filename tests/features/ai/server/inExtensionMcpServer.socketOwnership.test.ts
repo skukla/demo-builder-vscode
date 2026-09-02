@@ -74,6 +74,9 @@ const GATE_WAIT_MS = 300;
  */
 const REACHABLE_BUDGET_MS = 5_000;
 
+/** Ceiling on one `start()` — well under jest's 10s, so the step is named. */
+const STEP_BUDGET_MS = 3_000;
+
 /** Let the socket close / cleanup callbacks settle before asserting. */
 const SETTLE_MS = 50;
 
@@ -119,6 +122,30 @@ async function waitForReachable(socket: string): Promise<string[]> {
     throw new Error(`socket never became reachable: ${String(lastError)}`);
 }
 
+/**
+ * Await `step`, or fail naming it.
+ *
+ * Bounding `waitForReachable` was not enough: this test still spent its whole
+ * 10s jest allowance and reported a bare "Exceeded timeout" naming nothing, on
+ * a full-suite run, twice. The remaining unbounded awaits are the two
+ * `server.start()` calls and the RPC helpers' `net.connect`, which has no
+ * timeout of its own. Whatever hangs, the failure should say which step it was.
+ *
+ * @param label - what is being awaited, quoted back in the failure
+ * @param step - the promise to bound
+ */
+async function within<T>(label: string, step: Promise<T>): Promise<T> {
+    return Promise.race([
+        step,
+        new Promise<never>((_, reject) =>
+            setTimeout(
+                () => reject(new Error(`${label} did not settle within ${STEP_BUDGET_MS}ms`)),
+                STEP_BUDGET_MS
+            )
+        ),
+    ]);
+}
+
 describe('InExtensionMcpServer socket ownership', () => {
     let socketPath: string;
     let projectsDir: string;
@@ -144,7 +171,7 @@ describe('InExtensionMcpServer socket ownership', () => {
     it('leaves the successor reachable when disposal interleaves with the successor bind', async () => {
         const outgoing = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         servers.push(outgoing);
-        await outgoing.start();
+        await within('outgoing.start()', outgoing.start());
 
         // Arm the gate on the SHARED path only. A bind stats its PRIVATE name
         // (`<socket>.<pid>`), so the two are told apart by the path alone.
@@ -173,7 +200,7 @@ describe('InExtensionMcpServer socket ownership', () => {
         // The reload: a second host renames its own socket over the shared name.
         const successor = new InExtensionMcpServer(socketPath, projectsDir, makeLogger());
         servers.push(successor);
-        await successor.start();
+        await within('successor.start()', successor.start());
 
         // Release the outgoing instance to act on the identity it read earlier.
         release();
