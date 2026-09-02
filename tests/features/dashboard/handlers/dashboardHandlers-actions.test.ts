@@ -19,6 +19,7 @@ import { ErrorCode } from '@/types/errorCodes';
 import { setupMocks, createDashboardProject } from './dashboardHandlers.testUtils';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
+import { mockWindow } from '../../../helpers/vscodeMockViews';
 // Mock vscode
 jest.mock(
     'vscode',
@@ -242,7 +243,7 @@ describe('Dashboard Action Handlers', () => {
     });
 
     describe('handleOpenAdminPanel', () => {
-        const mockShowInformationMessage = (vscode.window as any)
+        const mockShowInformationMessage = mockWindow
             .showInformationMessage as jest.Mock;
         const { validateURL } = require('@/core/validation/URLValidator');
 

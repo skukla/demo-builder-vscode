@@ -18,6 +18,7 @@ import {
 } from './envFileWatcherService.testUtils';
 
 import { createMockExtensionContext } from '../../helpers/extensionContextFake';
+import { mockWorkspace } from '../../helpers/vscodeMockViews';
 describe('EnvFileWatcherService - Security and Resource Management (Mocked)', () => {
     let mockContext: vscode.ExtensionContext;
     let mockWatcherManager: WorkspaceWatcherManager;
@@ -67,7 +68,7 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
         it('should reject all paths when no workspace folders exist', async () => {
             // Given: No workspace folders
             const originalFolders = vscode.workspace.workspaceFolders;
-            (vscode.workspace as any).workspaceFolders = [];
+            mockWorkspace.workspaceFolders = [];
 
             const _service = new EnvFileWatcherService(
                 mockContext,
@@ -88,7 +89,7 @@ describe('EnvFileWatcherService - Security and Resource Management (Mocked)', ()
             );
 
             // Restore
-            (vscode.workspace as any).workspaceFolders = originalFolders;
+            mockWorkspace.workspaceFolders = originalFolders;
         });
 
         it('should validate paths for initializeFileHashes command', async () => {

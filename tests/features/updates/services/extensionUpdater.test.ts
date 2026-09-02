@@ -9,6 +9,7 @@ import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { mockCommands, mockWindow } from '../../../helpers/vscodeMockViews';
 // Mock modules
 jest.mock('fs/promises');
 jest.mock('vscode', () => ({
@@ -57,9 +58,9 @@ describe('ExtensionUpdater', () => {
         mockWithProgress = jest.fn().mockImplementation(
             async (config, callback) => callback(mockProgress),
         );
-        (vscode.window as any).withProgress = mockWithProgress;
-        (vscode.window as any).showInformationMessage = jest.fn();
-        (vscode.commands as any).executeCommand = jest.fn();
+        mockWindow.withProgress = mockWithProgress;
+        mockWindow.showInformationMessage = jest.fn();
+        mockCommands.executeCommand = jest.fn();
         (vscode.Uri as any).file = jest.fn((path) => ({ path }));
     });
 

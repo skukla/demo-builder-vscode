@@ -67,7 +67,7 @@ describe("runner keyed writes sync the CALLER's project reference", () => {
     it('add: the passed project carries the new keyed entry (stale-save clobber pin)', async () => {
         const project = createProject();
 
-        await addAppBuilderComponent(project, INTEGRATION_ENTRY, createDeps() as never);
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, createDeps());
 
         expect(project.appBuilderComponents?.[INTEGRATION_ENTRY.id]).toMatchObject({
             kind: 'integration',
@@ -92,7 +92,7 @@ describe("runner keyed writes sync the CALLER's project reference", () => {
             },
         } as never);
 
-        await removeAppBuilderComponent(project, INTEGRATION_ENTRY.id, createDeps() as never);
+        await removeAppBuilderComponent(project, INTEGRATION_ENTRY.id, createDeps());
 
         expect(project.appBuilderComponents?.[INTEGRATION_ENTRY.id]).toBeUndefined();
     });
@@ -111,7 +111,7 @@ describe('keyed entry persists the display name', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
         expect(persisted.appBuilderComponents?.[INTEGRATION_ENTRY.id]?.name).toBe('ERP Bridge');
@@ -121,7 +121,7 @@ describe('keyed entry persists the display name', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
         expect(persisted.appBuilderComponents?.[MESH_ENTRY.id]?.name).toBe('Commerce Mesh');
@@ -133,7 +133,7 @@ describe('keyed entry persists the display name', () => {
             deployApp: jest.fn().mockResolvedValue({ success: false, error: 'deploy boom' }),
         });
 
-        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
         const entry = persisted.appBuilderComponents?.[INTEGRATION_ENTRY.id];
@@ -168,7 +168,7 @@ describe('keyed entry persists the display name', () => {
         const project = instanceProject('Order Sync');
         const deps = createDeps();
 
-        const result = await deployAppBuilderComponent(project, 'order-sync', deps as never);
+        const result = await deployAppBuilderComponent(project, 'order-sync', deps);
 
         expect(result.success).toBe(true);
         const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
@@ -179,7 +179,7 @@ describe('keyed entry persists the display name', () => {
         const project = instanceProject();
         const deps = createDeps();
 
-        await deployAppBuilderComponent(project, 'order-sync', deps as never);
+        await deployAppBuilderComponent(project, 'order-sync', deps);
 
         const persisted = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
         expect(persisted.appBuilderComponents?.['order-sync']?.name).toBe('order-sync');
@@ -206,7 +206,7 @@ describe('the add attaches the installed component instance', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         const instance = project.componentInstances?.[MESH_ENTRY.id];
         expect(instance).toBeDefined();
@@ -220,7 +220,7 @@ describe('the add attaches the installed component instance', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         expect(project.componentInstances?.[INTEGRATION_ENTRY.id]).toBeDefined();
     });
@@ -229,7 +229,7 @@ describe('the add attaches the installed component instance', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         const saved = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
         expect(saved.componentInstances?.[MESH_ENTRY.id]?.subType).toBe('mesh');
