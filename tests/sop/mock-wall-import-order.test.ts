@@ -72,7 +72,13 @@ function misorderedSuites(walls: Set<string>): string[] {
 /**
  * Suites carrying this hazard on 2026-09-02, when the check was written.
  *
- * All ten pass today: the wall sits below the subject import, and whatever their
+ * Started at ten. `debugLogger-slowCommand` came off the same day and is the
+ * proof the hazard is not theoretical: deleting its redundant copy of the wall
+ * — the shared `.testUtils` already had one — failed four tests on
+ * `logsChannel.info is not a function`, because the subject had already bound
+ * to the real output channels. Moving the import above it fixed them.
+ *
+ * The rest pass today: the wall sits below the subject import, and whatever their
  * subject binds early happens not to be something the assertions depend on. That
  * is luck holding, not a design, and the same shape failed 61 of 63 tests in
  * `skillsWriter.test.ts` when it was probed directly.
@@ -81,7 +87,6 @@ function misorderedSuites(walls: Set<string>): string[] {
  * `@/` import and deleting the line here; nothing may be added.
  */
 const LEDGERED = [
-    'tests/core/logging/debugLogger-slowCommand.test.ts',
     'tests/features/dashboard/handlers/aiHandlers.logAiVerification.test.ts',
     'tests/features/dashboard/handlers/dashboardHandlers-actions.test.ts',
     'tests/features/dashboard/handlers/dashboardHandlers-deployMesh.test.ts',

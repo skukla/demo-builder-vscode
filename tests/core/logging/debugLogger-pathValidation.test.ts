@@ -11,35 +11,6 @@ import {
     resetMocks,
 } from './debugLogger.testUtils';
 
-// Mock vscode - must be in test file for proper hoisting
-jest.mock('vscode', () => {
-    const originalModule = jest.requireActual('../../__mocks__/vscode');
-    return {
-        ...originalModule,
-        window: {
-            ...originalModule.window,
-            createOutputChannel: jest.fn((name: string, options?: { log: boolean }) => {
-                const { mockLogsChannel, mockDebugChannel } = require('./debugLogger.testUtils');
-                // Both channels use LogOutputChannel with { log: true }
-                if (options?.log) {
-                    if (name === 'Demo Builder: User Logs') {
-                        return mockLogsChannel;
-                    }
-                    if (name === 'Demo Builder: Debug Logs') {
-                        return mockDebugChannel;
-                    }
-                }
-                return { append: jest.fn(), appendLine: jest.fn(), clear: jest.fn(), show: jest.fn(), hide: jest.fn(), dispose: jest.fn(), name };
-            }),
-        },
-        workspace: {
-            ...originalModule.workspace,
-            // Return 'trace' to enable all log levels in tests
-            getConfiguration: jest.fn().mockReturnValue({ get: jest.fn().mockReturnValue('trace') }),
-        },
-    };
-});
-
 import * as vscode from 'vscode';
 import { DebugLogger, _resetLoggerForTesting } from '@/core/logging/debugLogger';
 

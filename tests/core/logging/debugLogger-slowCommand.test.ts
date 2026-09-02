@@ -13,41 +13,13 @@
  * everything else keeps the 3s bar, where 3s really is a long time.
  */
 
-// Mock vscode — must live in the test file for correct hoisting (same shape the
-// sibling debugLogger suites use).
-jest.mock('vscode', () => {
-    const originalModule = jest.requireActual('../../__mocks__/vscode');
-    return {
-        ...originalModule,
-        window: {
-            ...originalModule.window,
-            createOutputChannel: jest.fn((name: string, options?: { log: boolean }) => {
-                const { mockLogsChannel, mockDebugChannel } = require('./debugLogger.testUtils');
-                if (options?.log) {
-                    if (name === 'Demo Builder: User Logs') return mockLogsChannel;
-                    if (name === 'Demo Builder: Debug Logs') return mockDebugChannel;
-                }
-                return {
-                    append: jest.fn(),
-                    appendLine: jest.fn(),
-                    clear: jest.fn(),
-                    show: jest.fn(),
-                    hide: jest.fn(),
-                    dispose: jest.fn(),
-                    name,
-                };
-            }),
-        },
-        workspace: {
-            ...originalModule.workspace,
-            getConfiguration: jest.fn().mockReturnValue({ get: jest.fn().mockReturnValue('trace') }),
-        },
-    };
-});
-
+// First: `debugLogger.testUtils` installs the vscode wall, and `jest.mock` hoists
+// above the imports of the module it appears in — not across modules. Below the
+// subject import, the logger binds to the real output channels and every
+// assertion here fails on `logsChannel.info is not a function`.
+import { createDebugLoggerContext, mockLogsChannel, resetMocks } from './debugLogger.testUtils';
 import { DebugLogger, _resetLoggerForTesting } from '@/core/logging/debugLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { createDebugLoggerContext, mockLogsChannel, resetMocks } from './debugLogger.testUtils';
 
 function logCommandTaking(command: string, durationMs: number): void {
     const logger = new DebugLogger(createDebugLoggerContext());
