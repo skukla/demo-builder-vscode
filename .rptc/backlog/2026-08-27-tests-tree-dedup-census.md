@@ -80,6 +80,12 @@ re-measured by the sweep's own command).
 20 real targets are extracted, the 42 legitimate splits carry written reasons,
 and the ratchet rests at that adjudicated floor.
 
+**Status 2026-09-02 (end of day): the first four are met.** Lane C's 20 real
+targets are extracted, every split family is adjudicated, and the debt list is
+empty. Clones over `tests/` fell 160 to 67 and duplicated lines 7,863 to 3,368.
+What remains is lane B, which belongs to [[PL-13]]'s ADR-015 conversions, and
+choosing the floor the clone count should rest at — a decision, not work.
+
 ## Where it actually stands — measured 2026-09-02
 
 Every number above is the 2026-08-28 baseline and none of it was re-measured
@@ -105,9 +111,9 @@ nobody has worked.
 1. ~~`helixService`~~ — **done** (`9e3e2c301`). Four of its seven suites shared a
    50-line preamble; 92 tests before and after, 266 lines removed. That closes
    lane C's real targets at 20 of 20.
-2. **23 families with measured duplicated setup.** What used to be "21 small
-   targets" plus rows the ranking never scored. Still opportunistic: do them when
-   a batch is already in that area, not as a sweep.
+2. ~~23 families with measured duplicated setup.~~ **Done.** All 23 worked
+   through: 11 given a shared setup, 12 read and adjudicated. The ledger's debt
+   list is now EMPTY — 43 families carry a written reason and none carries none.
 3. ~~The 42 legitimate size-splits need written reasons.~~ **Done** — the ledger
    now carries two lists, measured debt and adjudicated splits, and 31 families
    have a written reason. Two enforcers hold it: a reason must be at least eight
@@ -188,3 +194,4 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  Seven ledger rows were never families — the detector groups by a filename's first hyphen-token, so three unrelated 'no-*' enforcers read as one family and securityValidation-* as another (c5e4a10b4). Detector now requires a real subject; ledger 61 -> 54.
 - 2026-09-02  Ledger split into measured debt vs adjudicated splits, each with a written reason grounded in the removable-lines ranking AND the per-suite mock sets. 26 adjudicated; debt 54 -> 28. dashboardHandlers looked legitimate by line count but its 4 suites share 5 mocked modules — kept as debt.
 - 2026-09-02  Adjudication complete: 31 families carry written reasons, 23 remain as measured debt (ae71936df). processCleanup adjudicated despite the largest measured saving — its duplication is an explanatory comment and its suites split real-vs-mocked.
+- 2026-09-02  All 23 remaining families worked: 11 extracted to a shared setup, 12 adjudicated. Debt list EMPTY, 43 families carry a written reason (0b4ab06e0). Clones 160 -> 67, duplicated lines 7,863 -> 3,368. Left: lane B (PL-13's conversions) and choosing the clone floor.
