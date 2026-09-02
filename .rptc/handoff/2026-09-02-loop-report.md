@@ -35,7 +35,7 @@ Five files got worked:
 | DA.live sign-in and token handling | 67% | 83% |
 | Persists every project's state | 56% | 67% |
 | Updates and rolls back components in a project | ~40%* | 46% |
-| Adobe sign-in, and everything that needs it | 39% | 43% |
+| Adobe sign-in, and everything that needs it | 39% | 44% |
 
 \* That one "before" is approximate: it was taken with the hand arithmetic described
 under corrections, and the exact figure was not re-derived before the tests changed it.
@@ -56,8 +56,8 @@ gate on a delete that could be bypassed by supplying half of what it asks for, a
 credential that one path refuses as unsafe and another accepts, and two faults in the
 measuring instrument itself which was calling genuine improvements "padding".
 
-**Nothing in the shipping extension changed.** Twenty-seven commits, all tests, test
-helpers, measurement scripts and documentation. The full suite is green: 15,622 tests.
+**Nothing in the shipping extension changed.** Thirty-two commits, all tests, test
+helpers, measurement scripts and documentation. The full suite is green: 15,627 tests.
 
 **What is measured now, and where it stands.** Sixteen files are checked at every
 release and pinned so they cannot get worse. Four of them still sit below 70%, and they
@@ -65,7 +65,7 @@ are the four that matter most:
 
 | | |
 |---|---|
-| Adobe sign-in | 43% |
+| Adobe sign-in | 44% |
 | Component updates and rollback | 46% |
 | The update manager | 51% |
 | Project state | 67% |
@@ -192,7 +192,8 @@ seconds, and the dashboard asks on every load — so the answer is cached. That 
 matters in both directions: without it the extension feels broken, and with one that
 never expires a signed-out user stays "signed in" until they reload the window.
 
-The word "cache" did not appear anywhere in that file's tests.
+The word "cache" did not appear anywhere in that file's tests. Nor did anything call the
+method that reports how much time is LEFT on a token — the one the expiry warnings read.
 
 Six tests now hold it, including the two least obvious: a NEGATIVE answer is cached too
 (otherwise a signed-out person pays the slow check every single time, which is the cost
@@ -276,6 +277,11 @@ claiming to be finished while still open, no citations pointing at deleted files
 
 Every item reached a finished, committed state. Nothing is half-done.
 
+Where the work stops rather than ends: three of the four files still under 70% have plenty
+left, and the next steps are named in
+`.rptc/research/what-the-mutation-sample-misses/research.md` in priority order. The loop
+went as far as it could without needing a decision from you.
+
 ## Filed rather than fixed
 
 All six are written up with their evidence in
@@ -356,8 +362,8 @@ Two are decisions, not corrections:
 
 ## Your decisions
 
-1. **Merge `loop/2026-09-01-top-files` into `develop`?** 36 commits (27 from tonight), no
-   production code, full suite green at 15,622 tests.
+1. **Merge `loop/2026-09-01-top-files` into `develop`?** 41 commits (32 from tonight), no
+   production code, full suite green at 15,627 tests.
 2. **The DA.live token with no stated expiry** (item 6) — refuse it everywhere, accept it
    everywhere, or keep the clipboard stricter on purpose and say so in a comment?
 3. **The two tools that call themselves destructive** (item 5) — which way?

@@ -340,3 +340,6 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  docs(handoff): mark the one approximate number as approximate (`c88fe72e5`)
 - 2026-09-02  docs(handoff): lead the report with what nobody had measured (`c622b347c`)
 - 2026-09-02  test(auth): the cached sign-in answer, in both places that read it (`90a1d268e`)
+- 2026-09-02  test(auth): how long is left on the token, and a config store that will not read (`ea908a5b7`)
+- 2026-09-02  docs(mutation): the update manager's HTTP branches, measured and left alone (`131e3824b`)
+- 2026-09-02  docs(handoff): the loop report, with where the sixteen measured files now stand (`06f05ae5a`)
