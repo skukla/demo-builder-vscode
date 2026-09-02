@@ -11,49 +11,26 @@
  */
 
 import {
-    MockProcessCleanup,
     ProcessCleanup,
     StartDemoCommand,
     mockCommandExecutor,
-    mockCommands,
     mockWindow,
-    mockWorkspace,
-    fakeTerminal,
-    startDemoExtensionContext,
-    startableStateManager,
+    setupStartDemo,
 } from './startDemo.testUtils';
 import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
-import { StateManager } from '@/core/state/stateManager';
-import type { Logger } from '@/types/logger';
 import * as vscode from 'vscode';
-import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('StartDemoCommand - Port Conflict', () => {
     let command: StartDemoCommand;
-    let mockContext: jest.Mocked<vscode.ExtensionContext>;
-    let mockStateManager: jest.Mocked<StateManager>;
-    let mockLogger: jest.Mocked<Logger>;
     let mockProcessCleanup: jest.Mocked<ProcessCleanup>;
     let mockTerminal: { name: string; dispose: jest.Mock; sendText: jest.Mock; show: jest.Mock };
 
     beforeEach(() => {
         jest.clearAllMocks();
         jest.useFakeTimers();
+        ({ command, mockProcessCleanup, mockTerminal } = setupStartDemo());
 
-                mockTerminal = fakeTerminal();
-        mockWindow.terminals = [];
-        mockWindow.createTerminal = jest.fn().mockReturnValue(mockTerminal);
-
-        // Setup mock ProcessCleanup instance
-        mockProcessCleanup = {
-            killProcessTree: jest.fn().mockResolvedValue(undefined),
-        } as any;
-        MockProcessCleanup.mockImplementation(() => mockProcessCleanup);
-
-        // Setup mock CommandExecutor - port initially NOT available (conflict)
         mockCommandExecutor.isPortAvailable.mockResolvedValue(false);
-
-        // Mock lsof to return PID
         mockCommandExecutor.execute.mockImplementation(async (cmd: string) => {
             if (cmd.includes('lsof -ti:')) {
                 return { code: 0, stdout: '12345', stderr: '' };
@@ -67,38 +44,6 @@ describe('StartDemoCommand - Port Conflict', () => {
             }
             return { code: 0, stdout: '', stderr: '' };
         });
-
-                mockContext = startDemoExtensionContext();
-
-                mockStateManager = startableStateManager() as jest.Mocked<StateManager>;
-
-        // Mock logger
-        mockLogger = createMockLogger();
-
-        // Mock vscode.window.withProgress to execute task immediately
-        mockWindow.withProgress = jest.fn().mockImplementation(
-            async (_options: any, task: any) => {
-                return await task({ report: jest.fn() });
-            }
-        );
-
-        // Mock vscode.window.setStatusBarMessage
-        mockWindow.setStatusBarMessage = jest.fn();
-
-        // Mock vscode.commands.executeCommand
-        mockCommands.executeCommand = jest.fn().mockResolvedValue(undefined);
-
-        // Mock vscode.workspace.getConfiguration
-        mockWorkspace.getConfiguration = jest.fn().mockReturnValue({
-            get: jest.fn().mockReturnValue(3000),
-        });
-
-        // Create command instance
-        command = new StartDemoCommand(
-            mockContext,
-            mockStateManager,
-            mockLogger
-        );
     });
 
     afterEach(() => {

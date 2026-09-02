@@ -10,8 +10,9 @@
 import {
     DeleteProjectCommand,
     vscode,
+    setupDeleteProject,
 } from './deleteProject.testUtils';
-import { StateManager } from '@/core/state/stateManager';
+import type { StateManager } from '@/types/state';
 import type { Logger } from '@/types/logger';
 
 // Mock fs/promises with explicit exports
@@ -19,15 +20,12 @@ jest.mock('fs/promises', () => ({
     rm: jest.fn().mockResolvedValue(undefined),
 }));
 import * as fs from 'fs/promises';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 const mockRm = fs.rm as jest.Mock;
 
 // Import vscode after mock
 
 describe('DeleteProjectCommand - Error Handling', () => {
     let command: DeleteProjectCommand;
-    let mockContext: ReturnType<typeof createMockExtensionContext>;
     let mockStateManager: jest.Mocked<StateManager>;
     let mockLogger: jest.Mocked<Logger>;
     const testProjectPath = '/tmp/test-project-error';
@@ -37,51 +35,9 @@ describe('DeleteProjectCommand - Error Handling', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        // Reset fs mocks
         mockRm.mockClear();
         mockRm.mockResolvedValue(undefined);
-
-        // Mock extension context
-        // The canonical fake. The literal it replaces named three of
-        // ExtensionContext's twenty-one members.
-        mockContext = createMockExtensionContext({ subscriptions: [] }, '/mock/extension/path');
-
-        // Mock state manager
-        mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({
-                name: 'test-project',
-                path: testProjectPath,
-                status: 'stopped',
-            }),
-            clearProject: jest.fn().mockResolvedValue(undefined),
-            removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
-        } as any;
-
-        // Mock logger
-        mockLogger = createMockLogger();
-
-        // Mock vscode.window.showInformationMessage for confirmation (returns 'Yes')
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Yes');
-
-        // Mock vscode.window.showErrorMessage
-        (vscode.window.showErrorMessage as jest.Mock).mockResolvedValue('OK');
-
-        // Mock vscode.window.withProgress to execute task immediately
-        (vscode.window.withProgress as jest.Mock).mockImplementation(
-            async (_options: any, task: any) => {
-                return await task({ report: jest.fn() });
-            }
-        );
-
-        // Mock vscode.commands.executeCommand
-        (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
-
-        command = new DeleteProjectCommand(
-            mockContext,
-            mockStateManager,
-            mockLogger
-        );
+        ({ command, mockStateManager, mockLogger } = setupDeleteProject(testProjectPath));
     });
 
     afterEach(() => {

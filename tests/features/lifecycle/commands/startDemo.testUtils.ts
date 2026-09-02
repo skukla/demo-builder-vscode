@@ -48,7 +48,8 @@ jest.mock('@/core/di/serviceLocator', () => ({
 // Mock logging
 
 // The SUT, re-exported so specs never import it directly — see the header.
-export { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
+import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
+export { StartDemoCommand };
 
 // The mocked collaborators the specs drive and assert against.
 export { ProcessCleanup, MockProcessCleanup, mockCommandExecutor };
@@ -67,6 +68,9 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import type * as vscode from 'vscode';
 import type { StateManager } from '@/types/state';
+import type { Logger } from '@/types/logger';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { mockCommands, mockWindow, mockWorkspace } from '../../../helpers/vscodeMockViews';
 
 /**
  * The project the start-demo suites drive: one frontend component, ready, on 3000.
@@ -125,4 +129,56 @@ export function fakeTerminal(name = 'test-project - Frontend'): {
     show: jest.Mock;
 } {
     return { name, dispose: jest.fn(), sendText: jest.fn(), show: jest.fn() };
+}
+
+
+export interface StartDemoHarness {
+    command: StartDemoCommand;
+    mockContext: jest.Mocked<vscode.ExtensionContext>;
+    mockStateManager: jest.Mocked<StateManager>;
+    mockLogger: jest.Mocked<Logger>;
+    mockProcessCleanup: jest.Mocked<ProcessCleanup>;
+    mockTerminal: ReturnType<typeof fakeTerminal>;
+}
+
+/**
+ * Everything the start-demo suites build before each test.
+ *
+ * The first pass at this family moved the project, context and terminal
+ * fixtures; the vscode stubs and the command construction stayed behind and
+ * kept three suites duplicating 39 lines. All of it is here now.
+ *
+ * The four vscode stubs are not optional: `withProgress` must run its task
+ * straight through or nothing executes, and a suite omitting any of the other
+ * three fails on a missing function rather than on its subject.
+ */
+export function setupStartDemo(project = startableProject()): StartDemoHarness {
+    const mockTerminal = fakeTerminal();
+    mockWindow.terminals = [];
+    mockWindow.createTerminal = jest.fn().mockReturnValue(mockTerminal);
+
+    const mockProcessCleanup = {
+        killProcessTree: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<ProcessCleanup>;
+    (ProcessCleanup as jest.MockedClass<typeof ProcessCleanup>).mockImplementation(
+        () => mockProcessCleanup
+    );
+
+    const mockContext = startDemoExtensionContext();
+    const mockStateManager = startableStateManager(project) as jest.Mocked<StateManager>;
+    const mockLogger = createMockLogger() as jest.Mocked<Logger>;
+
+    mockWindow.withProgress = jest
+        .fn()
+        .mockImplementation(async (_options: unknown, task: (p: unknown) => unknown) =>
+            task({ report: jest.fn() })
+        );
+    mockWindow.setStatusBarMessage = jest.fn();
+    mockCommands.executeCommand = jest.fn().mockResolvedValue(undefined);
+    mockWorkspace.getConfiguration = jest.fn().mockReturnValue({
+        get: jest.fn().mockReturnValue(3000),
+    });
+
+    const command = new StartDemoCommand(mockContext, mockStateManager, mockLogger);
+    return { command, mockContext, mockStateManager, mockLogger, mockProcessCleanup, mockTerminal };
 }
