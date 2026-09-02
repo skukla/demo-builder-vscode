@@ -217,3 +217,48 @@ refuses to reward.
 **Nothing to decide.** The guard is not wrong — it skips a pointless validation call and
 says what it means. It simply cannot be distinguished by a test, and that is worth
 recording so the next person working this module does not spend an hour on it.
+
+## stateManager.ts:144 — a timestamp that is read, defaulted, and then thrown away (3 mutants)
+
+```ts
+this.state = {
+    version: parsed.version || 1,
+    currentProject: validProject,
+    processes: new Map(Object.entries(parsed.processes || {})),
+    lastUpdated: new Date(parsed.lastUpdated || Date.now()),   // 144
+};
+```
+
+All three mutants on that line survive, and no test can kill them, because the value
+never reaches anything. Every read of `this.state.lastUpdated` in the file is at line
+163 — inside `saveState`, nine lines after line 154 has already overwritten it with
+`new Date()`. Nothing outside `stateManager.ts` reads the state file's `lastUpdated`
+either (checked across `src/`; the other matches are unrelated `lastUpdated` fields on
+component and manifest records).
+
+So the parse, the `|| Date.now()` default, and the `Date` construction are all discarded.
+
+**A small decision, and genuinely optional.** Either drop `lastUpdated` from the load —
+it is written to the file and read back by nothing — or keep it, on the grounds that a
+state shape should round-trip even where nothing currently depends on it. The first is
+one line; the second wants a comment saying the value is deliberately unused, or the
+next person will file this again.
+
+## stateManager.ts:102 — a guard whose failure lands in the same place (2 mutants)
+
+```ts
+const parsed = parseJSON<{...}>(data);
+if (!parsed) {
+    this.logger.warn('Failed to parse state file, using defaults');
+    return;
+}
+```
+
+Removing the guard does not change the outcome. `parsed` is undefined, the next line
+reads a property off it, that throws, and the surrounding `try/catch` swallows it into
+exactly the same defaults the guard returns to. The only observable difference is which
+of two log lines is written, and asserting log text is what the ratchet exists to refuse
+to reward.
+
+**Nothing to decide.** The guard earns its place by being explicit rather than by
+changing behaviour — the reader should not have to know the catch is there.

@@ -329,3 +329,5 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  test: name what the casts were hiding — and the compiler corrected three of MY shapes (`77a2c7a58`)
 - 2026-09-02  test(eds): the DA.live guard reports the real reason, or a generic one when there is none (`0ce691a8d`)
 - 2026-09-02  test(eds): what a DA.live sign-in stores, and for how long (`4db3eea23`)
+- 2026-09-02  feat(mutation): measure the file every project's state passes through (`6e6770348`)
+- 2026-09-02  docs(handoff): bring the loop report up to date (`70198b301`)

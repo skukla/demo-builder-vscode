@@ -37,6 +37,8 @@ module.exports = {
         '**/tests/core/state/stateManager-errorHandling.test.ts',
         '**/tests/core/state/stateManager-getCurrentProject-diskPointer.test.ts',
         '**/tests/core/state/stateManager-getCurrentProject-reload.test.ts',
+        '**/tests/core/state/stateManager-loadDefaults.test.ts',
+        '**/tests/core/state/stateManager-loadProjectFromPath.test.ts',
         '**/tests/core/state/stateManager-processes.test.ts',
         '**/tests/core/state/stateManager-projects.test.ts',
         '**/tests/core/state/stateManager-recentProjects.test.ts',

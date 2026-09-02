@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "stateManager added to the pinned set at its measured 56.49% — the lowest of anything measured, and the file every project's state passes through",
+    "_note": "stateManager: the state-file defaults and the read-only load contract (65.58%)",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -154,20 +154,20 @@
             "highValueSurvivors": 0
         },
         "src/core/state/stateManager.ts": {
-            "score": 56.49,
-            "killed": 87,
-            "survived": 56,
+            "score": 65.58,
+            "killed": 101,
+            "survived": 42,
             "noCoverage": 11,
             "timeout": 0,
             "survivorCategories": {
                 "string": 9,
-                "block": 10,
-                "branch": 21,
+                "block": 8,
+                "branch": 11,
                 "logPresentation": 4,
-                "optionalChain": 6,
-                "other": 6
+                "other": 5,
+                "optionalChain": 5
             },
-            "highValueSurvivors": 31
+            "highValueSurvivors": 19
         }
     }
 }
