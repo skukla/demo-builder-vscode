@@ -266,7 +266,9 @@ function writeFrontmatter(item, changes) {
     if (!parts) throw new Error(`${item.rel}: no frontmatter to change`);
     let fm = parts[0];
     for (const [k, v] of Object.entries(changes)) {
-        const line = `${k}: ${v}`;
+        // Lists round-trip as `[a, b]`, which is what the reader expects and what every
+        // hand-written item already uses.
+        const line = `${k}: ${Array.isArray(v) ? `[${v.join(', ')}]` : v}`;
         fm = new RegExp(`^${k}:.*$`, 'm').test(fm)
             ? fm.replace(new RegExp(`^${k}:.*$`, 'm'), line)
             : `${fm.replace(/\n+$/, '')}\n${line}`;
@@ -429,7 +431,15 @@ function main() {
             for (const kv of pos.slice(1)) {
                 const m = kv.match(/^([a-z-]+)=(.*)$/);
                 if (!m) die(`bad assignment "${kv}" — expected key=value`);
-                changes[m[1]] = m[2];
+                // A LIST field has to become an ARRAY here, the same way reading a file
+                // parses it. It used to be stored as the raw string, and then `validate`
+                // iterated that string CHARACTER BY CHARACTER: `needs=PL-11` reported
+                // `needs "1" does not exist`, because it was checking the letter. The
+                // refusal was correct and its reason was nonsense, which is worse than
+                // failing outright — it reads as a syntax you have to guess at.
+                changes[m[1]] = LIST_FIELDS.includes(m[1])
+                    ? m[2].replace(/[[\]]/g, '').split(/[\s,]+/).filter(Boolean)
+                    : m[2];
             }
             if (!Object.keys(changes).length) die('nothing to set');
             // Validate the RESULT BEFORE writing it. The first version wrote first

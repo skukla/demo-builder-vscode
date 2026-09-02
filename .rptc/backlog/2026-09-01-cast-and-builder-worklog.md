@@ -347,3 +347,8 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  refactor(prerequisites): remove a branch that cannot run and a condition that cannot be false (`66ad43d8d`)
 - 2026-09-02  Merge loop/2026-09-01-top-files: mutation-driven test effectiveness (`e49ffe305`)
 - 2026-09-02  docs(handoff): close the loop report (`9b9743394`)
+- 2026-09-02  feat(mutation): decide the scope of the effort by rule, and propose the thresholds (`0d1541d1b`)
+- 2026-09-02  feat(mcp): gate republish and sync_content, without stopping unattended agents (`4ce57d04f`)
+- 2026-09-02  fix(eds): refuse a DA.live token that states no expiry, on every path (`0e1c0ce84`)
+- 2026-09-02  docs(eds): say why republish overwrites config.json outright (`2c2a3c102`)
+- 2026-09-02  docs(mcp): reinvestigate whether republish and sync_content are destructive (`86f9f40a9`)

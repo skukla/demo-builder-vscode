@@ -3,7 +3,7 @@ id: PL-22
 kind: question
 area: platform
 parent: PL-11
-needs: []
+needs: [PL-9]
 value: med
 status: open
 layer: A

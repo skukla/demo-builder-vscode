@@ -3,7 +3,7 @@ id: PL-29
 kind: epic
 area: platform
 parent: PL-30
-needs: []
+needs: [PL-11]
 value: high
 status: active
 ---

@@ -195,3 +195,4 @@ the state table above is the record until there is real work to hold.
 - 2026-09-01  test(helpers): the logger fake ledger reaches zero and becomes a ban (`f2f9e3816`)
 - 2026-09-01  test(sop): seven rules that reached zero are banned, not ledgered (`4413bb469`)
 - 2026-09-01  chore(health): snapshot 7 — after the PL-33 merge (`bbe320dda`)
+- 2026-09-02  docs(backlog): make the programme one closed roster that can actually finish (`6c45d15c5`)
