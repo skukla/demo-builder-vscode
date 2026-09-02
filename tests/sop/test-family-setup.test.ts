@@ -92,6 +92,17 @@ describe('split test families share their setup', () => {
         expect(Number(shared)).toBeGreaterThan(0);
     });
 
+    it('the ledger lists each family once — a duplicate row inflates the count', () => {
+        // Found 2026-09-02: `helixService` was listed TWICE. The assertion below
+        // reads the ledger into a Set, so a duplicate changes nothing it can see —
+        // it passes cleanly while the row count, which is the number quoted as
+        // remaining work, is overstated. Nothing else checks the file's shape.
+        const counts = new Map<string, number>();
+        for (const f of LEDGER.families) counts.set(f, (counts.get(f) ?? 0) + 1);
+        const duplicated = [...counts].filter(([, n]) => n > 1).map(([f]) => f);
+        expect(duplicated).toEqual([]);
+    });
+
     it('no NEW family arrives without a shared setup, and fixed families leave the ledger', () => {
         const ledger = new Set(LEDGER.families);
         const unlisted = current.filter((f) => !ledger.has(f));

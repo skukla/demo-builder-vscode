@@ -9,95 +9,38 @@
  * - HTTP 200 synchronous success
  */
 
-import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
-import { createMockLogger } from '../../../../helpers/loggerFake';
-
-// Mock vscode module
-
-// Mock logging
-const mockLogger = createMockLogger();
-// `Logger` was ALSO listed here as a mocked export. `@/core/logging` never
-// exported a `Logger` — only DebugLogger/ErrorLogger/StepLogger and the two
-// accessors — so that line faked a symbol that does not exist. Dropped 2026-08-31
-// (PL-31) when the barrel went and every key had to name its declaring module.
-jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: jest.fn(() => mockLogger),
-}));
-
-// Mock timeout config
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        QUICK: 5000,
-        NORMAL: 30000,
-        LONG: 180000,
-        VERY_LONG: 300000,
-    },
-    CACHE_TTL: {
-        SHORT: 60000,
-        MEDIUM: 300000,
-        LONG: 3600000,
-    },
-}));
-
-// Mock DA.live content operations
-const mockListDirectory = jest.fn();
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        listDirectory: mockListDirectory,
-    })),
-}));
-
-type HelixServiceType = import('@/features/eds/services/helix/helixService').HelixService;
-
-interface MockGitHubTokenService {
-    getToken: jest.Mock;
-    validateToken: jest.Mock;
-}
-
-interface MockDaLiveTokenProvider {
-    getAccessToken: jest.Mock<Promise<string | null>>;
-}
+import {
+    createHelixService,
+    installFetchMock,
+    makeDaLiveTokenProvider,
+    makeGitHubTokenService,
+    mockListDirectory,
+    mockLogger,
+    restoreFetch,
+    type HelixServiceType,
+    type MockDaLiveTokenProvider,
+    type MockGitHubTokenService,
+} from './helixService.testUtils';
 
 describe('HelixService - Preview/Publish', () => {
     let service: HelixServiceType;
     let mockGitHubTokenService: MockGitHubTokenService;
     let mockDaLiveTokenProvider: MockDaLiveTokenProvider;
     let mockFetch: jest.Mock;
-    const originalFetch = global.fetch;
 
     beforeEach(async () => {
         jest.clearAllMocks();
         mockListDirectory.mockReset();
-
-        mockGitHubTokenService = {
-            getToken: jest
-                .fn()
-                .mockResolvedValue({
-                    token: 'valid-github-token',
-                    tokenType: 'bearer',
-                    scopes: ['repo'],
-                }),
-            validateToken: jest.fn().mockResolvedValue({ valid: true }),
-        };
-
-        mockDaLiveTokenProvider = {
-            getAccessToken: jest.fn().mockResolvedValue('valid-dalive-ims-token'),
-        };
-
-        mockFetch = jest.fn();
-        global.fetch = mockFetch;
-
-        const module = await import('@/features/eds/services/helix/helixService');
-        service = new module.HelixService(
-            undefined,
-            mockGitHubTokenService as unknown as GitHubTokenService,
-            mockDaLiveTokenProvider
-        );
+        mockGitHubTokenService = makeGitHubTokenService();
+        mockDaLiveTokenProvider = makeDaLiveTokenProvider();
+        mockFetch = installFetchMock();
+        service = await createHelixService({
+            githubTokenService: mockGitHubTokenService,
+            daLiveTokenProvider: mockDaLiveTokenProvider,
+        });
     });
 
-    afterEach(() => {
-        global.fetch = originalFetch;
-    });
+    afterEach(restoreFetch);
 
     describe('Single Page Preview/Publish', () => {
         it('should preview a page via POST /preview/{org}/{site}/main/{path}', async () => {
