@@ -22,6 +22,30 @@ own socket over yours and kill the running MCP session.
 `DEMO_BUILDER_MCP_SOCKET_DIR`. **Do not remove that.** Nothing else keeps a test run
 off the live socket, and from the test's side the failure is completely silent.
 
+## A full-suite failure might be your machine, not your change
+
+Two suites hold REAL resources: `processCleanup` spawns child processes and polls
+for their exit, and `inExtensionMcpServer` binds real sockets. Both have generous
+timeouts, and both still fail intermittently when the machine is busy — a live
+Extension Development Host, a build, another test run.
+
+Measured 2026-09-02: two consecutive full-gate runs each failed one of those two
+suites, in files the branch had not touched, at load average 5.8 with a Dev Host
+open. Each passed three times in isolation immediately after, and the gate went
+green once the run had the machine to itself.
+
+**So before believing a full-suite failure, check what else is running.**
+
+```bash
+uptime                                            # load average
+ps aux | grep -iE "jest|esbuild|extension-host" | grep -v grep
+```
+
+Then re-run the failing suite alone. A failure that reproduces in isolation is
+yours; one that only appears under load is the scheduler. Do not "fix" the second
+kind by raising a timeout — the timeouts are already generous, and raising them
+hides the first kind.
+
 ## Two projects, and which one runs your file
 
 | Project | Environment | Matches |
