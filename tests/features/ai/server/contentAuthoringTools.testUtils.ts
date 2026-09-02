@@ -97,3 +97,112 @@ export function fakeServer(): {
         },
     };
 }
+
+import { COMPONENT_IDS } from '@/core/constants';
+import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+
+/**
+ * The project these tools run against.
+ *
+ * `selectedStack` MUST start with "eds-": the module uses the shared
+ * getEdsRepoParts/getEdsDaLiveTarget getters, whose INTERNAL isEdsProject call
+ * resolves to the real implementation even though the SUT's own call is mocked.
+ * Mocking the getters instead would stop testing the coordinate extraction.
+ */
+export const EDS_PROJECT = {
+    name: 'bodea',
+    path: '/p/bodea',
+    selectedStack: 'eds-commerce',
+    componentInstances: {
+        [COMPONENT_IDS.EDS_STOREFRONT]: {
+            metadata: { githubRepo: 'skukla/bodea', daLiveOrg: 'skukla', daLiveSite: 'bodea' },
+        },
+    },
+};
+
+/** A handler context carrying the project above. */
+export const ctxFactory = () =>
+    createMockHandlerContext({
+        stateManager: createMockStateManager({ getCurrentProject }),
+        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
+        logger: createMockLogger(),
+    });
+
+export interface DaLiveOpsDouble {
+    listDirectory: jest.Mock;
+    createSource: jest.Mock;
+    deleteSource: jest.Mock;
+    readSource: jest.Mock;
+}
+
+export interface HelixDouble {
+    previewAndPublishPage: jest.Mock;
+    unpublishPage: jest.Mock;
+}
+
+/** A fetch `Response` shaped as far as these tools read it. */
+export const okResponse = (body: string, status = 200) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: status === 200 ? 'OK' : 'Error',
+    text: async () => body,
+});
+
+/** A server with the content-authoring tools registered on it. */
+export function register(): ReturnType<typeof fakeServer> {
+    const s = fakeServer();
+    registerContentAuthoringTools(s, ctxFactory, HelixServiceMock);
+    return s;
+}
+
+export interface ContentAuthoringDoubles {
+    daOps: DaLiveOpsDouble;
+    helix: HelixDouble;
+    fetchMock: jest.Mock;
+}
+
+/**
+ * Every collaborator answering successfully, so a test overrides only the one it
+ * is about. Both suites built this identically — 60 lines each.
+ */
+export function setupContentAuthoring(): ContentAuthoringDoubles {
+    getCurrentProject.mockResolvedValue(EDS_PROJECT);
+    isEdsProjectMock.mockReturnValue(true);
+    getGitHubServicesMock.mockReturnValue({
+        tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
+    });
+    getDaLiveAuthServiceMock.mockReturnValue({
+        isAuthenticated: jest.fn(async () => true),
+        getAccessToken: jest.fn(async () => 'da-token'),
+    });
+
+    const daOps: DaLiveOpsDouble = {
+        listDirectory: jest.fn(async () => []),
+        createSource: jest.fn(async () => ({ success: true, path: '/about.html' })),
+        deleteSource: jest.fn(async () => ({ success: true })),
+        readSource: jest.fn(async () => ({
+            status: 200,
+            body: '<body><main>hi</main></body>',
+            bytes: 28,
+            truncated: false,
+        })),
+    };
+    DaLiveContentOperationsMock.mockImplementation(() => daOps);
+
+    const helix: HelixDouble = {
+        previewAndPublishPage: jest.fn(async () => undefined),
+        unpublishPage: jest.fn(async () => true),
+    };
+    // The double is partial by design — these two methods are all these tools
+    // call. Cast at the boundary, once, per ADR-016.
+    HelixServiceMock.mockImplementation(() => helix as unknown as HelixService);
+
+    const fetchMock = jest.fn(async () => okResponse('<body><main>hi</main></body>'));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    return { daOps, helix, fetchMock };
+}
