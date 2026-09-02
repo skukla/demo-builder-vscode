@@ -5,77 +5,32 @@
  * These tests verify the fetcher works correctly in isolation.
  */
 
-import { AdobeEntityFetcher } from '@/features/authentication/services/adobeEntityFetcher';
+import {
+    AdobeEntityFetcher,
+    setupEntityFetcher,
+} from './adobeEntityFetcher.testUtils';
+
 import { ErrorCode } from '@/types/errorCodes';
 import { AppError } from '@/core/errors';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import type { StepLogger } from '@/core/logging/stepLogger';
-import type { Logger } from '@/types/logger';
 
 // Mock external dependencies
-jest.mock('@/types/typeGuards');
-
-import { getLogger } from '@/core/logging/debugLogger';
-import { parseJSON } from '@/types/typeGuards';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 describe('AdobeEntityFetcher', () => {
     let fetcher: AdobeEntityFetcher;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let mockCacheManager: jest.Mocked<AuthCacheManager>;
-    let mockLogger: jest.Mocked<Logger>;
-    let mockStepLogger: jest.Mocked<StepLogger>;
-    let onNoOrgsAccessible: jest.Mock;
 
     beforeEach(() => {
-        // Setup logger mock
-        (getLogger as jest.Mock).mockReturnValue(createMockLogger());
-
-        // Mock parseJSON
-        (parseJSON as jest.Mock).mockImplementation((str) => {
-            try {
-                return JSON.parse(str);
-            } catch {
-                return null;
-            }
-        });
-
-        // Create mocks
-        mockCommandExecutor = createMockCommandExecutor({ execute: jest.fn() });
-
-        mockSDKClient = {
-            isInitialized: jest.fn().mockReturnValue(false),
-            getClient: jest.fn(),
-            ensureInitialized: jest.fn().mockResolvedValue(true),
-        } as unknown as jest.Mocked<AdobeSDKClient>;
-
-        mockCacheManager = {
-            getCachedOrgList: jest.fn().mockReturnValue(undefined),
-            setCachedOrgList: jest.fn(),
-            getCachedOrganization: jest.fn().mockReturnValue(undefined),
-            getCachedProject: jest.fn().mockReturnValue(undefined),
-        } as unknown as jest.Mocked<AuthCacheManager>;
-
-        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
-
-        mockStepLogger = {
-            logTemplate: jest.fn(),
-        } as unknown as jest.Mocked<StepLogger>;
-
-        onNoOrgsAccessible = jest.fn();
-
-        fetcher = new AdobeEntityFetcher(
+        ({
+            fetcher,
             mockCommandExecutor,
             mockSDKClient,
             mockCacheManager,
-            mockLogger,
-            mockStepLogger,
-            { onNoOrgsAccessible },
-        );
+        } = setupEntityFetcher());
     });
 
     describe('getProjects() - org targeting & typed 403', () => {
@@ -139,7 +94,6 @@ describe('AdobeEntityFetcher', () => {
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(false);
 
-
             const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
             mockCommandExecutor.execute.mockImplementation(async () => {
                 seenOrgIds.push(getActiveOrgContext()?.orgId);
@@ -155,7 +109,6 @@ describe('AdobeEntityFetcher', () => {
             const seenOrgIds: (string | undefined)[] = [];
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(false);
-
 
             const { getActiveOrgContext } = require('@/core/shell/orgContextEnv');
             mockCommandExecutor.execute.mockImplementation(async () => {
