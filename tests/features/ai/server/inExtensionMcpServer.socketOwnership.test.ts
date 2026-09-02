@@ -69,6 +69,32 @@ const GATE_WAIT_MS = 300;
 /** Let the socket close / cleanup callbacks settle before asserting. */
 const SETTLE_MS = 50;
 
+/**
+ * Wait until the shared socket answers again, rather than guessing how long the
+ * outgoing instance's floating cleanup takes.
+ *
+ * `SETTLE_MS` was a flat 50ms here. Disposal fires its cleanup as a floating
+ * promise, so 50ms is a hope, and under load the assertions ran while the
+ * successor was still mid-bind — this test failed a full-suite run on
+ * 2026-09-02 while passing in isolation. Its sibling file had the same defect
+ * and was fixed the same day; this one was missed because only the sibling was
+ * on the clone list.
+ */
+async function waitForReachable(socket: string): Promise<string[]> {
+    const deadline = Date.now() + 5_000;
+    let lastError: unknown;
+    while (Date.now() < deadline) {
+        try {
+            const names = await listToolsOverSocket(socket);
+            if (names.length > 0) return names;
+        } catch (error) {
+            lastError = error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error(`socket never became reachable: ${String(lastError)}`);
+}
+
 describe('InExtensionMcpServer socket ownership', () => {
     let socketPath: string;
     let projectsDir: string;
@@ -127,10 +153,12 @@ describe('InExtensionMcpServer socket ownership', () => {
 
         // Release the outgoing instance to act on the identity it read earlier.
         release();
-        await new Promise((resolve) => setTimeout(resolve, SETTLE_MS));
+
+        // Poll for the end state — the successor answering — rather than waiting
+        // a fixed time for a floating cleanup promise.
+        const names = await waitForReachable(socketPath);
 
         expect(fs.existsSync(socketPath)).toBe(true);
-        const names = await listToolsOverSocket(socketPath);
         expect(names.length).toBeGreaterThan(0);
     });
 
