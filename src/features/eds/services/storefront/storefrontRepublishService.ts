@@ -217,6 +217,16 @@ export async function republishStorefrontConfig(params: RepublishParams): Promis
         }
 
         // Step 3: Write config.json to component path
+        //
+        // A PLAIN OVERWRITE, DELIBERATELY. config.json is generated output — it is
+        // derived entirely from the project's own configuration by `generateConfigJson`
+        // above, and regenerating it is the whole job of a republish. It is not meant to
+        // be hand-edited (owner, 2026-09-02), so there is nothing here for the ADR-013
+        // hash-and-skip seam to protect and no user edit to preserve.
+        //
+        // That seam is scoped to the generated AI BUNDLE (`aiBundle/`), which lands in a
+        // project people then edit. Reaching for it here would be applying the right rule
+        // to the wrong file.
         onProgress?.('Writing config.json...');
         const configJsonPath = path.join(componentPath, 'config.json');
 

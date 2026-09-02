@@ -62,18 +62,25 @@ for a prewarm that failed at creation", per its own code comment), and a gate ma
 agent path two calls instead of one. That is a real cost and it is the reason this is a
 decision rather than a fix.
 
-## Separate lead found while reading — not part of the question
+## Separate lead found while reading — ANSWERED, not a defect
 
 `republishStorefrontConfig` writes `config.json` with a direct
-`fsPromises.writeFile(configJsonPath, ...)`. It does not go through the ADR-013
-hash-and-skip seam in `generatedFileWriter.ts`.
+`fsPromises.writeFile(configJsonPath, ...)` rather than through the ADR-013 hash-and-skip
+seam. I raised it because this repo's second stated property is that a user's own edits
+are never overwritten, and it says specifically that a writer calling `writeFile` directly
+has opted out of that.
 
-This repo's second stated property is that a user's own edits are never overwritten, and
-it says specifically that "a writer that calls `writeFile` directly has quietly opted out
-of that". Whether that applies here depends on something I could not settle by reading:
-whether `config.json` is meant to be hand-editable at all, or is purely generated output
-that republish exists to regenerate. If it is generated-only, this is fine as written and
-worth a comment saying so. If a consultant may hand-edit it, republish silently discards
-that.
+**Closed the same day, and the lead was wrong twice over.**
 
-Not filed as a defect — filed as a question with the file:line to check.
+The owner confirmed `config.json` is not meant to be hand-edited: it is generated entirely
+from the project's own configuration, and regenerating it is what a republish IS. There is
+no user edit to preserve, so a plain overwrite is correct.
+
+The rule was also mis-applied. The hash-and-skip seam is scoped to the generated AI bundle
+— every one of its callers is under `aiBundle/`, and CLAUDE.md says "generated-BUNDLE
+write", not "every generated file". Nothing bans direct writes elsewhere, and no enforcer
+was bypassed.
+
+The answer is now a comment at the write site, so the next person to notice a bare
+`writeFile` next to a rule about not clobbering edits finds the reason instead of filing
+this again.
