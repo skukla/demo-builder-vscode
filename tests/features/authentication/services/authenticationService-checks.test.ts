@@ -172,6 +172,69 @@ describe('AuthenticationService - Authentication Checks', () => {
      * written out twice, and nothing tested either copy — the word "cache" did not appear
      * in this suite.
      */
+    /**
+     * `getTokenStatus` is the only way anything asks HOW LONG is left, rather than just
+     * whether the token is good. The prompts that warn before an expiry read it. Nothing
+     * called it in any test.
+     */
+    describe('getTokenStatus', () => {
+        it('reports the time remaining, not just that the token is valid', async () => {
+            mockStoredToken.value = validStoredToken(Date.now() + 3600000);
+
+            const status = await authService.getTokenStatus();
+
+            expect(status.isAuthenticated).toBe(true);
+            // About an hour. The exact figure depends on the clock; what matters is that
+            // the remaining time is carried through rather than dropped.
+            expect(status.expiresInMinutes).toBeGreaterThan(50);
+            expect(status.expiresInMinutes).toBeLessThanOrEqual(60);
+        });
+
+        it('reports an expired token as not authenticated', async () => {
+            mockStoredToken.value = validStoredToken(Date.now() - 60000);
+
+            const status = await authService.getTokenStatus();
+
+            expect(status.isAuthenticated).toBe(false);
+        });
+
+        it('answers for a machine with no token at all', async () => {
+            mockStoredToken.value = undefined;
+
+            await expect(authService.getTokenStatus()).resolves.toMatchObject({
+                isAuthenticated: false,
+            });
+        });
+    });
+
+    /**
+     * WHEN THE CHECK ITSELF BREAKS — an unreadable config file, a library that throws.
+     *
+     * Both checks answer "not signed in" rather than propagating, because an exception
+     * here would take out whatever asked, and the dashboard asks on every load. Neither
+     * catch had been entered by a test.
+     */
+    describe('when the token check throws', () => {
+        function tokenReadExplodes() {
+            const config = jest.requireMock('@adobe/aio-lib-core-config');
+            (config.get as jest.Mock).mockImplementationOnce(() => {
+                throw new Error('config store unreadable');
+            });
+        }
+
+        it('the quick check answers false instead of throwing', async () => {
+            tokenReadExplodes();
+
+            await expect(authService.isAuthenticated()).resolves.toBe(false);
+        });
+
+        it('the full check answers false instead of throwing', async () => {
+            tokenReadExplodes();
+
+            await expect(authService.isFullyAuthenticated()).resolves.toBe(false);
+        });
+    });
+
     describe('the cached answer', () => {
         it('answers a second time without re-reading the token store', async () => {
             mockStoredToken.value = validStoredToken();

@@ -336,3 +336,28 @@ state for a long time believing they are current.
 **Not filed as a defect**, because the comment shows the trade-off was made on purpose.
 But if the extension should ever tell someone "I could not check", this is where that
 decision lives, and the existing tests would not notice either way.
+
+## authenticationService.ts:170-173 and 217-235 — catch blocks nothing can enter (8 mutants)
+
+Both authentication checks wrap their token read in a try/catch that logs, caches a brief
+negative and returns false. Neither catch has ever been entered by a test, and an attempt
+to enter one failed for a structural reason worth recording.
+
+Making the CLI config store throw does not reach them: the in-process reader has its own
+fallback and answers rather than propagating — a fact its own mock comment in the test
+suite already notes ("without it, the reader's reload throws and quietly runs its fallback
+path instead"). `TokenManager.isTokenValid` adds no catch of its own, so the swallowing
+happens below it, and by the time the service sees an answer there is nothing left to
+throw.
+
+Reaching the catch would mean replacing `TokenManager`, which the service constructs
+itself.
+
+**Nothing to decide.** A defensive catch around an external read is correct even when the
+current collaborator cannot trigger it — the reader's fallback is not a contract. Recorded
+so the next person does not spend the hour I nearly did.
+
+**The tests written along the way were kept**, because they pin something real even though
+they do not enter the catch: an unreadable config store makes both checks answer "not
+signed in" rather than throwing, and an exception there would take out whatever asked —
+the dashboard asks on every load.
