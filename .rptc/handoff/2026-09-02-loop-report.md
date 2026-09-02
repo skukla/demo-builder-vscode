@@ -34,7 +34,11 @@ Five files got worked:
 | The site tools an agent calls | 54% | 69% |
 | DA.live sign-in and token handling | 67% | 83% |
 | Persists every project's state | 56% | 67% |
-| Updates and rolls back components in a project | 40% | 45% |
+| Updates and rolls back components in a project | ~40%* | 45% |
+
+\* That one "before" is approximate: it was taken with the hand arithmetic described
+under corrections, and the exact figure was not re-derived before the tests changed it.
+Every other number here came from the tool.
 
 In the second, the number of missed bugs fell from 16 to 1. In the third, code that no
 test ran at all fell from 35 deliberate breakages to 2.
