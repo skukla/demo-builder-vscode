@@ -185,7 +185,15 @@ export function compare(reportPath, baselinePath, partial = false) {
             bBehaviour === undefined || nBehaviour === undefined
                 ? n.highValueSurvivors >= b.highValueSurvivors
                 : nBehaviour >= bBehaviour;
-        if (n.score > b.score && stalled) {
+        // Bringing UNREACHABLE code under test raises the score and raises the survivor
+        // count at the same time: a NoCoverage mutant becomes either killed or survived,
+        // and the ones that survive are newly visible work rather than new debt. Padding
+        // never moves this number, so exempting a run whose uncovered count fell keeps
+        // the check aimed at what it was built for. Measured 2026-09-02: nineteen
+        // uncovered mutants became covered, thirteen of them killed, and the rule called
+        // the run padding because six of the rest now showed up as survivors.
+        const reachedNewCode = n.noCoverage < b.noCoverage;
+        if (n.score > b.score && stalled && !reachedNewCode) {
             const shown =
                 bBehaviour === undefined || nBehaviour === undefined
                     ? `branch/block survivors did not fall (${b.highValueSurvivors} -> ${n.highValueSurvivors})`

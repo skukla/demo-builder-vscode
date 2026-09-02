@@ -121,6 +121,28 @@ describe('Install Handler - Error Handling', () => {
         expect(mockContext.errorLogger!.logError).toHaveBeenCalled();
     });
 
+    /**
+     * Verification that THROWS is a warning — the install ran, we just could not confirm
+     * it. Verification that returns NOTHING is different: there is no result to report,
+     * so the handler cannot say installed or not-installed and must fail outright rather
+     * than push a status built from an absent result. No test covered it; five mutants
+     * sat on the branch with no coverage at all.
+     */
+    it('fails outright when verification returns no result at all', async () => {
+        (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(undefined);
+
+        const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+        expect(result).toEqual(
+            expect.objectContaining({ success: false, error: 'Installation verification failed' })
+        );
+        // And it must NOT report a status built from a result it does not have.
+        expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
+            'prerequisite-status',
+            expect.objectContaining({ installed: true })
+        );
+    });
+
     it('should handle Node version check failures during multi-version', async () => {
         const states = new Map();
         states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });

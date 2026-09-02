@@ -75,3 +75,47 @@ compute the same total). It is not: `isDynamicInstall` is read a second time at
 default step. A non-Node prerequisite declaring `dynamic` therefore loses its default
 step if the guard goes. That mutant is now killed by a test, and the equivalence claim
 was only avoided because the report was read per-mutant instead of reasoned about.
+
+## installHandler.ts:76-81 — a whole branch that cannot run (5 mutants, NO coverage)
+
+```ts
+function determineNodeVersionsForInstall(prereq, nodeVersions, version) {
+    if (prereq.perNodeVersion) { ... }
+    if (prereq.id === 'node') {          // 76
+        if (version) { return [version]; }   // 77-79
+        return nodeVersions.length ? nodeVersions : undefined;   // 80
+    }
+    ...
+}
+```
+
+Not a survivor and not equivalent — five mutants with NO COVERAGE, because nothing can
+reach these lines. This is dead code, which this repo does not keep.
+
+**The proof, in four steps, all in `installHandler.ts`:**
+
+1. The function has exactly ONE caller — line 589, `targetVersions ||
+   determineNodeVersionsForInstall(prereq, nodeVersions, version)`.
+2. `targetVersions` is assigned in exactly one place, line 584, inside
+   `if (prereq.id === 'node')` at line 581.
+3. Line 583 returns from the handler when `resolveNodeTargetVersions` says
+   `earlyReturn`, and that function returns `earlyReturn: true` for every case where
+   `targetVersions` is missing or empty (lines 122-126). So if line 589 is reached with
+   `prereq.id === 'node'`, `targetVersions` is a NON-EMPTY array.
+4. A non-empty array is truthy, so `||` short-circuits and the call never happens.
+
+Therefore the function only ever runs when `prereq.id !== 'node'`, and the branch at 76
+is unreachable.
+
+**What to do.** Deleting lines 76-81 is provable by the compiler and the suite, and this
+repo's standing rule is that obsolete code is removed rather than left in place. The loop
+did not do it for the same reason it left `:424` alone: this is production code in the
+install path, the only thing pushing for the change is a mutation report, and neither of
+those is a good enough reason to edit it while nobody is watching.
+
+It is a few minutes of work with the evidence above already gathered.
+
+**A caution if you take it.** The branch reads as the obvious behaviour for the Node
+prerequisite — "use the explicit version if given". Someone will re-add it. If it goes,
+the reason it CANNOT run belongs in a comment on the remaining function, or the deletion
+will be undone by the next person who notices Node is unhandled there.

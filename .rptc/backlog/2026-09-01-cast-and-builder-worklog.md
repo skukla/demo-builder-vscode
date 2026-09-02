@@ -319,3 +319,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  test(prerequisites): how many steps the progress bar counts, and five fixtures that lied (`29cb30c10`)
 - 2026-09-02  test(prerequisites): the payload the prerequisites row is drawn from (`b42c9856b`)
 - 2026-09-02  test(prerequisites): Node versions are ordered as numbers, not as text (`90c5f0aae`)
+- 2026-09-02  test(prerequisites): which Node version a plugin lands on, and an id lookup with no config (`442153779`)

@@ -65,10 +65,16 @@ function check(label, beforeRep, afterRep, mustFlag, stripCategories = false) {
     return ok;
 }
 
+// D: previously-unreachable code becomes covered. Score rises, a survivor appears where
+// there was no coverage at all — real progress that the rule must not call padding.
+const beforeD = report([[1,'StringLiteral','Survived'], [2,'ConditionalExpression','NoCoverage'], [2,'EqualityOperator','NoCoverage']]);
+const realD   = report([[1,'StringLiteral','Survived'], [2,'ConditionalExpression','Survived'], [2,'EqualityOperator','Killed']]);
+
 const results = [
     check('A-padding-must-flag', before, padding, true),
     check('B-real-branch-must-pass', before, real, false),
     check('C-comparator-must-pass', beforeC, realC, false),
+    check('D-newly-covered-must-pass', beforeD, realD, false),
 ];
 console.log(results.every(Boolean) ? '\nALL CONTROLS PASSED' : '\nSELF-TEST FAILED');
 const ok = results.every(Boolean);
