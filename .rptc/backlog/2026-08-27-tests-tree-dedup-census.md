@@ -65,7 +65,7 @@ reviewers, so 2.44% in tests is accumulated slack, not a law of test code.
 | **B. Mock-wall suites** | 41 clones / 1,658 lines (21%) | Melts as a SIDE EFFECT of the ADR-015 conversions — no separate work | PL-13 batches |
 | **C. Between separate files** | 103 clones / ≈2,446 removable | Extract a shared setup per family, worst-first | this item, ranked list below |
 
-Lane C's ranking is `.rptc/plans/architecture-test-convergence/family-worklist.json`
+Lane C's ranking is `.rptc/complete/architecture-test-convergence/family-worklist.json`
 (all 89 shared-setup-less families scored): **20 real targets** (≥40 removable
 lines — deleteProject 177, stopDemo 152, storefrontSetupPhases 147,
 edsResetService 144, aiContextWriter 141 lead it), **27 small** (10–39, do
@@ -79,6 +79,48 @@ re-measured by the sweep's own command).
 **Done when**: lane A is zero, lane B has melted with its conversions, lane C's
 20 real targets are extracted, the 42 legitimate splits carry written reasons,
 and the ratchet rests at that adjudicated floor.
+
+## Where it actually stands — measured 2026-09-02
+
+Every number above is the 2026-08-28 baseline and none of it was re-measured
+until now. Two of them had drifted far enough to mislead.
+
+| | Then | Now |
+|---|---|---|
+| Clones over `tests/` | 160 | **72** |
+| Duplicated lines | 7,863 | **3,548** |
+| Lane C real targets (≥40 lines) extracted | 0 of 20 | **19 of 20** |
+| Lane C small targets (10–39) extracted | 0 of 27 | **6 of 27** |
+| Families the setup enforcer still ledgers | 63 | **62** |
+
+Two of the 20 "real targets" read as unstarted only because the worklist still
+named their pre-merge paths — `tests/unit/features/eds/...` and
+`tests/core/commands/ResetAllCommand`, neither of which exists. Both directories
+moved; one family was already done. Paths corrected in the worklist the same
+day, because a row pointing at a deleted directory looks exactly like a row
+nobody has worked.
+
+**What is genuinely left:**
+
+1. **`helixService` — the last real lane-C target.** 7 suites, no shared setup,
+   ~90 removable lines. The largest single remaining piece.
+2. **21 of the 27 small targets** (10–39 lines each). These are explicitly
+   opportunistic: do them when a batch is already in that area, not as a sweep.
+3. **The 42 legitimate size-splits need written reasons.** Until each carries
+   one they keep counting as debt, which is the whole reason the number never
+   looks finished.
+4. **Lane B is not this item's work** — it melts as PL-13's ADR-015 conversions
+   land, and PL-13 is down to ~8 ledger rows.
+5. **The clone count needs an adjudicated floor.** 160 was frozen as "cannot
+   grow"; the real figure is 72 and `scripts/healthSnapshot.mjs` tracks it as a
+   lower-is-better trend rather than a pinned ceiling. Deciding the floor is the
+   closing act, not a prerequisite.
+
+**Placement — done 2026-09-02**, and it was never in the lane model above:
+45 suites moved to their subjects' mirrors, the `webview-ui` allowlist row
+deleted, and the enforcer gained a subject check. Its stated blind spot is that
+the subject resolver cannot name a subject for 316 suites (the import lives in
+the family's shared setup), so the weaker directory check still carries those.
 
 ## Shipped so far
 

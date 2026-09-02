@@ -1,539 +1,539 @@
 {
- "_what": "PL-14/PL-9 worklist: the 89 ledgered families ranked by duplicated setup lines extraction would remove. >=40 = real target; <10 = adjudicate as a legitimate split, not a defect.",
- "rows": [
-  {
-   "family": "tests/features/lifecycle/commands/deleteProject",
-   "removableLines": 177,
-   "sharedLines": 59,
-   "suites": 4
-  },
-  {
-   "family": "tests/features/lifecycle/commands/stopDemo",
-   "removableLines": 152,
-   "sharedLines": 76,
-   "suites": 3
-  },
-  {
-   "family": "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases",
-   "removableLines": 147,
-   "sharedLines": 49,
-   "suites": 4
-  },
-  {
-   "family": "tests/features/eds/services/reset/edsResetService",
-   "removableLines": 144,
-   "sharedLines": 36,
-   "suites": 5
-  },
-  {
-   "family": "tests/features/project-creation/services/aiBundle/aiContextWriter",
-   "removableLines": 141,
-   "sharedLines": 47,
-   "suites": 4
-  },
-  {
-   "family": "tests/features/mesh/commands/deployMesh",
-   "removableLines": 136,
-   "sharedLines": 34,
-   "suites": 5
-  },
-  {
-   "family": "tests/features/components/services/componentManager",
-   "removableLines": 108,
-   "sharedLines": 18,
-   "suites": 7
-  },
-  {
-   "family": "tests/unit/features/eds/services/helix/helixService",
-   "removableLines": 90,
-   "sharedLines": 30,
-   "suites": 4
-  },
-  {
-   "family": "tests/features/eds/services/reset/edsResetUI",
-   "removableLines": 86,
-   "sharedLines": 86,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/ai/server/contentAuthoringTools",
-   "removableLines": 86,
-   "sharedLines": 86,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/ai/mcpInspector",
-   "removableLines": 65,
-   "sharedLines": 65,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/eds/services/edsPipeline",
-   "removableLines": 60,
-   "sharedLines": 60,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/project-creation/ui/steps/CommerceStep",
-   "removableLines": 53,
-   "sharedLines": 53,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/eds/handlers/daLive/daLiveAuthPrompt",
-   "removableLines": 53,
-   "sharedLines": 53,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/dashboard/commands/configure",
-   "removableLines": 51,
-   "sharedLines": 17,
-   "suites": 4
-  },
-  {
-   "family": "tests/core/commands/ResetAllCommand",
-   "removableLines": 49,
-   "sharedLines": 49,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/mesh/services/meshVerifier",
-   "removableLines": 48,
-   "sharedLines": 48,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/eds/services/daLive/daLiveConfigService",
-   "removableLines": 48,
-   "sharedLines": 48,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/projects-dashboard/commands/showProjectsList",
-   "removableLines": 46,
-   "sharedLines": 46,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/project-creation/commands/createProject",
-   "removableLines": 42,
-   "sharedLines": 14,
-   "suites": 4
-  },
-  {
-   "family": "tests/features/project-creation/ui/components/integration-flow/useIntegrationFlow",
-   "removableLines": 39,
-   "sharedLines": 39,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/eds/ui/steps/StorefrontSetupStep",
-   "removableLines": 36,
-   "sharedLines": 36,
-   "suites": 2
-  },
-  {
-   "family": "tests/core/shell/processCleanup",
-   "removableLines": 36,
-   "sharedLines": 9,
-   "suites": 5
-  },
-  {
-   "family": "tests/features/components/ui/hooks/useComponentConfig",
-   "removableLines": 34,
-   "sharedLines": 17,
-   "suites": 3
-  },
-  {
-   "family": "tests/core/shell/fileWatcher",
-   "removableLines": 30,
-   "sharedLines": 30,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/updates/services/componentUpdater",
-   "removableLines": 30,
-   "sharedLines": 15,
-   "suites": 3
-  },
-  {
-   "family": "tests/features/dashboard/ui/components/integrations/IntegrationDetailPanel",
-   "removableLines": 30,
-   "sharedLines": 15,
-   "suites": 3
-  },
-  {
-   "family": "tests/core/state/projectManifest",
-   "removableLines": 29,
-   "sharedLines": 29,
-   "suites": 2
-  },
-  {
-   "family": "tests/core/base/baseCommand",
-   "removableLines": 29,
-   "sharedLines": 29,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/eds/services/configService/configurationService",
-   "removableLines": 28,
-   "sharedLines": 28,
-   "suites": 2
-  },
-  {
-   "family": "tests/commands/diagnosticsChecks",
-   "removableLines": 26,
-   "sharedLines": 13,
-   "suites": 3
-  },
-  {
-   "family": "tests/features/eds/handlers/authoringExperience",
-   "removableLines": 25,
-   "sharedLines": 25,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/projects-dashboard/services/settingsSerializer",
-   "removableLines": 21,
-   "sharedLines": 21,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/eds/services/daLive/daLiveAuthService",
-   "removableLines": 21,
-   "sharedLines": 7,
-   "suites": 4
-  },
-  {
-   "family": "tests/features/eds/services/github/githubAppService",
-   "removableLines": 19,
-   "sharedLines": 19,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/authentication/services/ioEventsClient",
-   "removableLines": 19,
-   "sharedLines": 19,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhase1",
-   "removableLines": 18,
-   "sharedLines": 18,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/updates/commands/updateExecutor",
-   "removableLines": 17,
-   "sharedLines": 17,
-   "suites": 2
-  },
-  {
-   "family": "tests/core/utils/disposableStore",
-   "removableLines": 17,
-   "sharedLines": 17,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/eds/services/github/githubFileOperations",
-   "removableLines": 15,
-   "sharedLines": 15,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/lifecycle/commands/openInClaude",
-   "removableLines": 15,
-   "sharedLines": 5,
-   "suites": 4
-  },
-  {
-   "family": "tests/templates/type",
-   "removableLines": 14,
-   "sharedLines": 14,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/authentication/services/tokenManager",
-   "removableLines": 14,
-   "sharedLines": 7,
-   "suites": 3
-  },
-  {
-   "family": "tests/features/project-creation/ui/steps/WelcomeStep",
-   "removableLines": 12,
-   "sharedLines": 6,
-   "suites": 3
-  },
-  {
-   "family": "tests/features/eds/ui/steps/codeSyncStatusView",
-   "removableLines": 11,
-   "sharedLines": 11,
-   "suites": 2
-  },
-  {
-   "family": "tests/templates/demo",
-   "removableLines": 10,
-   "sharedLines": 5,
-   "suites": 3
-  },
-  {
-   "family": "tests/features/eds/services/helix/helixService",
-   "removableLines": 10,
-   "sharedLines": 5,
-   "suites": 3
-  },
-  {
-   "family": "tests/commands/diagnostics",
-   "removableLines": 8,
-   "sharedLines": 8,
-   "suites": 2
-  },
-  {
-   "family": "tests/core/validation/fieldValidation",
-   "removableLines": 8,
-   "sharedLines": 4,
-   "suites": 3
-  },
-  {
-   "family": "tests/features/data-installer/ui/views/DatapackCatalogView",
-   "removableLines": 6,
-   "sharedLines": 6,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/data-installer/ui/views/DatapackActivityView",
-   "removableLines": 6,
-   "sharedLines": 6,
-   "suites": 2
-  },
-  {
-   "family": "tests/types/demoPackages",
-   "removableLines": 5,
-   "sharedLines": 5,
-   "suites": 2
-  },
-  {
-   "family": "tests/sop/no",
-   "removableLines": 4,
-   "sharedLines": 2,
-   "suites": 3
-  },
-  {
-   "family": "tests/templates/config",
-   "removableLines": 3,
-   "sharedLines": 3,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/authentication/handlers/workspaceHandlers",
-   "removableLines": 3,
-   "sharedLines": 3,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/ai/mcpDriftDetector",
-   "removableLines": 3,
-   "sharedLines": 3,
-   "suites": 2
-  },
-  {
-   "family": "tests/sop/credential",
-   "removableLines": 2,
-   "sharedLines": 2,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/eds/ui/steps/repoSelectionInline",
-   "removableLines": 2,
-   "sharedLines": 2,
-   "suites": 2
-  },
-  {
-   "family": "tests/core/base/baseWebviewCommand",
-   "removableLines": 2,
-   "sharedLines": 2,
-   "suites": 2
-  },
-  {
-   "family": "tests/types/webview",
-   "removableLines": 1,
-   "sharedLines": 1,
-   "suites": 2
-  },
-  {
-   "family": "tests/templates/manifest",
-   "removableLines": 1,
-   "sharedLines": 1,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/project-creation/ui/components/BrandGallery",
-   "removableLines": 1,
-   "sharedLines": 1,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/project-creation/services/aiBundle/aiBundleActivationRefresh",
-   "removableLines": 1,
-   "sharedLines": 1,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/project-creation/handlers/addIntegrationFlowHandlers",
-   "removableLines": 1,
-   "sharedLines": 1,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/lifecycle/services/projectResetService",
-   "removableLines": 1,
-   "sharedLines": 1,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/eds/services/storefront/storefrontStalenessDetector",
-   "removableLines": 1,
-   "sharedLines": 1,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/eds/services/daLive/daLiveContentOperations",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 13
-  },
-  {
-   "family": "tests/features/authentication/services/adobeEntityFetcher",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 12
-  },
-  {
-   "family": "tests/features/project-creation/handlers/executor",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 11
-  },
-  {
-   "family": "tests/types/typeGuards",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 8
-  },
-  {
-   "family": "tests/core/validation/securityValidation",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 6
-  },
-  {
-   "family": "tests/features/updates/commands/checkUpdates",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 5
-  },
-  {
-   "family": "tests/features/prerequisites/handlers/shared",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 5
-  },
-  {
-   "family": "tests/features/eds/ui/steps/RepoSelectionInline",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 5
-  },
-  {
-   "family": "tests/core/state/projectFileLoader",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 5
-  },
-  {
-   "family": "tests/features/projects-dashboard/handlers/dashboardHandlers",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 4
-  },
-  {
-   "family": "tests/features/project-creation/ui/wizard/wizardHelpers",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 4
-  },
-  {
-   "family": "tests/features/lifecycle/commands/startDemo",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 4
-  },
-  {
-   "family": "tests/features/eds/services/configGenerator",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 4
-  },
-  {
-   "family": "tests/features/eds/handlers/storefrontSetup/storefrontSetupHandlers",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 4
-  },
-  {
-   "family": "tests/features/mesh/services/meshCheckHelpers",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 3
-  },
-  {
-   "family": "tests/features/dashboard/handlers/configureHandlers",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 3
-  },
-  {
-   "family": "tests/features/dashboard/commands/showDashboard",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 3
-  },
-  {
-   "family": "tests/features/projects-dashboard/ui/ProjectsDashboard",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/project-creation/ui/steps/ReviewStep",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/project-creation/ui/steps/ProjectCreationStep",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 2
-  },
-  {
-   "family": "tests/features/project-creation/ui/components/ConfigurationSummary",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 2
-  },
-  {
-   "family": "tests/core/utils/projectDisplayName",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 2
-  },
-  {
-   "family": "tests/core/shell/commandSequencer",
-   "removableLines": 0,
-   "sharedLines": 0,
-   "suites": 2
-  }
- ]
+  "_what": "PL-14/PL-9 worklist: the 89 ledgered families ranked by duplicated setup lines extraction would remove. >=40 = real target; <10 = adjudicate as a legitimate split, not a defect. Paths refreshed 2026-09-02: two rows still named pre-merge locations (tests/unit/... and tests/core/commands/...), which read as unstarted work because the directory no longer existed.",
+  "rows": [
+    {
+      "family": "tests/features/lifecycle/commands/deleteProject",
+      "removableLines": 177,
+      "sharedLines": 59,
+      "suites": 4
+    },
+    {
+      "family": "tests/features/lifecycle/commands/stopDemo",
+      "removableLines": 152,
+      "sharedLines": 76,
+      "suites": 3
+    },
+    {
+      "family": "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhases",
+      "removableLines": 147,
+      "sharedLines": 49,
+      "suites": 4
+    },
+    {
+      "family": "tests/features/eds/services/reset/edsResetService",
+      "removableLines": 144,
+      "sharedLines": 36,
+      "suites": 5
+    },
+    {
+      "family": "tests/features/project-creation/services/aiBundle/aiContextWriter",
+      "removableLines": 141,
+      "sharedLines": 47,
+      "suites": 4
+    },
+    {
+      "family": "tests/features/mesh/commands/deployMesh",
+      "removableLines": 136,
+      "sharedLines": 34,
+      "suites": 5
+    },
+    {
+      "family": "tests/features/components/services/componentManager",
+      "removableLines": 108,
+      "sharedLines": 18,
+      "suites": 7
+    },
+    {
+      "family": "tests/features/eds/services/helix/helixService",
+      "removableLines": 90,
+      "sharedLines": 30,
+      "suites": 4
+    },
+    {
+      "family": "tests/features/eds/services/reset/edsResetUI",
+      "removableLines": 86,
+      "sharedLines": 86,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/ai/server/contentAuthoringTools",
+      "removableLines": 86,
+      "sharedLines": 86,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/ai/mcpInspector",
+      "removableLines": 65,
+      "sharedLines": 65,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/eds/services/edsPipeline",
+      "removableLines": 60,
+      "sharedLines": 60,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/project-creation/ui/steps/CommerceStep",
+      "removableLines": 53,
+      "sharedLines": 53,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/eds/handlers/daLive/daLiveAuthPrompt",
+      "removableLines": 53,
+      "sharedLines": 53,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/dashboard/commands/configure",
+      "removableLines": 51,
+      "sharedLines": 17,
+      "suites": 4
+    },
+    {
+      "family": "tests/commands/ResetAllCommand",
+      "removableLines": 49,
+      "sharedLines": 49,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/mesh/services/meshVerifier",
+      "removableLines": 48,
+      "sharedLines": 48,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/eds/services/daLive/daLiveConfigService",
+      "removableLines": 48,
+      "sharedLines": 48,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/projects-dashboard/commands/showProjectsList",
+      "removableLines": 46,
+      "sharedLines": 46,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/project-creation/commands/createProject",
+      "removableLines": 42,
+      "sharedLines": 14,
+      "suites": 4
+    },
+    {
+      "family": "tests/features/project-creation/ui/components/integration-flow/useIntegrationFlow",
+      "removableLines": 39,
+      "sharedLines": 39,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/eds/ui/steps/StorefrontSetupStep",
+      "removableLines": 36,
+      "sharedLines": 36,
+      "suites": 2
+    },
+    {
+      "family": "tests/core/shell/processCleanup",
+      "removableLines": 36,
+      "sharedLines": 9,
+      "suites": 5
+    },
+    {
+      "family": "tests/features/components/ui/hooks/useComponentConfig",
+      "removableLines": 34,
+      "sharedLines": 17,
+      "suites": 3
+    },
+    {
+      "family": "tests/core/shell/fileWatcher",
+      "removableLines": 30,
+      "sharedLines": 30,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/updates/services/componentUpdater",
+      "removableLines": 30,
+      "sharedLines": 15,
+      "suites": 3
+    },
+    {
+      "family": "tests/features/dashboard/ui/components/integrations/IntegrationDetailPanel",
+      "removableLines": 30,
+      "sharedLines": 15,
+      "suites": 3
+    },
+    {
+      "family": "tests/core/state/projectManifest",
+      "removableLines": 29,
+      "sharedLines": 29,
+      "suites": 2
+    },
+    {
+      "family": "tests/core/base/baseCommand",
+      "removableLines": 29,
+      "sharedLines": 29,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/eds/services/configService/configurationService",
+      "removableLines": 28,
+      "sharedLines": 28,
+      "suites": 2
+    },
+    {
+      "family": "tests/commands/diagnosticsChecks",
+      "removableLines": 26,
+      "sharedLines": 13,
+      "suites": 3
+    },
+    {
+      "family": "tests/features/eds/handlers/authoringExperience",
+      "removableLines": 25,
+      "sharedLines": 25,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/projects-dashboard/services/settingsSerializer",
+      "removableLines": 21,
+      "sharedLines": 21,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/eds/services/daLive/daLiveAuthService",
+      "removableLines": 21,
+      "sharedLines": 7,
+      "suites": 4
+    },
+    {
+      "family": "tests/features/eds/services/github/githubAppService",
+      "removableLines": 19,
+      "sharedLines": 19,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/authentication/services/ioEventsClient",
+      "removableLines": 19,
+      "sharedLines": 19,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/eds/handlers/storefrontSetup/storefrontSetupPhase1",
+      "removableLines": 18,
+      "sharedLines": 18,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/updates/commands/updateExecutor",
+      "removableLines": 17,
+      "sharedLines": 17,
+      "suites": 2
+    },
+    {
+      "family": "tests/core/utils/disposableStore",
+      "removableLines": 17,
+      "sharedLines": 17,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/eds/services/github/githubFileOperations",
+      "removableLines": 15,
+      "sharedLines": 15,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/lifecycle/commands/openInClaude",
+      "removableLines": 15,
+      "sharedLines": 5,
+      "suites": 4
+    },
+    {
+      "family": "tests/templates/type",
+      "removableLines": 14,
+      "sharedLines": 14,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/authentication/services/tokenManager",
+      "removableLines": 14,
+      "sharedLines": 7,
+      "suites": 3
+    },
+    {
+      "family": "tests/features/project-creation/ui/steps/WelcomeStep",
+      "removableLines": 12,
+      "sharedLines": 6,
+      "suites": 3
+    },
+    {
+      "family": "tests/features/eds/ui/steps/codeSyncStatusView",
+      "removableLines": 11,
+      "sharedLines": 11,
+      "suites": 2
+    },
+    {
+      "family": "tests/templates/demo",
+      "removableLines": 10,
+      "sharedLines": 5,
+      "suites": 3
+    },
+    {
+      "family": "tests/features/eds/services/helix/helixService",
+      "removableLines": 10,
+      "sharedLines": 5,
+      "suites": 3
+    },
+    {
+      "family": "tests/commands/diagnostics",
+      "removableLines": 8,
+      "sharedLines": 8,
+      "suites": 2
+    },
+    {
+      "family": "tests/core/validation/fieldValidation",
+      "removableLines": 8,
+      "sharedLines": 4,
+      "suites": 3
+    },
+    {
+      "family": "tests/features/data-installer/ui/views/DatapackCatalogView",
+      "removableLines": 6,
+      "sharedLines": 6,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/data-installer/ui/views/DatapackActivityView",
+      "removableLines": 6,
+      "sharedLines": 6,
+      "suites": 2
+    },
+    {
+      "family": "tests/types/demoPackages",
+      "removableLines": 5,
+      "sharedLines": 5,
+      "suites": 2
+    },
+    {
+      "family": "tests/sop/no",
+      "removableLines": 4,
+      "sharedLines": 2,
+      "suites": 3
+    },
+    {
+      "family": "tests/templates/config",
+      "removableLines": 3,
+      "sharedLines": 3,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/authentication/handlers/workspaceHandlers",
+      "removableLines": 3,
+      "sharedLines": 3,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/ai/mcpDriftDetector",
+      "removableLines": 3,
+      "sharedLines": 3,
+      "suites": 2
+    },
+    {
+      "family": "tests/sop/credential",
+      "removableLines": 2,
+      "sharedLines": 2,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/eds/ui/steps/repoSelectionInline",
+      "removableLines": 2,
+      "sharedLines": 2,
+      "suites": 2
+    },
+    {
+      "family": "tests/core/base/baseWebviewCommand",
+      "removableLines": 2,
+      "sharedLines": 2,
+      "suites": 2
+    },
+    {
+      "family": "tests/types/webview",
+      "removableLines": 1,
+      "sharedLines": 1,
+      "suites": 2
+    },
+    {
+      "family": "tests/templates/manifest",
+      "removableLines": 1,
+      "sharedLines": 1,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/project-creation/ui/components/BrandGallery",
+      "removableLines": 1,
+      "sharedLines": 1,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/project-creation/services/aiBundle/aiBundleActivationRefresh",
+      "removableLines": 1,
+      "sharedLines": 1,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/project-creation/handlers/addIntegrationFlowHandlers",
+      "removableLines": 1,
+      "sharedLines": 1,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/lifecycle/services/projectResetService",
+      "removableLines": 1,
+      "sharedLines": 1,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/eds/services/storefront/storefrontStalenessDetector",
+      "removableLines": 1,
+      "sharedLines": 1,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/eds/services/daLive/daLiveContentOperations",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 13
+    },
+    {
+      "family": "tests/features/authentication/services/adobeEntityFetcher",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 12
+    },
+    {
+      "family": "tests/features/project-creation/handlers/executor",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 11
+    },
+    {
+      "family": "tests/types/typeGuards",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 8
+    },
+    {
+      "family": "tests/core/validation/securityValidation",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 6
+    },
+    {
+      "family": "tests/features/updates/commands/checkUpdates",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 5
+    },
+    {
+      "family": "tests/features/prerequisites/handlers/shared",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 5
+    },
+    {
+      "family": "tests/features/eds/ui/steps/RepoSelectionInline",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 5
+    },
+    {
+      "family": "tests/core/state/projectFileLoader",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 5
+    },
+    {
+      "family": "tests/features/projects-dashboard/handlers/dashboardHandlers",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 4
+    },
+    {
+      "family": "tests/features/project-creation/ui/wizard/wizardHelpers",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 4
+    },
+    {
+      "family": "tests/features/lifecycle/commands/startDemo",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 4
+    },
+    {
+      "family": "tests/features/eds/services/configGenerator",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 4
+    },
+    {
+      "family": "tests/features/eds/handlers/storefrontSetup/storefrontSetupHandlers",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 4
+    },
+    {
+      "family": "tests/features/mesh/services/meshCheckHelpers",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 3
+    },
+    {
+      "family": "tests/features/dashboard/handlers/configureHandlers",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 3
+    },
+    {
+      "family": "tests/features/dashboard/commands/showDashboard",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 3
+    },
+    {
+      "family": "tests/features/projects-dashboard/ui/ProjectsDashboard",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/project-creation/ui/steps/ReviewStep",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/project-creation/ui/steps/ProjectCreationStep",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 2
+    },
+    {
+      "family": "tests/features/project-creation/ui/components/ConfigurationSummary",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 2
+    },
+    {
+      "family": "tests/core/utils/projectDisplayName",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 2
+    },
+    {
+      "family": "tests/core/shell/commandSequencer",
+      "removableLines": 0,
+      "sharedLines": 0,
+      "suites": 2
+    }
+  ]
 }
