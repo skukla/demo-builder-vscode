@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "installHandler: progress step count, the final-status payload routing, and the status-map write are all constrained (65.43%)",
+    "_note": "installHandler: Node versions ordered as numbers, not text (66.54%)",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -72,9 +72,9 @@
             "highValueSurvivors": 6
         },
         "src/features/prerequisites/handlers/installHandler.ts": {
-            "score": 65.43,
-            "killed": 354,
-            "survived": 154,
+            "score": 66.54,
+            "killed": 360,
+            "survived": 148,
             "noCoverage": 33,
             "timeout": 0,
             "survivorCategories": {
@@ -82,7 +82,7 @@
                 "string": 6,
                 "logPresentation": 56,
                 "optionalChain": 16,
-                "other": 18,
+                "other": 12,
                 "block": 7
             },
             "highValueSurvivors": 58

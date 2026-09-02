@@ -117,6 +117,31 @@ export function writeBaseline(reportPath, baselinePath, note, merge = false) {
     return modules;
 }
 
+
+/**
+ * Survivors that represent BEHAVIOUR rather than wording.
+ *
+ * The ratchet's second rule exists to catch a score raised by asserting log strings.
+ * It originally read `highValueSurvivors`, which counts only branch and block — so
+ * killing any other kind of behavioural mutant raised the score while that number
+ * stood still, and the rule fired on genuine work. It did, on 2026-09-02: six mutants
+ * on two `.sort()` comparators died (as text, Node 8 sorts after Node 20 — a real
+ * defect reaching the user), and the run was reported as padding.
+ *
+ * The two instruments also disagreed. `mutationWorklist.mjs` ranked those same
+ * comparators as decisions worth working, so the loop was steered at work the ratchet
+ * then refused to credit.
+ *
+ * Wording is what `string` and `logPresentation` capture; everything else changes what
+ * the code DOES. Subtracting only those two states the rule precisely and leaves
+ * `highValueSurvivors` — which the baseline rows pin and the report prints — untouched.
+ */
+function behaviouralSurvivors(row) {
+    const c = row.survivorCategories;
+    if (!c) return undefined; // an older row: fall back to the coarse check
+    return row.survived - (c.string ?? 0) - (c.logPresentation ?? 0);
+}
+
 /**
  * Compare a fresh report against the baseline.
  *
@@ -154,10 +179,19 @@ export function compare(reportPath, baselinePath, partial = false) {
                     `A change went in that the tests do not constrain.`
             );
         }
-        if (n.score > b.score && n.highValueSurvivors >= b.highValueSurvivors) {
+        const bBehaviour = behaviouralSurvivors(b);
+        const nBehaviour = behaviouralSurvivors(n);
+        const stalled =
+            bBehaviour === undefined || nBehaviour === undefined
+                ? n.highValueSurvivors >= b.highValueSurvivors
+                : nBehaviour >= bBehaviour;
+        if (n.score > b.score && stalled) {
+            const shown =
+                bBehaviour === undefined || nBehaviour === undefined
+                    ? `branch/block survivors did not fall (${b.highValueSurvivors} -> ${n.highValueSurvivors})`
+                    : `behavioural survivors did not fall (${bBehaviour} -> ${nBehaviour})`;
             problems.push(
-                `${path}: score ROSE ${b.score}% -> ${n.score}% but branch/block survivors ` +
-                    `did not fall (${b.highValueSurvivors} -> ${n.highValueSurvivors}). ` +
+                `${path}: score ROSE ${b.score}% -> ${n.score}% but ${shown}. ` +
                     `That is a score raised without constraining a decision — ` +
                     `check what the new assertions actually assert.`
             );

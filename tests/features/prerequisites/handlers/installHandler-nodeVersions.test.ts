@@ -227,4 +227,70 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
         });
     });
 
+
+    /**
+     * NODE VERSIONS ARE SORTED AS NUMBERS, NOT AS TEXT.
+     *
+     * As text, Node 8 sorts after Node 20 and Node 10 sorts before both. That order
+     * reaches the user twice: it is the order versions are installed in, and the last
+     * version in the list is the one made the default. So a text sort quietly makes the
+     * wrong Node version the system default.
+     *
+     * Two separate sorts do this, written out twice (installHandler.ts:118 and :143).
+     * Neither was constrained, because the shared test setup hands back keys that are
+     * already in numeric order — so the sort could be deleted with nothing failing.
+     * These tests hand back UNSORTED input, which is what production actually gets.
+     */
+    describe('ordering Node versions as numbers rather than as text', () => {
+        const OUT_OF_ORDER = ['20', '8', '10'];
+        const NUMERIC = ['8', '10', '20'];
+
+        it('sorts the versions a per-version tool is checked against', async () => {
+            const states = new Map();
+            states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
+            mockContext.sharedState.currentPrerequisiteStates = states;
+            (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue([...OUT_OF_ORDER]);
+            (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValue({
+                perNodeVersionStatus: [],
+                perNodeVariantMissing: true,
+                missingVariantMajors: ['8'],
+            });
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            expect(shared.checkPerNodeVersionStatus).toHaveBeenCalledWith(
+                mockAdobeCliPrereq,
+                NUMERIC,
+                mockContext
+            );
+        });
+
+        it('sorts the missing Node versions before installing them', async () => {
+            const states = new Map();
+            states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
+            mockContext.sharedState.currentPrerequisiteStates = states;
+            // Keys in the order the mapping happens to hold them — production does not
+            // promise numeric order here, which is why the handler sorts.
+            (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({
+                '20': 'A', '8': 'B', '10': 'C',
+            });
+            (shared.getNodeVersionKeys as jest.Mock).mockReturnValue([...OUT_OF_ORDER]);
+            (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
+            (mockContext.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue(
+                OUT_OF_ORDER.map((m) => ({
+                    version: `Node ${m}`,
+                    component: 'not installed',
+                    installed: false,
+                }))
+            );
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            expect(mockContext.prereqManager?.getInstallSteps).toHaveBeenCalledWith(
+                mockNodePrereq,
+                { nodeVersions: NUMERIC }
+            );
+        });
+    });
+
 });

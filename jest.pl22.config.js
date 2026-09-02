@@ -43,6 +43,7 @@ module.exports = {
         '**/tests/features/prerequisites/handlers/installHandler-edgeCases.test.ts',
         '**/tests/features/prerequisites/handlers/installHandler-errorHandling.test.ts',
         '**/tests/features/prerequisites/handlers/installHandler-fnmShell.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-finalStatus.test.ts',
         '**/tests/features/prerequisites/handlers/installHandler-happyPath.test.ts',
         '**/tests/features/prerequisites/handlers/installHandler-nodeVersions.test.ts',
         '**/tests/features/prerequisites/handlers/installHandler-versionSatisfaction.test.ts',

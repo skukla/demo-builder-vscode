@@ -705,6 +705,21 @@ so when the point is *how* a collaborator was used, assert the arguments rather 
 result. And coverage does not tell you a test would catch a bug: `npm run test:mutation`
 breaks the code on purpose and reports what nothing noticed.
 
+> **Convention.** The mutation ratchet's "score rose without constraining anything"
+> rule keeps controls in both directions, and they run with the suite.
+> *Why:* that rule exists to catch a score raised by asserting log strings rather than
+> behaviour, and it is a heuristic, so it fails in two ways that look nothing alike. It
+> can go quiet, and then the number it guards can be padded. Or it can fire on real
+> work, which is what happened on 2026-09-02: six mutants died on two `.sort()`
+> comparators — as text, Node 8 sorts after Node 20, a defect a user would see — and
+> the run was reported as padding, because the rule counted only branch and block
+> survivors and a comparator is neither. The two instruments had also drifted apart:
+> the worklist that steers the work ranked those same comparators as decisions worth
+> constraining, so the loop was aimed at work the ratchet then refused to credit.
+> Enforced by `tests/sop/mutation-ratchet-selftest.test.ts`, which runs the controls in
+> `scripts/mutationBaseline.selftest.mjs`; breaking the rule makes one of them print
+> FAIL and exit non-zero, which is how the file's own value was checked.
+
 > **Convention.** A canonical fake covers its subject's WHOLE public surface, and
 > invents nothing.
 > *Why:* both halves have failed here. A fake NARROWER than the need is one nobody
@@ -1035,11 +1050,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 36 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 37 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 77 conventions. 76 of them are enforced; 1 is not.**
+**This handbook states 78 conventions. 77 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on
