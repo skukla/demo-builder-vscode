@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/ai/server/siteTools.ts"
+        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts"
     ],
     "reporters": [
         "clear-text",
