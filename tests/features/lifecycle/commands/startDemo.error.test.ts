@@ -11,10 +11,13 @@
  */
 
 import {
-    StartDemoCommand,
-    ProcessCleanup,
     MockProcessCleanup,
+    ProcessCleanup,
+    StartDemoCommand,
     mockCommandExecutor,
+    mockCommands,
+    mockWindow,
+    mockWorkspace,
 } from './startDemo.testUtils';
 import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state/stateManager';
@@ -40,8 +43,8 @@ describe('StartDemoCommand - Error Handling', () => {
             sendText: jest.fn(),
             show: jest.fn(),
         };
-        (vscode.window as any).terminals = [];
-        (vscode.window as any).createTerminal = jest.fn().mockReturnValue(mockTerminal);
+        mockWindow.terminals = [];
+        mockWindow.createTerminal = jest.fn().mockReturnValue(mockTerminal);
 
         // Setup mock ProcessCleanup instance
         mockProcessCleanup = {
@@ -93,20 +96,20 @@ describe('StartDemoCommand - Error Handling', () => {
         mockLogger = createMockLogger();
 
         // Mock vscode.window.withProgress to execute task immediately
-        (vscode.window as any).withProgress = jest.fn().mockImplementation(
+        mockWindow.withProgress = jest.fn().mockImplementation(
             async (_options: any, task: any) => {
                 return await task({ report: jest.fn() });
             }
         );
 
         // Mock vscode.window.setStatusBarMessage
-        (vscode.window as any).setStatusBarMessage = jest.fn();
+        mockWindow.setStatusBarMessage = jest.fn();
 
         // Mock vscode.commands.executeCommand
-        (vscode.commands as any).executeCommand = jest.fn().mockResolvedValue(undefined);
+        mockCommands.executeCommand = jest.fn().mockResolvedValue(undefined);
 
         // Mock vscode.workspace.getConfiguration
-        (vscode.workspace as any).getConfiguration = jest.fn().mockReturnValue({
+        mockWorkspace.getConfiguration = jest.fn().mockReturnValue({
             get: jest.fn().mockReturnValue(3000),
         });
 
@@ -145,7 +148,7 @@ describe('StartDemoCommand - Error Handling', () => {
             });
 
             // Override default port config to also be invalid
-            (vscode.workspace as any).getConfiguration = jest.fn().mockReturnValue({
+            mockWorkspace.getConfiguration = jest.fn().mockReturnValue({
                 get: jest.fn().mockReturnValue(-1),
             });
 
@@ -187,7 +190,7 @@ describe('StartDemoCommand - Error Handling', () => {
             });
 
             // Override default port config
-            (vscode.workspace as any).getConfiguration = jest.fn().mockReturnValue({
+            mockWorkspace.getConfiguration = jest.fn().mockReturnValue({
                 get: jest.fn().mockReturnValue(99999),
             });
 
@@ -343,7 +346,7 @@ describe('StartDemoCommand - Error Handling', () => {
     describe('Test 3.3: Terminal Creation Fails', () => {
         it('should catch and show error when terminal creation throws', async () => {
             // Given: createTerminal throws error
-            (vscode.window as any).createTerminal = jest.fn().mockImplementation(() => {
+            mockWindow.createTerminal = jest.fn().mockImplementation(() => {
                 throw new Error('Terminal creation failed');
             });
 
@@ -370,7 +373,7 @@ describe('StartDemoCommand - Error Handling', () => {
                 // Simulate error after first save (status = 'starting')
                 if (statusChanges.length === 1 && project.status === 'starting') {
                     // Next operation will fail - simulate by making terminal throw
-                    (vscode.window as any).createTerminal = jest.fn().mockImplementation(() => {
+                    mockWindow.createTerminal = jest.fn().mockImplementation(() => {
                         throw new Error('Simulated failure after starting');
                     });
                 }

@@ -11,10 +11,13 @@
  */
 
 import {
-    StartDemoCommand,
-    ProcessCleanup,
     MockProcessCleanup,
+    ProcessCleanup,
+    StartDemoCommand,
     mockCommandExecutor,
+    mockCommands,
+    mockWindow,
+    mockWorkspace,
 } from './startDemo.testUtils';
 import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state/stateManager';
@@ -41,8 +44,8 @@ describe('StartDemoCommand - Port Conflict', () => {
             sendText: jest.fn(),
             show: jest.fn(),
         };
-        (vscode.window as any).terminals = [];
-        (vscode.window as any).createTerminal = jest.fn().mockReturnValue(mockTerminal);
+        mockWindow.terminals = [];
+        mockWindow.createTerminal = jest.fn().mockReturnValue(mockTerminal);
 
         // Setup mock ProcessCleanup instance
         mockProcessCleanup = {
@@ -105,20 +108,20 @@ describe('StartDemoCommand - Port Conflict', () => {
         mockLogger = createMockLogger();
 
         // Mock vscode.window.withProgress to execute task immediately
-        (vscode.window as any).withProgress = jest.fn().mockImplementation(
+        mockWindow.withProgress = jest.fn().mockImplementation(
             async (_options: any, task: any) => {
                 return await task({ report: jest.fn() });
             }
         );
 
         // Mock vscode.window.setStatusBarMessage
-        (vscode.window as any).setStatusBarMessage = jest.fn();
+        mockWindow.setStatusBarMessage = jest.fn();
 
         // Mock vscode.commands.executeCommand
-        (vscode.commands as any).executeCommand = jest.fn().mockResolvedValue(undefined);
+        mockCommands.executeCommand = jest.fn().mockResolvedValue(undefined);
 
         // Mock vscode.workspace.getConfiguration
-        (vscode.workspace as any).getConfiguration = jest.fn().mockReturnValue({
+        mockWorkspace.getConfiguration = jest.fn().mockReturnValue({
             get: jest.fn().mockReturnValue(3000),
         });
 
@@ -139,7 +142,7 @@ describe('StartDemoCommand - Port Conflict', () => {
         it('should use ProcessCleanup instead of hardcoded delay for port conflicts', async () => {
             // Given: Port 3000 is in use by PID 12345
             // User chooses "Stop & Start"
-            (vscode.window as any).showWarningMessage = jest.fn().mockResolvedValue('Stop & Start');
+            mockWindow.showWarningMessage = jest.fn().mockResolvedValue('Stop & Start');
 
             // Track the flow of port availability checks
             let checkCount = 0;
@@ -189,7 +192,7 @@ describe('StartDemoCommand - Port Conflict', () => {
         it('should not kill process when user cancels port conflict resolution', async () => {
             // Given: Port 3000 in use
             // User clicks "Cancel"
-            (vscode.window as any).showWarningMessage = jest.fn().mockResolvedValue('Cancel');
+            mockWindow.showWarningMessage = jest.fn().mockResolvedValue('Cancel');
 
             // When: User clicks "Cancel"
             await command.execute();
@@ -208,7 +211,7 @@ describe('StartDemoCommand - Port Conflict', () => {
     describe('Test 2.3: Port Conflict Kill Fails', () => {
         it('should show error and return when ProcessCleanup fails', async () => {
             // Given: Port in use, user chooses "Stop & Start"
-            (vscode.window as any).showWarningMessage = jest.fn().mockResolvedValue('Stop & Start');
+            mockWindow.showWarningMessage = jest.fn().mockResolvedValue('Stop & Start');
 
             // ProcessCleanup.killProcessTree fails with EPERM
             mockProcessCleanup.killProcessTree.mockRejectedValue(
@@ -244,7 +247,7 @@ describe('StartDemoCommand - Port Conflict', () => {
     describe('Test 2.4: Port Available After Kill', () => {
         it('should verify port is actually freed before starting demo', async () => {
             // Given: Port conflict resolved via ProcessCleanup
-            (vscode.window as any).showWarningMessage = jest.fn().mockResolvedValue('Stop & Start');
+            mockWindow.showWarningMessage = jest.fn().mockResolvedValue('Stop & Start');
 
             // Track isPortAvailable calls
             let checkCount = 0;

@@ -47,7 +47,7 @@ describe('installSmart404Handler', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -73,7 +73,7 @@ describe('installSmart404Handler', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -89,7 +89,7 @@ describe('installSmart404Handler', () => {
             repoOwner,
             repoName,
             undefined,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -104,7 +104,7 @@ describe('installSmart404Handler', () => {
             repoOwner,
             repoName,
             'not-a-url',
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -119,7 +119,7 @@ describe('installSmart404Handler', () => {
             repoOwner,
             repoName,
             'https://example.com/api/v1/web/accs-discovery/discover-stores',
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -134,7 +134,7 @@ describe('installSmart404Handler', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -156,7 +156,7 @@ describe('installSmart404Handler', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -187,7 +187,7 @@ describe('installSmart404Handler', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -223,7 +223,7 @@ describe('installSmart404Handler', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -244,7 +244,7 @@ describe('installSmart404Handler', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -259,7 +259,7 @@ describe('installSmart404Handler', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             'custom-org',
             'custom-site'
         );
@@ -288,7 +288,8 @@ describe('installSmart404Handler — stale SHA', () => {
     const SHA_MISMATCH = 'scripts/delayed.js does not match 15be5fb9e97773471ea4124c259d6d1e2eeb2626';
 
     /** Contents API hands back `sha` on each successive read of delayed.js. */
-    function makeGithub(delayedShas: string[]) {
+    /** Returns the shared `GithubFake`, so the publisher accepts it uncast. */
+    function makeGithub(delayedShas: string[]): GithubFake {
         let read = 0;
         return {
             getFileContent: jest.fn().mockImplementation((_o: string, _r: string, path: string) => {
@@ -309,7 +310,7 @@ describe('installSmart404Handler — stale SHA', () => {
                 return Promise.resolve({ content: '// Existing delayed.js\n', sha });
             }),
             createOrUpdateFile: jest.fn(),
-        };
+        } as GithubFake;
     }
 
     beforeEach(() => jest.clearAllMocks());
@@ -321,7 +322,7 @@ describe('installSmart404Handler — stale SHA', () => {
             .mockResolvedValue({ sha: 'new', commitSha: 'c' });
 
         const result = await installSmart404Handler(
-            gh as never, repoOwner, repoName, overlayUrl, mockLogger as never,
+            gh, repoOwner, repoName, overlayUrl, mockLogger,
             daLiveOrg, daLiveSite,
         );
 
@@ -338,7 +339,7 @@ describe('installSmart404Handler — stale SHA', () => {
         gh.createOrUpdateFile.mockRejectedValue(new Error(SHA_MISMATCH));
 
         const result = await installSmart404Handler(
-            gh as never, repoOwner, repoName, overlayUrl, mockLogger as never,
+            gh, repoOwner, repoName, overlayUrl, mockLogger,
             daLiveOrg, daLiveSite,
         );
 
@@ -356,7 +357,7 @@ describe('installSmart404Handler — stale SHA', () => {
         gh.createOrUpdateFile.mockRejectedValue(new Error('Resource not accessible by integration'));
 
         const result = await installSmart404Handler(
-            gh as never, repoOwner, repoName, overlayUrl, mockLogger as never,
+            gh, repoOwner, repoName, overlayUrl, mockLogger,
             daLiveOrg, daLiveSite,
         );
 

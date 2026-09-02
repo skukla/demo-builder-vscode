@@ -20,6 +20,7 @@
  * succeed override it themselves.
  */
 
+import * as vscode from 'vscode';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 
 // Mock ProcessCleanup
@@ -52,3 +53,29 @@ export { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 
 // The mocked collaborators the specs drive and assert against.
 export { ProcessCleanup, MockProcessCleanup, mockCommandExecutor };
+
+/**
+ * The mocked `vscode` namespaces, as WRITABLE typed views.
+ *
+ * These suites replace members of the mocked module — `vscode.window.terminals`,
+ * `createTerminal`, `withProgress` and so on. The real API declares them readonly,
+ * correctly, so assignment needs a cast; the module here is a fake, so assigning is
+ * the intended way to drive it.
+ *
+ * The cast lives HERE, once, naming exactly the members these suites write. It
+ * replaced 28 separate `(vscode.window as any).x = …` — each of which disabled
+ * checking of the entire statement to reach one member, so a misspelt name created a
+ * new property and the test went on passing against nothing.
+ */
+export interface MockedVscodeWindow {
+    terminals: vscode.Terminal[];
+    createTerminal: jest.Mock;
+    withProgress: jest.Mock;
+    setStatusBarMessage: jest.Mock;
+    showWarningMessage: jest.Mock;
+    showInformationMessage: jest.Mock;
+}
+
+export const mockWindow = vscode.window as unknown as MockedVscodeWindow;
+export const mockCommands = vscode.commands as unknown as { executeCommand: jest.Mock };
+export const mockWorkspace = vscode.workspace as unknown as { getConfiguration: jest.Mock };
