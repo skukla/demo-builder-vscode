@@ -20,6 +20,24 @@ import { createMockLogger } from '../../helpers/loggerFake';
 // Mock VS Code API
 
 // Concrete test command (BaseCommand is abstract)
+/**
+ * The protected members a test subclass reaches on itself.
+ *
+ * These suites subclass `BaseCommand` and poke at `disposables` and
+ * `createTerminal` from inside — legitimate, since the point is to prove the base
+ * class disposes what it was given. `self(this).x` disabled checking of each
+ * whole statement to reach one member; this names them.
+ */
+interface BaseCommandInternals {
+    // The REAL types. A hand-written `{ add; dispose }` was my own invented shape —
+    // `DisposableStore` also has `disposables`, `isDisposed`, `disposed`, `count`
+    // and `reset`, and the compiler said so the moment the cast came off.
+    disposables: DisposableStore;
+    createTerminal(name: string): vscode.Terminal;
+}
+
+const self = (cmd: object): BaseCommandInternals => cmd as unknown as BaseCommandInternals;
+
 class TestCommand extends BaseCommand {
     public async execute(): Promise<void> {
         // Test implementation
@@ -27,12 +45,12 @@ class TestCommand extends BaseCommand {
 
     // Expose protected disposables for testing
     public getDisposables(): DisposableStore {
-        return (this as any).disposables;
+        return self(this).disposables;
     }
 
     // Expose protected createTerminal for testing
     public testCreateTerminal(name: string): vscode.Terminal {
-        return (this as any).createTerminal(name);
+        return self(this).createTerminal(name);
     }
 }
 
@@ -198,7 +216,7 @@ describe('BaseCommand Disposal Support', () => {
             class SubCommand extends BaseCommand {
                 public async execute(): Promise<void> {
                     // Add mock resource
-                    (this as any).disposables.add({
+                    self(this).disposables.add({
                         dispose: jest.fn(),
                     });
                 }
@@ -220,11 +238,11 @@ describe('BaseCommand Disposal Support', () => {
 
             class SubCommand extends BaseCommand {
                 public async execute(): Promise<void> {
-                    (this as any).disposables.add(mockDisposable);
+                    self(this).disposables.add(mockDisposable);
                 }
 
                 public getDisposables() {
-                    return (this as any).disposables;
+                    return self(this).disposables;
                 }
             }
 
@@ -246,7 +264,7 @@ describe('BaseCommand Disposal Support', () => {
 
             class SubCommand extends BaseCommand {
                 public async execute(): Promise<void> {
-                    (this as any).disposables.add(mockDisposable);
+                    self(this).disposables.add(mockDisposable);
                 }
 
                 public override dispose(): void {

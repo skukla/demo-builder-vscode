@@ -2,6 +2,7 @@ import { setLoadingState } from '@/core/utils/loadingHTML';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import * as vscode from 'vscode';
 
+import { mockWindow } from '../../helpers/vscodeMockViews';
 // Mock vscode with ColorThemeKind
 jest.mock('vscode', () => ({
     ColorThemeKind: {
@@ -201,7 +202,7 @@ describe('loadingHTML', () => {
         });
 
         it('should use dark theme by default', async () => {
-            (vscode.window as any).activeColorTheme = {
+            mockWindow.activeColorTheme = {
                 kind: vscode.ColorThemeKind.Dark,
             };
 
@@ -221,7 +222,7 @@ describe('loadingHTML', () => {
         });
 
         it('should use light theme when active', async () => {
-            (vscode.window as any).activeColorTheme = {
+            mockWindow.activeColorTheme = {
                 kind: vscode.ColorThemeKind.Light,
             };
 

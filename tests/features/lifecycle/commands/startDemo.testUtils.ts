@@ -52,3 +52,11 @@ export { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 
 // The mocked collaborators the specs drive and assert against.
 export { ProcessCleanup, MockProcessCleanup, mockCommandExecutor };
+
+/**
+ * The writable views moved to `tests/helpers/vscodeMockViews.ts` on 2026-09-01 —
+ * the same shape was in 10 files across four features, so it belongs beside the other
+ * canonical fakes rather than in one family's setup. Re-exported so this family's
+ * specs keep importing from here.
+ */
+export { mockWindow, mockCommands, mockWorkspace } from '../../../helpers/vscodeMockViews';

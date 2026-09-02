@@ -11,19 +11,44 @@
 import { existsSync } from 'fs';
 import { compare, writeBaseline } from './mutationBaseline.mjs';
 
-const REPORT = 'reports/mutation/pl22.json';
+/**
+ * WHICH REPORT. Defaults to the sample; `--report <path>` points it at another.
+ *
+ * The focused run (`npm run test:mutation:focus`) writes `focus.json` and covers ONE
+ * module. Without this flag it had no ratchet at all: a focus-driven change could make
+ * a module worse and nothing would notice until the next ~16-minute sample run. That
+ * is the wrong safety net for the loop that uses focus as its measurement.
+ *
+ * `--write` with `--report` MERGES: the measured module's row is replaced and the
+ * rest are kept, so a focused run can raise the floor it just cleared.
+ *
+ * The baseline is shared on purpose. A module's row is a module's row whichever report
+ * produced it, so a focus run checks the same pinned numbers the sample pinned — and
+ * `compare` only looks at modules present in BOTH, so a focus report naturally checks
+ * exactly its own module and ignores the other eleven.
+ */
+const reportFlag = process.argv.indexOf('--report');
+const REPORT = reportFlag !== -1 ? process.argv[reportFlag + 1] : 'reports/mutation/pl22.json';
 const BASELINE = 'reports/mutation/baseline.json';
 
 const write = process.argv.includes('--write');
 const note = process.argv[process.argv.indexOf('--write') + 1] ?? '';
 
 if (!existsSync(REPORT)) {
-    console.error(`No report at ${REPORT}. Run \`npm run test:mutation:sample\` first.`);
+    console.error(
+        `No report at ${REPORT}. Run \`npm run test:mutation:sample\` (or ` +
+            `\`npm run test:mutation:focus\` for a single module) first.`
+    );
     process.exit(1);
 }
 
+// A partial report is MERGED, never written wholesale: it holds real numbers for the
+// module it measured and knows nothing about the other eleven, so overwriting with it
+// would switch the ratchet off for everything it did not look at.
+const partial = reportFlag !== -1;
+
 if (write || !existsSync(BASELINE)) {
-    const modules = writeBaseline(REPORT, BASELINE, note);
+    const modules = writeBaseline(REPORT, BASELINE, note, partial);
     const n = Object.keys(modules).length;
     console.log(`${existsSync(BASELINE) ? 'Wrote' : 'Created'} ${BASELINE} — ${n} modules.`);
     for (const [p, r] of Object.entries(modules)) {
@@ -35,7 +60,7 @@ if (write || !existsSync(BASELINE)) {
     process.exit(0);
 }
 
-const { problems, now, base } = compare(REPORT, BASELINE);
+const { problems, now, base } = compare(REPORT, BASELINE, partial);
 
 console.log('module                          baseline    now   branch/block   uncovered');
 for (const [p, b] of Object.entries(base)) {

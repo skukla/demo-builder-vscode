@@ -42,6 +42,7 @@ jest.mock('@/features/eds/services/storefront/storefrontNameMigrationForProject'
 
 import { expectWithinCeiling } from './responseCeilings';
 import { registerSiteTools } from '@/features/ai/server/siteTools';
+import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
@@ -62,7 +63,17 @@ const logger = createMockLogger();
 let allProjects: Array<{ name: string; path: string }> = [];
 /** What `loadProjectFromPath` resolves to, keyed by path. */
 let projectsOnDisk: Record<string, unknown> = {};
-const loadProjectFromPath = jest.fn(async (path: string) => projectsOnDisk[path]);
+const loadProjectFromPath = jest.fn(
+    async (
+        path: string,
+        // The real signature, so a test can assert what it was HANDED. Narrower than
+        // the real thing, the tuple has no second element and the compiler says so —
+        // which is how the terminal provider below stopped being described as a
+        // "component list" it never was.
+        _terminalProvider?: () => readonly unknown[],
+        _options?: { persistAfterLoad?: boolean }
+    ) => projectsOnDisk[path]
+);
 const saveProject = jest.fn().mockResolvedValue(undefined);
 
 /**
@@ -71,11 +82,21 @@ const saveProject = jest.fn().mockResolvedValue(undefined);
  * `harnessWithNoProject()` would have quietly kept the project and the no-project
  * tests would have measured the happy path.
  */
+/**
+ * The parts of a tool's registration that describe it to an AGENT rather than run it.
+ *
+ * The harness used to drop the definition on the floor (`_def: never`), so the
+ * annotations were unobservable and nothing could assert them — twelve mutants sat on
+ * those booleans, each one flipping what Claude Code is told about whether a tool is
+ * safe to call.
+ */
 function buildHarness(currentProject: unknown) {
     const tools = new Map<string, Tool>();
+    const defs = new Map<string, McpToolSchema>();
     const server = {
-        registerTool(name: string, _def: never, handler: Tool) {
+        registerTool(name: string, def: McpToolSchema, handler: Tool) {
             tools.set(name, handler);
+            defs.set(name, def);
         },
     };
     registerSiteTools(
@@ -94,6 +115,8 @@ function buildHarness(currentProject: unknown) {
     );
     return {
         names: () => [...tools.keys()],
+        /** What `tools/list` hands the agent for this tool. */
+        definitionOf: (name: string): McpToolSchema => defs.get(name)!,
         async callRaw(name: string, args: Record<string, unknown> = {}): Promise<string> {
             return (await tools.get(name)!(args)).content[0].text;
         },
@@ -288,6 +311,17 @@ describe('repair_site_configuration', () => {
         expect(out.lostGrants).toEqual(['o***r@example.test']);
     });
 
+    it('hands the repair a way to persist the project it changed', async () => {
+        await harness().call('repair_site_configuration', { confirm: true });
+
+        // The repair updates the project as it goes and cannot save it itself. If the
+        // callback it is handed does nothing, the repair appears to succeed and the
+        // change is gone at the next reload.
+        const persist = mockRepairSiteConfigForProject.mock.calls[0][3] as (p: unknown) => unknown;
+        persist(project);
+        expect(saveProject).toHaveBeenCalledWith(project);
+    });
+
     it('does not republish', async () => {
         const out = await harness().call('repair_site_configuration', { confirm: true });
 
@@ -380,6 +414,49 @@ describe('find_storefront_name_mismatches', () => {
             persistAfterLoad: false,
         });
         expect(saveProject).not.toHaveBeenCalled();
+
+        // `expect.any(Function)` passes for ANY function, so it does not check what the
+        // second argument ANSWERS. It is the loader's terminal provider, and a headless
+        // MCP tool has no VS Code terminals to hand back — its default reaches for
+        // `vscode.window.terminals`, which does not exist here.
+        const [, terminals] = loadProjectFromPath.mock.calls[0];
+        expect(terminals!()).toEqual([]);
+    });
+
+    it('skips a project whose manifest resolves to nothing, and keeps scanning', async () => {
+        allProjects = [
+            { name: 'gone', path: '/projects/gone' },
+            { name: 'demo', path: '/projects/demo' },
+        ];
+        // '/projects/gone' is absent from the map, so the loader resolves undefined
+        // rather than throwing — a different case from the unreadable manifest below,
+        // and the one a deleted directory produces.
+        projectsOnDisk = { '/projects/demo': project };
+        mockFindStorefrontNameMismatch.mockReturnValue(candidate);
+
+        const out = await harness().call('find_storefront_name_mismatches');
+
+        expect(out).toMatchObject({ scanned: 2, total: 1 });
+    });
+
+    it('lists only the projects that actually mismatch', async () => {
+        allProjects = [
+            { name: 'fine', path: '/projects/fine' },
+            { name: 'demo', path: '/projects/demo' },
+        ];
+        // Two DISTINCT projects, so the mismatch check can answer differently for each
+        // without depending on call order.
+        const alreadyCorrect = { ...project, name: 'fine' };
+        projectsOnDisk = { '/projects/fine': alreadyCorrect, '/projects/demo': project };
+        mockFindStorefrontNameMismatch.mockImplementation((p: unknown) =>
+            p === project ? candidate : undefined
+        );
+
+        const out = await harness().call('find_storefront_name_mismatches');
+
+        // Both scanned, one reported — a scan that listed every project it read would
+        // send the user migrating things that are already correct.
+        expect(out).toMatchObject({ scanned: 2, total: 1 });
     });
 
     it('reports an empty list rather than an error when nothing needs migrating', async () => {
@@ -441,6 +518,19 @@ describe('migrate_storefront_name', () => {
         expect(mockMigrateStorefrontNameForProject).not.toHaveBeenCalled();
     });
 
+    it('refuses when the name echo is right but confirm was never given', async () => {
+        // Both halves of the gate have to hold. An agent that has read the refusal
+        // knows the exact name to echo, so the echo alone is not evidence a human
+        // agreed — and this is the call that deletes the old DA.live site root.
+        const out = await harness().call('migrate_storefront_name', {
+            ...atDemo,
+            confirmName: 'demo',
+        });
+
+        expect(String(out.error)).toMatch(/confirm/i);
+        expect(mockMigrateStorefrontNameForProject).not.toHaveBeenCalled();
+    });
+
     it('refuses when the name echo does not match', async () => {
         const out = await harness().call('migrate_storefront_name', {
             ...atDemo,
@@ -471,6 +561,23 @@ describe('migrate_storefront_name', () => {
         expect(out.migrated).toBe(true);
         expect(out.publishKeyRenewed).toBe(true);
         expect(out.to).toBe('someone/demo-builder-test');
+    });
+
+    it('hands the migration a way to persist the project it renamed', async () => {
+        await harness().call('migrate_storefront_name', {
+            ...atDemo,
+            confirm: true,
+            confirmName: 'demo',
+        });
+
+        // Same rule as the repair: the rename changes the project and the tool owns
+        // saving it. A callback that drops the update loses the new site name.
+        const persist = mockMigrateStorefrontNameForProject.mock.calls[0][3] as (
+            p: unknown
+        ) => unknown;
+        const renamed = { ...project, name: 'renamed' };
+        persist(renamed);
+        expect(saveProject).toHaveBeenCalledWith(renamed);
     });
 
     it('reports a publish key that was NOT re-minted', async () => {
@@ -508,6 +615,30 @@ describe('migrate_storefront_name', () => {
         });
 
         expect(out.lostGrants).toEqual(['o***r@example.test']);
+    });
+
+    it('reads the target manifest without rewriting it', async () => {
+        await harness().call('migrate_storefront_name', atDemo);
+
+        // Same rule as the scan: resolving WHICH project to migrate must not persist
+        // the manifest as a side effect of reading it.
+        expect(loadProjectFromPath).toHaveBeenCalledWith('/projects/demo', expect.any(Function), {
+            persistAfterLoad: false,
+        });
+        const [, terminals] = loadProjectFromPath.mock.calls[0];
+        expect(terminals!()).toEqual([]);
+    });
+
+    it('accepts a project path with stray whitespace around it', async () => {
+        // Paths arrive from an agent, which may well have copied one out of prose with
+        // a trailing newline. Untrimmed, this resolves to nothing and the tool reports
+        // the project as missing.
+        const out = await harness().call('migrate_storefront_name', {
+            projectPath: '  /projects/demo\n',
+        });
+
+        expect(String(out.error ?? '')).not.toMatch(/No project found/);
+        expect(out.from).toBe('someone/citisignal-one');
     });
 
     it('says "nothing to do" rather than erroring on an already-correct project', async () => {
@@ -662,5 +793,87 @@ describe('connect_dalive', () => {
         };
 
         expect(out.needsUser).toBeDefined();
+    });
+});
+
+/**
+ * WHAT THESE TOOLS TELL AN AGENT ABOUT THEMSELVES.
+ *
+ * `annotations` is not decoration. It travels to the client in `tools/list`, so it is
+ * how Claude Code learns which of these tools are safe to call unprompted, and the dry
+ * run gates on `readOnlyHint`. Twelve mutants sat on these six booleans and every one
+ * survived: nothing asserted them, because the test harness discarded the definition
+ * and kept only the handler.
+ *
+ * Flipping one is not a test failure anywhere else in this suite — it is an agent being
+ * told that a tool which rewrites a project manifest is read-only.
+ */
+describe('what these tools declare themselves to be', () => {
+    /** Tool -> [readOnlyHint, destructiveHint]. */
+    const DECLARED: [string, boolean, boolean][] = [
+        ['get_site_access', true, false],
+        ['find_storefront_name_mismatches', true, false],
+        ['set_site_admin', false, true],
+        ['migrate_storefront_name', false, true],
+        ['repair_site_configuration', false, false],
+        ['connect_dalive', false, false],
+    ];
+
+    it.each(DECLARED)('%s declares readOnly=%s destructive=%s', (name, readOnly, destructive) => {
+        expect(harness().definitionOf(name).annotations).toEqual({
+            readOnlyHint: readOnly,
+            destructiveHint: destructive,
+        });
+    });
+
+    it('covers every registered tool, so a new one cannot arrive unpinned', () => {
+        expect(DECLARED.map(([n]) => n).sort()).toEqual(harness().names().sort());
+    });
+
+    /**
+     * The pins above restate the source. These two tie the declaration to what the tool
+     * actually DOES, which is the part an agent is trusting.
+     */
+    /**
+     * Arguments that reach each destructive tool's gate. They must be VALID apart from
+     * the missing confirmation: `migrate_storefront_name` resolves its target before
+     * gating, so a bogus path fails earlier and the test would pass on the wrong
+     * refusal.
+     */
+    const ARGS_REACHING_THE_GATE: Record<string, Record<string, unknown>> = {
+        set_site_admin: { email: 'someone@example.test', admin: true },
+        migrate_storefront_name: { projectPath: '/projects/demo' },
+    };
+
+    beforeEach(() => {
+        // `migrate_storefront_name` resolves the project from disk before it gates, so
+        // that path has to resolve or the refusal under test never runs.
+        projectsOnDisk = { '/projects/demo': project };
+        mockFindStorefrontNameMismatch.mockReturnValue(candidate);
+    });
+
+    it('every tool calling itself destructive really does refuse without confirm', async () => {
+        const destructive = DECLARED.filter(([, , d]) => d).map(([n]) => n);
+        expect(destructive.sort()).toEqual(Object.keys(ARGS_REACHING_THE_GATE).sort());
+
+        for (const name of destructive) {
+            const out = await harness().call(name, ARGS_REACHING_THE_GATE[name]);
+
+            // Refused for the RIGHT reason, and nothing was written.
+            expect(String(out.error)).toMatch(/confirm/i);
+        }
+        expect(mockAddSiteAdmin).not.toHaveBeenCalled();
+        expect(mockRemoveSiteAdmin).not.toHaveBeenCalled();
+        expect(mockMigrateStorefrontNameForProject).not.toHaveBeenCalled();
+    });
+
+    it('no tool calling itself read-only asks for a confirmation it would not honour', () => {
+        const readOnly = DECLARED.filter(([, r]) => r).map(([n]) => n);
+        expect(readOnly.length).toBeGreaterThan(0);
+
+        for (const name of readOnly) {
+            const schema = harness().definitionOf(name).inputSchema ?? {};
+            expect(Object.keys(schema)).not.toContain('confirm');
+        }
     });
 });

@@ -70,6 +70,33 @@ export function createProject({ mode = 'structural', tsConfigFilePath = 'tsconfi
     if (mode !== 'structural' && mode !== 'typed') {
         throw new Error(`unknown mode "${mode}" — expected "structural" or "typed"`);
     }
+    /**
+     * RETRY ON A VANISHING FILE.
+     *
+     * Typed mode builds the whole program from `tsconfig.test.json`, whose `include`
+     * covers `tests/**`. `eslint-type-aware.test.ts` writes a real probe file there
+     * for a few milliseconds — it has to be inside the project, or type-aware linting
+     * refuses to run on it — and jest runs suites in parallel. If the probe is deleted
+     * between ts-morph reading the file list and reading the file, construction throws
+     * FileNotFoundError and the scan dies.
+     *
+     * That suite already moved its probe out of the directories the WALKING scanners
+     * read, and its comment says so. This scanner does not walk: it takes tsconfig's
+     * word for the file set, so no relocation inside the project can help it. The
+     * file is transient by design, so retrying is the fix — and a genuinely missing
+     * file still fails, on the last attempt, with the same error.
+     */
+    for (let attempt = 0; ; attempt += 1) {
+        try {
+            return buildProject(tsConfigFilePath, mode);
+        } catch (err) {
+            const transient = /File not found/.test(String(err?.message ?? ''));
+            if (!transient || attempt >= 2) throw err;
+        }
+    }
+}
+
+function buildProject(tsConfigFilePath, mode) {
     return new Project({
         tsConfigFilePath,
         // In structural mode nothing is added up front; the caller adds exactly the

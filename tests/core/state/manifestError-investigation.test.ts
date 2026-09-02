@@ -20,6 +20,7 @@ import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import type { Project } from '@/types/base';
 import * as path from 'path';
 
+import { codedError } from '../../helpers/codedErrorFake';
 // Mock fs/promises
 jest.mock('fs/promises');
 
@@ -162,8 +163,7 @@ describe('Manifest Error Investigation', () => {
         it('should handle ENOENT during rename', async () => {
             // Given: rename fails with ENOENT (the exact error we see in production)
             const project = createTestProject();
-            const enoentError = new Error("ENOENT: no such file or directory, rename '/test/path/.demo-builder.json.tmp' -> '/test/path/.demo-builder.json'");
-            (enoentError as any).code = 'ENOENT';
+            const enoentError = codedError("ENOENT: no such file or directory, rename '/test/path/.demo-builder.json.tmp' -> '/test/path/.demo-builder.json'", { code: 'ENOENT' });
 
             mockFs.rename.mockRejectedValue(enoentError);
 

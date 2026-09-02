@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **77** conventions, **76** enforced
+- **78** conventions, **77** enforced
 - **20** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -116,6 +116,7 @@ it means the rule rests on somebody noticing.
 
 | Rule | Why | How | Enforced by |
 |---|---|---|---|
+| The mutation ratchet's "score rose without constraining anything" rule keeps controls in both directions, and they run with the suite. |  |  | `ratchet-controls.test.ts` |
 | A canonical fake covers its subject's WHOLE public surface, and invents nothing. |  |  | `fake-mirrors-subject.test.ts` |
 | A split test family shares one `.testUtils` file, which owns the mocks and the subject import. enforced by `tests/sop/test-family-setup.test.ts`. |  | [procedure](../../.claude/skills/webview-test-authoring/SKILL.md) | `test-family-setup.test.ts` |
 | Before designing a way to hand a mocked collaborator in — or to share one between suites — delete the mock and run the suite. If it still passes, the mock was the whole problem. |  |  | `redundant-automocks.test.ts` |

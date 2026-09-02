@@ -52,8 +52,23 @@ import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 export {
     ensureDaLiveAuth,
     showDaLiveAuthQuickPick,
+    validateDaLiveToken,
+    validateDaLiveTokenStrict,
     type DaLiveGuardResult,
 } from '@/features/eds/handlers/daLive/daLiveAuthPrompt';
+
+/**
+ * Build a DA.live-shaped JWT from a payload.
+ *
+ * Assembled rather than pasted so no JWT literal lands in the repo — a secret
+ * scanner flags the literal and cannot tell a fixture from a live credential.
+ * The signature is the word "signature": nothing verifies one, and the parser
+ * only base64-decodes the middle part.
+ */
+export function makeDaLiveToken(payload: Record<string, string>): string {
+    const encode = (value: object): string => Buffer.from(JSON.stringify(value)).toString('base64');
+    return `${encode({ alg: 'HS256' })}.${encode(payload)}.signature`;
+}
 export { clearServiceCache } from '@/features/eds/handlers/edsServiceCache';
 
 /**

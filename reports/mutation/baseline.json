@@ -1,6 +1,6 @@
 {
-    "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher \u2014 that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "12 modules. installHandler and integrationCardModel were RE-MEASURED on 2026-08-31 after jest.pl22.config.js was found naming 12 of installHandler's 13 suites and 1 of integrationCardModel's 5. Their previous numbers described the tests the runner loaded, not the tests that exist; each carries a _supersedes block holding them. The other ten reproduced to 0.00 in the same run, which is what makes the two moves attributable to the config rather than to run variance.",
+    "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
+    "_note": "authenticationService: getTokenStatus covered; the unreachable catches recorded (43.77%)",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -15,18 +15,18 @@
             "highValueSurvivors": 11
         },
         "src/features/ai/server/siteTools.ts": {
-            "score": 57.33,
-            "killed": 129,
-            "survived": 93,
-            "noCoverage": 3,
+            "score": 69.2,
+            "killed": 164,
+            "survived": 72,
+            "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "other": 21,
-                "branch": 16,
-                "string": 51,
-                "optionalChain": 5
+                "string": 57,
+                "other": 9,
+                "optionalChain": 5,
+                "branch": 1
             },
-            "highValueSurvivors": 16
+            "highValueSurvivors": 1
         },
         "src/features/dashboard/ui/components/integrations/integrationCardModel.ts": {
             "score": 91.9,
@@ -40,30 +40,23 @@
                 "other": 2,
                 "string": 5
             },
-            "highValueSurvivors": 7,
-            "_supersedes": {
-                "score": 42.96,
-                "survived": 89,
-                "noCoverage": 73,
-                "highValueSurvivors": 41,
-                "why": "measured against an incomplete test set"
-            }
+            "highValueSurvivors": 7
         },
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts": {
-            "score": 67.04,
-            "killed": 179,
-            "survived": 53,
-            "noCoverage": 35,
+            "score": 82.77,
+            "killed": 221,
+            "survived": 44,
+            "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 19,
-                "other": 9,
-                "string": 10,
-                "optionalChain": 2,
-                "block": 4,
-                "logPresentation": 9
+                "branch": 11,
+                "other": 7,
+                "string": 9,
+                "logPresentation": 10,
+                "block": 3,
+                "optionalChain": 4
             },
-            "highValueSurvivors": 23
+            "highValueSurvivors": 14
         },
         "src/features/eds/services/patches/codePatchRegistry.ts": {
             "score": 84.54,
@@ -79,25 +72,20 @@
             "highValueSurvivors": 6
         },
         "src/features/prerequisites/handlers/installHandler.ts": {
-            "score": 57.12,
-            "killed": 309,
-            "survived": 196,
-            "noCoverage": 36,
+            "score": 70.24,
+            "killed": 380,
+            "survived": 150,
+            "noCoverage": 11,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 99,
-                "other": 24,
-                "string": 53,
-                "optionalChain": 20
+                "logPresentation": 57,
+                "optionalChain": 16,
+                "string": 7,
+                "other": 12,
+                "branch": 48,
+                "block": 10
             },
-            "highValueSurvivors": 99,
-            "_supersedes": {
-                "score": 49.17,
-                "survived": 163,
-                "noCoverage": 112,
-                "highValueSurvivors": 73,
-                "why": "measured against an incomplete test set"
-            }
+            "highValueSurvivors": 58
         },
         "src/core/ui/utils/spectrumTokens.ts": {
             "score": 88.24,
@@ -119,8 +107,8 @@
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 1,
-                "string": 1
+                "string": 1,
+                "other": 1
             },
             "highValueSurvivors": 0
         },
@@ -142,8 +130,8 @@
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 1,
-                "string": 1
+                "string": 1,
+                "other": 1
             },
             "highValueSurvivors": 0
         },
@@ -164,7 +152,70 @@
             "timeout": 0,
             "survivorCategories": {},
             "highValueSurvivors": 0
+        },
+        "src/core/state/stateManager.ts": {
+            "score": 66.88,
+            "killed": 103,
+            "survived": 40,
+            "noCoverage": 11,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 9,
+                "block": 7,
+                "branch": 10,
+                "logPresentation": 4,
+                "other": 5,
+                "optionalChain": 5
+            },
+            "highValueSurvivors": 17
+        },
+        "src/features/updates/services/componentUpdater.ts": {
+            "score": 46.34,
+            "killed": 133,
+            "survived": 116,
+            "noCoverage": 38,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 18,
+                "other": 11,
+                "branch": 36,
+                "logPresentation": 28,
+                "block": 13,
+                "optionalChain": 10
+            },
+            "highValueSurvivors": 49
+        },
+        "src/features/updates/services/updateManager.ts": {
+            "score": 51.4,
+            "killed": 92,
+            "survived": 75,
+            "noCoverage": 12,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 12,
+                "branch": 43,
+                "optionalChain": 4,
+                "block": 9,
+                "logPresentation": 3,
+                "other": 4
+            },
+            "highValueSurvivors": 52
+        },
+        "src/features/authentication/services/authenticationService.ts": {
+            "score": 43.77,
+            "killed": 116,
+            "survived": 101,
+            "noCoverage": 48,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 35,
+                "branch": 17,
+                "string": 36,
+                "other": 4,
+                "optionalChain": 6,
+                "block": 3
+            },
+            "highValueSurvivors": 20
         }
-    },
-    "_correction": "NEITHER MOVE IS AN IMPROVEMENT AND NEITHER MAY BE COUNTED AS ONE. No test was written. integrationCardModel 42.96 -> 91.90 is four suites that were always there; it is not a badly-tested module and comes off the target list. installHandler 49.17 -> 57.12 is one suite, and its high-value survivors ROSE 73 -> 99 while its score rose, which is normally the signature the anti-gaming rule exists to catch. It is not gaming here: adding the missing suite converted mutants from NoCoverage (112 -> 36) into Survived, i.e. from 'no test reaches this' to 'a test reaches it and does not check it'. That is a truer and worse signal, and installHandler remains the real worst module of the twelve."
+    }
 }

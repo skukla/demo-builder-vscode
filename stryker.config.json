@@ -25,10 +25,11 @@
     "timeoutMS": 20000,
     "disableTypeChecks": true,
     "tempDirName": ".stryker-tmp",
-    "cleanTempDir": true,
+    "cleanTempDir": "always",
     "ignorePatterns": [
         ".stryker-tmp",
         ".stryker-tmp-pl22",
+        ".stryker-tmp-focus",
         "reports",
         "coverage",
         "dist"

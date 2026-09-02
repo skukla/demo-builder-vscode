@@ -20,6 +20,12 @@ import type { Logger } from '@/types/logger';
 import * as vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import {
+    createMockTerminal,
+    mockCommands,
+    mockWindow,
+    mockWorkspace,
+} from '../../../helpers/vscodeMockViews';
 const MockProcessCleanup = ProcessCleanup as jest.MockedClass<typeof ProcessCleanup>;
 
 describe('StopDemoCommand - Error Handling', () => {
@@ -28,17 +34,17 @@ describe('StopDemoCommand - Error Handling', () => {
     let mockStateManager: jest.Mocked<StateManager>;
     let mockLogger: jest.Mocked<Logger>;
     let mockProcessCleanup: jest.Mocked<ProcessCleanup>;
-    let mockTerminal: { name: string; dispose: jest.Mock };
+    let mockTerminal: ReturnType<typeof createMockTerminal>;
 
     beforeEach(() => {
         jest.clearAllMocks();
 
         // Setup mock terminal
-        mockTerminal = {
+        mockTerminal = createMockTerminal({
             name: 'test-project - Frontend',
             dispose: jest.fn(),
-        };
-        (vscode.window as any).terminals = [mockTerminal];
+        });
+        mockWindow.terminals = [mockTerminal];
 
         // Setup mock ProcessCleanup instance
         mockProcessCleanup = {
@@ -87,23 +93,23 @@ describe('StopDemoCommand - Error Handling', () => {
         mockLogger = createMockLogger();
 
         // Mock vscode.window.withProgress to execute task immediately
-        (vscode.window as any).withProgress = jest.fn().mockImplementation(
+        mockWindow.withProgress = jest.fn().mockImplementation(
             async (_options: any, task: any) => {
                 return await task({ report: jest.fn() });
             }
         );
 
         // Mock vscode.window.setStatusBarMessage
-        (vscode.window as any).setStatusBarMessage = jest.fn();
+        mockWindow.setStatusBarMessage = jest.fn();
 
         // Mock vscode.window.showErrorMessage
-        (vscode.window as any).showErrorMessage = jest.fn().mockResolvedValue('OK');
+        mockWindow.showErrorMessage = jest.fn().mockResolvedValue('OK');
 
         // Mock vscode.commands.executeCommand
-        (vscode.commands as any).executeCommand = jest.fn().mockResolvedValue(undefined);
+        mockCommands.executeCommand = jest.fn().mockResolvedValue(undefined);
 
         // Mock vscode.workspace.getConfiguration
-        (vscode.workspace as any).getConfiguration = jest.fn().mockReturnValue({
+        mockWorkspace.getConfiguration = jest.fn().mockReturnValue({
             get: jest.fn().mockReturnValue(3000),
         });
 

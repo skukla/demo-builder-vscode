@@ -43,7 +43,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -102,7 +102,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -144,7 +144,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -193,7 +193,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -218,7 +218,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -247,7 +247,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -280,7 +280,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -307,7 +307,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );
@@ -328,7 +328,7 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
             repoOwner,
             repoName,
             overlayUrl,
-            mockLogger as never,
+            mockLogger,
             daLiveOrg,
             daLiveSite
         );

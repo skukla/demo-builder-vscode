@@ -14,11 +14,12 @@
 import * as fs from 'fs';
 import { downloadWorkspaceConfigJson } from '@/features/data-installer/services/workspaceConfigDownload';
 
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 const TARGET = { orgId: '285361', projectId: 'proj-1', workspaceId: 'ws-1' };
 
 /** An executor that writes the file the command names, like aio would. */
 function executorWriting(content: string | null, code = 0, stderr = '') {
-    return {
+    return createMockCommandExecutor({
         execute: jest.fn(async (command: string) => {
             const match = command.match(/"([^"]+)"/);
             if (content !== null && match) {
@@ -26,14 +27,14 @@ function executorWriting(content: string | null, code = 0, stderr = '') {
             }
             return { code, stdout: '', stderr };
         }),
-    };
+    });
 }
 
 describe('downloadWorkspaceConfigJson', () => {
     it('returns the downloaded JSON', async () => {
         const executor = executorWriting('{"project":{}}');
 
-        const raw = await downloadWorkspaceConfigJson(executor as never, TARGET);
+        const raw = await downloadWorkspaceConfigJson(executor, TARGET);
 
         expect(raw).toBe('{"project":{}}');
     });
@@ -41,7 +42,7 @@ describe('downloadWorkspaceConfigJson', () => {
     it('targets the EXPLICIT org, project and workspace — never the selected context', async () => {
         const executor = executorWriting('{}');
 
-        await downloadWorkspaceConfigJson(executor as never, TARGET);
+        await downloadWorkspaceConfigJson(executor, TARGET);
 
         const command = executor.execute.mock.calls[0][0];
         expect(command).toContain('aio console workspace download');
@@ -53,7 +54,7 @@ describe('downloadWorkspaceConfigJson', () => {
     it('removes the temp file even on success — it holds the client secret', async () => {
         const executor = executorWriting('{"secret":"here"}');
 
-        await downloadWorkspaceConfigJson(executor as never, TARGET);
+        await downloadWorkspaceConfigJson(executor, TARGET);
 
         const command = executor.execute.mock.calls[0][0];
         const filePath = (command.match(/"([^"]+)"/) as RegExpMatchArray)[1];
@@ -63,7 +64,7 @@ describe('downloadWorkspaceConfigJson', () => {
     it('throws a readable error on a non-zero exit, without the command output', async () => {
         const executor = executorWriting(null, 2, 'ERROR_DOWNLOAD_WORKSPACE_JSON 404');
 
-        await expect(downloadWorkspaceConfigJson(executor as never, TARGET)).rejects.toThrow(
+        await expect(downloadWorkspaceConfigJson(executor, TARGET)).rejects.toThrow(
             /workspace configuration/i
         );
     });
@@ -71,7 +72,7 @@ describe('downloadWorkspaceConfigJson', () => {
     it('throws when the command succeeds but no file appears', async () => {
         const executor = executorWriting(null, 0);
 
-        await expect(downloadWorkspaceConfigJson(executor as never, TARGET)).rejects.toThrow();
+        await expect(downloadWorkspaceConfigJson(executor, TARGET)).rejects.toThrow();
     });
 });
 
@@ -95,7 +96,7 @@ describe('command injection', () => {
     ])('refuses a hostile %s instead of shelling it out', async (_field, target) => {
         const executor = executorWriting('{}');
 
-        await expect(downloadWorkspaceConfigJson(executor as never, target)).rejects.toThrow();
+        await expect(downloadWorkspaceConfigJson(executor, target)).rejects.toThrow();
         expect(executor.execute).not.toHaveBeenCalled();
     });
 
@@ -103,7 +104,7 @@ describe('command injection', () => {
         const executor = executorWriting('{"project":{}}');
 
         await expect(
-            downloadWorkspaceConfigJson(executor as never, {
+            downloadWorkspaceConfigJson(executor, {
                 orgId: '285361',
                 projectId: '4566206088345707694',
                 workspaceId: '4566206088345747128',

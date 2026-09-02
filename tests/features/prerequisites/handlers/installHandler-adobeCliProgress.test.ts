@@ -28,6 +28,7 @@ import * as shared from '@/features/prerequisites/handlers/shared';
 import {
     mockAdobeCliPrereq,
     mockAdobeCliPrereqNoVersion,
+    mockNodePrereq,
     mockNodeResult,
     createInstallHandlerContext,
     setupMockCommandExecutor,
@@ -174,4 +175,102 @@ describe('Install Handler - Adobe I/O CLI Unified Progress Messages', () => {
             undefined
         );
     });
+
+    /**
+     * HOW MANY STEPS the progress bar counts before the install starts.
+     *
+     * The total is computed once (installHandler.ts:183-186) and handed to every
+     * `executeStep` call, so a wrong total shows up as a progress bar that stops
+     * short or never reaches the end — visible to the user, invisible to a test
+     * that only checks the install succeeded.
+     *
+     * Two rules: steps run once per target Node version, EXCEPT for a dynamic Node
+     * install, which runs them once in total; and steps whose name says "default"
+     * are never multiplied.
+     */
+    describe('the number of steps the progress bar counts', () => {
+        const twoStepsAndADefault = {
+            steps: [
+                { name: 'Install thing', message: 'Installing...', commands: ['install'] },
+                { name: 'Link thing', message: 'Linking...', commands: ['link'] },
+                { name: 'Set as default', message: 'Setting default...', commands: ['default'] },
+            ],
+        };
+
+        function totalsSeenByProgress(): number[] {
+            return (mockContext.progressUnifier.executeStep as jest.Mock).mock.calls.map(
+                (c: unknown[]) => c[2] as number
+            );
+        }
+
+        function planSteps(prereq: unknown) {
+            const states = new Map();
+            states.set(0, { prereq, result: mockNodeResult });
+            mockContext.sharedState.currentPrerequisiteStates = states;
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue(
+                twoStepsAndADefault
+            );
+        }
+
+        it('counts each step once when there is no version to repeat over', async () => {
+            planSteps(mockAdobeCliPrereqNoVersion);
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            // 2 install steps x 1 + 1 default = 3
+            const totals = totalsSeenByProgress();
+            expect(totals.length).toBeGreaterThan(0);
+            expect(new Set(totals)).toEqual(new Set([3]));
+        });
+
+        it('counts install steps once per Node version, and the default step once', async () => {
+            planSteps(mockNodePrereq);
+            (mockContext.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+                { version: 'Node 18', component: 'not installed', installed: false },
+                { version: 'Node 20', component: 'not installed', installed: false },
+            ]);
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            // 2 install steps x 2 versions + 1 default = 5
+            const totals = totalsSeenByProgress();
+            expect(totals.length).toBeGreaterThan(0);
+            expect(new Set(totals)).toEqual(new Set([5]));
+        });
+
+        it('does not treat a NON-Node prerequisite as dynamic, so its default step still runs', async () => {
+            // Only Node declares `dynamic` in prerequisites.json today. The `id === 'node'`
+            // guard is what stops a future config that adds `dynamic` elsewhere from taking
+            // the dynamic path — which runs the install steps and SKIPS the default step
+            // entirely. Without this test, deleting the guard breaks nothing visible.
+            planSteps({
+                ...mockAdobeCliPrereqNoVersion,
+                install: { ...mockAdobeCliPrereqNoVersion.install, dynamic: true },
+            });
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            const stepNames = (mockContext.progressUnifier.executeStep as jest.Mock).mock.calls.map(
+                (c: unknown[]) => (c[0] as { name: string }).name
+            );
+            expect(stepNames).toContain('Set as default');
+            expect(stepNames).toHaveLength(3);
+        });
+
+        it('counts a dynamic Node install once, not once per version', async () => {
+            planSteps({ ...mockNodePrereq, install: { ...mockNodePrereq.install, dynamic: true } });
+            (mockContext.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+                { version: 'Node 18', component: 'not installed', installed: false },
+                { version: 'Node 20', component: 'not installed', installed: false },
+            ]);
+
+            await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+            // The dynamic installer handles every version itself: 2 + 1 = 3, not 5.
+            const totals = totalsSeenByProgress();
+            expect(totals.length).toBeGreaterThan(0);
+            expect(new Set(totals)).toEqual(new Set([3]));
+        });
+    });
+
 });

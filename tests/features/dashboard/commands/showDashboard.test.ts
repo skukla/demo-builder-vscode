@@ -13,6 +13,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { internals } from '../../../helpers/commandInternals';
 // Mock dependencies
 
 /**
@@ -83,12 +84,12 @@ describe('ProjectDashboardWebviewCommand - Bundle Loading', () => {
             cspSource: 'vscode-webview://test',
             asWebviewUri: jest.fn((uri: vscode.Uri) => uri),
         };
-        (command as any).panel = {
+        internals(command).panel = {
             webview: mockWebview,
         };
 
         // When: Webview HTML is generated
-        const html = await (command as any).getWebviewContent();
+        const html = await internals(command).getWebviewContent();
 
         // Then: Contains single script tag for the feature bundle
         expect(html).toContain('dashboard-bundle.js');
@@ -106,12 +107,12 @@ describe('ProjectDashboardWebviewCommand - Bundle Loading', () => {
             cspSource: 'vscode-webview://test',
             asWebviewUri: jest.fn((uri: vscode.Uri) => uri),
         };
-        (command as any).panel = {
+        internals(command).panel = {
             webview: mockWebview,
         };
 
         // When: HTML content is parsed
-        const html = await (command as any).getWebviewContent();
+        const html = await internals(command).getWebviewContent();
 
         // Then: Single script tag has nonce attribute
         const scriptMatches = html.match(/<script nonce="([^"]+)"/g);
@@ -158,7 +159,7 @@ describe('ProjectDashboardWebviewCommand - getInitialData (keyed-only project)',
             },
         });
 
-        const data = await (command as any).getInitialData();
+        const data = await internals(command).getInitialData();
 
         expect(data.hasMesh).toBe(true);
     });
@@ -180,7 +181,7 @@ describe('ProjectDashboardWebviewCommand - getInitialData (keyed-only project)',
             appBuilderComponents: keyed,
         });
 
-        const data = await (command as any).getInitialData();
+        const data = await internals(command).getInitialData();
 
         expect(data.appBuilderComponents).toEqual(keyed);
         // The singular app-card seed retired with the AppBuilderCard (D3 Step 08).

@@ -12,7 +12,7 @@
  * instrument is RUN, and `tests/sop/mutation-config-pairing.test.ts` covers the
  * per-build half: that every mutated module has a baseline row and a test selected.
  */
-import { readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 
 /** A line that only feeds a logger is presentation. Mutating it proves nothing. */
 const LOGGY = /[Ll]ogger|\.log\(|\.debug\(|\.warn\(|\.info\(|\.error\(|\.trace\(/;
@@ -80,8 +80,23 @@ export function summarise(reportPath) {
     return rows;
 }
 
-export function writeBaseline(reportPath, baselinePath, note) {
-    const modules = summarise(reportPath);
+/**
+ * Pin a report's numbers as the new floor.
+ *
+ * @param merge  true when the report covers only SOME modules — a focused run. The
+ *   report's modules replace their baseline rows and every other row is kept as it
+ *   was. Without this the loop could CHECK against the floor after each focused
+ *   measurement but never RAISE it, so the floor sat two shipped improvements stale
+ *   and would have accepted a regression back to it as "held". Overwriting outright
+ *   instead would delete the rows the focused run never measured, which is worse.
+ */
+export function writeBaseline(reportPath, baselinePath, note, merge = false) {
+    const measured = summarise(reportPath);
+    const kept =
+        merge && existsSync(baselinePath)
+            ? JSON.parse(readFileSync(baselinePath, 'utf8')).modules
+            : {};
+    const modules = { ...kept, ...measured };
     writeFileSync(
         baselinePath,
         JSON.stringify(
@@ -102,12 +117,48 @@ export function writeBaseline(reportPath, baselinePath, note) {
     return modules;
 }
 
+
+/**
+ * Survivors that represent BEHAVIOUR rather than wording.
+ *
+ * The ratchet's second rule exists to catch a score raised by asserting log strings.
+ * It originally read `highValueSurvivors`, which counts only branch and block — so
+ * killing any other kind of behavioural mutant raised the score while that number
+ * stood still, and the rule fired on genuine work. It did, on 2026-09-02: six mutants
+ * on two `.sort()` comparators died (as text, Node 8 sorts after Node 20 — a real
+ * defect reaching the user), and the run was reported as padding.
+ *
+ * The two instruments also disagreed. `mutationWorklist.mjs` ranked those same
+ * comparators as decisions worth working, so the loop was steered at work the ratchet
+ * then refused to credit.
+ *
+ * Wording is what `string` and `logPresentation` capture; everything else changes what
+ * the code DOES. Subtracting only those two states the rule precisely and leaves
+ * `highValueSurvivors` — which the baseline rows pin and the report prints — untouched.
+ */
+function behaviouralSurvivors(row) {
+    const c = row.survivorCategories;
+    if (!c) return undefined; // an older row: fall back to the coarse check
+    return row.survived - (c.string ?? 0) - (c.logPresentation ?? 0);
+}
+
 /**
  * Compare a fresh report against the baseline.
  *
  * Returns a list of human-readable problems; empty means the ratchet held.
  */
-export function compare(reportPath, baselinePath) {
+/**
+ * @param reportPath  a Stryker JSON report
+ * @param baselinePath  the pinned per-module baseline
+ * @param partial  true when the report deliberately covers only SOME baseline
+ *   modules — a focused single-module run. Without it, every module the run did not
+ *   measure reports as "dropped from the config", which is 11 false alarms on a focus
+ *   report and makes the ratchet unusable exactly where the loop needs it.
+ *
+ *   The check it turns off is still worth having for a FULL run: a module silently
+ *   vanishing from `mutate` is how a measurement quietly stops measuring.
+ */
+export function compare(reportPath, baselinePath, partial = false) {
     const now = summarise(reportPath);
     const base = JSON.parse(readFileSync(baselinePath, 'utf8')).modules;
     const problems = [];
@@ -115,7 +166,11 @@ export function compare(reportPath, baselinePath) {
     for (const [path, b] of Object.entries(base)) {
         const n = now[path];
         if (!n) {
-            problems.push(`${path}: in the baseline but NOT in this run — was it dropped from the config?`);
+            if (!partial) {
+                problems.push(
+                    `${path}: in the baseline but NOT in this run — was it dropped from the config?`
+                );
+            }
             continue;
         }
         if (n.score < b.score) {
@@ -124,10 +179,27 @@ export function compare(reportPath, baselinePath) {
                     `A change went in that the tests do not constrain.`
             );
         }
-        if (n.score > b.score && n.highValueSurvivors >= b.highValueSurvivors) {
+        const bBehaviour = behaviouralSurvivors(b);
+        const nBehaviour = behaviouralSurvivors(n);
+        const stalled =
+            bBehaviour === undefined || nBehaviour === undefined
+                ? n.highValueSurvivors >= b.highValueSurvivors
+                : nBehaviour >= bBehaviour;
+        // Bringing UNREACHABLE code under test raises the score and raises the survivor
+        // count at the same time: a NoCoverage mutant becomes either killed or survived,
+        // and the ones that survive are newly visible work rather than new debt. Padding
+        // never moves this number, so exempting a run whose uncovered count fell keeps
+        // the check aimed at what it was built for. Measured 2026-09-02: nineteen
+        // uncovered mutants became covered, thirteen of them killed, and the rule called
+        // the run padding because six of the rest now showed up as survivors.
+        const reachedNewCode = n.noCoverage < b.noCoverage;
+        if (n.score > b.score && stalled && !reachedNewCode) {
+            const shown =
+                bBehaviour === undefined || nBehaviour === undefined
+                    ? `branch/block survivors did not fall (${b.highValueSurvivors} -> ${n.highValueSurvivors})`
+                    : `behavioural survivors did not fall (${bBehaviour} -> ${nBehaviour})`;
             problems.push(
-                `${path}: score ROSE ${b.score}% -> ${n.score}% but branch/block survivors ` +
-                    `did not fall (${b.highValueSurvivors} -> ${n.highValueSurvivors}). ` +
+                `${path}: score ROSE ${b.score}% -> ${n.score}% but ${shown}. ` +
                     `That is a score raised without constraining a decision — ` +
                     `check what the new assertions actually assert.`
             );

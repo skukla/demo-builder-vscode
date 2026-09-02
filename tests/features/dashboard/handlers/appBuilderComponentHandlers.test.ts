@@ -182,7 +182,7 @@ describe('handleAddAppBuilderComponent', () => {
                     source: { owner: 'adobe', repo: 'commerce-integration-starter-kit' },
                 },
             },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
         mockGetAppBuilderComponentEntry.mockReturnValue({
             ...ERP_ENTRY,
@@ -208,7 +208,7 @@ describe('handleAddAppBuilderComponent', () => {
                     source: { owner: 'acme', repo: 'erp-sync' },
                 },
             },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
         mockGetAppBuilderComponentEntry.mockReturnValue({ ...ERP_ENTRY, id: 'my-app-b' });
 
@@ -419,7 +419,7 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
                 entryOverrides === null
                     ? {}
                     : { 'firefly-image-gen': { ...KEYED_ENTRY, ...entryOverrides } },
-        } as never);
+        });
         // An AI-built instance id never resolves in the catalog (the beforeEach
         // default returns ERP_ENTRY for the add path — rename must see undefined).
         mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
@@ -566,7 +566,7 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
                     source: { owner: 'acme', repo: 'unnamed-import', branch: 'main' },
                 },
             },
-        } as never);
+        });
         mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
         const vscode = require('vscode');
         vscode.window.showInputBox = jest.fn().mockResolvedValue(undefined);
@@ -633,9 +633,9 @@ describe('handleAddAppBuilderComponent — duplicate ids', () => {
     it('refuses a catalog entry already present, without calling the runner', async () => {
         const { mockContext } = setupMocks({
             appBuilderComponents: {
-                'erp-sync': { kind: 'integration', status: 'deployed' },
+                'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'acme', repo: 'erp-sync', branch: 'main' } },
             },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
 
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
@@ -655,9 +655,9 @@ describe('handleAddAppBuilderComponent — duplicate ids', () => {
         });
         const { mockContext } = setupMocks({
             appBuilderComponents: {
-                'acme-erp-sync': { kind: 'integration', status: 'deployed' },
+                'acme-erp-sync': { kind: 'integration', status: 'deployed', source: { owner: 'acme', repo: 'erp-sync', branch: 'main' } },
             },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
 
         const result = await handleAddAppBuilderComponent(mockContext, {
@@ -674,9 +674,9 @@ describe('handleAddAppBuilderComponent — duplicate ids', () => {
         // recovers, so the duplicate guard must not stand in the way.
         const { mockContext } = setupMocks({
             appBuilderComponents: {
-                'erp-sync': { kind: 'integration', status: 'error' },
+                'erp-sync': { kind: 'integration', status: 'error', source: { owner: 'acme', repo: 'erp-sync', branch: 'main' } },
             },
-        } as never);
+        });
         mockTestDeveloperPermissions(true);
 
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });
@@ -687,8 +687,14 @@ describe('handleAddAppBuilderComponent — duplicate ids', () => {
 
     it('still allows an add whose id is NOT present', async () => {
         const { mockContext } = setupMocks({
-            appBuilderComponents: { 'other-thing': { kind: 'integration' } },
-        } as never);
+            appBuilderComponents: {
+                'other-thing': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'other-thing', branch: 'main' },
+                },
+            },
+        });
         mockTestDeveloperPermissions(true);
 
         const result = await handleAddAppBuilderComponent(mockContext, { id: 'erp-sync' });

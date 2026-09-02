@@ -105,4 +105,27 @@ describe('install-prerequisite addressed by prerequisiteId', () => {
 
         expect(result.data).toMatchObject({ prerequisite: 'Docker' });
     });
+
+    /**
+     * An agent can ask for a prerequisite before anything has loaded the config — the
+     * headless context builds fresh per call and nothing guarantees a prior read. When
+     * that read comes back with nothing, the resolver must still be handed a LIST, not
+     * a missing value, and the answer must be "no such prerequisite" rather than a
+     * crash inside dependency resolution.
+     */
+    it('answers cleanly when the config read comes back empty', async () => {
+        const ctx = createContext();
+        (ctx.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(undefined);
+        (ctx.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue([]);
+
+        const result = await handleInstallPrerequisite(ctx, { prerequisiteId: 'docker' });
+
+        // Asserting the ARGUMENT: the empty list is the whole point. Handing the
+        // resolver `undefined` instead is invisible against a mock and throws against
+        // the real one.
+        expect(ctx.prereqManager!.resolveDependencies).toHaveBeenCalledWith([]);
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/docker/);
+    });
+
 });

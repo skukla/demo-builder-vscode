@@ -35,6 +35,8 @@ jest.mock('@/core/shell/orgContextEnv', () => {
 import { withOrgContext } from '@/core/shell/orgContextEnv';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 const MESH = 'GraphQLServiceSDK';
 const MGMT = 'AdobeIOManagementAPISDK';
 
@@ -67,8 +69,11 @@ function createProject(): Project {
     };
 }
 
-function createAuthService() {
-    return {
+function createAuthService(): jest.Mocked<AuthenticationService> {
+    // The canonical fake, with the four methods this suite drives. It was a bare
+    // four-method literal reaching `ensureMeshApiSubscribed` through `as any` at
+    // nine call sites — and that param is typed `AuthenticationService`, which has 44.
+    return createMockAuthenticationService({
         getServicesForOrg: jest.fn().mockResolvedValue([
             { code: MESH, name: 'API Mesh', platformList: ['apiKey'], domainMandatory: true },
             { code: MGMT, name: 'I/O Management API', platformList: ['oauth_server_to_server'] },
@@ -80,7 +85,7 @@ function createAuthService() {
         // Default: nothing subscribed yet → the subscribe paths proceed.
         getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
         getCachedOrganization: jest.fn().mockReturnValue(undefined),
-    };
+    });;
 }
 
 describe('ensureMeshApiSubscribed', () => {
@@ -102,7 +107,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 
@@ -124,7 +129,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 
@@ -141,7 +146,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 
@@ -156,7 +161,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 
@@ -173,7 +178,7 @@ describe('ensureMeshApiSubscribed', () => {
         await expect(
             ensureMeshApiSubscribed({
                 project: createProject(),
-                authService: authService as any,
+                authService: authService,
                 logger,
             })
         ).resolves.toEqual(expect.any(Array));
@@ -185,7 +190,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         const result = await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 
@@ -204,7 +209,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         const result = await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 
@@ -219,7 +224,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
             onProgress: (event) => {
                 events.push(event);
@@ -241,7 +246,7 @@ describe('ensureMeshApiSubscribed', () => {
 
         const result = await ensureMeshApiSubscribed({
             project: createProject(),
-            authService: authService as any,
+            authService: authService,
             logger,
         });
 

@@ -12,10 +12,14 @@
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 
-import { CommandExecutor, ComponentUpdater, fs, vscode } from './componentUpdater.testUtils';
-import { createMockLogger } from '../../../helpers/loggerFake';
+import {
+    CommandExecutor,
+    ComponentUpdater,
+    fs,
+    vscode,
+    setupUpdater,
+} from './componentUpdater.testUtils';
 jest.mock('@/core/validation/URLValidator');
-import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 
 describe('ComponentUpdater - Extended Coverage', () => {
     let updater: ComponentUpdater;
@@ -24,63 +28,12 @@ describe('ComponentUpdater - Extended Coverage', () => {
     let mockExecutor: Record<string, jest.Mock>;
 
     beforeEach(() => {
-        jest.clearAllMocks();
-
-        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
-
-        mockExecutor = {
-            execute: jest.fn().mockResolvedValue({
-                stdout: '',
-                stderr: '',
-                code: 0,
-                duration: 100,
-            }),
-        };
-
-        // CONVERTED 2026-08-28 (ADR-015): the executor is a constructor
-        // dependency now — the same fake is handed straight in.
-
-        // Security validation is automocked at module scope. This used to
-        // `require('@/core/validation')` and ASSIGN a fresh jest.fn onto the
-        // module — which only worked because the barrel handed back a plain
-        // object. The declaring module is a real ES namespace whose exports are
-        // getters and cannot be assigned; the automock supplies the mock.
-        jest.mocked(validateGitHubDownloadURL).mockReset();
-
-        jest.spyOn(fs, 'cp').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'rm').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'mkdir').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'readFile').mockResolvedValue('{"name": "test"}');
-        jest.spyOn(fs, 'writeFile').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'access').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'unlink').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'rename').mockResolvedValue(undefined);
-
-        (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
-
-        global.fetch = jest.fn().mockResolvedValue({
-            ok: true,
-            arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1024)),
-        }) as unknown as typeof fetch;
-
-        updater = new ComponentUpdater(
-            mockLogger,
-            '/mock/extension/path',
-            mockExecutor as unknown as CommandExecutor
-        );
-
-        mockProject = {
-            path: '/path/to/project',
-            name: 'test-project',
-            componentInstances: {
-                'test-component': {
-                    id: 'test-component',
-                    path: '/path/to/project/components/test-component',
-                    port: 3000,
-                },
-            },
-            componentVersions: {},
-        } as unknown as Project;
+        ({
+            updater,
+            logger: mockLogger,
+            executor: mockExecutor,
+            project: mockProject,
+        } = setupUpdater());
     });
 
     describe('.env file preservation', () => {
@@ -201,6 +154,30 @@ describe('ComponentUpdater - Extended Coverage', () => {
             expect(mockProject.componentVersions?.['test-component']).toEqual({
                 version: '1.0.0',
                 lastUpdated: expect.any(String),
+            });
+        });
+
+        it('keeps the INSTALLED component in step with the version record', async () => {
+            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+
+            await updater.updateComponent(mockProject, 'test-component', downloadUrl, '1.0.0');
+
+            // Two places record a version and the project loader PREFERS this one. If it
+            // is not moved, a successful update leaves the dashboard showing the old
+            // version while the version record says the new one — and nothing fails.
+            expect(mockProject.componentInstances?.['test-component']?.version).toBe('1.0.0');
+        });
+
+        it('updates a project that has no version record yet', async () => {
+            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            // Older projects predate the field entirely. The default fixture already has
+            // an empty one, so the branch that CREATES it was never taken.
+            delete (mockProject as { componentVersions?: unknown }).componentVersions;
+
+            await updater.updateComponent(mockProject, 'test-component', downloadUrl, '1.0.0');
+
+            expect(mockProject.componentVersions?.['test-component']).toMatchObject({
+                version: '1.0.0',
             });
         });
 

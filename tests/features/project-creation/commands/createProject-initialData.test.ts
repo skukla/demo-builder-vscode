@@ -14,6 +14,7 @@ import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
+import { internals } from '../../../helpers/commandInternals';
 // Factory mock keeping the real module: transitive deps (fetch-blob via the
 // auth service import chain) destructure fs.promises at load time, so a bare
 // auto-mock crashes the suite before any test runs.
@@ -96,7 +97,7 @@ describe('CreateProjectWebviewCommand - getInitialData wizard-steps validation',
             })
         );
 
-        const data = await (command as any).getInitialData();
+        const data = await internals(command).getInitialData();
 
         expect(data.wizardSteps).toBeNull();
         expect(mockLogger.error).toHaveBeenCalledWith(expect.stringContaining('wizard-steps.json'));
@@ -114,7 +115,7 @@ describe('CreateProjectWebviewCommand - getInitialData wizard-steps validation',
         ];
         setupStepsFile(JSON.stringify({ steps }));
 
-        const data = await (command as any).getInitialData();
+        const data = await internals(command).getInitialData();
 
         expect(data.wizardSteps).toEqual(steps);
         expect(mockLogger.error).not.toHaveBeenCalled();
@@ -127,7 +128,7 @@ describe('CreateProjectWebviewCommand - getInitialData wizard-steps validation',
             })
         );
 
-        const data = await (command as any).getInitialData();
+        const data = await internals(command).getInitialData();
 
         expect(data.wizardSteps).toBeNull();
     });

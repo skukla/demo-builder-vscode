@@ -44,6 +44,11 @@ sample completed normally and left nothing behind. So residue is not the normal
 state, and finding some means a previous run did not finish. That is the useful
 reading: gigabytes in a temp dir are a record of interruptions, not of usage.
 
+`cleanTempDir` is `'always'` in both configs since 2026-09-02 — the docs define `true`
+as "delete after a SUCCESSFUL run", so a failed run used to leave its sandbox behind.
+`'always'` covers failure; it cannot cover a hard kill, so the next paragraph still
+holds.
+
 A KILLED RUN ORPHANS ITS WHOLE SANDBOX. Interrupting the sample (Ctrl-C, a session
 ending, a timeout) left **1.0GB** behind in one go — so this is not slow accumulation
 over months, it is one gigabyte per interrupted run. Delete the temp dir before
@@ -55,6 +60,112 @@ feels slow, look there first:
 ```bash
 du -sh .stryker-tmp .stryker-tmp-pl22 2>/dev/null
 ```
+
+
+## Working a module in a loop — the cycle
+
+The sample is a release check. THIS is the working cadence, and every step is
+verifiable, which is what makes it safe to run unattended.
+
+```bash
+npm run test:mutation:focus        # ~3 min, ONE module
+npm run test:mutation:worklist     # the ranked decisions nothing constrains
+# ... read the top line, understand the decision, write the test ...
+npm run test:mutation:focus
+node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
+npm run gate                       # and only then commit
+```
+
+**The ratchet is the safety net, and it reads THREE numbers.** A score that falls is a
+regression. A score that RISES while nothing got better tested is also flagged — that
+combination is the signature of a score raised by asserting log strings, and it is the
+failure mode to fear in an unattended run, because it looks like progress.
+
+"Nothing got better tested" is narrower than it sounds, and both narrowings were paid
+for on 2026-09-02, when the rule flagged real work twice in one session:
+
+- It compares **behavioural** survivors — every kind except log lines and string
+  literals — not just branch and block. Killing six mutants on two `.sort()` comparators
+  (as text, Node 8 sorts after Node 20) moved neither branch nor block, and the run was
+  reported as padding.
+- It **exempts a run whose uncovered count fell**. Bringing unreachable code under test
+  RAISES the survivor count, because a mutant with no coverage becomes either killed or
+  surviving — and the ones that survive are newly visible work, not new debt.
+
+Both exemptions are safe because padding moves neither number. `npm run
+test:mutation:selftest` holds the controls in both directions, and they run with the
+suite via `tests/sop/ratchet-controls.test.ts`. Change the rule and run them; breaking
+it on purpose is how they were checked rather than assumed.
+
+**Moving to the next module is one command:**
+
+```bash
+npm run test:mutation:focus:on -- src/features/eds/services/siteTools.ts
+```
+
+It writes BOTH files — `stryker.focus.config.json`'s `mutate` and
+`jest.focus.config.js`'s `testMatch` — finds the suites by this repo's mirror convention — a
+module under src is tested by the same path under tests, plus any suite split from it
+with a hyphenated suffix — and clears the incremental cache, which belongs to the module
+it was built for.
+
+It **refuses** when no suite mirrors the module, and writes nothing in that case. That
+refusal is the point: a focused run with no suites reports 0% in seconds and reads
+exactly like a catastrophic result. `tests/sop/mutation-config-pairing.test.ts` still
+fails the build if the two files disagree — it exists because a run where they DID
+disagree reported 0% for seven modules in 19 seconds, and was a run that never executed
+the tests.
+
+This used to read "editing TWO files together", which is a rule you follow until the
+night you do not: on 2026-09-02 a new suite went into the focused config and not the
+sample one, and only an enforcer caught it.
+
+**When a survivor looks like the suite SHOULD catch it, check before writing a test.**
+A survivor is a claim by the tool, and the tool can be wrong in two ways that both cost
+an hour if you believe them:
+
+1. **Break the line by hand and run the suite.** Comment the condition out, or force it,
+   and see whether anything fails. On 2026-09-02 a confirm gate on a tool that deletes a
+   live DA.live site root showed as an unconstrained survivor; disabling the gate failed
+   three tests immediately. The gate was constrained and the report was mis-attributing.
+2. **Re-run with `coverageAnalysis` set to `all`.** The focused config uses `perTest`,
+   which is faster and can under-attribute which tests reach a mutant. Switching to `all`
+   on that same line turned three of its four survivors into kills and left exactly one —
+   which was a REAL gap worth a test: the gate takes a confirmation flag AND a name echo,
+   and nothing covered supplying the echo while omitting the flag. An agent that has read
+   the refusal knows the exact name to echo, so that combination is the one to worry
+   about.
+
+Related: several mutants on one line can share the same replacement TEXT — each is a
+different sub-expression of the same condition — so a report showing "one survived, two
+killed" for the identical string cannot tell you WHICH. That is when step 1 is the only
+way to find out.
+
+**When a mutant cannot be killed**, do not contort a test to fake it. Some are
+EQUIVALENT — the mutated code behaves identically, and no test can tell. Record it
+where it belongs:
+
+```ts
+// Stryker disable next-line ConditionalExpression: equivalent — both branches
+// return the same value when `versions` is empty, which the caller guarantees.
+```
+
+The mutant stays visible in the report with `Ignored` status and stops dragging the
+score. That is the honest end state for a module: every decision either constrained by
+a test or marked equivalent WITH A REASON — not "all killed".
+
+**What a finished module looks like.** Computed 2026-09-02 across the sample: killing
+every unconstrained decision takes the pooled score from 70.73% to **80.41%**, and to
+85.51% if the uncovered mutants are reached too. It does not approach 100%, because
+what remains is 172 string/object literals and 69 log lines — text, in a codebase that
+is largely registries and messages. The number to report alongside the score is
+**unconstrained decisions: 0**; the score alone cannot tell that state from a worse one.
+
+**After a module is finished, ROTATE — do not grow the sample.** Twelve worked modules
+are no longer a sample of anything; they are the twelve modules someone spent evenings
+on, and reporting their score as the repo's gets more misleading the better they get.
+Draw the next modules by the same stride, and keep the finished ones on the ratchet so
+they cannot fall.
 
 ## Baseline — 2026-08-30, first real run
 
@@ -221,3 +332,16 @@ it did not until the same day, so the trap was live for this pilot too.
 - `test-strategy-scan` — the census-based read of the suite; this is the empirical one
 - `gate` — do the tests pass (run first; a red suite makes the score meaningless)
 - ADR-016 — the three-tier test strategy, which names mutation testing as the measure
+
+## Getting more out of it — the 2026-09-02 research
+
+`.rptc/research/stryker-for-this-repo/research.md` is the sourced pass over what
+StrykerJS offers that we do not use, checked against our own numbers. The headline:
+**mutants can be IGNORED, not just excluded** — a `// Stryker disable <mutator>: reason`
+comment keeps the mutant visible in the report while removing it from the score, which
+is the honest answer for declaration tables whose values are constrained by a
+source-scanning enforcer instead of a unit test.
+
+It also records, with the doc quote that proves it, why those enforcers CANNOT simply
+be added to the mutation run: the sandbox never contains `.git`, both derive their file
+list from `git ls-files`, and a throwing test counts as a killed mutant.

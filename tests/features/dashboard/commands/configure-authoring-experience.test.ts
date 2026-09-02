@@ -20,6 +20,7 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
 
 
 
+import { internals } from '../../../helpers/commandInternals';
 // Mesh / storefront staleness — return "no changes" so the save path stays simple.
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
@@ -213,9 +214,9 @@ describe('ConfigureProjectWebviewCommand - save-configuration authoring experien
         >;
 
         // Stub side-effecting private methods so the save path doesn't touch disk.
-        (command as any).registerProgrammaticWrites = jest.fn().mockResolvedValue(undefined);
-        (command as any).regenerateEnvFiles = jest.fn().mockResolvedValue(undefined);
-        (command as any).showPostSaveNotifications = jest.fn();
+        internals(command).registerProgrammaticWrites = jest.fn().mockResolvedValue(undefined);
+        internals(command).regenerateEnvFiles = jest.fn().mockResolvedValue(undefined);
+        internals(command).showPostSaveNotifications = jest.fn();
     });
 
     it('persists the changed authoringExperience into EDS metadata', async () => {

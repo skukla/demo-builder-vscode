@@ -85,6 +85,27 @@ beforeEach(() => {
     } as never);
 });
 
+/**
+ * What `handleGetProjects` puts on its response.
+ *
+ * These assertions read `result.data.projects` and `.projectsViewMode`, and were
+ * reaching them through `dataOf(result)` — which switched off checking of the
+ * whole expression, so `.projcts` would have read `undefined` and
+ * `expect(undefined).toHaveLength(3)` would have failed with a confusing message
+ * rather than a compile error.
+ */
+interface ProjectsResponse {
+    // `Project`, not a hand-written row. My first draft listed three fields and the
+    // compiler named the ones it was missing — `meshStatusSummary` is declared on
+    // `Project` and the handler STAMPS it, which a three-field guess cannot know.
+    projects: Project[];
+    projectsViewMode?: string;
+    runningProjectPath?: string;
+    project?: Project;
+}
+
+const dataOf = (result: { data?: unknown }): ProjectsResponse => result.data as ProjectsResponse;
+
 describe('dashboardHandlers', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -107,7 +128,7 @@ describe('dashboardHandlers', () => {
             // loadProjectFromPath should be called for each project
             expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledTimes(3);
             expect(result.success).toBe(true);
-            expect((result.data as any).projects).toHaveLength(3);
+            expect(dataOf(result).projects).toHaveLength(3);
         });
 
         it('should include projectsViewMode from config', async () => {
@@ -120,7 +141,7 @@ describe('dashboardHandlers', () => {
             const result = await handleGetProjects(context);
 
             expect(result.success).toBe(true);
-            expect((result.data as any).projectsViewMode).toBe('rows');
+            expect(dataOf(result).projectsViewMode).toBe('rows');
         });
 
         it('should return empty array when no projects exist', async () => {
@@ -182,7 +203,7 @@ describe('dashboardHandlers', () => {
             const result = await handleGetProjects(context);
 
             expect(result.success).toBe(true);
-            const returnedNames = (result.data as any).projects.map((p: any) => p.name);
+            const returnedNames = dataOf(result).projects.map((p: any) => p.name);
             expect(returnedNames).toEqual([
                 'buildright-eds',
                 'citisignal-eds',
@@ -217,7 +238,7 @@ describe('dashboardHandlers', () => {
             const result = await handleGetProjects(context);
 
             expect(result.success).toBe(true);
-            const projects = (result.data as any).projects;
+            const projects = dataOf(result).projects;
             expect(projects[0].meshStatusSummary).toBe('stale');
             expect(context.stateManager.saveProject).toHaveBeenCalled();
         });
@@ -248,7 +269,7 @@ describe('dashboardHandlers', () => {
 
             const result = await handleGetProjects(context);
 
-            const projects = (result.data as any).projects;
+            const projects = dataOf(result).projects;
             expect(projects[0].meshStatusSummary).toBe('deployed');
         });
 
@@ -278,7 +299,7 @@ describe('dashboardHandlers', () => {
 
             const result = await handleGetProjects(context);
 
-            const projects = (result.data as any).projects;
+            const projects = dataOf(result).projects;
             expect(projects[0].meshStatusSummary).toBe('unknown');
         });
 
@@ -296,7 +317,7 @@ describe('dashboardHandlers', () => {
 
             const result = await handleGetProjects(context);
 
-            const projects = (result.data as any).projects;
+            const projects = dataOf(result).projects;
             expect(projects[0].meshStatusSummary).toBe('not-deployed');
         });
     });
@@ -313,7 +334,7 @@ describe('dashboardHandlers', () => {
             expect(context.stateManager.loadProjectFromPath).toHaveBeenCalledWith(project.path);
             expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
             expect(result.success).toBe(true);
-            expect((result.data as any).project.name).toBe('Selected Project');
+            expect(dataOf(result).project?.name).toBe('Selected Project');
         });
 
         it('should return error if project path is outside demo-builder directory', async () => {

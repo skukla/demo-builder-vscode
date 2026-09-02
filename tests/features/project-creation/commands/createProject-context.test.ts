@@ -15,6 +15,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { internals } from '../../../helpers/commandInternals';
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(() => ({
@@ -216,12 +217,12 @@ describe('CreateProjectWebviewCommand - Context Variables', () => {
             const command = createWizardCommand();
 
             // Mock the methods that normally throw to allow execution to proceed
-            (command as any).createOrRevealPanel = jest.fn().mockResolvedValue(mockPanel);
-            (command as any).initializeCommunication = jest.fn().mockResolvedValue({
+            internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(mockPanel);
+            internals(command).initializeCommunication = jest.fn().mockResolvedValue({
                 on: jest.fn(),
                 sendMessage: jest.fn().mockResolvedValue(undefined),
             });
-            (command as any).updateSidebarWizardContext = jest.fn();
+            internals(command).updateSidebarWizardContext = jest.fn();
 
             // When: execute() is called (wizard opens)
             await command.execute();

@@ -19,6 +19,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { internals } from '../../../helpers/commandInternals';
 /**
  * Create mock ExtensionContext
  */
@@ -84,7 +85,7 @@ describe('ShowProjectsListCommand', () => {
             const command = createCommand();
 
             // When: Accessing the webview ID
-            const webviewId = (command as any).getWebviewId();
+            const webviewId = internals(command).getWebviewId();
 
             // Then: Should return correct ID
             expect(webviewId).toBe('demoBuilder.projectsList');
@@ -95,7 +96,7 @@ describe('ShowProjectsListCommand', () => {
             const command = createCommand();
 
             // When: Accessing the title
-            const title = (command as any).getWebviewTitle();
+            const title = internals(command).getWebviewTitle();
 
             // Then: Should return "Projects"
             expect(title).toBe('Projects');
@@ -106,7 +107,7 @@ describe('ShowProjectsListCommand', () => {
             const command = createCommand();
 
             // When: Accessing loading message
-            const message = (command as any).getLoadingMessage();
+            const message = internals(command).getLoadingMessage();
 
             // Then: Should return appropriate loading message
             expect(message).toBe('Loading Projects...');
@@ -123,12 +124,12 @@ describe('ShowProjectsListCommand', () => {
                 cspSource: 'vscode-webview://test',
                 asWebviewUri: jest.fn((uri: vscode.Uri) => uri),
             };
-            (command as any).panel = {
+            internals(command).panel = {
                 webview: mockWebview,
             };
 
             // When: Webview HTML is generated
-            const html = await (command as any).getWebviewContent();
+            const html = await internals(command).getWebviewContent();
 
             // Then: Single feature bundle — no runtime/vendors/common split
             expect(html).toContain('projectsList-bundle.js');
@@ -146,12 +147,12 @@ describe('ShowProjectsListCommand', () => {
                 cspSource: 'vscode-webview://test',
                 asWebviewUri: jest.fn((uri: vscode.Uri) => uri),
             };
-            (command as any).panel = {
+            internals(command).panel = {
                 webview: mockWebview,
             };
 
             // When: HTML content is parsed
-            const html = await (command as any).getWebviewContent();
+            const html = await internals(command).getWebviewContent();
 
             // Then: Single script tag with nonce
             const scriptMatches = html.match(/<script nonce="([^"]+)"/g);
@@ -179,7 +180,7 @@ describe('ShowProjectsListCommand', () => {
 
             try {
                 // When: Getting initial data
-                const initialData = await (command as any).getInitialData();
+                const initialData = await internals(command).getInitialData();
 
                 // Then: Should contain theme information
                 expect(initialData).toHaveProperty('theme');

@@ -16,12 +16,9 @@ import {
     CommandExecutor,
     ComponentUpdater,
     fs,
-    vscode,
+    setupUpdater,
 } from './componentUpdater.testUtils';
-import { resetComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
-import { createMockLogger } from '../../../helpers/loggerFake';
 jest.mock('@/core/validation/URLValidator');
-import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 
 describe('ComponentUpdater - Core Workflow', () => {
     let updater: ComponentUpdater;
@@ -30,76 +27,12 @@ describe('ComponentUpdater - Core Workflow', () => {
     let mockExecutor: Record<string, jest.Mock>;
 
     beforeEach(() => {
-        jest.clearAllMocks();
-        // The registry manager is a session singleton memoised in module scope, and
-        // jest.clearAllMocks() cannot see module state. Without this, the first
-        // test's instance — built with that test's extension path — answers every
-        // later test.
-        resetComponentRegistryManager();
-
-        // Mock logger
-        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
-
-        // Mock executor with execute method
-        mockExecutor = {
-            execute: jest.fn().mockResolvedValue({
-                stdout: '',
-                stderr: '',
-                code: 0,
-                duration: 100,
-            }),
-        };
-
-        // Mock ServiceLocator
-        // CONVERTED 2026-08-28 (ADR-015): the executor is a constructor
-        // dependency now — the same fake is handed straight in.
-
-        // Security validation is automocked at module scope (see the top of this
-        // file). This used to `require('@/core/validation')` and ASSIGN a fresh
-        // jest.fn onto the module — which only worked because the barrel handed
-        // back a plain object. Importing the declaring module directly gives a
-        // real ES module namespace, whose exports are getters and cannot be
-        // assigned; the automock supplies the mock instead.
-        jest.mocked(validateGitHubDownloadURL).mockReset();
-
-        // Mock fs operations using jest.spyOn
-        jest.spyOn(fs, 'cp').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'rm').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'mkdir').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'readFile').mockResolvedValue('{"name": "test"}');
-        jest.spyOn(fs, 'writeFile').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'access').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'unlink').mockResolvedValue(undefined);
-        jest.spyOn(fs, 'rename').mockResolvedValue(undefined);
-
-        // Mock vscode.commands
-        (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
-
-        // Mock global fetch
-        global.fetch = jest.fn().mockResolvedValue({
-            ok: true,
-            arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1024)),
-        }) as unknown as typeof fetch;
-
-        updater = new ComponentUpdater(
-            mockLogger,
-            '/mock/extension/path',
-            mockExecutor as unknown as CommandExecutor
-        );
-
-        // Mock project
-        mockProject = {
-            path: '/path/to/project',
-            name: 'test-project',
-            componentInstances: {
-                'test-component': {
-                    id: 'test-component',
-                    path: '/path/to/project/components/test-component',
-                    port: 3000,
-                },
-            },
-            componentVersions: {},
-        } as unknown as Project;
+        ({
+            updater,
+            logger: mockLogger,
+            executor: mockExecutor,
+            project: mockProject,
+        } = setupUpdater());
     });
 
     describe('updateComponent() - Shell parameter for unzip (CRITICAL FIX)', () => {

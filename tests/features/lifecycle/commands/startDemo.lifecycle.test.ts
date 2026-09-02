@@ -11,10 +11,13 @@
  */
 
 import {
-    StartDemoCommand,
-    ProcessCleanup,
     MockProcessCleanup,
+    ProcessCleanup,
+    StartDemoCommand,
     mockCommandExecutor,
+    mockCommands,
+    mockWindow,
+    mockWorkspace,
 } from './startDemo.testUtils';
 import { ServiceLocator as _ServiceLocator } from '@/core/di/serviceLocator';
 import { StateManager } from '@/core/state/stateManager';
@@ -41,8 +44,8 @@ describe('StartDemoCommand - Lifecycle', () => {
             sendText: jest.fn(),
             show: jest.fn(),
         };
-        (vscode.window as any).terminals = [];
-        (vscode.window as any).createTerminal = jest.fn().mockReturnValue(mockTerminal);
+        mockWindow.terminals = [];
+        mockWindow.createTerminal = jest.fn().mockReturnValue(mockTerminal);
 
         // Setup mock ProcessCleanup instance
         mockProcessCleanup = {
@@ -94,20 +97,20 @@ describe('StartDemoCommand - Lifecycle', () => {
         mockLogger = createMockLogger();
 
         // Mock vscode.window.withProgress to execute task immediately
-        (vscode.window as any).withProgress = jest.fn().mockImplementation(
+        mockWindow.withProgress = jest.fn().mockImplementation(
             async (_options: any, task: any) => {
                 return await task({ report: jest.fn() });
             }
         );
 
         // Mock vscode.window.setStatusBarMessage
-        (vscode.window as any).setStatusBarMessage = jest.fn();
+        mockWindow.setStatusBarMessage = jest.fn();
 
         // Mock vscode.commands.executeCommand
-        (vscode.commands as any).executeCommand = jest.fn().mockResolvedValue(undefined);
+        mockCommands.executeCommand = jest.fn().mockResolvedValue(undefined);
 
         // Mock vscode.workspace.getConfiguration
-        (vscode.workspace as any).getConfiguration = jest.fn().mockReturnValue({
+        mockWorkspace.getConfiguration = jest.fn().mockReturnValue({
             get: jest.fn().mockReturnValue(3000),
         });
 
@@ -227,7 +230,7 @@ describe('StartDemoCommand - Lifecycle', () => {
             mockStateManager.getCurrentProject.mockResolvedValue(undefined);
 
             // Mock showInformationMessage to return 'Cancel' (user doesn't create project)
-            (vscode.window as any).showInformationMessage = jest.fn().mockResolvedValue('Cancel');
+            mockWindow.showInformationMessage = jest.fn().mockResolvedValue('Cancel');
 
             // When: startDemo called
             await command.execute();
@@ -253,7 +256,7 @@ describe('StartDemoCommand - Lifecycle', () => {
             mockStateManager.getCurrentProject.mockResolvedValue(undefined);
 
             // Mock showInformationMessage to return 'Create Project'
-            (vscode.window as any).showInformationMessage = jest.fn().mockResolvedValue('Create Project');
+            mockWindow.showInformationMessage = jest.fn().mockResolvedValue('Create Project');
 
             // When: startDemo called and user chooses 'Create Project'
             await command.execute();

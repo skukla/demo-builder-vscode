@@ -60,7 +60,7 @@ describe('mesh add — writes the .env before deploying', () => {
         const project = createProject();
         const deps = createDeps();
 
-        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(result.success).toBe(true);
         expect(deps.writeComponentEnv).toHaveBeenCalledWith(
@@ -85,7 +85,7 @@ describe('mesh add — writes the .env before deploying', () => {
             }),
         });
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(order).toEqual(['env', 'deploy']);
     });
@@ -96,7 +96,7 @@ describe('mesh add — writes the .env before deploying', () => {
             writeComponentEnv: jest.fn().mockRejectedValue(new Error('registry unavailable')),
         });
 
-        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(result.success).toBe(false);
         expect(result.error).toMatch(/registry unavailable/);
@@ -110,7 +110,7 @@ describe('integration add — no .env (catalog app repos ship none)', () => {
         const project = createProject();
         const deps = createDeps();
 
-        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         expect(result.success).toBe(true);
         expect(deps.writeComponentEnv).not.toHaveBeenCalled();
@@ -152,7 +152,7 @@ describe('mesh redeploy — refreshes the .env', () => {
             }),
         });
 
-        const result = await deployAppBuilderComponent(project, MESH_ENTRY.id, deps as never);
+        const result = await deployAppBuilderComponent(project, MESH_ENTRY.id, deps);
 
         expect(result.success).toBe(true);
         expect(order).toEqual(['env', 'deploy']);

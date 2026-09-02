@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { mockWorkspace } from '../../../helpers/vscodeMockViews';
 /**
  * Shared test utilities for createHandler tests
  */
@@ -98,7 +99,7 @@ export function setupDefaultMocks(): MockCommandExecutor {
 
     // Mock vscode
     (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
-    (vscode.workspace as any).isTrusted = true;
+    mockWorkspace.isTrusted = true;
 
     // Mock fs
     (fs.existsSync as jest.Mock).mockReturnValue(false);
@@ -142,7 +143,7 @@ export function mockExecutionFailure(errorMessage: string): void {
  * Configures mocks for workspace trust scenarios
  */
 export function mockUntrustedWorkspace(tipAlreadyShown = false): jest.Mock {
-    (vscode.workspace as any).isTrusted = false;
+    mockWorkspace.isTrusted = false;
     (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
 
     // Return function that gets current mock implementation

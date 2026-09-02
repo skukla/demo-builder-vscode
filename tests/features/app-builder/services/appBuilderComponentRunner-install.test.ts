@@ -64,7 +64,7 @@ describe('S2S deploy-env wiring', () => {
         const { deps } = kitDeps({ resolveAppManagementEnv });
         const project = createProject();
 
-        await addAppBuilderComponent(project, KIT_ENTRY, deps as never);
+        await addAppBuilderComponent(project, KIT_ENTRY, deps);
 
         expect(resolveAppManagementEnv).toHaveBeenCalledWith(project);
         expect(deps.deployApp).toHaveBeenCalledWith(
@@ -82,7 +82,7 @@ describe('S2S deploy-env wiring', () => {
         });
         const project = createProject();
 
-        const result = await addAppBuilderComponent(project, KIT_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, KIT_ENTRY, deps);
 
         expect(result.success).toBe(false);
         expect(result.error).toContain('IMS credentials');
@@ -101,7 +101,7 @@ describe('S2S deploy-env wiring', () => {
         const { deps } = kitDeps({ resolveAppManagementEnv });
         const project = createProject();
 
-        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         expect(resolveAppManagementEnv).not.toHaveBeenCalled();
         expect(deps.deployApp).toHaveBeenCalledWith(
@@ -128,7 +128,7 @@ describe('S2S deploy-env wiring', () => {
             } as never,
         } as never);
 
-        await deployAppBuilderComponent(project, KIT_ENTRY.id, deps as never);
+        await deployAppBuilderComponent(project, KIT_ENTRY.id, deps);
 
         expect(deps.subscribeRequiredApis).toHaveBeenCalledWith([KIT_ENTRY], project);
     });
@@ -151,7 +151,7 @@ describe('S2S deploy-env wiring', () => {
             } as never,
         } as never);
 
-        await deployAppBuilderComponent(project, INTEGRATION_ENTRY.id, deps as never);
+        await deployAppBuilderComponent(project, INTEGRATION_ENTRY.id, deps);
 
         expect(deps.subscribeRequiredApis).not.toHaveBeenCalled();
     });
@@ -162,7 +162,7 @@ describe('install-after-deploy wiring', () => {
         const { deps, installAppManagement } = kitDeps();
         const project = createProject();
 
-        const result = await addAppBuilderComponent(project, KIT_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, KIT_ENTRY, deps);
 
         expect(result.success).toBe(true);
         expect(installAppManagement).toHaveBeenCalledWith(project, KIT_URLS, expect.any(Function));
@@ -180,7 +180,7 @@ describe('install-after-deploy wiring', () => {
         });
         const project = createProject();
 
-        const result = await addAppBuilderComponent(project, KIT_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, KIT_ENTRY, deps);
 
         expect(result.success).toBe(true);
         expect(project.appBuilderComponents?.[KIT_ENTRY.id]?.status).toBe('deployed');
@@ -201,7 +201,7 @@ describe('install-after-deploy wiring', () => {
         const { deps, installAppManagement } = kitDeps();
         const project = createProject();
 
-        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        const result = await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         expect(result.success).toBe(true);
         expect(installAppManagement).not.toHaveBeenCalled();
@@ -226,7 +226,7 @@ describe('install-after-deploy wiring', () => {
             } as never,
         } as Partial<Project>);
 
-        const result = await deployAppBuilderComponent(project, 'order-sync', deps as never);
+        const result = await deployAppBuilderComponent(project, 'order-sync', deps);
 
         expect(result.success).toBe(true);
         expect(installAppManagement).toHaveBeenCalled();
@@ -247,7 +247,7 @@ describe('install-after-deploy wiring', () => {
             } as never,
         } as Partial<Project>);
 
-        await deployAppBuilderComponent(project, 'my-app', deps as never);
+        await deployAppBuilderComponent(project, 'my-app', deps);
 
         expect(installAppManagement).not.toHaveBeenCalled();
     });

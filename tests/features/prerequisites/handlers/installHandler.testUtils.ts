@@ -26,11 +26,13 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
+import type { PrerequisiteStatusPayload } from '@/types/webviewPayloads';
 import { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockDebugLogger } from '../../../helpers/debugLoggerFake';
 // Mock prerequisite definitions
 export const mockNodePrereq: PrerequisiteDefinition = {
     id: 'node',
@@ -39,11 +41,11 @@ export const mockNodePrereq: PrerequisiteDefinition = {
     check: { command: 'node --version' },
     install: {
         steps: [
-            { name: 'Install Node {version}', message: 'Installing Node {version}...', command: 'fnm install {version}' },
-            { name: 'Set Node {version} as default', message: 'Setting as default...', command: 'fnm default {version}' },
+            { name: 'Install Node {version}', message: 'Installing Node {version}...', commands: ['fnm install {version}'] },
+            { name: 'Set Node {version} as default', message: 'Setting as default...', commands: ['fnm default {version}'] },
         ],
     },
-} as any;
+};
 
 export const mockNpmPrereq: PrerequisiteDefinition = {
     id: 'npm',
@@ -52,10 +54,10 @@ export const mockNpmPrereq: PrerequisiteDefinition = {
     check: { command: 'npm --version' },
     install: {
         steps: [
-            { name: 'Install npm', message: 'Installing npm...', command: 'npm install -g npm' },
+            { name: 'Install npm', message: 'Installing npm...', commands: ['npm install -g npm'] },
         ],
     },
-} as any;
+};
 
 export const mockAdobeCliPrereq: PrerequisiteDefinition = {
     id: 'adobe-cli',
@@ -65,10 +67,10 @@ export const mockAdobeCliPrereq: PrerequisiteDefinition = {
     check: { command: 'aio --version', parseVersion: '@adobe/aio-cli/(\\S+)' },
     install: {
         steps: [
-            { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
+            { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', commands: ['npm install -g @adobe/aio-cli'] },
         ],
     },
-} as any;
+};
 
 export const mockAdobeCliPrereqNoVersion: PrerequisiteDefinition = {
     id: 'adobe-cli',
@@ -78,10 +80,10 @@ export const mockAdobeCliPrereqNoVersion: PrerequisiteDefinition = {
     check: { command: 'aio --version', parseVersion: '@adobe/aio-cli/(\\S+)' },
     install: {
         steps: [
-            { name: 'Install Adobe I/O CLI', message: 'Installing Adobe I/O CLI globally', command: 'npm install -g @adobe/aio-cli' },
+            { name: 'Install Adobe I/O CLI', message: 'Installing Adobe I/O CLI globally', commands: ['npm install -g @adobe/aio-cli'] },
         ],
     },
-} as any;
+};
 
 export const mockManualPrereq: PrerequisiteDefinition = {
     id: 'docker',
@@ -92,7 +94,7 @@ export const mockManualPrereq: PrerequisiteDefinition = {
         manual: true,
         url: 'https://www.docker.com/get-started',
     },
-} as any;
+};
 
 export const mockNodeResult: PrerequisiteStatus = {
     id: 'node',
@@ -197,10 +199,28 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
 
     return createMockHandlerContextBase({
         prereqManager: {
+            /**
+             * The FULL manager surface. Four methods were missing until 2026-09-02 —
+             * `resolveDependencies`, `getPrerequisiteById`, `getRequiredPrerequisites`
+             * and `checkAllPrerequisites` — and the first one's absence is WHY the
+             * `prerequisiteId` install path had no test: reaching it throws
+             * "Cannot read properties of undefined" before the handler runs.
+             *
+             * A fake smaller than its subject does not fail; it makes a branch
+             * UNTESTABLE, and the branch then looks merely uncovered. The `as any`
+             * at the end of this object is what let it drift — with the real type
+             * named, a missing method is a compile error rather than a TypeError
+             * three layers into a handler.
+             */
+            resolveDependencies: jest.fn().mockReturnValue([]),
+            getPrerequisiteById: jest.fn(),
+            getRequiredPrerequisites: jest.fn().mockReturnValue([]),
+            checkAllPrerequisites: jest.fn().mockResolvedValue([]),
+            getLatestInFamily: jest.fn(),
             loadConfig: jest.fn(),
             getInstallSteps: jest.fn().mockReturnValue({
                 steps: [
-                    { name: 'Install npm', message: 'Installing npm...', command: 'npm install -g npm' },
+                    { name: 'Install npm', message: 'Installing npm...', commands: ['npm install -g npm'] },
                 ],
             }),
             checkPrerequisite: jest.fn().mockResolvedValue(mockNodeResult),
@@ -220,7 +240,7 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
         } as any,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         logger: createMockLogger(),
-        debugLogger: createMockLogger() as any,
+        debugLogger: createMockDebugLogger(),
         stepLogger: {
             log: jest.fn(),
         } as any,
@@ -263,6 +283,24 @@ export function cacheInvalidateMock(context: HandlerContext): jest.Mock {
         invalidate: jest.Mock;
     };
     return manager.invalidate;
+}
+
+/**
+ * The LAST `prerequisite-status` payload the handler pushed.
+ *
+ * This is the handler's answer: the webview renders the row from it, so every
+ * decision `sendFinalInstallStatus` makes — installed or not, which per-version
+ * status list to attach, whether Install stays offered — is readable here and
+ * nowhere else.
+ *
+ * Returns `undefined` when no status was sent, which is itself a real outcome:
+ * an early return sends `prerequisite-install-complete` instead.
+ */
+export function lastFinalStatus(context: HandlerContext): PrerequisiteStatusPayload | undefined {
+    const calls = (context.sendMessage as jest.Mock).mock.calls.filter(
+        ([type]: [string]) => type === 'prerequisite-status'
+    );
+    return calls.at(-1)?.[1] as PrerequisiteStatusPayload | undefined;
 }
 
 /**

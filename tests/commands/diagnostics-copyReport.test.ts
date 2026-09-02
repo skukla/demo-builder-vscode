@@ -24,6 +24,7 @@ import {
 } from '@/commands/diagnostics';
 import type { DiagnosticsReport } from '@/commands/diagnostics';
 
+import { createMockDebugLogger } from '../helpers/debugLoggerFake';
 const TOKEN = 'gho_SUPERSECRETVALUE0000000000000000000';
 
 function makeReport(overrides: Partial<DiagnosticsReport> = {}): DiagnosticsReport {
@@ -284,46 +285,44 @@ describe('buildSummaryLines', () => {
 });
 
 describe('runDiagnosticsAction', () => {
-    const logger = {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn(),
-        show: jest.fn(),
-        exportDebugLog: jest.fn(),
-    };
+    /**
+ * `runDiagnosticsAction` declares `DebugLogger`, not `Logger` — it calls `show()`
+ * to reveal the output channel. The two are different interfaces and both live on
+ * `HandlerContext`; picking the wrong builder here is what the compiler caught.
+ */
+const logger = createMockDebugLogger();
     const SUMMARY = '=== DIAGNOSTICS SUMMARY ===\nSystem: darwin';
 
     beforeEach(() => jest.clearAllMocks());
 
     it('copies the summary when Copy Report is chosen', async () => {
-        await runDiagnosticsAction('Copy Report', SUMMARY, logger as never);
+        await runDiagnosticsAction('Copy Report', SUMMARY, logger);
 
         expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith(SUMMARY);
     });
 
     it('confirms the copy so the user knows it worked', async () => {
-        await runDiagnosticsAction('Copy Report', SUMMARY, logger as never);
+        await runDiagnosticsAction('Copy Report', SUMMARY, logger);
 
         expect(vscode.window.showInformationMessage).toHaveBeenCalled();
     });
 
     it('still reveals the channel for Show Logs', async () => {
-        await runDiagnosticsAction('Show Logs', SUMMARY, logger as never);
+        await runDiagnosticsAction('Show Logs', SUMMARY, logger);
 
         expect(logger.show).toHaveBeenCalled();
         expect(vscode.env.clipboard.writeText).not.toHaveBeenCalled();
     });
 
     it('still exports for Export Log', async () => {
-        await runDiagnosticsAction('Export Log', SUMMARY, logger as never);
+        await runDiagnosticsAction('Export Log', SUMMARY, logger);
 
         expect(logger.exportDebugLog).toHaveBeenCalled();
         expect(vscode.env.clipboard.writeText).not.toHaveBeenCalled();
     });
 
     it('does nothing when the notification is dismissed', async () => {
-        await runDiagnosticsAction(undefined, SUMMARY, logger as never);
+        await runDiagnosticsAction(undefined, SUMMARY, logger);
 
         expect(vscode.env.clipboard.writeText).not.toHaveBeenCalled();
         expect(logger.show).not.toHaveBeenCalled();

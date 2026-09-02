@@ -11,6 +11,7 @@
 
 import { ServiceLocator } from '@/core/di/serviceLocator';
 
+import { createMockAuthenticationService } from '../../helpers/authenticationServiceFake';
 // Mock dependencies
 jest.mock('@/core/shell/commandExecutor', () => ({
     CommandExecutor: jest.fn().mockImplementation(() => ({
@@ -66,10 +67,7 @@ describe('DI Patterns', () => {
 
     describe('ServiceLocator - AuthenticationService Singleton', () => {
         it('should return same AuthenticationService instance on multiple calls', () => {
-            const mockAuthService = {
-                getTokenStatus: jest.fn(),
-                login: jest.fn(),
-            } as any;
+            const mockAuthService = createMockAuthenticationService({ getTokenStatus: jest.fn(), login: jest.fn() });
 
             ServiceLocator.setAuthenticationService(mockAuthService);
 
@@ -87,10 +85,7 @@ describe('DI Patterns', () => {
         });
 
         it('should throw if AuthenticationService registered twice', () => {
-            const mockAuthService = {
-                getTokenStatus: jest.fn(),
-                login: jest.fn(),
-            } as any;
+            const mockAuthService = createMockAuthenticationService({ getTokenStatus: jest.fn(), login: jest.fn() });
 
             ServiceLocator.setAuthenticationService(mockAuthService);
 
@@ -154,7 +149,7 @@ describe('DI Patterns', () => {
             // Given: All services registered
             const { CommandExecutor } = require('@/core/shell/commandExecutor');
             ServiceLocator.setCommandExecutor(new CommandExecutor());
-            ServiceLocator.setAuthenticationService({ getTokenStatus: jest.fn() } as any);
+            ServiceLocator.setAuthenticationService(createMockAuthenticationService());
             ServiceLocator.setSidebarProvider({ resolveWebviewView: jest.fn() } as any);
 
             expect(ServiceLocator.isInitialized()).toBe(true);

@@ -212,9 +212,25 @@ describe('ensureDaLiveAuth', () => {
         // When: ensureDaLiveAuth is called
         const result = await ensureDaLiveAuth(mockContext);
 
-        // Then: Should return not authenticated with error
+        // Then: Should return not authenticated, carrying the REASON rather than a
+        // generic one. `toBeDefined()` passed whether the real reason survived or was
+        // replaced by the fallback, which is why the fallback went untested.
         expect(result.authenticated).toBe(false);
-        expect(result.error).toBeDefined();
+        expect(result.error).toMatch(/token format/i);
+    });
+
+    it('falls back to a generic reason when the flow gives none', async () => {
+        // Cancelling produces no error text of its own, and the guard's caller still
+        // needs something to show. Without the fallback the caller reports a failure
+        // with an empty reason.
+        mockIsAuthenticated.mockResolvedValue(false);
+        showWarningMessageResponse = 'Sign In';
+        showInfoMessageResponse = undefined; // dismissed
+
+        const result = await ensureDaLiveAuth(mockContext);
+
+        expect(result.authenticated).toBe(false);
+        expect(result.error).toBe('DA.live authentication required');
     });
 
     it('should return cancelled when QuickPick is cancelled', async () => {
