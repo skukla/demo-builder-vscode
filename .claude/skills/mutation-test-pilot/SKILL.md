@@ -61,6 +61,60 @@ feels slow, look there first:
 du -sh .stryker-tmp .stryker-tmp-pl22 2>/dev/null
 ```
 
+
+## Working a module in a loop — the cycle
+
+The sample is a release check. THIS is the working cadence, and every step is
+verifiable, which is what makes it safe to run unattended.
+
+```bash
+npm run test:mutation:focus        # ~3 min, ONE module
+npm run test:mutation:worklist     # the ranked decisions nothing constrains
+# ... read the top line, understand the decision, write the test ...
+npm run test:mutation:focus
+node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
+npm run gate                       # and only then commit
+```
+
+**The ratchet is the safety net, and it reads BOTH numbers.** A score that falls is a
+regression. A score that RISES while branch/block survivors stay put is also flagged —
+that combination is the signature of a score raised by asserting log strings, and it is
+the failure mode to fear in an unattended run, because it looks like progress.
+
+**Moving to the next module means editing TWO files together**:
+`stryker.focus.config.json`'s `mutate` and `jest.focus.config.js`'s `testMatch`.
+`tests/sop/mutation-config-pairing.test.ts` fails the build if they disagree — it
+exists because a run where they disagreed once reported 0% for seven modules in 19
+seconds, which reads as a devastating result and was a run that never executed the
+tests. List test paths explicitly; that enforcer verifies each one exists and a glob
+is not a path it can check.
+
+**When a mutant cannot be killed**, do not contort a test to fake it. Some are
+EQUIVALENT — the mutated code behaves identically, and no test can tell. Record it
+where it belongs:
+
+```ts
+// Stryker disable next-line ConditionalExpression: equivalent — both branches
+// return the same value when `versions` is empty, which the caller guarantees.
+```
+
+The mutant stays visible in the report with `Ignored` status and stops dragging the
+score. That is the honest end state for a module: every decision either constrained by
+a test or marked equivalent WITH A REASON — not "all killed".
+
+**What a finished module looks like.** Computed 2026-09-02 across the sample: killing
+every unconstrained decision takes the pooled score from 70.73% to **80.41%**, and to
+85.51% if the uncovered mutants are reached too. It does not approach 100%, because
+what remains is 172 string/object literals and 69 log lines — text, in a codebase that
+is largely registries and messages. The number to report alongside the score is
+**unconstrained decisions: 0**; the score alone cannot tell that state from a worse one.
+
+**After a module is finished, ROTATE — do not grow the sample.** Twelve worked modules
+are no longer a sample of anything; they are the twelve modules someone spent evenings
+on, and reporting their score as the repo's gets more misleading the better they get.
+Draw the next modules by the same stride, and keep the finished ones on the ratchet so
+they cannot fall.
+
 ## Baseline — 2026-08-30, first real run
 
 **93.37%**, 166 mutants over 4 modules, 33 seconds, 11 survivors.

@@ -107,7 +107,18 @@ export function writeBaseline(reportPath, baselinePath, note) {
  *
  * Returns a list of human-readable problems; empty means the ratchet held.
  */
-export function compare(reportPath, baselinePath) {
+/**
+ * @param reportPath  a Stryker JSON report
+ * @param baselinePath  the pinned per-module baseline
+ * @param partial  true when the report deliberately covers only SOME baseline
+ *   modules — a focused single-module run. Without it, every module the run did not
+ *   measure reports as "dropped from the config", which is 11 false alarms on a focus
+ *   report and makes the ratchet unusable exactly where the loop needs it.
+ *
+ *   The check it turns off is still worth having for a FULL run: a module silently
+ *   vanishing from `mutate` is how a measurement quietly stops measuring.
+ */
+export function compare(reportPath, baselinePath, partial = false) {
     const now = summarise(reportPath);
     const base = JSON.parse(readFileSync(baselinePath, 'utf8')).modules;
     const problems = [];
@@ -115,7 +126,11 @@ export function compare(reportPath, baselinePath) {
     for (const [path, b] of Object.entries(base)) {
         const n = now[path];
         if (!n) {
-            problems.push(`${path}: in the baseline but NOT in this run — was it dropped from the config?`);
+            if (!partial) {
+                problems.push(
+                    `${path}: in the baseline but NOT in this run — was it dropped from the config?`
+                );
+            }
             continue;
         }
         if (n.score < b.score) {
