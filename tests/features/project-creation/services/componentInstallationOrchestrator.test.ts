@@ -78,7 +78,10 @@ describe('installAllComponents — isolated MCP-tools install contract', () => {
             '/proj',
             expect.objectContaining({ path: '/proj' }),
             expect.anything(),
-            expect.any(Function)
+            expect.any(Function),
+            // The installer needs a logger or an npm EBADENGINE warning reaches
+            // no channel at all — npm exits 0 on it.
+            expect.objectContaining({ warn: expect.any(Function) })
         );
     });
 
@@ -94,7 +97,10 @@ describe('installAllComponents — isolated MCP-tools install contract', () => {
             '/proj',
             expect.objectContaining({ path: '/proj' }),
             expect.anything(),
-            expect.any(Function)
+            expect.any(Function),
+            // The installer needs a logger or an npm EBADENGINE warning reaches
+            // no channel at all — npm exits 0 on it.
+            expect.objectContaining({ warn: expect.any(Function) })
         );
     });
 

@@ -35,6 +35,7 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AiDefaults } from '@/types/aiDefaults';
+import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 
 const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
@@ -83,11 +84,44 @@ export function resolveMcpToolsDir(projectPath: string): string {
  * @param projectPath - absolute path to the project root
  * @param project - the project record, used to resolve which entries apply
  */
+/** npm's own warning prefix, both spellings it has shipped. */
+const NPM_WARNING_LINE = /^npm (warn|WARN)\b/;
+
+/**
+ * Put npm's output on a channel a human can find, whatever it exited with.
+ *
+ * Warnings are raised to `warn` and named individually — an EBADENGINE says which
+ * package wants which Node, and that is the whole content of the finding. Everything
+ * else is debug: a clean install has nothing to say.
+ */
+function logNpmOutput(
+    stdout: string | undefined,
+    stderr: string | undefined,
+    logger?: Pick<Logger, 'debug' | 'warn'>,
+): void {
+    if (!logger) return;
+    const lines = `${stdout ?? ''}\n${stderr ?? ''}`
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
+    if (lines.length === 0) return;
+
+    const warnings = lines.filter((line) => NPM_WARNING_LINE.test(line));
+    for (const warning of warnings) {
+        logger.warn(`[AI Tools] ${warning}`);
+    }
+    logger.debug(
+        `[AI Tools] npm install output (${lines.length} line(s), ${warnings.length} warning(s)):\n` +
+            lines.join('\n'),
+    );
+}
+
 export async function installAiDefaultsMcpTools(
     projectPath: string,
     project: Project,
     commandManager: CommandExecutor,
     onProgress?: (message: string) => void,
+    logger?: Pick<Logger, 'debug' | 'warn'>,
 ): Promise<InstallAiDefaultsResult> {
     const toolsDir = resolveMcpToolsDir(projectPath);
 
@@ -140,6 +174,20 @@ export async function installAiDefaultsMcpTools(
                   }
                 : {}),
         });
+
+        // LOG WHAT NPM SAID, whatever it exited with.
+        //
+        // Until 2026-09-02 npm's output was read ONLY on a non-zero exit, and the
+        // progress hook above keeps just the LAST line of each chunk. So a WARNING —
+        // npm exits 0 — was seen by nobody: it flashed past on the progress line and
+        // reached no channel at all. An EBADENGINE (a package declaring a Node range
+        // this machine does not satisfy) went unrecorded exactly that way, and the
+        // only reason it was noticed is that someone happened to be watching the
+        // progress line at the right moment.
+        //
+        // Warnings go to `warn` so they survive a debug-off session; the rest is
+        // debug-level, because a successful install is noise until it is not.
+        logNpmOutput(result.stdout, result.stderr, logger);
 
         if (result.code !== 0) {
             const tail = (result.stderr ?? '').slice(-NPM_STDERR_TAIL_BYTES).trim();

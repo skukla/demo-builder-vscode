@@ -216,8 +216,14 @@ export async function handleRegenerateAiFiles(context: HandlerContext): Promise<
             project.path,
             project,
             ServiceLocator.getCommandExecutor(),
-            (line) =>
-            emit('Downloading AI tool packages', line),
+            (line) => emit('Downloading AI tool packages', line),
+            // Warnings to the visible channel, the full output to the debug one.
+            // npm exits 0 on a warning, so before this an EBADENGINE reached
+            // neither — see the installer.
+            {
+                debug: (m: string) => context.debugLogger.debug(m),
+                warn: (m: string) => context.logger.warn(m),
+            },
         );
         if (!installResult.success) {
             return {

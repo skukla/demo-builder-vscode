@@ -258,6 +258,81 @@ describe('applicableMcpPackages', () => {
     });
 });
 
+describe('installAiDefaultsMcpTools — npm output reaches a channel', () => {
+    // Regression, 2026-09-02: npm's output was read ONLY on a non-zero exit, and
+    // npm exits 0 on a warning. An EBADENGINE (a package declaring a Node range
+    // this machine does not satisfy) therefore reached no channel at all — it
+    // flashed past on the progress line, which keeps only the last line of a chunk.
+    const EBADENGINE = 'npm warn EBADENGINE Unsupported engine {';
+    const DEPRECATED = 'npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported';
+
+    let logger: { debug: jest.Mock; warn: jest.Mock };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        executeMock.mockReset();
+        logger = { debug: jest.fn(), warn: jest.fn() };
+    });
+
+    it('raises every npm warning to warn even though npm exited 0', async () => {
+        executeMock.mockResolvedValue({
+            code: 0,
+            stdout: `${EBADENGINE}\nadded 214 packages`,
+            stderr: DEPRECATED,
+        });
+
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor, undefined, logger);
+
+        expect(logger.warn).toHaveBeenCalledWith(`[AI Tools] ${EBADENGINE}`);
+        expect(logger.warn).toHaveBeenCalledWith(`[AI Tools] ${DEPRECATED}`);
+        expect(logger.warn).toHaveBeenCalledTimes(2);
+    });
+
+    it('sends the whole output to debug, warning lines included', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: `${EBADENGINE}\nadded 214 packages`, stderr: '' });
+
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor, undefined, logger);
+
+        const debugMessage = logger.debug.mock.calls[0][0] as string;
+        expect(debugMessage).toContain('2 line(s), 1 warning(s)');
+        expect(debugMessage).toContain(EBADENGINE);
+        expect(debugMessage).toContain('added 214 packages');
+    });
+
+    it('logs nothing when npm said nothing (a clean install is not news)', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor, undefined, logger);
+
+        expect(logger.warn).not.toHaveBeenCalled();
+        expect(logger.debug).not.toHaveBeenCalled();
+    });
+
+    it('still logs the output when npm FAILED, alongside the structured error', async () => {
+        executeMock.mockResolvedValue({ code: 1, stdout: EBADENGINE, stderr: 'npm error code E404' });
+
+        const result = await installAiDefaultsMcpTools(
+            PROJECT_PATH,
+            EDS_PROJECT,
+            executor,
+            undefined,
+            logger
+        );
+
+        expect(logger.warn).toHaveBeenCalledWith(`[AI Tools] ${EBADENGINE}`);
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('npm install exited with code 1');
+    });
+
+    it('installs without a logger (the parameter is optional, not required)', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: EBADENGINE, stderr: '' });
+
+        await expect(
+            installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor)
+        ).resolves.toEqual({ success: true });
+    });
+});
+
 describe('readInstalledMcpPackages', () => {
     it('reads the dependency names from the isolated tools manifest', async () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValueOnce(

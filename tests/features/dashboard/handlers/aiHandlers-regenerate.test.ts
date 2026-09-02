@@ -200,7 +200,10 @@ describe('aiHandlers — regenerating AI files', () => {
                 PROJECT_WITH_STOREFRONT.path,
                 PROJECT_WITH_STOREFRONT,
                 expect.anything(),
-                expect.any(Function)
+                expect.any(Function),
+                // The installer needs a logger or an npm EBADENGINE warning reaches
+                // no channel at all — npm exits 0 on it.
+                { debug: expect.any(Function), warn: expect.any(Function) }
             );
             // Order matters: the install must complete before context files are written
             // (so .mcp.json's isolated-dir-anchored paths resolve to real files).

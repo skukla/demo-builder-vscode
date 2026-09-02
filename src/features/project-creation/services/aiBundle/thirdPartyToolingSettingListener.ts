@@ -48,7 +48,7 @@ async function applyToAllProjects(
         try {
             const project = await loader.loadProject(summary.path, () => []);
             if (!project) continue;
-            await installAiDefaultsMcpTools(summary.path, project, commandManager);
+            await installAiDefaultsMcpTools(summary.path, project, commandManager, undefined, logger);
             const writer = createGeneratedFileWriter(
                 summary.path,
                 project.aiFileHashes ?? {},

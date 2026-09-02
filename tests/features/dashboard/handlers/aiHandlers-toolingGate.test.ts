@@ -50,7 +50,10 @@ describe('handleRegenerateAiFiles — tooling gate', () => {
             meshProject.path,
             meshProject,
             expect.anything(),
-            expect.any(Function)
+            expect.any(Function),
+            // The installer needs a logger or an npm EBADENGINE warning reaches
+            // no channel at all — npm exits 0 on it.
+            { debug: expect.any(Function), warn: expect.any(Function) }
         );
     });
 });
