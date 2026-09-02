@@ -39,6 +39,11 @@ Both configs now carry `ignorePatterns`. After deleting the two directories the
 pilot ran in **29s and reproduced 93.37% exactly**, module for module — which is
 also what proves the ignore list did not change what gets mutated.
 
+A CLEAN RUN CLEANS UP AFTER ITSELF — verified 2026-09-01, both the pilot and the
+sample completed normally and left nothing behind. So residue is not the normal
+state, and finding some means a previous run did not finish. That is the useful
+reading: gigabytes in a temp dir are a record of interruptions, not of usage.
+
 A KILLED RUN ORPHANS ITS WHOLE SANDBOX. Interrupting the sample (Ctrl-C, a session
 ending, a timeout) left **1.0GB** behind in one go — so this is not slow accumulation
 over months, it is one gigabyte per interrupted run. Delete the temp dir before
@@ -64,6 +69,18 @@ du -sh .stryker-tmp .stryker-tmp-pl22 2>/dev/null
 
 Compare a new run against this table. A score that DROPS means a change went in
 that the tests do not constrain.
+
+**But compare PER MODULE, never on the overall percentage.** The sample picks its
+modules by a deterministic stride across every source file that has a test, so
+adding or removing tests reshuffles which modules it lands on. On 2026-09-01 the
+overall figure read 70.73% against a recorded 59.29% — and that comparison was
+worthless, because the set had changed (`spectrumTokens`, `integrationCardModel` and
+`importProgress` were in; `envMerge` was out). Nothing had improved by eleven points.
+
+`scripts/checkMutationBaseline.mjs` is the authority: it keeps a PER-MODULE baseline,
+compares only modules present in both runs, and prints regressions by name. Its
+verdict on that same run was the real answer — eleven modules identical, one
+regression — and the regression was a genuine finding.
 
 ## The pilot's 93% does NOT generalise — 2026-08-30, PL-22
 

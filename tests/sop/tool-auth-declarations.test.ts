@@ -31,11 +31,7 @@
  * @see tests/sop/tool-catalog-gating.test.ts — same brace-independent derivation
  */
 
-import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-
-const ROOT = join(__dirname, '..', '..');
+import { toolDeclarations } from './tool.testUtils';
 
 /** The sign-ins the extension can actually offer. */
 const PROVIDERS = new Set(['adobe', 'dalive', 'github', 'commerce']);
@@ -70,46 +66,17 @@ interface Declaration {
     providers: string[] | null;
 }
 
-/** Read each tool's `needsAuth` by bounding the search to its OWN declaration. */
+/** Each tool's declared sign-ins, read from its own declaration. */
 function declarations(): Declaration[] {
-    const files = execSync(
-        "git ls-files 'src/features/ai/server/*.ts' 'src/mcp-server.ts' 'src/mcp/*.ts'",
-        { encoding: 'utf8', cwd: ROOT }
-    )
-        .split('\n')
-        .filter(Boolean);
-
-    const out: Declaration[] = [];
-    for (const file of files) {
-        const src = readFileSync(join(ROOT, file), 'utf8');
-        // BOTH registration forms. Matching only `registerTool(` found 66 of the
-        // surface and the control said so — descriptor rows declare `tool: 'name'`
-        // instead, and they carry `needsAuth` too.
-        const sites = [
-            ...[...src.matchAll(/registerTool\(\s*'([a-z0-9_]+)'/g)],
-            ...[...src.matchAll(/tool:\s*'([a-z0-9_]+)'/g)],
-        ]
-            .map((m) => ({ name: m[1], at: m.index as number }))
-            .sort((a, b) => a.at - b.at);
-
-        sites.forEach(({ name, at }, i) => {
-            // Bounded to the NEXT declaration — the unbounded window is the exact bug
-            // that made the tool catalog understate four confirm gates.
-            const body = src.slice(at, sites[i + 1]?.at ?? src.length);
-            const m = /needsAuth:\s*(\[[^\]]*\]|false)/.exec(body);
-            if (!m) {
-                out.push({ name, providers: null });
-                return;
-            }
-            const raw = m[1];
-            out.push({
-                name,
-                providers:
-                    raw === 'false' ? [] : [...raw.matchAll(/'([a-z]+)'/g)].map((p) => p[1]),
-            });
-        });
-    }
-    return out;
+    return toolDeclarations().map(({ name, body }) => {
+        const m = /needsAuth:\s*(\[[^\]]*\]|false)/.exec(body);
+        if (!m) return { name, providers: null };
+        const raw = m[1];
+        return {
+            name,
+            providers: raw === 'false' ? [] : [...raw.matchAll(/'([a-z]+)'/g)].map((p) => p[1]),
+        };
+    });
 }
 
 describe('every tool declares real sign-ins', () => {

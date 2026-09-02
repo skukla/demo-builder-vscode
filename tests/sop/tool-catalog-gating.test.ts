@@ -17,42 +17,25 @@
  * regex would pass whatever the generator believes, which is exactly the failure. This
  * brace-matches each declaration instead, so the two methods have to agree.
  */
-import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { toolDeclarations } from './tool.testUtils';
 
 const ROOT = join(__dirname, '..', '..');
 
-/** Tool names whose declaring literal contains `confirm: true`, by brace matching. */
-const gatedInSource = (): Set<string> => {
-    const files = execSync(
-        "git ls-files 'src/features/ai/server/*.ts' 'src/mcp-server.ts' 'src/mcp/*.ts'",
-        { encoding: 'utf8', cwd: ROOT }
-    )
-        .split('\n')
-        .filter(Boolean);
-
-    const gated = new Set<string>();
-    for (const file of files) {
-        const src = readFileSync(join(ROOT, file), 'utf8');
-        const decls = [
-            ...[...src.matchAll(/tool:\s*'([a-z0-9_]+)'/g)].map((m) => ({
-                name: m[1],
-                at: m.index as number,
-            })),
-            ...[...src.matchAll(/registerTool\(\s*'([a-z0-9_]+)'/g)].map((m) => ({
-                name: m[1],
-                at: m.index as number,
-            })),
-        ].sort((a, b) => a.at - b.at);
-
-        decls.forEach(({ name, at }, i) => {
-            const end = decls[i + 1]?.at ?? src.length;
-            if (/confirm:\s*true/.test(src.slice(at, end))) gated.add(name);
-        });
-    }
-    return gated;
-};
+/**
+ * Tool names whose own declaration contains `confirm: true`.
+ *
+ * The site extraction moved to `tool.testUtils.ts` on 2026-09-01, shared with
+ * `tool-auth-declarations`, which had duplicated it. The bounded window — the thing
+ * this file exists to get right — lives there now, documented with the reason.
+ */
+const gatedInSource = (): Set<string> =>
+    new Set(
+        toolDeclarations()
+            .filter(({ body }) => /confirm:\s*true/.test(body))
+            .map(({ name }) => name)
+    );
 
 /** Tool names the generated catalog marks with the confirm flag. */
 const gatedInCatalog = (): Set<string> => {
