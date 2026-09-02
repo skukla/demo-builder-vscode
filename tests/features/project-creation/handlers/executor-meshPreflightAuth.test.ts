@@ -16,6 +16,7 @@
 import { ensureMeshPreflightAuth } from '@/features/project-creation/handlers/executor';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 describe('Executor - Mesh Pre-flight Authentication', () => {
     // Minimal mock for authManager
     function createMockAuthManager(overrides: {
@@ -30,7 +31,7 @@ describe('Executor - Mesh Pre-flight Authentication', () => {
         } = overrides;
 
         let callCount = 0;
-        return {
+        return createMockAuthenticationService({
             isAuthenticated: jest.fn().mockImplementation(async () => {
                 callCount++;
                 // First call returns the initial state; after login, return postLoginAuthenticated
@@ -38,7 +39,7 @@ describe('Executor - Mesh Pre-flight Authentication', () => {
                 return postLoginAuthenticated;
             }),
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(loginSuccess),
-        };
+        });
     }
 
     describe('when auth token is valid', () => {
@@ -46,7 +47,7 @@ describe('Executor - Mesh Pre-flight Authentication', () => {
             const authManager = createMockAuthManager({ isAuthenticated: true });
             const logger = createMockLogger();
 
-            const result = await ensureMeshPreflightAuth(authManager as any, logger as any, {});
+            const result = await ensureMeshPreflightAuth(authManager, logger, {});
 
             expect(result).toBe(true);
             expect(authManager.isAuthenticated).toHaveBeenCalledTimes(1);
@@ -68,7 +69,7 @@ describe('Executor - Mesh Pre-flight Authentication', () => {
                 workspace: 'ws-789',
             };
 
-            const result = await ensureMeshPreflightAuth(authManager as any, logger as any, adobeConfig);
+            const result = await ensureMeshPreflightAuth(authManager, logger, adobeConfig);
 
             expect(result).toBe(true);
             expect(authManager.loginAndRestoreProjectContext).toHaveBeenCalledWith({
@@ -85,7 +86,7 @@ describe('Executor - Mesh Pre-flight Authentication', () => {
             });
             const logger = createMockLogger();
 
-            const result = await ensureMeshPreflightAuth(authManager as any, logger as any, {});
+            const result = await ensureMeshPreflightAuth(authManager, logger, {});
 
             expect(result).toBe(false);
             expect(authManager.loginAndRestoreProjectContext).toHaveBeenCalled();
@@ -99,7 +100,7 @@ describe('Executor - Mesh Pre-flight Authentication', () => {
             });
             const logger = createMockLogger();
 
-            const result = await ensureMeshPreflightAuth(authManager as any, logger as any, {});
+            const result = await ensureMeshPreflightAuth(authManager, logger, {});
 
             expect(result).toBe(false);
             // Should have called isAuthenticated twice: initial check + post-login verification
@@ -111,7 +112,7 @@ describe('Executor - Mesh Pre-flight Authentication', () => {
         it('should return true (graceful degradation)', async () => {
             const logger = createMockLogger();
 
-            const result = await ensureMeshPreflightAuth(undefined, logger as any, {});
+            const result = await ensureMeshPreflightAuth(undefined, logger, {});
 
             expect(result).toBe(true);
         });

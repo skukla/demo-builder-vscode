@@ -8,12 +8,16 @@
 
 import * as vscode from 'vscode';
 import { performAddonUpdates } from '@/features/updates/commands/updateExecutor';
+import type { UpdateContext } from '@/features/updates/services/updateCore';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import type { BlockLibraryUpdateItem } from '@/features/updates/commands/updateTypes';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 // ─── Module mocks ────────────────────────────────────────────────────────────
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
@@ -101,19 +105,39 @@ function makeItem(project: Project): BlockLibraryUpdateItem {
     };
 }
 
-function makeCtx(saveImpl?: () => Promise<void>): {
-    secrets: vscode.SecretStorage;
-    extensionPath: string;
-    stateManager: { saveProject: jest.Mock };
-    logger: ReturnType<typeof createMockLogger>;
-} {
+function makeCtx(saveImpl?: () => Promise<void>): TestUpdateContext {
     return {
-        secrets: {} as vscode.SecretStorage,
+        // `{} as vscode.SecretStorage` claimed an empty object was a secret store,
+        // and the one-method stateManager beside it the same about a class with
+        // twenty. Both have canonical builders.
+        secrets: createMockSecretStorage().secrets,
         extensionPath: '/ext',
-        stateManager: { saveProject: jest.fn(saveImpl ?? (() => Promise.resolve())) },
+        // REQUIRED on UpdateContext and omitted entirely until now — the cast on the
+        // whole object meant nothing said so, and this suite was handing the executor
+        // a context production cannot produce.
+        commandManager: createMockCommandExecutor(),
+        stateManager: createMockStateManager({
+            // `.mockImplementation` rather than `jest.fn(impl)`: the latter INFERS a
+            // zero-argument signature from the callback, which no real `saveProject`
+            // accepts. Third time this shape has bitten on this programme.
+            saveProject: jest.fn().mockImplementation(saveImpl ?? (() => Promise.resolve())),
+        }),
         logger: createMockLogger(),
     };
 }
+
+/**
+ * The REAL `UpdateContext`, with the two members this suite reads back kept at their
+ * mocked types — `stateManager.saveProject.mock.calls` and the logger's.
+ *
+ * An earlier draft declared a parallel `UpdateContextForTest` shape. That is the
+ * invented-type mistake this programme keeps finding in other people's tests: the
+ * production type exists, and a second description of it can only drift.
+ */
+type TestUpdateContext = UpdateContext & {
+    stateManager: ReturnType<typeof createMockStateManager>;
+    logger: ReturnType<typeof createMockLogger>;
+};
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
@@ -129,7 +153,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             const lib = project.installedBlockLibraries![0];
             expect(lib.syncDisabledMarker).toBeDefined();
@@ -142,7 +166,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(installMock).not.toHaveBeenCalled();
         });
@@ -152,7 +176,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(project.installedBlockLibraries![0].commitSha).toBe('aaa111');
         });
@@ -164,7 +188,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(installMock).toHaveBeenCalledTimes(1);
             const [, destOwner, destRepo, libs] = installMock.mock.calls[0];
@@ -183,7 +207,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(project.installedBlockLibraries![0].commitSha).toBe('bbb222');
         });
@@ -199,7 +223,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(project.installedBlockLibraries![0].commitSha).toBe('aaa111');
         });
@@ -218,7 +242,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             });
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(project.installedBlockLibraries![0].syncDisabledMarker).toBeUndefined();
         });
@@ -231,7 +255,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(showInfoMock).toHaveBeenCalledTimes(1);
             const [, ...buttons] = showInfoMock.mock.calls[0];
@@ -244,7 +268,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(installMock).toHaveBeenCalledTimes(1);
             expect(project.installedBlockLibraries![0].commitSha).toBe('bbb222');
@@ -256,7 +280,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(installMock).not.toHaveBeenCalled();
             expect(project.installedBlockLibraries![0].syncDisabledMarker).toBeDefined();
@@ -269,7 +293,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             const project = makeProject();
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(installMock).not.toHaveBeenCalled();
             expect(project.installedBlockLibraries![0].commitSha).toBe('aaa111');
@@ -293,7 +317,7 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             });
             const ctx = makeCtx();
 
-            await performAddonUpdates([makeItem(project)], [], new Set(), ctx as never);
+            await performAddonUpdates([makeItem(project)], [], new Set(), ctx);
 
             expect(installMock).not.toHaveBeenCalled();
             expect(project.installedBlockLibraries![0].commitSha).toBe('aaa111');

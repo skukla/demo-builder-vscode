@@ -25,8 +25,8 @@ describe('ProjectSetupContext', () => {
         mockLogger = createMockLogger();
 
         mockHandlerContext = {
-            logger: mockLogger as any,
-            debugLogger: mockLogger as any,
+            logger: mockLogger,
+            debugLogger: mockLogger,
             context: {
                 extensionPath: '/test/extension/path',
                 secrets: {} as any,

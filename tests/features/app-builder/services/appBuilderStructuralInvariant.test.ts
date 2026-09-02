@@ -43,8 +43,8 @@ import {
     removeAppBuilderComponent,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
-import { createMockLogger } from '../../../helpers/loggerFake';
 
+import { createDeps as sharedCreateDeps } from './appBuilderComponentRunner.testUtils';
 // =============================================================================
 // Fixtures — N integrations
 // =============================================================================
@@ -62,49 +62,11 @@ function integrationEntry(id: string): AppBuilderComponentCatalogEntry {
     };
 }
 
-function createComponentManager() {
-    return {
-        installComponent: jest.fn(async (project: Project, def: { id: string; name?: string }) => {
-            const instance = {
-                id: def.id,
-                name: def.name ?? def.id,
-                type: 'app-builder',
-                status: 'ready',
-                path: `/proj/components/${def.id}`,
-                lastUpdated: new Date(),
-            };
-            project.componentInstances = project.componentInstances ?? {};
-            project.componentInstances[def.id] = instance as never;
-            return { success: true, component: instance };
-        }),
-        removeComponent: jest.fn(async (project: Project, id: string) => {
-            if (project.componentInstances) {
-                delete project.componentInstances[id];
-            }
-        }),
-    };
-}
-
-function createDeps() {
-    return {
-        componentManager: createComponentManager(),
-        commandManager: {
-            execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
-        },
-        logger: createMockLogger(),
-        saveProject: jest.fn().mockResolvedValue(undefined),
-        getCachedOrganization: jest.fn().mockReturnValue(undefined),
-        deployMesh: jest.fn().mockResolvedValue({ success: true, data: {} }),
-        deployApp: jest.fn().mockResolvedValue({
-            success: true,
-            data: { url: 'https://app/api', deployedUrls: {} },
-        }),
-        subscribeRequiredApis: jest.fn().mockResolvedValue(undefined),
-        republishStorefront: jest.fn().mockResolvedValue({ success: true }),
-        catalog: INTEGRATION_IDS.map(integrationEntry),
-        secrets: {} as never,
-    };
-}
+/**
+ * The SHARED `createDeps`. This file had its own copy — same interface, its own
+ * drift — which is what the duplicate-fake scans exist to find.
+ */
+const createDeps = sharedCreateDeps;
 
 function createProject(overrides: Partial<Project> = {}): Project {
     return {
@@ -120,7 +82,7 @@ function createProject(overrides: Partial<Project> = {}): Project {
 async function addAllIntegrations(deps: ReturnType<typeof createDeps>): Promise<Project> {
     let project = createProject();
     for (const id of INTEGRATION_IDS) {
-        const result = await addAppBuilderComponent(project, integrationEntry(id), deps as never);
+        const result = await addAppBuilderComponent(project, integrationEntry(id), deps);
         expect(result.success).toBe(true);
         project = deps.saveProject.mock.calls.at(-1)?.[0] as Project;
     }
@@ -221,7 +183,7 @@ describe('structural invariant: remove targets only its own package', () => {
         const project = projectWithAllIntegrations();
         const deps = createDeps();
 
-        const result = await removeAppBuilderComponent(project, 'crm-sync', deps as never);
+        const result = await removeAppBuilderComponent(project, 'crm-sync', deps);
 
         expect(result.success).toBe(true);
         const undeployCalls = deps.commandManager.execute.mock.calls.filter((c: unknown[]) =>
@@ -235,7 +197,7 @@ describe('structural invariant: remove targets only its own package', () => {
         const project = projectWithAllIntegrations();
         const deps = createDeps();
 
-        await removeAppBuilderComponent(project, 'crm-sync', deps as never);
+        await removeAppBuilderComponent(project, 'crm-sync', deps);
 
         expect(deps.componentManager.removeComponent).toHaveBeenCalledTimes(1);
         expect(deps.componentManager.removeComponent).toHaveBeenCalledWith(

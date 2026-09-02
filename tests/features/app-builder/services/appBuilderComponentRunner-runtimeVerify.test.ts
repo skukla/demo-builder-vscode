@@ -87,7 +87,7 @@ describe('post-undeploy runtime verification', () => {
             },
         });
 
-        const result = await removeAppBuilderComponent(integrationProject(), ID, deps as never);
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
 
         const deleteCall = (deps.commandManager.execute as jest.Mock).mock.calls.find(
             (c: unknown[]) => String(c[0]).includes('package delete')
@@ -106,7 +106,7 @@ describe('post-undeploy runtime verification', () => {
             'package list': { stdout: JSON.stringify([{ name: 'someone-elses-app' }]) },
         });
 
-        const result = await removeAppBuilderComponent(integrationProject(), ID, deps as never);
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
 
         const deleteCall = (deps.commandManager.execute as jest.Mock).mock.calls.find(
             (c: unknown[]) => String(c[0]).includes('package delete')
@@ -122,7 +122,7 @@ describe('post-undeploy runtime verification', () => {
             'package list': { stdout: JSON.stringify([{ name: 'kit-package-b' }]) },
         });
 
-        const result = await removeAppBuilderComponent(integrationProject(), ID, deps as never);
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
 
         expect(result.runtimeCleanup?.deleted).toEqual(['kit-package-b']);
     });
@@ -131,7 +131,7 @@ describe('post-undeploy runtime verification', () => {
         const deps = createDeps();
         routeExecute(deps, { 'package list': { reject: true } });
 
-        const result = await removeAppBuilderComponent(integrationProject(), ID, deps as never);
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
 
         expect(result.success).toBe(true);
         expect(result.runtimeCleanup?.verified).toBe(false);
@@ -146,7 +146,7 @@ describe('post-undeploy runtime verification', () => {
             'package delete': { reject: true },
         });
 
-        const result = await removeAppBuilderComponent(integrationProject(), ID, deps as never);
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
 
         expect(result.runtimeCleanup).toEqual({
             verified: true,
@@ -177,7 +177,7 @@ describe('post-undeploy runtime verification', () => {
             },
         });
 
-        const result = await removeAppBuilderComponent(project, 'eds-accs-mesh', deps as never);
+        const result = await removeAppBuilderComponent(project, 'eds-accs-mesh', deps);
 
         const listCall = (deps.commandManager.execute as jest.Mock).mock.calls.find(
             (c: unknown[]) => String(c[0]).includes('package list')
