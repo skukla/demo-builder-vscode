@@ -1,0 +1,26 @@
+Work backlog item PL-32 — drive the type-erasing casts in tests/ to zero.
+
+WHAT DONE MEANS. Both ceilings in tests/sop/type-erasing-casts.ledger.json read 0
+("as any" is 241 and "as never" is 190 as of 2026-09-02), and `npm run gate`
+exits 0. Nothing else counts as done.
+
+HOW TO PROVE IT EACH TURN. After every batch, run
+`npx jest --no-coverage tests/sop/type-erasing-casts.test.ts > /tmp/casts.txt 2>&1`
+and paste the two ceiling numbers it reports into your reply. Do not describe
+progress in prose without those numbers — the evaluator reads only what you
+surface, so an unpasted number does not exist.
+
+METHOD. Read `.claude/skills/ask-the-tool/SKILL.md` first and use it: change many
+sites at once, run `npm run typecheck:tests`, and let the compiler name the sites
+where the cast was load-bearing. An ARGUMENT cast is a silenced type error, never
+a formatting problem — build the object the callee declares instead of casting,
+and if that is impossible, leave the cast and say why.
+
+RULES. Lower the ledger ceiling to the new measurement after each batch; never
+raise it. Commit each batch separately with a `Backlog: PL-32` trailer, and only
+after `npm run gate` exits 0 — capture the exit code in a variable, never read it
+through a pipe. Push after each commit. Make no cloud writes and no cross-item
+changes.
+
+STOP EARLY AND SAY SO if a remaining cast needs a product decision, or if two
+consecutive batches fail the gate for the same reason. Also stop after 25 turns.

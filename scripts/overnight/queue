@@ -1,0 +1,8 @@
+# The order items run in, one name per line. Blank lines and # comments ignored.
+#
+# Order is a decision, not an accident: a default glob ran PL-16 before PL-32
+# because "1" sorts before "3". Put the cleanest end state first — it is the one
+# most likely to finish, and it finishes while the night is young.
+
+PL-32
+PL-16

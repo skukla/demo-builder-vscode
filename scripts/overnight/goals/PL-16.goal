@@ -1,0 +1,26 @@
+Work backlog item PL-16 — give StateManager and Project fixtures a shared builder,
+the way HandlerContext already has one.
+
+WHAT DONE MEANS FOR TONIGHT. The `castCeilings` in
+tests/sop/canonical-fakes.ledger.json are lower than they start (Project 145,
+Partial<Project> 38, HandlerContext 13, vscode.ExtensionContext 6 as of
+2026-09-02), and `npm run gate` exits 0. Reaching zero is NOT expected tonight
+and is not the condition.
+
+HOW TO PROVE IT EACH TURN. After every batch run
+`npx jest --no-coverage tests/sop/canonical-fakes.test.ts > /tmp/fakes.txt 2>&1`
+and paste the four ceiling numbers into your reply.
+
+THE TRAP, AND IT IS THE WHOLE REASON THIS GOAL IS CAPPED. `createMockProject`
+supplies rich defaults, and several suites assert on the ABSENCE of fields. A
+blind substitution typechecks, passes, and silently changes what those tests
+mean. Before converting any site, read what the test asserts. If it asserts on a
+missing or empty field, LEAVE IT and record the file in your reply.
+
+RULES. Lower ceilings only, never raise. One `Backlog: PL-16` commit per batch,
+each gated on `npm run gate` exiting 0 with the code captured in a variable.
+Push after each commit. No cloud writes.
+
+STOP AND HAND BACK — this is expected, not a failure — as soon as the only
+remaining sites are absence-asserting ones, or any conversion needs a judgement
+about what a test is for. List those files and stop. Also stop after 20 turns.

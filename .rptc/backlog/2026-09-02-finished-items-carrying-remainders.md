@@ -58,3 +58,7 @@ trade a visible gap for an invisible one.
 
 - [[PL-33]] — every convention is enforced, or it stops being a convention. Same
   argument, applied to the record instead of the code.
+
+## Shipped so far
+
+- 2026-09-02  docs: every leftover in one place, and the reason one class of them was invisible (PL-39) (`687dcd4a9`)
