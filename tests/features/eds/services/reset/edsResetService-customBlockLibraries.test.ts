@@ -7,16 +7,14 @@
  * TDD RED Phase: Tests written BEFORE implementation.
  */
 
+import './edsResetService.sharedMocks';
+
 import type { Project } from '@/types/base';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 
 // =============================================================================
 // Mocks - jest.mock calls are hoisted
 // =============================================================================
-
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
-}));
 
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
@@ -26,10 +24,6 @@ jest.mock('@/features/components/services/blockLibraryLoader', () => ({
 }));
 
 // Mock dynamic imports used by resetRepoToTemplate
-
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn(),
-}));
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     getGitHubServices: jest.fn().mockReturnValue({
@@ -74,7 +68,7 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false });
 // =============================================================================
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
-import { createResetContext, meshDeps } from './edsResetService.testUtils';
+import { createResetContext, meshDeps, resetParams } from './edsResetService.testUtils';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import {
     getBlockLibrarySource,
@@ -163,15 +157,7 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
 
         // When: Executing reset
         await executeEdsReset(
-            {
-                repoOwner: 'test-owner',
-                repoName: 'test-repo',
-                daLiveOrg: 'test-org',
-                daLiveSite: 'test-repo',
-                templateOwner: 'template-owner',
-                templateRepo: 'template-repo',
-                project,
-            },
+            resetParams(project),
             context,
             mockTokenProvider,
             meshDeps
@@ -209,15 +195,7 @@ describe('EDS Reset Service - Custom Block Libraries', () => {
 
         // When: Executing reset
         await executeEdsReset(
-            {
-                repoOwner: 'test-owner',
-                repoName: 'test-repo',
-                daLiveOrg: 'test-org',
-                daLiveSite: 'test-repo',
-                templateOwner: 'template-owner',
-                templateRepo: 'template-repo',
-                project,
-            },
+            resetParams(project),
             context,
             mockTokenProvider,
             meshDeps

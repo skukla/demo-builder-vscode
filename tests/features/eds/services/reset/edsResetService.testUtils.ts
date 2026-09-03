@@ -87,3 +87,32 @@ export function createResetContext(currentProject?: Project | null): HandlerCont
         } as unknown as HandlerContext['authManager'],
     });
 }
+
+/**
+ * The `executeEdsReset` parameters seven call sites across this family repeat.
+ *
+ * The six identifier fields never vary; only `project` and `redeployMesh` do
+ * (counted 2026-09-02: four sites pass redeployMesh true, two omit it, one
+ * passes false). None of those tests is asserting on the owner or template
+ * names — they are there so the call is well-formed.
+ *
+ * @param project - the project under reset
+ * @param overrides - anything this call needs beyond the defaults
+ */
+export function resetParams(
+    project: Project,
+    overrides: Record<string, unknown> = {}
+): Parameters<typeof import('@/features/eds/services/reset/edsResetService').executeEdsReset>[0] {
+    return {
+        repoOwner: 'test-owner',
+        repoName: 'test-repo',
+        daLiveOrg: 'test-org',
+        daLiveSite: 'test-repo',
+        templateOwner: 'template-owner',
+        templateRepo: 'template-repo',
+        project,
+        ...overrides,
+    } as Parameters<
+        typeof import('@/features/eds/services/reset/edsResetService').executeEdsReset
+    >[0];
+}

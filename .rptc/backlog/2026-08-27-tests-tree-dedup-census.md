@@ -255,3 +255,4 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  test(app-builder): six runner suites share the withOrgContext wall (`cd4e24864`)
 - 2026-09-02  test(core): one recording file-system watcher for the two watcher suites (`865e7e170`)
 - 2026-09-02  test(eds): six stub walls shared by the two placeholder-stub suites (`40e408ccc`)
+- 2026-09-02  test(eds): six stub walls shared by the two placeholder-stub suites (`86922125f`)

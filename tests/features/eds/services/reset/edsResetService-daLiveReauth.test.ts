@@ -7,6 +7,8 @@
  * storefrontSetupPhases.ts.
  */
 
+import { mockEnsureDaLiveAuth } from './edsResetService.sharedMocks';
+
 import type { Project } from '@/types/base';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -16,36 +18,11 @@ jest.setTimeout(5000);
 // Mocks — defined before imports
 // =============================================================================
 
-const mockEnsureDaLiveAuth = jest.fn();
-
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
-}));
-
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     getBlockLibraryContentSource: jest.fn(),
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
-}));
-
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: jest.fn().mockReturnValue({
-        tokenService: {},
-        fileOperations: {
-            resetRepoToTemplate: jest
-                .fn()
-                .mockResolvedValue({ fileCount: 10, commitSha: 'abc1234567' }),
-            getFileContent: jest.fn().mockResolvedValue(null),
-            createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
-        },
-    }),
-    configureDaLivePermissions: jest.fn().mockResolvedValue({ success: true }),
-    getDaLiveAuthService: jest.fn().mockReturnValue({
-        getAccessToken: jest.fn().mockResolvedValue('token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    }),
-    ensureDaLiveAuth: (...args: unknown[]) => mockEnsureDaLiveAuth(...args),
 }));
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
@@ -60,10 +37,6 @@ jest.mock('@/features/eds/services/edsPipeline', () => ({
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
 // path and never touched, so the mock silenced nothing. Measured 2026-08-31 by
 // stripping it and re-running this suite.
-
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn(),
-}));
 
 // Mock fetch for code sync verification
 global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
