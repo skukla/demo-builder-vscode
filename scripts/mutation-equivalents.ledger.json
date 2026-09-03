@@ -1003,6 +1003,42 @@
             "decision": "none \u2014 both lines are kept for diagnosis of a switch that did not land",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (ensureProjectOrgContext)"
+        },
+        {
+            "module": "src/features/authentication/services/imsTokenClaims.ts",
+            "anchors": [
+                "if (!payloadSegment) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The whole decoder body sits inside a try whose catch returns undefined, and the guard returns undefined too. Drop the guard and a missing segment reaches Buffer.from(undefined), which throws a TypeError the catch absorbs; an empty segment decodes to '' and JSON.parse('') throws the same way. Every input that takes the guard therefore yields the same value without it, so no assertion on the return can tell the two apart, and the function has no other observable effect (no logging by design).",
+            "decision": "none \u2014 the guard is kept so a malformed token returns by decision rather than by a caught TypeError; making it killable would mean moving the guards outside the try, a restructure this pass does not own",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (imsTokenClaims)"
+        },
+        {
+            "module": "src/features/authentication/services/imsTokenClaims.ts",
+            "anchors": [
+                "if (typeof payload !== 'object' || payload === null) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "Same shape as the segment guard: the try's catch returns the value the guard returns. Without the guard a null payload throws on the property read and is caught; a string, number or boolean payload has no own user_id property, so the read yields undefined and the string check on the next line returns undefined. JSON.parse cannot produce any other non-object, so there is no input on which the guarded and unguarded code answer differently. The five mutants (drop the condition three ways, empty the block, and || to &&) all reduce to that one unobservable case.",
+            "decision": "none \u2014 the guard narrows the type for the reader and fails closed by decision; the catch makes it unobservable, not unnecessary",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (imsTokenClaims)"
+        },
+        {
+            "module": "src/features/authentication/services/imsTokenClaims.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch block removes an explicit `return undefined` from a function whose end-of-body fallthrough already returns undefined. The mutant and the original return the identical value on every throwing input, and the function has no side effects to distinguish them. The explicit return stays because the file's contract is 'decoding failures yield undefined so callers fail closed', and an empty catch reads as a swallowed error rather than a decision.",
+            "decision": "none \u2014 an explicit fail-closed return over an empty catch",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (imsTokenClaims)"
         }
     ]
 }
