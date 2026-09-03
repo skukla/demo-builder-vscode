@@ -63,3 +63,4 @@ caught at either number.
 
 - 2026-09-03  fix(test): the socket step budget stops guessing, and the load problem gets an item (`c1407098a`)
 - 2026-09-03  fix(tests): the two suites that fail only under load get the headroom the third already had (`96234cfe2`)
+- 2026-09-03  docs(backlog): log the load-headroom fix against PL-41 (`893b7d715`)

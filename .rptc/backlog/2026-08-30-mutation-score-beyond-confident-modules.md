@@ -233,3 +233,5 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(auth): bring authenticationService to zero open mutation gaps (`96f2ec2cf`)
 - 2026-09-03  test(auth): bring useAuthStatus to zero open mutation gaps (`270042ffb`)
 - 2026-09-03  test(auth): bring AdobeEntityFields to zero open mutation gaps (`937915b26`)
+- 2026-09-03  test(auth): bring tokenManager to zero open mutation gaps (`26229dc2d`)
+- 2026-09-03  fix(overnight): resume on the branch already checked out instead of trying to recut it (`d8e93608e`)
