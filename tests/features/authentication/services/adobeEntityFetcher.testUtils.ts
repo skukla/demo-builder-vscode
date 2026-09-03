@@ -80,6 +80,7 @@ export function setupEntityFetcher(): EntityFetcherHarness {
         setCachedOrgList: jest.fn(),
         getCachedOrganization: jest.fn().mockReturnValue(undefined),
         getCachedProject: jest.fn().mockReturnValue(undefined),
+        getCachedWorkspace: jest.fn().mockReturnValue(undefined),
     } as unknown as jest.Mocked<AuthCacheManager>;
 
     const mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
