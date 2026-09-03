@@ -39,3 +39,17 @@ convergence batches plus dedicated passes for the top emitters.
 - 2026-08-28  test(noise): six webviewLogger mocks deleted — the canonical form was zero (`5a81d4e92`)
 - 2026-08-28  test(noise): real-output noise 102 -> 32, and the gate's own comment was wrong (`4959dea36`)
 - 2026-08-28  test(noise): phase 4 begins — 17 suites go silent by fixing one shared filter (`86764c226`)
+
+## Shipped so far
+
+- 2026-09-03  Run noise reaches zero. Measured on a full gate: `console.warn` 0,
+  `console.error` 0, act() warnings 0, and the console allowlist empty — the
+  item's three original fix classes were already done. What remained was 58
+  `console.log` firings from exactly TWO statements:
+  `wizardHelpers.ts` (a trace labelled "Debug:", on the hot `buildProjectConfig`
+  path) and `StorefrontSetupStep.tsx` (an unmount notice). Both deleted, neither
+  a suppression: the second duplicated `handleCancelStorefrontSetup`'s own
+  `'[Storefront Setup] Cancel requested'`, written through the extension's
+  logger the moment it receives the cancel — the side that can actually persist
+  it. Two further `console.log` calls in `wizardHelpers` sit on error paths
+  beside a `console.warn`, never fire in the suite, and were deliberately left.

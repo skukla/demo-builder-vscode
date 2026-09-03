@@ -441,8 +441,11 @@ export function StorefrontSetupStep({
         return () => {
             // On unmount, if setup was running, send cancel message to abort backend operations
             if (isSetupRunningRef.current) {
-                // eslint-disable-next-line no-console
-                console.log('[StorefrontSetupStep] Unmounting during active setup, sending cancel');
+                // No log here: `handleCancelStorefrontSetup` writes
+                // '[Storefront Setup] Cancel requested' through the extension's
+                // logger the moment it receives this, which is the side that can
+                // actually persist it. A console.log here only reached the
+                // webview devtools and fired in every test that unmounted.
                 vscode.postMessage('storefront-setup-cancel', {
                     partialState: partialStateRef.current,
                     edsConfig: {
