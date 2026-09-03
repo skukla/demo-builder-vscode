@@ -72,16 +72,19 @@ describe('ProcessCleanup - Basic Operations', () => {
             const childProcess = spawn('sleep', ['10']);
             const pid = childProcess.pid!;
 
-            // When: killProcessTree called
-            const startTime = Date.now();
-            await processCleanup.killProcessTree(pid, 'SIGTERM');
-            const duration = Date.now() - startTime;
+            // Observe the signals, as the test below does. This one measured the
+            // clock against the grace period, and under full-suite load the 100ms
+            // poll chain stretched past 5s on a child that HAD exited on SIGTERM —
+            // the bound failed on correct behaviour, twice on 2026-09-03.
+            const killSpy = jest.spyOn(process, 'kill');
 
-            // Then: it exited on SIGTERM rather than being force-killed. The
-            // boundary for that claim is the grace period — escalation to SIGKILL
-            // cannot have happened below it. A tighter wall-clock bound would be
-            // stricter than the property under test, and is what made this flake.
-            expect(duration).toBeLessThan(TIMEOUTS.PROCESS_GRACEFUL_SHUTDOWN);
+            // When: killProcessTree called
+            await processCleanup.killProcessTree(pid, 'SIGTERM');
+
+            // Then: it exited on SIGTERM rather than being force-killed.
+            const signals = killSpy.mock.calls.map((call) => call[1]);
+            expect(signals).not.toContain('SIGKILL');
+            killSpy.mockRestore();
             expect(() => process.kill(pid, 0)).toThrow();
         });
 
