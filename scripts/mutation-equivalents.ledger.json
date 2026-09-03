@@ -21,7 +21,9 @@
         },
         {
             "module": "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts",
-            "anchors": ["if (!clipped) {"],
+            "anchors": [
+                "if (!clipped) {"
+            ],
             "mutants": 2,
             "category": "branch",
             "reason": "Deleting the empty-clipboard guard changes nothing observable: an empty string fails validateDaLiveTokenStrict on the next line and returns undefined by the other route. The only difference is one debug log line, and asserting log text is what the ratchet exists to refuse to reward.",
@@ -31,7 +33,9 @@
         },
         {
             "module": "src/core/state/stateManager.ts",
-            "anchors": ["lastUpdated: new Date(parsed.lastUpdated || Date.now()),"],
+            "anchors": [
+                "lastUpdated: new Date(parsed.lastUpdated || Date.now()),"
+            ],
             "mutants": 3,
             "category": "other",
             "reason": "The value never reaches anything. Every read of this.state.lastUpdated is inside saveState, nine lines after it has already been overwritten with new Date(). Nothing outside stateManager.ts reads the state file's lastUpdated. So the parse, the default and the Date construction are all discarded.",
@@ -41,7 +45,9 @@
         },
         {
             "module": "src/core/state/stateManager.ts",
-            "anchors": ["if (!parsed) {"],
+            "anchors": [
+                "if (!parsed) {"
+            ],
             "mutants": 2,
             "category": "branch",
             "reason": "Removing the guard does not change the outcome. parsed is undefined, the next line reads a property off it, that throws, and the surrounding try/catch swallows it into exactly the same defaults the guard returns to. The only observable difference is which of two log lines is written.",
@@ -51,7 +57,9 @@
         },
         {
             "module": "src/features/updates/services/componentUpdater.ts",
-            "anchors": ["if (project.componentInstances?.[componentId]) {"],
+            "anchors": [
+                "if (project.componentInstances?.[componentId]) {"
+            ],
             "mutants": 3,
             "category": "branch",
             "reason": "updateComponent reads the component out of componentInstances in its first statement and throws if it is not there, so by this line the entry is guaranteed to exist. A test that removed it never reaches this line — it gets the refusal instead, which is what happened when one was written. The version sync on this line is real and is tested; only the guard around it is unreachable.",
@@ -72,6 +80,18 @@
             "note": "The source note records 8 mutants across both catch blocks without splitting them between the two. The split is not known; the count is.",
             "recorded": "2026-09-02",
             "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
+        },
+        {
+            "module": "src/features/updates/commands/updateExecutor.ts",
+            "anchors": [
+                "projectUpdates.get(key)?.push(selection);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the `?.`, which would throw only if `projectUpdates.get(key)` were undefined. The two lines above set the key when it is absent, so by this line the entry always exists; the `?.` is there because Map.get is typed `T | undefined`. A test cannot reach the undefined case: there is no input to performComponentUpdates that skips the set. The grouping itself is tested (two selections on one project reach the updater twice and save once), so only the guard is unreachable, not the push.",
+            "decision": "none — the `?.` is required by the type. A rewrite (`const list = get(key); if (list) list.push(...) else set(key, [selection])`) would be fully killable, but is a style change to src, outside this batch's remit",
+            "recorded": "2026-09-03",
+            "source": "PL-22 batch MUT-01, updateExecutor focus run"
         }
     ]
 }

@@ -6,19 +6,13 @@
  * instead of silently bumping `commitSha`.
  */
 
-import './updateExecutor.testUtils';
+import { makeUpdateContext as makeCtx } from './updateExecutor.testUtils';
 import * as vscode from 'vscode';
 import { performAddonUpdates } from '@/features/updates/commands/updateExecutor';
-import type { UpdateContext } from '@/features/updates/services/updateCore';
 import { installBlockCollections } from '@/features/eds/services/blockCollectionHelpers';
 import type { BlockLibraryUpdateItem } from '@/features/updates/commands/updateTypes';
 import type { Project } from '@/types/base';
 import type { InstalledBlockLibrary } from '@/types/blockLibraries';
-import { createMockLogger } from '../../../helpers/loggerFake';
-
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 // ─── Module mocks ────────────────────────────────────────────────────────────
 
 // The block-library update path reaches the shared GitHub services for a token.
@@ -85,40 +79,6 @@ function makeItem(project: Project): BlockLibraryUpdateItem {
         label: 'Test Library',
     };
 }
-
-function makeCtx(saveImpl?: () => Promise<void>): TestUpdateContext {
-    return {
-        // `{} as vscode.SecretStorage` claimed an empty object was a secret store,
-        // and the one-method stateManager beside it the same about a class with
-        // twenty. Both have canonical builders.
-        secrets: createMockSecretStorage().secrets,
-        extensionPath: '/ext',
-        // REQUIRED on UpdateContext and omitted entirely until now — the cast on the
-        // whole object meant nothing said so, and this suite was handing the executor
-        // a context production cannot produce.
-        commandManager: createMockCommandExecutor(),
-        stateManager: createMockStateManager({
-            // `.mockImplementation` rather than `jest.fn(impl)`: the latter INFERS a
-            // zero-argument signature from the callback, which no real `saveProject`
-            // accepts. Third time this shape has bitten on this programme.
-            saveProject: jest.fn().mockImplementation(saveImpl ?? (() => Promise.resolve())),
-        }),
-        logger: createMockLogger(),
-    };
-}
-
-/**
- * The REAL `UpdateContext`, with the two members this suite reads back kept at their
- * mocked types — `stateManager.saveProject.mock.calls` and the logger's.
- *
- * An earlier draft declared a parallel `UpdateContextForTest` shape. That is the
- * invented-type mistake this programme keeps finding in other people's tests: the
- * production type exists, and a second description of it can only drift.
- */
-type TestUpdateContext = UpdateContext & {
-    stateManager: ReturnType<typeof createMockStateManager>;
-    logger: ReturnType<typeof createMockLogger>;
-};
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
@@ -279,6 +239,79 @@ describe('performAddonUpdates — block library syncBehavior policy', () => {
             expect(installMock).not.toHaveBeenCalled();
             expect(project.installedBlockLibraries![0].commitSha).toBe('aaa111');
             expect(project.installedBlockLibraries![0].syncDisabledMarker).toBeUndefined();
+        });
+    });
+
+    describe('template-sync dedup', () => {
+        // The project's EDS metadata names the same repo the library came from.
+        function projectSyncedFromLibrarySource(): Project {
+            return makeProject({
+                componentInstances: {
+                    'eds-storefront': {
+                        id: 'eds-storefront',
+                        name: 'EDS Storefront',
+                        status: 'ready',
+                        path: '/projects/demo/components/eds-storefront',
+                        metadata: {
+                            githubRepo: 'demo-org/demo-repo',
+                            templateOwner: 'stephen-garner-adobe',
+                            templateRepo: 'isle5',
+                        },
+                    },
+                },
+            });
+        }
+
+        it('skips a library the template sync just covered — no install, no SHA bump, no prompt', async () => {
+            setSyncBehavior('ask');
+            const project = projectSyncedFromLibrarySource();
+            const ctx = makeCtx();
+
+            await performAddonUpdates([makeItem(project)], [], new Set([project.path]), ctx);
+
+            expect(installMock).not.toHaveBeenCalled();
+            expect(showInfoMock).not.toHaveBeenCalled();
+            expect(project.installedBlockLibraries![0].commitSha).toBe('aaa111');
+        });
+
+        it('still applies the library when the template sync did NOT succeed for that project', async () => {
+            setSyncBehavior('enabled');
+            const project = projectSyncedFromLibrarySource();
+            const ctx = makeCtx();
+
+            await performAddonUpdates([makeItem(project)], [], new Set(['/projects/other']), ctx);
+
+            expect(installMock).toHaveBeenCalledTimes(1);
+            expect(project.installedBlockLibraries![0].commitSha).toBe('bbb222');
+        });
+    });
+
+    describe('library not installed in the project', () => {
+        it('returns before prompting when the selection names a library the project lacks', async () => {
+            setSyncBehavior('ask');
+            const project = makeProject();
+            const ctx = makeCtx();
+            const item = { ...makeItem(project), library: makeLibrary({ name: 'Ghost' }) };
+
+            await performAddonUpdates([item], [], new Set(), ctx);
+
+            expect(showInfoMock).not.toHaveBeenCalled();
+            expect(installMock).not.toHaveBeenCalled();
+            expect(ctx.logger.warn).toHaveBeenCalledTimes(1);
+            expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+        });
+
+        it('treats a project with no installedBlockLibraries at all the same way, without throwing', async () => {
+            setSyncBehavior('enabled');
+            const project = makeProject({ installedBlockLibraries: undefined });
+            const ctx = makeCtx();
+            const item = { ...makeItem(makeProject()), project };
+
+            await expect(performAddonUpdates([item], [], new Set(), ctx)).resolves.toBeUndefined();
+
+            expect(installMock).not.toHaveBeenCalled();
+            expect(ctx.logger.warn).toHaveBeenCalledTimes(1);
+            expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
         });
     });
 

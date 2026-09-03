@@ -11,7 +11,7 @@
  * the contract.
  */
 
-import './updateExecutor.testUtils';
+import { captureProgress } from './updateExecutor.testUtils';
 import * as vscode from 'vscode';
 import {
     performAdobeMcpUpdates,
@@ -33,6 +33,7 @@ jest.mock('@/features/updates/services/adobeMcpUpdateCore', () => ({
 const coreMock = applyAdobeMcpUpdate as jest.Mock;
 const showErrorMock = vscode.window.showErrorMessage as jest.Mock;
 const showWarningMock = vscode.window.showWarningMessage as jest.Mock;
+const withProgressMock = vscode.window.withProgress as jest.Mock;
 
 const PKG = '@adobe-commerce/commerce-extensibility-tools';
 
@@ -59,10 +60,73 @@ function makeItem(projectOverrides: Partial<Project> = {}): AdobeMcpUpdateItem {
 }
 
 describe('performAdobeMcpUpdates', () => {
+    let report: jest.Mock;
+
     beforeEach(() => {
         jest.clearAllMocks();
         coreMock.mockReset();
         coreMock.mockResolvedValue(undefined);
+        report = captureProgress();
+    });
+
+    it('shows a non-cancellable notification titled Updating Adobe MCP', async () => {
+        await performAdobeMcpUpdates([makeItem()], makeCtx());
+
+        expect(withProgressMock).toHaveBeenCalledWith(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: 'Updating Adobe MCP',
+                cancellable: false,
+            },
+            expect.any(Function),
+        );
+    });
+
+    it('reports package, version and project with an even share of the bar per project', async () => {
+        await performAdobeMcpUpdates(
+            [makeItem({ name: 'a', path: '/p/a' }), makeItem({ name: 'b', path: '/p/b' })],
+            makeCtx(),
+        );
+
+        expect(report).toHaveBeenNthCalledWith(1, { message: `${PKG} → 2.0.0 in a…`, increment: 50 });
+        expect(report).toHaveBeenNthCalledWith(2, { message: `${PKG} → 2.0.0 in b…`, increment: 50 });
+    });
+
+    it('a running project whose demo the user keeps is dropped, and alone it means no progress bar', async () => {
+        showWarningMock.mockResolvedValue('Skip');
+
+        await performAdobeMcpUpdates([makeItem({ status: 'running' })], makeCtx());
+
+        expect(showWarningMock).toHaveBeenCalledWith(
+            expect.stringContaining('is currently running'),
+            'Stop & Update',
+            'Skip',
+        );
+        expect(coreMock).not.toHaveBeenCalled();
+        expect(withProgressMock).not.toHaveBeenCalled();
+    });
+
+    it('a skipped project does not take the others with it', async () => {
+        const ctx = makeCtx();
+        const idle = makeItem({ name: 'b', path: '/p/b' });
+        showWarningMock.mockResolvedValue('Skip');
+
+        await performAdobeMcpUpdates([makeItem({ name: 'a', path: '/p/a', status: 'running' }), idle], ctx);
+
+        expect(coreMock).toHaveBeenCalledTimes(1);
+        expect(coreMock).toHaveBeenCalledWith(idle.project, PKG, '2.0.0', ctx);
+        expect(report).toHaveBeenCalledWith({ message: `${PKG} → 2.0.0 in b…`, increment: 100 });
+    });
+
+    it('counts successes and failures separately in the summary', async () => {
+        coreMock.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce(undefined);
+
+        await performAdobeMcpUpdates(
+            [makeItem({ name: 'a', path: '/p/a' }), makeItem({ name: 'b', path: '/p/b' })],
+            makeCtx(),
+        );
+
+        expect(showWarningMock).toHaveBeenCalledWith('Updated 1 Adobe MCP package(s), 1 failed.', 'OK');
     });
 
     it('delegates each selected update to the shared core', async () => {
