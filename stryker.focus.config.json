@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/authenticationService.ts"
+        "src/features/authentication/ui/hooks/useAuthStatus.ts"
     ],
     "reporters": [
         "clear-text",

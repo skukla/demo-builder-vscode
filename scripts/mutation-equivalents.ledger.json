@@ -1,5 +1,5 @@
 {
-    "_what": "Mutants that survive and that NO test can kill without lying about how the code is reached. Each entry names the code by its source TEXT rather than a line number, because line numbers drift and a stale entry must fail loudly rather than point at the wrong code. `mutants` is how many surviving mutants the entry accounts for; the ratchet subtracts it from the module's behavioural survivors to give `openGaps`, and a module is DONE when openGaps reaches zero. Adding a row here is a claim that must carry evidence — see `reason` and the section named in `source`.",
+    "_what": "Mutants that survive and that NO test can kill without lying about how the code is reached. Each entry names the code by its source TEXT rather than a line number, because line numbers drift and a stale entry must fail loudly rather than point at the wrong code. `mutants` is how many surviving mutants the entry accounts for; the ratchet subtracts it from the module's behavioural survivors to give `openGaps`, and a module is DONE when openGaps reaches zero. Adding a row here is a claim that must carry evidence \u2014 see `reason` and the section named in `source`.",
     "_rules": [
         "An anchor must appear EXACTLY ONCE in its module, or the entry names the line too.",
         "If the anchor no longer appears, the entry is STALE: re-triage it, do not edit the anchor to match.",
@@ -15,7 +15,7 @@
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Stryker drops the `?.`, which would throw only if `prereq.install` were undefined. The type makes `install` optional so the compiler requires the `?.`, but a prerequisite without an install block cannot reach this line: getInstallSteps returns null for one, and the handler throws 'No installation steps defined' on a null plan before executeInstallSteps runs. Killing it would mean mocking getInstallSteps to return a plan for a prerequisite that has no install block, which the real collaborator cannot produce.",
-            "decision": "none — the `?.` is required by the type and correct as written",
+            "decision": "none \u2014 the `?.` is required by the type and correct as written",
             "recorded": "2026-09-02",
             "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
         },
@@ -27,7 +27,7 @@
             "mutants": 2,
             "category": "branch",
             "reason": "Deleting the empty-clipboard guard changes nothing observable: an empty string fails validateDaLiveTokenStrict on the next line and returns undefined by the other route. The only difference is one debug log line, and asserting log text is what the ratchet exists to refuse to reward.",
-            "decision": "none — the guard skips a pointless validation call and says what it means",
+            "decision": "none \u2014 the guard skips a pointless validation call and says what it means",
             "recorded": "2026-09-02",
             "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
         },
@@ -39,7 +39,7 @@
             "mutants": 3,
             "category": "other",
             "reason": "The value never reaches anything. Every read of this.state.lastUpdated is inside saveState, nine lines after it has already been overwritten with new Date(). Nothing outside stateManager.ts reads the state file's lastUpdated. So the parse, the default and the Date construction are all discarded.",
-            "decision": "OPEN — either drop lastUpdated from the load, or keep it so the state shape round-trips and add a comment saying the value is deliberately unused",
+            "decision": "OPEN \u2014 either drop lastUpdated from the load, or keep it so the state shape round-trips and add a comment saying the value is deliberately unused",
             "recorded": "2026-09-02",
             "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
         },
@@ -51,7 +51,7 @@
             "mutants": 2,
             "category": "branch",
             "reason": "Removing the guard does not change the outcome. parsed is undefined, the next line reads a property off it, that throws, and the surrounding try/catch swallows it into exactly the same defaults the guard returns to. The only observable difference is which of two log lines is written.",
-            "decision": "none — the guard earns its place by being explicit; the reader should not have to know the catch is there",
+            "decision": "none \u2014 the guard earns its place by being explicit; the reader should not have to know the catch is there",
             "recorded": "2026-09-02",
             "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
         },
@@ -62,8 +62,8 @@
             ],
             "mutants": 2,
             "category": "branch",
-            "reason": "updateComponent reads the component out of componentInstances in its first statement and throws if it is not there, so by this line the entry is guaranteed to exist. A test that removed it never reaches this line — it gets the refusal instead, which is what happened when one was written. The version sync on this line is real and is tested; only the guard around it is unreachable.",
-            "decision": "none, but worth a comment — it reads as if the entry might be missing, which sent one test after a state the method forbids",
+            "reason": "updateComponent reads the component out of componentInstances in its first statement and throws if it is not there, so by this line the entry is guaranteed to exist. A test that removed it never reaches this line \u2014 it gets the refusal instead, which is what happened when one was written. The version sync on this line is real and is tested; only the guard around it is unreachable.",
+            "decision": "none, but worth a comment \u2014 it reads as if the entry might be missing, which sent one test after a state the method forbids",
             "recorded": "2026-09-02",
             "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md",
             "note": "Recorded as 3 on 2026-09-02; re-measured at 2 on 2026-09-03 after the plumbing suite pinned the version sync on a project whose instance exists (the ConditionalExpression->false mutant now dies). The two left are the guard-always-true and the dropped `?.`, both unreachable for the reason above."
@@ -77,8 +77,8 @@
             "mutants": 7,
             "category": "block",
             "reason": "Both authentication checks wrap their token read in a try/catch that logs, caches a brief negative and returns false. Neither catch can be entered: making the CLI config store throw does not reach them because the in-process reader has its own fallback and answers rather than propagating, and TokenManager.isTokenValid adds no catch of its own. Reaching the catch would mean replacing TokenManager, which the service constructs itself.",
-            "decision": "none — a defensive catch around an external read is correct even when the current collaborator cannot trigger it; the reader's fallback is not a contract",
-            "note": "Re-counted 2026-09-03 against a fresh focus run: 7, not the 8 the source note carried — the quick check catch holds 3 (block, the `false` cached, the `false` returned) and the full check catch holds 4 (block, the formatter options literal, the `false` cached, the `false` returned).",
+            "decision": "none \u2014 a defensive catch around an external read is correct even when the current collaborator cannot trigger it; the reader's fallback is not a contract",
+            "note": "Re-counted 2026-09-03 against a fresh focus run: 7, not the 8 the source note carried \u2014 the quick check catch holds 3 (block, the `false` cached, the `false` returned) and the full check catch holds 4 (block, the formatter options literal, the `false` cached, the `false` returned).",
             "recorded": "2026-09-02",
             "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
         },
@@ -90,7 +90,7 @@
             "mutants": 1,
             "category": "optionalChain",
             "reason": "Stryker drops the `?.`, which would throw only if `projectUpdates.get(key)` were undefined. The two lines above set the key when it is absent, so by this line the entry always exists; the `?.` is there because Map.get is typed `T | undefined`. A test cannot reach the undefined case: there is no input to performComponentUpdates that skips the set. The grouping itself is tested (two selections on one project reach the updater twice and save once), so only the guard is unreachable, not the push.",
-            "decision": "none — the `?.` is required by the type. A rewrite (`const list = get(key); if (list) list.push(...) else set(key, [selection])`) would be fully killable, but is a style change to src, outside this batch's remit",
+            "decision": "none \u2014 the `?.` is required by the type. A rewrite (`const list = get(key); if (list) list.push(...) else set(key, [selection])`) would be fully killable, but is a style change to src, outside this batch's remit",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-01, updateExecutor focus run"
         },
@@ -102,7 +102,7 @@
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch body in maybeOfferGraduation leaves the error swallowed exactly as before; the body is one debug line. The catch itself IS tested (a rejected getLatestFinalVersion raises no error box and the picker still opens), so only the diagnostic line is unconstrained, and asserting debug text is what the ratchet refuses to reward.",
-            "decision": "none — a swallowed error should say so in the debug channel; the line stays",
+            "decision": "none \u2014 a swallowed error should say so in the debug channel; the line stays",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-01, checkUpdates focus run"
         },
@@ -113,8 +113,8 @@
             ],
             "mutants": 1,
             "category": "block",
-            "reason": "Emptying the catch body in backupPreservedFiles changes nothing the caller can see: a preserved file that does not exist is skipped either way (the skip IS tested — a rejected readFile still yields a successful sync), and the body is one debug line. Asserting debug text is what the ratchet refuses to reward.",
-            "decision": "none — the line tells the Debug Logs reader why a preserved file was not restored",
+            "reason": "Emptying the catch body in backupPreservedFiles changes nothing the caller can see: a preserved file that does not exist is skipped either way (the skip IS tested \u2014 a rejected readFile still yields a successful sync), and the body is one debug line. Asserting debug text is what the ratchet refuses to reward.",
+            "decision": "none \u2014 the line tells the Debug Logs reader why a preserved file was not restored",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-01, templateSyncService focus run"
         },
@@ -126,14 +126,14 @@
             "mutants": 1,
             "category": "block",
             "reason": "Emptying the catch body around the rollback's registry lookup changes nothing observable: the lookup failure is already tested (a rejecting registry still reinstalls, with the default node version), and the body is one debug line.",
-            "decision": "none — a swallowed lookup failure should say so in the debug channel",
+            "decision": "none \u2014 a swallowed lookup failure should say so in the debug channel",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-01, componentUpdater focus run"
         },
         {
             "module": "src/features/updates/services/componentUpdater.ts",
             "anchors": [
-                "this.logger.debug('[Updates] ✓ Dependencies reinstalled');"
+                "this.logger.debug('[Updates] \u2713 Dependencies reinstalled');"
             ],
             "mutants": 1,
             "category": "block",
@@ -153,7 +153,7 @@
             "mutants": 9,
             "category": "other",
             "reason": "addedKeys is computed solely to choose between two debug lines after the merge; the merged content itself is written before it and is what the extended suite asserts. Every mutant on the filter, its predicate and the branch changes only which debug line is logged and what it lists. The value reaches nothing else.",
-            "decision": "OPEN — either keep the computation for the diagnostic (which keys a template added is useful in Debug Logs triage) or collapse both lines into one; either way it is not a test's job",
+            "decision": "OPEN \u2014 either keep the computation for the diagnostic (which keys a template added is useful in Debug Logs triage) or collapse both lines into one; either way it is not a test's job",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-01, componentUpdater focus run"
         },
@@ -164,8 +164,8 @@
             ],
             "mutants": 1,
             "category": "other",
-            "reason": "Stryker seeds the per-project `items: []` with a string. That string carries no downloadUrl, so the guard two lines later skips it before anything observes it — the real items are appended after the seed and reach the updater unchanged. No input to applyComponents can make the seed's contents matter.",
-            "decision": "none — the seed is empty by construction",
+            "reason": "Stryker seeds the per-project `items: []` with a string. That string carries no downloadUrl, so the guard two lines later skips it before anything observes it \u2014 the real items are appended after the seed and reach the updater unchanged. No input to applyComponents can make the seed's contents matter.",
+            "decision": "none \u2014 the seed is empty by construction",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-01, updateApplyService focus run"
         },
@@ -178,7 +178,7 @@
             "mutants": 2,
             "category": "optionalChain",
             "reason": "Both `?.` guard the same value on one path that cannot make it undefined: `proj` is a project that entered componentProjectMap only through its own componentInstances entries, so `proj.componentInstances` is defined and the indexed instance exists; the optional `instance` parameter therefore always arrives as an object. The types demand both chains (`componentInstances` is optional on Project, `instance` optional in the signature), and the only caller of the private method is that loop. Killing them would mean handing the loop a project whose instances vanished between the two passes, which nothing can do.",
-            "decision": "none — a restructure that carried the instance alongside each map entry would remove both chains but leaks a field into the public MultiProjectUpdateResult shape; not worth it for two mutants",
+            "decision": "none \u2014 a restructure that carried the instance alongside each map entry would remove both chains but leaks a field into the public MultiProjectUpdateResult shape; not worth it for two mutants",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (updateManager, 96.03%)"
         },
@@ -192,10 +192,10 @@
             ],
             "mutants": 11,
             "category": "branch",
-            "reason": "The 403, 5xx and catch-all throws are all caught by the same deliberate catch-all a few lines down, which logs at debug level and returns null, so every one of them produces the identical outcome (hasUpdate: false) and the only thing that differs is the wording of one debug line. The 404 branch differs from them only by staying silent, and that silence IS asserted; what is left of it (`true`: every non-OK status goes silent) again differs by the log line alone. Killing these means asserting log strings, which the ratchet exists to refuse to reward — the same triage as 2026-09-02, when the tests were deliberately not written. What IS pinned: a non-OK body is never read as a release, whatever the status.",
-            "decision": "OPEN product question, not a test question — graceful degradation means a rate-limited SC sees \"no update\" indefinitely, identically to being current, with only a debug line to say why. If the extension should ever say \"I could not check\", this is where that decision lives.",
+            "reason": "The 403, 5xx and catch-all throws are all caught by the same deliberate catch-all a few lines down, which logs at debug level and returns null, so every one of them produces the identical outcome (hasUpdate: false) and the only thing that differs is the wording of one debug line. The 404 branch differs from them only by staying silent, and that silence IS asserted; what is left of it (`true`: every non-OK status goes silent) again differs by the log line alone. Killing these means asserting log strings, which the ratchet exists to refuse to reward \u2014 the same triage as 2026-09-02, when the tests were deliberately not written. What IS pinned: a non-OK body is never read as a release, whatever the status.",
+            "decision": "OPEN product question, not a test question \u2014 graceful degradation means a rate-limited SC sees \"no update\" indefinitely, identically to being current, with only a debug line to say why. If the extension should ever say \"I could not check\", this is where that decision lives.",
             "recorded": "2026-09-03",
-            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md — \"Measured, and deliberately NOT tested: updateManager's HTTP branches\""
+            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md \u2014 \"Measured, and deliberately NOT tested: updateManager's HTTP branches\""
         },
         {
             "module": "src/features/updates/services/addonUpdateChecker.ts",
@@ -204,8 +204,8 @@
             ],
             "mutants": 3,
             "category": "optionalChain",
-            "reason": "The type says source is required, so the three `?.` only guard a persisted manifest older than the type. Dropping any of them makes a missing source throw inside the same per-library try whose catch warns and continues — exactly what the guard does — so the outcome (the library skipped, one warning, the next library still checked) is identical and only the warning's text differs. That text is what the ratchet refuses to reward.",
-            "decision": "none — the guard says what it means, and the catch is the safety net for everything else on the line",
+            "reason": "The type says source is required, so the three `?.` only guard a persisted manifest older than the type. Dropping any of them makes a missing source throw inside the same per-library try whose catch warns and continues \u2014 exactly what the guard does \u2014 so the outcome (the library skipped, one warning, the next library still checked) is identical and only the warning's text differs. That text is what the ratchet refuses to reward.",
+            "decision": "none \u2014 the guard says what it means, and the catch is the safety net for everything else on the line",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (addonUpdateChecker)"
         },
@@ -216,21 +216,21 @@
             ],
             "mutants": 2,
             "category": "branch",
-            "reason": "The guard on a null branch lookup (`if (!latestCommit)` above this line — the anchor is its body because the same condition also opens the SDK guard). With the guard removed or its body emptied, a null latestCommit reaches the debug line that calls latestCommit.slice, which throws into the per-library catch: one warning, continue, no comparison — the same outcome as the guard. Only the warning's text differs. The SDK twin of this guard IS killed, because there the catch logs on a different channel (error, not warn).",
-            "decision": "none — an explicit skip beats relying on a TypeError in a log line",
+            "reason": "The guard on a null branch lookup (`if (!latestCommit)` above this line \u2014 the anchor is its body because the same condition also opens the SDK guard). With the guard removed or its body emptied, a null latestCommit reaches the debug line that calls latestCommit.slice, which throws into the per-library catch: one warning, continue, no comparison \u2014 the same outcome as the guard. Only the warning's text differs. The SDK twin of this guard IS killed, because there the catch logs on a different channel (error, not warn).",
+            "decision": "none \u2014 an explicit skip beats relying on a TypeError in a log line",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (addonUpdateChecker)"
         },
         {
             "module": "src/features/updates/services/addonUpdateChecker.ts",
             "anchors": [
-                "`[Updates] Library \"${lib.name}\": ${lib.commitSha.slice(0, 7)} → ${latestCommit.slice(0, 7)}`,",
-                "`[Updates] Inspector SDK: ${currentCommit.slice(0, 7)} → ${latestCommit.slice(0, 7)}`,"
+                "`[Updates] Library \"${lib.name}\": ${lib.commitSha.slice(0, 7)} \u2192 ${latestCommit.slice(0, 7)}`,",
+                "`[Updates] Inspector SDK: ${currentCommit.slice(0, 7)} \u2192 ${latestCommit.slice(0, 7)}`,"
             ],
             "mutants": 4,
             "category": "other",
-            "reason": "Four `.slice(0, 7)` calls that shorten SHAs inside two debug messages. They are log presentation — the same mutants on the one-line debug calls a few lines up are classified as such and not counted — but here the message wraps onto its own line, and the classifier reads one line, so it does not see the `this.logger.debug(` that opens the statement above. Killing them means asserting the wording of a debug line.",
-            "decision": "OPEN for the instrument, not the module — classify() in scripts/mutationBaseline.mjs could look at the enclosing statement rather than the single line; then these four rows are not needed",
+            "reason": "Four `.slice(0, 7)` calls that shorten SHAs inside two debug messages. They are log presentation \u2014 the same mutants on the one-line debug calls a few lines up are classified as such and not counted \u2014 but here the message wraps onto its own line, and the classifier reads one line, so it does not see the `this.logger.debug(` that opens the statement above. Killing them means asserting the wording of a debug line.",
+            "decision": "OPEN for the instrument, not the module \u2014 classify() in scripts/mutationBaseline.mjs could look at the enclosing statement rather than the single line; then these four rows are not needed",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (addonUpdateChecker)"
         },
@@ -242,8 +242,8 @@
             ],
             "mutants": 2,
             "category": "optionalChain",
-            "reason": "GitHub's payload for a repository with fork:true always carries `parent`; the `?.` exist because the response type declares it optional. The only test that kills either chain hands the service a fork WITHOUT a parent and then pins what the code does next — a compare against the head `undefined:main` — which is a behaviour nobody wants asserted. Dropping the chains would turn that impossible payload into a caught TypeError and a null, which is arguably better, but is a behaviour change, not dead code.",
-            "decision": "OPEN, small — a `if (!repoData.parent) return null` guard before the compare would make both chains unnecessary and the impossible case explicit; outside this batch's remit",
+            "reason": "GitHub's payload for a repository with fork:true always carries `parent`; the `?.` exist because the response type declares it optional. The only test that kills either chain hands the service a fork WITHOUT a parent and then pins what the code does next \u2014 a compare against the head `undefined:main` \u2014 which is a behaviour nobody wants asserted. Dropping the chains would turn that impossible payload into a caught TypeError and a null, which is arguably better, but is a behaviour change, not dead code.",
+            "decision": "OPEN, small \u2014 a `if (!repoData.parent) return null` guard before the compare would make both chains unnecessary and the impossible case explicit; outside this batch's remit",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (forkSyncService)"
         },
@@ -254,8 +254,8 @@
             ],
             "mutants": 1,
             "category": "branch",
-            "reason": "The guard on an absent secret. Without it, JSON.parse(undefined) throws a SyntaxError into the catch two lines down, which also returns null; the caller then logs the same no-token line and returns false. Every observable — return value, requests made (none), log channel and text — is identical. Deleting the guard would make the no-secret path depend on JSON.parse rejecting the string \"undefined\", which is worse code for a mutant nobody can see.",
-            "decision": "none — an explicit guard beats relying on a parse error",
+            "reason": "The guard on an absent secret. Without it, JSON.parse(undefined) throws a SyntaxError into the catch two lines down, which also returns null; the caller then logs the same no-token line and returns false. Every observable \u2014 return value, requests made (none), log channel and text \u2014 is identical. Deleting the guard would make the no-secret path depend on JSON.parse rejecting the string \"undefined\", which is worse code for a mutant nobody can see.",
+            "decision": "none \u2014 an explicit guard beats relying on a parse error",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (collaboratorGate)"
         },
@@ -267,7 +267,7 @@
             "mutants": 1,
             "category": "block",
             "reason": "The catch around JSON.parse returns null; emptied, the function falls off its end and returns undefined. The only caller tests the result with `!token`, which treats null and undefined alike, so no request, return value or log differs. The `return null` is required by noImplicitReturns and the declared `string | null` type; Stryker mutates with type checking off.",
-            "decision": "none — required by the type and correct as written",
+            "decision": "none \u2014 required by the type and correct as written",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (collaboratorGate)"
         },
@@ -278,8 +278,8 @@
             ],
             "mutants": 1,
             "category": "optionalChain",
-            "reason": "Dropping the `?.` makes a branch body with no `commit` throw a TypeError instead of reading undefined — into the catch that wraps the whole lookup and returns null, which is what the `?? null` returns on the original path. Return value, requests and logs (there are none) are identical; the body is `any` from response.json(), so no type demands the chain either. Killing it would mean testing that a malformed body is handled by a read rather than by a throw, which is not a decision anyone depends on. GitHub's branch response always carries `commit`.",
-            "decision": "none — reading defensively is clearer than relying on the catch",
+            "reason": "Dropping the `?.` makes a branch body with no `commit` throw a TypeError instead of reading undefined \u2014 into the catch that wraps the whole lookup and returns null, which is what the `?? null` returns on the original path. Return value, requests and logs (there are none) are identical; the body is `any` from response.json(), so no type demands the chain either. Killing it would mean testing that a malformed body is handled by a read rather than by a throw, which is not a decision anyone depends on. GitHub's branch response always carries `commit`.",
+            "decision": "none \u2014 reading defensively is clearer than relying on the catch",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (githubApiClient)"
         },
@@ -290,8 +290,8 @@
             ],
             "mutants": 1,
             "category": "branch",
-            "reason": "The null guard on the latest final version. Without it a null reaches cleanTag inside the try below, where .replace on null throws a TypeError into the catch that returns the same false; an empty string reaches semver.gte, which throws the same way. The guard is required by the declared `string | null` type (cleanTag takes a string) and Stryker mutates with type checking off. Killing it would mean moving the cleanTag call out of the try so the mutant throws — a src change made only to expose a mutant.",
-            "decision": "none — required by the type and correct as written",
+            "reason": "The null guard on the latest final version. Without it a null reaches cleanTag inside the try below, where .replace on null throws a TypeError into the catch that returns the same false; an empty string reaches semver.gte, which throws the same way. The guard is required by the declared `string | null` type (cleanTag takes a string) and Stryker mutates with type checking off. Killing it would mean moving the cleanTag call out of the try so the mutant throws \u2014 a src change made only to expose a mutant.",
+            "decision": "none \u2014 required by the type and correct as written",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (releaseTrack)"
         },
@@ -304,7 +304,7 @@
             "mutants": 6,
             "category": "optionalChain",
             "reason": "getWorkspaceCredential and createWorkspaceCredential wrap their whole body in a try/catch that logs and returns undefined, and the guards inside answer undefined too. The three cache reads above each of these guards (`cachedOrg?.id`, `cachedProject?.id`, `cachedWorkspace?.id`) are typed optional, so the `?.` is required; dropping it throws on an empty cache, the catch swallows the throw, and the caller sees the same undefined the guard would have returned. The only difference is a debug line versus an error line. The two guard messages are the anchors because the three read lines are identical in both methods.",
-            "decision": "none — the `?.` is required by the type and correct as written",
+            "decision": "none \u2014 the `?.` is required by the type and correct as written",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
         },
@@ -317,7 +317,7 @@
             "mutants": 3,
             "category": "optionalChain",
             "reason": "getWorkspaceCredential and createWorkspaceCredential wrap their whole body in a try/catch that logs and returns undefined, and the guards inside answer undefined too. Dropping either `?.` throws when the SDK answers nothing or answers without a body; the catch swallows it and returns undefined, which is what the guard on the next line returns. For the create, the catch also checks the message for 409/Conflict, which a TypeError never carries, so it lands on the same return. Only the log level differs.",
-            "decision": "none — the SDK response type makes `body` optional, so the `?.` is required",
+            "decision": "none \u2014 the SDK response type makes `body` optional, so the `?.` is required",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
         },
@@ -329,7 +329,7 @@
             "mutants": 2,
             "category": "branch",
             "reason": "getWorkspaceCredential and createWorkspaceCredential wrap their whole body in a try/catch that logs and returns undefined, and the guards inside answer undefined too. Forcing this guard false, or emptying its body, sends a non-list into `credentials.length` and the for-of on the next lines, which throw, and the catch returns the undefined the guard would have returned. The `!credentials ||` half of the condition was deleted in the same change because `Array.isArray` already answers false for undefined, which removed one further mutant rather than recording it.",
-            "decision": "none — the guard is the correct shape; the try/catch makes its failure mode indistinguishable from its success mode",
+            "decision": "none \u2014 the guard is the correct shape; the try/catch makes its failure mode indistinguishable from its success mode",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
         },
@@ -341,7 +341,7 @@
             "mutants": 2,
             "category": "branch",
             "reason": "getWorkspaceCredential and createWorkspaceCredential wrap their whole body in a try/catch that logs and returns undefined, and the guards inside answer undefined too. When no entry carries a client_id, `anyCred` is undefined: forcing the condition true, or dropping the `?.`, throws inside the branch (the log line reads `anyCred.integration_type`), the catch swallows it and returns undefined, which is what the fall-through after the branch returns. When an entry does carry one, both mutants behave as the original.",
-            "decision": "none — the `?.` is required by `find`'s return type",
+            "decision": "none \u2014 the `?.` is required by `find`'s return type",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
         },
@@ -353,7 +353,7 @@
             "mutants": 1,
             "category": "block",
             "reason": "The catch body of getWorkspaceCredential is one error log and `return undefined`. Emptied, control falls off the end of the method, which returns undefined too. Every failure path in the method produces the same value with or without the catch body; only whether the failure is logged changes. The anchor is the log line because `} catch (error) {` appears twice in this module.",
-            "decision": "none — the explicit return says what the method means on failure",
+            "decision": "none \u2014 the explicit return says what the method means on failure",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
         },
@@ -367,8 +367,8 @@
             ],
             "mutants": 15,
             "category": "branch",
-            "reason": "Five `x || 'unnamed'` / `x || 'unknown'` fallbacks inside four debug messages, three mutants each. They are log presentation — the same operator on a one-line debug call is classified as such and not counted — but each message wraps onto its own line, and the classifier reads one line, so it does not see the `this.debugLogger.debug(` that opens the statement above. Killing them means asserting the wording of a debug line, which the ratchet exists to refuse to reward.",
-            "decision": "OPEN for the instrument, not the module — the same finding as the addonUpdateChecker row: classify() could look at the enclosing statement rather than the single line",
+            "reason": "Five `x || 'unnamed'` / `x || 'unknown'` fallbacks inside four debug messages, three mutants each. They are log presentation \u2014 the same operator on a one-line debug call is classified as such and not counted \u2014 but each message wraps onto its own line, and the classifier reads one line, so it does not see the `this.debugLogger.debug(` that opens the statement above. Killing them means asserting the wording of a debug line, which the ratchet exists to refuse to reward.",
+            "decision": "OPEN for the instrument, not the module \u2014 the same finding as the addonUpdateChecker row: classify() could look at the enclosing statement rather than the single line",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
         },
@@ -380,7 +380,7 @@
             "mutants": 1,
             "category": "block",
             "reason": "The loop body is a single debug line per credential (plus the `hasClientId` string it interpolates). Emptying it changes what is logged and nothing else. The worklist's own filter skips bodies that only feed a logger; the ratchet's classifier counts the block because it sees the `for` line, not the body.",
-            "decision": "none — the per-credential log is the diagnostic this method exists to leave behind when the wrong credential is picked",
+            "decision": "none \u2014 the per-credential log is the diagnostic this method exists to leave behind when the wrong credential is picked",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
         },
@@ -395,7 +395,7 @@
             "mutants": 4,
             "category": "optionalChain",
             "reason": "handleGetProjects reads `context.authManager` through `?.` four times and then throws 'Auth manager not available' when the fetch promise is missing. All of it sits inside the try whose catch maps every non-timeout, non-org, non-AUTH_EXPIRED failure to the one generic user message and the one generic error code. Dropping any `?.`, or forcing the guard, turns the missing auth manager into a TypeError that lands in the same catch with the same user-facing result: same `success:false`, same message, same code, same `get-projects` push. Only the error object handed to the logger differs, and asserting that is asserting a log string. The first anchor is the guard on the line below the `getCurrentOrganization` read, because that read's line appears three times in this module.",
-            "decision": "none — `authManager` is optional on HandlerContext, so every `?.` is required by the type",
+            "decision": "none \u2014 `authManager` is optional on HandlerContext, so every `?.` is required by the type",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
         },
@@ -407,7 +407,7 @@
             "mutants": 2,
             "category": "branch",
             "reason": "handleGetProjects reads `context.authManager` through `?.` four times and then throws 'Auth manager not available' when the fetch promise is missing. All of it sits inside the try whose catch maps every non-timeout, non-org, non-AUTH_EXPIRED failure to the one generic user message and the one generic error code. Dropping any `?.`, or forcing the guard, turns the missing auth manager into a TypeError that lands in the same catch with the same user-facing result: same `success:false`, same message, same code, same `get-projects` push. Only the error object handed to the logger differs, and asserting that is asserting a log string. Forcing this guard false, or emptying it, awaits an undefined promise and fails one line later in `stampProjectsDeletable`, inside the same catch.",
-            "decision": "none — the explicit throw names the wiring gap in the debug log, which is the only place it can be seen",
+            "decision": "none \u2014 the explicit throw names the wiring gap in the debug log, which is the only place it can be seen",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
         },
@@ -419,7 +419,7 @@
             "mutants": 2,
             "category": "branch",
             "reason": "A null plugin list (parseJSON refused the CLI output) answers 'no mesh' and runs no further probe. Forcing the guard false, or emptying it, sends null through `Array.isArray` (false) and `JSON.stringify(null).includes('api-mesh')` (false), which answers 'no mesh' and runs no further probe. The test that reaches this line pins both the answer and the command trail; the guard's only distinct effect is which warning is logged.",
-            "decision": "none — the two warnings are different diagnoses ('could not parse' versus 'not installed') and are worth keeping apart in the log",
+            "decision": "none \u2014 the two warnings are different diagnoses ('could not parse' versus 'not installed') and are worth keeping apart in the log",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
         },
@@ -432,7 +432,7 @@
             "mutants": 2,
             "category": "block",
             "reason": "The project-context probe is best-effort by design: its catch is one debug line, and the object literal on the second anchor is that line's argument, wrapped so the one-line classifier does not see the `debug(` above it. Emptying the catch, or emptying the argument, changes what is logged and nothing else.",
-            "decision": "none — the comment on the probe says non-fatal; the code is the comment",
+            "decision": "none \u2014 the comment on the probe says non-fatal; the code is the comment",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
         },
@@ -444,8 +444,8 @@
             ],
             "mutants": 2,
             "category": "optionalChain",
-            "reason": "`payload` is declared required, so no typed call can omit it; the `?.` guards a malformed webview message at the dispatch boundary (`requireAdobeAuth('create-adobe-project', …)`), which the handler's own signature says cannot happen. Killing either means calling the handler with `undefined as never`, a cast at the call boundary that this repo treats as a silenced type error. Same shape as the installHandler row.",
-            "decision": "none — a boundary guard on an untyped message is correct even when the typed signature cannot exercise it",
+            "reason": "`payload` is declared required, so no typed call can omit it; the `?.` guards a malformed webview message at the dispatch boundary (`requireAdobeAuth('create-adobe-project', \u2026)`), which the handler's own signature says cannot happen. Killing either means calling the handler with `undefined as never`, a cast at the call boundary that this repo treats as a silenced type error. Same shape as the installHandler row.",
+            "decision": "none \u2014 a boundary guard on an untyped message is correct even when the typed signature cannot exercise it",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
         },
@@ -457,7 +457,7 @@
             "mutants": 1,
             "category": "block",
             "reason": "The post-create refresh is best-effort: a failure leaves `projects` undefined and is logged at debug. Emptying the catch leaves `projects` undefined and logs nothing. The test for a failed refresh pins the omitted list and the success; only the log line separates the two.",
-            "decision": "none — the comment above the catch says why the list is omitted rather than emptied; the log is the trace of that",
+            "decision": "none \u2014 the comment above the catch says why the list is omitted rather than emptied; the log is the trace of that",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
         },
@@ -469,8 +469,8 @@
             ],
             "mutants": 6,
             "category": "branch",
-            "reason": "Both anchors exist only to word a debug line. The first is the org-list rendering inside the 'could not find org' warning, wrapped onto its own line so the one-line classifier does not see the `warn(` above it. The second computes `projectName`, which is read by nothing but the debug line beneath it — the returned project is built from `projectValue` directly. Killing any of the six means asserting the wording of a log line.",
-            "decision": "OPEN for the instrument on the first anchor (enclosing-statement classification, as in the addonUpdateChecker row); none on the second — the name is the log's business",
+            "reason": "Both anchors exist only to word a debug line. The first is the org-list rendering inside the 'could not find org' warning, wrapped onto its own line so the one-line classifier does not see the `warn(` above it. The second computes `projectName`, which is read by nothing but the debug line beneath it \u2014 the returned project is built from `projectValue` directly. Killing any of the six means asserting the wording of a log line.",
+            "decision": "OPEN for the instrument on the first anchor (enclosing-statement classification, as in the addonUpdateChecker row); none on the second \u2014 the name is the log's business",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeContextResolver)"
         },
@@ -482,7 +482,7 @@
             "mutants": 1,
             "category": "block",
             "reason": "The else branch for a string-shaped workspace is one debug line; control then reaches the same 'no workspace' return either way. Emptying it changes what is logged and nothing else.",
-            "decision": "none — the log says WHY there is no workspace, which the return value cannot",
+            "decision": "none \u2014 the log says WHY there is no workspace, which the return value cannot",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeContextResolver)"
         },
@@ -497,7 +497,7 @@
             "mutants": 4,
             "category": "block",
             "reason": "Four catch bodies, each one debug line and `return undefined`. Emptied, control falls off the end of an async function that returns undefined anyway. Every failure produces the same value with or without the catch body; only whether it is logged changes.",
-            "decision": "none — each explicit return says what the method means on failure",
+            "decision": "none \u2014 each explicit return says what the method means on failure",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeContextResolver)"
         },
@@ -510,8 +510,8 @@
             ],
             "mutants": 9,
             "category": "branch",
-            "reason": "The three current-* readers wrap their body in the catch above, which returns undefined. For org and project: dropping the `?.` throws on a missing context, forcing the guard false (or emptying it) hands `undefined` to the parser, whose final 'not string or object' branch returns undefined — three mutants each, all landing on the value the guard returns. For workspace: the `!context` guard four lines above the anchor (its line is not unique in this module) and the anchor itself, forced open, reach `context.workspace` / `typeof undefined`, which throw into the catch or fall to the 'no workspace' return. Only the log lines differ.",
-            "decision": "none — the guards are the correct shape; the catch and the parsers' fall-through make their failure mode indistinguishable from their success mode",
+            "reason": "The three current-* readers wrap their body in the catch above, which returns undefined. For org and project: dropping the `?.` throws on a missing context, forcing the guard false (or emptying it) hands `undefined` to the parser, whose final 'not string or object' branch returns undefined \u2014 three mutants each, all landing on the value the guard returns. For workspace: the `!context` guard four lines above the anchor (its line is not unique in this module) and the anchor itself, forced open, reach `context.workspace` / `typeof undefined`, which throw into the catch or fall to the 'no workspace' return. Only the log lines differ.",
+            "decision": "none \u2014 the guards are the correct shape; the catch and the parsers' fall-through make their failure mode indistinguishable from their success mode",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeContextResolver)"
         },
@@ -523,8 +523,8 @@
             ],
             "mutants": 2,
             "category": "branch",
-            "reason": "After the string branch, the parameter type is the object shape, so the compiler already knows this check is true. What it guards is `aio console where` JSON the parseJSON cast does not validate — a number or boolean in the org/project slot. No typed fixture can carry that shape: the cache manager's return type and the response type both forbid it, so killing the mutant means a cast at the fixture boundary. Same shape as the installHandler and projectHandlers `payload?.` rows.",
-            "decision": "none — a boundary guard on unvalidated CLI JSON is correct even when the typed signature cannot exercise it; deleting it would turn a malformed answer into an org named 'Unknown'",
+            "reason": "After the string branch, the parameter type is the object shape, so the compiler already knows this check is true. What it guards is `aio console where` JSON the parseJSON cast does not validate \u2014 a number or boolean in the org/project slot. No typed fixture can carry that shape: the cache manager's return type and the response type both forbid it, so killing the mutant means a cast at the fixture boundary. Same shape as the installHandler and projectHandlers `payload?.` rows.",
+            "decision": "none \u2014 a boundary guard on unvalidated CLI JSON is correct even when the typed signature cannot exercise it; deleting it would turn a malformed answer into an org named 'Unknown'",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeContextResolver)"
         },
@@ -536,7 +536,7 @@
             "mutants": 1,
             "category": "branch",
             "reason": "Forcing this true returns `matched` unconditionally: the project on a hit, and `undefined` on a miss, which is exactly what the fall-through below returns after its debug line. The miss test pins the undefined and the absence of a cache write; the guard's only distinct effect is the debug line.",
-            "decision": "none — the early return reads as intended",
+            "decision": "none \u2014 the early return reads as intended",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeContextResolver)"
         },
@@ -559,7 +559,7 @@
             "mutants": 16,
             "category": "optionalChain",
             "reason": "`authManager` is optional on HandlerContext, so every read of it needs the `?.`, and `orgs` inherits the same optionality from `authManager?.getOrganizations()`. But each of these sites is reached only AFTER a step that needs the service to answer: a successful `login`, an `isAuthenticated()` that returned true, or a cached org that only the service could have set. With no service those answers are undefined and the flow leaves before any of these lines, which the check-auth test without a service pins ('Not signed in', not a crash). So dropping a `?.` here can never throw on any reachable input. The two `tokenManager?.inspectToken()` reads are the same shape one level down: a missing token manager makes the inspection undefined, and both callers treat an undefined inspection and a thrown one identically (their catch returns the same value). Anchors name a unique neighbouring line where the mutated line appears twice in this module.",
-            "decision": "none — the `?.` is required by the type at every site",
+            "decision": "none \u2014 the `?.` is required by the type at every site",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
         },
@@ -572,7 +572,7 @@
             "mutants": 2,
             "category": "optionalChain",
             "reason": "These two ARE reachable without an auth service, and the difference is observable: with the `?.`, a missing service reads as a login that returned nothing, so the user is told the sign-in timed out; without it, the TypeError lands in the outer catch as a generic authentication failure. Neither is the right message for a wiring gap. The only test that kills the mutants would pin 'Sign-in timed out' as the answer to a missing service, and a test that guards a misleading message is worse than a survivor. Recorded rather than pinned; the honest fix is a guard that names the gap, which is a behaviour change outside this batch.",
-            "decision": "OPEN for the module — handleAuthenticate could refuse up front when the context has no auth service, as resolveOrgContext in projectHandlers does",
+            "decision": "OPEN for the module \u2014 handleAuthenticate could refuse up front when the context has no auth service, as resolveOrgContext in projectHandlers does",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
         },
@@ -584,7 +584,7 @@
             "mutants": 4,
             "category": "branch",
             "reason": "`tokenInspection?.expiresIn || 0` is the argument of a debug line that wraps onto its own line, so the one-line classifier does not see the `debug(` above it. The expression feeds nothing else. Killing any of the four means asserting the wording of the debug line.",
-            "decision": "OPEN for the instrument — enclosing-statement classification, as in the addonUpdateChecker row",
+            "decision": "OPEN for the instrument \u2014 enclosing-statement classification, as in the addonUpdateChecker row",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
         },
@@ -596,7 +596,7 @@
             "mutants": 2,
             "category": "branch",
             "reason": "Forcing this guard false, or emptying it, sends an undefined inspection into `.expiresIn`, which throws into the catch below, and the catch returns exactly the object the guard returns. The check-auth test with a failing inspection pins that value; the guard's only distinct effect is that the no-inspection case does not go through the catch.",
-            "decision": "none — the early return says what an absent inspection means",
+            "decision": "none \u2014 the early return says what an absent inspection means",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
         },
@@ -609,7 +609,7 @@
             "mutants": 4,
             "category": "block",
             "reason": "Two bodies that only log. The first is a warning when the token is about to expire; `tokenExpiringSoon` itself is returned and pinned by the expiry tests, so forcing or emptying the guard changes only whether the warning is written. The second is the catch around post-login org resolution: it logs and lets `orgResult` keep its default, which the failed-fetch test pins ('Sign-in complete', selection required); emptied, it does the same without the log.",
-            "decision": "none — both logs are the operator's only trace of the condition",
+            "decision": "none \u2014 both logs are the operator's only trace of the condition",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
         },
@@ -621,8 +621,8 @@
             ],
             "mutants": 2,
             "category": "other",
-            "reason": "Both literals are destructured by the caller as `const { currentOrg } = …`, and destructuring `{}` yields the same undefined. The explicit field is the typed contract (`{ currentOrg?: AdobeOrg }`), not a runtime difference.",
-            "decision": "none — the explicit shape documents the contract; `{}` would typecheck too but say less",
+            "reason": "Both literals are destructured by the caller as `const { currentOrg } = \u2026`, and destructuring `{}` yields the same undefined. The explicit field is the typed contract (`{ currentOrg?: AdobeOrg }`), not a runtime difference.",
+            "decision": "none \u2014 the explicit shape documents the contract; `{}` would typecheck too but say less",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
         },
@@ -635,7 +635,7 @@
             "mutants": 2,
             "category": "branch",
             "reason": "`> 1` versus `>= 1` differs only at exactly one org, which the `=== 1` branch above has already taken. And `requiresOrgSelection` on the zero-org result is never read: sendPostLoginStatus checks `orgLacksAccess` first and hardcodes `requiresOrgSelection: true` in that message, which the zero-org tests pin.",
-            "decision": "none — the result carries both flags for the type's sake; the consumer's precedence is the pinned behaviour",
+            "decision": "none \u2014 the result carries both flags for the type's sake; the consumer's precedence is the pinned behaviour",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
         },
@@ -646,8 +646,8 @@
             ],
             "mutants": 2,
             "category": "branch",
-            "reason": "Two mutants rewrite the first two terms of the failure check: `timedOut || error` to `timedOut && error`, and to `false`. Both leave `|| !outcome.result` standing, and tryWithTimeout never sets `result` on the path that sets `timedOut` or `error` — its catch builds the outcome without one. So every outcome the original condition rejects has no result, and the surviving `!outcome.result` term rejects it too; every outcome it accepts has a result and no error, and the mutants accept it too. The only killing input is an outcome carrying BOTH a result and an error, which means mocking tryWithTimeout to answer with a shape it cannot produce. Not recorded as a defect: the extra terms are what make the intent readable.",
-            "decision": "none — the condition is correct; the redundancy is against a helper contract the type does not express",
+            "reason": "Two mutants rewrite the first two terms of the failure check: `timedOut || error` to `timedOut && error`, and to `false`. Both leave `|| !outcome.result` standing, and tryWithTimeout never sets `result` on the path that sets `timedOut` or `error` \u2014 its catch builds the outcome without one. So every outcome the original condition rejects has no result, and the surviving `!outcome.result` term rejects it too; every outcome it accepts has a result and no error, and the mutants accept it too. The only killing input is an outcome carrying BOTH a result and an error, which means mocking tryWithTimeout to answer with a shape it cannot produce. Not recorded as a defect: the extra terms are what make the intent readable.",
+            "decision": "none \u2014 the condition is correct; the redundancy is against a helper contract the type does not express",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeOrgServices)"
         },
@@ -659,8 +659,8 @@
             ],
             "mutants": 2,
             "category": "other",
-            "reason": "Both `Date.now() - startTime` subtractions feed only a log line. The first becomes `elapsed`, which reaches `reason` only in the timed-out case, and in that case the thrown error is the TimeoutError itself, so the `new Error(reason)` fallback never carries it — it is built only when the SDK resolved nothing, where reason is the fixed word `failed`. The second is the continuation line of a multi-line debug call, which the one-line classifier does not see as logging. Killing either means asserting a formatted duration in a log message.",
-            "decision": "OPEN for the instrument — enclosing-statement classification, as in the addonUpdateChecker row",
+            "reason": "Both `Date.now() - startTime` subtractions feed only a log line. The first becomes `elapsed`, which reaches `reason` only in the timed-out case, and in that case the thrown error is the TimeoutError itself, so the `new Error(reason)` fallback never carries it \u2014 it is built only when the SDK resolved nothing, where reason is the fixed word `failed`. The second is the continuation line of a multi-line debug call, which the one-line classifier does not see as logging. Killing either means asserting a formatted duration in a log message.",
+            "decision": "OPEN for the instrument \u2014 enclosing-statement classification, as in the addonUpdateChecker row",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeOrgServices)"
         },
@@ -671,8 +671,8 @@
             ],
             "mutants": 2,
             "category": "optionalChain",
-            "reason": "Dropping either `?.` makes a missing response or a missing body throw a TypeError — inside the try whose catch returns `[]`, which is exactly what the `?.` reads produce for the same inputs. Both shapes are pinned (no response, a body without sdkList) and the caller sees `[]` either way; only the debug line in the catch differs. The read is documented fail-safe, so the catch is the contract and the `?.` is belt-and-braces.",
-            "decision": "none — the `?.` is required by the SDK response type",
+            "reason": "Dropping either `?.` makes a missing response or a missing body throw a TypeError \u2014 inside the try whose catch returns `[]`, which is exactly what the `?.` reads produce for the same inputs. Both shapes are pinned (no response, a body without sdkList) and the caller sees `[]` either way; only the debug line in the catch differs. The read is documented fail-safe, so the catch is the contract and the `?.` is belt-and-braces.",
+            "decision": "none \u2014 the `?.` is required by the SDK response type",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeOrgServices)"
         },
@@ -684,8 +684,8 @@
             ],
             "mutants": 4,
             "category": "branch",
-            "reason": "Both checks read `{ isAuthenticated, isExpired }` from AuthCacheManager.getCachedAuthStatus and gate on `!isExpired && isAuthenticated !== undefined`. Two mutants per site: `&&` to `||`, and the second term to `true`. The cache manager never produces the state that would tell them apart — it answers `isAuthenticated: undefined` exactly when `isExpired` is true, and `setCachedAuthStatus` writes the value and the expiry together, so a fresh entry always carries a boolean. Under that contract the second term is implied by the first, and all four rewrites compute the same value on every reachable state. The service constructs its own AuthCacheManager, so no test can hand it one that lies. The pair is pinned from both directions (quick then full, full then quick, cleared, expired negative). Anchors name each method's withTiming line because the condition itself appears twice.",
-            "decision": "OPEN for the module — the second term could be dropped, or the cache manager could answer a single `fresh: boolean`; either is a behaviour-preserving simplification outside this batch",
+            "reason": "Both checks read `{ isAuthenticated, isExpired }` from AuthCacheManager.getCachedAuthStatus and gate on `!isExpired && isAuthenticated !== undefined`. Two mutants per site: `&&` to `||`, and the second term to `true`. The cache manager never produces the state that would tell them apart \u2014 it answers `isAuthenticated: undefined` exactly when `isExpired` is true, and `setCachedAuthStatus` writes the value and the expiry together, so a fresh entry always carries a boolean. Under that contract the second term is implied by the first, and all four rewrites compute the same value on every reachable state. The service constructs its own AuthCacheManager, so no test can hand it one that lies. The pair is pinned from both directions (quick then full, full then quick, cleared, expired negative). Anchors name each method's withTiming line because the condition itself appears twice.",
+            "decision": "OPEN for the module \u2014 the second term could be dropped, or the cache manager could answer a single `fresh: boolean`; either is a behaviour-preserving simplification outside this batch",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
         },
@@ -709,7 +709,7 @@
             "mutants": 1,
             "category": "optionalChain",
             "reason": "CommandResult.stdout is a non-optional string, so the `?.` never short-circuits on any value the executor's type allows. The only input that distinguishes the two is `stdout: undefined`, which the compiler rejects. The trim itself IS pinned (a whitespace-padded short token is retried).",
-            "decision": "OPEN for the module — the `?.` is dead by type and could be dropped",
+            "decision": "OPEN for the module \u2014 the `?.` is dead by type and could be dropped",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
         },
@@ -723,7 +723,7 @@
             "mutants": 7,
             "category": "block",
             "reason": "Two else-bodies in login that contain only debug/warn calls, plus the expressions inside them. The no-valid-token else (1 block mutant, and 3 on the continuation line of its debug call: two `?.` and a `.substring`) and the non-zero-exit else (1 block mutant, plus the `??` and the `?.` feeding `exitCode`, which is read only by the debug line). The classifier sees one line at a time, so an argument that wraps onto its own line is not recognised as logging. Both branches then fall through to the same `return false` (or the same retry), which the tests pin; only the log text differs.",
-            "decision": "OPEN for the instrument — enclosing-statement classification, as in the addonUpdateChecker row",
+            "decision": "OPEN for the instrument \u2014 enclosing-statement classification, as in the addonUpdateChecker row",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
         },
@@ -736,7 +736,7 @@
             "mutants": 3,
             "category": "branch",
             "reason": "Three `??` operators inside one debug message that spans four lines; the classifier does not see the `debug(` on the line above. The context they format is not used for anything else in this method (Phase 4a: nothing is pinned to the global), so the only observable is the message text.",
-            "decision": "OPEN for the instrument — enclosing-statement classification",
+            "decision": "OPEN for the instrument \u2014 enclosing-statement classification",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
         },
@@ -748,9 +748,34 @@
             "mutants": 2,
             "category": "block",
             "reason": "The catch in loginAndRestoreProjectContext wraps one await: `this.login(force)`. login has its own catch that returns false for every failure, including a step logger that cannot be created (pinned), so it never rejects and this catch cannot be entered. Reaching it would mean replacing the service's own method.",
-            "decision": "none — a catch around an awaited collaborator is correct even when that collaborator currently swallows everything",
+            "decision": "none \u2014 a catch around an awaited collaborator is correct even when that collaborator currently swallows everything",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
+        },
+        {
+            "module": "src/features/authentication/ui/hooks/useAuthStatus.ts",
+            "anchors": [
+                "if (previousOrgId !== undefined) {",
+                "source: preAuthOrgIdRef.current !== undefined ? 'pre-auth-ref' : 'state',"
+            ],
+            "mutants": 7,
+            "category": "branch",
+            "reason": "The guarded body is a single `log.debug('Auth org comparison:', {...})` whose object argument spans seven lines, so the one-line classifier does not see it as logging and the worklist's log-only-body filter does not either. Four mutants on the guard (both constants, the block, `===`) and three on the `source` ternary inside the object all change only what the debug line says. `orgChanged` itself is computed above the guard and is pinned from four directions.",
+            "decision": "OPEN for the instrument \u2014 enclosing-statement classification",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (useAuthStatus)"
+        },
+        {
+            "module": "src/features/authentication/ui/hooks/useAuthStatus.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mount effect's dependency array `[]` is rewritten to `['Stryker was here']`. React compares dependencies element-wise with Object.is, and a string literal is equal to itself on every render, so the effect still runs exactly once. No sequence of renders can distinguish the two.",
+            "decision": "none",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (useAuthStatus)"
         }
     ]
 }

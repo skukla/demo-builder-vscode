@@ -50,7 +50,6 @@ export function useAuthStatus({
     const [authSubMessage, setAuthSubMessage] = useState<string>('');
     const [authTimeout, setAuthTimeout] = useState(false);
     const isSwitchingRef = useRef(false);
-    const authTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Track org ID before re-auth to detect if it changes
     // This allows us to preserve project/workspace when re-authenticating with same org
@@ -71,11 +70,6 @@ export function useAuthStatus({
     }, [state.adobeAuth, updateState]);
 
     const handleLogin = useCallback((force: boolean = false) => {
-        if (authTimeoutRef.current) {
-            clearTimeout(authTimeoutRef.current);
-            authTimeoutRef.current = null;
-        }
-
         setAuthTimeout(false);
         setAuthStatus('');
         setAuthSubMessage('');
@@ -116,11 +110,6 @@ export function useAuthStatus({
             const authData = data as AuthStatusData;
 
             log.debug('Auth status received:', authData);
-
-            if (authTimeoutRef.current) {
-                clearTimeout(authTimeoutRef.current);
-                authTimeoutRef.current = null;
-            }
 
             // Check for timeout using typed error code
             if (authData.code === ErrorCode.TIMEOUT) {
