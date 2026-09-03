@@ -26,25 +26,6 @@ jest.setTimeout(5000);
 // Mock Setup
 // =============================================================================
 
-jest.mock(
-    'vscode',
-    () => ({
-        commands: { executeCommand: jest.fn().mockResolvedValue(undefined) },
-        window: {
-            activeColorTheme: { kind: 1 },
-            showErrorMessage: jest.fn(),
-            withProgress: jest.fn(),
-        },
-        ColorThemeKind: { Dark: 2, Light: 1 },
-        ProgressLocation: { Notification: 15 },
-        env: {
-            clipboard: { writeText: jest.fn() },
-            openExternal: jest.fn(),
-        },
-        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-    }),
-    { virtual: true }
-);
 
 jest.mock('@/features/mesh/services/stalenessDetector');
 jest.mock('@/core/di/serviceLocator', () => ({

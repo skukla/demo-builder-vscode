@@ -14,11 +14,6 @@ import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
-// Mock modules
-jest.mock('vscode', () => ({}), { virtual: true });
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000 },
-}));
 jest.mock('@/features/eds/services/inspectorHelpers', () => ({
     SDK_SOURCE: {
         owner: 'skukla',

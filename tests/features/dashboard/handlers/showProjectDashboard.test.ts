@@ -11,17 +11,6 @@
  * Strict TDD: written BEFORE the handler exists.
  */
 
-jest.mock(
-    'vscode',
-    () => ({
-        commands: { executeCommand: jest.fn() },
-        window: { activeColorTheme: { kind: 1 } },
-        ColorThemeKind: { Dark: 2, Light: 1 },
-        env: { openExternal: jest.fn() },
-        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-    }),
-    { virtual: true }
-);
 
 jest.mock('@/features/mesh/services/stalenessDetector');
 

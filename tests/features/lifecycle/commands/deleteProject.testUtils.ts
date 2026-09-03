@@ -16,22 +16,6 @@
 
 import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
 
-// Mock VS Code API with proper types
-jest.mock('vscode', () => ({
-    window: {
-        showInformationMessage: jest.fn(),
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        withProgress: jest.fn(),
-        setStatusBarMessage: jest.fn(),
-    },
-    commands: {
-        executeCommand: jest.fn(),
-    },
-    ProgressLocation: {
-        Notification: 15,
-    },
-}));
 // Mock logging
 
 export { DeleteProjectCommand };

@@ -44,33 +44,6 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
 }));
 
-jest.mock(
-    'vscode',
-    () => ({
-        commands: {
-            executeCommand: jest.fn(),
-        },
-        workspace: {
-            getConfiguration: jest.fn().mockReturnValue({
-                get: jest.fn().mockReturnValue('cards'),
-            }),
-        },
-        Uri: {
-            file: jest.fn((p: string) => ({ fsPath: p, path: p })),
-            parse: jest.fn((s: string) => ({ toString: () => s, url: s })),
-        },
-        env: {
-            clipboard: {
-                writeText: jest.fn(),
-            },
-            openExternal: jest.fn(),
-        },
-        window: {
-            showInformationMessage: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
 
 // Below the mocks on purpose — see the note above about hoisting.
 export {

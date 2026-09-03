@@ -7,22 +7,6 @@
  * Adobe MCP update core, the other the sync path — so only these two move.
  */
 
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            withProgress: jest.fn((_opts: unknown, cb: (p: { report: jest.Mock }) => unknown) =>
-                cb({ report: jest.fn() })
-            ),
-            showWarningMessage: jest.fn(),
-            showErrorMessage: jest.fn(),
-            showInformationMessage: jest.fn(),
-        },
-        workspace: { getConfiguration: jest.fn() },
-        ProgressLocation: { Notification: 15 },
-    }),
-    { virtual: true }
-);
 
 jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
     installBlockCollections: jest.fn(),

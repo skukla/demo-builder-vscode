@@ -28,28 +28,6 @@ jest.setTimeout(5000);
 // Mock Setup - All mocks must be defined before imports
 // =============================================================================
 
-jest.mock(
-    'vscode',
-    () => ({
-        commands: {
-            executeCommand: jest.fn().mockResolvedValue(undefined),
-        },
-        window: {
-            activeColorTheme: { kind: 1 },
-            showInformationMessage: jest.fn(),
-            showErrorMessage: jest.fn(),
-            withProgress: jest.fn(),
-        },
-        ColorThemeKind: { Dark: 2, Light: 1 },
-        ProgressLocation: { Notification: 15 },
-        env: {
-            clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
-            openExternal: jest.fn(),
-        },
-        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-    }),
-    { virtual: true }
-);
 
 jest.mock('@/features/mesh/services/stalenessDetector');
 jest.mock('@/core/di/serviceLocator', () => ({

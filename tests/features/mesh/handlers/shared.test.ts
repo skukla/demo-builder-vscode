@@ -15,15 +15,6 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-// Mock dependencies
-jest.mock('vscode', () => ({
-    window: {
-        showWarningMessage: jest.fn(),
-    },
-    commands: {
-        executeCommand: jest.fn(),
-    },
-}));
 
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {

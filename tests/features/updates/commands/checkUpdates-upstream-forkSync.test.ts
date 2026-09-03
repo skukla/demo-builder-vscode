@@ -23,25 +23,6 @@ import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
-// Mock VS Code API
-jest.mock('vscode', () => ({
-    window: {
-        withProgress: jest.fn(),
-        showInformationMessage: jest.fn(),
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn().mockResolvedValue(undefined),
-        showQuickPick: jest.fn(),
-    },
-    ProgressLocation: {
-        Notification: 15,
-    },
-    QuickPickItemKind: {
-        Separator: 1,
-    },
-    commands: {
-        executeCommand: jest.fn(),
-    },
-}));
 
 // ---------------------------------------------------------------------------
 // Test helpers

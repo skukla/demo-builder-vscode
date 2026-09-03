@@ -4,34 +4,6 @@
  * Tests that navigateBack clears the current project and navigates to projects list.
  */
 
-// Mock vscode - must be before imports due to hoisting
-jest.mock('vscode', () => ({
-    commands: {
-        executeCommand: jest.fn(),
-    },
-    window: {
-        activeColorTheme: { kind: 1 },
-    },
-    ColorThemeKind: { Dark: 2, Light: 1 },
-    env: {
-        openExternal: jest.fn(),
-    },
-    Uri: {
-        parse: jest.fn((url: string) => ({ toString: () => url })),
-    },
-}), { virtual: true });
-
-// Mock stalenessDetector
-jest.mock('@/features/mesh/services/stalenessDetector');
-
-// Mock authentication
-
-// Mock ServiceLocator
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(),
-    },
-}));
 
 // Mock BaseWebviewCommand (used by handleNavigateBack for panel transition)
 jest.mock('@/core/base/baseWebviewCommand', () => ({

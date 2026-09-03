@@ -30,13 +30,6 @@ const updateLastSyncedCommitMock = jest.fn();
 const updateComponentMock = jest.fn();
 const executeMock = jest.fn();
 
-jest.mock(
-    'vscode',
-    () => ({
-        workspace: { getConfiguration: jest.fn() },
-    }),
-    { virtual: true }
-);
 
 jest.mock('@/features/updates/services/forkSyncService', () => ({
     ForkSyncService: jest.fn(() => ({ syncFork: syncForkMock })),

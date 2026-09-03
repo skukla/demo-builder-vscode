@@ -6,15 +6,6 @@
 
 import * as vscode from 'vscode';
 
-// Mock vscode
-jest.mock('vscode', () => ({
-    env: {
-        openExternal: jest.fn(),
-    },
-    Uri: {
-        parse: jest.fn((s: string) => s),
-    },
-}));
 
 // Mock timeoutConfig - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({

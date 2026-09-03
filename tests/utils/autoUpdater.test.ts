@@ -7,16 +7,6 @@
  */
 
 jest.mock('axios');
-jest.mock(
-    'vscode',
-    () => ({
-        workspace: { getConfiguration: jest.fn() },
-        window: { showInformationMessage: jest.fn() },
-        commands: { executeCommand: jest.fn() },
-        Uri: { file: jest.fn((p: string) => ({ fsPath: p })) },
-    }),
-    { virtual: true }
-);
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         QUICK: 5000,

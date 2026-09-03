@@ -5,11 +5,6 @@
  * to eliminate duplication between storeToken and validateDaLiveToken.
  */
 
-// Mock vscode before imports
-jest.mock('vscode', () => ({
-    env: { openExternal: jest.fn().mockResolvedValue(true) },
-    Uri: { parse: jest.fn((s: string) => s) },
-}));
 
 import { parseJwtPayload } from '@/features/eds/services/daLive/daLiveAuthService';
 

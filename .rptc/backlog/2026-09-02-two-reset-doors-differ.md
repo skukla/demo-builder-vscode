@@ -73,6 +73,8 @@ changed, which is why the difference had gone unnoticed.
 ## Shipped so far
 
 - 2026-09-02  docs(backlog): resetting a project does less from the dashboard than from the projects list (EDS-12) (`0cdfbc505`)
+- 2026-09-02  Merge fix/dashboard-reset-parity: the dashboard reset stops being the lighter one (EDS-12) (`ff01ea60f`)
+- 2026-09-02  fix(dashboard): reset does the same thing from both doors (EDS-12) (`fe8604ba8`)
 
 ## Shipped so far
 

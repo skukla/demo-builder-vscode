@@ -20,15 +20,6 @@ jest.mock('@/core/validation/fieldValidation');
 jest.mock('@/core/validation/normalizers');
 jest.mock('@/core/validation/validators/NodeVersionValidator');
 jest.mock('fs/promises');
-jest.mock(
-    'vscode',
-    () => ({
-        commands: {
-            executeCommand: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
 jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
     ComponentRegistryManager: jest.fn().mockImplementation(() => ({
         getComponentById: jest.fn().mockResolvedValue({

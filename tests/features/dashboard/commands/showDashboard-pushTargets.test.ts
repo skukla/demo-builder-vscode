@@ -12,17 +12,6 @@
  * Strict TDD: written BEFORE the resolver exists.
  */
 
-jest.mock(
-    'vscode',
-    () => ({
-        window: { activeColorTheme: { kind: 1 } },
-        ColorThemeKind: { Dark: 2, Light: 1 },
-        commands: { executeCommand: jest.fn() },
-        Uri: { parse: jest.fn((u: string) => ({ toString: () => u })) },
-        ViewColumn: { Active: -1, One: 1 },
-    }),
-    { virtual: true }
-);
 
 const mockGetActivePanel = jest.fn();
 jest.mock('@/core/base/baseWebviewCommand', () => ({

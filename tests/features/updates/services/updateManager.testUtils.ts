@@ -16,19 +16,6 @@
 
 import { UpdateManager } from '@/features/updates/services/updateManager';
 
-// Mock vscode
-jest.mock('vscode', () => ({
-    workspace: {
-        getConfiguration: jest.fn(),
-    },
-}), { virtual: true });
-// Mock Logger
-// Mock timeoutConfig - uses semantic categories
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        QUICK: 5000, // Fast operations (replaces UPDATE_CHECK)
-    },
-}));
 // Mock security validation
 jest.mock('@/core/validation/SensitiveDataRedactor', () => ({
     sanitizeErrorForLogging: jest.fn((msg: string) => msg),

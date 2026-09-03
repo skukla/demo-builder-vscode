@@ -21,18 +21,6 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
     },
 }));
 
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            withProgress: jest.fn(async (_o: unknown, task: (p: unknown) => unknown) =>
-                task({ report: jest.fn() })
-            ),
-        },
-        ProgressLocation: { Notification: 15 },
-    }),
-    { virtual: true }
-);
 
 import { handleDeployApiMesh } from '@/features/mesh/handlers/deployHandler';
 import type { HandlerContext } from '@/types/handlers';

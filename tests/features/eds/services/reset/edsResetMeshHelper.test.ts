@@ -25,15 +25,6 @@ jest.mock('@/core/shell/orgContextEnv', () => ({
     withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
 }));
 
-jest.mock(
-    'vscode',
-    () => ({
-        window: { showWarningMessage: jest.fn(), showInformationMessage: jest.fn() },
-        ProgressLocation: { Notification: 15 },
-        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-    }),
-    { virtual: true }
-);
 
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {

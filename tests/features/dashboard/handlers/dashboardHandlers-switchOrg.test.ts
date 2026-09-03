@@ -22,24 +22,6 @@ jest.mock('@/features/mesh/services/meshVerifier', () => ({
     verifyMeshDeployment: jest.fn().mockResolvedValue(undefined),
     syncMeshStatus: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            activeColorTheme: { kind: 1 },
-            showWarningMessage: jest.fn().mockResolvedValue('Cancel'),
-            // The forced sign-in runs behind the browser-opening notification
-            // (withBrowserSignInNotice) — run the task straight through.
-            withProgress: jest.fn(async (_options: unknown, task: () => unknown) => task()),
-        },
-        ProgressLocation: { Notification: 15, Window: 10, SourceControl: 1 },
-        ColorThemeKind: { Dark: 2, Light: 1 },
-        commands: { executeCommand: jest.fn() },
-        env: { openExternal: jest.fn() },
-        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-    }),
-    { virtual: true }
-);
 
 import './dashboardValidatorMocks';
 import { handleSwitchOrg } from '@/features/dashboard/handlers/dashboardHandlers';

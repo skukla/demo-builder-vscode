@@ -22,21 +22,6 @@ import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state/stateManager';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-// Mock VS Code API
-jest.mock('vscode', () => ({
-    window: {
-        withProgress: jest.fn(),
-        showInformationMessage: jest.fn(),
-        showErrorMessage: jest.fn().mockResolvedValue(undefined),
-        showQuickPick: jest.fn(),
-    },
-    ProgressLocation: {
-        Notification: 15,
-    },
-    QuickPickItemKind: {
-        Separator: 1,
-    },
-}));
 
 // Mock UpdateManager
 jest.mock('@/features/updates/services/updateManager');

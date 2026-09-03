@@ -17,16 +17,6 @@
 import { DaLiveAuthService } from '@/features/eds/services/daLive/daLiveAuthService';
 import { ExtensionContext } from 'vscode';
 
-// Mock vscode before imports
-jest.mock('vscode', () => ({
-    env: {
-        openExternal: jest.fn().mockResolvedValue(true),
-    },
-    Uri: {
-        parse: jest.fn((s: string) => s),
-    },
-    EventEmitter: require('../../../../helpers/vscodeEventEmitter').VscodeEventEmitter,
-}));
 // Mock logger
 
 export { DaLiveAuthService };

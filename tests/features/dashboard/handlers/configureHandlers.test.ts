@@ -26,18 +26,6 @@ jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
     extractTenantId: jest.fn(),
 }));
 
-// Mock vscode
-jest.mock('vscode', () => ({
-    env: {
-        openExternal: jest.fn().mockResolvedValue(undefined),
-    },
-    Uri: {
-        parse: jest.fn((url: string) => ({ toString: () => url })),
-    },
-    commands: {
-        executeCommand: jest.fn().mockResolvedValue(undefined),
-    },
-}));
 
 import './dashboardValidatorMocks';
 import * as vscode from 'vscode';

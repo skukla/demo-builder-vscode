@@ -12,14 +12,6 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { mockCommands, mockWindow } from '../../../helpers/vscodeMockViews';
 // Mock modules
 jest.mock('fs/promises');
-jest.mock('vscode', () => ({
-    window: {},
-    commands: {},
-    Uri: {},
-    ProgressLocation: {
-        Notification: 15,
-    },
-}));
 jest.mock('@/core/validation/PathSafetyValidator');
 jest.mock('@/core/validation/SensitiveDataRedactor');
 jest.mock('@/core/validation/URLValidator');

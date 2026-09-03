@@ -13,20 +13,6 @@ import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/core/state/stateManager';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock('vscode', () => ({
-    window: {
-        withProgress: jest.fn(),
-        showInformationMessage: jest.fn(),
-        showErrorMessage: jest.fn().mockResolvedValue(undefined),
-        showQuickPick: jest.fn(),
-    },
-    workspace: {
-        getConfiguration: jest.fn(),
-    },
-    ProgressLocation: { Notification: 15 },
-    QuickPickItemKind: { Separator: 1 },
-    ConfigurationTarget: { Global: 1 },
-}));
 
 jest.mock('@/features/updates/services/updateManager');
 jest.mock('@/features/updates/services/componentUpdater');

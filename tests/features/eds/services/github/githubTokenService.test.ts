@@ -4,10 +4,6 @@
  * Tests for token management methods extracted from GitHubService.
  */
 
-// Mock vscode
-jest.mock('vscode', () => ({
-    SecretStorage: jest.fn(),
-}));
 
 // Mock Octokit — the real code calls `Octokit.plugin(retry)` which returns a
 // constructor; the mock has to expose `.plugin()` returning itself so the

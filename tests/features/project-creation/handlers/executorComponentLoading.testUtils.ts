@@ -51,22 +51,5 @@ jest.mock('fs/promises', () => ({
     rmdir: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock(
-    'vscode',
-    () => ({
-        workspace: {
-            getConfiguration: jest.fn().mockReturnValue({
-                get: jest.fn().mockReturnValue(3000),
-            }),
-        },
-        window: {
-            setStatusBarMessage: jest.fn(),
-        },
-        commands: {
-            executeCommand: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
 
 export {};
