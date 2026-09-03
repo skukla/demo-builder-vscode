@@ -202,3 +202,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(updates): bring updateExecutor to zero open mutation gaps (`1c7ab26a5`)
 - 2026-09-03  fix(overnight): cut the branch from HEAD, verify goals after checkout, never exit 0 having run nothing (`7b5c00af2`)
 - 2026-09-03  docs(backlog): log the ratification commit against PL-22 (`1f2ef1427`)
+- 2026-09-03  test(updates): bring checkUpdates to zero open mutation gaps (`1aa446690`)

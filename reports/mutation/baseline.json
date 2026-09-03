@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-01 checkUpdates: 22 uncovered -> 0, 84 branch/block survivors -> 1 (ledgered debug-only catch); detection + dispatch suites, dead conjunct removed from six selection filters",
+    "_note": "MUT-01 templateSyncService: 73 uncovered -> 0, 31 branch/block survivors -> 1 (ledgered debug-only catch); plumbing suite pins every git command + options per strategy, guards, cleanup, updateLastSyncedCommit",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -11425,30 +11425,20 @@
             "openGaps": 9
         },
         "src/features/updates/services/templateSyncService.ts": {
-            "score": 29.41,
-            "killed": 75,
-            "survived": 107,
-            "noCoverage": 73,
+            "score": 87.84,
+            "killed": 224,
+            "survived": 31,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "optionalChain": 2,
-                "branch": 26,
-                "string": 29,
-                "other": 28,
-                "logPresentation": 17,
-                "block": 5
+                "string": 6,
+                "logPresentation": 24,
+                "block": 1
             },
-            "uncoveredCategories": {
-                "block": 19,
-                "other": 8,
-                "branch": 15,
-                "string": 22,
-                "logPresentation": 7,
-                "optionalChain": 2
-            },
-            "highValueSurvivors": 31,
-            "equivalent": 0,
-            "openGaps": 105
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/features/updates/services/templateUpdateChecker.ts": {
             "score": 68.32,

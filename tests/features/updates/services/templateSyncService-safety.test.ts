@@ -17,101 +17,20 @@
  * configuration, and nothing asserted it held.
  */
 
-const mockExecute = jest.fn();
-const mockReadFile = jest.fn();
-const mockWriteFile = jest.fn();
-const mockMkdir = jest.fn();
-const mockRm = jest.fn();
-const mockMkdtemp = jest.fn();
-
-jest.mock('vscode', () => ({ window: {}, workspace: {} }), { virtual: true });
-// The service constructs its own GitHubTokenService (one of the 12 remaining
-// construction-ledger rows). That is why this suite has to module-mock it rather
-// than hand a fake in — the ledger row's cost, in practice.
-jest.mock('@/features/eds/services/github/githubTokenService', () => ({
-    GitHubTokenService: class {
-        getToken = jest.fn().mockResolvedValue({ token: 'gh-token' });
-    },
-}));
-
-// The subject now asks the service cache instead of constructing its own token
-// service. This delegates to the SAME mocked class above, so the suite's
-// behaviour is unchanged — only the route to it is.
-jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
-    getGitHubServices: jest.fn(() => {
-        const { GitHubTokenService } = jest.requireMock(
-            '@/features/eds/services/github/githubTokenService',
-        );
-        return { tokenService: new GitHubTokenService() };
-    }),
-}));
-jest.mock('fs/promises', () => ({
-    readFile: (...a: unknown[]) => mockReadFile(...a),
-    writeFile: (...a: unknown[]) => mockWriteFile(...a),
-    mkdir: (...a: unknown[]) => mockMkdir(...a),
-    rm: (...a: unknown[]) => mockRm(...a),
-    mkdtemp: (...a: unknown[]) => mockMkdtemp(...a),
-}));
-
-import { TemplateSyncService } from '@/features/updates/services/templateSyncService';
-import { createMockProject } from '../../../helpers/projectFake';
-import type { Project } from '@/types/base';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
-
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
-/** An EDS project with the metadata the service reads. */
-function edsProject(): Project {
-    return createMockProject({
-        name: 'demo',
-        path: '/projects/demo',
-        componentInstances: {
-            'eds-storefront': {
-                id: 'eds-storefront',
-                name: 'EDS Storefront',
-                type: 'frontend',
-                status: 'ready',
-                metadata: {
-                    githubRepo: 'skukla/demo-storefront',
-                    templateOwner: 'adobe',
-                    templateRepo: 'aem-boilerplate-commerce',
-                },
-            },
-        },
-    });
-}
-
-function service(): TemplateSyncService {
-    return new TemplateSyncService(
-        createMockSecretStorage({ githubToken: 'gh-token' }).secrets,
-        createMockLogger(),
-        createMockCommandExecutor({ execute: (...a: unknown[]) => mockExecute(...a) })
-    );
-}
-
-/** Every git call succeeds unless a test says otherwise. */
-function allGitSucceeds() {
-    mockExecute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
-}
-
-/** Which git commands actually ran, in order. */
-function gitCalls(): string[] {
-    return mockExecute.mock.calls.map((c) => String(c[0]));
-}
-
-const pushed = () => gitCalls().some((c) => /git push/.test(c));
+import {
+    edsProject,
+    failOn,
+    gitCalls,
+    mockExecute,
+    mockReadFile,
+    mockWriteFile,
+    pushed,
+    resetFakes,
+    service,
+} from './templateSyncService.testUtils';
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    mockMkdtemp.mockResolvedValue('/tmp/sync-xyz');
-    mockMkdir.mockResolvedValue(undefined);
-    mockWriteFile.mockResolvedValue(undefined);
-    mockRm.mockResolvedValue(undefined);
-    // Both preserved files exist and have content worth keeping.
-    mockReadFile.mockImplementation(async (p: string) =>
-        p.endsWith('fstab.yaml') ? 'MOUNTS' : '{"headers":{}}'
-    );
-    allGitSucceeds();
+    resetFakes();
 });
 
 describe('CRITERION 1 — the preserved files survive both strategies', () => {
@@ -160,15 +79,6 @@ describe('CRITERION 1 — the preserved files survive both strategies', () => {
 });
 
 describe('CRITERION 2 — a failed git step never pushes', () => {
-    /** Make the Nth matching command fail; everything else succeeds. */
-    function failOn(pattern: RegExp) {
-        mockExecute.mockImplementation(async (cmd: string) =>
-            pattern.test(cmd)
-                ? { code: 1, stdout: '', stderr: 'boom' }
-                : { code: 0, stdout: '', stderr: '' }
-        );
-    }
-
     it('CONTROL: a fully successful sync DOES push', () => {
         // Otherwise every assertion in this block passes trivially.
         return service()
@@ -211,7 +121,7 @@ describe('CRITERION 3 — conflicts surface rather than resolving silently', () 
         mockExecute.mockImplementation(async (cmd: string) =>
             /diff --name-only --diff-filter=U/.test(cmd)
                 ? { code: 0, stdout: 'blocks/hero/hero.js\nstyles/styles.css\n', stderr: '' }
-                : { code: 0, stdout: '', stderr: '' },
+                : { code: 0, stdout: '', stderr: '' }
         );
     }
 

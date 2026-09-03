@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/updates/commands/checkUpdates.ts"
+        "src/features/updates/services/templateSyncService.ts"
     ],
     "reporters": [
         "clear-text",
