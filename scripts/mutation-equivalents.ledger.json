@@ -92,6 +92,18 @@
             "decision": "none — the `?.` is required by the type. A rewrite (`const list = get(key); if (list) list.push(...) else set(key, [selection])`) would be fully killable, but is a style change to src, outside this batch's remit",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-01, updateExecutor focus run"
+        },
+        {
+            "module": "src/features/updates/commands/checkUpdates.ts",
+            "anchors": [
+                "this.logger.debug(`[Updates] Graduation off-ramp skipped: ${(error as Error).message}`);"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch body in maybeOfferGraduation leaves the error swallowed exactly as before; the body is one debug line. The catch itself IS tested (a rejected getLatestFinalVersion raises no error box and the picker still opens), so only the diagnostic line is unconstrained, and asserting debug text is what the ratchet refuses to reward.",
+            "decision": "none — a swallowed error should say so in the debug channel; the line stays",
+            "recorded": "2026-09-03",
+            "source": "PL-22 batch MUT-01, checkUpdates focus run"
         }
     ]
 }

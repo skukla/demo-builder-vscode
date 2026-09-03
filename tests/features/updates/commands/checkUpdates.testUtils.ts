@@ -160,3 +160,21 @@ export function setupDefaultMocks(): CheckUpdatesHarness {
 
     return { mockProgress, mockContext, mockStateManager, mockLogger };
 }
+
+/**
+ * Make the state manager answer for exactly these projects: `getAllProjects`
+ * lists them and `loadProjectFromPath` finds each by path (null for a path it
+ * does not know, which is what production returns for a project that failed
+ * to load).
+ */
+export function loadProjects(
+    mockStateManager: jest.Mocked<StateManager>,
+    ...projects: Project[]
+): void {
+    mockStateManager.getAllProjects.mockResolvedValue(
+        projects.map((p) => ({ name: p.name, path: p.path, lastModified: new Date() })),
+    );
+    mockStateManager.loadProjectFromPath.mockImplementation(async (path: string) =>
+        projects.find((p) => p.path === path) ?? null,
+    );
+}

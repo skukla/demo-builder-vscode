@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/updates/commands/updateExecutor.ts"
+        "src/features/updates/commands/checkUpdates.ts"
     ],
     "reporters": [
         "clear-text",

@@ -199,3 +199,6 @@ which point the cadence drops to release cuts.
 - 2026-09-03  RATIFIED by the owner 2026-09-03: tiers as measured (tierOf, async density); floors 90/80/70 are targets not a gate; done = openGaps 0 (survivors killed or in the equivalents ledger with a reason); per-change ratchet unchanged. Next: the burn-down pass, ordered by consequence, run as a goal queue.
 - 2026-09-03  feat(mutation): ratify the tiers and the gate, and generate the burn-down queue (`102a9cf47`)
 - 2026-09-03  docs(backlog): log the baseline commit against PL-22 (`5f4446344`)
+- 2026-09-03  test(updates): bring updateExecutor to zero open mutation gaps (`1c7ab26a5`)
+- 2026-09-03  fix(overnight): cut the branch from HEAD, verify goals after checkout, never exit 0 having run nothing (`7b5c00af2`)
+- 2026-09-03  docs(backlog): log the ratification commit against PL-22 (`1f2ef1427`)
