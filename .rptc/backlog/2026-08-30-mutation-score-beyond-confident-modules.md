@@ -218,3 +218,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  refactor(updates): drop the dead optional chain in adobeMcpUpdateCore (`245c18e89`)
 - 2026-09-03  test(updates): bring extensionUpdater to zero open mutation gaps (`9a56fd7bb`)
 - 2026-09-03  test(auth): bring adobeWorkspaceCredentials to zero open mutation gaps (`2b190a9c8`)
+- 2026-09-03  test(auth): bring projectHandlers to zero open mutation gaps (`d1060d458`)
