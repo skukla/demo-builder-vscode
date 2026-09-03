@@ -586,16 +586,3 @@ describe('connect_dalive', () => {
         expect(out.needsUser).toBeDefined();
     });
 });
-
-/**
- * WHAT THESE TOOLS TELL AN AGENT ABOUT THEMSELVES.
- *
- * `annotations` is not decoration. It travels to the client in `tools/list`, so it is
- * how Claude Code learns which of these tools are safe to call unprompted, and the dry
- * run gates on `readOnlyHint`. Twelve mutants sat on these six booleans and every one
- * survived: nothing asserted them, because the test harness discarded the definition
- * and kept only the handler.
- *
- * Flipping one is not a test failure anywhere else in this suite — it is an agent being
- * told that a tool which rewrites a project manifest is read-only.
- */

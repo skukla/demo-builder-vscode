@@ -41,35 +41,14 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true });
 import {
     createSetupContext,
     executeStorefrontSetupPhases,
+    createEdsConfig,
 } from './storefrontSetupPhases.testUtils';
-import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
 // =============================================================================
 // Helpers
 // =============================================================================
-
-function createEdsConfig(
-    overrides?: Partial<StorefrontSetupStartPayload['edsConfig']>
-): StorefrontSetupStartPayload['edsConfig'] {
-    return {
-        repoName: 'test-repo',
-        repoMode: 'new',
-        daLiveOrg: 'test-org',
-        daLiveSite: 'test-site',
-        githubOwner: 'test-owner',
-        templateOwner: 'template-owner',
-        templateRepo: 'template-repo',
-        createdRepo: {
-            owner: 'test-owner',
-            name: 'test-repo',
-            url: 'https://github.com/test-owner/test-repo',
-            fullName: 'test-owner/test-repo',
-        },
-        ...overrides,
-    };
-}
 
 // =============================================================================
 // Tests

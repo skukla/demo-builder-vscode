@@ -10,6 +10,7 @@ import {
     WebviewCommunicationManager,
     createWebviewCommunication,
     vscode,
+    setupHandshakenManager,
 } from './webviewCommunicationManager.testUtils';
 import { Message } from '@/types/messages';
 
@@ -17,49 +18,11 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
     let mockPanel: vscode.WebviewPanel;
     let mockWebview: vscode.Webview;
     let manager: WebviewCommunicationManager;
-    let messageListener: (message: Message) => void;
+    let listener: () => (message: Message) => void;
 
     beforeEach(async () => {
-        jest.clearAllMocks();
         jest.useFakeTimers();
-
-        // Create mock webview
-        mockWebview = {
-            postMessage: jest.fn().mockResolvedValue(true),
-            onDidReceiveMessage: jest.fn(),
-            html: '',
-            options: {},
-            cspSource: 'mock-csp',
-            asWebviewUri: jest.fn()
-        } as unknown as vscode.Webview;
-
-        // Create mock panel
-        mockPanel = {
-            webview: mockWebview,
-            dispose: jest.fn(),
-            onDidDispose: jest.fn()
-        } as unknown as vscode.WebviewPanel;
-
-        // Capture message listener
-        (mockWebview.onDidReceiveMessage as jest.Mock).mockImplementation((listener) => {
-            messageListener = listener;
-            return { dispose: jest.fn() };
-        });
-
-        // Setup manager and complete handshake
-        manager = new WebviewCommunicationManager(mockPanel);
-        const initPromise = manager.initialize();
-        await Promise.resolve();
-
-        messageListener({
-            id: 'webview-1',
-            type: '__webview_ready__',
-            timestamp: Date.now()
-        });
-
-        await initPromise;
-
-        (mockWebview.postMessage as jest.Mock).mockClear();
+        ({ mockPanel, mockWebview, manager, listener } = await setupHandshakenManager());
     });
 
     afterEach(() => {
@@ -81,7 +44,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
             await Promise.resolve();
 
             // Simulate webview responding
-            messageListener({
+            listener()({
                 id: 'webview-1',
                 type: '__webview_ready__',
                 timestamp: Date.now()
@@ -104,7 +67,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
             await Promise.resolve();
 
             // Simulate webview responding
-            messageListener({
+            listener()({
                 id: 'webview-1',
                 type: '__webview_ready__',
                 timestamp: Date.now()
@@ -123,7 +86,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
             manager.on('test-message', handler);
 
             // Message without payload
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'test-message',
                 timestamp: Date.now()
@@ -139,7 +102,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
             const handler = jest.fn().mockResolvedValue({ result: 'ok' });
             manager.on('test-message', handler);
 
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'test-message',
                 payload: null as unknown as Record<string, unknown>,
@@ -153,7 +116,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
 
         it('should handle unregistered message types gracefully', async () => {
             // Message with no registered handler
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'unknown-message',
                 payload: {},
@@ -174,7 +137,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
             const handler = jest.fn().mockResolvedValue(undefined);
             manager.on('test-message', handler);
 
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'test-message',
                 payload: {},
@@ -196,7 +159,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
             const handler = jest.fn().mockRejectedValue('String error');
             manager.on('test-message', handler);
 
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'test-message',
                 payload: {},
@@ -229,7 +192,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
             manager.on('message-2', handler2);
 
             // Send both messages
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'message-1',
                 payload: {},
@@ -237,7 +200,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
                 expectsResponse: true
             });
 
-            messageListener({
+            listener()({
                 id: 'msg-2',
                 type: 'message-2',
                 payload: {},
@@ -254,7 +217,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
 
         it('should handle response to non-existent request', async () => {
             // Response to request that doesn't exist
-            messageListener({
+            listener()({
                 id: 'resp-1',
                 type: '__response__',
                 payload: { result: 'orphan' },
@@ -278,7 +241,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
             const initPromise = manager.initialize();
             await Promise.resolve();
 
-            messageListener({
+            listener()({
                 id: 'webview-1',
                 type: '__webview_ready__',
                 timestamp: Date.now()
@@ -296,7 +259,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
             const initPromise = manager.initialize();
             await Promise.resolve();
 
-            messageListener({
+            listener()({
                 id: 'webview-1',
                 type: '__webview_ready__',
                 timestamp: Date.now()

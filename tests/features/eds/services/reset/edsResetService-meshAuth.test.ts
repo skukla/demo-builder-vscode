@@ -12,6 +12,8 @@
  * AIO_CONSOLE_* env — without clobbering concurrent processes.
  */
 
+import './edsResetService.sharedMocks';
+
 import type { Project } from '@/types/base';
 
 jest.setTimeout(5000);
@@ -32,37 +34,11 @@ jest.mock('@/core/shell/orgContextEnv', () => ({
     withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
 }));
 
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000, NORMAL: 30000, PREREQUISITE_CHECK: 10000, UI: { MIN_LOADING: 200 } },
-}));
-
 jest.mock('@/features/components/services/blockLibraryLoader', () => ({
     getBlockLibrarySource: jest.fn(),
     getBlockLibraryName: jest.fn(),
     getBlockLibraryContentSource: jest.fn().mockReturnValue(null),
     isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
-}));
-
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest.fn(),
-}));
-
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: jest.fn().mockReturnValue({
-        tokenService: {},
-        fileOperations: {
-            resetRepoToTemplate: jest
-                .fn()
-                .mockResolvedValue({ fileCount: 10, commitSha: 'abc1234567' }),
-            getFileContent: jest.fn().mockResolvedValue(null),
-            createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
-        },
-    }),
-    configureDaLivePermissions: jest.fn().mockResolvedValue({ success: true }),
-    getDaLiveAuthService: jest.fn().mockReturnValue({
-        getAccessToken: jest.fn().mockResolvedValue('token'),
-        getUserEmail: jest.fn().mockResolvedValue('test@example.com'),
-    }),
 }));
 
 // NOT mocked, and it does not need to be: the collaborator is constructed on this
@@ -96,7 +72,7 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false });
 // =============================================================================
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
-import { createResetContext, meshDeps } from './edsResetService.testUtils';
+import { createResetContext, meshDeps, resetParams } from './edsResetService.testUtils';
 
 // =============================================================================
 // Helpers
@@ -171,16 +147,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
 
         // When: Executing reset with mesh redeployment
         await executeEdsReset(
-            {
-                repoOwner: 'test-owner',
-                repoName: 'test-repo',
-                daLiveOrg: 'test-org',
-                daLiveSite: 'test-repo',
-                templateOwner: 'template-owner',
-                templateRepo: 'template-repo',
-                project,
-                redeployMesh: true,
-            },
+            resetParams(project, { redeployMesh: true }),
             context,
             mockTokenProvider,
             meshDeps
@@ -201,16 +168,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
 
         // When
         await executeEdsReset(
-            {
-                repoOwner: 'test-owner',
-                repoName: 'test-repo',
-                daLiveOrg: 'test-org',
-                daLiveSite: 'test-repo',
-                templateOwner: 'template-owner',
-                templateRepo: 'template-repo',
-                project,
-                redeployMesh: true,
-            },
+            resetParams(project, { redeployMesh: true }),
             context,
             mockTokenProvider,
             meshDeps
@@ -236,16 +194,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
 
         // When
         await executeEdsReset(
-            {
-                repoOwner: 'test-owner',
-                repoName: 'test-repo',
-                daLiveOrg: 'test-org',
-                daLiveSite: 'test-repo',
-                templateOwner: 'template-owner',
-                templateRepo: 'template-repo',
-                project,
-                redeployMesh: true,
-            },
+            resetParams(project, { redeployMesh: true }),
             context,
             mockTokenProvider,
             meshDeps
@@ -273,16 +222,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
 
         // When
         const result = await executeEdsReset(
-            {
-                repoOwner: 'test-owner',
-                repoName: 'test-repo',
-                daLiveOrg: 'test-org',
-                daLiveSite: 'test-repo',
-                templateOwner: 'template-owner',
-                templateRepo: 'template-repo',
-                project,
-                redeployMesh: true,
-            },
+            resetParams(project, { redeployMesh: true }),
             context,
             mockTokenProvider,
             meshDeps
@@ -302,16 +242,7 @@ describe('EDS Reset Service - Mesh Redeployment Auth', () => {
 
         // When
         await executeEdsReset(
-            {
-                repoOwner: 'test-owner',
-                repoName: 'test-repo',
-                daLiveOrg: 'test-org',
-                daLiveSite: 'test-repo',
-                templateOwner: 'template-owner',
-                templateRepo: 'template-repo',
-                project,
-                redeployMesh: false,
-            },
+            resetParams(project, { redeployMesh: false }),
             context,
             mockTokenProvider,
             meshDeps

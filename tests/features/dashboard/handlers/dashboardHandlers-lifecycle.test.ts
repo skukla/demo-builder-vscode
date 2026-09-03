@@ -8,12 +8,15 @@
  */
 
 import * as vscode from 'vscode';
+// First: `dashboardHandlers.testUtils` installs this family's module wall, and
+// jest.mock hoists above the imports of the module it appears in — not across
+// modules — so it has to register before the handlers below bind.
+import { setupMocks } from './dashboardHandlers.testUtils';
 import {
     handleRestartDemo,
     handleStartDemo,
     handleStopDemo,
 } from '@/features/dashboard/handlers/dashboardHandlers';
-import { setupMocks } from './dashboardHandlers.testUtils';
 
 // Mock vscode
 jest.mock('vscode', () => ({
@@ -32,28 +35,7 @@ jest.mock('vscode', () => ({
     },
 }), { virtual: true });
 
-// Mock stalenessDetector
-jest.mock('@/features/mesh/services/stalenessDetector');
-
 // Mock authentication
-
-// Mock ServiceLocator
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(),
-    },
-}));
-
-// Mock validation
-jest.mock('@/core/validation/URLValidator', () => ({
-    validateURL: jest.fn(),
-}));
-
-jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
-}));
 
 describe('Dashboard Lifecycle Handlers', () => {
     const mockExecuteCommand = vscode.commands.executeCommand as jest.Mock;

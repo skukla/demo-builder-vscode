@@ -145,20 +145,36 @@ describe('ProcessCleanup - Basic Operations', () => {
         it('should kill parent and all child processes', async () => {
             // Given: Parent process with 2 child processes
             // Create a parent that spawns children
+            // The parent ANNOUNCES readiness rather than the test guessing at it.
+            // This waited a flat 500ms for node to start and spawn two children;
+            // on a busy machine that is not enough, and the kill then ran against
+            // a tree that did not exist yet. Same defect class as the two MCP
+            // socket suites (2026-09-02).
             const parentProcess = spawn('node', [
                 '-e',
                 `
                 const { spawn } = require('child_process');
                 const child1 = spawn('sleep', ['10']);
                 const child2 = spawn('sleep', ['10']);
+                process.stdout.write('children-up\\n');
                 setTimeout(() => {}, 60000);
                 `
             ]);
 
             const parentPid = parentProcess.pid!;
 
-            // Wait for children to spawn
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise<void>((resolve, reject) => {
+                const timer = setTimeout(
+                    () => reject(new Error('parent never reported its children up')),
+                    10_000
+                );
+                parentProcess.stdout?.on('data', (chunk: Buffer) => {
+                    if (chunk.toString().includes('children-up')) {
+                        clearTimeout(timer);
+                        resolve();
+                    }
+                });
+            });
 
             // When: killProcessTree(parentPid) called
             await processCleanup.killProcessTree(parentPid);

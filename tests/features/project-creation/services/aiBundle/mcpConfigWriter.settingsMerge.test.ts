@@ -13,32 +13,12 @@ import {
     fsPromises,
     writeMcpConfigs,
 } from './mcpConfigWriter.testUtils';
+import { makeEdsProject } from './aiBundleFixtures';
 import { makeTestWriter } from './generatedFileWriter.testUtils';
-import type { Project } from '@/types/base';
 
 const EXTENSION_DIST = '/path/to/extension/dist';
 // Pre-resolved Node binary — passed so the writer never shells out in tests.
 const NODE_PATH = '/usr/local/bin/node';
-
-function makeEdsProject(): Project {
-    return {
-        name: 'test-project',
-        created: new Date('2026-01-01'),
-        lastModified: new Date('2026-01-01'),
-        path: '/projects/test-project',
-        status: 'ready',
-        selectedStack: 'eds-paas',
-        componentInstances: {
-            'eds-storefront': {
-                id: 'eds-storefront',
-                name: 'EDS Storefront',
-                status: 'ready',
-                path: '/projects/test/components/eds-storefront',
-                metadata: { githubRepo: 'owner/my-repo' },
-            },
-        },
-    };
-}
 
 describe('writeMcpConfigs settings.json merge', () => {
     it('preserves user settings on disk instead of overwriting', async () => {

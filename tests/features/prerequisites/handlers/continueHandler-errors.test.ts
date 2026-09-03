@@ -1,43 +1,19 @@
 import {
-    ServiceLocator,
     shared,
+    setupContinueHandler,
 } from './continueHandler.testUtils';
 import { handleContinuePrerequisites } from '@/features/prerequisites/handlers/continueHandler';
 import { PrerequisiteStatus } from '@/features/prerequisites/services/types';
 import {
-    createContinueHandlerContext,
     mockAdobeCliPrereq,
 } from './continueHandler.testUtils';
 
 describe('Prerequisites Continue Handler - Error Handling', () => {
     let mockContext: any;
-    let mockCommandExecutor: any;
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        // Mock CommandExecutor
-        mockCommandExecutor = {
-            execute: jest.fn().mockResolvedValue({ stdout: '@adobe/aio-cli/10.0.0' }),
-        };
-        (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
-
-        // Mock shared utilities
-        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({
-            '18': 'React App',
-            '20': 'Node Backend',
-        });
-        (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(true);
-        // Object utility helpers (used for Object.keys patterns)
-        (shared.hasNodeVersions as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
-            return mapping && Object.keys(mapping).length > 0;
-        });
-        (shared.getNodeVersionKeys as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
-            return Object.keys(mapping || {}).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-        });
-
-        // Create mock context
-        mockContext = createContinueHandlerContext();
+        ({ mockContext } = setupContinueHandler());
     });
 
     describe('missing state validation', () => {

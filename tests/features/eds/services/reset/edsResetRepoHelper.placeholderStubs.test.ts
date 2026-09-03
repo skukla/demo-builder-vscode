@@ -9,34 +9,13 @@
  * repo's mock-audit rule.
  */
 
-import type { HandlerContext } from '@/types/handlers';
+import '../../../../helpers/edsPlaceholderStubMocks';
 
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mock-fstab'),
-}));
+import type { HandlerContext } from '@/types/handlers';
 
 jest.mock('@/features/eds/services/configGenerator', () => ({
     generateConfigJson: jest.fn().mockReturnValue({ success: true, content: '{}' }),
     buildConfigGeneratorParams: jest.fn().mockReturnValue({}),
-}));
-
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest
-        .fn()
-        .mockResolvedValue({ success: true, blocksCount: 0, blockIds: [] }),
-}));
-
-jest.mock('@/features/eds/services/inspectorHelpers', () => ({
-    generateInspectorTreeEntries: jest.fn().mockResolvedValue([]),
-    installInspectorTagging: jest.fn().mockResolvedValue({ success: true }),
-}));
-
-jest.mock('@/features/eds/services/pdp/pdp404HandlerPublisher', () => ({
-    installSmart404Handler: jest.fn().mockResolvedValue({ installed: false, reason: 'no-overlay' }),
-}));
-
-jest.mock('@/features/eds/services/quickEditPublisher', () => ({
-    installQuickEdit: jest.fn().mockResolvedValue({ installed: true }),
 }));
 
 jest.mock('@/features/eds/services/patches/lkgReader', () => ({
@@ -45,13 +24,6 @@ jest.mock('@/features/eds/services/patches/lkgReader', () => ({
 
 jest.mock('@/features/eds/services/patches/codePatchPipelineHelpers', () => ({
     applyCanonicalCodePatches: jest.fn().mockResolvedValue([]),
-}));
-
-jest.mock('@/features/components/services/blockLibraryLoader', () => ({
-    getBlockLibrarySource: jest.fn(),
-    getBlockLibraryName: jest.fn(),
-    getBlockLibraryContentSource: jest.fn(),
-    isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
 import { resetRepoToTemplate } from '@/features/eds/services/reset/edsResetRepoHelper';

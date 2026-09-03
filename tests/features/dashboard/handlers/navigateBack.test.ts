@@ -33,17 +33,6 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
-// Mock validation
-jest.mock('@/core/validation/URLValidator', () => ({
-    validateURL: jest.fn(),
-}));
-
-jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
-}));
-
 // Mock BaseWebviewCommand (used by handleNavigateBack for panel transition)
 jest.mock('@/core/base/baseWebviewCommand', () => ({
     BaseWebviewCommand: {
@@ -53,6 +42,7 @@ jest.mock('@/core/base/baseWebviewCommand', () => ({
     },
 }));
 
+import './dashboardValidatorMocks';
 import * as vscode from 'vscode';
 import { handleNavigateBack } from '@/features/dashboard/handlers/dashboardHandlers';
 

@@ -16,6 +16,10 @@
  */
 
 import {
+    mockUseComponentConfig,
+    mockUseStoreDiscovery,
+} from './ConnectStoreStepContent.sharedMocks';
+import {
     mockLookupComponentConfigValue,
 } from './ConnectStoreStepContent.testUtils';
 import React from 'react';
@@ -23,7 +27,6 @@ import { render, screen, within } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import {
-    type MockServiceGroup,
     ACCS_ENDPOINT_KEY,
     PAAS_URL,
     PAAS_ADMIN_USERNAME,
@@ -38,38 +41,6 @@ import {
 // Mock setup (mirrors ConnectStoreStepContent.test.tsx)
 // ---------------------------------------------------------------------------
 
-const mockUseComponentConfig = {
-    isLoading: false,
-    loadError: null as string | null,
-    serviceGroups: [] as MockServiceGroup[],
-    validationErrors: {} as Record<string, string>,
-    touchedFields: new Set<string>(),
-    componentConfigs: {} as Record<string, Record<string, string | boolean>>,
-    updateField: jest.fn(),
-    getFieldValue: jest.fn().mockReturnValue(''),
-    normalizeUrlField: jest.fn(),
-};
-
-const mockUseStoreDiscovery = {
-    isFetching: false,
-    fetchError: null as string | null,
-    hasStoreData: false,
-    fetchStores: jest.fn(),
-    getWebsiteItems: jest.fn().mockReturnValue([]),
-    getStoreGroupItems: jest.fn().mockReturnValue([]),
-    getStoreViewItems: jest.fn().mockReturnValue([]),
-    isStoreGroup: jest.fn((groupId: string) => groupId === 'accs' || groupId === 'adobe-commerce'),
-};
-
-jest.mock('@/features/components/ui/hooks/useComponentConfig', () => ({
-    useComponentConfig: () => mockUseComponentConfig,
-    __esModule: true,
-}));
-
-jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
-    useStoreDiscovery: () => mockUseStoreDiscovery,
-}));
-
 jest.mock('@/features/components/ui/components/ConfigFieldRenderer', () => ({
     ConfigFieldRenderer: ({ field, value, error, isTouched, onUpdate, onNormalizeUrl }: any) => (
         <div data-testid={`config-field-${field.key}`}>
@@ -83,12 +54,6 @@ jest.mock('@/features/components/ui/components/ConfigFieldRenderer', () => ({
             />
             {error && isTouched && <span data-testid={`error-${field.key}`}>{error}</span>}
         </div>
-    ),
-}));
-
-jest.mock('@/features/components/ui/components/StoreSelectionRow', () => ({
-    StoreSelectionRow: ({ group }: any) => (
-        <div data-testid={`store-selection-row-${group.id}`}>Store Selection for {group.label}</div>
     ),
 }));
 

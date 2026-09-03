@@ -21,8 +21,9 @@
  *   generateAIContextFiles.test.ts.)
  */
 
+import { fsPromises } from './aiBundleFsMock';
 import { createHash } from 'crypto';
-import * as fsPromises from 'fs/promises';
+import { makeEdsProject, makeEdsStorefrontInstance } from './aiBundleFixtures';
 import * as childProcess from 'child_process';
 import { enoentError, makeTestWriter } from './generatedFileWriter.testUtils';
 import {
@@ -31,26 +32,6 @@ import {
     refreshMcpConfigs,
 } from '@/features/project-creation/services/aiBundle/aiBundleService';
 import type { Project } from '@/types/base';
-
-jest.mock('fs/promises', () => {
-    const writeFile = jest.fn().mockResolvedValue(undefined);
-    return {
-        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        realpath: jest.fn(async (p: string) => p),
-        mkdir: jest.fn().mockResolvedValue(undefined),
-        writeFile,
-        readFile: jest.fn(),
-        appendFile: jest.fn().mockResolvedValue(undefined),
-        unlink: jest.fn().mockResolvedValue(undefined),
-        readdir: jest.fn(),
-        // O_NOFOLLOW writes go through open(); the returned handle delegates to
-        // the writeFile mock WITH the path, so path-based assertions keep working.
-        open: jest.fn(async (p: unknown) => ({
-            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
-            close: jest.fn(async () => undefined),
-        })),
-    };
-});
 
 // `resolveNodePath` shells out via promisify(execFile) when no nodePath is
 // supplied (the generateAIContextFiles path) — keep it deterministic. `exec`
@@ -93,19 +74,6 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     };
 }
 
-function makeEdsProject(): Project {
-    return makeProject({
-        componentInstances: {
-            'eds-storefront': {
-                id: 'eds-storefront',
-                name: 'EDS Storefront',
-                status: 'ready',
-                path: '/projects/test/components/eds-storefront',
-                metadata: { githubRepo: 'owner/my-repo' },
-            },
-        },
-    });
-}
 
 /** All paths absent (ENOENT) unless a suffix matcher supplies content. */
 function mockDisk(contentBySuffix: Record<string, string> = {}): void {
@@ -154,7 +122,7 @@ describe('refreshMcpConfigs', () => {
             '.claude/settings.json': 'hash-that-does-not-match-disk',
         });
 
-        await refreshMcpConfigs(PROJECT_PATH, makeEdsProject(), EXTENSION_PATH, writer, NODE_PATH);
+        await refreshMcpConfigs(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH, componentInstances: { 'eds-storefront': makeEdsStorefrontInstance({}, `${PROJECT_PATH}/components/eds-storefront`) } }), EXTENSION_PATH, writer, NODE_PATH);
 
         const report = writer.report();
         expect(report.written).toContain('.claude/settings.json');

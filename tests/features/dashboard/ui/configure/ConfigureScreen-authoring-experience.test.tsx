@@ -1,3 +1,6 @@
+import './ConfigureScreen.mocks';
+import './ConfigureScreen.storeDiscoveryMocks';
+
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -11,26 +14,8 @@ import {
     railTabLabels,
 } from './ConfigureScreen.testUtils';
 
-// Mock hooks
-jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
-    useFocusTrap: jest.fn(() => ({ current: null })),
-}));
-
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
     useSelectableDefault: jest.fn(() => ({})),
-}));
-
-jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
-    useSelectableDefault: jest.fn(() => ({})),
-}));
-
-// Mock WebviewClient
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-    },
 }));
 
 // Mock layout components. The shell + rail are NOT mocked (direct-path imports) so the
@@ -51,23 +36,6 @@ jest.mock('@/core/ui/components/layout/PageHeader', () => ({
             {subtitle && <h3>{subtitle}</h3>}
         </div>
     ),
-}));
-
-jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
-    useStoreDiscovery: () => ({
-        isFetching: false,
-        fetchError: null,
-        hasStoreData: false,
-        fetchStores: jest.fn(),
-        getWebsiteItems: () => [],
-        getStoreGroupItems: () => [],
-        getStoreViewItems: () => [],
-        isStoreGroup: () => false,
-    }),
-}));
-
-jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
-    useAutoStoreDetect: () => ({ autoDetectKey: undefined, forceFetch: jest.fn() }),
 }));
 
 jest.mock('@/features/components/ui/components/StoreConfigFieldRow', () => ({

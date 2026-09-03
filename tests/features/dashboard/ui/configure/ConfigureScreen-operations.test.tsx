@@ -1,3 +1,4 @@
+import './ConfigureScreen.mocks';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
@@ -6,26 +7,8 @@ import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScre
 import '@testing-library/jest-dom';
 import { mockProject, mockComponentsData, selectSection } from './ConfigureScreen.testUtils';
 
-// Mock hooks
-jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
-    useFocusTrap: jest.fn(() => ({ current: null })),
-}));
-
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
     useSelectableDefault: jest.fn(() => ({})),
-}));
-
-jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
-    useSelectableDefault: jest.fn(() => ({})),
-}));
-
-// Mock WebviewClient
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-    },
 }));
 
 // Mock layout components

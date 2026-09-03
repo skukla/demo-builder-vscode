@@ -37,16 +37,6 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
-jest.mock('@/core/validation/URLValidator', () => ({
-    validateURL: jest.fn(),
-}));
-
-jest.mock('@/core/validation/validators/AdobeResourceValidator', () => ({
-    validateOrgId: jest.fn(),
-    validateProjectId: jest.fn(),
-    validateWorkspaceId: jest.fn(),
-}));
-
 // Org targeting is ambient; the only way to observe it is the wrapper.
 const mockWithOrgContext = jest.fn((_t: unknown, fn: () => Promise<unknown>) => fn());
 jest.mock('@/core/shell/orgContextEnv', () => ({
@@ -65,6 +55,7 @@ jest.mock('@/core/base/baseWebviewCommand', () => ({
     },
 }));
 
+import './dashboardValidatorMocks';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';

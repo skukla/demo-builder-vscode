@@ -5,7 +5,7 @@
  * establishing the request-response pattern for component operations.
  */
 
-import { ComponentRegistryManager, DependencyResolver } from './componentHandlers.testUtils';
+import { ComponentRegistryManager, DependencyResolver, setupComponentHandlerSuite } from './componentHandlers.testUtils';
 import {
     handleLoadDependencies,
     handleValidateSelection,
@@ -16,11 +16,6 @@ import {
     handleLoadPreset,
 } from '@/features/components/handlers/componentHandlers';
 import { HandlerContext } from '@/types/handlers';
-import {
-    createComponentHandlerContext,
-    createMockRegistryManager,
-    createMockDependencyResolver,
-} from './componentHandlers.testUtils';
 
 describe('componentHandlers - Pattern B (request-response)', () => {
     let mockContext: HandlerContext;
@@ -28,23 +23,11 @@ describe('componentHandlers - Pattern B (request-response)', () => {
     let mockDependencyResolver: jest.Mocked<DependencyResolver>;
 
     beforeEach(() => {
-        mockContext = createComponentHandlerContext();
-        mockRegistryManager = createMockRegistryManager();
-        // The handler reads the registry off the context now (ADR-015); it no
-        // longer constructs one, so hand this suite's fake in directly. The
-        // constructor mock below stays for DependencyResolver's sake.
-        mockContext.componentRegistry = mockRegistryManager;
-        mockDependencyResolver = createMockDependencyResolver();
-
-        // Mock the ComponentRegistryManager constructor
-        (
-            ComponentRegistryManager as jest.MockedClass<typeof ComponentRegistryManager>
-        ).mockImplementation(() => mockRegistryManager);
-
-        // Mock the DependencyResolver constructor
-        (DependencyResolver as jest.MockedClass<typeof DependencyResolver>).mockImplementation(
-            () => mockDependencyResolver
-        );
+        ({
+            context: mockContext,
+            registryManager: mockRegistryManager,
+            dependencyResolver: mockDependencyResolver,
+        } = setupComponentHandlerSuite());
     });
 
     afterEach(() => {

@@ -7,8 +7,8 @@
  * Covers EDS projects, headless projects, block libraries, and conditional sections.
  */
 
+import { fsPromises } from './aiBundleFsMock';
 import { createHash } from 'crypto';
-import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { enoentError, makeTestWriter } from './generatedFileWriter.testUtils';
 import {
@@ -21,24 +21,7 @@ import {
     makeEdsProject,
     makeEdsStorefrontInstance,
     makeHeadlessProject,
-} from './aiContextWriter.testUtils';
-
-jest.mock('fs/promises', () => {
-    const writeFile = jest.fn().mockResolvedValue(undefined);
-    return {
-        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        realpath: jest.fn(async (p: string) => p),
-        mkdir: jest.fn().mockResolvedValue(undefined),
-        writeFile,
-        readFile: jest.fn(),
-        // O_NOFOLLOW writes go through open(); the returned handle delegates to
-        // the writeFile mock WITH the path, so path-based assertions keep working.
-        open: jest.fn(async (p: unknown) => ({
-            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
-            close: jest.fn(async () => undefined),
-        })),
-    };
-});
+} from './aiBundleFixtures';
 
 function sha256(content: string): string {
     return createHash('sha256').update(content, 'utf-8').digest('hex');

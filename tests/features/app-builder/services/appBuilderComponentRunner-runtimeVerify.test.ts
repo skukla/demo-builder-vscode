@@ -11,15 +11,10 @@
  * 500-line soft limit); same mock preamble conventions.
  */
 
+import { mockWithOrgContext } from './appBuilderComponentRunner.orgContextMock';
 import type { Project } from '@/types/base';
 
 jest.setTimeout(5000);
-
-const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
-jest.mock('@/core/shell/orgContextEnv', () => ({
-    ...jest.requireActual('@/core/shell/orgContextEnv'),
-    withOrgContext: (target: unknown, fn: () => Promise<unknown>) => mockWithOrgContext(target, fn),
-}));
 
 const mockListDeclaredPackageNames = jest.fn();
 jest.mock('@/features/app-builder/services/appConfigPackages', () => ({

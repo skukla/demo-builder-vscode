@@ -11,27 +11,10 @@
  * - Not pass nodeVersions for non-Node prerequisites
  */
 
+// Registers the shared module wall — must precede every other import here.
+import './installHandler.mocks';
+
 // Mock all dependencies (MUST be at top before imports)
-jest.mock('@/features/prerequisites/handlers/shared', () => {
-    const actual = jest.requireActual('@/features/prerequisites/handlers/shared');
-    return {
-        ...actual,
-        getRequiredNodeVersions: jest.fn(),
-        getNodeVersionMapping: jest.fn(),
-        checkPerNodeVersionStatus: jest.fn(),
-        hasNodeVersions: jest.fn(),
-        getNodeVersionKeys: jest.fn(),
-    };
-});
-jest.mock('@/core/di/serviceLocator');
-jest.mock('vscode', () => ({
-    env: {
-        openExternal: jest.fn(),
-    },
-    Uri: {
-        parse: jest.fn((url: string) => ({ url })),
-    },
-}));
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import * as shared from '@/features/prerequisites/handlers/shared';
@@ -226,7 +209,6 @@ describe('Install Handler - Node Versions Parameter Passing', () => {
             );
         });
     });
-
 
     /**
      * NODE VERSIONS ARE SORTED AS NUMBERS, NOT AS TEXT.

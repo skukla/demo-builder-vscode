@@ -23,8 +23,9 @@
  * source at the bottom, with a positive control on the loader import.
  */
 
+import { fsPromises } from './aiBundleFsMock';
 import { createHash } from 'crypto';
-import * as fsPromises from 'fs/promises';
+import { makeEdsProject, makeEdsStorefrontInstance } from './aiBundleFixtures';
 import * as childProcess from 'child_process';
 import * as path from 'path';
 import {
@@ -36,26 +37,6 @@ import { AI_CONTEXT_VERSION } from '@/core/constants';
 import { refreshAiBundlesOnActivation } from '@/features/project-creation/services/aiBundle/aiBundleActivationRefresh';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-
-jest.mock('fs/promises', () => {
-    const writeFile = jest.fn().mockResolvedValue(undefined);
-    return {
-        lstat: jest.fn().mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })),
-        realpath: jest.fn(async (p: string) => p),
-        mkdir: jest.fn().mockResolvedValue(undefined),
-        writeFile,
-        readFile: jest.fn(),
-        appendFile: jest.fn().mockResolvedValue(undefined),
-        unlink: jest.fn().mockResolvedValue(undefined),
-        readdir: jest.fn(),
-        // O_NOFOLLOW writes go through open(); the returned handle delegates to
-        // the writeFile mock WITH the path, so path-based assertions keep working.
-        open: jest.fn(async (p: unknown) => ({
-            writeFile: jest.fn(async (d: unknown, e: unknown) => writeFile(p as string, d, e)),
-            close: jest.fn(async () => undefined),
-        })),
-    };
-});
 
 // `resolveNode` is injected in every test, so the sweep itself never shells
 // out — but `browserUtils` (loaded transitively via aiContextWriter)
@@ -99,16 +80,15 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     };
 }
 
-function makeEdsProject(overrides: Partial<Project> = {}): Project {
-    return makeProject({
+function makeEdsProjectAtA(overrides: Partial<Project> = {}): Project {
+    return makeEdsProject({
+        name: 'demo-a',
+        path: PROJECT_A,
         componentInstances: {
-            'eds-storefront': {
-                id: 'eds-storefront',
-                name: 'EDS Storefront',
-                status: 'ready',
-                path: `${PROJECT_A}/components/eds-storefront`,
-                metadata: { githubRepo: 'owner/my-repo' },
-            },
+            'eds-storefront': makeEdsStorefrontInstance(
+                { githubRepo: 'owner/my-repo' },
+                `${PROJECT_A}/components/eds-storefront`
+            ),
         },
         ...overrides,
     });
@@ -445,7 +425,7 @@ describe('stale aiContextVersion stamp', () => {
                 '@playwright/mcp',
             ]),
         });
-        const deps = makeDeps({ [PROJECT_A]: makeEdsProject({ aiContextVersion: 3 }) });
+        const deps = makeDeps({ [PROJECT_A]: makeEdsProjectAtA({ aiContextVersion: 3 }) });
 
         await refreshAiBundlesOnActivation(EXTENSION_PATH, makeMockLogger(), deps);
 
@@ -461,7 +441,7 @@ describe('stale aiContextVersion stamp', () => {
         const skillRel = '.claude/skills/scrape-reference-site/SKILL.md';
         const skillAbs = path.join(PROJECT_A, skillRel);
         mockDisk({ [skillAbs]: 'previously generated content' });
-        const project = makeEdsProject({
+        const project = makeEdsProjectAtA({
             aiContextVersion: 3,
             aiFileHashes: { [skillRel]: sha256('previously generated content') },
         });

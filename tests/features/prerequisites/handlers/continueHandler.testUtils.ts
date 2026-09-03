@@ -111,3 +111,43 @@ export function createContinueHandlerContext(
         ...overrides,
     } as never);
 }
+
+import * as shared from '@/features/prerequisites/handlers/shared';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+
+export interface ContinueHandlerHarness {
+    mockContext: ReturnType<typeof createContinueHandlerContext>;
+    mockCommandExecutor: { execute: jest.Mock };
+}
+
+/**
+ * The collaborators two continueHandler suites set up identically.
+ *
+ * The two `mockImplementation`s are the real behaviour, not stubs: `hasNodeVersions`
+ * answers whether the mapping has any keys, and `getNodeVersionKeys` returns them
+ * NUMERICALLY sorted — text order would put Node 8 after Node 20, which is the
+ * defect the handler's own sort exists to prevent.
+ *
+ * The edge-cases suite is deliberately not a caller: it drives a different node
+ * mapping per test, so a shared default would be overwritten in every one.
+ */
+export function setupContinueHandler(): ContinueHandlerHarness {
+    const mockCommandExecutor = {
+        execute: jest.fn().mockResolvedValue({ stdout: '@adobe/aio-cli/10.0.0' }),
+    };
+    (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
+
+    (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({
+        '18': 'React App',
+        '20': 'Node Backend',
+    });
+    (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(true);
+    (shared.hasNodeVersions as jest.Mock).mockImplementation(
+        (mapping: Record<string, string>) => Boolean(mapping) && Object.keys(mapping).length > 0
+    );
+    (shared.getNodeVersionKeys as jest.Mock).mockImplementation((mapping: Record<string, string>) =>
+        Object.keys(mapping || {}).sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
+    );
+
+    return { mockContext: createContinueHandlerContext(), mockCommandExecutor };
+}

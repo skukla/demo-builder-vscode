@@ -5,7 +5,6 @@
  * Reference: .rptc/plans/resource-lifecycle-management/TESTING-MOCKING-PATTERNS.md
  */
 
-import * as vscode from 'vscode';
 import { createMockLogger } from '../../helpers/loggerFake';
 import { createMockStateManager } from '../../helpers/stateManagerFake';
 
@@ -27,43 +26,9 @@ jest.mock('vscode', () => {
             workspaceFolders: [
                 { uri: { fsPath: '/project1', toString: () => 'file:///project1' }, name: 'project1', index: 0 },
             ],
-            createFileSystemWatcher: jest.fn((pattern: string) => {
-                const watcher = {
-                    pattern,
-                    _disposed: false,
-                    _listeners: {
-                        onCreate: [] as ((...args: unknown[]) => unknown)[],
-                        onChange: [] as ((...args: unknown[]) => unknown)[],
-                        onDelete: [] as ((...args: unknown[]) => unknown)[]
-                    },
-                    onDidCreate: jest.fn((listener) => {
-                        watcher._listeners.onCreate.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    onDidChange: jest.fn((listener) => {
-                        watcher._listeners.onChange.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    onDidDelete: jest.fn((listener) => {
-                        watcher._listeners.onDelete.push(listener);
-                        return { dispose: () => {} };
-                    }),
-                    dispose: jest.fn(() => {
-                        watcher._disposed = true;
-                        const { mockWatchers } = require('./envFileWatcherService.testUtils');
-                        const idx = mockWatchers.indexOf(watcher);
-                        if (idx !== -1) mockWatchers.splice(idx, 1);
-                    }),
-                    // Helper to simulate file change
-                    _simulateChange: (uri: vscode.Uri) => {
-                        watcher._listeners.onChange.forEach((l: (...args: unknown[]) => unknown) => l(uri));
-                    }
-                };
-
-                const { mockWatchers } = require('./envFileWatcherService.testUtils');
-                mockWatchers.push(watcher);
-                return watcher;
-            })
+            createFileSystemWatcher: (
+                require('./recordingFileWatcher') as typeof import('./recordingFileWatcher')
+            ).createRecordingWatcherFactory(() => mockWatchers)
         },
         window: {
             showInformationMessage: jest.fn(() => Promise.resolve(undefined)),

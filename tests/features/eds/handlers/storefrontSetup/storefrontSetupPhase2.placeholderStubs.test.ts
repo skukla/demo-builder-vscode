@@ -8,41 +8,13 @@
  * commit stays non-fatal — it costs console cosmetics, never the setup.
  */
 
+import '../../../../helpers/edsPlaceholderStubMocks';
+
 import type { HandlerContext } from '@/types/handlers';
-
-jest.mock('@/features/eds/services/fstabGenerator', () => ({
-    generateFstabContent: jest.fn().mockReturnValue('mock-fstab'),
-}));
-
-jest.mock('@/features/eds/services/blockCollectionHelpers', () => ({
-    installBlockCollections: jest
-        .fn()
-        .mockResolvedValue({ success: true, blocksCount: 0, blockIds: [] }),
-}));
-
-jest.mock('@/features/eds/services/inspectorHelpers', () => ({
-    generateInspectorTreeEntries: jest.fn().mockResolvedValue([]),
-    installInspectorTagging: jest.fn().mockResolvedValue({ success: true }),
-}));
-
-jest.mock('@/features/eds/services/pdp/pdp404HandlerPublisher', () => ({
-    installSmart404Handler: jest.fn().mockResolvedValue({ installed: false, reason: 'no-overlay' }),
-}));
-
-jest.mock('@/features/eds/services/quickEditPublisher', () => ({
-    installQuickEdit: jest.fn().mockResolvedValue({ installed: true }),
-}));
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     addPdpCaveat: jest.fn(),
     describeSmart404Skip: jest.fn().mockReturnValue('skip'),
-}));
-
-jest.mock('@/features/components/services/blockLibraryLoader', () => ({
-    getBlockLibrarySource: jest.fn(),
-    getBlockLibraryName: jest.fn(),
-    getBlockLibraryContentSource: jest.fn(),
-    isBlockLibraryAvailableForPackage: jest.fn().mockReturnValue(true),
 }));
 
 import { executePhaseHelixConfig } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhase2';

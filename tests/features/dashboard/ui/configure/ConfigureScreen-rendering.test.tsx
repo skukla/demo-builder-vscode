@@ -1,3 +1,6 @@
+import './ConfigureScreen.mocks';
+import './ConfigureScreen.storeDiscoveryMocks';
+
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -11,26 +14,8 @@ import {
     railTabLabels,
 } from './ConfigureScreen.testUtils';
 
-// Mock hooks
-jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
-    useFocusTrap: jest.fn(() => ({ current: null })),
-}));
-
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
     useSelectableDefault: jest.fn(() => ({})),
-}));
-
-jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
-    useSelectableDefault: jest.fn(() => ({})),
-}));
-
-// Mock WebviewClient
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-    },
 }));
 
 // Mock layout components. NOTE: the shell (`layout/StepAreaShell`) and the rail
@@ -53,25 +38,6 @@ jest.mock('@/core/ui/components/layout/PageHeader', () => ({
             {subtitle && <h3>{subtitle}</h3>}
         </div>
     ),
-}));
-
-// Mock store discovery hooks & row — tested separately in ConfigureScreen-store-discovery.test.tsx.
-// Here we just need them to render benignly so the existing rendering assertions still pass.
-jest.mock('@/features/components/ui/hooks/useStoreDiscovery', () => ({
-    useStoreDiscovery: () => ({
-        isFetching: false,
-        fetchError: null,
-        hasStoreData: false,
-        fetchStores: jest.fn(),
-        getWebsiteItems: () => [],
-        getStoreGroupItems: () => [],
-        getStoreViewItems: () => [],
-        isStoreGroup: () => false,
-    }),
-}));
-
-jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
-    useAutoStoreDetect: () => ({ autoDetectKey: undefined, forceFetch: jest.fn() }),
 }));
 
 // Minimal stand-in for StoreConfigFieldRow — renders label + input so existing

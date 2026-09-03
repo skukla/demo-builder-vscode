@@ -11,29 +11,6 @@ import {
     resetMocks,
 } from './debugLogger.testUtils';
 
-// Mock vscode — the same preamble the sibling suites use (hoisting rules).
-jest.mock('vscode', () => {
-    const originalModule = jest.requireActual('../../__mocks__/vscode');
-    return {
-        ...originalModule,
-        window: {
-            ...originalModule.window,
-            createOutputChannel: jest.fn((name: string, options?: { log: boolean }) => {
-                const utils = require('./debugLogger.testUtils');
-                if (options?.log) {
-                    if (name === 'Demo Builder: User Logs') return utils.mockLogsChannel;
-                    if (name === 'Demo Builder: Debug Logs') return utils.mockDebugChannel;
-                }
-                return { append: jest.fn(), appendLine: jest.fn(), clear: jest.fn(), show: jest.fn(), hide: jest.fn(), dispose: jest.fn(), name };
-            }),
-        },
-        workspace: {
-            ...originalModule.workspace,
-            getConfiguration: jest.fn().mockReturnValue({ get: jest.fn().mockReturnValue('trace') }),
-        },
-    };
-});
-
 import { nextCallTag, runWithCallTag } from '@/core/logging/callTagContext';
 import { DebugLogger, _resetLoggerForTesting } from '@/core/logging/debugLogger';
 

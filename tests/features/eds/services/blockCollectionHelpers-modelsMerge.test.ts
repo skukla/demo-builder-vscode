@@ -16,9 +16,8 @@ import {
     createComponentModels,
     createDestComponentModels,
     createBlockFileEntries,
-    delegateCommitTreeToBranch,
+    setupBlockCollectionMocks,
 } from './blockCollectionHelpers.testUtils';
-import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('installBlockCollections (single library)', () => {
     const TEST_SOURCE: AddonSource = { owner: 'stephen-garner-adobe', repo: 'isle5', branch: 'main' };
@@ -56,22 +55,7 @@ describe('installBlockCollections (single library)', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        mockLogger = createMockLogger() as unknown as jest.Mocked<Logger>;
-
-        mockGithubFileOps = {
-            listRepoFiles: jest.fn(),
-            getBlobContent: jest.fn(),
-            getFileContent: jest.fn(),
-            getBranchInfo: jest.fn(),
-            createTree: jest.fn(),
-            createCommit: jest.fn(),
-            updateBranchRef: jest.fn(),
-            commitTreeToBranch: jest.fn(),
-        } as unknown as jest.Mocked<GitHubFileOperations>;
-        delegateCommitTreeToBranch(
-            mockGithubFileOps as unknown as Parameters<typeof delegateCommitTreeToBranch>[0],
-        );
+        ({ mockLogger, mockGithubFileOps } = setupBlockCollectionMocks());
     });
 
     describe('component-models merge', () => {

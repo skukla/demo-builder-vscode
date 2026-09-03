@@ -9,6 +9,7 @@
 import {
     WebviewCommunicationManager,
     vscode,
+    setupHandshakenManager,
 } from './webviewCommunicationManager.testUtils';
 import { Message } from '@/types/messages';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -17,49 +18,11 @@ describe('WebviewCommunicationManager - Messaging', () => {
     let mockPanel: vscode.WebviewPanel;
     let mockWebview: vscode.Webview;
     let manager: WebviewCommunicationManager;
-    let messageListener: (message: Message) => void;
+    let listener: () => (message: Message) => void;
 
     beforeEach(async () => {
-        jest.clearAllMocks();
         jest.useFakeTimers();
-
-        // Create mock webview
-        mockWebview = {
-            postMessage: jest.fn().mockResolvedValue(true),
-            onDidReceiveMessage: jest.fn(),
-            html: '',
-            options: {},
-            cspSource: 'mock-csp',
-            asWebviewUri: jest.fn()
-        } as unknown as vscode.Webview;
-
-        // Create mock panel
-        mockPanel = {
-            webview: mockWebview,
-            dispose: jest.fn(),
-            onDidDispose: jest.fn()
-        } as unknown as vscode.WebviewPanel;
-
-        // Capture message listener
-        (mockWebview.onDidReceiveMessage as jest.Mock).mockImplementation((listener) => {
-            messageListener = listener;
-            return { dispose: jest.fn() };
-        });
-
-        // Setup manager and complete handshake
-        manager = new WebviewCommunicationManager(mockPanel);
-        const initPromise = manager.initialize();
-        await Promise.resolve();
-
-        messageListener({
-            id: 'webview-1',
-            type: '__webview_ready__',
-            timestamp: Date.now()
-        });
-
-        await initPromise;
-
-        (mockWebview.postMessage as jest.Mock).mockClear();
+        ({ mockPanel, mockWebview, manager, listener } = await setupHandshakenManager());
     });
 
     afterEach(() => {
@@ -75,7 +38,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
             const requestMessage = calls[0][0] as Message;
 
             // Simulate webview response
-            messageListener({
+            listener()({
                 id: 'response-1',
                 type: '__response__',
                 payload: { result: 'success' },
@@ -97,7 +60,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
             // Re-complete handshake
             const initPromise = manager.initialize();
             await Promise.resolve();
-            messageListener({
+            listener()({
                 id: 'webview-1',
                 type: '__webview_ready__',
                 timestamp: Date.now()
@@ -121,7 +84,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
             const requestMessage = calls[0][0] as Message;
 
             // Simulate error response
-            messageListener({
+            listener()({
                 id: 'response-1',
                 type: '__response__',
                 timestamp: Date.now(),
@@ -142,7 +105,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
 
             // Respond to request 2
             const req2Message = calls.find(c => c[0].type === 'request-2')![0] as Message;
-            messageListener({
+            listener()({
                 id: 'resp-2',
                 type: '__response__',
                 payload: { result: 2 },
@@ -153,7 +116,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
 
             // Respond to request 1
             const req1Message = calls.find(c => c[0].type === 'request-1')![0] as Message;
-            messageListener({
+            listener()({
                 id: 'resp-1',
                 type: '__response__',
                 payload: { result: 1 },
@@ -164,7 +127,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
 
             // Respond to request 3
             const req3Message = calls.find(c => c[0].type === 'request-3')![0] as Message;
-            messageListener({
+            listener()({
                 id: 'resp-3',
                 type: '__response__',
                 payload: { result: 3 },
@@ -195,7 +158,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
             manager.on('test-message', handler);
 
             // Simulate incoming message
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'test-message',
                 payload: { data: 'test' },
@@ -212,7 +175,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
             manager.on('test-message', handler);
 
             // Message with expectsResponse flag
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'test-message',
                 payload: { data: 'test' },
@@ -240,7 +203,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
             manager.on('test-message', asyncHandler);
 
             // Send message with response expectation
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'test-message',
                 payload: { input: 'test' },
@@ -268,7 +231,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
             const handler = jest.fn().mockReturnValue({ result: 'sync' });
             manager.on('test-message', handler);
 
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'test-message',
                 payload: {},
@@ -289,7 +252,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
             const handler = jest.fn().mockRejectedValue(new Error('Handler error'));
             manager.on('test-message', handler);
 
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'test-message',
                 payload: {},
@@ -314,7 +277,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
             manager.once('test-message', handler);
 
             // First message
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'test-message',
                 payload: {},
@@ -325,7 +288,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
             expect(handler).toHaveBeenCalledTimes(1);
 
             // Second message (handler should not be called)
-            messageListener({
+            listener()({
                 id: 'msg-2',
                 type: 'test-message',
                 payload: {},
@@ -340,7 +303,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
             const handler = jest.fn().mockResolvedValue({ result: 'handled' });
             manager.on('test-message', handler);
 
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'test-message',
                 payload: {},
@@ -360,7 +323,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
 
         it('should not send acknowledgment for response messages', async () => {
             // Simulate receiving a response message
-            messageListener({
+            listener()({
                 id: 'resp-1',
                 type: '__response__',
                 payload: { result: 'test' },
@@ -382,7 +345,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
             manager.on('get-projects', handler);
 
             // Message with expectsResponse should trigger timeout hint
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'get-projects',
                 payload: { orgId: '123' },
@@ -405,7 +368,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
             const handler = jest.fn().mockResolvedValue({ success: true });
             manager.on('list-org-console-apis', handler);
 
-            messageListener({
+            listener()({
                 id: 'msg-loca',
                 type: 'list-org-console-apis',
                 payload: { componentIds: [] },
@@ -432,7 +395,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
                 .mockResolvedValueOnce(true);                // response succeeds
 
             // Should not throw
-            messageListener({
+            listener()({
                 id: 'msg-1',
                 type: 'authenticate',
                 payload: {},
@@ -459,7 +422,7 @@ describe('WebviewCommunicationManager - Messaging', () => {
         it('rejects the request instead of leaving it unresolved', async () => {
             (mockWebview.postMessage as jest.Mock).mockClear();
 
-            await messageListener({
+            await listener()({
                 id: 'req-unhandled',
                 type: 'nobody-handles-this',
                 payload: {},

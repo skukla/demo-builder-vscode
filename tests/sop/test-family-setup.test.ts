@@ -117,6 +117,33 @@ function isRealFamily(key: string, members: string[]): boolean {
     return named.length === members.length && new Set(named).size === 1;
 }
 
+/**
+ * Do all of these suites import the same module from their OWN directory?
+ *
+ * The two checks above look for a file named `<subject>.testUtils.*`, which is
+ * the convention and covers most families. It is the convention and not the
+ * point: what matters is that the suites SHARE their setup, not what the file is
+ * called. The aiBundle directory is the case that proved the difference — eleven
+ * suites across three subjects share one `aiBundleFixtures.ts`, which is better
+ * than three near-identical per-subject files and which the name check cannot
+ * see (2026-09-02).
+ *
+ * SAME DIRECTORY, deliberately. A first version accepted any relative import and
+ * cleared four ledgered families on the strength of `helpers/loggerFake` — a
+ * repo-wide canonical fake that nearly every suite imports and that is not this
+ * family's setup by any reading. The ledger's own staleness check caught it,
+ * which is what that half of the ledger is for.
+ *
+ * @param bodies - the source of every suite in the family
+ */
+function shareALocalModule(bodies: string[]): boolean {
+    const localImports = (body: string): Set<string> =>
+        new Set(Array.from(body.matchAll(/from '(\.\/[^']+)'/g), (m) => m[1]));
+    const [first, ...rest] = bodies.map(localImports);
+    if (!first) return false;
+    return rest.reduce((shared, next) => new Set([...shared].filter((x) => next.has(x))), first).size > 0;
+}
+
 function familiesWithoutSharedSetup(): string[] {
     const files = execSync(
         `git ls-files 'tests/**/*.test.ts' 'tests/**/*.test.tsx' 'tests/*.test.ts' 'tests/*.test.tsx'`,
@@ -142,10 +169,9 @@ function familiesWithoutSharedSetup(): string[] {
         const hasUtilsFile = ['.testUtils.ts', '.testUtils.tsx'].some((ext) =>
             existsSync(join(ROOT, dir, subject + ext)),
         );
-        const allShare = members.every((m) =>
-            readFileSync(join(ROOT, m), 'utf8').includes('testUtils'),
-        );
-        if (!hasUtilsFile && !allShare) offenders.push(key);
+        const bodies = members.map((m) => readFileSync(join(ROOT, m), 'utf8'));
+        const allShare = bodies.every((b) => b.includes('testUtils'));
+        if (!hasUtilsFile && !allShare && !shareALocalModule(bodies)) offenders.push(key);
     }
     return offenders.sort();
 }

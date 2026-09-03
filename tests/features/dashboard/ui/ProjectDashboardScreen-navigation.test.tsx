@@ -1,230 +1,27 @@
 /**
- * Tests for ProjectDashboardScreen back navigation
+ * ProjectDashboardScreen - Back Navigation Tests
  *
- * Tests that the dashboard renders a back navigation link and handles clicks.
+ * The mock wall lives in `ProjectDashboardScreen.testUtils` with the other six
+ * suites of this screen. This one carried its own copy of 21 of those 23 mocks
+ * until 2026-09-02 — it was the only sibling that never adopted the shared file,
+ * and the clone ledger found it duplicating a helper sitting beside it.
+ *
+ * The two below are genuinely its own: no other suite renders the icons that the
+ * back-navigation row does.
  */
-
-// Mock webviewClient - must be before imports due to hoisting
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn().mockReturnValue(() => {}),
-        request: jest.fn(() => new Promise(() => {})),
-    },
-}));
-
-// Mock React Spectrum Provider context (required for Spectrum components)
-jest.mock('@adobe/react-spectrum', () => {
-    const { domProps } = jest.requireActual('../../../helpers/spectrumStubProps');
-    return {
-        // ActionGrid's lifecycle + remedy tiles wrap their buttons in a
-        // TooltipTrigger. A per-suite Spectrum mock only exports what the tree
-        // rendered when it was written, so adding a primitive anywhere in the tree
-        // breaks every suite mocking this module.
-        TooltipTrigger: ({ children }: any) => <>{children}</>,
-        Tooltip: ({ children }: any) => <span role="tooltip">{children}</span>,
-        View: ({ children, ...props }: any) => <div {...domProps(props)}>{children}</div>,
-        Flex: ({ children, ...props }: any) => (
-            <div style={{ display: 'flex' }} {...domProps(props)}>
-                {children}
-            </div>
-        ),
-        Heading: ({ children, level, ...props }: any) => {
-            const Tag = `h${level || 1}` as keyof React.JSX.IntrinsicElements;
-            return <Tag {...domProps(props)}>{children}</Tag>;
-        },
-        Text: ({ children, ...props }: any) => <span {...domProps(props)}>{children}</span>,
-        Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
-            <button
-                onClick={onPress}
-                disabled={isDisabled}
-                data-variant={variant}
-                data-testid="back-button"
-                {...domProps(props)}
-            >
-                {children}
-            </button>
-        ),
-        ActionButton: ({ children, onPress, _isQuiet, isDisabled, ...props }: any) => (
-            <button onClick={onPress} disabled={isDisabled} {...domProps(props)}>
-                {children}
-            </button>
-        ),
-        MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
-        Menu: ({ children, onAction }: any) => {
-            const r = require('react');
-            return (
-                <div role="menu">
-                    {r.Children.map(children, (child: any) => {
-                        if (!child) return null;
-                        const key = child.key ?? child.props?.['data-key'];
-                        return (
-                            <button key={key} role="menuitem" onClick={() => onAction?.(key)}>
-                                {child.props?.children}
-                            </button>
-                        );
-                    })}
-                </div>
-            );
-        },
-        Item: ({ children }: any) => <>{children}</>,
-        Divider: () => <hr />,
-        ProgressCircle: () => <div data-testid="progress-circle" />,
-        Link: ({ children, onPress, _isQuiet, ...props }: any) => (
-            <a onClick={onPress} {...domProps(props)}>
-                {children}
-            </a>
-        ),
-        DialogContainer: ({ children }: any) => <div>{children}</div>,
-    };
-});
-
-// Mock Spectrum icons
-jest.mock('@spectrum-icons/workflow/ChevronLeft', () => ({
-    __esModule: true,
-    default: ({ size }: any) => (
-        <span data-testid="chevron-left-icon" data-size={size}>
-            {'<'}
-        </span>
-    ),
-}));
-
-jest.mock('@spectrum-icons/workflow/PlayCircle', () => ({
-    __esModule: true,
-    default: () => <span data-testid="play-icon" />,
-}));
-
-jest.mock('@spectrum-icons/workflow/StopCircle', () => ({
-    __esModule: true,
-    default: () => <span data-testid="stop-icon" />,
-}));
-
-jest.mock('@spectrum-icons/workflow/Settings', () => ({
-    __esModule: true,
-    default: () => <span data-testid="settings-icon" />,
-}));
-
-jest.mock('@spectrum-icons/workflow/Replay', () => ({
-    __esModule: true,
-    default: () => <span data-testid="replay-icon" />,
-}));
-jest.mock('@spectrum-icons/workflow/Refresh', () => ({
-    __esModule: true,
-    default: () => <span data-testid="refresh-icon" />,
-}));
-
-jest.mock('@spectrum-icons/workflow/Globe', () => ({
-    __esModule: true,
-    default: () => <span data-testid="globe-icon" />,
-}));
-
-jest.mock('@spectrum-icons/workflow/Delete', () => ({
-    __esModule: true,
-    default: () => <span data-testid="delete-icon" />,
-}));
-
-jest.mock('@spectrum-icons/workflow/ViewList', () => ({
-    __esModule: true,
-    default: () => <span data-testid="viewlist-icon" />,
-}));
 
 jest.mock('@spectrum-icons/workflow/DataMapping', () => ({
     __esModule: true,
     default: () => <span data-testid="datamapping-icon" />,
 }));
 
-jest.mock('@spectrum-icons/workflow/Data', () => ({
-    __esModule: true,
-    default: () => <span data-testid="data-icon" />,
-}));
-
-jest.mock('@spectrum-icons/workflow/Login', () => ({
-    __esModule: true,
-    default: () => <span data-testid="login-icon" />,
-}));
-
-// Mock hooks
-jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
-    useFocusTrap: () => ({ current: null }),
-}));
-
-jest.mock('@/core/ui/hooks/useTimerCleanup', () => ({
-    useSingleTimer: () => ({
-        ref: { current: null },
-        set: jest.fn(),
-        clear: jest.fn(),
-    }),
-}));
-
-// Mock StatusCard and GridLayout
-jest.mock('@/core/ui/components/feedback/InlineNotice', () => ({
-    // OrgContextNotice now renders through the shared InlineNotice (extracted
-    // 2026-08-20). Stubbed to its structure — title, body, optional hint and
-    // action — so the suite keeps asserting on CONTENT rather than on the
-    // banner's markup.
-    InlineNotice: ({ title, children, hint, action, testId }: any) => (
-        <div data-testid={testId}>
-            <span>{title}</span>
-            <span>{children}</span>
-            {hint && <span>{hint}</span>}
-            {action}
-        </div>
-    ),
-}));
-
-jest.mock('@/core/ui/components/feedback/StatusCard', () => ({
-    StatusCard: ({ label, status, color }: any) => (
-        <div data-testid={`status-card-${label}`} data-color={color}>
-            {label}: {status}
-        </div>
-    ),
-}));
-
-jest.mock('@/core/ui/components/layout/ControlPanelLayout', () => ({
-    ControlPanelLayout: ({ masthead, primary, secondary }: any) => (
-        <div data-testid="control-panel">
-            <div data-testid="control-panel-masthead">{masthead}</div>
-            <div data-testid="control-panel-primary">{primary}</div>
-            {secondary && <div data-testid="control-panel-secondary">{secondary}</div>}
-        </div>
-    ),
-}));
-
-jest.mock('@/core/ui/components/layout/GridLayout', () => ({
-    GridLayout: ({ children }: any) => <div data-testid="grid-layout">{children}</div>,
-}));
-
-jest.mock('@/core/ui/components/layout/PageHeader', () => ({
-    PageHeader: ({ title, subtitle }: any) => (
-        <div data-testid="page-header">
-            <h1>{title}</h1>
-            {subtitle && <h3>{subtitle}</h3>}
-        </div>
-    ),
-}));
-
-jest.mock('@/core/ui/components/layout/PageLayout', () => ({
-    PageLayout: ({ header, children }: any) => (
-        <div data-testid="page-layout">
-            <div data-testid="page-layout-header">{header}</div>
-            <div data-testid="page-layout-content">{children}</div>
-        </div>
-    ),
-}));
-
-// Mock dashboardPredicates
-jest.mock('@/features/dashboard/ui/dashboardPredicates', () => ({
-    isStartActionDisabled: () => false,
-}));
-
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import { ProjectDashboardScreen } from '@/features/dashboard/ui/ProjectDashboardScreen';
+import { fireEvent, screen } from '@testing-library/react';
+import { renderDashboard } from './ProjectDashboardScreen.testUtils';
 import { asDisplayName } from '@/core/utils/projectDisplayName';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
+/** The stub the shared mock wall installs on the webview client. */
 const mockPostMessage = webviewClient.postMessage as jest.Mock;
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 describe('ProjectDashboardScreen - Back Navigation', () => {
     const mockProject = {
@@ -239,7 +36,7 @@ describe('ProjectDashboardScreen - Back Navigation', () => {
     describe('Back navigation link rendering', () => {
         it('should render "All Projects" back navigation link', () => {
             // Given: A project dashboard screen
-            render(<ProjectDashboardScreen project={mockProject} />);
+            renderDashboard({ project: mockProject });
 
             // Then: The back navigation link should be visible
             const backLink = screen.getByText('All Projects');
@@ -248,7 +45,7 @@ describe('ProjectDashboardScreen - Back Navigation', () => {
 
         it('should render back button in status section', () => {
             // Given: A project dashboard screen
-            render(<ProjectDashboardScreen project={mockProject} />);
+            renderDashboard({ project: mockProject });
 
             // Then: Back button should be in the content area (status section)
             const content = screen.getByTestId('page-layout-content');
@@ -258,7 +55,7 @@ describe('ProjectDashboardScreen - Back Navigation', () => {
 
         it('should render back button with secondary variant', () => {
             // Given: A project dashboard screen
-            render(<ProjectDashboardScreen project={mockProject} />);
+            renderDashboard({ project: mockProject });
 
             // Then: Back button should use secondary variant (matching design system)
             const backButton = screen.getByTestId('back-button');
@@ -269,7 +66,7 @@ describe('ProjectDashboardScreen - Back Navigation', () => {
     describe('Back navigation click handling', () => {
         it('should send navigateBack message when clicked', () => {
             // Given: A project dashboard screen
-            render(<ProjectDashboardScreen project={mockProject} />);
+            renderDashboard({ project: mockProject });
 
             // When: User clicks the back link
             const backLink = screen.getByText('All Projects');
@@ -281,7 +78,7 @@ describe('ProjectDashboardScreen - Back Navigation', () => {
 
         it('should only send one navigateBack message per click', () => {
             // Given: A project dashboard screen
-            render(<ProjectDashboardScreen project={mockProject} />);
+            renderDashboard({ project: mockProject });
 
             // When: User clicks the back link
             const backLink = screen.getByText('All Projects');
@@ -298,7 +95,7 @@ describe('ProjectDashboardScreen - Back Navigation', () => {
     describe('Back navigation accessibility', () => {
         it('should be a clickable button element', () => {
             // Given: A project dashboard screen
-            render(<ProjectDashboardScreen project={mockProject} />);
+            renderDashboard({ project: mockProject });
 
             // Then: Back link should be a button
             const backButton = screen.getByText('All Projects').closest('button');
@@ -307,7 +104,7 @@ describe('ProjectDashboardScreen - Back Navigation', () => {
 
         it('should be keyboard accessible', () => {
             // Given: A project dashboard screen
-            render(<ProjectDashboardScreen project={mockProject} />);
+            renderDashboard({ project: mockProject });
 
             // Then: Back button should be focusable and clickable via keyboard
             const backButton = screen.getByText('All Projects').closest('button');
@@ -318,7 +115,7 @@ describe('ProjectDashboardScreen - Back Navigation', () => {
     describe('Status section back button', () => {
         it('should render back button in status section', () => {
             // Given: A project dashboard screen
-            render(<ProjectDashboardScreen project={mockProject} />);
+            renderDashboard({ project: mockProject });
 
             // Then: Back button should be rendered in content area
             const content = screen.getByTestId('page-layout-content');
@@ -328,7 +125,7 @@ describe('ProjectDashboardScreen - Back Navigation', () => {
 
         it('should display "All Projects" label on back button', () => {
             // Given: A project dashboard screen
-            render(<ProjectDashboardScreen project={mockProject} />);
+            renderDashboard({ project: mockProject });
 
             // Then: Back button should display "All Projects" label
             const backButton = screen.getByTestId('back-button');

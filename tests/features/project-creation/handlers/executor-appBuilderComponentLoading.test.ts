@@ -13,38 +13,10 @@
  *    component is produced from the addons (the regression being removed).
  */
 
+import './executorComponentLoading.testUtils';
 import * as meshDeployment from '@/features/mesh/services/meshDeployment';
 import * as stalenessDetector from '@/features/mesh/services/stalenessDetector';
 import { HandlerContext } from '@/types/handlers';
-
-// Mock dependencies
-jest.mock('@/features/mesh/services/meshDeployment');
-jest.mock('@/features/mesh/services/stalenessDetector');
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: {
-        getCommandExecutor: jest.fn().mockReturnValue({
-            execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),
-        }),
-        getAuthenticationService: jest.fn().mockReturnValue({
-            testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
-        }),
-    },
-}));
-
-// Stub the App Builder permission gate so the mesh phase is a no-op.
-jest.mock('@/features/components/services/projectAppBuilderPredicate', () => ({
-    projectRequiresAppBuilder: jest.fn(() => false),
-}));
-
-// Mock fs/promises for file operations
-jest.mock('fs/promises', () => ({
-    mkdir: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    access: jest.fn().mockRejectedValue(new Error('Not found')),
-    readdir: jest.fn().mockResolvedValue([]),
-    rm: jest.fn().mockResolvedValue(undefined),
-    rmdir: jest.fn().mockResolvedValue(undefined),
-}));
 
 // Capture every definition passed to installComponent so we can assert on the
 // component list produced by loadComponentDefinitions.
@@ -106,27 +78,6 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
         }),
     })),
 }));
-
-// Mock envFileGenerator
-jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
-    generateComponentEnvFile: jest.fn().mockResolvedValue(undefined),
-    generateComponentConfigFiles: jest.fn().mockResolvedValue(undefined),
-}));
-
-// Mock vscode
-jest.mock('vscode', () => ({
-    workspace: {
-        getConfiguration: jest.fn().mockReturnValue({
-            get: jest.fn().mockReturnValue(3000),
-        }),
-    },
-    window: {
-        setStatusBarMessage: jest.fn(),
-    },
-    commands: {
-        executeCommand: jest.fn(),
-    },
-}), { virtual: true });
 
 const mockDeployMeshComponent = meshDeployment.deployMeshComponent as jest.Mock;
 const mockUpdateMeshState = stalenessDetector.updateMeshState as jest.Mock;

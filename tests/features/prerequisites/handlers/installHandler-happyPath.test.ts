@@ -13,27 +13,10 @@
  * - Default steps optimization (only for last version)
  */
 
+// Registers the shared module wall — must precede every other import here.
+import './installHandler.mocks';
+
 // Mock all dependencies (MUST be at top before imports)
-jest.mock('@/features/prerequisites/handlers/shared', () => {
-    const actual = jest.requireActual('@/features/prerequisites/handlers/shared');
-    return {
-        ...actual,
-        getRequiredNodeVersions: jest.fn(),
-        getNodeVersionMapping: jest.fn(),
-        checkPerNodeVersionStatus: jest.fn(),
-        hasNodeVersions: jest.fn(),
-        getNodeVersionKeys: jest.fn(),
-    };
-});
-jest.mock('@/core/di/serviceLocator');
-jest.mock('vscode', () => ({
-    env: {
-        openExternal: jest.fn(),
-    },
-    Uri: {
-        parse: jest.fn((url: string) => ({ url })),
-    },
-}));
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import * as shared from '@/features/prerequisites/handlers/shared';
@@ -48,7 +31,7 @@ import {
     setupSharedUtilityMocks,
     cacheInvalidateMock,
     mockNpmPrereq,
-    lastFinalStatus,
+    lastFinalStatus,    arrangePerNodeAdobeCliInstall,
 } from './installHandler.testUtils';
 
 describe('Install Handler - Happy Path', () => {
@@ -159,14 +142,7 @@ describe('Install Handler - Happy Path', () => {
     });
 
     it('should install per-node-version prerequisite (Adobe CLI)', async () => {
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
-            steps: [
-                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
-            ],
-        });
+        arrangePerNodeAdobeCliInstall(mockContext);
         // Note: Per-node version checking happens inside executeStep/checkPrerequisite which are mocked
 
         const result = await handleInstallPrerequisite(mockContext, { prereqId: 0, version: '20' });
@@ -214,14 +190,7 @@ describe('Install Handler - Happy Path', () => {
     });
 
     it('should return early if already installed for all Node versions', async () => {
-        const states = new Map();
-        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
-        mockContext.sharedState.currentPrerequisiteStates = states;
-        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
-            steps: [
-                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
-            ],
-        });
+        arrangePerNodeAdobeCliInstall(mockContext);
         // Note: Per-node version checking happens inside checkPerNodeVersionStatus which uses CommandExecutor
 
         const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
@@ -330,7 +299,6 @@ describe('Install Handler - Happy Path', () => {
         });
     });
 
-
     /**
      * The final status message the user reads when an install finishes.
      *
@@ -369,7 +337,6 @@ describe('Install Handler - Happy Path', () => {
                 .mockResolvedValueOnce(before)
                 .mockResolvedValue(after);
         }
-
 
         it('lists every version when all required Node versions are present', async () => {
             useNodePrereq(
@@ -439,7 +406,6 @@ describe('Install Handler - Happy Path', () => {
             expect(finalStatusMessage()).toBe('npm is not installed');
         });
     });
-
 
     /**
      * Whether the install SUCCEEDED, for a per-Node-version tool.

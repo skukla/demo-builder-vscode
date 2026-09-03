@@ -748,6 +748,14 @@ breaks the code on purpose and reports what nothing noticed.
 > enforced by `tests/sop/test-family-setup.test.ts`.
 > *Why:* the copies drift otherwise, and a spec that keeps its own copy can silently stop mocking anything.
 
+> **Convention.** A suite imports its shared mock wall BEFORE it imports the code under
+> test. Enforced by `tests/sop/mock-wall-import-order.test.ts` (shrink-only ledger).
+> *Why:* `jest.mock` hoists above the imports of the module it appears in, not across
+> modules, so a wall imported second registers after the subject has already bound to
+> the real thing. Moving one such import down failed 61 of 63 tests in
+> `skillsWriter.test.ts` with nothing in the file looking wrong. `import/order` is an
+> auto-fixable warning here, so the ordering needed a check rather than a comment.
+
 > **Convention.** Before designing a way to hand a mocked collaborator in — or to share
 > one between suites — delete the mock and run the suite. If it still passes, the mock was
 > the whole problem.
@@ -1058,11 +1066,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 38 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 39 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 79 conventions. 78 of them are enforced; 1 is not.**
+**This handbook states 80 conventions. 79 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

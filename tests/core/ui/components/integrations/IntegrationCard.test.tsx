@@ -15,52 +15,12 @@
  * needs, having no deploy status to show before the project is built.
  */
 
+import '../../../../helpers/integrationCardSpectrumMocks';
 import React from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
 import type { IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 import '@testing-library/jest-dom';
-
-// The Menu mock renders items EAGERLY (no popup) — the directory convention;
-// each Item becomes a button firing the parent Menu's onAction with its key.
-jest.mock('@adobe/react-spectrum', () => ({
-        ActionButton: ({ children, onPress, isQuiet: _q, UNSAFE_className, ...props }: any) => (
-            <button onClick={onPress} className={UNSAFE_className} {...props}>
-                {children}
-            </button>
-        ),
-        Button: ({ children, onPress, isDisabled, variant, ...props }: any) => (
-            <button onClick={onPress} disabled={isDisabled} data-variant={variant} {...props}>
-                {children}
-            </button>
-        ),
-        Link: ({ children, onPress, isQuiet, ...props }: any) => (
-            <span role="link" tabIndex={0} data-quiet={isQuiet} onClick={onPress} {...props}>
-                {children}
-            </span>
-        ),
-        MenuTrigger: ({ children }: any) => <div data-testid="menu-trigger">{children}</div>,
-        Menu: ({ children, onAction }: any) => (
-            <ul data-testid="card-menu">
-                {require('react').Children.map(children, (child: any) =>
-                    child ? (
-                        <li>
-                            <button onClick={() => onAction?.(child.key)}>
-                                {child.props.children}
-                            </button>
-                        </li>
-                    ) : null
-                )}
-            </ul>
-        ),
-        Item: ({ children }: any) => <>{children}</>,
-    Text: ({ children }: any) => <span>{children}</span>,
-}));
-
-jest.mock('@spectrum-icons/workflow/More', () => ({
-    __esModule: true,
-    default: () => <span data-testid="icon-more" />,
-}));
 
 jest.mock('@/core/ui/components/ui/StatusDot', () => ({
     StatusDot: ({ variant, className }: any) => (

@@ -13,7 +13,6 @@ import { expectWithinCeiling } from './responseCeilings';
 import {
     candidate,
     harness,
-    harnessWithNoProject,
     project,
     resetSiteToolsMocks,
     world,
@@ -117,26 +116,6 @@ describe('response ceilings', () => {
             confirmName: 'demo',
         });
         expectWithinCeiling('migrate_storefront_name', raw);
-    });
-});
-
-describe('connect_dalive', () => {
-    it('always hands back, pointing at the bookmarklet setup command', async () => {
-        const out = (await harness().call('connect_dalive')) as {
-            needsUser: { reason: string; where: { command: string }; resumeWith: string };
-        };
-
-        expect(out.needsUser.reason).toBe('secret-entry');
-        expect(out.needsUser.where.command).toBe('demoBuilder.openDaLiveBookmarkletSetup');
-        expect(out.needsUser.resumeWith).toBe('get_auth_status');
-    });
-
-    it('hands back even with no current project — signing in does not need one', async () => {
-        const out = (await harnessWithNoProject().call('connect_dalive')) as {
-            needsUser?: unknown;
-        };
-
-        expect(out.needsUser).toBeDefined();
     });
 });
 
