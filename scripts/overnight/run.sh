@@ -46,6 +46,21 @@ for n in "${NAMES[@]}"; do
 done
 [[ ${#FILES[@]} -gt 0 ]] || { echo "nothing to run"; exit 1; }
 
+# The owner's standing rule for unattended work: commits go to a WORK BRANCH,
+# never to develop. Made here rather than left to each condition, because git
+# mechanics in prose is how a rule gets skipped on turn nineteen.
+BRANCH="loop/$(date +%Y-%m-%d)-goal-queue"
+if [[ $DRY -eq 0 ]]; then
+    if git -C "$REPO" show-ref --verify --quiet "refs/heads/$BRANCH"; then
+        git -C "$REPO" checkout -q "$BRANCH"
+    else
+        git -C "$REPO" checkout -q -b "$BRANCH"
+    fi
+    echo "branch:   $BRANCH (from $(git -C "$REPO" rev-parse --short HEAD))"
+else
+    echo "branch:   $BRANCH (would be created)"
+fi
+
 echo "queue:    ${#FILES[@]} item(s)"
 echo "logs:     $LOGDIR"
 echo "started:  $(date)"

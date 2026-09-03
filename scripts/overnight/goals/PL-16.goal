@@ -19,7 +19,8 @@ missing or empty field, LEAVE IT and record the file in your reply.
 
 RULES. Lower ceilings only, never raise. One `Backlog: PL-16` commit per batch,
 each gated on `npm run gate` exiting 0 with the code captured in a variable.
-Push after each commit. No cloud writes.
+You are already on the work branch loop/<date>-goal-queue — stay on it, do
+NOT checkout or merge develop, and push the branch after each commit. No cloud writes.
 
 STOP AND HAND BACK — this is expected, not a failure — as soon as the only
 remaining sites are absence-asserting ones, or any conversion needs a judgement

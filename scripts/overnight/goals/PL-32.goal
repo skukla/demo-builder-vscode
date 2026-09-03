@@ -19,7 +19,8 @@ and if that is impossible, leave the cast and say why.
 RULES. Lower the ledger ceiling to the new measurement after each batch; never
 raise it. Commit each batch separately with a `Backlog: PL-32` trailer, and only
 after `npm run gate` exits 0 — capture the exit code in a variable, never read it
-through a pipe. Push after each commit. Make no cloud writes and no cross-item
+through a pipe. You are already on the work branch loop/<date>-goal-queue — stay on it, do
+NOT checkout or merge develop, and push the branch after each commit. Make no cloud writes and no cross-item
 changes.
 
 STOP EARLY AND SAY SO if a remaining cast needs a product decision, or if two
