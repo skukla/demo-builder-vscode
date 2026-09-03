@@ -851,6 +851,19 @@
             "decision": "none \u2014 the `> 0` is the readable form of the intent",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (tokenManager)"
+        },
+        {
+            "module": "src/features/authentication/ui/components/AdobeProjectPicker.tsx",
+            "anchors": [
+                "return unsubscribe;",
+                "void webviewClient.request('switchOrg').catch(() => undefined);"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "The push subscription's useEffect and the `switchOrg` useCallback are each memoised with `[]`, rewritten by Stryker to `['Stryker was here']`. React compares dependencies element-wise with Object.is and a string literal equals itself on every render, so the effect runs once and the callback is created once either way \u2014 the same shape recorded for AdobeEntityFields. `}, []);` appears twice in this module, so the anchors name the unique line inside each body instead.",
+            "decision": "none",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (AdobeProjectPicker)"
         }
     ]
 }

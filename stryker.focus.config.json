@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/authCacheManager.ts"
+        "src/features/authentication/ui/components/AdobeProjectPicker.tsx"
     ],
     "reporters": [
         "clear-text",

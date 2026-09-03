@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeProjectPicker } from '@/features/authentication/ui/components/AdobeProjectPicker';
-import { WizardState } from '@/types/webview';
+import type { AdobeProject, WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
 import {
     mockProjects,
@@ -85,6 +85,60 @@ describe('AdobeProjectPicker', () => {
 
         it('stores the search text under the project search key', () => {
             expect(configPassed().searchFilterKey).toBe('projectSearchFilter');
+        });
+
+        it('threads the selected org so the backend targets IT', () => {
+            expect(configPassed().messagePayload).toEqual({ orgId: 'org1' });
+        });
+
+        it('lets the load proceed once an org is selected', () => {
+            const validateBeforeLoad = configPassed().validateBeforeLoad as () => unknown;
+            expect(validateBeforeLoad()).toEqual({ valid: true });
+        });
+
+        it('auto-selects a lone project by default', () => {
+            expect(configPassed().autoSelectSingle).toBe(true);
+        });
+    });
+
+    /**
+     * The Add-Integration flow's pending-selection model: it hands
+     * `onProjectSelect` and takes the pick itself, and never wants a lone project
+     * auto-picked, because its Continue is what commits.
+     */
+    describe('Pending-selection overrides (onProjectSelect)', () => {
+        function configWithOverride(onProjectSelect: (p: AdobeProject) => void) {
+            mockUseSelectionStep.mockReturnValue(createMockSelectionStep({ items: mockProjects }));
+            render(
+                <Provider theme={defaultTheme}>
+                    <AdobeProjectPicker
+                        state={baseState as WizardState}
+                        updateState={mockUpdateState}
+                        onProjectSelect={onProjectSelect}
+                    />
+                </Provider>
+            );
+            return mockUseSelectionStep.mock.calls[0][0];
+        }
+
+        it('hands the picked project to the caller and writes NOTHING to state', () => {
+            const onProjectSelect = jest.fn();
+            const config = configWithOverride(onProjectSelect);
+
+            config.onSelect(mockProjects[1]);
+
+            expect(onProjectSelect).toHaveBeenCalledWith({
+                id: 'project2',
+                name: 'project-2',
+                title: 'Test Project 2',
+                description: 'Second test project',
+                org_id: 'org123',
+            });
+            expect(mockUpdateState).not.toHaveBeenCalled();
+        });
+
+        it('never auto-selects a lone project for a pending-selection caller', () => {
+            expect(configWithOverride(jest.fn()).autoSelectSingle).toBe(false);
         });
     });
     const mockUpdateState = jest.fn();

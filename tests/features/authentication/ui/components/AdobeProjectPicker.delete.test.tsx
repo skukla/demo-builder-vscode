@@ -394,7 +394,11 @@ describe('AdobeProjectPicker — delete affordance', () => {
                 'Delete project Test Project 1', 'project1', { success: true },
             );
 
-            expect(mockUpdateState).toHaveBeenCalledWith({
+            // toStrictEqual, not toHaveBeenCalledWith: the loose matcher treats an
+            // `undefined` property as equal to a MISSING one, so an emptied `{}`
+            // update passed as a clear until 2026-09-03.
+            expect(mockUpdateState).toHaveBeenCalledTimes(1);
+            expect(mockUpdateState.mock.calls[0][0]).toStrictEqual({
                 adobeProject: undefined,
                 adobeWorkspace: undefined,
                 workspacesCache: undefined,
@@ -543,6 +547,65 @@ describe('AdobeProjectPicker — delete affordance', () => {
             fireEvent.click(screen.getByLabelText('Delete project Test Project 2'));
 
             expect(screen.queryByText('boom')).not.toBeInTheDocument();
+        });
+    });
+
+    /**
+     * Shapes the extension may hand over that the happy paths never do: a push
+     * with no body, a response that is not an object, a wizard with no org or no
+     * selection. Each survived a mutation run on 2026-09-03 because every other
+     * test supplied the full shape.
+     */
+    describe('Defensive shapes from the extension', () => {
+        it('ignores a project-delete-started push with no body', () => {
+            renderPicker();
+            const handler = messageHandlers.get('project-delete-started');
+            expect(handler).toBeDefined();
+
+            expect(() => act(() => handler!(undefined))).not.toThrow();
+
+            expect(latestHookOptions().autoSelectSingle).toBe(true);
+        });
+
+        it('ignores a project-delete-started push that names no project', () => {
+            renderPicker();
+            const handler = messageHandlers.get('project-delete-started');
+
+            act(() => handler!({}));
+
+            expect(latestHookOptions().autoSelectSingle).toBe(true);
+        });
+
+        it('shows the fallback error when the handler answers with nothing at all', async () => {
+            renderPicker();
+            await pressDeleteConfirmAndSettle(
+                'Delete project Test Project 1', 'project1', undefined,
+            );
+
+            expect(screen.getByText('Could not delete the project.')).toBeInTheDocument();
+        });
+
+        it('sends an undefined orgId when the wizard has no org', async () => {
+            renderPicker({ ...baseState, adobeOrg: undefined });
+            await pressDeleteAndSettle('Delete project Test Project 1');
+
+            expect(mockRequest).toHaveBeenCalledWith('delete-adobe-project', {
+                projectId: 'project1',
+                projectTitle: 'Test Project 1',
+                orgId: undefined,
+            });
+        });
+
+        it('succeeds quietly when nothing was selected to begin with', async () => {
+            const { container } = renderPicker({ ...baseState, adobeProject: undefined });
+            await pressDeleteConfirmAndSettle(
+                'Delete project Test Project 1', 'project1', { success: true },
+            );
+
+            expect(mockUpdateState).not.toHaveBeenCalled();
+            // No inline error of ANY wording — a thrown TypeError's message would
+            // land in the same red text and not match /could not delete/.
+            expect(container.querySelector('.text-red-600')).toBeNull();
         });
     });
 

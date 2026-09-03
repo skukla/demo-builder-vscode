@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "authCacheManager: expiry boundaries at the exact instant with identity jitter, per-cache TTL choice asserted as the jitter's argument, token-inspection and targeted clears covered; dead unused logger field removed",
+    "_note": "AdobeProjectPicker: pending-selection overrides, org-switch request, label fallbacks and renderDescription as list arguments, defensive push/response shapes, strict clear assertion; two dependency-array mutants ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -4251,26 +4251,19 @@
             "openGaps": 0
         },
         "src/features/authentication/ui/components/AdobeProjectPicker.tsx": {
-            "score": 72.57,
-            "killed": 82,
-            "survived": 26,
-            "noCoverage": 5,
+            "score": 92.04,
+            "killed": 104,
+            "survived": 9,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "optionalChain": 6,
-                "branch": 4,
-                "other": 6,
-                "string": 10
+                "other": 2,
+                "string": 7
             },
-            "uncoveredCategories": {
-                "block": 2,
-                "string": 1,
-                "other": 1,
-                "branch": 1
-            },
-            "highValueSurvivors": 4,
-            "equivalent": 0,
-            "openGaps": 20
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 2,
+            "openGaps": 0
         },
         "src/features/authentication/ui/components/AdobeWorkspacePicker.tsx": {
             "score": 92.75,
