@@ -248,3 +248,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(auth): bring organizationHandlers to zero open mutation gaps (`cc93b8502`)
 - 2026-09-03  test(auth): bring imsTokenClaims to zero open mutation gaps (`822ec92a9`)
 - 2026-09-03  docs(backlog): log the MUT-01 batch commits against PL-22 (`07a93cf8f`)
+- 2026-09-03  test(auth): bring ioEventsClient to zero open mutation gaps (`1c20b2a7c`)

@@ -58,6 +58,18 @@ describe('buildApiAccessCatalog', () => {
         expect(row.requiresReview).toBe(false);
     });
 
+    it('does NOT flag requiresProfile on an ENABLED row that still lists the profile reason', () => {
+        // The profile gate is a reason for being disabled; on an enabled row it is stale metadata.
+        const [row] = buildApiAccessCatalog([
+            svc({ code: 'AEMAssetsAuthor', enabled: true, disabledReasons: ['USER_MISSING_PRODUCT_PROFILES'] }),
+        ]);
+        expect(row).toMatchObject({ code: 'AEMAssetsAuthor', requiresProfile: false });
+    });
+
+    it('hides a disabled row that reports no reasons at all', () => {
+        expect(buildApiAccessCatalog([svc({ code: 'Silent', enabled: false })])).toEqual([]);
+    });
+
     it('hides deprecated / unsupported / exception disabled rows', () => {
         const rows = buildApiAccessCatalog([
             svc({ code: 'DeprecatedOne', enabled: false, disabledReasons: ['DEPRECATED'] }),
@@ -74,6 +86,24 @@ describe('buildApiAccessCatalog', () => {
         ]);
         expect(rows).toHaveLength(1);
         expect(rows[0]).toMatchObject({ code: 'ACCS-REST-API', group: EC });
+    });
+
+    it('dedupes a profile-missing variant over an exception-disabled duplicate, whichever comes first', () => {
+        const rows = buildApiAccessCatalog([
+            svc({ code: 'AEMAssetsAuthor', enabled: false, disabledReasons: ['EXCEPTION'] }),
+            svc({ code: 'AEMAssetsAuthor', enabled: false, disabledReasons: ['USER_MISSING_PRODUCT_PROFILES'] }),
+        ]);
+        expect(rows).toEqual([
+            expect.objectContaining({ code: 'AEMAssetsAuthor', requiresProfile: true }),
+        ]);
+    });
+
+    it('keeps the first-seen variant when duplicates rank equally', () => {
+        const rows = buildApiAccessCatalog([
+            svc({ code: 'ACCS-REST-API', name: 'First', cloudGrouping: EC }),
+            svc({ code: 'ACCS-REST-API', name: 'Second', cloudGrouping: AEP }),
+        ]);
+        expect(rows).toEqual([expect.objectContaining({ name: 'First', group: EC })]);
     });
 
     it('always keeps a code named in `keep` even if it were disabled', () => {

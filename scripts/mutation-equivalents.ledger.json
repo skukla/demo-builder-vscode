@@ -1063,6 +1063,18 @@
             "decision": "none \u2014 the fallback is required for the call to be well-formed and its content is unreachable past the filter",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (ioEventsClient)"
+        },
+        {
+            "module": "src/features/authentication/services/apiAccessCatalog.ts",
+            "anchors": [
+                "(service.disabledReasons ?? []).includes(PROFILE_MISSING_REASON)"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the `[]` fallback with a one-string placeholder array. The only thing done with the array is `.includes(PROFILE_MISSING_REASON)`, and the placeholder is not that reason, so the expression answers false exactly as the empty array does. A disabled row with no reasons is hidden either way (that decision is pinned by the no-reasons test). The fallback exists so `.includes` has an array to run on; its content is never compared to anything but one fixed string it cannot equal.",
+            "decision": "none \u2014 the fallback makes the call well-formed and no substituted content can match the one reason it is checked against",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (apiAccessCatalog)"
         }
     ]
 }
