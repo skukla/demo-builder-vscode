@@ -256,3 +256,5 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  test(core): one recording file-system watcher for the two watcher suites (`865e7e170`)
 - 2026-09-02  test(eds): six stub walls shared by the two placeholder-stub suites (`40e408ccc`)
 - 2026-09-02  test(eds): six stub walls shared by the two placeholder-stub suites (`86922125f`)
+- 2026-09-02  test(eds): the last clone-ledger pair — the reset suites share their walls and params (`32d185aae`)
+- 2026-09-03  Clone ledger reaches ZERO outstanding: 62 pairs / 2,506 duplicated lines at the start, 0 pairs / 0 lines now, with 2 pairs adjudicated as variants and their reasons recorded. 41 commits on loop/2026-09-02-clone-burndown-2, each gated on the full suite (1222 files, 15,668 tests). Findings filed along the way: EDS-12, PL-35, PL-36, PL-37, PL-38.
