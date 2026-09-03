@@ -1,0 +1,40 @@
+Work backlog item PL-22 — the mutation burn-down, batch MUT-02. Bring each of
+these modules to ZERO open gaps, in this order:
+
+  - src/features/updates/services/updateManager.ts  (orchestration, 51.4%, 66 open gaps)
+  - src/features/updates/services/templateUpdateChecker.ts  (orchestration, 68.32%, 26 open gaps)
+  - src/features/updates/services/addonUpdateChecker.ts  (mixed, 57.53%, 21 open gaps)
+  - src/features/updates/services/forkSyncService.ts  (orchestration, 68.24%, 15 open gaps)
+  - src/features/updates/services/adobeMcpUpdateChecker.ts  (mixed, 56.25%, 14 open gaps)
+
+WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
+Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts
+the decision (assert the ARGUMENTS a collaborator receives, not the mock's answer — a
+mock cannot see a malformed call) or RECORDED in scripts/mutation-equivalents.ledger.json
+with the argument for why no test can kill it. The score is not the target; a module can
+be done at 60% and neglected at 90%. Never add a ledger row to reach zero faster — the
+ledger is for what CANNOT be killed, not what you did not get to.
+
+THE CYCLE, one module at a time, never two measurements at once (the focus configs are
+single generated files and collide):
+  1. node scripts/focusModule.mjs <module>
+  2. npx stryker run stryker.focus.config.json > /tmp/focus.txt 2>&1
+  3. node scripts/mutationWorklist.mjs         — the decisions nothing constrains, ranked
+  4. write the tests (or the ledger entries), run them
+  5. re-measure (1–2), then: node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
+     — the ratchet must hold; if it reports padding, your test asserted a log string
+  6. node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json --write "<what changed>"
+  7. PASTE the module's new row: score, survived, noCoverage, equivalent, openGaps.
+     The evaluator reads only what you surface; an unpasted number does not exist.
+
+A mutant that reveals a REAL defect or dead code may be fixed in src/ — say so, with the
+reason, in the commit. Any other src/ change is out of scope.
+
+RULES. Stay on the current work branch; never checkout or merge develop. One commit per
+module, `Backlog: PL-22` trailer, each gated on `npm run gate` exiting 0 with the exit
+code captured in a variable, never read through a pipe. Push after each commit. No
+cloud writes. No attribution trailers.
+
+FINISH by pasting a table of the batch: module, openGaps before, openGaps after, tests
+added, ledger rows added. Stop after 40 turns, or earlier if two consecutive gates fail
+for the same reason — say which, and stop.

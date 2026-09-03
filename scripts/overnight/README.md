@@ -65,3 +65,18 @@ finishes while the night is young.
 - Conditions forbid cloud writes and require every commit to be gated on
   `npm run gate` exiting 0, with the exit code captured in a variable rather than
   read through a pipe.
+
+## The mutation burn-down queue is generated
+
+```bash
+node scripts/mutationQueue.mjs --limit 30 --dry   # see the order
+node scripts/mutationQueue.mjs --limit 30         # write queue + goals/MUT-NN.goal
+./scripts/overnight/run.sh                        # work it
+```
+
+It reads `reports/mutation/baseline.json`, drops every module already at zero open
+gaps, ranks the rest by **consequence** — updates and rollback, auth, project state,
+reset, lifecycle, prerequisites, project creation, then everything else — and within
+an area by open gaps, then writes batches of five as goal files. Re-run it after a
+night and it produces the next night's queue from what actually stuck. The order is a
+rule in the script, not a list; the plan's step 6 is why.

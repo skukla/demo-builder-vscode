@@ -742,6 +742,8 @@ breaks the code on purpose and reports what nothing noticed.
 > subtracts from a module's open-gap count on the strength of an argument about code
 > that is no longer there. The ratchet still gates on behavioural survivors and never
 > on `openGaps`, so adding a ledger row can never be what makes a run pass.
+> Ratified 2026-09-03 as the definition of done, with the tier floors as targets rather
+> than a gate — the full shape is at the top of the mutation plan.
 > Enforced by `tests/sop/mutation-equivalents-ledger.test.ts`, which fails when an
 > anchor no longer resolves to exactly one line of its module.
 

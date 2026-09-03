@@ -80,7 +80,7 @@ Barely started: `authenticationService.ts` 39.25% → 43.77%, `componentUpdater.
 one swallowed log line — killable only by asserting log text, which the ratchet exists to
 refuse to reward.
 
-## Thresholds — the tiers hold, the floors are targets not a gate
+## Thresholds — RATIFIED 2026-09-03: tiers as measured, floors as targets, `openGaps` as the gate
 
 One number cannot fit, so the plan proposes three, by tier. `tierOf()` in
 `scripts/mutationScope.mjs` assigns them mechanically: no `await` is pure, async density
@@ -143,8 +143,9 @@ the full set rather than sixteen: the tiers are right, the floors are targets, a
 
 ## What keeps this open
 
-1. **Nothing is ratified yet** — not the tiers, not the floors, not the gate. The
-   recommendation above is what awaits a decision.
+1. ~~Nothing is ratified yet.~~ **Ratified 2026-09-03** in the shape stated at the top of
+   `.rptc/plans/mutation-scope-and-thresholds/overview.md`: tiers as measured, floors as
+   targets, `openGaps` zero as done, the per-change ratchet unchanged.
 2. ~~The burn-down is at 3.2%.~~ **The map exists — 98% measured.** What remains is
    working it: 17,475 open gaps, 71 modules done. The plan's step 6 says order by
    consequence, not score; the area table above is the input to that ordering.
@@ -195,3 +196,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  feat(mutation): the runner picks its jest project, unblocking a third of the codebase (`c3dadd694`)
 - 2026-09-03  Baseline sweep COMPLETE: 610 of 622 included modules pinned (98%). Tally across runs: 11 skipped (no mirrored suite), 1 name-only suite that never exercises its module (DashboardStatusHeader.tsx — Stryker 'No tests were executed', now filed as a skip rather than a failure), 0 timeouts. Three runner defects found and fixed on the way: React modules unmeasurable (jest project chosen from suites now; +156 files), @jest-environment docblocks defeating Stryker's coverage hook (61 files, decided in jest.config.js now, enforcer added), and openGaps ignoring uncovered mutants (4 modules read finished that no test entered). Two text heuristics for 'does the suite exercise the module' were tried and both refused modules that measure fine; that decision is left to Stryker. 48 early rows being re-measured for the uncovered breakdown.
 - 2026-09-03  feat(mutation): the full baseline — 610 of 622 modules measured, 17,475 open gaps (`6b692c330`)
+- 2026-09-03  RATIFIED by the owner 2026-09-03: tiers as measured (tierOf, async density); floors 90/80/70 are targets not a gate; done = openGaps 0 (survivors killed or in the equivalents ledger with a reason); per-change ratchet unchanged. Next: the burn-down pass, ordered by consequence, run as a goal queue.

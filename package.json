@@ -504,6 +504,7 @@
         "test:mutation:sample": "stryker run stryker.pl22.config.json && node scripts/checkMutationBaseline.mjs",
         "test:mutation:baseline": "node scripts/checkMutationBaseline.mjs --write",
         "test:mutation:sweep": "node scripts/mutationSweep.mjs",
+        "test:mutation:queue": "node scripts/mutationQueue.mjs",
         "test:mutation:selftest": "node scripts/mutationBaseline.selftest.mjs",
         "docs:adr-index": "node scripts/generate-adr-index.mjs",
         "docs:adr-check": "node scripts/generate-adr-index.mjs --check",

@@ -1,7 +1,25 @@
 # Mutation testing: what's in scope, what the targets are, and how we get there
 
-**Status: PROPOSED.** The categorization is measured and controlled. The thresholds and
-the plan need your ratification — nothing below is enforced yet.
+**Status: RATIFIED 2026-09-03** (owner), in this shape and no other:
+
+1. **The tiers** — pure / mixed / orchestration, assigned mechanically by `tierOf()` in
+   `scripts/mutationScope.mjs` from async density. Ratified as measured: the order holds
+   across all 610 modules.
+2. **The floors** — 90 / 80 / 70 — are **targets**: what a properly worked module of that
+   tier should reach. They are not a pass/fail gate, and no enforcer compares a score
+   to them. Fitted to sixteen well-tested modules, they sit above the real medians
+   (79.6 / 65.5 / 63.4) and disagree with "done" on 126 of 610.
+3. **The gate is `openGaps`** — a module is finished when its open-gap count is zero:
+   every surviving or uncovered behavioural mutant either killed or recorded in
+   `scripts/mutation-equivalents.ledger.json` with a reason. Recorded per row in
+   `reports/mutation/baseline.json`.
+4. **The per-change ratchet is unchanged** — score may not fall, behavioural survivors
+   may not rise while the score rises, uncovered may not rise. It gates on those, never
+   on `openGaps`, so a ledger entry can never be what makes a run pass.
+
+The categorization below was measured and controlled; §2's sixteen-module table is kept
+as the record of how the targets were first fitted, with the 610-module re-read beneath
+it.
 
 Three questions, in order: which files are in this exercise, what score should each kind
 of file reach and why, and how we get from 16 measured files to all of them.
