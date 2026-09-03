@@ -1,6 +1,7 @@
 import { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { Logger } from '@/types/logger';
+import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import {
     createSuccessResult,
     mockOrg,
@@ -253,7 +254,8 @@ describe('AuthenticationService - Login/Logout Operations', () => {
 
         beforeEach(() => {
             // Spy on cache manager methods
-            const cacheManager = (authService as any).cacheManager;
+            const cacheManager = (authService as unknown as { cacheManager: AuthCacheManager })
+                .cacheManager;
             clearAuthStatusCacheSpy = jest.spyOn(cacheManager, 'clearAuthStatusCache');
             clearValidationCacheSpy = jest.spyOn(cacheManager, 'clearValidationCache');
             clearTokenInspectionCacheSpy = jest.spyOn(cacheManager, 'clearTokenInspectionCache');
@@ -295,7 +297,8 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             // getOrganizations(), which is org-list-cache-first — so the org LIST must be
             // cleared too, else the org re-derives from a stale list (~60s TTL). The forced
             // path already clears both via clearAll.
-            const cacheManager = (authService as any).cacheManager;
+            const cacheManager = (authService as unknown as { cacheManager: AuthCacheManager })
+                .cacheManager;
             cacheManager.setCachedOrganization(mockOrg); // seed a stale org
             cacheManager.setCachedOrgList([mockOrg]); // seed a stale org list
 

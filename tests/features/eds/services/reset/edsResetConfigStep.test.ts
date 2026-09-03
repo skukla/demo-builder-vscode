@@ -50,6 +50,8 @@ jest.mock('@/features/eds/services/configService/siteConfigRegistrar', () => ({
 }));
 import { publishConfigAndRegisterSite } from '@/features/eds/services/reset/edsResetConfigStep';
 import type { ConfigStepServices } from '@/features/eds/services/reset/edsResetConfigStep';
+import type { TokenProvider } from '@/features/eds/services/daLive/daLiveOrgOperations';
+import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -61,8 +63,12 @@ const PARAMS = {
     byomOverlayUrl: 'https://overlay.example/render',
 };
 
-const TOKEN_PROVIDER = { getToken: jest.fn() } as never;
-const GITHUB_TOKENS = { validateToken: jest.fn() } as never;
+// Both are forwarded, never called, by this step. The DA.live provider is the
+// shape the callee declares (`getAccessToken`, not `getToken` — the cast that
+// used to sit here hid that mismatch). The GitHub service is a class with private
+// state no literal can supply.
+const TOKEN_PROVIDER: TokenProvider = { getAccessToken: jest.fn() };
+const GITHUB_TOKENS = { validateToken: jest.fn() } as unknown as GitHubTokenService;
 
 function makeLogger(): Logger {
     return createMockLogger() as unknown as Logger;

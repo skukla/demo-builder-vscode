@@ -13,6 +13,8 @@ import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 describe('ProjectSetupContext', () => {
     let mockHandlerContext: jest.Mocked<HandlerContext>;
@@ -24,26 +26,12 @@ describe('ProjectSetupContext', () => {
     beforeEach(() => {
         mockLogger = createMockLogger();
 
-        mockHandlerContext = {
+        mockHandlerContext = createMockHandlerContext({
             logger: mockLogger,
             debugLogger: mockLogger,
-            context: {
-                extensionPath: '/test/extension/path',
-                secrets: {} as any,
-                globalState: {
-                    get: jest.fn(),
-                    update: jest.fn().mockResolvedValue(undefined),
-                },
-            } as any,
-            panel: undefined,
-            stateManager: {} as any,
-            communicationManager: undefined,
+            context: createMockExtensionContext({ extensionPath: '/test/extension/path' }),
             sendMessage: jest.fn().mockResolvedValue(undefined),
-            sharedState: {
-                isAuthenticating: false,
-            },
-            authManager: {} as any,
-        } as jest.Mocked<HandlerContext>;
+        });
 
         mockRegistry = {
             version: '1.0.0',
@@ -75,11 +63,11 @@ describe('ProjectSetupContext', () => {
                     kind: 'mesh',
                     status: 'deployed',
                     source: { owner: '', repo: '' },
-                        envVars: {},
-                        sourceHash: null,
-                        lastDeployed: '',
-                        endpoint: 'https://mesh.adobe.io/graphql',
-                            },
+                    envVars: {},
+                    sourceHash: null,
+                    lastDeployed: '',
+                    endpoint: 'https://mesh.adobe.io/graphql',
+                },
             },
         };
 
@@ -162,7 +150,10 @@ describe('ProjectSetupContext', () => {
         });
 
         it('should return empty object when registry.envVars is undefined', () => {
-            const registryWithoutEnvVars = { ...mockRegistry, envVars: undefined } as any;
+            const registryWithoutEnvVars: ComponentRegistry = {
+                ...mockRegistry,
+                envVars: undefined,
+            };
             const context = new ProjectSetupContext(
                 mockHandlerContext,
                 registryWithoutEnvVars,
@@ -339,11 +330,11 @@ describe('ProjectSetupContext', () => {
                         kind: 'mesh',
                         status: 'deployed',
                         source: { owner: '', repo: '' },
-                            envVars: {},
-                            sourceHash: null,
-                            lastDeployed: '2026-01-01T00:00:00.000Z',
-                            endpoint: 'https://updated-mesh.adobe.io/graphql',
-                                    },
+                        envVars: {},
+                        sourceHash: null,
+                        lastDeployed: '2026-01-01T00:00:00.000Z',
+                        endpoint: 'https://updated-mesh.adobe.io/graphql',
+                    },
                 },
             };
 
@@ -398,20 +389,24 @@ describe('ProjectSetupContext', () => {
 
     describe('accessor error handling', () => {
         it('should handle null/undefined gracefully in getBackendId', () => {
+            // Deliberately malformed: a null where the type says an object, to
+            // prove the accessor does not throw on it.
             const context = new ProjectSetupContext(mockHandlerContext, mockRegistry, mockProject, {
-                components: null,
-            } as any);
+                projectName: 'test-project',
+                components: null as unknown as ProjectCreationConfig['components'],
+            });
 
             expect(() => context.getBackendId()).not.toThrow();
             expect(context.getBackendId()).toBeUndefined();
         });
 
         it('should handle null/undefined gracefully in getMeshEndpoint', () => {
-            const projectWithNull = {
+            // Deliberately malformed: nulls where the type says optional objects.
+            const projectWithNull: Project = {
                 ...mockProject,
-                componentInstances: null,
-                appBuilderComponents: null,
-            } as any;
+                componentInstances: null as unknown as Project['componentInstances'],
+                appBuilderComponents: null as unknown as Project['appBuilderComponents'],
+            };
 
             const context = new ProjectSetupContext(
                 mockHandlerContext,

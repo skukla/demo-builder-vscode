@@ -24,8 +24,8 @@ describe('Token Expiry Detection - handleAuthenticate()', () => {
             inspectToken: jest.fn(),
         };
 
-        // Add getTokenManager method to authManager
-        (mockContext.authManager as any).getTokenManager = jest.fn(() => mockTokenManager);
+        // Point the fake's getTokenManager at this suite's token manager
+        (mockContext.authManager!.getTokenManager as jest.Mock).mockReturnValue(mockTokenManager);
 
         jest.clearAllMocks();
     });

@@ -13,41 +13,15 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockExtensionContext as createMockExtensionContextBase } from '../../../helpers/extensionContextFake';
 import { internals } from '../../../helpers/commandInternals';
-// Mock dependencies
 
-/**
- * Create mock ExtensionContext
- */
+/** The canonical ExtensionContext fake, at this suite's extension path. */
 function createMockExtensionContext(): vscode.ExtensionContext {
-    return {
-        subscriptions: [],
-        extensionPath: '/mock/extension/path',
-        globalState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-            setKeysForSync: jest.fn(),
-        } as any,
-        workspaceState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-        } as any,
-        extensionUri: vscode.Uri.file('/mock/extension/path'),
-        extensionMode: vscode.ExtensionMode.Test,
-        environmentVariableCollection: {} as any,
-        asAbsolutePath: (relativePath: string) => `/mock/extension/path/${relativePath}`,
-        storageUri: undefined,
-        globalStorageUri: vscode.Uri.file('/mock/storage'),
-        logUri: vscode.Uri.file('/mock/logs'),
-        storagePath: '/mock/storage',
-        globalStoragePath: '/mock/global/storage',
-        logPath: '/mock/logs',
-        secrets: createMockSecretStorage().secrets,
-        extension: {} as any,
-        languageModelAccessInformation: {} as any,
-    };
+    return createMockExtensionContextBase(
+        { secrets: createMockSecretStorage().secrets },
+        '/mock/extension/path'
+    );
 }
 
 

@@ -20,6 +20,8 @@ import * as _vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 // Mock dependencies
 jest.mock('@/core/di/serviceLocator');
 // Uses the real @/core/utils/timeoutConfig (pure constants) — a partial config-leaf
@@ -71,13 +73,11 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
         // Mock handler context with injected logger
-        mockContext = {
-            context: {
-                globalStorageUri: {
-                    fsPath: '/tmp/test-storage',
-                },
+        mockContext = createMockHandlerContext({
+            context: createMockExtensionContext({
+                globalStorageUri: _vscode.Uri.file('/tmp/test-storage'),
                 extensionPath: '/tmp/test-extension',
-            },
+            }),
             logger: mockLogger,
             debugLogger: createMockLogger(),
             stateManager: createMockStateManager({
@@ -89,6 +89,7 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
                 }),
             }),
             sharedState: {
+                isAuthenticating: false,
                 apiServicesConfig: {
                     services: {
                         apiMesh: {
@@ -101,7 +102,7 @@ describe('Mesh Handlers - DI Pattern (Step 9)', () => {
                     },
                 },
             },
-        } as any;
+        });
     });
 
     describe('Handler Context-Based Injection', () => {

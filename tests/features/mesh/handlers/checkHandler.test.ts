@@ -12,6 +12,8 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 // withOrgContext records the target then runs the callback (no global mutation).
 // buildOrgTargetFromProjectAdobe is pure — use the real implementation.
 const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
@@ -63,12 +65,10 @@ describe('checkHandler - Security Tests (Step 2)', () => {
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
         // Mock handler context
-        mockContext = {
-            context: {
-                globalStorageUri: {
-                    fsPath: '/tmp/test-storage',
-                },
-            },
+        mockContext = createMockHandlerContext({
+            context: createMockExtensionContext({
+                globalStorageUri: _vscode.Uri.file('/tmp/test-storage'),
+            }),
             logger: createMockLogger(),
             debugLogger: createMockLogger(),
             stateManager: createMockStateManager({
@@ -82,6 +82,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
             }),
             authManager: createMockAuthenticationService(),
             sharedState: {
+                isAuthenticating: false,
                 apiServicesConfig: {
                     services: {
                         apiMesh: {
@@ -94,7 +95,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                     },
                 },
             },
-        } as any;
+        });
     });
 
     describe('WorkspaceId Validation (SECURITY)', () => {
@@ -305,7 +306,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
         // The config carries setupInstructions in production; the handler must NOT
         // surface them anymore — absent-API is auto-remediated by the deploy path.
         beforeEach(() => {
-            (mockContext.sharedState as any).apiServicesConfig = {
+            mockContext.sharedState.apiServicesConfig = {
                 services: {
                     apiMesh: {
                         detection: {

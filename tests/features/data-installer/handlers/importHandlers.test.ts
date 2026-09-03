@@ -23,7 +23,7 @@ import {
     happyClient,
     importHandlers,
     makeImportHarness,
-    MockedWriteClient,
+    stubWriteClient,
     mockedWatch,
     PAYLOAD,
     resetImportHandlerMocks,
@@ -136,7 +136,7 @@ describe('start-datapack-import', () => {
             .fn()
             .mockResolvedValue({ valid: false, reason: 'Invalid input. Must provide one of: …' });
         const startImport = jest.fn();
-        MockedWriteClient.mockImplementation(() => ({ validateImport, startImport }) as never);
+        stubWriteClient({ validateImport, startImport });
         const { context } = makeImportHarness();
 
         const result = await importHandlers['start-datapack-import'](context, PAYLOAD);
@@ -340,16 +340,13 @@ describe('validate-datapack-import', () => {
 
     it('stops at unusable credentials and says so', async () => {
         const validateImport = jest.fn();
-        MockedWriteClient.mockImplementation(
-            () =>
-                ({
-                    checkCredentials: jest
-                        .fn()
-                        .mockResolvedValue({ usable: false, reason: 'Authentication failed' }),
-                    validateImport,
-                    startImport: jest.fn(),
-                }) as never
-        );
+        stubWriteClient({
+            checkCredentials: jest
+                .fn()
+                .mockResolvedValue({ usable: false, reason: 'Authentication failed' }),
+            validateImport,
+            startImport: jest.fn(),
+        });
         const { context } = makeImportHarness();
 
         const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);
@@ -397,15 +394,12 @@ describe('validate-datapack-import', () => {
         const validateImport = jest
             .fn()
             .mockResolvedValue({ valid: false, reason: 'Invalid input. Must provide one of: …' });
-        MockedWriteClient.mockImplementation(
-            () =>
-                ({
-                    validateImport,
-                    startImport: jest.fn(),
-                    // Credentials pass, so the shape verdict is what comes back.
-                    checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
-                }) as never
-        );
+        stubWriteClient({
+            validateImport,
+            startImport: jest.fn(),
+            // Credentials pass, so the shape verdict is what comes back.
+            checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
+        });
         const { context } = makeImportHarness();
 
         const result = await importHandlers['validate-datapack-import'](context, PAYLOAD);

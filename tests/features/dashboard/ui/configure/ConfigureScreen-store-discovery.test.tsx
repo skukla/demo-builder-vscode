@@ -104,10 +104,7 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
         };
 
         renderWithProvider(
-            <ConfigureScreen
-                project={projectWithAdobe as never}
-                componentsData={mockComponentsData}
-            />
+            <ConfigureScreen project={projectWithAdobe} componentsData={mockComponentsData} />
         );
 
         expect(useAutoStoreDetectMock).toHaveBeenCalledWith(
@@ -119,10 +116,7 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
         const projectNoAdobe = { ...mockProject, adobe: undefined };
 
         renderWithProvider(
-            <ConfigureScreen
-                project={projectNoAdobe as never}
-                componentsData={mockComponentsData}
-            />
+            <ConfigureScreen project={projectNoAdobe} componentsData={mockComponentsData} />
         );
 
         expect(useAutoStoreDetectMock).toHaveBeenCalledWith(
@@ -132,7 +126,7 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
 
     it('renders StoreConfigFieldRow for every field in the ACTIVE service group', () => {
         renderWithProvider(
-            <ConfigureScreen project={mockProject as never} componentsData={mockComponentsData} />
+            <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
         );
 
         // Fields from the test fixture — see ConfigureScreen.testUtils. One section is on
@@ -150,7 +144,7 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
 
     it('passes the correct service group id to StoreConfigFieldRow so store-group branching works', () => {
         renderWithProvider(
-            <ConfigureScreen project={mockProject as never} componentsData={mockComponentsData} />
+            <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
         );
 
         // Commerce URL is in the 'adobe-commerce' group (a store group per the mock isStoreGroup)
@@ -166,7 +160,7 @@ describe('ConfigureScreen - Store Discovery Integration', () => {
 
     it('passes fetchStores, hasStoreData, isFetching to useAutoStoreDetect so the hook can coordinate', () => {
         renderWithProvider(
-            <ConfigureScreen project={mockProject as never} componentsData={mockComponentsData} />
+            <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
         );
 
         expect(useAutoStoreDetectMock).toHaveBeenCalledWith(

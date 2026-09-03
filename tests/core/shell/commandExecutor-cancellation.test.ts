@@ -69,8 +69,7 @@ describe('CommandExecutor - Cancellation (AbortController)', () => {
 
             // Simulate execa's canceled error response (deferred to allow handler attachment)
             setImmediate(() => {
-                const canceledError = new Error('Command was canceled') as any;
-                canceledError.isCanceled = true;
+                const canceledError = Object.assign(new Error('Command was canceled'), { isCanceled: true });
                 mockSubprocess._reject(canceledError);
             });
 
@@ -99,8 +98,7 @@ describe('CommandExecutor - Cancellation (AbortController)', () => {
 
             // Complete the promise (deferred to allow handler attachment)
             setImmediate(() => {
-                const canceledError = new Error('Command was canceled') as any;
-                canceledError.isCanceled = true;
+                const canceledError = Object.assign(new Error('Command was canceled'), { isCanceled: true });
                 mockSubprocess._reject(canceledError);
             });
 
@@ -189,8 +187,7 @@ describe('CommandExecutor - Cancellation (AbortController)', () => {
 
             // Simulate canceled error (deferred to allow handler attachment)
             setImmediate(() => {
-                const canceledError = new Error('Command was canceled') as any;
-                canceledError.isCanceled = true;
+                const canceledError = Object.assign(new Error('Command was canceled'), { isCanceled: true });
                 mockSubprocess._reject(canceledError);
             });
 

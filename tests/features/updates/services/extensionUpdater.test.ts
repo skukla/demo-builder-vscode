@@ -53,7 +53,7 @@ describe('ExtensionUpdater', () => {
         mockWindow.withProgress = mockWithProgress;
         mockWindow.showInformationMessage = jest.fn();
         mockCommands.executeCommand = jest.fn();
-        (vscode.Uri as any).file = jest.fn((path) => ({ path }));
+        (vscode.Uri as unknown as { file: (path: string) => unknown }).file = jest.fn((path: string) => ({ path }));
     });
 
     describe('updateExtension', () => {

@@ -51,12 +51,17 @@ jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', 
     buildRunnerDepsContext: (...a: unknown[]) => mockBuildRunnerDepsContext(...(a as [])),
 }));
 
-import { handleSetProjectDestination } from '@/features/dashboard/handlers/destinationHandlers';
+import {
+    handleSetProjectDestination,
+    type SetProjectDestinationPayload,
+} from '@/features/dashboard/handlers/destinationHandlers';
+import type { TokenManager } from '@/features/authentication/services/tokenManager';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 const EXISTING_ADOBE = {
     organization: '285361',
@@ -99,11 +104,18 @@ beforeEach(() => {
  * the shared node setup empties it after every test — so seed per-test.
  */
 beforeEach(() => {
-    ServiceLocator.setAuthenticationService({
-        getTokenManager: () => ({ inspectToken: jest.fn(async () => ({ valid: false })) }),
-        getCachedOrganization: jest.fn(),
-        getS2SDeployCredentials: jest.fn(),
-    } as never);
+    ServiceLocator.setAuthenticationService(
+        createMockAuthenticationService({
+            getTokenManager: jest.fn(
+                () =>
+                    ({
+                        inspectToken: jest.fn(async () => ({ valid: false })),
+                    }) as unknown as TokenManager
+            ),
+            getCachedOrganization: jest.fn(),
+            getS2SDeployCredentials: jest.fn(),
+        })
+    );
     ServiceLocator.setCommandExecutor(createMockCommandExecutor());
 });
 
@@ -169,7 +181,7 @@ describe('handleSetProjectDestination', () => {
 
         const result = await handleSetProjectDestination(context, {
             project: { id: 'new-project-id', name: 'NewProject', title: 'New Project' },
-        } as never);
+        } as unknown as SetProjectDestinationPayload);
 
         expect(result.success).toBe(false);
         expect(saveProject).not.toHaveBeenCalled();

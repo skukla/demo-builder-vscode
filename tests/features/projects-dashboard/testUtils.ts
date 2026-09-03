@@ -50,7 +50,7 @@ export function createProjectsDashboardProject(overrides?: Partial<Project>): Pr
             }),
         },
         ...overrides,
-    } as never)
+    });
 }
 
 /**

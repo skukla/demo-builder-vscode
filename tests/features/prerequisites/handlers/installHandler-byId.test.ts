@@ -16,16 +16,23 @@ jest.mock('vscode', () => ({ env: { openExternal: jest.fn() }, Uri: { parse: (u:
 });
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
-import type { HandlerContext } from '@/types/handlers';
+import type { HandlerContext, PrerequisiteCheckState } from '@/types/handlers';
+import type { PrerequisiteDefinition } from '@/features/prerequisites/services/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-const DOCKER = {
+const DOCKER: PrerequisiteDefinition = {
     id: 'docker',
     name: 'Docker',
     description: 'containers',
     optional: true,
+    check: { command: 'docker --version' },
 };
-const NODE = { id: 'node', name: 'Node.js', description: 'runtime' };
+const NODE: PrerequisiteDefinition = {
+    id: 'node',
+    name: 'Node.js',
+    description: 'runtime',
+    check: { command: 'node --version' },
+};
 
 /** Resolved order is deterministic from config — docker sits at index 1 here. */
 const RESOLVED = [NODE, DOCKER];
@@ -96,7 +103,22 @@ describe('install-prerequisite addressed by prerequisiteId', () => {
     it('prefers the id when both addresses are supplied', async () => {
         const ctx = createContext();
         // An index pointing at a DIFFERENT prerequisite, to prove which one won.
-        ctx.sharedState.currentPrerequisiteStates = new Map([[0, { prereq: NODE, result: {} }]]) as never;
+        ctx.sharedState.currentPrerequisiteStates = new Map<number, PrerequisiteCheckState>([
+            [
+                0,
+                {
+                    prereq: NODE,
+                    result: {
+                        id: 'node',
+                        name: 'Node.js',
+                        description: 'runtime',
+                        installed: true,
+                        optional: false,
+                        canInstall: false,
+                    },
+                },
+            ],
+        ]);
 
         const result = await handleInstallPrerequisite(ctx, {
             prerequisiteId: 'docker',

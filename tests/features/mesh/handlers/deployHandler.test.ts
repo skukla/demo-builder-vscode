@@ -30,6 +30,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 /**
  * ADR-015 (2026-08-28): the handler resolves the auth manager and executor at
@@ -37,7 +38,7 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
  * the registry after EVERY test, so the fakes are seeded per-test.
  */
 function seedRegistry(): void {
-    ServiceLocator.setAuthenticationService({} as never);
+    ServiceLocator.setAuthenticationService(createMockAuthenticationService());
     ServiceLocator.setCommandExecutor(createMockCommandExecutor());
 }
 

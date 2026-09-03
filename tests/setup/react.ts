@@ -36,7 +36,9 @@ const mockVSCodeApi = {
 };
 
 // Mock acquireVsCodeApi global function
-(global as any).acquireVsCodeApi = jest.fn(() => mockVSCodeApi);
+(globalThis as unknown as { acquireVsCodeApi: () => typeof mockVSCodeApi }).acquireVsCodeApi = jest.fn(
+    () => mockVSCodeApi,
+);
 
 // =============================================================================
 // Test Lifecycle Hooks

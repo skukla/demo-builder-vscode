@@ -23,7 +23,11 @@ import type { HandlerContext } from '@/types/handlers';
 import type {
     PrerequisiteDefinition,
     PrerequisiteStatus,
+    PrerequisitesManager,
 } from '@/features/prerequisites/services/PrerequisitesManager';
+import type { ErrorLogger } from '@/core/logging/errorLogger';
+import type { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
@@ -82,6 +86,9 @@ export const mockAdobeCliPrereq: PrerequisiteDefinition = {
 export function createCheckHandlerContext(
     overrides?: Partial<HandlerContext>
 ): jest.Mocked<HandlerContext> {
+    // The manager, error logger, progress unifier and step logger are CLASSES
+    // with private members, so no literal can satisfy them; each fake carries
+    // only the methods the check handlers call.
     return createMockHandlerContextBase({
         prereqManager: {
             loadConfig: jest.fn(),
@@ -92,19 +99,17 @@ export function createCheckHandlerContext(
                 getPerVersionResults: jest.fn().mockReturnValue(undefined),
                 clearAll: jest.fn(),
             }),
-        },
+        } as unknown as PrerequisitesManager,
         authManager: createMockAuthenticationService(),
-        componentHandler: {},
-        errorLogger: {},
-        progressUnifier: {},
+        errorLogger: {} as unknown as ErrorLogger,
+        progressUnifier: {} as unknown as ProgressUnifier,
         stepLogger: {
             log: jest.fn(),
-        },
+        } as unknown as StepLogger,
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
         context: createMockExtensionContext(),
         panel: undefined,
-        stateManager: {},
         communicationManager: undefined,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: {
@@ -114,7 +119,7 @@ export function createCheckHandlerContext(
             currentComponentSelection: undefined,
         },
         ...overrides,
-    } as never);
+    });
 }
 
 /** Canonical component-selection fixture (ADR-016). */

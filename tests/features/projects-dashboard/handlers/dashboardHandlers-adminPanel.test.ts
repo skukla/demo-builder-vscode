@@ -29,7 +29,7 @@ describe('dashboardHandlers', () => {
                 componentConfigs: {
                     'citisignal-nextjs': { ADOBE_COMMERCE_ADMIN_URL: url },
                 },
-            } as any);
+            });
         }
 
         /** Flush the fire-and-forget notification .then chain. */

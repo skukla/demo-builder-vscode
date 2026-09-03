@@ -11,6 +11,12 @@
 import '../../../../helpers/edsPlaceholderStubMocks';
 
 import type { HandlerContext } from '@/types/handlers';
+import type { StorefrontSetupStartPayload } from '@/types/webviewRequests';
+import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
+import type {
+    RepoInfo,
+    SetupServices,
+} from '@/features/eds/handlers/storefrontSetup/storefrontSetupTypes';
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     addPdpCaveat: jest.fn(),
@@ -25,12 +31,23 @@ import {
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 
-const EDS_CONFIG = {
+const EDS_CONFIG: StorefrontSetupStartPayload['edsConfig'] = {
+    repoName: 'shop',
     daLiveOrg: 'acme',
     daLiveSite: 'shop',
-} as any;
+};
 
-const REPO_INFO = { repoOwner: 'me', repoName: 'shop' };
+const REPO_INFO: RepoInfo = { repoOwner: 'me', repoName: 'shop' };
+
+/** The three file-ops calls this phase makes; the class itself holds private Octokit state. */
+type FileOpsStub = jest.Mocked<
+    Pick<GitHubFileOperations, 'getFileContent' | 'createOrUpdateFile' | 'commitTreeToBranch'>
+>;
+
+/** Only `githubFileOps` is read here; the other services are forwarded to mocked modules. */
+function servicesWith(githubFileOps: FileOpsStub): SetupServices {
+    return { githubFileOps } as unknown as SetupServices;
+}
 
 function makeContext(): HandlerContext {
     return createMockHandlerContext({
@@ -39,13 +56,13 @@ function makeContext(): HandlerContext {
     });
 }
 
-function makeGithubFileOps(overrides: Record<string, unknown> = {}) {
+function makeGithubFileOps(overrides: Partial<FileOpsStub> = {}): FileOpsStub {
     return {
         getFileContent: jest.fn().mockResolvedValue(null),
         createOrUpdateFile: jest.fn().mockResolvedValue(undefined),
         commitTreeToBranch: jest.fn().mockResolvedValue('sha123'),
         ...overrides,
-    } as any;
+    };
 }
 
 describe('executePhaseHelixConfig — placeholder stubs (creation)', () => {
@@ -55,10 +72,8 @@ describe('executePhaseHelixConfig — placeholder stubs (creation)', () => {
         await executePhaseHelixConfig(
             makeContext(),
             EDS_CONFIG,
-
-            { githubFileOps } as any,
-
-            REPO_INFO as any,
+            servicesWith(githubFileOps),
+            REPO_INFO,
             new AbortController().signal
         );
 
@@ -92,10 +107,8 @@ describe('executePhaseHelixConfig — placeholder stubs (creation)', () => {
             executePhaseHelixConfig(
                 context,
                 EDS_CONFIG,
-
-                { githubFileOps } as any,
-
-                REPO_INFO as any,
+                servicesWith(githubFileOps),
+                REPO_INFO,
                 new AbortController().signal
             )
         ).resolves.toBeDefined();

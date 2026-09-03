@@ -19,7 +19,12 @@ import {
 } from '@/features/updates/commands/updateExecutor';
 import type { AdobeMcpUpdateItem } from '@/features/updates/commands/updateTypes';
 import { applyAdobeMcpUpdate } from '@/features/updates/services/adobeMcpUpdateCore';
+import type { Project } from '@/types/base';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 jest.mock('@/features/updates/services/adobeMcpUpdateCore', () => ({
     applyAdobeMcpUpdate: jest.fn(),
@@ -33,22 +38,24 @@ const PKG = '@adobe-commerce/commerce-extensibility-tools';
 
 function makeCtx(): UpdateContext {
     return {
-        secrets: {} as vscode.SecretStorage,
+        secrets: createMockSecretStorage().secrets,
         extensionPath: '/ext',
-        stateManager: { saveProjectConfigOnly: jest.fn(async () => undefined) },
+        // The fake's default saveProjectConfigOnly already resolves undefined.
+        stateManager: createMockStateManager(),
         logger: createMockLogger(),
-    } as never;
+        commandManager: createMockCommandExecutor(),
+    };
 }
 
-function makeItem(projectOverrides: Record<string, unknown> = {}): AdobeMcpUpdateItem {
+function makeItem(projectOverrides: Partial<Project> = {}): AdobeMcpUpdateItem {
     return {
-        project: { name: 'demo', path: '/p/demo', status: 'ready', ...projectOverrides },
+        project: createMockProject({ name: 'demo', path: '/p/demo', status: 'ready', ...projectOverrides }),
         packageName: PKG,
         currentVersion: '1.0.0',
         latestVersion: '2.0.0',
         isAdobeMcpUpdate: true,
         label: 'Adobe MCP',
-    } as never;
+    };
 }
 
 describe('performAdobeMcpUpdates', () => {

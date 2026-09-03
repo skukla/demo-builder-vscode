@@ -19,25 +19,25 @@ describe('FileWatcher', () => {
         mockPollingService.pollUntilCondition = jest.fn().mockResolvedValue(undefined);
 
         fileWatcher = new FileWatcher(mockPollingService);
-        (fileWatcher as any).pollingService = mockPollingService;
 
         // Mock vscode.workspace.createFileSystemWatcher to return proper event methods
         const mockWatcherFactory = () => {
-            const watcher = new EventEmitter() as any;
-            watcher.dispose = jest.fn();
-            watcher.onDidChange = jest.fn((cb) => {
-                watcher.on('change', cb);
-                return { dispose: jest.fn() };
+            const emitter = new EventEmitter();
+            return Object.assign(emitter, {
+                dispose: jest.fn(),
+                onDidChange: jest.fn((cb: () => void) => {
+                    emitter.on('change', cb);
+                    return { dispose: jest.fn() };
+                }),
+                onDidCreate: jest.fn((cb: () => void) => {
+                    emitter.on('create', cb);
+                    return { dispose: jest.fn() };
+                }),
+                onDidDelete: jest.fn((cb: () => void) => {
+                    emitter.on('delete', cb);
+                    return { dispose: jest.fn() };
+                }),
             });
-            watcher.onDidCreate = jest.fn((cb) => {
-                watcher.on('create', cb);
-                return { dispose: jest.fn() };
-            });
-            watcher.onDidDelete = jest.fn((cb) => {
-                watcher.on('delete', cb);
-                return { dispose: jest.fn() };
-            });
-            return watcher;
         };
         (vscode.workspace.createFileSystemWatcher as jest.Mock).mockImplementation(mockWatcherFactory);
     });

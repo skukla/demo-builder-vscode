@@ -173,7 +173,7 @@ describe('handleSelectProject - Navigation', () => {
             await handleSelectProject(context, {
                 projectPath: project.path,
                 forceNewWindow: true,
-            } as any);
+            });
 
             expect(mockExecuteCommand).toHaveBeenCalledWith(
                 'vscode.openFolder',
@@ -192,7 +192,7 @@ describe('handleSelectProject - Navigation', () => {
             await handleSelectProject(context, {
                 projectPath: project.path,
                 forceNewWindow: true,
-            } as any);
+            });
 
             expect(mockExecuteCommand).toHaveBeenCalledWith(
                 'vscode.openFolder',

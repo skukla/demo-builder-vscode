@@ -17,7 +17,7 @@
 
 import { setupMocks } from './dashboardHandlers.testUtils';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
-import type { Project } from '@/types/base';
+import type { AppBuilderComponentState, Project } from '@/types/base';
 
 // ---- D1 runner (the live engine — fully mocked) ----------------------------
 export const mockAddAppBuilderComponent = jest.fn();
@@ -135,10 +135,10 @@ export function resetHandlerMocks(): void {
 }
 
 /** The canonical project fixture (ADR-016) with this suite's components. */
-export function createFreshProject(components: Record<string, unknown>): Project {
+export function createFreshProject(components: Record<string, AppBuilderComponentState>): Project {
     return createMockProjectBase({
         name: 'test-project',
         path: '/path/to/project',
         appBuilderComponents: components,
-    } as never);
+    });
 }

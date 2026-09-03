@@ -37,15 +37,19 @@ jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', 
 const mockTestDeveloperPermissions = jest.fn();
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
-        getAuthenticationService: () => ({ testDeveloperPermissions: mockTestDeveloperPermissions }),
+        getAuthenticationService: () => ({
+            testDeveloperPermissions: mockTestDeveloperPermissions,
+        }),
         // ADR-015 (2026-08-28): the handler resolves these when assembling
         // runner deps, so the module mock must answer them.
         getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
-
     },
 }));
 
 import { executeAppBuilderIntegrationsPhase } from '@/features/project-creation/handlers/executor';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const INTEGRATION_ENTRY = {
     id: 'erp-sync',
@@ -63,12 +67,12 @@ const MESH_ENTRY = {
     source: { owner: 'adobe', repo: 'mesh', branch: 'main' },
 };
 
-const context = {} as never;
-const project = { name: 'demo' } as never;
+const context = createMockHandlerContext();
+const project = createMockProject({ name: 'demo' });
 const progressTracker = jest.fn();
 
-function config(overrides: Record<string, unknown> = {}) {
-    return { projectName: 'demo', ...overrides } as never;
+function config(overrides: Partial<ProjectCreationConfig> = {}): ProjectCreationConfig {
+    return { projectName: 'demo', ...overrides };
 }
 
 beforeEach(() => {
@@ -77,12 +81,13 @@ beforeEach(() => {
     mockTestDeveloperPermissions.mockResolvedValue({ hasPermissions: true });
 });
 
-
-
 describe('executeAppBuilderIntegrationsPhase', () => {
     it('is a no-op when no integration ids are selected (no permission check)', async () => {
         await executeAppBuilderIntegrationsPhase(
-            context, project, config({ selectedAppBuilderComponents: [] }), progressTracker,
+            context,
+            project,
+            config({ selectedAppBuilderComponents: [] }),
+            progressTracker
         );
 
         expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
@@ -93,19 +98,24 @@ describe('executeAppBuilderIntegrationsPhase', () => {
         mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
 
         await executeAppBuilderIntegrationsPhase(
-            context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker,
+            context,
+            project,
+            config({ selectedAppBuilderComponents: ['erp-sync'] }),
+            progressTracker
         );
 
         expect(mockTestDeveloperPermissions).toHaveBeenCalledTimes(1);
         expect(mockAddAppBuilderComponent).toHaveBeenCalledTimes(1);
         expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
-            project, INTEGRATION_ENTRY, expect.anything(),
+            project,
+            INTEGRATION_ENTRY,
+            expect.anything()
         );
         // The API subscribe (union reconcile, inside the runner) is communicated.
         expect(progressTracker).toHaveBeenCalledWith(
             'Deploying Integrations',
             expect.any(Number),
-            'Enabling API access...',
+            'Enabling API access...'
         );
     });
 
@@ -123,15 +133,19 @@ describe('executeAppBuilderIntegrationsPhase', () => {
                     'owner-custom-app': { owner: 'owner', repo: 'custom-app' },
                 },
             }),
-            progressTracker,
+            progressTracker
         );
 
         // The sources-map key travels as the explicit instance id (shell instancing).
         expect(mockBuildCustomIntegrationEntry).toHaveBeenCalledWith(
             { owner: 'owner', repo: 'custom-app' },
-            'owner-custom-app',
+            'owner-custom-app'
         );
-        expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(project, customEntry, expect.anything());
+        expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
+            project,
+            customEntry,
+            expect.anything()
+        );
     });
 
     it('deploys TWO shell-sourced instances under distinct ids and names', async () => {
@@ -139,7 +153,9 @@ describe('executeAppBuilderIntegrationsPhase', () => {
         // Pass-through mirroring the real builder's instance-identity contract.
         mockBuildCustomIntegrationEntry.mockImplementation((source, id) => ({
             id,
-            name: (source as { name?: string; repo: string }).name ?? (source as { repo: string }).repo,
+            name:
+                (source as { name?: string; repo: string }).name ??
+                (source as { repo: string }).repo,
             description: '',
             kind: 'integration' as const,
             source,
@@ -152,32 +168,38 @@ describe('executeAppBuilderIntegrationsPhase', () => {
                 selectedAppBuilderComponents: ['order-sync', 'firefly-image-gen'],
                 appBuilderComponentSources: {
                     'order-sync': {
-                        owner: 'skukla', repo: 'app-builder-shell', name: 'Order Sync',
+                        owner: 'skukla',
+                        repo: 'app-builder-shell',
+                        name: 'Order Sync',
                     },
                     'firefly-image-gen': {
-                        owner: 'skukla', repo: 'app-builder-shell', name: 'Firefly Image Gen',
+                        owner: 'skukla',
+                        repo: 'app-builder-shell',
+                        name: 'Firefly Image Gen',
                     },
                 },
             }),
-            progressTracker,
+            progressTracker
         );
 
         expect(mockBuildCustomIntegrationEntry).toHaveBeenCalledWith(
             { owner: 'skukla', repo: 'app-builder-shell', name: 'Order Sync' },
-            'order-sync',
+            'order-sync'
         );
         expect(mockBuildCustomIntegrationEntry).toHaveBeenCalledWith(
             { owner: 'skukla', repo: 'app-builder-shell', name: 'Firefly Image Gen' },
-            'firefly-image-gen',
+            'firefly-image-gen'
         );
         expect(mockAddAppBuilderComponent).toHaveBeenCalledTimes(2);
         const deployedEntries = mockAddAppBuilderComponent.mock.calls.map(
-            (c) => c[1] as { id: string; name: string; kind: string },
+            (c) => c[1] as { id: string; name: string; kind: string }
         );
         expect(deployedEntries).toEqual([
             expect.objectContaining({ id: 'order-sync', name: 'Order Sync', kind: 'integration' }),
             expect.objectContaining({
-                id: 'firefly-image-gen', name: 'Firefly Image Gen', kind: 'integration',
+                id: 'firefly-image-gen',
+                name: 'Firefly Image Gen',
+                kind: 'integration',
             }),
         ]);
     });
@@ -186,7 +208,10 @@ describe('executeAppBuilderIntegrationsPhase', () => {
         mockGetAppBuilderComponentEntry.mockReturnValue(MESH_ENTRY);
 
         await executeAppBuilderIntegrationsPhase(
-            context, project, config({ selectedAppBuilderComponents: ['commerce-paas-mesh'] }), progressTracker,
+            context,
+            project,
+            config({ selectedAppBuilderComponents: ['commerce-paas-mesh'] }),
+            progressTracker
         );
 
         expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
@@ -195,12 +220,18 @@ describe('executeAppBuilderIntegrationsPhase', () => {
 
     it('throws when the developer-permission gate fails (never calls the runner)', async () => {
         mockGetAppBuilderComponentEntry.mockReturnValue(INTEGRATION_ENTRY);
-        mockTestDeveloperPermissions.mockResolvedValue({ hasPermissions: false, error: 'Developer access required' });
+        mockTestDeveloperPermissions.mockResolvedValue({
+            hasPermissions: false,
+            error: 'Developer access required',
+        });
 
         await expect(
             executeAppBuilderIntegrationsPhase(
-                context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker,
-            ),
+                context,
+                project,
+                config({ selectedAppBuilderComponents: ['erp-sync'] }),
+                progressTracker
+            )
         ).rejects.toThrow('Developer access required');
 
         expect(mockAddAppBuilderComponent).not.toHaveBeenCalled();
@@ -212,8 +243,11 @@ describe('executeAppBuilderIntegrationsPhase', () => {
 
         await expect(
             executeAppBuilderIntegrationsPhase(
-                context, project, config({ selectedAppBuilderComponents: ['erp-sync'] }), progressTracker,
-            ),
+                context,
+                project,
+                config({ selectedAppBuilderComponents: ['erp-sync'] }),
+                progressTracker
+            )
         ).rejects.toThrow('clone failed');
     });
 });

@@ -139,6 +139,6 @@ describe('collectUserSetKeys', () => {
     });
 
     it('survives a null or non-object tree', () => {
-        expect(collectUserSetKeys(null as never, 'demoBuilder', () => undefined)).toEqual([]);
+        expect(collectUserSetKeys(null as unknown as Record<string, unknown>, 'demoBuilder', () => undefined)).toEqual([]);
     });
 });

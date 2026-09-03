@@ -3,6 +3,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import * as vscode from 'vscode';
 
 import { mockWindow } from '../../helpers/vscodeMockViews';
+import { createMockWebviewPanel } from '../../helpers/webviewPanelFake';
 
 describe('loadingHTML', () => {
     let mockPanel: vscode.WebviewPanel;
@@ -12,11 +13,7 @@ describe('loadingHTML', () => {
         jest.clearAllMocks();
         jest.useFakeTimers();
 
-        mockPanel = {
-            webview: {
-                html: '',
-            },
-        } as any;
+        mockPanel = createMockWebviewPanel();
 
         mockLogger = {
             info: jest.fn(),

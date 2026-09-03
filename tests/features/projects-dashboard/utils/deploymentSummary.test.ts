@@ -21,7 +21,7 @@ import {
     getRuntimeSummary,
 } from '@/features/projects-dashboard/utils/projectStatusUtils';
 import type { Project } from '@/types/base';
-import { createProjectsDashboardProject } from '../testUtils';
+import { createMockComponentInstance, createProjectsDashboardProject } from '../testUtils';
 
 /** A project with one mesh entry and N integration entries. */
 function withDeployables(
@@ -185,7 +185,14 @@ describe('getRuntimeSummary — the local axis only', () => {
     it('reports the port for a running non-EDS project', () => {
         const project = createProjectsDashboardProject({
             status: 'running',
-            componentInstances: { frontend: { port: 3000 } } as never,
+            componentInstances: {
+                frontend: createMockComponentInstance({
+                    id: 'frontend',
+                    name: 'Frontend',
+                    type: 'frontend',
+                    port: 3000,
+                }),
+            },
         });
 
         expect(getRuntimeSummary(project)?.text).toBe('Running on port 3000');

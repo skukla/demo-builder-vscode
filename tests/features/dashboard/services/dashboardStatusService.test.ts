@@ -182,7 +182,7 @@ describe('dashboardStatusService', () => {
         // is answered by the deploy record, not by a staleness baseline that only
         // one of two deploy paths happens to write.
         it('returns true for a keyed entry with an endpoint but NO staleness baseline', () => {
-            const project = {
+            const project = createMockProject({
                 name: 'test-project',
                 path: '/path/to/project',
                 appBuilderComponents: {
@@ -194,13 +194,13 @@ describe('dashboardStatusService', () => {
                         source: { owner: 'skukla', repo: 'eds-accs-mesh' },
                     },
                 },
-            } as never;
+            });
 
             expect(hasMeshDeploymentRecord(project)).toBe(true);
         });
 
         it('returns true on lastDeployed alone (deployed, endpoint since cleared)', () => {
-            const project = {
+            const project = createMockProject({
                 name: 'test-project',
                 path: '/path/to/project',
                 appBuilderComponents: {
@@ -211,14 +211,14 @@ describe('dashboardStatusService', () => {
                         source: { owner: 'skukla', repo: 'eds-accs-mesh' },
                     },
                 },
-            } as never;
+            });
 
             expect(hasMeshDeploymentRecord(project)).toBe(true);
         });
 
         // Control: a mesh that exists but has never deployed is still not-deployed.
         it('returns false for a keyed entry with no endpoint, timestamp or baseline', () => {
-            const project = {
+            const project = createMockProject({
                 name: 'test-project',
                 path: '/path/to/project',
                 appBuilderComponents: {
@@ -228,7 +228,7 @@ describe('dashboardStatusService', () => {
                         source: { owner: 'skukla', repo: 'eds-accs-mesh' },
                     },
                 },
-            } as never;
+            });
 
             expect(hasMeshDeploymentRecord(project)).toBe(false);
         });

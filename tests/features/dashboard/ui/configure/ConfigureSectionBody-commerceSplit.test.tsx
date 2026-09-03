@@ -30,6 +30,7 @@ import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { ConfigureSectionBody } from '@/features/dashboard/ui/configure/ConfigureSectionBody';
 import type { ServiceGroup, UniqueField } from '@/features/dashboard/ui/configure/configureTypes';
+import type { ConfigureSection } from '@/features/dashboard/ui/configure/configureSections';
 
 jest.mock('@adobe/react-spectrum', () => ({
     TextField: ({ label }: any) => <div>{label}</div>,
@@ -75,6 +76,17 @@ const CATALOG: ServiceGroup = {
     fields: [field('ADOBE_CATALOG_API_KEY')],
 };
 
+/** A rail section for a service group; the body branches on `kind` and `id` only. */
+const serviceGroupSection = (id: string, label: string): ConfigureSection => ({
+    id,
+    label,
+    kind: 'serviceGroup',
+    isComplete: true,
+    requiredTotal: 0,
+    requiredComplete: 0,
+    hasError: false,
+});
+
 /** Records which group each field row was handed — the cascade depends on it. */
 const seen: { key: string; groupId: string }[] = [];
 
@@ -82,7 +94,7 @@ function renderBody(group: ServiceGroup, storeStructureReady = true) {
     seen.length = 0;
     return render(
         <ConfigureSectionBody
-            section={{ id: group.id, label: group.label, kind: 'serviceGroup' } as never}
+            section={serviceGroupSection(group.id, group.label)}
             serviceGroups={[group, CATALOG]}
             renderFieldRow={(f, g) => {
                 seen.push({ key: f.key, groupId: g.id });
@@ -167,13 +179,10 @@ describe('the Business Structure tab', () => {
         seen.length = 0;
         return render(
             <ConfigureSectionBody
-                section={
-                    {
-                        id: 'adobe-commerce:business-structure',
-                        label: 'Business Structure',
-                        kind: 'serviceGroup',
-                    } as never
-                }
+                section={serviceGroupSection(
+                    'adobe-commerce:business-structure',
+                    'Business Structure'
+                )}
                 serviceGroups={[COMMERCE, CATALOG]}
                 renderFieldRow={(f, g) => {
                     seen.push({ key: f.key, groupId: g.id });

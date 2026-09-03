@@ -229,7 +229,7 @@ describe('Type Narrowing', () => {
             // In this branch, context should be narrowed to { type: 'projects' }
             expect(context.type).toBe('projects');
             // Should NOT have project property
-            expect((context as any).project).toBeUndefined();
+            expect((context as unknown as { project?: Project }).project).toBeUndefined();
         }
     });
 

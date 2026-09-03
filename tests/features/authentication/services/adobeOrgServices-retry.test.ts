@@ -16,6 +16,7 @@
 jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 
 import { AdobeOrgServices } from '@/features/authentication/services/adobeOrgServices';
+import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
@@ -27,7 +28,7 @@ function makeService(getServicesForOrg: jest.Mock): AdobeOrgServices {
         ensureInitialized: jest.fn(),
         getClient: () => ({ getServicesForOrg }),
     };
-    return new AdobeOrgServices(sdkClient as never);
+    return new AdobeOrgServices(sdkClient as unknown as AdobeSDKClient);
 }
 
 describe('getServicesForOrg retry hardening', () => {

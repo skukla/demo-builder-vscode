@@ -26,14 +26,14 @@ import { createMockHandlerContext as createMockHandlerContextBase } from '../../
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
-/** Build a minimal mock HandlerContext (uses `as any` to avoid over-mocking). */
+/** Build a minimal mock HandlerContext over the canonical builder. */
 export function createComponentHandlerContext(): HandlerContext {
     return createMockHandlerContextBase({
         context: createMockExtensionContext({}, '/mock/extension/path'),
         logger: createMockLogger(),
         sharedState: {
             isAuthenticating: false,
-        } as any,
+        },
         sendMessage: jest.fn(),
     })
 }
@@ -49,7 +49,7 @@ export function createMockRegistryManager(): jest.Mocked<ComponentRegistryManage
         loadRegistry: jest.fn(),
         getPresets: jest.fn(),
         checkCompatibility: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<ComponentRegistryManager>;
 }
 
 /** Build a mock DependencyResolver. */
@@ -57,7 +57,7 @@ export function createMockDependencyResolver(): jest.Mocked<DependencyResolver> 
     return {
         resolveDependencies: jest.fn(),
         validateDependencyChain: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<DependencyResolver>;
 }
 
 /** The three doubles both componentHandlers suites drive, already wired up. */

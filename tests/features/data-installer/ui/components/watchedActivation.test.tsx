@@ -20,6 +20,7 @@
  */
 
 import { watchedActivation } from '@/features/data-installer/ui/components/ImportDatapackModal';
+import type { LastAction } from '@/features/data-installer/ui/components/importResult';
 
 describe('watchedActivation', () => {
     /** The regression. Both ids are present; the reset must win. */
@@ -41,11 +42,11 @@ describe('watchedActivation', () => {
      * A dry run and provisioning start no job, so neither should change which
      * job is being watched — the modal may have been reopened onto a running one.
      */
-    it.each([['dryRun'], ['provision'], [null]])(
+    it.each<[LastAction | null]>([['dryRun'], ['provision'], [null]])(
         'falls back to whichever job exists when the last action was %s',
         (action) => {
-            expect(watchedActivation(action as never, 'act-import', undefined)).toBe('act-import');
-            expect(watchedActivation(action as never, undefined, 'act-reset')).toBe('act-reset');
+            expect(watchedActivation(action, 'act-import', undefined)).toBe('act-import');
+            expect(watchedActivation(action, undefined, 'act-reset')).toBe('act-reset');
         }
     );
 

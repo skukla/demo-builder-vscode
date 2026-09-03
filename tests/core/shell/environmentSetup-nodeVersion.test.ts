@@ -34,8 +34,12 @@ describe('EnvironmentSetup - Node Version Management', () => {
 
         // Create a fresh instance and explicitly clear all caches
         environmentSetup = createEnvironmentSetup(mockHomeDir);
-        (environmentSetup as any).cachedAdobeCLINodeVersion = undefined;
-        (environmentSetup as any).cachedFnmPath = undefined;
+        const caches = environmentSetup as unknown as {
+            cachedAdobeCLINodeVersion: string | null | undefined;
+            cachedFnmPath: string | null | undefined;
+        };
+        caches.cachedAdobeCLINodeVersion = undefined;
+        caches.cachedFnmPath = undefined;
     });
 
     describe('getInfrastructureNodeVersion', () => {

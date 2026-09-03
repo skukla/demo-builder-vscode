@@ -306,13 +306,13 @@ describe('IntegrationsSummaryTile', () => {
  * disagree with the card the surface shows for the same state.
  */
 describe('IntegrationsSummaryTile — the dot explains itself', () => {
-    const integration = (status: string) => ({
-        kind: 'integration' as const,
+    const integration = (status: AppBuilderComponentState['status']): AppBuilderComponentState => ({
+        kind: 'integration',
         status,
         source: { owner: 'acme', repo: 'widget' },
     });
 
-    it.each([
+    it.each<[AppBuilderComponentState['status'], string]>([
         ['error', 'Deploy failed'],
         ['stale', 'Update needed'],
         ['not-deployed', 'Not deployed'],
@@ -321,7 +321,7 @@ describe('IntegrationsSummaryTile — the dot explains itself', () => {
         render(
             <IntegrationsSummaryTile
                 hasAdobeContext
-                appBuilderComponents={{ a: integration(status) } as never}
+                appBuilderComponents={{ a: integration(status) }}
             />
         );
 
@@ -334,13 +334,11 @@ describe('IntegrationsSummaryTile — the dot explains itself', () => {
         render(
             <IntegrationsSummaryTile
                 hasAdobeContext
-                appBuilderComponents={
-                    {
-                        a: integration('deployed'),
-                        b: integration('error'),
-                        c: integration('deployed'),
-                    } as never
-                }
+                appBuilderComponents={{
+                    a: integration('deployed'),
+                    b: integration('error'),
+                    c: integration('deployed'),
+                }}
             />
         );
 

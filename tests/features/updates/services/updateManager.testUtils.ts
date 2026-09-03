@@ -28,6 +28,7 @@ jest.mock('@/core/validation/URLValidator', () => ({
 export { UpdateManager };
 export * as vscode from 'vscode';
 
+import type { Extension } from 'vscode';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockProject as createMockProjectBase } from '../../../helpers/projectFake';
 /**
@@ -46,7 +47,8 @@ import { createMockProject as createMockProjectBase } from '../../../helpers/pro
 export function createUpdateManagerContext(version: string = '1.0.0'): any {
     return createMockExtensionContext({
         extensionPath: '/mock/extension/path',
-        extension: { packageJSON: { version } },
+        // Only `packageJSON.version` is read; the rest of `Extension` is not built.
+        extension: { packageJSON: { version } } as unknown as Extension<unknown>,
         // This suite's own: the GitHub token must resolve, or update checks
         // take the unauthenticated path and the assertions change.
         secrets: {
@@ -55,7 +57,7 @@ export function createUpdateManagerContext(version: string = '1.0.0'): any {
             delete: jest.fn(),
             onDidChange: jest.fn(),
         },
-    } as never);
+    });
 }
 
 /** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */
@@ -170,7 +172,7 @@ export function createUpdateManagerProject(components: { id: string; version: st
     return createMockProjectBase({
         componentInstances,
         componentVersions,
-    } as never)
+    });
 }
 
 /**

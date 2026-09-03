@@ -419,7 +419,7 @@ describe('ConfigFieldRenderer', () => {
                 key: 'UNKNOWN',
                 componentIds: ['test-component'],
                 label: 'Unknown',
-                type: 'unknown' as any,
+                type: 'unknown' as unknown as UniqueField['type'],
                 required: false,
             };
 

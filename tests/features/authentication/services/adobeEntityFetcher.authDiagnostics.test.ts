@@ -111,7 +111,8 @@ describe('a 401 from the CLI', () => {
             code: 2,
             stdout: '',
             stderr: UNAUTHORIZED,
-        } as never);
+            duration: 0,
+        });
 
         await expect(fetcher.getOrganizations()).rejects.not.toThrow(/AUTH_EXPIRED/);
     });
@@ -122,7 +123,8 @@ describe('a 401 from the CLI', () => {
             code: 2,
             stdout: '',
             stderr: UNAUTHORIZED,
-        } as never);
+            duration: 0,
+        });
 
         await expect(fetcher.getOrganizations()).rejects.toThrow(/AUTH_EXPIRED/);
     });
@@ -133,7 +135,8 @@ describe('a 401 from the CLI', () => {
             code: 2,
             stdout: '',
             stderr: UNAUTHORIZED,
-        } as never);
+            duration: 0,
+        });
 
         await expect(fetcher.getOrganizations()).rejects.toThrow(/AUTH_EXPIRED/);
     });
@@ -147,7 +150,8 @@ describe('what the logs must show', () => {
             code: 2,
             stdout: 'not json',
             stderr: UNAUTHORIZED,
-        } as never);
+            duration: 0,
+        });
 
         await expect(fetcher.getOrganizations()).rejects.toThrow();
 
@@ -159,7 +163,8 @@ describe('what the logs must show', () => {
             code: 2,
             stdout: '',
             stderr: ' ›   Error: 403 - Forbidden',
-        } as never);
+            duration: 0,
+        });
 
         await expect(fetcher.getOrganizations()).rejects.toThrow();
 

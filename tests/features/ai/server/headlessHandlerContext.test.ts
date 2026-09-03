@@ -24,6 +24,7 @@ import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 function makeLogger(): Logger {
     return createMockLogger() as unknown as Logger;
@@ -34,11 +35,10 @@ describe('createHeadlessHandlerContext', () => {
         typeof ServiceLocator.setAuthenticationService
     >[0];
 
-    const fakeContext = {
-        extensionPath: '/ext',
-        globalState: { get: jest.fn(), update: jest.fn() },
-    } as any;
-    const fakeStateManager = createMockStateManager({ getCurrentProject: jest.fn() }) as unknown as StateManager;
+    const fakeContext = createMockExtensionContext({}, '/ext');
+    const fakeStateManager = createMockStateManager({
+        getCurrentProject: jest.fn(),
+    }) as unknown as StateManager;
 
     beforeEach(() => {
         ServiceLocator.reset();

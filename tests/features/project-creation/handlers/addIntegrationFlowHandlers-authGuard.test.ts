@@ -93,8 +93,14 @@ describe('Adobe entity handlers refuse before fetching when sign-in is declined'
     it.each(ENTITY_HANDLERS)('%s consults the sign-in guard', async (type) => {
         const context = createContext();
         // Calling through the union makes the payload param the intersection of
-        // every handler's payload; the guard fires before any payload is read.
-        await addIntegrationFlowHandlers[type](context, {} as never);
+        // every handler's payload, so this carries each one's required field.
+        // The values never matter: the guard fires before any payload is read.
+        await addIntegrationFlowHandlers[type](context, {
+            orgId: 'org',
+            projectId: 'project',
+            workspaceId: 'workspace',
+            name: 'name',
+        });
 
         expect(mockEnsureAdobeIOAuth).toHaveBeenCalledTimes(1);
     });

@@ -118,8 +118,13 @@ describe('mesh redeploy — refreshes the .env', () => {
     function deployedMeshProject(): Project {
         const project = createProject();
         project.componentInstances = {
-            [MESH_ENTRY.id]: { path: `/proj/components/${MESH_ENTRY.id}` },
-        } as never;
+            [MESH_ENTRY.id]: {
+                id: MESH_ENTRY.id,
+                name: MESH_ENTRY.name,
+                status: 'ready',
+                path: `/proj/components/${MESH_ENTRY.id}`,
+            },
+        };
         project.appBuilderComponents = {
             [MESH_ENTRY.id]: {
                 kind: 'mesh',
@@ -127,7 +132,7 @@ describe('mesh redeploy — refreshes the .env', () => {
                 name: MESH_ENTRY.name,
                 source: MESH_ENTRY.source,
             },
-        } as never;
+        };
         return project;
     }
 

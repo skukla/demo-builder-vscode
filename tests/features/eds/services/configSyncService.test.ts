@@ -24,7 +24,9 @@ import {
     ConfigSyncParams,
 } from '@/features/eds/services/configSyncService';
 import { promises as fsPromises } from 'fs';
+import type * as vscode from 'vscode';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
@@ -47,7 +49,7 @@ jest.mock('@/features/eds/services/github/githubTokenService', () => ({
 jest.mock('@/features/eds/handlers/edsServiceCache', () => ({
     getGitHubServices: jest.fn(() => {
         const { GitHubTokenService } = jest.requireMock(
-            '@/features/eds/services/github/githubTokenService',
+            '@/features/eds/services/github/githubTokenService'
         );
         return { tokenService: new GitHubTokenService() };
     }),
@@ -72,11 +74,7 @@ global.fetch = mockFetch;
 describe('syncConfigToRemote', () => {
     let mockLogger: ReturnType<typeof createMockLogger>;
 
-    let mockSecrets: {
-        get: jest.Mock;
-        store: jest.Mock;
-        delete: jest.Mock;
-    };
+    let mockSecrets: jest.Mocked<vscode.SecretStorage>;
 
     let mockAuthManager: jest.Mocked<AuthenticationService>;
 
@@ -88,11 +86,7 @@ describe('syncConfigToRemote', () => {
 
         mockLogger = createMockLogger();
 
-        mockSecrets = {
-            get: jest.fn(),
-            store: jest.fn(),
-            delete: jest.fn(),
-        };
+        mockSecrets = createMockSecretStorage().secrets;
 
         mockAuthManager = createMockAuthenticationService({
             getTokenManager: jest.fn().mockReturnValue({
@@ -104,9 +98,9 @@ describe('syncConfigToRemote', () => {
             componentPath: '/path/to/eds-storefront',
             repoOwner: 'test-owner',
             repoName: 'test-repo',
-            logger: mockLogger as any,
-            secrets: mockSecrets as any,
-            authManager: mockAuthManager as any,
+            logger: mockLogger,
+            secrets: mockSecrets,
+            authManager: mockAuthManager,
             makeHelix: () => ({ previewCode: mockPreviewCode }),
         };
 
@@ -357,7 +351,7 @@ describe('describeCdnPropagation', () => {
         // Guards the one detail this message can get wrong in a way nobody
         // notices: claiming we waited a length of time we did not.
         expect(describeCdnPropagation({ cdnVerified: false })).toContain(
-            `~${CDN_VERIFY_BUDGET_SECONDS}s`,
+            `~${CDN_VERIFY_BUDGET_SECONDS}s`
         );
         expect(CDN_VERIFY_BUDGET_SECONDS).toBe(20);
     });

@@ -19,8 +19,9 @@ import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { UpdateManager } from '@/features/updates/services/updateManager';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
-import type { StateManager } from '@/core/state/stateManager';
+import type { StateManager } from '@/types/state';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 
 // Mock UpdateManager
@@ -51,12 +52,12 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
         };
 
         // Create mock state manager with all required methods
-        mockStateManager = {
+        mockStateManager = createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(null),
             saveProject: jest.fn().mockResolvedValue(undefined),
             getAllProjects: jest.fn().mockResolvedValue([]),
             loadProjectFromPath: jest.fn().mockResolvedValue(null),
-        } as any;
+        });
 
         // Create mock logger
         mockLogger = createMockLogger();
@@ -276,7 +277,13 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
             mockUpdateManager.prototype.checkExtensionUpdate = jest.fn().mockRejectedValue(apiError);
 
             // Spy on command's showError method
-            const showErrorSpy = jest.spyOn(command as any, 'showError').mockResolvedValue(undefined);
+            // `showError` is protected on BaseCommand; name its real signature to spy on it.
+            const showErrorSpy = jest
+                .spyOn(
+                    command as unknown as { showError: (message: string, error?: Error) => Promise<void> },
+                    'showError',
+                )
+                .mockResolvedValue(undefined);
 
             // Act
             const executePromise = command.execute();

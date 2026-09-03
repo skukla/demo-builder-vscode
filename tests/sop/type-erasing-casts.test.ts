@@ -98,8 +98,15 @@ const SELF = path.relative(repoRoot, __filename).replace(/\\/g, '/');
  * carrying `'const x = y as any;'` in its controls — string literals, not casts,
  * but this counter reads text and cannot tell them apart. Counting them would put
  * the ceiling up by two for writing a test that proves a ban works.
+ *
+ * `architecture-rules` joined on 2026-09-02, when the corpus reached zero and its
+ * argument-cast detector's five string-literal controls were the last six matches.
  */
-const DETECTOR_FIXTURES = new Set([SELF, 'tests/sop/src-erases-no-types.test.ts']);
+const DETECTOR_FIXTURES = new Set([
+    SELF,
+    'tests/sop/src-erases-no-types.test.ts',
+    'tests/sop/architecture-rules.test.ts',
+]);
 
 const corpus = collectTestFiles(testsDir).filter((f) => !DETECTOR_FIXTURES.has(f));
 

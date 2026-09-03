@@ -34,8 +34,7 @@ describe('CommandExecutor - Timeout Handling', () => {
 
             // Simulate execa timeout error
             setImmediate(() => {
-                const timeoutError = new Error('Command timed out') as any;
-                timeoutError.timedOut = true;
+                const timeoutError = Object.assign(new Error('Command timed out'), { timedOut: true });
                 mockSubprocess._reject(timeoutError);
             });
 
@@ -80,8 +79,7 @@ describe('CommandExecutor - Timeout Handling', () => {
 
             // Simulate execa canceled error
             setImmediate(() => {
-                const canceledError = new Error('Command was canceled') as any;
-                canceledError.isCanceled = true;
+                const canceledError = Object.assign(new Error('Command was canceled'), { isCanceled: true });
                 mockSubprocess._reject(canceledError);
             });
 
@@ -99,8 +97,7 @@ describe('CommandExecutor - Timeout Handling', () => {
 
             // Simulate execa killed error
             setImmediate(() => {
-                const killedError = new Error('Command was killed') as any;
-                killedError.killed = true;
+                const killedError = Object.assign(new Error('Command was killed'), { killed: true });
                 mockSubprocess._reject(killedError);
             });
 

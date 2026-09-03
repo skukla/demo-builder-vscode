@@ -82,10 +82,12 @@ describe("runner keyed writes sync the CALLER's project reference", () => {
             componentInstances: {
                 [INTEGRATION_ENTRY.id]: {
                     id: INTEGRATION_ENTRY.id,
+                    name: INTEGRATION_ENTRY.name,
+                    status: 'ready',
                     path: '/proj/components/erp-bridge',
                 },
             },
-        } as never);
+        });
 
         await removeAppBuilderComponent(project, INTEGRATION_ENTRY.id, createDeps());
 

@@ -76,7 +76,7 @@ function makeHealableExecutor() {
             return Promise.resolve({ code: 0, stdout: '', stderr: '' });
         }
         if (command.includes('workspace download')) {
-            mockFs.readFile.mockResolvedValue(WORKSPACE_JSON as never);
+            mockFs.readFile.mockResolvedValue(WORKSPACE_JSON);
             return Promise.resolve({ code: 0, stdout: '', stderr: '' });
         }
         if (command.includes('get-url')) {
@@ -89,16 +89,16 @@ function makeHealableExecutor() {
         }
         return Promise.resolve({ code: 0, stdout: '', stderr: '' });
     });
-    return { execute };
+    return createMockCommandExecutor({ execute });
 }
 
 beforeEach(() => {
     jest.clearAllMocks();
     // No build script → buildComponent is a no-op; no legacy .env reads.
     mockFs.access.mockRejectedValue(new Error('ENOENT'));
-    mockFs.readFile.mockResolvedValue(WORKSPACE_JSON as never);
-    mockFs.mkdtemp.mockResolvedValue('/tmp/db-test' as never);
-    mockFs.rm.mockResolvedValue(undefined as never);
+    mockFs.readFile.mockResolvedValue(WORKSPACE_JSON);
+    mockFs.mkdtemp.mockResolvedValue('/tmp/db-test');
+    mockFs.rm.mockResolvedValue(undefined);
 });
 
 describe('isToolchainStalenessError', () => {
@@ -115,7 +115,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
         const cm = makeHealableExecutor();
         const consent = jest.fn().mockResolvedValue(true);
 
-        const result = await deployAppComponent('/app', cm as never, makeLogger(), {
+        const result = await deployAppComponent('/app', cm, makeLogger(), {
             confirmToolchainRefresh: consent,
         });
 
@@ -131,7 +131,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
         const cm = makeHealableExecutor();
         const consent = jest.fn().mockResolvedValue(false);
 
-        const result = await deployAppComponent('/app', cm as never, makeLogger(), {
+        const result = await deployAppComponent('/app', cm, makeLogger(), {
             confirmToolchainRefresh: consent,
         });
 
@@ -145,7 +145,7 @@ describe('deployAppComponent — refresh-and-retry', () => {
     it('no consent source at all: same hint, no prompt-shaped behaviour', async () => {
         const cm = makeHealableExecutor();
 
-        const result = await deployAppComponent('/app', cm as never, makeLogger(), {});
+        const result = await deployAppComponent('/app', cm, makeLogger(), {});
 
         expect(result.success).toBe(false);
         expect(result.error).toContain('out-of-date Adobe CLI toolchain');

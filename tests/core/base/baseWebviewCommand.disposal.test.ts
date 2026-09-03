@@ -16,8 +16,10 @@
 
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { DisposableStore } from '@/core/utils/disposableStore';
 import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 
 import { internals } from '../../helpers/commandInternals';
 // Mock panel state for disposal testing
@@ -120,23 +122,23 @@ class TestWebviewCommand extends BaseWebviewCommand {
 
     // Expose protected members for testing
     public getDisposables(): DisposableStore {
-        return (this as any).disposables;
+        return this.disposables;
     }
 
     public async testCreatePanel(): Promise<vscode.WebviewPanel> {
-        return await (this as any).createOrRevealPanel();
+        return await this.createOrRevealPanel();
     }
 
-    public async testInitComm() {
-        return await (this as any).initializeCommunication();
+    public async testInitComm(): Promise<WebviewCommunicationManager> {
+        return await this.initializeCommunication();
     }
 
-    public testGetPanel() {
-        return (this as any).panel;
+    public testGetPanel(): vscode.WebviewPanel | undefined {
+        return this.panel;
     }
 
-    public testGetCommManager() {
-        return (this as any).communicationManager;
+    public testGetCommManager(): WebviewCommunicationManager | undefined {
+        return this.communicationManager;
     }
 }
 
@@ -149,14 +151,7 @@ describe('BaseWebviewCommand Disposal', () => {
         jest.clearAllMocks();
         mockDisposeCallback = undefined;
 
-        mockContext = {
-            subscriptions: [],
-            extensionPath: '/test',
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn(),
-            },
-        } as any;
+        mockContext = createMockExtensionContext({ extensionPath: '/test' });
 
         mockStateManager = {
             getCurrentProject: jest.fn().mockResolvedValue({ name: 'test' }),
@@ -279,7 +274,7 @@ describe('BaseWebviewCommand Disposal', () => {
 
             command.dispose();
 
-            expect(commManager.dispose).toHaveBeenCalled();
+            expect(commManager!.dispose).toHaveBeenCalled();
             expect(command.testGetCommManager()).toBeUndefined();
         });
     });
@@ -300,12 +295,13 @@ describe('BaseWebviewCommand Disposal', () => {
             command.getDisposables().add(mockDisposable);
 
             const commManager = command.testGetCommManager();
+            expect(commManager).toBeDefined();
 
             // Trigger panel disposal
             mockPanel.dispose();
 
             // Should dispose communicationManager
-            expect(commManager.dispose).toHaveBeenCalled();
+            expect(commManager!.dispose).toHaveBeenCalled();
 
             // Should dispose all registered resources
             expect(mockDisposable.dispose).toHaveBeenCalled();

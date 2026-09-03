@@ -118,3 +118,4 @@ is currently `off` for `tests/` in `eslint.config.mjs`; that line goes too.
 - 2026-09-01  refactor(state): consumers depend on the StateManager INTERFACE, not the class (`d2aa49275`)
 - 2026-09-01  refactor(tests): HandlerContext casts 59 -> 38, done through the documented toolchain (`1fe31d699`)
 - 2026-09-01  feat(codemod): adopt ts-morph, with a harness tuned to this repo (`a60ab0379`)
+- 2026-09-03  Every remaining cast converted: 431 across 177 files, in one parallel pass over the compiler's load-bearing worklist. Ledger pinned at 0/0; the last six text matches were architecture-rules' own control fixtures, now in the detector's exclusion list. Left: delete the ledger test and add the eslint ban

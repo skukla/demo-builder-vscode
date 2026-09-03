@@ -40,6 +40,7 @@ import {
     setupMocks,
     mockBuildCustomIntegrationEntry,
 } from './appBuilderComponentHandlers.testUtils';
+import type { AppBuilderComponentState } from '@/types/base';
 
 beforeEach(() => {
     resetHandlerMocks();
@@ -413,7 +414,7 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
         url: 'https://firefly.example.com',
     };
 
-    function setupRename(entryOverrides: Partial<typeof KEYED_ENTRY> | null = {}) {
+    function setupRename(entryOverrides: Partial<AppBuilderComponentState> | null = {}) {
         const mocks = setupMocks({
             appBuilderComponents:
                 entryOverrides === null
@@ -582,7 +583,7 @@ describe('handleRenameAppBuilderComponent (display name only — shell instancin
     });
 
     it('never prompts for a mesh-kind entry (fixed "API Mesh" identity)', async () => {
-        const { mockContext, showInputBox } = setupRename({ kind: 'mesh' as never });
+        const { mockContext, showInputBox } = setupRename({ kind: 'mesh' });
 
         const result = await handleRenameAppBuilderComponent(mockContext, {
             id: 'firefly-image-gen',

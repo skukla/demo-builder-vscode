@@ -14,6 +14,7 @@ import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { DisposableStore } from '@/core/utils/disposableStore';
 import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 
 // Mock logger
 
@@ -64,13 +65,7 @@ describe('BaseCommand Disposal Support', () => {
         jest.clearAllMocks();
 
         // Create mock dependencies
-        mockContext = {
-            subscriptions: [],
-            globalState: {
-                get: jest.fn(),
-                update: jest.fn(),
-            },
-        } as any;
+        mockContext = createMockExtensionContext();
 
         mockStateManager = {
             getCurrentProject: jest.fn(),

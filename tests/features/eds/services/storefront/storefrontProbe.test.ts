@@ -41,14 +41,15 @@ const logger = createMockLogger();
  * homepage body.
  */
 function mockFetch(routes: Record<string, { status: number; body?: string }>) {
-    global.fetch = jest.fn(async (url: string) => {
+    global.fetch = jest.fn(async (url: RequestInfo | URL) => {
         const hit = routes[new URL(String(url)).pathname] ?? { status: 404, body: '' };
+        // Only the three members the probe reads; the rest of Response is not built.
         return {
             ok: hit.status >= 200 && hit.status < 300,
             status: hit.status,
             text: async () => hit.body ?? '',
-        };
-    }) as never;
+        } as unknown as Response;
+    });
 }
 
 const HEALTHY = {
@@ -337,7 +338,8 @@ describe('probeOverlayVersion', () => {
     const OVERLAY = 'https://ns.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp?org=a&site=b';
 
     const respondWith = (impl: () => unknown) => {
-        global.fetch = jest.fn(async () => impl()) as never;
+        // The canned reply carries only what the probe reads; it is a partial Response.
+        global.fetch = jest.fn(async () => impl() as Response);
     };
 
     it('reports the sha and version the action returns', async () => {

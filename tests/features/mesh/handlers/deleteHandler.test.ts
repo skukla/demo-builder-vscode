@@ -21,6 +21,8 @@ import { MESH_DELETE_COMMAND } from '@/core/shell/meshDeleteCommand';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 // Record the target rather than stubbing it out — the assertion IS the target.
 // buildOrgTargetFromProjectAdobe is pure, so the real one is used.
 const mockWithOrgContext = jest.fn((_target: unknown, fn: () => Promise<unknown>) => fn());
@@ -51,8 +53,10 @@ describe('handleDeleteApiMesh — org targeting', () => {
         });
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
 
-        mockContext = {
-            context: { globalStorageUri: { fsPath: '/tmp/test-storage' } },
+        mockContext = createMockHandlerContext({
+            context: createMockExtensionContext({
+                globalStorageUri: _vscode.Uri.file('/tmp/test-storage'),
+            }),
             logger: createMockLogger(),
             debugLogger: createMockLogger(),
             stateManager: createMockStateManager({
@@ -64,8 +68,7 @@ describe('handleDeleteApiMesh — org targeting', () => {
                     },
                 }),
             }),
-            sharedState: {},
-        } as any;
+        });
     });
 
     it('runs the delete inside an org context, not bare', async () => {

@@ -16,6 +16,7 @@ import {
 } from '@/features/projects-dashboard/services/settingsSerializer';
 import type { Project } from '@/types/base';
 import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
+import type { SettingsFile } from '@/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
 
 describe('settingsSerializer', () => {
@@ -83,18 +84,30 @@ describe('settingsSerializer', () => {
     });
 
     describe('isNewerVersion', () => {
+        /** A minimal but COMPLETE SettingsFile at the given schema version. */
+        function settingsAtVersion(version: number): SettingsFile {
+            return {
+                version,
+                exportedAt: '2024-01-01T00:00:00Z',
+                source: { project: 'test' },
+                includesSecrets: false,
+                selections: {},
+                configs: {},
+            };
+        }
+
         it('should return true when version is newer', () => {
-            const settings = { version: SETTINGS_FILE_VERSION + 1 } as any;
+            const settings = settingsAtVersion(SETTINGS_FILE_VERSION + 1);
             expect(isNewerVersion(settings)).toBe(true);
         });
 
         it('should return false when version is current', () => {
-            const settings = { version: SETTINGS_FILE_VERSION } as any;
+            const settings = settingsAtVersion(SETTINGS_FILE_VERSION);
             expect(isNewerVersion(settings)).toBe(false);
         });
 
         it('should return false when version is older', () => {
-            const settings = { version: SETTINGS_FILE_VERSION - 1 } as any;
+            const settings = settingsAtVersion(SETTINGS_FILE_VERSION - 1);
             expect(isNewerVersion(settings)).toBe(false);
         });
     });

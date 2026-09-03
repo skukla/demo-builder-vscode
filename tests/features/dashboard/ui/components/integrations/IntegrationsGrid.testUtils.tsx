@@ -13,6 +13,7 @@
  */
 
 import '../../../../../helpers/webviewClientMock';
+import { createMockProject } from '../../../../../helpers/projectFake';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -225,7 +226,7 @@ export function renderGrid({
     onDeployMesh = jest.fn(),
     onReAuthenticate = jest.fn(),
 }: RenderOptions = {}) {
-    const project = { appBuilderComponents } as never;
+    const project = createMockProject({ appBuilderComponents });
     const integrationCards = buildIntegrationCards(listAppBuilderComponents(project), {}, CATALOG);
     const cards = withMesh
         ? [

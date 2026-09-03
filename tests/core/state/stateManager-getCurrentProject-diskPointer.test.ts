@@ -15,6 +15,7 @@
  */
 
 import * as fs from 'fs/promises';
+import type { Project } from '@/types/base';
 import { setupMocks, createStateManagerProject, type TestMocks } from './stateManager.testUtils';
 
 jest.mock('fs/promises');
@@ -52,10 +53,8 @@ describe('StateManager.getCurrentProject — disk pointer', () => {
         );
     }
 
-    function stubLoad(project: unknown) {
-        return jest
-            .spyOn(testMocks.stateManager, 'loadProjectFromPath')
-            .mockResolvedValue(project as never);
+    function stubLoad(project: Project | null) {
+        return jest.spyOn(testMocks.stateManager, 'loadProjectFromPath').mockResolvedValue(project);
     }
 
     it('resolves the project another window selected, not the one held in memory', async () => {

@@ -1,5 +1,6 @@
 import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
 import { createMockStatus, setupMockTime } from './prerequisitesCacheManager.testUtils';
+import type { CachedPrerequisiteResult } from '@/features/prerequisites/services/types';
 
 /**
  * PrerequisitesCacheManager Statistics & Versions Test Suite
@@ -191,9 +192,11 @@ describe('PrerequisitesCacheManager - Statistics & Versions', () => {
             expect(results[0].major).toBe('20');
 
             // Access private cache to verify nodeVersion is stored
-            const cache = (cacheManager as any).cache;
+            const cache = (
+                cacheManager as unknown as { cache: Map<string, CachedPrerequisiteResult> }
+            ).cache;
             const cachedEntry = cache.get('aio-cli##20');
-            expect(cachedEntry.nodeVersion).toBe('20');
+            expect(cachedEntry?.nodeVersion).toBe('20');
         });
     });
 });

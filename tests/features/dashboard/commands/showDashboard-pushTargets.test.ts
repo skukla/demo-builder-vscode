@@ -83,7 +83,7 @@ describe('push-channel targeting', () => {
                     status: 'deployed',
                     source: { owner: 'a', repo: 'b' },
                 },
-            } as never);
+            });
 
             expect(postMessage).toHaveBeenCalledWith(
                 expect.objectContaining({ type: 'appBuilderComponentsSnapshot' })
@@ -113,9 +113,7 @@ describe('push-channel targeting', () => {
                 id === INTEGRATIONS_ID ? panel : undefined
             );
 
-            await ProjectDashboardWebviewCommand.sendMeshStatusUpdate({
-                status: 'deployed',
-            } as never);
+            await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deployed');
 
             expect(postMessage).toHaveBeenCalled();
         });

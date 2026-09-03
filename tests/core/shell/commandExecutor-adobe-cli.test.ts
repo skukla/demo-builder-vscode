@@ -176,7 +176,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             const mockSubprocess2 = createMockExecaSubprocess();
 
             // First call with Node 20
-            mockExeca.mockReturnValueOnce(mockSubprocess1 as any);
+            mockExeca.mockReturnValueOnce(mockSubprocess1);
             const promise1 = commandExecutor.execute('aio --version', { useNodeVersion: '20' });
 
             process.nextTick(() => {
@@ -186,7 +186,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             const result1 = await promise1;
 
             // Second call with Node 24 - should NOT use cache from Node 20
-            mockExeca.mockReturnValueOnce(mockSubprocess2 as any);
+            mockExeca.mockReturnValueOnce(mockSubprocess2);
             const promise2 = commandExecutor.execute('aio --version', { useNodeVersion: '24' });
 
             process.nextTick(() => {
@@ -233,7 +233,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             const mockSubprocess2 = createMockExecaSubprocess();
 
             // First call without Node version (default)
-            mockExeca.mockReturnValueOnce(mockSubprocess1 as any);
+            mockExeca.mockReturnValueOnce(mockSubprocess1);
             const promise1 = commandExecutor.execute('aio --version');
 
             process.nextTick(() => {
@@ -243,7 +243,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             await promise1;
 
             // Second call with explicit Node version - should NOT use cache
-            mockExeca.mockReturnValueOnce(mockSubprocess2 as any);
+            mockExeca.mockReturnValueOnce(mockSubprocess2);
             const promise2 = commandExecutor.execute('aio --version', { useNodeVersion: '20' });
 
             process.nextTick(() => {
@@ -264,7 +264,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             const mockSubprocess2 = createMockExecaSubprocess();
 
             // First call with Node 20
-            mockExeca.mockReturnValueOnce(mockSubprocess1 as any);
+            mockExeca.mockReturnValueOnce(mockSubprocess1);
             const promise1 = commandExecutor.execute('aio plugins', { useNodeVersion: '20' });
 
             process.nextTick(() => {
@@ -274,7 +274,7 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             await promise1;
 
             // Second call with Node 24 - should NOT use cache
-            mockExeca.mockReturnValueOnce(mockSubprocess2 as any);
+            mockExeca.mockReturnValueOnce(mockSubprocess2);
             const promise2 = commandExecutor.execute('aio plugins', { useNodeVersion: '24' });
 
             process.nextTick(() => {

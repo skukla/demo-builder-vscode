@@ -11,6 +11,7 @@ import {
     deriveAiReadyState,
     type AiBadgeInputs,
 } from '@/features/dashboard/ui/hooks/aiStatusDerivations';
+import type { McpInventoryEntry, SkillInventoryEntry } from '@/types/ai';
 
 const idleInputs: AiBadgeInputs = {
     verifyResult: null,
@@ -123,8 +124,15 @@ describe('deriveAiInventoryView', () => {
     });
 
     it('should pass through inventory lists and edited files', () => {
-        const skills = [{ name: 'demo' }] as never[];
-        const mcps = [{ id: 'demo-builder' }] as never[];
+        const skills: SkillInventoryEntry[] = [
+            {
+                name: 'demo',
+                description: null,
+                path: '/p/.claude/skills/demo/SKILL.md',
+                source: 'demo-builder',
+            },
+        ];
+        const mcps: McpInventoryEntry[] = [{ id: 'demo-builder', status: 'ok' }];
         const view = deriveAiInventoryView(
             { inventory: { skills, mcps, editedFiles: ['AGENTS.md'] } },
             false

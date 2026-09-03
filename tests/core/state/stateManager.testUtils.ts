@@ -28,7 +28,6 @@ jest.mock('@/core/logging/debugLogger', () => {
     };
 });
 
-
 // Access the mock logger instance via the mocked module
 type MockLoggerShape = {
     info: jest.Mock;
@@ -37,12 +36,18 @@ type MockLoggerShape = {
     debug: jest.Mock;
     trace: jest.Mock;
 };
-const loggingModule = jest.requireMock('@/core/logging/debugLogger') as { __mockLoggerInstance: MockLoggerShape };
+const loggingModule = jest.requireMock('@/core/logging/debugLogger') as {
+    __mockLoggerInstance: MockLoggerShape;
+};
 export const mockLoggerInstance = loggingModule.__mockLoggerInstance;
 
 export const mockHomedir = '/mock/home';
 export const mockStateFile = path.join(mockHomedir, '.demo-builder', 'state.json');
-export const mockRecentProjectsFile = path.join(mockHomedir, '.demo-builder', 'recent-projects.json');
+export const mockRecentProjectsFile = path.join(
+    mockHomedir,
+    '.demo-builder',
+    'recent-projects.json'
+);
 
 export interface TestMocks {
     stateManager: StateManager;
@@ -51,19 +56,19 @@ export interface TestMocks {
     mockWorkspaceState: vscode.Memento;
 }
 
-export function createStateManagerProject(id?: string): Partial<Project> {
+/**
+ * @param _label - accepted so the callers that pass one keep compiling. It used
+ *   to land on an `id` field that `Project` never declared (with `version`,
+ *   `state`, `hasUnsavedChanges`, `components`, `openFiles` — all invented, all
+ *   hidden by an `as never`), and nothing ever read any of them.
+ */
+export function createStateManagerProject(_label?: string): Project {
     return createMockProjectBase({
-        id: id || 'test-project',
         path: '/test/project',
         name: 'Test Project',
-        version: '1.0.0',
         created: new Date('2024-01-01T00:00:00.000Z'),
         lastModified: new Date('2024-01-02T00:00:00.000Z'),
-        state: 'stopped',
-        hasUnsavedChanges: false,
-        components: [],
-        openFiles: []
-    } as never)
+    });
 }
 
 export function setupMocks(): TestMocks {
@@ -83,7 +88,7 @@ export function setupMocks(): TestMocks {
         get: jest.fn(),
         update: jest.fn().mockResolvedValue(undefined),
         keys: jest.fn().mockReturnValue([]),
-        setKeysForSync: jest.fn()
+        setKeysForSync: jest.fn(),
     } as unknown as vscode.Memento;
 
     // Create mock workspace state
@@ -91,7 +96,7 @@ export function setupMocks(): TestMocks {
         get: jest.fn(),
         update: jest.fn().mockResolvedValue(undefined),
         keys: jest.fn().mockReturnValue([]),
-        setKeysForSync: jest.fn()
+        setKeysForSync: jest.fn(),
     } as unknown as vscode.Memento;
 
     // Create mock context
@@ -112,7 +117,7 @@ export function setupMocks(): TestMocks {
         secrets: {} as vscode.SecretStorage,
         environmentVariableCollection: {} as vscode.GlobalEnvironmentVariableCollection,
         extension: {} as vscode.Extension<any>,
-        languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation
+        languageModelAccessInformation: {} as vscode.LanguageModelAccessInformation,
     } as unknown as vscode.ExtensionContext;
 
     // Mock fs functions
@@ -131,6 +136,6 @@ export function setupMocks(): TestMocks {
         stateManager,
         mockContext,
         mockGlobalState,
-        mockWorkspaceState
+        mockWorkspaceState,
     };
 }

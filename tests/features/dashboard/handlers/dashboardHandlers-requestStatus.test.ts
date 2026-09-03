@@ -58,7 +58,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         detectFrontendChanges.mockReturnValue(false);
 
         // Project has meshStatusSummary='deployed' (set by card grid)
-        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
+        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -86,7 +86,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
-        const { mockContext } = setupMocks({ meshStatusSummary: 'stale' } as any);
+        const { mockContext } = setupMocks({ meshStatusSummary: 'stale' });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -120,7 +120,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
                     envVars: { MESH_ID: 'mesh123' },
                 },
             },
-        } as any);
+        });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -144,7 +144,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
                     port: 3000,
                 },
             },
-        } as any);
+        });
 
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
@@ -197,8 +197,9 @@ describe('dashboardHandlers - handleRequestStatus', () => {
                 envVars: {
                     NEXT_PUBLIC_MESH_ENDPOINT: 'old-value',
                 },
+                capturedAt: '2025-01-26T12:00:00.000Z',
             },
-        } as any);
+        });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -248,7 +249,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
-        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
+        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
         const { ServiceLocator } = require('@/core/di/serviceLocator');
         ServiceLocator.getAuthenticationService.mockReturnValue({
             isAuthenticated: jest.fn().mockResolvedValue(true),
@@ -268,7 +269,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
         detectFrontendChanges.mockReturnValue(false);
 
-        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' } as any);
+        const { mockContext } = setupMocks({ meshStatusSummary: 'deployed' });
 
         // Auth returns false initially, then true after login
         const { ServiceLocator } = require('@/core/di/serviceLocator');

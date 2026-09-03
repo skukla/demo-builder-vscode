@@ -5,6 +5,7 @@ import type { Logger } from '@/types/logger';
 import {
     createMockCommandExecutor,
     createMockLogger,
+    createMockSDKClient,
     createMockStepLogger,
 } from './authenticationService.testUtils';
 
@@ -46,11 +47,9 @@ describe('AuthenticationService - ApiSubscriberClient passthroughs', () => {
         const StepLoggerMock = require('@/core/logging/stepLogger').StepLogger;
         StepLoggerMock.create = jest.fn().mockResolvedValue(mockStepLogger);
 
-        (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(() => ({
-            initialize: jest.fn().mockResolvedValue(undefined),
-            ensureInitialized: jest.fn().mockResolvedValue(true),
-            clear: jest.fn(),
-        }) as any);
+        (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(
+            () => createMockSDKClient()
+        );
 
         mockFetcher = {
             getServicesForOrg: jest.fn().mockResolvedValue([{ code: 'X' }]),

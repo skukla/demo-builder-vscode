@@ -28,7 +28,7 @@ export function createMockCacheManager(): jest.Mocked<AuthCacheManager> {
         clearAll: jest.fn(),
         clearConsoleWhereCache: jest.fn(),
         setOrgClearedDueToValidation: jest.fn(),
-    } as any;
+    } as unknown as jest.Mocked<AuthCacheManager>;
 }
 
 /** Canonical logger fake (ADR-016). Re-exported so existing imports keep working. */

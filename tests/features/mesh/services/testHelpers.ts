@@ -57,20 +57,6 @@ export function createProjectWithoutCommerce(): Project {
 }
 
 /**
- * Creates a project with null Commerce configuration
- */
-export function createProjectWithNullCommerce(): Project {
-    return {
-        name: 'test-project',
-        path: '/test/project',
-        status: 'ready',
-        created: new Date(),
-        lastModified: new Date(),
-        commerce: null as any,
-    };
-}
-
-/**
  * Command execution result types for testing
  */
 export interface MockCommandResult {

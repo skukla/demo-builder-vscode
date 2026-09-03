@@ -99,7 +99,7 @@ describe('ConfigureProjectWebviewCommand - getInitialData envVars', () => {
                 }) as unknown as ComponentRegistryManager
         );
 
-        (vscode.window.activeColorTheme as any) = { kind: vscode.ColorThemeKind.Dark };
+        vscode.window.activeColorTheme = { kind: vscode.ColorThemeKind.Dark };
 
         command = new ConfigureProjectWebviewCommand(mockContext, mockStateManager, mockLogger);
     });

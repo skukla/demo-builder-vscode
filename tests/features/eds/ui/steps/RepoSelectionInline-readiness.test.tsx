@@ -22,20 +22,24 @@
  */
 
 import { computeRepoValid } from '@/features/eds/ui/steps/repoSelectionInline.helpers';
+import type {
+    RepoCreationState,
+    RepoReadinessState,
+} from '@/features/eds/ui/steps/repoSelectionInline.helpers';
+import type { GitHubRepoItem } from '@/types/webview';
 
-const SELECTED = { id: 1, name: 'demo-builder-test', fullName: 'skukla/demo-builder-test' };
-const CREATED = { isCreated: true, isCreating: false };
+// `id` is the fullName: GitHubRepoItem declares it a string, not GitHub's numeric id.
+const SELECTED: GitHubRepoItem = {
+    id: 'skukla/demo-builder-test',
+    name: 'demo-builder-test',
+    fullName: 'skukla/demo-builder-test',
+    htmlUrl: 'https://github.com/skukla/demo-builder-test',
+};
+const CREATED: RepoCreationState = { isCreated: true, isCreating: false };
 
 /** computeRepoValid(repoMode, repoCreationState, selectedRepo, isLoading, readiness, resetOn) */
-function valid(readiness: unknown, resetOn: boolean) {
-    return computeRepoValid(
-        'existing',
-        CREATED as never,
-        SELECTED as never,
-        false,
-        readiness as never,
-        resetOn
-    );
+function valid(readiness: RepoReadinessState | undefined, resetOn: boolean) {
+    return computeRepoValid('existing', CREATED, SELECTED, false, readiness, resetOn);
 }
 
 describe('computeRepoValid — readiness gate', () => {
@@ -75,14 +79,7 @@ describe('computeRepoValid — readiness gate', () => {
 
     it('still requires a selected repo regardless of readiness', () => {
         expect(
-            computeRepoValid(
-                'existing',
-                CREATED as never,
-                undefined,
-                false,
-                { kind: 'storefront' } as never,
-                false
-            )
+            computeRepoValid('existing', CREATED, undefined, false, { kind: 'storefront' }, false)
         ).toBe(false);
     });
 
@@ -92,10 +89,10 @@ describe('computeRepoValid — readiness gate', () => {
         expect(
             computeRepoValid(
                 'new',
-                CREATED as never,
+                CREATED,
                 undefined,
                 false,
-                { kind: 'not-a-storefront', missing: ['scripts/scripts.js'] } as never,
+                { kind: 'not-a-storefront', missing: ['scripts/scripts.js'] },
                 false
             )
         ).toBe(true);

@@ -9,6 +9,7 @@ import { handleGetProjects, handleSelectProject, handleCreateProject, handleOpen
 import { createProjectsDashboardProject, createMockProjects, createProjectsDashboardContext } from '../testUtils';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 /**
  * ADR-015 (2026-08-28): this boundary resolves its collaborators from the
@@ -17,10 +18,12 @@ import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake'
  */
 beforeEach(() => {
     ServiceLocator.setCommandExecutor(createMockCommandExecutor());
-    ServiceLocator.setAuthenticationService({
-        getCachedOrganization: jest.fn(),
-        getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })),
-    } as never);
+    ServiceLocator.setAuthenticationService(
+        createMockAuthenticationService({
+            getCachedOrganization: jest.fn(),
+            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true }),
+        }),
+    );
 });
 
 /**

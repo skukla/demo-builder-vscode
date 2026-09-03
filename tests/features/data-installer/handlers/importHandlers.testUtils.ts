@@ -119,15 +119,21 @@ export const PAYLOAD = {
     dataTypes: ['categories', 'products'],
 };
 
+/**
+ * Install a partial write client. The class carries private state no literal can
+ * supply, so the methods a test hands in stand for the whole instance.
+ */
+export function stubWriteClient(methods: Partial<DataInstallerWriteClient>): void {
+    MockedWriteClient.mockImplementation(() => methods as DataInstallerWriteClient);
+}
+
 /** A write client whose validate passes and whose start is accepted. */
 export function happyClient() {
     const validateImport = jest.fn().mockResolvedValue({ valid: true });
     const startImport = jest.fn().mockResolvedValue({ activationId: 'act-1' });
     const startDelete = jest.fn().mockResolvedValue({ activationId: 'act-9' });
     const checkCredentials = jest.fn().mockResolvedValue({ usable: true });
-    MockedWriteClient.mockImplementation(
-        () => ({ validateImport, startImport, startDelete, checkCredentials }) as never
-    );
+    stubWriteClient({ validateImport, startImport, startDelete, checkCredentials });
     return { validateImport, startImport, startDelete, checkCredentials };
 }
 

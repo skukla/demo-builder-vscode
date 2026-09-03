@@ -12,6 +12,8 @@
 import '../../../../helpers/edsPlaceholderStubMocks';
 
 import type { HandlerContext } from '@/types/handlers';
+import type { EdsResetParams } from '@/features/eds/services/reset/edsResetParams';
+import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
 
 jest.mock('@/features/eds/services/configGenerator', () => ({
     generateConfigJson: jest.fn().mockReturnValue({ success: true, content: '{}' }),
@@ -33,16 +35,17 @@ import {
 } from '@/features/eds/services/placeholderStubs';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
+import { createMockProject } from '../../../../helpers/projectFake';
 
-const PARAMS = {
+const PARAMS: EdsResetParams = {
     repoOwner: 'me',
     repoName: 'shop',
     daLiveOrg: 'acme',
     daLiveSite: 'shop',
     templateOwner: 'tpl-owner',
     templateRepo: 'tpl-repo',
-    project: { name: 'p', path: '/p', selectedBlockLibraries: [] },
-} as any;
+    project: createMockProject({ name: 'p', path: '/p', selectedBlockLibraries: [] }),
+};
 
 function makeContext(): HandlerContext {
     return createMockHandlerContext({
@@ -53,9 +56,10 @@ function makeContext(): HandlerContext {
 describe('resetRepoToTemplate — placeholder stubs ride the bulk override commit', () => {
     it('hands one stub per requested sheet to githubFileOps.resetRepoToTemplate', async () => {
         const resetMock = jest.fn().mockResolvedValue({ fileCount: 20, commitSha: 'abc1234567' });
+        // The one call the reset makes; the class holds private Octokit state.
         const githubFileOps = {
             resetRepoToTemplate: resetMock,
-        } as any;
+        } as unknown as GitHubFileOperations;
 
         await resetRepoToTemplate(PARAMS, makeContext(), githubFileOps, jest.fn());
 

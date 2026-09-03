@@ -30,7 +30,7 @@ describe('githubApiClient', () => {
             // repo has been bitten by.
             const mockSecrets = createMockSecretStorage({ githubToken: 'my-token' }).secrets;
 
-            const headers = await buildGitHubHeaders(mockSecrets as any);
+            const headers = await buildGitHubHeaders(mockSecrets);
 
             expect(headers['Authorization']).toBe('token my-token');
             expect(headers['Accept']).toBe('application/vnd.github.v3+json');
@@ -41,7 +41,7 @@ describe('githubApiClient', () => {
             // Empty store: `get` resolves undefined for every key.
             const mockSecrets = createMockSecretStorage().secrets;
 
-            const headers = await buildGitHubHeaders(mockSecrets as any);
+            const headers = await buildGitHubHeaders(mockSecrets);
 
             expect(headers['Authorization']).toBeUndefined();
             expect(headers['Accept']).toBe('application/vnd.github.v3+json');

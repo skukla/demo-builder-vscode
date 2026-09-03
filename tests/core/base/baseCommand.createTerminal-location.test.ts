@@ -9,6 +9,7 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 
 
 
@@ -22,7 +23,7 @@ class TestCommand extends BaseCommand {
         cwd?: string,
         location?: vscode.TerminalEditorLocationOptions,
     ): vscode.Terminal {
-        return (this as any).createTerminal(name, cwd, location);
+        return this.createTerminal(name, cwd, location);
     }
 }
 
@@ -34,10 +35,7 @@ describe('BaseCommand.createTerminal location option', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        mockContext = {
-            subscriptions: [],
-            globalState: { get: jest.fn(), update: jest.fn() },
-        } as any;
+        mockContext = createMockExtensionContext();
 
         mockStateManager = { getCurrentProject: jest.fn(), setState: jest.fn() };
         mockLogger = createMockLogger();

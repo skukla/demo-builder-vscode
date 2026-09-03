@@ -20,6 +20,7 @@ jest.mock('@/features/mesh/services/meshVerifier', () => ({
 
 import { handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
 import { setupMocks } from './dashboardHandlers.testUtils';
+import type { Project } from '@/types/base';
 
 describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () => {
     beforeEach(() => {
@@ -32,7 +33,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
 
         const { mockContext } = setupMocks({
             meshStatusSummary: 'not-deployed',
-        } as any);
+        });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -50,7 +51,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
 
         const { mockContext } = setupMocks({
             meshStatusSummary: 'stale',
-        } as any);
+        });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -68,7 +69,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
 
         const { mockContext } = setupMocks({
             meshStatusSummary: 'deployed',
-        } as any);
+        });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -86,7 +87,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
 
         const { mockContext } = setupMocks({
             meshStatusSummary: 'config-incomplete',
-        } as any);
+        });
 
         const result = await handleRequestStatus(mockContext);
 
@@ -104,7 +105,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
 
         const { mockContext } = setupMocks({
             meshStatusSummary: 'deployed',
-        } as any);
+        });
 
         // Override auth mock AFTER setupMocks (which sets isAuthenticated=true)
         const { ServiceLocator } = require('@/core/di/serviceLocator');
@@ -129,10 +130,10 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
     // the component entry first; the two handlers disagreed about the same mesh
     // depending on which message landed last.
     describe('a failed mesh component beats the persisted summary', () => {
-        function withFailedMesh(summary: string) {
+        function withFailedMesh(summary: Project['meshStatusSummary']) {
             const { detectFrontendChanges } = require('@/features/mesh/services/stalenessDetector');
             detectFrontendChanges.mockReturnValue(false);
-            const { mockContext, mockProject } = setupMocks({ meshStatusSummary: summary } as any);
+            const { mockContext, mockProject } = setupMocks({ meshStatusSummary: summary });
             mockProject.componentInstances!['commerce-mesh'].status = 'error';
             return mockContext;
         }
@@ -164,7 +165,7 @@ describe('dashboardHandlers - handleRequestStatus - persisted mesh status', () =
 
         const { mockContext } = setupMocks({
             meshStatusSummary: 'unknown',
-        } as any);
+        });
 
         const result = await handleRequestStatus(mockContext);
 

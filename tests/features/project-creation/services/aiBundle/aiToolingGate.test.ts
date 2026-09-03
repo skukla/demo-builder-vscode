@@ -192,20 +192,24 @@ describe('resolveAvailableMcpToolIds', () => {
 describe('third-party opt-out (the one code point for every seam)', () => {
     const edsProject = makeProject({
         componentInstances: {
-            [COMPONENT_IDS.EDS_STOREFRONT]: { id: COMPONENT_IDS.EDS_STOREFRONT, path: '/p/sf' },
+            [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
+                path: '/p/sf',
+            },
         },
-    } as never);
-    const playwrightEntry = {
+    });
+    const playwrightEntry = makeEntry({
         id: 'playwright',
         package: '@playwright/mcp',
         version: '~0.0.79',
-        command: 'node',
         args: ['x'],
         description: 'd',
         requires: 'eds-storefront',
         thirdParty: true,
-    } as never;
-    const adobeEntry = { ...(playwrightEntry as object), id: 'dropins', thirdParty: undefined } as never;
+    });
+    const adobeEntry = makeEntry({ ...playwrightEntry, id: 'dropins', thirdParty: undefined });
 
     afterEach(() => setThirdPartyToolsResolver(() => true));
 

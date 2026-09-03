@@ -7,10 +7,14 @@
  * Part of Step 3: Handler Registry Simplification
  */
 
-import { lifecycleHandlers, handleOpenExternal } from '@/features/project-creation/handlers/wizardLifecycleHandlers';
+import {
+    lifecycleHandlers,
+    handleOpenExternal,
+} from '@/features/project-creation/handlers/wizardLifecycleHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 describe('lifecycleHandlers', () => {
@@ -57,7 +61,9 @@ describe('lifecycleHandlers', () => {
         it('should have exactly 10 handlers', () => {
             // Given: lifecycleHandlers object
             // When: Getting registered types
-            const types = getRegisteredTypes(lifecycleHandlers) as Array<keyof typeof lifecycleHandlers>;
+            const types = getRegisteredTypes(lifecycleHandlers) as Array<
+                keyof typeof lifecycleHandlers
+            >;
 
             // Then: Exactly 10 handlers
             // (show-logs removed — the Logs toggle moved to the sidebar utility)
@@ -69,14 +75,15 @@ describe('lifecycleHandlers', () => {
             // Given: lifecycleHandlers object
             // When: Checking handler types
             // Then: All handlers should be functions
-            const types = getRegisteredTypes(lifecycleHandlers) as Array<keyof typeof lifecycleHandlers>;
+            const types = getRegisteredTypes(lifecycleHandlers) as Array<
+                keyof typeof lifecycleHandlers
+            >;
             for (const type of types) {
                 expect(typeof lifecycleHandlers[type]).toBe('function');
             }
         });
     });
 });
-
 
 describe('handleOpenExternal - Security', () => {
     // Create mock context factory
@@ -85,7 +92,7 @@ describe('handleOpenExternal - Security', () => {
         debugLogger: createMockLogger(),
         context: createMockExtensionContext(),
         panel: undefined,
-        stateManager: {} as any,
+        stateManager: createMockStateManager(),
         communicationManager: undefined,
         sendMessage: jest.fn(),
         sharedState: { isAuthenticating: false },

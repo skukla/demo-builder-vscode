@@ -343,8 +343,8 @@ describe('ConfigurationService — failure reporting', () => {
     }
 
     function loggedText(): string {
-        return ['debug', 'info', 'warn', 'error']
-            .flatMap((lvl) => (logger as never as Record<string, jest.Mock>)[lvl].mock.calls)
+        return (['debug', 'info', 'warn', 'error'] as const)
+            .flatMap((lvl) => logger[lvl].mock.calls)
             .map((c) => String(c[0]))
             .join('\n');
     }
