@@ -242,3 +242,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(auth): bring AdobeWorkspacePicker to zero open mutation gaps (`fb4d3d170`)
 - 2026-09-03  test(auth): bring workspaceHandlers to zero open mutation gaps (`a7e94e2ff`)
 - 2026-09-03  chore(mutation): the second queue — 40 modules, the rest of the consequence tier (`56e85b1fc`)
+- 2026-09-03  test(auth): bring adobeSDKClient to zero open mutation gaps (`ba9383a52`)

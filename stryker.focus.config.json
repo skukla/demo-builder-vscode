@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/adobeSDKClient.ts"
+        "src/features/authentication/services/eventProviderLifecycle.ts"
     ],
     "reporters": [
         "clear-text",
