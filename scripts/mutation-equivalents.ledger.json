@@ -776,6 +776,32 @@
             "decision": "none",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (useAuthStatus)"
+        },
+        {
+            "module": "src/features/authentication/ui/components/AdobeEntityFields.tsx",
+            "anchors": [
+                "if (onCreateFlow) {",
+                "const res = await webviewClient.request<HandlerResult<Workspace>>("
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Both fields' handleCreate opens with this guard, and both are reachable only through NewAdobeEntityForm's Create button, which is disabled under exactly the same condition: `isDisabled={!trimmed || busy}` with `onCreate(trimmed)`. So `!name` is `!trimmed` and `busy` is the same state, and no click can arrive with either true. Two mutants per site (the constant `false`, and `||` to `&&`), none distinguishable through the form. The guard is kept because handleCreate is handed out as a prop and a future caller need not gate. The guard line `if (!name || busy) return;` appears once per field, so the anchors name the unique line that follows each: the onCreateFlow branch in the project field and the workspace request in the other.",
+            "decision": "none \u2014 a defensive guard on a callback that leaves the component",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (AdobeEntityFields)"
+        },
+        {
+            "module": "src/features/authentication/ui/components/AdobeEntityFields.tsx",
+            "anchors": [
+                "const [error, setError] = useState<string | undefined>(createError);",
+                "const [error, setError] = useState<string | undefined>();"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "Each field's `browse` callback is memoised with `[]`, rewritten by Stryker to `['Stryker was here']`. React compares dependencies element-wise with Object.is and a string literal equals itself on every render, so the callback is created once either way. Anchors name each field's error-state declaration, the unique line two above its `browse` callback, because neither the callback body nor its closing `}, []);` is unique in this module.",
+            "decision": "none",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (AdobeEntityFields)"
         }
     ]
 }

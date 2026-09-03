@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/ui/hooks/useAuthStatus.ts"
+        "src/features/authentication/ui/components/AdobeEntityFields.tsx"
     ],
     "reporters": [
         "clear-text",
