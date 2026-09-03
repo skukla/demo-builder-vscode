@@ -2,18 +2,20 @@ import * as fs from 'fs/promises';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { isRepoCollaborator } from './collaboratorGate';
-import { ComponentRepositoryResolver, type ComponentRepositoryInfo } from './componentRepositoryResolver';
-import {
-    GITHUB_API_BASE,
-    buildGitHubHeaders,
-    fetchWithTimeout,
-} from './githubApiClient';
+import { ComponentRepositoryResolver } from './componentRepositoryResolver';
+import { GITHUB_API_BASE, buildGitHubHeaders, fetchWithTimeout } from './githubApiClient';
 import { selectLatestForChannel } from './releaseTrack';
-import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset, UpdateChannel } from './types';
+import type {
+    ReleaseInfo,
+    UpdateCheckResult,
+    GitHubRelease,
+    GitHubReleaseAsset,
+    UpdateChannel,
+} from './types';
 import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 import { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
-import { getComponentIds, getComponentVersion } from '@/types/typeGuards';
+import { getComponentInstanceEntries, getComponentVersion } from '@/types/typeGuards';
 
 export type { UpdateCheckResult };
 
@@ -38,7 +40,7 @@ export class UpdateManager {
     private logger: Logger;
     private context: vscode.ExtensionContext;
     private repositoryResolver: ComponentRepositoryResolver;
-  
+
     // Extension repository (not in components.json)
     private readonly EXTENSION_REPO = 'skukla/demo-builder-vscode';
 
@@ -56,13 +58,13 @@ export class UpdateManager {
         const channel = await this.resolveEffectiveChannel(this.getUpdateChannel());
 
         const latestRelease = await this.fetchLatestRelease(this.EXTENSION_REPO, channel);
-    
+
         if (!latestRelease) {
             return { hasUpdate: false, current: currentVersion, latest: currentVersion };
         }
-    
+
         const hasUpdate = this.isNewerVersion(latestRelease.version, currentVersion);
-    
+
         return {
             hasUpdate,
             current: currentVersion,
@@ -91,38 +93,40 @@ export class UpdateManager {
         // Components ship no -alpha.* builds; early-access collapses to beta for
         // component checks so EA users don't silently skip component updates.
         const configuredChannel = this.getUpdateChannel();
-        const channel: UpdateChannel = configuredChannel === 'early-access' ? 'beta' : configuredChannel;
+        const channel: UpdateChannel =
+            configuredChannel === 'early-access' ? 'beta' : configuredChannel;
 
         // Collect all unique component IDs across all projects
-        const componentProjectMap = new Map<string, Array<{ project: Project; currentVersion: string }>>();
+        const componentProjectMap = new Map<
+            string,
+            Array<{ project: Project; currentVersion: string }>
+        >();
 
         for (const project of projects) {
-            if (!project.componentInstances) continue;
-
-            const componentIds = getComponentIds(project.componentInstances);
-            for (const componentId of componentIds) {
-                const component = project.componentInstances[componentId];
-
+            for (const [componentId, component] of getComponentInstanceEntries(project)) {
                 // RESILIENCE: Skip components whose paths don't exist on filesystem
                 // This handles cases where a component was deleted but still registered in state
-                if (!component?.path) {
-                    this.logger.debug(`[Updates] Skipping ${componentId} in ${project.name}: no path registered`);
+                if (!component.path) {
+                    this.logger.debug(
+                        `[Updates] Skipping ${componentId} in ${project.name}: no path registered`,
+                    );
                     continue;
                 }
 
                 try {
                     await fs.access(component.path);
                 } catch {
-                    this.logger.debug(`[Updates] Skipping ${componentId} in ${project.name}: path does not exist (${component.path})`);
+                    this.logger.debug(
+                        `[Updates] Skipping ${componentId} in ${project.name}: path does not exist (${component.path})`,
+                    );
                     continue;
                 }
 
                 const currentVersion = getComponentVersion(project, componentId) || 'unknown';
 
-                if (!componentProjectMap.has(componentId)) {
-                    componentProjectMap.set(componentId, []);
-                }
-                componentProjectMap.get(componentId)?.push({ project, currentVersion });
+                const entries = componentProjectMap.get(componentId) ?? [];
+                entries.push({ project, currentVersion });
+                componentProjectMap.set(componentId, entries);
             }
         }
 
@@ -131,27 +135,30 @@ export class UpdateManager {
         // For each unique component, fetch latest version once and check all projects
         for (const [componentId, projectVersions] of componentProjectMap.entries()) {
             // Resolve repository: try components.json first, then any project's instance repoUrl
-            let repoInfo: ComponentRepositoryInfo | null = null;
+            let repository: string | null = null;
             for (const { project: proj } of projectVersions) {
-                repoInfo = await this.resolveComponentRepository(
-                    componentId, proj.componentInstances?.[componentId],
+                repository = await this.resolveComponentRepository(
+                    componentId,
+                    proj.componentInstances?.[componentId],
                 );
-                if (repoInfo) break;
+                if (repository) break;
             }
 
-            if (!repoInfo) {
+            if (!repository) {
                 continue;
             }
 
-            const latestRelease = await this.fetchLatestRelease(repoInfo.repository, channel);
+            const latestRelease = await this.fetchLatestRelease(repository, channel);
             if (!latestRelease) {
                 continue;
             }
 
             // Find projects that are outdated
             const outdatedProjects = projectVersions.filter(({ currentVersion }) => {
-                return currentVersion === 'unknown' ||
-                    this.isNewerVersion(latestRelease.version, currentVersion);
+                return (
+                    currentVersion === 'unknown' ||
+                    this.isNewerVersion(latestRelease.version, currentVersion)
+                );
             });
 
             if (outdatedProjects.length > 0) {
@@ -172,13 +179,17 @@ export class UpdateManager {
      * Stable: Latest non-prerelease
      * Beta: Latest release (including prereleases)
      */
-    private async fetchLatestRelease(repo: string, channel: UpdateChannel): Promise<ReleaseInfo | null> {
+    private async fetchLatestRelease(
+        repo: string,
+        channel: UpdateChannel,
+    ): Promise<ReleaseInfo | null> {
         try {
             // For stable: use /releases/latest (non-prereleases only)
             // For beta: use /releases?per_page=20 (includes prereleases, need to sort)
-            const url = channel === 'stable'
-                ? `${GITHUB_API_BASE}/repos/${repo}/releases/latest`
-                : `${GITHUB_API_BASE}/repos/${repo}/releases?per_page=20`;
+            const url =
+                channel === 'stable'
+                    ? `${GITHUB_API_BASE}/repos/${repo}/releases/latest`
+                    : `${GITHUB_API_BASE}/repos/${repo}/releases?per_page=20`;
 
             const headers = await buildGitHubHeaders(this.context.secrets);
 
@@ -203,14 +214,7 @@ export class UpdateManager {
             // Stable returns a single object; beta/early-access return an array.
             // For arrays, pick the highest release the channel ACCEPTS by track
             // (beta excludes -alpha.*, early-access takes -alpha.* only).
-            let release: GitHubRelease;
-            if (Array.isArray(data)) {
-                const selected = selectLatestForChannel(data, channel);
-                if (!selected) return null;
-                release = selected;
-            } else {
-                release = data;
-            }
+            const release = Array.isArray(data) ? selectLatestForChannel(data, channel) : data;
 
             if (!release || release.message === 'Not Found') {
                 return null;
@@ -218,22 +222,20 @@ export class UpdateManager {
 
             // Find VSIX asset for extension, or source archive for components
             const isExtension = repo === this.EXTENSION_REPO;
-            const asset: GitHubReleaseAsset | string | undefined = isExtension
+            const downloadUrl = isExtension
                 ? release.assets.find((a: GitHubReleaseAsset) => a.name.endsWith('.vsix'))
+                      ?.browser_download_url
                 : release.zipball_url;
 
-            if (!asset) {
+            if (!downloadUrl) {
                 return null;
             }
 
-            // Safely extract download URL based on asset type
-            const downloadUrl = isExtension && typeof asset !== 'string'
-                ? asset.browser_download_url
-                : release.zipball_url;
-
             // SECURITY: Validate GitHub download URL before returning
             if (!validateGitHubDownloadURL(downloadUrl)) {
-                this.logger.warn(`[Updates] Security check failed for download URL from ${repo}: ${downloadUrl}`);
+                this.logger.warn(
+                    `[Updates] Security check failed for download URL from ${repo}: ${downloadUrl}`,
+                );
                 return null;
             }
 
@@ -249,33 +251,33 @@ export class UpdateManager {
         } catch (error) {
             // Graceful degradation: returning null means "no update available" which
             // is better UX than showing errors for transient network issues or GitHub outages.
-            this.logger.debug(`[Updates] Release check failed for ${repo}: ${(error as Error).message}`);
+            this.logger.debug(
+                `[Updates] Release check failed for ${repo}: ${(error as Error).message}`,
+            );
             return null;
         }
     }
 
     /**
-     * Resolve a component's GitHub repository using components.json (primary)
-     * or the instance's stored repoUrl (fallback for components defined in demo-packages.json)
+     * Resolve a component's GitHub repository (owner/repo) using components.json
+     * (primary) or the instance's stored repoUrl (fallback for components defined
+     * in demo-packages.json).
      */
     private async resolveComponentRepository(
         componentId: string,
-        instance?: { repoUrl?: string; name?: string },
-    ): Promise<ComponentRepositoryInfo | null> {
+        instance?: { repoUrl?: string },
+    ): Promise<string | null> {
         const repoInfo = await this.repositoryResolver.getRepositoryInfo(componentId);
-        if (repoInfo) return repoInfo;
+        if (repoInfo) return repoInfo.repository;
 
         if (!instance?.repoUrl) return null;
 
-        const repository = this.repositoryResolver.extractRepositoryFromUrl(instance.repoUrl);
-        if (!repository) return null;
-
-        const name = typeof instance.name === 'string' ? instance.name : componentId;
-        return { id: componentId, repository, name };
+        return this.repositoryResolver.extractRepositoryFromUrl(instance.repoUrl);
     }
 
     private getUpdateChannel(): UpdateChannel {
-        return vscode.workspace.getConfiguration('demoBuilder')
+        return vscode.workspace
+            .getConfiguration('demoBuilder')
             .get<UpdateChannel>('updateChannel', 'stable');
     }
 
@@ -312,4 +314,3 @@ export class UpdateManager {
         return tagName.replace(/^v/, '');
     }
 }
-

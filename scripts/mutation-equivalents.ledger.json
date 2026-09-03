@@ -168,6 +168,34 @@
             "decision": "none — the seed is empty by construction",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-01, updateApplyService focus run"
+        },
+        {
+            "module": "src/features/updates/services/updateManager.ts",
+            "anchors": [
+                "proj.componentInstances?.[componentId],",
+                "if (!instance?.repoUrl) return null;"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both `?.` guard the same value on one path that cannot make it undefined: `proj` is a project that entered componentProjectMap only through its own componentInstances entries, so `proj.componentInstances` is defined and the indexed instance exists; the optional `instance` parameter therefore always arrives as an object. The types demand both chains (`componentInstances` is optional on Project, `instance` optional in the signature), and the only caller of the private method is that loop. Killing them would mean handing the loop a project whose instances vanished between the two passes, which nothing can do.",
+            "decision": "none — a restructure that carried the instance alongside each map entry would remove both chains but leaks a field into the public MultiProjectUpdateResult shape; not worth it for two mutants",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (updateManager, 96.03%)"
+        },
+        {
+            "module": "src/features/updates/services/updateManager.ts",
+            "anchors": [
+                "if (response.status === 404) {",
+                "if (response.status === 403) {",
+                "if (response.status >= 500) {",
+                "} catch (error) {"
+            ],
+            "mutants": 11,
+            "category": "branch",
+            "reason": "The 403, 5xx and catch-all throws are all caught by the same deliberate catch-all a few lines down, which logs at debug level and returns null, so every one of them produces the identical outcome (hasUpdate: false) and the only thing that differs is the wording of one debug line. The 404 branch differs from them only by staying silent, and that silence IS asserted; what is left of it (`true`: every non-OK status goes silent) again differs by the log line alone. Killing these means asserting log strings, which the ratchet exists to refuse to reward — the same triage as 2026-09-02, when the tests were deliberately not written. What IS pinned: a non-OK body is never read as a release, whatever the status.",
+            "decision": "OPEN product question, not a test question — graceful degradation means a rate-limited SC sees \"no update\" indefinitely, identically to being current, with only a debug line to say why. If the extension should ever say \"I could not check\", this is where that decision lives.",
+            "recorded": "2026-09-03",
+            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md — \"Measured, and deliberately NOT tested: updateManager's HTTP branches\""
         }
     ]
 }
