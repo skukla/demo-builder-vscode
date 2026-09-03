@@ -127,4 +127,53 @@ describe('AuthenticationService - ApiSubscriberClient passthroughs', () => {
         await authService.clearConsoleContext();
         expect(mockSelector.clearConsoleContext).toHaveBeenCalledTimes(1);
     });
+
+    it('should forward getSubscribedServiceCodes', async () => {
+        mockFetcher.getSubscribedServiceCodes = jest.fn().mockResolvedValue(['A']);
+        await expect(authService.getSubscribedServiceCodes('org', 'int')).resolves.toEqual(['A']);
+        expect(mockFetcher.getSubscribedServiceCodes).toHaveBeenCalledWith('org', 'int');
+    });
+
+    it('should forward getProjectsSdkOnly with its org target', async () => {
+        mockFetcher.getProjectsSdkOnly = jest.fn().mockResolvedValue([{ id: 'p1' }]);
+        await expect(authService.getProjectsSdkOnly({ orgId: 'org' })).resolves.toEqual([
+            { id: 'p1' },
+        ]);
+        expect(mockFetcher.getProjectsSdkOnly).toHaveBeenCalledWith({ orgId: 'org' });
+    });
+
+    it('should forward getWorkspacesSdkOnly with its target', async () => {
+        mockFetcher.getWorkspacesSdkOnly = jest.fn().mockResolvedValue([{ id: 'w1' }]);
+        const target = { orgId: 'org', projectId: 'proj' };
+        await expect(authService.getWorkspacesSdkOnly(target)).resolves.toEqual([{ id: 'w1' }]);
+        expect(mockFetcher.getWorkspacesSdkOnly).toHaveBeenCalledWith(target);
+    });
+
+    it('should forward getWorkspaceCredential', async () => {
+        mockFetcher.getWorkspaceCredential = jest.fn().mockResolvedValue({ clientId: 'cid' });
+        await expect(authService.getWorkspaceCredential()).resolves.toEqual({ clientId: 'cid' });
+        expect(mockFetcher.getWorkspaceCredential).toHaveBeenCalledTimes(1);
+    });
+
+    it('should forward renameRemoteProject', async () => {
+        mockFetcher.renameRemoteProject = jest.fn().mockResolvedValue(true);
+        await expect(authService.renameRemoteProject('org', 'proj', 'New title')).resolves.toBe(true);
+        expect(mockFetcher.renameRemoteProject).toHaveBeenCalledWith('org', 'proj', 'New title');
+    });
+
+    it('should forward createWorkspaceCredential', async () => {
+        mockFetcher.createWorkspaceCredential = jest.fn().mockResolvedValue({ clientId: 'new' });
+        await expect(authService.createWorkspaceCredential('name', 'desc')).resolves.toEqual({
+            clientId: 'new',
+        });
+        expect(mockFetcher.createWorkspaceCredential).toHaveBeenCalledWith('name', 'desc');
+    });
+
+    it('should forward getS2SDeployCredentials', async () => {
+        mockFetcher.getS2SDeployCredentials = jest.fn().mockResolvedValue({ clientId: 's2s' });
+        await expect(authService.getS2SDeployCredentials('org', 'proj', 'ws')).resolves.toEqual({
+            clientId: 's2s',
+        });
+        expect(mockFetcher.getS2SDeployCredentials).toHaveBeenCalledWith('org', 'proj', 'ws');
+    });
 });

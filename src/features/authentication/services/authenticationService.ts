@@ -100,20 +100,21 @@ export class AuthenticationService {
         ).then((stepLogger) => {
             this.stepLogger = stepLogger;
 
-            // Initialize entity services now that stepLogger is ready
-            if (!this.entities) {
-                this.entities = createEntityServices(
-                    this.commandManager,
-                    this.sdkClient,
-                    this.cacheManager,
-                    this.logger,
-                    stepLogger,
-                    // So a CLI 401 cannot be reported as an expired session while
-                    // this same manager says the token has hours left — the state
-                    // that had a user signing in three times to no effect.
-                    async () => (await this.tokenManager.inspectToken()).valid,
-                );
-            }
+            // Initialize entity services now that stepLogger is ready. Unguarded:
+            // this `.then` runs once per service (the init promise is never
+            // reset) and nothing else assigns `entities`, so a guard here could
+            // never be false.
+            this.entities = createEntityServices(
+                this.commandManager,
+                this.sdkClient,
+                this.cacheManager,
+                this.logger,
+                stepLogger,
+                // So a CLI 401 cannot be reported as an expired session while
+                // this same manager says the token has hours left — the state
+                // that had a user signing in three times to no effect.
+                async () => (await this.tokenManager.inspectToken()).valid,
+            );
 
             return stepLogger;
         });

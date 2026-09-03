@@ -364,4 +364,39 @@ describe('AuthenticationService - Authentication Checks', () => {
             expect(result).toBe(false);
         });
     });
+
+    describe('the shared cache, full check first', () => {
+        it('a full check that passed answers the quick check without re-reading', async () => {
+            mockStoredToken.value = validStoredToken();
+            await expect(authService.isFullyAuthenticated()).resolves.toBe(true);
+
+            // The store now says signed OUT; the quick check must still answer from the
+            // positive the full check cached.
+            mockStoredToken.value = undefined;
+            await expect(authService.isAuthenticated()).resolves.toBe(true);
+        });
+    });
+
+    describe('entity services wiring', () => {
+        it('hands the entity services a token check that answers from the token store', async () => {
+            mockStoredToken.value = validStoredToken();
+            await authService.getOrganizations();
+
+            const isTokenValid = (createEntityServices as jest.Mock).mock.calls[0][5] as
+                () => Promise<boolean>;
+            await expect(isTokenValid()).resolves.toBe(true);
+
+            authService.clearCache();
+            mockStoredToken.value = undefined;
+            await expect(isTokenValid()).resolves.toBe(false);
+        });
+
+        it('fails loudly when the entity factory returns nothing', async () => {
+            (createEntityServices as jest.Mock).mockReturnValue(undefined);
+
+            await expect(authService.getOrganizations()).rejects.toThrow(
+                'Entity services failed to initialize',
+            );
+        });
+    });
 });

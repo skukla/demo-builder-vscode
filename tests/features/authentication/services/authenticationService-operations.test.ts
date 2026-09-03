@@ -341,4 +341,77 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             expect(clearTokenInspectionCacheSpy).toHaveBeenCalledTimes(1);
         });
     });
+
+    describe('login — exit code, token shape and the forced path', () => {
+        const validToken = 'x'.repeat(150);
+
+        it('a non-zero exit is a failed login — no retry, no forced attempt', async () => {
+            mockCommandExecutor.execute.mockResolvedValue({
+                code: 1,
+                stdout: '',
+                stderr: 'denied',
+                duration: 0,
+            });
+
+            await expect(authService.login()).resolves.toBe(false);
+
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(1);
+        });
+
+        it('whitespace cannot pad a short token past the floor — the output is trimmed first', async () => {
+            mockCommandExecutor.execute
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: `short${' '.repeat(120)}`,
+                    stderr: '',
+                    duration: 0,
+                })
+                .mockResolvedValueOnce(createSuccessResult(validToken));
+
+            await expect(authService.login()).resolves.toBe(true);
+
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(2);
+            expect(mockCommandExecutor.execute).toHaveBeenNthCalledWith(
+                2,
+                'aio auth login -f',
+                expect.objectContaining({ encoding: 'utf8' }),
+            );
+        });
+
+        it('a forced login that yields no token stops — it does not force again', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult('short'));
+
+            await expect(authService.login(true)).resolves.toBe(false);
+
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(1);
+        });
+
+        it('a forced login clears everything once and does not clear the caches again after', async () => {
+            const cacheManager = (authService as unknown as { cacheManager: AuthCacheManager })
+                .cacheManager;
+            const clearAll = jest.spyOn(cacheManager, 'clearAll');
+            const clearAuthStatus = jest.spyOn(cacheManager, 'clearAuthStatusCache');
+            const clearValidation = jest.spyOn(cacheManager, 'clearValidationCache');
+            const clearInspection = jest.spyOn(cacheManager, 'clearTokenInspectionCache');
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(validToken));
+
+            await expect(authService.login(true)).resolves.toBe(true);
+
+            // clearAll clears the three itself; a second round would count them twice.
+            expect(clearAll).toHaveBeenCalledTimes(1);
+            expect(clearAuthStatus).toHaveBeenCalledTimes(1);
+            expect(clearValidation).toHaveBeenCalledTimes(1);
+            expect(clearInspection).toHaveBeenCalledTimes(1);
+        });
+
+        it('answers false when the step logger cannot be created', async () => {
+            const StepLoggerClass = require('@/core/logging/stepLogger').StepLogger;
+            StepLoggerClass.create = jest.fn().mockRejectedValue(new Error('no templates'));
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(validToken));
+
+            await expect(authService.login()).resolves.toBe(false);
+
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
+        });
+    });
 });

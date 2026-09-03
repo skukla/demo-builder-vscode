@@ -74,11 +74,11 @@
                 "this.debugLogger.error('[Auth] Quick authentication check failed', error as Error);",
                 "this.debugLogger.error('[Auth] Authentication check failed', error as Error);"
             ],
-            "mutants": 8,
+            "mutants": 7,
             "category": "block",
             "reason": "Both authentication checks wrap their token read in a try/catch that logs, caches a brief negative and returns false. Neither catch can be entered: making the CLI config store throw does not reach them because the in-process reader has its own fallback and answers rather than propagating, and TokenManager.isTokenValid adds no catch of its own. Reaching the catch would mean replacing TokenManager, which the service constructs itself.",
             "decision": "none — a defensive catch around an external read is correct even when the current collaborator cannot trigger it; the reader's fallback is not a contract",
-            "note": "The source note records 8 mutants across both catch blocks without splitting them between the two. The split is not known; the count is.",
+            "note": "Re-counted 2026-09-03 against a fresh focus run: 7, not the 8 the source note carried — the quick check catch holds 3 (block, the `false` cached, the `false` returned) and the full check catch holds 4 (block, the formatter options literal, the `false` cached, the `false` returned).",
             "recorded": "2026-09-02",
             "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
         },
@@ -675,6 +675,82 @@
             "decision": "none — the `?.` is required by the SDK response type",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeOrgServices)"
+        },
+        {
+            "module": "src/features/authentication/services/authenticationService.ts",
+            "anchors": [
+                "return withTiming('isAuthenticated', async () => {",
+                "return withTiming('isFullyAuthenticated', async () => {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Both checks read `{ isAuthenticated, isExpired }` from AuthCacheManager.getCachedAuthStatus and gate on `!isExpired && isAuthenticated !== undefined`. Two mutants per site: `&&` to `||`, and the second term to `true`. The cache manager never produces the state that would tell them apart — it answers `isAuthenticated: undefined` exactly when `isExpired` is true, and `setCachedAuthStatus` writes the value and the expiry together, so a fresh entry always carries a boolean. Under that contract the second term is implied by the first, and all four rewrites compute the same value on every reachable state. The service constructs its own AuthCacheManager, so no test can hand it one that lies. The pair is pinned from both directions (quick then full, full then quick, cleared, expired negative). Anchors name each method's withTiming line because the condition itself appears twice.",
+            "decision": "OPEN for the module — the second term could be dropped, or the cache manager could answer a single `fresh: boolean`; either is a behaviour-preserving simplification outside this batch",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
+        },
+        {
+            "module": "src/features/authentication/services/authenticationService.ts",
+            "anchors": [
+                "operation: 'browser-auth',"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The `{ operation, timeout }` options handed to AuthenticationErrorFormatter in login's command catch shape a `formatted` object that reaches only three presentation sinks: logger.error, debugLogger.debug and stepLogger.logTemplate. The return value (`null`) and the caller's answer (false) are the same whatever the options say. Killing the mutant means asserting the wording of the formatted title.",
+            "decision": "none",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
+        },
+        {
+            "module": "src/features/authentication/services/authenticationService.ts",
+            "anchors": [
+                "const token = result.stdout?.trim();"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "CommandResult.stdout is a non-optional string, so the `?.` never short-circuits on any value the executor's type allows. The only input that distinguishes the two is `stdout: undefined`, which the compiler rejects. The trim itself IS pinned (a whitespace-padded short token is retried).",
+            "decision": "OPEN for the module — the `?.` is dead by type and could be dropped",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
+        },
+        {
+            "module": "src/features/authentication/services/authenticationService.ts",
+            "anchors": [
+                "'[Auth] Command succeeded but no valid token in output',",
+                "`[Auth] Output length: ${result.stdout?.length}, first 100 chars: ${result.stdout?.substring(0, 100)}`,",
+                "const exitCode = result?.code ?? 'unknown';"
+            ],
+            "mutants": 7,
+            "category": "block",
+            "reason": "Two else-bodies in login that contain only debug/warn calls, plus the expressions inside them. The no-valid-token else (1 block mutant, and 3 on the continuation line of its debug call: two `?.` and a `.substring`) and the non-zero-exit else (1 block mutant, plus the `??` and the `?.` feeding `exitCode`, which is read only by the debug line). The classifier sees one line at a time, so an argument that wraps onto its own line is not recognised as logging. Both branches then fall through to the same `return false` (or the same retry), which the tests pin; only the log text differs.",
+            "decision": "OPEN for the instrument — enclosing-statement classification, as in the addonUpdateChecker row",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
+        },
+        {
+            "module": "src/features/authentication/services/authenticationService.ts",
+            "anchors": [
+                "`[Auth] Login complete; context (${adobeContext.organization ?? '-'}/` +",
+                "`${adobeContext.projectId ?? '-'}/${adobeContext.workspace ?? '-'}) ` +"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Three `??` operators inside one debug message that spans four lines; the classifier does not see the `debug(` on the line above. The context they format is not used for anything else in this method (Phase 4a: nothing is pinned to the global), so the only observable is the message text.",
+            "decision": "OPEN for the instrument — enclosing-statement classification",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
+        },
+        {
+            "module": "src/features/authentication/services/authenticationService.ts",
+            "anchors": [
+                "debugLogger.error('[Auth] Login and context restoration failed', error as Error);"
+            ],
+            "mutants": 2,
+            "category": "block",
+            "reason": "The catch in loginAndRestoreProjectContext wraps one await: `this.login(force)`. login has its own catch that returns false for every failure, including a step logger that cannot be created (pinned), so it never rejects and this catch cannot be entered. Reaching it would mean replacing the service's own method.",
+            "decision": "none — a catch around an awaited collaborator is correct even when that collaborator currently swallows everything",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
         }
     ]
 }
