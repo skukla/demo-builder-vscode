@@ -129,6 +129,7 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // =============================================================================
 // Test Utilities
@@ -138,7 +139,7 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
  * Create a mock EDS project with metadata
  */
 function createMockEdsProject(overrides?: Partial<Project>): Project {
-    return {
+    return createMockProject({
         name: 'test-eds-project',
         path: '/path/to/project',
         status: 'running',
@@ -165,7 +166,7 @@ function createMockEdsProject(overrides?: Partial<Project>): Project {
             },
         },
         ...overrides,
-    } as unknown as Project;
+    });
 }
 
 /**

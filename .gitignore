@@ -115,3 +115,9 @@ reports/loadbearing-casts.md
 reports/health/.jscpd-tests/
 reports/mutation/mutation.json
 reports/mutation/pl22.json
+
+# Raw stream-json from an overnight goal queue (scripts/overnight/run.sh).
+# The handoff REPORTS beside these are tracked and are the record; these are
+# run artifacts — 8.5 MB across two runs on 2026-09-03, and a full session
+# transcript apiece. This repository is public, so they stay out of history.
+.rptc/handoff/overnight-*/

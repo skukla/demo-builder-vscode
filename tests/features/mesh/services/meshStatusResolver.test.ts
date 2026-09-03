@@ -12,6 +12,7 @@ import {
 } from '@/features/mesh/services/meshStatusResolver';
 import { parseEnvFile } from '@/core/utils/envParser';
 import type { ComponentInstance, Project } from '@/types/base';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // Mock fs/promises
 jest.mock('fs/promises');
@@ -364,7 +365,7 @@ ADOBE_COMMERCE_STORE_CODE=main_store
 ADOBE_CATALOG_API_KEY=api-key-123
 `);
 
-            const project = {
+            const project = createMockProject({
                 ...mockProjectWithMeshEndpoint,
                 appBuilderComponents: {
                     'commerce-mesh': {
@@ -376,7 +377,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
                         declinedAt: '2026-07-01T00:00:00Z',
                     },
                 },
-            } as unknown as Project;
+            });
 
             const result = await determineMeshStatus(
                 { hasChanges: true },
@@ -399,9 +400,9 @@ ADOBE_COMMERCE_STORE_CODE=main_store
 ADOBE_CATALOG_API_KEY=api-key-123
 `);
 
-            const project = {
+            const project = createMockProject({
                 ...mockProjectWithMeshEndpoint,
-                meshState: undefined, // post-Step-07 world: keyed entry only
+                // post-Step-07 world: keyed entry only, no meshState
                 appBuilderComponents: {
                     'commerce-mesh': {
                         kind: 'mesh',
@@ -410,7 +411,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
                         endpoint: mockMeshEndpoint,
                     },
                 },
-            } as unknown as Project;
+            });
 
             const result = await determineMeshStatus(
                 { hasChanges: false },

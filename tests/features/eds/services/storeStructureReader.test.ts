@@ -42,6 +42,7 @@ jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
 
 import { readStoreStructure } from '@/features/eds/services/storeStructureReader';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const STRUCTURE = {
     websites: [
@@ -67,7 +68,7 @@ const STRUCTURE = {
 
 /** A PaaS project with credentials and a scope, unless overridden. */
 function paasProject(overrides: Record<string, string> = {}): Project {
-    return {
+    return createMockProject({
         componentSelections: { backend: 'adobe-commerce-paas' },
         componentConfigs: {
             'adobe-commerce-paas': {
@@ -80,11 +81,11 @@ function paasProject(overrides: Record<string, string> = {}): Project {
                 ...overrides,
             },
         },
-    } as unknown as Project;
+    });
 }
 
 function accsProject(): Project {
-    return {
+    return createMockProject({
         adobe: { organization: 'org-1' },
         componentSelections: { backend: 'adobe-commerce-accs' },
         componentConfigs: {
@@ -95,7 +96,7 @@ function accsProject(): Project {
                 ACCS_STORE_VIEW_CODE: 'default',
             },
         },
-    } as unknown as Project;
+    });
 }
 
 beforeEach(() => {
@@ -231,10 +232,10 @@ describe('readStoreStructure — ACCS', () => {
 
 describe('readStoreStructure — unsupported backend', () => {
     it('declines an ACO project instead of guessing a request shape', async () => {
-        const project = {
+        const project = createMockProject({
             componentSelections: { backend: 'adobe-commerce-aco' },
             componentConfigs: {},
-        } as unknown as Project;
+        });
 
         const result = await readStoreStructure(project);
 

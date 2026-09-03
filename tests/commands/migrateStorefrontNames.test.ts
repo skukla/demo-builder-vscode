@@ -67,6 +67,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import { createMockLogger } from '../helpers/loggerFake';
 import { createMockStateManager } from '../helpers/stateManagerFake';
 import { createMockExtensionContext } from '../helpers/extensionContextFake';
+import { createMockProject } from '../helpers/projectFake';
 
 const migrateMock = migrateStorefrontNamingIfNeeded as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
@@ -85,14 +86,17 @@ function makeProject(
         daLiveOrg = 'skukla',
         githubRepo = `skukla/${name}`,
     } = overrides;
-    return {
+    return createMockProject({
         name,
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
                 metadata: { daLiveOrg, daLiveSite, githubRepo },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 function makeStateManager(projectsByPath: Record<string, Project>): StateManager {
@@ -152,7 +156,7 @@ describe('MigrateStorefrontNamesCommand', () => {
         });
 
         it('ignores projects without an eds-storefront component instance', async () => {
-            const noEds = { name: 'no-eds', componentInstances: {} } as unknown as Project;
+            const noEds = createMockProject({ name: 'no-eds', componentInstances: {} });
             const sm = makeStateManager({ '/a': noEds });
 
             await makeCommand(sm).execute();

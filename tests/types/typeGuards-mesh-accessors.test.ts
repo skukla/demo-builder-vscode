@@ -38,7 +38,7 @@ describe('typeGuards - Mesh Component Accessors', () => {
         ...overrides,
     } as ComponentInstance);
 
-    const createProjectWithMesh = (meshId: string, meshOverrides: Partial<ComponentInstance> = {}): Project => ({
+    const createProjectWithMesh = (meshId: string, meshOverrides: Partial<ComponentInstance> = {}): Project => (createMockProject({
         name: 'test-project',
         componentInstances: {
             [meshId]: createMeshComponent(meshId, meshOverrides),
@@ -49,7 +49,7 @@ describe('typeGuards - Mesh Component Accessors', () => {
                 status: 'ready',
             },
         },
-    } as unknown as Project);
+    }));
 
     // =================================================================
     // getComponentInstancesBySubType Tests
@@ -88,13 +88,13 @@ describe('typeGuards - Mesh Component Accessors', () => {
         });
 
         it('should return multiple components with same subType', () => {
-            const project = {
+            const project = createMockProject({
                 componentInstances: {
-                    'adobe-commerce-aco': { id: 'adobe-commerce-aco', subType: 'addon' },
-                    'another-addon': { id: 'another-addon', subType: 'addon' },
+                    'adobe-commerce-aco': { id: 'adobe-commerce-aco', name: 'ACO', status: 'ready', subType: 'service' },
+                    'another-addon': { id: 'another-addon', name: 'Another', status: 'ready', subType: 'service' },
                 },
-            } as unknown as Project;
-            const addons = getComponentInstancesBySubType(project, 'addon');
+            });
+            const addons = getComponentInstancesBySubType(project, 'service');
             expect(addons).toHaveLength(2);
         });
     });
@@ -127,11 +127,11 @@ describe('typeGuards - Mesh Component Accessors', () => {
         });
 
         it('should return undefined when no mesh component exists', () => {
-            const project = {
+            const project = createMockProject({
                 componentInstances: {
-                    'headless': { id: 'headless', type: 'frontend' },
+                    'headless': { id: 'headless', name: 'Headless', status: 'ready', type: 'frontend' },
                 },
-            } as unknown as Project;
+            });
             expect(getMeshComponentInstance(project)).toBeUndefined();
         });
 
@@ -144,7 +144,7 @@ describe('typeGuards - Mesh Component Accessors', () => {
         });
 
         it('should return undefined when componentInstances is empty', () => {
-            const project = { componentInstances: {} } as unknown as Project;
+            const project = createMockProject({ componentInstances: {} });
             expect(getMeshComponentInstance(project)).toBeUndefined();
         });
     });
@@ -170,11 +170,11 @@ describe('typeGuards - Mesh Component Accessors', () => {
         });
 
         it('should return undefined when no mesh exists', () => {
-            const project = {
+            const project = createMockProject({
                 componentInstances: {
-                    'headless': { id: 'headless', type: 'frontend' },
+                    'headless': { id: 'headless', name: 'Headless', status: 'ready', type: 'frontend' },
                 },
-            } as unknown as Project;
+            });
             expect(getMeshComponentId(project)).toBeUndefined();
         });
 
@@ -198,11 +198,11 @@ describe('typeGuards - Mesh Component Accessors', () => {
         });
 
         it('should return false when no mesh component exists', () => {
-            const project = {
+            const project = createMockProject({
                 componentInstances: {
-                    'headless': { id: 'headless', type: 'frontend' },
+                    'headless': { id: 'headless', name: 'Headless', status: 'ready', type: 'frontend' },
                 },
-            } as unknown as Project;
+            });
             expect(hasMeshComponent(project)).toBe(false);
         });
 
@@ -215,7 +215,7 @@ describe('typeGuards - Mesh Component Accessors', () => {
         });
 
         it('should return false when componentInstances is empty', () => {
-            const project = { componentInstances: {} } as unknown as Project;
+            const project = createMockProject({ componentInstances: {} });
             expect(hasMeshComponent(project)).toBe(false);
         });
     });
@@ -228,7 +228,7 @@ describe('typeGuards - Mesh Component Accessors', () => {
         const meshEndpoint = 'https://edge-sandbox-graph.adobe.io/api/12345/graphql';
 
         it('should return the endpoint from the keyed mesh entry', () => {
-            const project = {
+            const project = createMockProject({
                 ...createProjectWithMesh('eds-commerce-mesh'),
                 appBuilderComponents: {
                     mesh: {
@@ -238,7 +238,7 @@ describe('typeGuards - Mesh Component Accessors', () => {
                         endpoint: meshEndpoint,
                     },
                 },
-            } as unknown as Project;
+            });
             expect(getMeshEndpointUrl(project)).toBe(meshEndpoint);
         });
 
@@ -256,11 +256,11 @@ describe('typeGuards - Mesh Component Accessors', () => {
         });
 
         it('should return undefined when no mesh component and no keyed entry', () => {
-            const project = {
+            const project = createMockProject({
                 componentInstances: {
-                    'headless': { id: 'headless', type: 'frontend' },
+                    'headless': { id: 'headless', name: 'Headless', status: 'ready', type: 'frontend' },
                 },
-            } as unknown as Project;
+            });
             expect(getMeshEndpointUrl(project)).toBeUndefined();
         });
 
@@ -271,7 +271,7 @@ describe('typeGuards - Mesh Component Accessors', () => {
             const keyedEndpoint = 'https://edge-graph.adobe.io/api/keyed-1/graphql';
 
             it('returns undefined when the keyed mesh entry has no endpoint', () => {
-                const project = {
+                const project = createMockProject({
                     ...createProjectWithMesh('eds-commerce-mesh'),
                     appBuilderComponents: {
                         'eds-commerce-mesh': {
@@ -280,12 +280,12 @@ describe('typeGuards - Mesh Component Accessors', () => {
                             source: { owner: '', repo: '' },
                         },
                     },
-                } as unknown as Project;
+                });
                 expect(getMeshEndpointUrl(project)).toBeUndefined();
             });
 
             it('returns the keyed endpoint under the canonical mesh key', () => {
-                const project = {
+                const project = createMockProject({
                     ...createProjectWithMesh('eds-commerce-mesh'),
                     appBuilderComponents: {
                         mesh: {
@@ -295,7 +295,7 @@ describe('typeGuards - Mesh Component Accessors', () => {
                             endpoint: keyedEndpoint,
                         },
                     },
-                } as unknown as Project;
+                });
                 expect(getMeshEndpointUrl(project)).toBe(keyedEndpoint);
             });
         });

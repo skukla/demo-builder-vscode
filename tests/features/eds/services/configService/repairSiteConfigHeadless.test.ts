@@ -16,7 +16,6 @@ import { repairSiteConfig } from '@/features/eds/services/configService/repairSi
 import type { RepairSiteConfigParams } from '@/features/eds/services/configService/repairSiteConfigHeadless';
 import type { ConfigurationService } from '@/features/eds/services/configService/configurationService';
 import { DaLiveAuthError } from '@/features/eds/services/types';
-import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
@@ -34,10 +33,13 @@ jest.mock('@/features/eds/services/configService/configAccessRecovery', () => ({
 const logger = createMockLogger() as unknown as Logger;
 
 /** Mirrors the real shape: `extractRepublishParams` reads the EDS component instance. */
-const project = {
+const project = createMockProject({
     name: 'demo',
     componentInstances: {
         'eds-storefront': {
+            id: 'eds-storefront',
+            name: 'eds-storefront',
+            status: 'ready',
             path: '/tmp/demo/storefront',
             metadata: {
                 githubRepo: 'skukla/demo-builder-test',
@@ -46,7 +48,7 @@ const project = {
             },
         },
     },
-} as unknown as Project;
+});
 
 /** Only the read-back is called here; the class holds private token/logger state. */
 const makeService = (overlayUrl?: string, readable = true): ConfigurationService =>

@@ -25,6 +25,7 @@ import { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockProject } from '../../../helpers/projectFake';
 
 function makeContext(project: Project | undefined): HandlerContext {
     return createMockHandlerContext({
@@ -41,7 +42,7 @@ function makeContext(project: Project | undefined): HandlerContext {
 }
 
 function makeEdsProject(): Project {
-    return {
+    return createMockProject({
         name: 'test-eds',
         path: '/path/to/eds',
         status: 'running',
@@ -54,11 +55,11 @@ function makeEdsProject(): Project {
                 status: 'ready',
             },
         },
-    } as unknown as Project;
+    });
 }
 
 function makeHeadlessProject(): Project {
-    return {
+    return createMockProject({
         name: 'test-headless',
         path: '/path/to/headless',
         status: 'running',
@@ -71,7 +72,7 @@ function makeHeadlessProject(): Project {
                 status: 'ready',
             },
         },
-    } as unknown as Project;
+    });
 }
 
 describe('handleRefreshBlockLibrary', () => {

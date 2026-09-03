@@ -60,6 +60,7 @@ import { createMeshDepsFake } from '../../../../helpers/meshDepsFake';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 /** Shared fake (PL-16) — this was one of eleven hand-rolled copies. */
 const meshDeps = createMeshDepsFake();
@@ -69,12 +70,14 @@ const meshDeps = createMeshDepsFake();
 // =============================================================================
 
 function makeProject(): Project {
-    return {
+    return createMockProject({
         name: 'demo',
         path: '/p',
-        adobe: { organization: { id: 'org1', code: 'ORG1', name: 'Org' } },
+        adobe: { organization: 'org1' },
         componentInstances: {
             'eds-accs-mesh': {
+                name: 'eds-accs-mesh',
+                status: 'ready',
                 id: 'eds-accs-mesh',
                 subType: 'mesh',
                 path: '/p/components/eds-accs-mesh',
@@ -82,7 +85,7 @@ function makeProject(): Project {
                 metadata: { meshId: 'stale-local-mesh-id' },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 function makeContext(): HandlerContext {

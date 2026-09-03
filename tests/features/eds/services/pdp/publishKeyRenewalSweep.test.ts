@@ -27,6 +27,7 @@ import { COMPONENT_IDS } from '@/core/constants';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 const registerMock = registerPublishKey as jest.Mock;
 
@@ -36,20 +37,23 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const logger = createMockLogger() as unknown as Logger;
 
 function edsProject(name: string, registeredAt?: string, githubRepo = 'skukla/a-store'): Project {
-    return {
+    return createMockProject({
         name,
         publishKeyRegisteredAt: registeredAt,
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
                 metadata: { daLiveOrg: 'skukla', daLiveSite: 'a-store', githubRepo },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 /** A project with no EDS storefront at all — a mesh-only or App Builder demo. */
 function nonEdsProject(name: string): Project {
-    return { name, componentInstances: {} } as unknown as Project;
+    return createMockProject({ name, componentInstances: {} });
 }
 
 function run(projects: Project[], overrides: Partial<Parameters<typeof renewPublishKeys>[0]> = {}) {

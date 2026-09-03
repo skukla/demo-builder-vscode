@@ -83,6 +83,7 @@ import type { Project } from '@/types/base';
 import { createMockLogger } from '../helpers/loggerFake';
 import { createMockStateManager } from '../helpers/stateManagerFake';
 import { createMockExtensionContext } from '../helpers/extensionContextFake';
+import { createMockProject } from '../helpers/projectFake';
 
 const executePipelineMock = executeEdsPipeline as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
@@ -102,7 +103,7 @@ function makeContext(): vscode.ExtensionContext {
     return createMockExtensionContext();
 }
 
-const EDS_PROJECT = {
+const EDS_PROJECT = createMockProject({
     name: 'Demo EDS',
     path: '/projects/demo',
     selectedStack: 'eds-paas',
@@ -119,7 +120,7 @@ const EDS_PROJECT = {
             },
         },
     },
-} as unknown as Project;
+});
 
 /**
  * Helix reaches the headless core through the command's own seam, not a module mock.

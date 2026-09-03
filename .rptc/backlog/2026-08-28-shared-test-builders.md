@@ -334,6 +334,11 @@ never filed anywhere until now.
 - 2026-09-03  test: 11 Project literals adopt the builder where nothing reads what it adds (`b0c9155c2`)
 - 2026-09-03  test: Partial<Project> casts reach zero — 32 were redundant, 6 hid a real gap (`b6c670631`)
 - 2026-09-03  docs(backlog): log the PL-16 and PL-32 commits the trailer sweep found (`48b247d41`)
+- 2026-09-03  test: the last 44 convertible Project literals adopt the builder (`fcfcbe665`)
+- 2026-09-03  test: 49 Project literals adopt the builder across the reset, updates and EDS suites (`8e74f7dc3`)
+- 2026-09-03  test(types): 35 accessor-suite Project literals adopt the builder (`58bac5ead`)
+- 2026-09-03  docs(backlog): log the batch-2 and batch-3 PL-16 commits (`bf114ec14`)
+- 2026-09-03  docs(backlog): the Project cast sites are exhausted — six must stay, and here is why (`9659d8f8f`)
 
 ## Reopened by the compiler, 2026-09-01 — and it named the next builders itself
 
@@ -372,3 +377,60 @@ Order to work in: extend the codemod to use existing builders for members (41), 
 
 Method and tooling: `docs/development/toolchain.md`, harness at
 `scripts/codemod/project.mjs`.
+
+## `Project` cast sites — EXHAUSTED 2026-09-03
+
+Every one of the 134 brace-anchored `} as Project` / `} as unknown as Project`
+sites outside `tests/helpers/` was read against its subject and dispositioned:
+
+    converted   128
+    must-stay     6
+    unread        0
+    ─────────────────
+    total       134   (enforcer count at start; `castCeilings.Project` now 6)
+
+The reading rule, applied at every site: the builder only ADDS keys the literal
+lacks (`path`, `status: 'ready'`, dates, a full `adobe`, empty
+`componentSelections` / `componentInstances` / `componentConfigs` /
+`componentVersions`). A site converts when nothing on the path under test reads
+one of those keys, or reads it in a way where the default is indistinguishable
+from absence (a keyed lookup into `{}`). A site stays when the subject BRANCHES on
+one of them being absent, or the test asserts absence outright — because a blind
+substitution there still passes and silently changes what the test means.
+
+### The must-stay list (the ceiling is this list's length)
+
+| # | File | Why it cannot convert |
+|---|---|---|
+| 1 | `tests/sop/canonical-fakes.test.ts` (docblock) | Prose naming the pattern the detector looks for; not a fixture. |
+| 2 | `tests/sop/canonical-fakes.test.ts` (CONTROL, first string) | The detector's own positive control: `'const p = {} as unknown as Project;'`. A detector that cannot see its control proves nothing. |
+| 3 | `tests/sop/canonical-fakes.test.ts` (CONTROL, second string) | Same control, bare `as Project` spelling. |
+| 4 | `tests/features/eds/services/reset/edsResetUI-sampleData.test.ts` | The fixture is deliberately a project WITHOUT `adobe`; `resetEdsProjectWithUI` branches on `project.adobe?.organization` into the Adobe-auth + org-context pre-flight. The builder's default org would take that branch, and the suite's stubbed auth would let it pass silently. |
+| 5 | `tests/features/project-creation/handlers/executor-meshStatePopulation.test.ts` | Asserts `expect(mockProject.componentConfigs).toBeUndefined()` — "the project has no componentConfigs" IS the case under test. The builder supplies `{}`. |
+| 6 | `tests/core/state/projectFileLoader-orphanConfigs.test.ts` | The test "is a no-op when componentConfigs is absent" exists to hit `if (!configs) return false` in `stripOrphanedComponentConfigs`. With the builder's `{}` the call still returns `false`, but through the loop, not the early return — the branch the test names would go unexercised. |
+
+Rows 1–3 are the instrument, not the corpus: the enforcer walks `tests/sop/`
+along with everything else, and excluding its own file to lower a number would be
+tampering with the measurement. Rows 4–6 are the trap the item warned about, each
+verified by reading the subject's branch (edsResetUI.ts `adobe?.organization`
+guard; the executor test's own assertion; projectFileLoader.ts `!configs`).
+
+### What the compiler found once the casts came off (all fixed in the three commits)
+
+- 40 nested `ComponentInstance` literals missing `id`, `name` or `status` — filled
+  in; no subject in those suites reads them.
+- `subType: 'addon'` and `status: 'installed'` — values that exist on no type.
+- `adobe.organization` holding an object where `AdobeConfig` declares a string.
+- `componentInstances: []` in three writer fixtures — an array where the type is a
+  keyed record. `Object.keys` made both shapes look the same to every assertion.
+- `id` on a Project fixture, and `meshState` on another — fields Project does not have.
+- Two suites defining a LOCAL `createMockProject` that shadowed the shared one;
+  a blind conversion made each call itself. Renamed.
+- One byte-identical duplicate builder (`appBuilderStructuralInvariant`'s
+  `createProject` vs the runner testUtils export) — deleted in favour of the import.
+
+Method: four parallel read-only passes wrote a per-site disposition (keys, subject,
+fields read with `src:line`, absence-dependence, verdict) before any edit; the two
+must-stay claims and the three non-Project-field claims were re-verified against
+source by hand before acting. Conversion was mechanical (`createMockProject({...same
+keys...})`), then `typecheck:tests` named every nested shape the cast had hidden.

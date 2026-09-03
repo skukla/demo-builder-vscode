@@ -19,12 +19,13 @@
 import { createOrgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
 import { CHECK_IDS } from '@/types/messages';
 import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks/types';
-import type { Project } from '@/types/base';
+import type { AdobeConfig, Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import { createMockAuthenticationService } from '../../../../helpers/authenticationServiceFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 const mockLogger: Logger = createMockLogger();
 
 /** Build a run context with a captured `post` spy. */
@@ -52,8 +53,8 @@ function makeAuth(overrides: Partial<jest.Mocked<AuthenticationService>> = {}) {
     });
 }
 
-function projectWithOrg(organization?: string, extra: Record<string, unknown> = {}): Project {
-    return { path: '/tmp/proj', adobe: organization ? { organization, ...extra } : undefined } as unknown as Project;
+function projectWithOrg(organization?: string, extra: Partial<AdobeConfig> = {}): Project {
+    return createMockProject({ path: '/tmp/proj', adobe: organization ? { organization, ...extra } : undefined });
 }
 
 /** The default self-heal sink; a test that asserts on it installs its own. */

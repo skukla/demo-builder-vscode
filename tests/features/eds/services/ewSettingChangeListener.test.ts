@@ -19,6 +19,7 @@ import type { GitHubTokenService } from '@/features/eds/services/github/githubTo
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 
 const mockApplyAuthoringExperienceFlip = jest.fn().mockResolvedValue({
@@ -57,17 +58,20 @@ interface ProjectSpec {
 
 function makeProject(spec: ProjectSpec): Project {
     if (!spec.eds) {
-        return {
+        return createMockProject({
             name: spec.name,
             path: `/p/${spec.name}`,
             componentInstances: {},
-        } as unknown as Project;
+        });
     }
-    return {
+    return createMockProject({
         name: spec.name,
         path: `/p/${spec.name}`,
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
                 metadata: {
                     daLiveOrg: 'org',
                     daLiveSite: 'site',
@@ -76,7 +80,7 @@ function makeProject(spec: ProjectSpec): Project {
                 },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 function buildStateManager(specs: ProjectSpec[]): StateManager {

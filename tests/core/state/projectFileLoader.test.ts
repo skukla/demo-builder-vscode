@@ -337,7 +337,7 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
 // redeploy silently dropped the user's picked APIs.
 describe('additionalConsoleApis — manifest persistence (§E)', () => {
     function baseProject(overrides: Record<string, unknown> = {}): Project {
-        return {
+        return createMockProject({
             name: 'apis-demo',
             path: PROJECT_PATH,
             created: new Date('2026-07-15T00:00:00Z'),
@@ -346,7 +346,7 @@ describe('additionalConsoleApis — manifest persistence (§E)', () => {
             componentConfigs: {},
             componentVersions: {},
             ...overrides,
-        } as unknown as Project;
+        });
     }
 
     async function writeAndCaptureManifest(project: Project): Promise<Record<string, unknown>> {

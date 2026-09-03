@@ -14,13 +14,13 @@ import * as vscode from 'vscode';
 import { StateManager } from '@/core/state/stateManager';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 
 
 import { internals } from '../../../helpers/commandInternals';
+import { createMockProject } from '../../../helpers/projectFake';
 jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () => ({
     getAvailableAppBuilderComponents: jest.fn(() => []),
 }));
@@ -65,13 +65,13 @@ describe('ConfigureProjectWebviewCommand - getInitialData envVars', () => {
         const mockContext = createMockExtensionContext();
 
         mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({
+            getCurrentProject: jest.fn().mockResolvedValue(createMockProject({
                 name: 'test-project',
                 path: '/nonexistent/test/project',
                 componentInstances: {},
                 componentConfigs: {},
                 componentSelections: {},
-            } as unknown as Project),
+            })),
             getAllProjects: jest.fn().mockResolvedValue([]),
         } as unknown as jest.Mocked<StateManager>;
 

@@ -8,7 +8,15 @@
 # landed in git — rather than 40MB of transcript.
 #
 set -uo pipefail
-DIR="${1:?usage: summarise.sh <overnight-log-dir>}"
+DIR="${1:?usage: summarise.sh [--keep] <overnight-log-dir>}"
+
+# The raw stream-json is an ARTEFACT, not the record. Two runs left 8.5 MB of
+# full session transcript on disk; the commits and the handoff report are what
+# anybody reads afterwards. So summarising consumes the logs by default — the
+# numbers below are the only part worth keeping — and `--keep` opts out when a
+# run needs picking over.
+KEEP=0
+if [ "$DIR" = "--keep" ]; then KEEP=1; DIR="${2:?usage: summarise.sh [--keep] <dir>}"; fi
 
 python3 - "$DIR" <<'PY'
 import json, os, sys, subprocess
@@ -62,3 +70,9 @@ print('commits in the last 18h: %d' % len(lines))
 for l in lines[:25]:
     print('   ', l)
 PY
+
+if [ "$KEEP" -eq 0 ]; then
+    rm -rf "$DIR"
+    echo
+    echo "Logs consumed. Pass --keep to retain them for picking over."
+fi

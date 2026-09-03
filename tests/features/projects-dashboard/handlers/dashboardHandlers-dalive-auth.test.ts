@@ -190,6 +190,7 @@ import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // =============================================================================
 // Test Utilities
@@ -199,7 +200,7 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
  * Create a mock EDS project with full metadata for reset operations
  */
 function createMockEdsProject(overrides?: Partial<Project>): Project {
-    return {
+    return createMockProject({
         name: 'test-eds-project',
         path: '/Users/test/.demo-builder/projects/test-eds',
         status: 'running',
@@ -225,7 +226,7 @@ function createMockEdsProject(overrides?: Partial<Project>): Project {
             },
         },
         ...overrides,
-    } as unknown as Project;
+    });
 }
 
 /**

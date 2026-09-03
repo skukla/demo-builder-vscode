@@ -16,7 +16,7 @@ import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
 
 function project(): Project {
-    return {
+    return createMockProject({
         name: 'p',
         path: '/p',
         appBuilderComponents: {
@@ -27,7 +27,7 @@ function project(): Project {
                 endpoint: 'https://graph.adobe.io/api/demo/graphql',
             },
         },
-    } as unknown as Project;
+    });
 }
 
 describe('recordDeployOutcome — failure reason', () => {

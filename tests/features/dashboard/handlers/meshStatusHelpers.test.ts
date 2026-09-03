@@ -6,9 +6,9 @@
  * the dashboard-side status push that stayed behind.
  */
 
-import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 describe('meshStatusHelpers', () => {
     const mockMeshPath = '/projects/demo/components/commerce-mesh';
@@ -18,7 +18,7 @@ describe('meshStatusHelpers', () => {
                 sendDemoStatusUpdate,
             } = require('@/features/dashboard/handlers/meshStatusHelpers');
 
-            const project = {
+            const project = createMockProject({
                 name: 'demo',
                 path: '/projects/demo',
                 status: 'ready',
@@ -41,7 +41,7 @@ describe('meshStatusHelpers', () => {
                         envVars: { MESH_ID: 'mesh123' },
                     },
                 },
-            } as unknown as Project;
+            });
 
             const postMessage = jest.fn();
             const context = {

@@ -17,6 +17,7 @@ import {
 import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 describe('configGenerator', () => {
     let mockLogger: Logger;
@@ -497,8 +498,7 @@ describe('configGenerator', () => {
          * exactly what the load-time migration produces from an old manifest.
          */
         function migratedMeshProject(): Project {
-            return {
-                id: 'proj-1',
+            return createMockProject({
                 name: 'Legacy Mesh Project',
                 path: '/tmp/proj-1',
                 componentSelections: { backend: 'adobe-commerce-paas' },
@@ -516,6 +516,9 @@ describe('configGenerator', () => {
                 },
                 componentInstances: {
                     'eds-storefront': {
+                        id: 'eds-storefront',
+                        name: 'eds-storefront',
+                        status: 'ready',
                         metadata: {
                             githubRepo: 'test-owner/test-repo',
                             daLiveOrg: 'test-org',
@@ -532,13 +535,13 @@ describe('configGenerator', () => {
                         lastDeployed: '2026-06-20T00:00:00.000Z',
                     },
                 },
-            } as unknown as Project;
+            });
         }
 
         /** Forward-state: the provider declares the endpoint via providesEnvVars. */
         function appBuilderComponentsOnlyProject(): Project {
             const base = migratedMeshProject();
-            return {
+            return createMockProject({
                 ...base,
                 appBuilderComponents: {
                     mesh: {
@@ -549,7 +552,7 @@ describe('configGenerator', () => {
                         providesEnvVars: { MESH_ENDPOINT },
                     },
                 },
-            } as unknown as Project;
+            });
         }
 
         let mockLogger: Logger;
@@ -595,7 +598,7 @@ describe('configGenerator', () => {
         });
 
         it('falls back to the direct backend endpoint when NO provider exists (no mesh)', () => {
-            const noMesh = {
+            const noMesh = createMockProject({
                 ...migratedMeshProject(),
                 appBuilderComponents: undefined,
                 componentConfigs: {
@@ -603,7 +606,7 @@ describe('configGenerator', () => {
                         ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://direct.example.com/graphql',
                     },
                 },
-            } as unknown as Project;
+            });
 
             const params = extractConfigParams(noMesh);
             expect(params.commerceEndpoint).toBe('https://direct.example.com/graphql');

@@ -119,3 +119,24 @@ that fires 18 times, which is the right first result for a check nobody has run.
 
 The alternative — banning such sentences — would be worse. The sentences are
 valuable; they just need somewhere to be seen.
+
+---
+
+## Postscript — what the two goal runs cost and produced
+
+Distilled from the stream-json logs before they were deleted. The logs were
+8.5 MB of raw transcript; the commits are the record, so only these numbers were
+worth keeping.
+
+| run | item | turns | tool calls | outcome |
+|---|---|---|---|---|
+| 2026-09-02 23:37 | PL-32 | 675 | 460 | 431 casts removed, both ceilings to zero |
+| 2026-09-02 23:37 | PL-16 | 135 | 63 | two families closed; stopped early on a condition that meant "lower", not "done" |
+| 2026-09-03 06:37 | PL-16 | 533 | 330 | 134 sites read, 128 converted, 6 dispositioned must-stay |
+
+The middle row is the lesson. Same item, same machine, a quarter of the turns —
+because the condition was satisfied by the first successful batch. Rewriting it
+as *converted + must-stay = 134, ceiling equals the must-stay count* produced
+four times the work and the artefact that was actually wanted: the six files
+that cannot convert, each with the branch that depends on the key a builder
+would supply.

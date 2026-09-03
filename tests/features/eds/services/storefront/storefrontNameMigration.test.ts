@@ -17,14 +17,18 @@ import { migrateStorefrontNamingIfNeeded } from '@/features/eds/services/storefr
 import type { StorefrontMigrationContext } from '@/features/eds/services/storefront/storefrontNameMigration';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 const mockLogger = createMockLogger();
 
 function makeProject(daLiveSite: string): Project {
-    return {
+    return createMockProject({
         name: 'my-commerce-demo',
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
                 metadata: {
                     daLiveOrg: 'skukla',
                     daLiveSite,
@@ -32,7 +36,7 @@ function makeProject(daLiveSite: string): Project {
                 },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 function makeCtx(overrides: Partial<StorefrontMigrationContext> = {}): StorefrontMigrationContext {
@@ -364,7 +368,7 @@ describe('migrateStorefrontNamingIfNeeded', () => {
 
         it('tolerates a project missing the eds-storefront instance (no crash, ctx still mutated)', async () => {
             const ctx = makeCtx();
-            const project = { name: 'no-eds', componentInstances: {} } as unknown as Project;
+            const project = createMockProject({ name: 'no-eds', componentInstances: {} });
 
             const result = await migrateStorefrontNamingIfNeeded(
                 ctx,

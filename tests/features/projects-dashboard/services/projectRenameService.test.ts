@@ -39,9 +39,10 @@ import { renameProjectCore } from '@/features/projects-dashboard/services/projec
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockProject } from '../../../helpers/projectFake';
 
-function createMockProject(overrides?: Partial<Project>): Project {
-    return {
+function projectToRename(overrides?: Partial<Project>): Project {
+    return createMockProject({
         name: 'old-name',
         path: '/projects/old-name',
         status: 'ready',
@@ -54,7 +55,7 @@ function createMockProject(overrides?: Partial<Project>): Project {
             },
         },
         ...overrides,
-    } as unknown as Project;
+    });
 }
 
 function createMockContext(): HandlerContext {
@@ -79,7 +80,7 @@ describe('renameProjectCore', () => {
     });
 
     it('should reject an empty name', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
 
         const result = await renameProjectCore(context, project, '   ');
@@ -89,7 +90,7 @@ describe('renameProjectCore', () => {
     });
 
     it('should block rename while the demo is running', async () => {
-        const project = createMockProject({ status: 'running' });
+        const project = projectToRename({ status: 'running' });
         const context = createMockContext();
 
         const result = await renameProjectCore(context, project, 'new-name');
@@ -99,7 +100,7 @@ describe('renameProjectCore', () => {
     });
 
     it('should reject an invalid project name', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
         mockValidateName.mockImplementation(() => {
             throw new Error('Invalid name');
@@ -112,7 +113,7 @@ describe('renameProjectCore', () => {
     });
 
     it('should error when the target folder already exists', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
         mockAccess.mockResolvedValue(undefined); // folder exists
 
@@ -123,7 +124,7 @@ describe('renameProjectCore', () => {
     });
 
     it('should rename the folder on disk', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
 
         await renameProjectCore(context, project, 'new-name');
@@ -132,7 +133,7 @@ describe('renameProjectCore', () => {
     });
 
     it('should update project path and componentInstances paths', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
 
         await renameProjectCore(context, project, 'new-name');
@@ -144,7 +145,7 @@ describe('renameProjectCore', () => {
     });
 
     it('should remove the old path from recent projects', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
 
         await renameProjectCore(context, project, 'new-name');
@@ -155,7 +156,7 @@ describe('renameProjectCore', () => {
     });
 
     it('should save the renamed project', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
 
         await renameProjectCore(context, project, 'new-name');
@@ -165,7 +166,7 @@ describe('renameProjectCore', () => {
     });
 
     it('should return success with the new name and path', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
 
         const result = await renameProjectCore(context, project, 'new-name');
@@ -181,7 +182,7 @@ describe('renameProjectCore', () => {
     });
 
     it('regenerates AI context files for the new path (fixes stale MCP paths)', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
 
         await renameProjectCore(context, project, 'new-name');
@@ -195,7 +196,7 @@ describe('renameProjectCore', () => {
     });
 
     it('does not regenerate AI context for a no-op rename (path unchanged)', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
 
         await renameProjectCore(context, project, 'old-name');
@@ -204,7 +205,7 @@ describe('renameProjectCore', () => {
     });
 
     it('treats AI context regeneration failure as non-fatal (rename still succeeds)', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
         mockGenerateAIContextFiles.mockRejectedValueOnce(new Error('regen boom'));
 
@@ -241,7 +242,7 @@ describe('renaming by TITLE', () => {
      * titles at all.
      */
     it('moves the folder to the slug derived from the title', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
 
         await renameProjectCore(context, project, 'Bodea B2B Demo');
@@ -250,7 +251,7 @@ describe('renaming by TITLE', () => {
     });
 
     it('stores the title as typed and the slug beside it', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
 
         await renameProjectCore(context, project, 'Bodea B2B Demo');
@@ -260,7 +261,7 @@ describe('renaming by TITLE', () => {
     });
 
     it('rewrites component paths onto the new folder', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
 
         await renameProjectCore(context, project, 'Bodea B2B Demo');
@@ -274,7 +275,7 @@ describe('renaming by TITLE', () => {
         // "!!!" normalises to an empty slug. Renaming to it would compute
         // `path.join(root, '')` -- the projects ROOT -- and move the project
         // directory onto it.
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
 
         const result = await renameProjectCore(context, project, '!!!');
@@ -300,7 +301,7 @@ describe('rollback when the save fails after the move', () => {
     };
 
     it('moves the folder back', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
         failSave(context);
 
@@ -314,7 +315,7 @@ describe('rollback when the save fails after the move', () => {
     });
 
     it('restores the project to exactly what it was', async () => {
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
         failSave(context);
 
@@ -331,7 +332,7 @@ describe('rollback when the save fails after the move', () => {
     it('reports the unrecoverable case rather than pretending it rolled back', async () => {
         // Both directions failed. This is the one state a user cannot infer from
         // the UI, because the folder and the manifest genuinely disagree.
-        const project = createMockProject();
+        const project = projectToRename();
         const context = createMockContext();
         failSave(context);
         mockRename
@@ -365,7 +366,7 @@ describe('remote Adobe I/O project title sync', () => {
 
     function adobeProject(remoteTitle: string): Project {
         mockAccess.mockRejectedValue(new Error('ENOENT'));
-        return createMockProject({
+        return projectToRename({
             title: 'Old Title',
             adobe: {
                 organization: 'org-1',

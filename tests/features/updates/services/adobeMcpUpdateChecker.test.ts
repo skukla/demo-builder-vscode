@@ -28,6 +28,7 @@ import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockProject } from '../../../helpers/projectFake';
 const readFileMock = fsPromises.readFile as jest.Mock;
 const getLatestReleaseMock = getLatestRelease as jest.Mock;
 
@@ -36,7 +37,7 @@ function makeLogger(): Logger {
 }
 
 function makeProject(overrides: Partial<Project> = {}): Project {
-    return {
+    return createMockProject({
         name: 'demo',
         path: '/projects/demo',
         componentInstances: {
@@ -48,7 +49,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
             },
         },
         ...overrides,
-    } as Project;
+    });
 }
 
 const ADOBE_MCP_PKG = '@adobe-commerce/commerce-extensibility-tools';

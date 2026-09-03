@@ -15,15 +15,16 @@
 
 import { stripRedundantDaLiveSite } from '@/core/state/projectFileLoader';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../helpers/projectFake';
 
 function projectWith(metadata: Record<string, unknown> | undefined): Project {
-    return {
+    return createMockProject({
         name: 'demo',
         path: '/p',
         componentInstances: metadata
-            ? { 'eds-storefront': { id: 'eds-storefront', metadata } }
+            ? { 'eds-storefront': { id: 'eds-storefront', name: 'EDS Storefront', status: 'ready', metadata } }
             : {},
-    } as unknown as Project;
+    });
 }
 
 describe('stripRedundantDaLiveSite', () => {

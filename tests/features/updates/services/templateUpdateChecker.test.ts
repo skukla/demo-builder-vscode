@@ -39,6 +39,7 @@ jest.mock('@/features/eds/services/patches/lkgReader', () => ({
 import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockProject } from '../../../helpers/projectFake';
 const mockReadLkgSha = readLkgSha as jest.Mock;
 
 const mockLogger: Logger = createMockLogger();
@@ -52,14 +53,17 @@ const OLD_SHA = 'a'.repeat(40);
 const NEW_SHA = 'b'.repeat(40);
 
 function makeProject(metadata: Record<string, unknown>): Project {
-    return {
+    return createMockProject({
         name: 'test-storefront',
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
                 metadata,
             },
         },
-    } as unknown as Project;
+    });
 }
 
 beforeEach(() => {
@@ -213,10 +217,10 @@ describe('checkForUpdates — forked path (legacy)', () => {
 describe('checkForUpdates — preconditions', () => {
     it('returns null when no EDS instance is present', async () => {
         const checker = new TemplateUpdateChecker(mockSecrets, mockLogger);
-        const result = await checker.checkForUpdates({
+        const result = await checker.checkForUpdates(createMockProject({
             name: 'no-eds',
             componentInstances: {},
-        } as unknown as Project);
+        }));
         expect(result).toBeNull();
     });
 

@@ -240,7 +240,7 @@ describe('ProjectSetupContext', () => {
         // The keyed mesh entry is the only endpoint carrier (PL-1 phase 2
         // removed the legacy meshState from Project entirely).
         it('should return the endpoint from the keyed mesh entry (keyed-only)', () => {
-            const keyedOnlyProject = {
+            const keyedOnlyProject = createMockProject({
                 ...mockProject,
                 appBuilderComponents: {
                     mesh: {
@@ -250,7 +250,7 @@ describe('ProjectSetupContext', () => {
                         endpoint: 'https://keyed-mesh.adobe.io/graphql',
                     },
                 },
-            } as unknown as Project;
+            });
 
             const context = new ProjectSetupContext(
                 mockHandlerContext,

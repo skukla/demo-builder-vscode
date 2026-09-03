@@ -18,6 +18,7 @@ import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 
 const mockRepublishStorefrontConfig = jest.fn();
@@ -44,7 +45,7 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
 const STOREFRONT_ACTION_TAKEN = 'demoBuilder._internal.storefrontActionTaken';
 
 function makeProject(): Project {
-    return { name: 'Test Project', path: '/test/project', componentConfigs: {} } as unknown as Project;
+    return createMockProject({ name: 'Test Project', path: '/test/project', componentConfigs: {} });
 }
 
 describe('ConfigureProjectWebviewCommand - storefront republish resets notification flag', () => {

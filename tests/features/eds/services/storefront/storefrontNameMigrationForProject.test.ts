@@ -86,11 +86,19 @@ const services = { daLiveContentOps, configService };
  * the component instance's metadata, not on the project root.
  */
 function projectWith(metadata: Record<string, string>): Project {
-    return {
+    return createMockProject({
         name: 'demo',
         path: '/projects/demo',
-        componentInstances: { 'eds-storefront': { path: '/projects/demo/storefront', metadata } },
-    } as unknown as Project;
+        componentInstances: {
+            'eds-storefront': {
+                id: 'eds-storefront',
+                name: 'EDS Storefront',
+                status: 'ready',
+                path: '/projects/demo/storefront',
+                metadata,
+            },
+        },
+    });
 }
 
 const MISMATCHED = {

@@ -20,6 +20,7 @@ import {
 } from '@/features/app-builder/services/appManagementUninstaller';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const NS_BASE = 'https://285361-kuklabodeamesh5ngv-stage.adobeioruntime.net/api/v1/web';
 
@@ -29,7 +30,7 @@ const DEPLOYED_URLS = {
 };
 
 function paasProject(): Project {
-    return {
+    return createMockProject({
         name: 'demo',
         path: '/tmp/demo',
         adobe: {
@@ -46,7 +47,7 @@ function paasProject(): Project {
         componentConfigs: {
             'adobe-commerce-paas': { ADOBE_COMMERCE_URL: 'https://demo.example.com/' },
         },
-    } as unknown as Project;
+    });
 }
 
 function makeClient(overrides: Partial<jest.Mocked<UninstallerClient>> = {}) {

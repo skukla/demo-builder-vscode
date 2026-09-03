@@ -48,13 +48,14 @@ global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { createResetContext, meshDeps } from './edsResetService.testUtils';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
 function createProject(): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         path: '/test/project',
         status: 'ready',
@@ -76,7 +77,7 @@ function createProject(): Project {
                 },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 function createResetParams() {

@@ -10,13 +10,13 @@
  */
 
 import { pickSampleSku, prewarmCatalog } from '@/features/eds/services/catalogPrewarmService';
-import type { Project } from '@/types/base';
 import {
     catalogPage,
     makeAccsProject,
     makePublisher,
     mockLogger,
 } from './catalogPrewarmService.testUtils';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const ACCS_OVERLAY =
     'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp?org=skukla&site=citisignal-b2b';
@@ -62,10 +62,10 @@ describe('prewarmCatalog — gate / skip cases', () => {
     });
 
     it('skips PaaS storefronts (v1 ACCS-only — PaaS in follow-up)', async () => {
-        const paasProject = {
+        const paasProject = createMockProject({
             ...makeAccsProject(),
             componentSelections: { backend: 'adobe-commerce-paas' },
-        } as Project;
+        });
 
         const result = await prewarmCatalog(
             paasProject,

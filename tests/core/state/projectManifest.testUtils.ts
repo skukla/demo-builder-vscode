@@ -29,16 +29,16 @@ export const mockLogger = createMockLogger();
  * written manifest carries.
  */
 export function createTestProject(overrides: Partial<Project> = {}): Project {
-    return {
+    return createMockProject({
         name: 'bodea-demo',
         path: '/test/path',
         created: new Date('2026-01-01T00:00:00Z'),
         componentSelections: {},
-        componentInstances: [],
+        componentInstances: {},
         componentConfigs: {},
         componentVersions: {},
         ...overrides,
-    } as Project;
+    });
 }
 
 /** The JSON the writer actually handed to disk. */
@@ -72,5 +72,6 @@ export function resetFsMocks(): void {
 
 // Below the mock on purpose — see the note above about hoisting.
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
+import { createMockProject } from '../../helpers/projectFake';
 
 export { ProjectConfigWriter };
