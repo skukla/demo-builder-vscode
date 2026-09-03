@@ -175,6 +175,7 @@ its long tail correct?
 - 2026-09-02  docs(backlog): our two most-mocked modules are faked 122 different ways (PL-38) (`72175f000`)
 - 2026-09-02  Merge chore/pl-38-mock-divergence: 59 dead vscode mocks deleted, PL-38 answered (`1fd4dd91f`)
 - 2026-09-02  docs(backlog): PL-38 answered — one half shipped, the other half blocked by a measured obstacle (`36819d8a7`)
+- 2026-09-02  test: 31 suites share one WebviewClient double — and a retraction (PL-38) (`5b419129b`)
 
 ## Shipped so far
 

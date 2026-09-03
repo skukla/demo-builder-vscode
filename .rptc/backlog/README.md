@@ -274,7 +274,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-36` | fix | [The third Node-version sort in installHandler is untested](2026-09-02-install-handler-target-version-sort.md) | — | med | backlog |
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (34)
+### platform  (35)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -286,7 +286,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-6` | fix | [aio CLI tree staleness is invisible to version checks](2026-08-27-aio-cli-tree-staleness-invisible-to-version-checks.md) | — | med | shipped |
 | `PL-7` | fix | [rptc-hygiene-scan check 5 parses zero active entries](2026-08-27-rptc-hygiene-scan-section5-broken.md) | — | low | shipped |
 | `PL-8` | fix | [Dedup pass over the pre-boundary clones the sweeps filed](2026-08-27-dedup-pass-pre-boundary-clones.md) | — | med | shipped |
-| `PL-9` | chore | └ [Tests-tree dedup — the census after the first-ever scan](2026-08-27-tests-tree-dedup-census.md) | — | med | built |
+| `PL-9` | chore | └ [Tests-tree dedup — the census after the first-ever scan](2026-08-27-tests-tree-dedup-census.md) | — | med | shipped |
 | `PL-10` | question | └ [Testing approach audit — do the tests need the same scan toolkit the code got?](2026-08-28-testing-approach-audit.md) | — | med | shipped |
 | `PL-14` | chore | └ [ADR-016 enforcement tooling — the seven artifacts](2026-08-28-adr-016-enforcement-tooling.md) | — | high | built |
 | `PL-15` | chore | └ [Run-noise burn-down to zero](2026-08-28-noise-burndown.md) | PL-14 | med | active |
@@ -312,6 +312,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-34` | chore | └ [Every open finding from the 2026-09-01 toolchain day, in one list](2026-09-01-cast-and-builder-worklog.md) | — | high | active |
 | `PL-37` | chore | [The webview handshake's `stateVersion` is write-only](2026-09-02-webview-state-version-dead.md) | — | low | backlog |
 | `PL-38` | chore | [Our two most-mocked modules are faked 122 different ways](2026-09-02-webviewclient-mock-divergence.md) | — | med | built |
+| `PL-39` | chore | [An item can be marked done while its own body says what is left](2026-09-02-finished-items-carrying-remainders.md) | — | med | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -459,7 +460,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 
-*61 item(s) sit outside the A–G chain.*
+*62 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
