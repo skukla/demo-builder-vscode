@@ -15,20 +15,15 @@
 
 jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 
-import { AdobeOrgServices } from '@/features/authentication/services/adobeOrgServices';
-import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
+import { makeService, SERVICES } from './adobeOrgServices.testUtils';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
-const SERVICES = [{ code: 'GraphQLServiceSDK', name: 'Mesh', type: 't' }];
-
-function makeService(getServicesForOrg: jest.Mock): AdobeOrgServices {
-    const sdkClient = {
-        isInitialized: () => true,
-        ensureInitialized: jest.fn(),
-        getClient: () => ({ getServicesForOrg }),
-    };
-    return new AdobeOrgServices(sdkClient as unknown as AdobeSDKClient);
+/** The service with `getServicesForOrg` answering as `call` does. */
+function serviceWith(call: jest.Mock) {
+    const { service, client } = makeService();
+    client.getServicesForOrg.mockImplementation(call);
+    return service;
 }
 
 describe('getServicesForOrg retry hardening', () => {
@@ -40,7 +35,7 @@ describe('getServicesForOrg retry hardening', () => {
             .mockRejectedValueOnce(new Error('500 Internal Server Error'))
             .mockResolvedValueOnce({ body: SERVICES });
 
-        const result = await makeService(call).getServicesForOrg('org-1');
+        const result = await serviceWith(call).getServicesForOrg('org-1');
 
         expect(result).toEqual(SERVICES);
         expect(call).toHaveBeenCalledTimes(2);
@@ -50,14 +45,14 @@ describe('getServicesForOrg retry hardening', () => {
     it('two fast failures throw — exactly one retry, never a loop', async () => {
         const call = jest.fn().mockRejectedValue(new Error('500'));
 
-        await expect(makeService(call).getServicesForOrg('org-1')).rejects.toThrow();
+        await expect(serviceWith(call).getServicesForOrg('org-1')).rejects.toThrow();
         expect(call).toHaveBeenCalledTimes(2);
     });
 
     it('a success on the first try never sleeps or re-calls', async () => {
         const call = jest.fn().mockResolvedValue({ body: SERVICES });
 
-        await expect(makeService(call).getServicesForOrg('org-1')).resolves.toEqual(SERVICES);
+        await expect(serviceWith(call).getServicesForOrg('org-1')).resolves.toEqual(SERVICES);
         expect(call).toHaveBeenCalledTimes(1);
         expect(sleep).not.toHaveBeenCalled();
     });
@@ -70,7 +65,7 @@ describe('getServicesForOrg retry hardening', () => {
             // Never settles → tryWithTimeout reports timedOut.
             const call = jest.fn(() => new Promise(() => undefined));
 
-            const pending = makeService(call).getServicesForOrg('org-1');
+            const pending = serviceWith(call).getServicesForOrg('org-1');
             // The assertion IS awaited below; the handler must attach BEFORE the
             // timers advance or the rejection is unhandled. The rule cannot see a
             // deferred await.

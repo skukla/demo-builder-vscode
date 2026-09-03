@@ -638,6 +638,43 @@
             "decision": "none — the result carries both flags for the type's sake; the consumer's precedence is the pinned behaviour",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeOrgServices.ts",
+            "anchors": [
+                "if (outcome.timedOut || outcome.error || !outcome.result) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Two mutants rewrite the first two terms of the failure check: `timedOut || error` to `timedOut && error`, and to `false`. Both leave `|| !outcome.result` standing, and tryWithTimeout never sets `result` on the path that sets `timedOut` or `error` — its catch builds the outcome without one. So every outcome the original condition rejects has no result, and the surviving `!outcome.result` term rejects it too; every outcome it accepts has a result and no error, and the mutants accept it too. The only killing input is an outcome carrying BOTH a result and an error, which means mocking tryWithTimeout to answer with a shape it cannot produce. Not recorded as a defect: the extra terms are what make the intent readable.",
+            "decision": "none — the condition is correct; the redundancy is against a helper contract the type does not express",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeOrgServices)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeOrgServices.ts",
+            "anchors": [
+                "const elapsed = formatDuration(Date.now() - startTime);",
+                "`${formatDuration(Date.now() - startTime)}`,"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "Both `Date.now() - startTime` subtractions feed only a log line. The first becomes `elapsed`, which reaches `reason` only in the timed-out case, and in that case the thrown error is the TimeoutError itself, so the `new Error(reason)` fallback never carries it — it is built only when the SDK resolved nothing, where reason is the fixed word `failed`. The second is the continuation line of a multi-line debug call, which the one-line classifier does not see as logging. Killing either means asserting a formatted duration in a log message.",
+            "decision": "OPEN for the instrument — enclosing-statement classification, as in the addonUpdateChecker row",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeOrgServices)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeOrgServices.ts",
+            "anchors": [
+                "return response?.body?.sdkList ?? [];"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Dropping either `?.` makes a missing response or a missing body throw a TypeError — inside the try whose catch returns `[]`, which is exactly what the `?.` reads produce for the same inputs. Both shapes are pinned (no response, a body without sdkList) and the caller sees `[]` either way; only the debug line in the catch differs. The read is documented fail-safe, so the catch is the contract and the `?.` is belt-and-braces.",
+            "decision": "none — the `?.` is required by the SDK response type",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeOrgServices)"
         }
     ]
 }
