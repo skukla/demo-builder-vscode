@@ -14,13 +14,10 @@
  * Strict TDD: written BEFORE the tile exists.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { postMessage: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
-}));
 
 jest.mock('@adobe/react-spectrum', () => {
     const { domProps } = jest.requireActual('../../../../helpers/spectrumStubProps');

@@ -25,18 +25,11 @@
  * render states, the header count, and filtering.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { act } from '@testing-library/react';
 import type { AppBuilderComponentState } from '@/types/base';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-        request: jest.fn(() => Promise.resolve({ success: true })),
-    },
-}));
 
 // The page primitives have their own suites; stub them so this file tests the
 // screen's own logic (states, counts, filtering, channels) rather than layout.
@@ -207,7 +200,6 @@ export const DEPLOYED: AppBuilderComponentState = {
     status: 'deployed',
     source: { owner: 'acme', repo: 'erp-sync' },
 };
-
 
 export function resetIntegrationsScreenMocks(): void {
     jest.clearAllMocks();

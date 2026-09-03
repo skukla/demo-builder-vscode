@@ -11,12 +11,13 @@
  *    error inline (no state write, stays on the panel). Honest by attempt, not by probe.
  *
  * The selection pickers are mocked to sentinels that RENDER their `headerAction` (so the
- * "New" button is observable); the webview request layer is mocked so the handler
+ * "New" button is observable); the webview mockRequest layer is mocked so the handler
  * protocol is observable.
  *
  * @jest-environment jsdom
  */
 
+import { mockRequest } from '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -27,10 +28,6 @@ import {
 } from '@/features/authentication/ui/components/AdobeEntityFields';
 import type { WizardState } from '@/types/webview';
 
-const request = jest.fn();
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: (...args: unknown[]) => request(...args) },
-}));
 jest.mock('@/features/authentication/ui/components/AdobeProjectPicker', () => ({
     AdobeProjectPicker: ({ headerAction }: { headerAction?: React.ReactNode }) => (
         <div data-testid="project-picker">{headerAction}</div>
@@ -66,12 +63,12 @@ function renderField(node: React.ReactElement) {
 
 /** Route create calls through `impl`; anything else resolves success. */
 function mockRequests(impl?: (type: string, payload?: unknown) => unknown) {
-    request.mockImplementation((type: string, payload?: unknown) =>
+    mockRequest.mockImplementation((type: string, payload?: unknown) =>
         Promise.resolve(impl ? impl(type, payload) : { success: true }),
     );
 }
 
-beforeEach(() => request.mockReset());
+beforeEach(() => mockRequest.mockReset());
 
 describe('AdobeProjectField', () => {
     it('renders the selection picker with the "New" button always offered', () => {
@@ -101,7 +98,7 @@ describe('AdobeProjectField', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
         await waitFor(() =>
-            expect(request).toHaveBeenCalledWith('create-adobe-project', { name: 'np' }),
+            expect(mockRequest).toHaveBeenCalledWith('create-adobe-project', { name: 'np' }),
         );
         await waitFor(() =>
             expect(updateState).toHaveBeenCalledWith(
@@ -166,7 +163,7 @@ describe('AdobeProjectField', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Browse' }));
 
         expect(screen.getByTestId('project-picker')).toBeInTheDocument();
-        expect(request).not.toHaveBeenCalledWith('create-adobe-project', expect.anything());
+        expect(mockRequest).not.toHaveBeenCalledWith('create-adobe-project', expect.anything());
     });
 
     // The picker is UNMOUNTED while this panel is up, so the handler's old
@@ -234,7 +231,7 @@ describe('AdobeWorkspaceField', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
         await waitFor(() =>
-            expect(request).toHaveBeenCalledWith('create-adobe-workspace', { name: 'nw' }),
+            expect(mockRequest).toHaveBeenCalledWith('create-adobe-workspace', { name: 'nw' }),
         );
         await waitFor(() =>
             expect(updateState).toHaveBeenCalledWith(
@@ -314,7 +311,7 @@ describe('AdobeWorkspaceField — pending-default overrides (Adobe I/O sub-step)
 });
 
 describe('AdobeProjectField — external create flow (onCreateFlow)', () => {
-    it('delegates Create to onCreateFlow without issuing a request or busy state', async () => {
+    it('delegates Create to onCreateFlow without issuing a mockRequest or busy state', async () => {
         mockRequests();
         const onCreateFlow = jest.fn();
         renderField(
@@ -326,7 +323,7 @@ describe('AdobeProjectField — external create flow (onCreateFlow)', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Create' }));
 
         expect(onCreateFlow).toHaveBeenCalledWith('my-demo');
-        expect(request).not.toHaveBeenCalledWith('create-adobe-project', expect.anything());
+        expect(mockRequest).not.toHaveBeenCalledWith('create-adobe-project', expect.anything());
         // Delegated create leaves the form interactive (the parent swaps the view).
         expect(screen.getByRole('button', { name: 'Create' })).not.toBeDisabled();
     });

@@ -12,15 +12,12 @@
  * `addAppBuilderComponent`.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { act, render } from '@testing-library/react';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { postMessage: jest.fn() },
-}));
 
 /** Capture the props the adapter hands the wizard modal. */
 let captured: Record<string, any> | undefined;

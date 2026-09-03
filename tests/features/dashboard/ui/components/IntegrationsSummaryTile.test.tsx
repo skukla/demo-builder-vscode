@@ -13,16 +13,13 @@
  * Strict TDD: written BEFORE the component exists.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { IntegrationsSummaryTile } from '@/features/dashboard/ui/components/IntegrationsSummaryTile';
 import type { AppBuilderComponentState } from '@/types/base';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { postMessage: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
-}));
 
 jest.mock('@adobe/react-spectrum', () => ({
     // The tile now routes through DashboardTile, which wraps it in a

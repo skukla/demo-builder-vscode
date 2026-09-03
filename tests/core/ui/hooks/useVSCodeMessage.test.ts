@@ -1,14 +1,7 @@
+import '../../../helpers/webviewClientMock';
 import { renderHook } from '@testing-library/react';
 import { useVSCodeMessage } from '@/core/ui/hooks/useVSCodeMessage';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-
-// Mock the vscode API
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        onMessage: jest.fn(),
-        postMessage: jest.fn(),
-    },
-}));
 
 describe('useVSCodeMessage', () => {
     let mockUnsubscribe: jest.Mock;

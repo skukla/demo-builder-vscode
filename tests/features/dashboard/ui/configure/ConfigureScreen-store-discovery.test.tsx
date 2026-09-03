@@ -7,6 +7,7 @@
  *   (which internally branches to plain FormField for non-store fields).
  */
 
+import '../../../../helpers/webviewClientMock';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -30,14 +31,6 @@ jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
 
 // WebviewClient mock (postMessage spy for any outbound messages)
 const postMessageMock = jest.fn();
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: (...args: unknown[]) => postMessageMock(...args),
-        request: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-    },
-}));
-
 // Capture the props passed to useAutoStoreDetect
 const useAutoStoreDetectMock = jest.fn();
 jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({

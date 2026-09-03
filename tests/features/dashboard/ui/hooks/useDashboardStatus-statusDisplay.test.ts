@@ -11,15 +11,8 @@
  * @jest-environment jsdom
  */
 
+import '../../../../helpers/webviewClientMock';
 import { renderHook, act } from '@testing-library/react';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(),
-        request: jest.fn(),
-    },
-}));
 
 import { useDashboardStatus } from '@/features/dashboard/ui/hooks/useDashboardStatus';
 import { setupMocks, type TestMocks } from './useDashboardStatus.testUtils';

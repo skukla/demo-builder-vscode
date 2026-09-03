@@ -13,23 +13,12 @@
  * @jest-environment jsdom
  */
 
+import { webviewClientHandlers } from '../../../../helpers/webviewClientMock';
 import { renderHook, act } from '@testing-library/react';
 import { useRowStatusOverrides } from '@/features/dashboard/ui/hooks/useRowStatusOverrides';
 
-/** Captured channel handlers, so tests can push like the extension does. */
-const handlers: Record<string, (data: unknown) => void> = {};
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        onMessage: jest.fn((type: string, handler: (data: unknown) => void) => {
-            handlers[type] = handler;
-            return () => delete handlers[type];
-        }),
-    },
-}));
-
 function pushStatus(payload: Record<string, unknown>): void {
-    act(() => handlers.appBuilderComponentStatusUpdate?.(payload));
+    act(() => webviewClientHandlers.get('appBuilderComponentStatusUpdate')?.(payload));
 }
 /**
  * Push a snapshot in the shape the EXTENSION actually sends.
@@ -43,11 +32,11 @@ function pushStatus(payload: Record<string, unknown>): void {
  * deploy's error status vanished and the card fell back to "Deployed").
  */
 function pushSnapshot(map: Record<string, unknown>): void {
-    act(() => handlers.appBuilderComponentsSnapshot?.({ components: map }));
+    act(() => webviewClientHandlers.get('appBuilderComponentsSnapshot')?.({ components: map }));
 }
 
 beforeEach(() => {
-    for (const key of Object.keys(handlers)) delete handlers[key];
+    webviewClientHandlers.clear();
 });
 
 describe('useRowStatusOverrides', () => {

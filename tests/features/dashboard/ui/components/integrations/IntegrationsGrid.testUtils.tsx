@@ -12,6 +12,7 @@
  * registered before the component module loads.
  */
 
+import '../../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -19,14 +20,6 @@ import type { MeshStatus, StatusDisplay } from '@/features/dashboard/ui/hooks/us
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 import type { AppBuilderComponentState } from '@/types/base';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-        request: jest.fn(() => Promise.resolve({ success: true })),
-    },
-}));
 
 jest.mock('@adobe/react-spectrum', () => ({
     // Menu renders items EAGERLY (no popup): each Item becomes a button firing

@@ -10,13 +10,10 @@
  * Strict TDD: written BEFORE the hook exists.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { onMessage: jest.fn() },
-}));
 
 // Below the mock on purpose — see webview-test-authoring §3.
 import { webviewClient } from '@/core/ui/utils/WebviewClient';

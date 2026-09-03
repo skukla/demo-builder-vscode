@@ -71,44 +71,46 @@ The 34 survivors are the remaining question for this module: each replaces the
 shared mock for a reason nobody wrote down, and widening the shared mock might
 retire more of them. Not urgent — they are correct, just unexplained.
 
-### `WebviewClient`: the divergence is shallow, but a shared wall does not work
+### `WebviewClient`: shallow divergence, and it consolidates
 
 The 33 versions are less arbitrary than the count suggests. Nearly all are
 subsets of the same members (`onMessage` 37 files, `postMessage` 37, `request`
-19, `requestAuth` 6, `ready` 5, and six members appearing once each), and most
-of the "different implementations" are the SAME pattern — delegate to a
-suite-local `jest.fn` so the test can drive it — written out per suite. A single
-double with every member, exporting its handles, fits all of them on paper.
+19, `requestAuth` 6, `ready` 5, six members appearing once each), and most of the
+"different implementations" are the SAME pattern — delegate to a suite-local
+`jest.fn` so the test can drive it — written out per suite.
 
-**It does not work in practice, and this is the finding.** Building that double
-in `tests/helpers/` and pointing 33 self-contained suites at it failed 41
-suites. The cause is not the double's shape:
+`tests/helpers/webviewClientMock.ts` is the canonical double: every member of the
+union, each an exported `mock…` handle. **31 files adopted it.** 54 files and 33
+walls become 23 and 14.
 
-- widening it from the 5 common members to all 12 changed nothing;
-- naming every handle `mock…` (jest restricts what a factory may close over)
-  changed nothing;
-- a probe printed what the suites actually receive: **the REAL client**, keys
-  and all. The wall never registered.
+#### A RETRACTION, because this item briefly said the opposite
 
-Controlled comparison, same file, same module:
+An earlier version of this section recorded that a shared wall "does not work"
+for this module, on the strength of a probe showing suites receiving the real
+client. That finding was WRONG, and the cause was mine: the first version of the
+double named its handles `client…`, and **jest only lets a `jest.mock` factory
+reference out-of-scope variables whose names begin with `mock`**. The factory
+silently never registered.
 
-| wall location | registers? |
-|---|---|
-| inline in the test file | **yes** — `keys=onMessage,postMessage` |
-| in an imported file under `tests/helpers/` | **no** — real client |
+Worse, I re-probed after renaming and the probe still showed the real client, so
+I wrote the wrong conclusion down. That second probe was contaminated — a
+throwaway file whose import path had been string-edited. The lesson is not about
+jest: **a probe that confirms a surprising negative deserves the same scrutiny as
+the claim it supports**, and a control would have caught it, because the same
+shape passes on the first try when written cleanly.
 
-That is specific to this module. A shared wall in an imported file works fine
-for `fs/promises` (`aiBundleFsMock.ts`) and for the communication manager
-(`webviewCommandMocks.ts`), both exercised the same day. Something loads
-`WebviewClient` before an imported helper's `jest.mock` can take effect —
-probably the react `setupFiles` chain, but that is a hypothesis and was NOT
-confirmed, so it should be measured before anyone tries again.
+Rebuilt with `mock…` names, the conversion failed 3 suites instead of 41, and
+those 3 were classifier misses rather than real obstacles.
 
-**The conversion was reverted; the suite is green.** What is worth keeping is
-the measurement above and the shape it implies. Anyone picking this up should
-start by finding out what pulls `WebviewClient` in early, because until that is
-known a shared wall for it cannot be made to work — and the 33 versions are the
-symptom, not the problem.
+#### The 23 that keep their own wall
+
+- **21** delegate to suite-local handles the tests assert on. Converting them
+  means renaming those handles across each suite and its consumers — mechanical,
+  wide, and better as its own change than bolted onto this one.
+- **`ProjectDashboardScreen.testUtils` and its consumers**: a real behavioural
+  difference. The shared double's `ready` RESOLVES; that suite's wall omits
+  `ready` entirely, so adopting it settles a promise outside `act()` and trips
+  the console gate. Left alone rather than papered over.
 
 ## Why this was filed as a question
 
@@ -177,5 +179,7 @@ its long tail correct?
 ## Shipped so far
 
 - 2026-09-02  59 dead vscode walls deleted (`e057b6c56`); 101 files / 89 walls
-  become 37 / 36. WebviewClient consolidation attempted, measured, and reverted
-  with the obstacle recorded above.
+  become 37 / 36.
+- 2026-09-02  WebviewClient consolidated onto `tests/helpers/webviewClientMock.ts`;
+  31 files adopt it, 54 files / 33 walls become 23 / 14. The 21 handle-delegating
+  suites remain as named follow-on work.

@@ -22,20 +22,13 @@
  * work, it would silently do nothing.
  */
 
+import '../../../../helpers/webviewClientMock';
 jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
     useFocusTrap: jest.fn(() => ({ current: null })),
 }));
 
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
     useSelectableDefault: jest.fn(() => ({})),
-}));
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-    },
 }));
 
 /**

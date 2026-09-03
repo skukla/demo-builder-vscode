@@ -12,6 +12,7 @@
  * exported helpers, never imported directly by the test files.
  */
 
+import '../../../../helpers/webviewClientMock';
 import { render, act } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -22,14 +23,6 @@ import type { AiInventory, SkillInventoryEntry } from '@/types/ai';
 import { createMockProject as createMockProjectBase } from '../../../../helpers/projectFake';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-    },
-}));
 
 // Mock the page chrome to keep tests focused on composition.
 jest.mock('@/core/ui/components/layout/PageFooter', () => ({

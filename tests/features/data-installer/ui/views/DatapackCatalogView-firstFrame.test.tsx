@@ -22,6 +22,7 @@
  * first.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -47,10 +48,6 @@ jest.mock('@/core/ui/hooks/useVSCodeRequest', () => ({
         reset: stableReset,
         ...NOT_YET_ASKED,
     }),
-}));
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: jest.fn(), postMessage: jest.fn() },
 }));
 
 // Below the mocks on purpose — see webview-test-authoring §3.

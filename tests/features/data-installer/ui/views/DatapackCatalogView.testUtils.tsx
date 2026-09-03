@@ -11,11 +11,8 @@
  * 166-line preamble into the new half, so it moved here instead of being copied.
  */
 
+import '../../../../helpers/webviewClientMock';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: jest.fn() },
-}));
 
 // Below the mock on purpose (see useDataInstallerRequest's suite).
 import { webviewClient } from '@/core/ui/utils/WebviewClient';

@@ -5,9 +5,6 @@
  * The superset is safe — a suite that never calls it is unaffected — and one
  * definition beats two that drift.
  */
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: jest.fn(), postMessage: jest.fn() },
-}));
+import '../../../../helpers/webviewClientMock';
 
 export {};

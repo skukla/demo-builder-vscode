@@ -9,15 +9,8 @@
  * @jest-environment jsdom
  */
 
+import '../../../../helpers/webviewClientMock';
 import { renderHook, act } from '@testing-library/react';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(),
-        request: jest.fn(),
-    },
-}));
 
 import { useLiveDaLiveUrl } from '@/features/dashboard/ui/hooks/useLiveDaLiveUrl';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';

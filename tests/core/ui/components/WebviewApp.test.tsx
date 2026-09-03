@@ -5,18 +5,10 @@
  * This is CRITICAL infrastructure - handles theme sync, handshake, and Provider setup.
  */
 
+import '../../../helpers/webviewClientMock';
 import React from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-
-// Create mocks that can be accessed before Jest hoisting
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(),
-        ready: jest.fn(),
-    },
-}));
 
 // Import after mock is set up
 import { WebviewApp } from '@/core/ui/components/WebviewApp';

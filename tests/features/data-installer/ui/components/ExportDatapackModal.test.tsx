@@ -17,15 +17,12 @@
  * Strict TDD: written BEFORE the component exists.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import { change, press, settle } from '../../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: jest.fn() },
-}));
 
 // Below the mock on purpose — see webview-test-authoring §3.
 import { webviewClient } from '@/core/ui/utils/WebviewClient';

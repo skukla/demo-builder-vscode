@@ -11,6 +11,7 @@
  * Import this AFTER `ConfigureScreen.mocks` and before the screen under test.
  */
 
+import '../../../../helpers/webviewClientMock';
 jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({
     useAutoStoreDetect: () => ({ autoDetectKey: undefined, forceFetch: jest.fn() }),
 }));
@@ -43,14 +44,6 @@ jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
 
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
     useSelectableDefault: jest.fn(() => ({})),
-}));
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-    },
 }));
 
 jest.mock('@/features/components/ui/hooks/useAutoStoreDetect', () => ({

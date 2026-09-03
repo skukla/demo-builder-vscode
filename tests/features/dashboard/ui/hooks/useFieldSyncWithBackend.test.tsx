@@ -7,15 +7,8 @@
  * @jest-environment jsdom
  */
 
+import '../../../../helpers/webviewClientMock';
 import { renderHook, act } from '@testing-library/react';
-
-// Mock the WebviewClient - must be before import
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        request: jest.fn(),
-    },
-}));
 
 import { useFieldSyncWithBackend } from '@/features/dashboard/ui/hooks/useFieldSyncWithBackend';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';

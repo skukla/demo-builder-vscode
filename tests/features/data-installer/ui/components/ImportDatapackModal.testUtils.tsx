@@ -7,6 +7,7 @@
  * import everything from here and never reach for the SUT directly.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 
 // The canonical act-settling helpers (ADR-016) — re-exported so specs keep a
@@ -15,10 +16,6 @@ import { change, press, settle } from '../../../../helpers/reactSettle';
 
 export { change, press, settle };
 import { render, screen } from '@testing-library/react';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
-}));
 
 // Below the mock on purpose — see the module docstring.
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -79,6 +76,4 @@ export async function awaitForm(): Promise<void> {
     await settle();
     await screen.findByRole('checkbox', { name: 'Categories' });
 }
-
-
 

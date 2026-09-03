@@ -15,19 +15,12 @@
  * Strict TDD: written BEFORE the component exists.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ManageApisModal } from '@/features/dashboard/ui/components/ManageApisModal';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()),
-        request: jest.fn(),
-    },
-}));
 
 function getClient() {
     const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient');

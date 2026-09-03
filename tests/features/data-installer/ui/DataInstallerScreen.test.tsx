@@ -12,15 +12,12 @@
  * written to hide itself below two.
  */
 
+import '../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import { settle } from '../../../helpers/reactSettle';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: jest.fn() },
-}));
 
 // Below the mock on purpose (see useDataInstallerRequest's suite).
 import { webviewClient } from '@/core/ui/utils/WebviewClient';

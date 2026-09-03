@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 
+import '../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
@@ -10,14 +11,6 @@ import {
     createMockProjects,
     createProjectsDashboardProject,
 } from '../testUtils';
-
-// Mock the webviewClient
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: {
-        postMessage: jest.fn(),
-        onMessage: jest.fn(() => jest.fn()), // Returns unsubscribe function
-    },
-}));
 
 // Wrap component with Spectrum Provider
 const renderWithProvider = (ui: React.ReactElement) => {

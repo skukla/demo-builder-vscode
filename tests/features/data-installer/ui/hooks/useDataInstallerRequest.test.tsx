@@ -16,13 +16,10 @@
  * Strict TDD: written BEFORE the hook exists.
  */
 
+import '../../../../helpers/webviewClientMock';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { request: jest.fn() },
-}));
 
 // Below the mock on purpose: `jest.mock` is hoisted above the imports of THIS
 // module only, so the client must be imported after it to bind to the mock.
