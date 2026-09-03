@@ -144,13 +144,30 @@ describe('ensureProjectOrgContext', () => {
         await ensureProjectOrgContext({ authManager, project, logger });
 
         // The forced login runs inside a notification progress (reused Open-in-Browser shape).
+        // Not cancellable: a half-cancelled forced login leaves the token in no known org.
         expect(vscode.window.withProgress).toHaveBeenCalledWith(
-            expect.objectContaining({
+            {
                 location: vscode.ProgressLocation.Notification,
                 title: expect.stringContaining('Opening browser'),
-            }),
+                cancellable: false,
+            },
             expect.any(Function),
         );
+    });
+
+    it('returns not reachable, keeping the ORIGINAL org name, when the re-check cannot run', async () => {
+        // The detector answers undefined when it cannot determine reachability —
+        // a forced login the user abandoned leaves getOrganizations failing.
+        mockDetect
+            .mockResolvedValueOnce({ reachable: false, expectedOrg: 'org-expected', currentOrg: 'Wrong Org' })
+            .mockResolvedValueOnce(undefined);
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Switch IMS Org');
+        const authManager = createMockAuthManager();
+
+        const result = await ensureProjectOrgContext({ authManager, project, logger });
+
+        expect(result).toEqual({ reachable: false, currentOrg: 'Wrong Org' });
+        expect(authManager.loginAndRestoreProjectContext).toHaveBeenCalledTimes(1);
     });
 
     it('returns not reachable (not cancelled) when still mismatched after the switch', async () => {
@@ -189,5 +206,21 @@ describe('ensureProjectOrgContext', () => {
         expect(message).toContain('Wrong Org');
         expect(message).toContain('Acme Demo');
         expect(actions).toEqual(['Switch IMS Org', 'Cancel']);
+    });
+
+    it('names only the project when the current org is unknown', async () => {
+        mockDetect.mockResolvedValue({ reachable: false, expectedOrg: 'org-expected', currentOrg: undefined });
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Cancel');
+        const authManager = createMockAuthManager();
+
+        await ensureProjectOrgContext({ authManager, project, logger });
+
+        // The org-naming sentence would read "signed into undefined" here.
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+            '"Acme Demo" was created in a different Adobe organization than the one '
+                + "you're signed into. Switch organizations to continue.",
+            'Switch IMS Org',
+            'Cancel',
+        );
     });
 });

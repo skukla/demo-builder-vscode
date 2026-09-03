@@ -976,6 +976,33 @@
             "decision": "none \u2014 the debug line is kept for diagnosis, not behaviour",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeSDKClient)"
+        },
+        {
+            "module": "src/features/authentication/services/ensureProjectOrgContext.ts",
+            "category": "optionalChain",
+            "mutants": 3,
+            "anchors": [
+                "organization: project.adobe?.organization,",
+                "projectId: project.adobe?.projectId,",
+                "workspace: project.adobe?.workspace,"
+            ],
+            "reason": "The forced-login context is built only after `detectProjectOrgMismatch` reported a mismatch, and the detector returns undefined \u2014 the gate's early `{ reachable: true }` \u2014 whenever `project.adobe?.organization` is absent. So `project.adobe` is defined at all three reads and dropping the `?.` changes nothing. The `?.` is what `Project`'s optional `adobe` demands at the read site; reaching these lines with it undefined means mocking the detector to report a mismatch for a project it would never check.",
+            "decision": "none \u2014 the reads sit behind the detector's own no-org guard",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (ensureProjectOrgContext)"
+        },
+        {
+            "module": "src/features/authentication/services/ensureProjectOrgContext.ts",
+            "category": "branch",
+            "mutants": 4,
+            "anchors": [
+                "if (reachable) {",
+                "} else {"
+            ],
+            "reason": "The branch after the re-check selects between two log lines \u2014 `Organization switch successful` and `Still mismatched after the forced switch` \u2014 and nothing else; the returned `reachable` and `currentOrg` are computed before and after it from the same values, and both outcomes are pinned. Flipping the condition, emptying either body, or both, changes only which sentence is logged; distinguishing them means asserting a log string. Accounts for the two ConditionalExpression and the BlockStatement on the `if`, plus the BlockStatement on the `else`.",
+            "decision": "none \u2014 both lines are kept for diagnosis of a switch that did not land",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (ensureProjectOrgContext)"
         }
     ]
 }
