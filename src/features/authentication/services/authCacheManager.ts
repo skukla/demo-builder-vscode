@@ -1,5 +1,4 @@
 import { getCacheTTLWithJitter } from '@/core/cache/cacheUtils';
-import { getLogger } from '@/core/logging/debugLogger';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 import type {
     AdobeOrg,
@@ -9,7 +8,6 @@ import type {
     CacheEntry,
     AdobeConsoleWhereResponse,
 } from '@/features/authentication/services/types';
-import type { Logger } from '@/types/logger';
 
 /**
  * Manages caching strategies for authentication-related data
@@ -23,16 +21,6 @@ import type { Logger } from '@/types/logger';
  * SECURITY: Cache TTLs include random jitter (±10%) to prevent timing attacks
  */
 export class AuthCacheManager {
-    private _logger: Logger;
-
-    /**
-     * Create an AuthCacheManager
-     * @param logger - Optional logger for dependency injection (defaults to getLogger())
-     */
-    constructor(logger?: Logger) {
-        this._logger = logger ?? getLogger();
-    }
-
     // Session caching for current selections
     private cachedOrganization: AdobeOrg | undefined;
     private cachedProject: AdobeProject | undefined;

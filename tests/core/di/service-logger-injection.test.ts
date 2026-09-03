@@ -10,7 +10,6 @@
  * - When not provided, getLogger() fallback is used internally
  *
  * Services tested:
- * - AuthCacheManager
  * - PrerequisitesCacheManager
  * - TokenManager
  * - DaLiveOrgOperations (extracted from DaLiveService)
@@ -101,22 +100,6 @@ describe('Service Logger Injection', () => {
             if (typeof fn === 'function' && 'mockClear' in fn) {
                 fn.mockClear();
             }
-        });
-    });
-
-    describe('AuthCacheManager', () => {
-        it('should accept optional logger in constructor', () => {
-            const {
-                AuthCacheManager,
-            } = require('@/features/authentication/services/authCacheManager');
-
-            // Should work without logger (backward compatible)
-            const cacheManager1 = new AuthCacheManager();
-            expect(cacheManager1).toBeDefined();
-
-            // Should work with logger (DI pattern)
-            const cacheManager2 = new AuthCacheManager(mockLogger);
-            expect(cacheManager2).toBeDefined();
         });
     });
 
