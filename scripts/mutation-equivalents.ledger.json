@@ -156,6 +156,18 @@
             "decision": "OPEN — either keep the computation for the diagnostic (which keys a template added is useful in Debug Logs triage) or collapse both lines into one; either way it is not a test's job",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-01, componentUpdater focus run"
+        },
+        {
+            "module": "src/features/updates/services/updateApplyService.ts",
+            "anchors": [
+                "const entry = byProject.get(item.project.path) ?? { project: item.project, items: [] };"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker seeds the per-project `items: []` with a string. That string carries no downloadUrl, so the guard two lines later skips it before anything observes it — the real items are appended after the seed and reach the updater unchanged. No input to applyComponents can make the seed's contents matter.",
+            "decision": "none — the seed is empty by construction",
+            "recorded": "2026-09-03",
+            "source": "PL-22 batch MUT-01, updateApplyService focus run"
         }
     ]
 }
