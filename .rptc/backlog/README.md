@@ -314,7 +314,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-38` | chore | [Our two most-mocked modules are faked 122 different ways](2026-09-02-webviewclient-mock-divergence.md) | — | med | shipped |
 | `PL-39` | chore | [An item can be marked done while its own body says what is left](2026-09-02-finished-items-carrying-remainders.md) | — | med | backlog |
 | `PL-40` | question | [Can the wizard's configuration warnings even fire, and does anyone need them?](2026-09-03-webview-warnings-reach-nobody.md) | — | med | open |
-| `PL-41` | fix | [Three suites fail only under full-suite load, and it costs real pushes](2026-09-03-suites-that-fail-only-under-load.md) | — | med | backlog |
+| `PL-41` | fix | [Three suites fail only under full-suite load, and it costs real pushes](2026-09-03-suites-that-fail-only-under-load.md) | — | med | active |
 
 <!-- END GENERATED registry -->
 

@@ -44,6 +44,14 @@ const MINUTES = Number(arg('--minutes', '480'));
 const LIMIT = Number(arg('--limit', '0'));
 const PER_MODULE_MIN = Number(arg('--timeout-min', '12'));
 const REDO = process.argv.includes('--redo');
+/**
+ * `--only <file>`: restrict the queue to the modules listed in that file, one per line.
+ * Exists for a targeted re-measure — the 48 rows pinned before `openGaps` learned to
+ * count uncovered mutants (2026-09-03) lack the per-category breakdown that fix added,
+ * and the baseline alone cannot supply it. Combine with `--redo`, since those modules
+ * are already pinned.
+ */
+const ONLY = arg('--only', '');
 
 /** Modules the scope rule includes, in the order it lists them. */
 function includedModules() {
@@ -101,7 +109,10 @@ function main() {
 
     const already = pinned();
     const all = includedModules();
-    const queue = all.filter((m) => REDO || !already.has(m));
+    const only = ONLY
+        ? new Set(readFileSync(ONLY, 'utf8').split('\n').map((l) => l.trim()).filter(Boolean))
+        : null;
+    const queue = all.filter((m) => (REDO || !already.has(m)) && (!only || only.has(m)));
 
     console.log(`included: ${all.length}   already pinned: ${already.size}   to measure: ${queue.length}`);
     console.log(`budget: ${MINUTES} min   per-module cap: ${PER_MODULE_MIN} min\n`);
@@ -149,9 +160,28 @@ function main() {
             appendFileSync(LOG, JSON.stringify({ mod, outcome: 'timeout', minutes: Number(mins) }) + '\n');
             continue;
         }
+        // Stryker found nothing on the module's import graph to run. That is a suite
+        // that matched by NAME without exercising the module — a "no suite" case the
+        // text check in focusModule.mjs could not see — not a broken run. Filed as a
+        // skip so the tally reads true and the module is retried by nobody.
+        if (/No tests were executed/.test(stryker.out)) {
+            tally.skipped += 1;
+            console.log(`${label}\n    SKIP  named suite(s) never exercise the module — Stryker ran no tests`);
+            appendFileSync(LOG, JSON.stringify({ mod, outcome: 'skip-no-related-tests' }) + '\n');
+            continue;
+        }
         if (!stryker.ok || !existsSync(FOCUS_REPORT)) {
             tally.failed += 1;
-            const tailLines = stryker.out.trim().split('\n').slice(-3).join(' | ');
+            // The FIRST error line is the cause; the last three are stack trace. Keeping
+            // only the tail cost an hour on 2026-09-03: "Missing coverage results" was
+            // the whole diagnosis and the log held `pool.js:69:13 | | Node.js v20`.
+            const lines = stryker.out.trim().split('\n');
+            const firstError = lines.find((l) => /ERROR|Error:/.test(l)) ?? '';
+            const errorBody = lines.slice(lines.indexOf(firstError) + 1, lines.indexOf(firstError) + 4);
+            const tailLines = [firstError, ...errorBody, '…', ...lines.slice(-2)]
+                .filter(Boolean)
+                .map((l) => l.replace(/\x1b\[[0-9;]*m/g, '').trim())
+                .join(' | ');
             console.log(`${label}\n    FAIL  exit ${stryker.status}: ${tailLines}`);
             appendFileSync(LOG, JSON.stringify({ mod, outcome: 'fail', status: stryker.status, detail: tailLines }) + '\n');
             continue;

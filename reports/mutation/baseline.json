@@ -12,9 +12,15 @@
                 "branch": 11,
                 "string": 5
             },
+            "uncoveredCategories": {
+                "block": 2,
+                "string": 3,
+                "other": 2,
+                "branch": 1
+            },
             "highValueSurvivors": 11,
             "equivalent": 0,
-            "openGaps": 11
+            "openGaps": 16
         },
         "src/features/ai/server/siteTools.ts": {
             "score": 69.2,
@@ -23,10 +29,13 @@
             "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "string": 57,
                 "other": 9,
+                "string": 57,
                 "optionalChain": 5,
                 "branch": 1
+            },
+            "uncoveredCategories": {
+                "string": 1
             },
             "highValueSurvivors": 1,
             "equivalent": 0,
@@ -43,6 +52,9 @@
                 "optionalChain": 5,
                 "other": 2,
                 "string": 5
+            },
+            "uncoveredCategories": {
+                "string": 4
             },
             "highValueSurvivors": 7,
             "equivalent": 0,
@@ -62,6 +74,9 @@
                 "block": 3,
                 "logPresentation": 10
             },
+            "uncoveredCategories": {
+                "string": 2
+            },
             "highValueSurvivors": 14,
             "equivalent": 2,
             "openGaps": 23
@@ -77,6 +92,9 @@
                 "branch": 6,
                 "logPresentation": 4
             },
+            "uncoveredCategories": {
+                "string": 1
+            },
             "highValueSurvivors": 6,
             "equivalent": 0,
             "openGaps": 6
@@ -90,14 +108,19 @@
             "survivorCategories": {
                 "logPresentation": 57,
                 "optionalChain": 16,
-                "string": 6,
                 "other": 12,
+                "string": 6,
                 "branch": 45,
                 "block": 10
             },
+            "uncoveredCategories": {
+                "block": 2,
+                "logPresentation": 2,
+                "other": 2
+            },
             "highValueSurvivors": 55,
             "equivalent": 1,
-            "openGaps": 82
+            "openGaps": 86
         },
         "src/core/ui/utils/spectrumTokens.ts": {
             "score": 88.24,
@@ -106,27 +129,31 @@
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 2,
                 "block": 1,
+                "branch": 2,
                 "string": 1
             },
+            "uncoveredCategories": {},
             "highValueSurvivors": 3,
             "equivalent": 0,
             "openGaps": 3
         },
         "src/core/utils/mcpSocketPath.ts": {
-            "score": 77.78,
-            "killed": 7,
-            "survived": 2,
+            "score": 44.44,
+            "killed": 4,
+            "survived": 5,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 1,
-                "other": 1
+                "block": 1,
+                "other": 1,
+                "string": 2,
+                "branch": 1
             },
-            "highValueSurvivors": 0,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
             "equivalent": 0,
-            "openGaps": 1
+            "openGaps": 3
         },
         "src/features/components/services/commerceCredentialStore.ts": {
             "score": 95.65,
@@ -137,6 +164,7 @@
             "survivorCategories": {
                 "string": 1
             },
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
             "openGaps": 0
@@ -151,6 +179,7 @@
                 "string": 1,
                 "other": 1
             },
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
             "openGaps": 1
@@ -162,6 +191,7 @@
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {},
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
             "openGaps": 0
@@ -173,6 +203,7 @@
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {},
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
             "openGaps": 0
@@ -191,9 +222,15 @@
                 "other": 5,
                 "optionalChain": 5
             },
+            "uncoveredCategories": {
+                "block": 6,
+                "string": 2,
+                "branch": 2,
+                "optionalChain": 1
+            },
             "highValueSurvivors": 17,
             "equivalent": 5,
-            "openGaps": 22
+            "openGaps": 31
         },
         "src/features/updates/services/componentUpdater.ts": {
             "score": 46.34,
@@ -202,16 +239,24 @@
             "noCoverage": 38,
             "timeout": 0,
             "survivorCategories": {
-                "string": 18,
-                "other": 11,
-                "branch": 36,
-                "logPresentation": 28,
+                "optionalChain": 10,
                 "block": 13,
-                "optionalChain": 10
+                "string": 18,
+                "logPresentation": 28,
+                "other": 11,
+                "branch": 36
+            },
+            "uncoveredCategories": {
+                "other": 7,
+                "branch": 22,
+                "optionalChain": 2,
+                "block": 3,
+                "string": 3,
+                "logPresentation": 1
             },
             "highValueSurvivors": 49,
             "equivalent": 3,
-            "openGaps": 67
+            "openGaps": 101
         },
         "src/features/updates/services/updateManager.ts": {
             "score": 51.4,
@@ -227,9 +272,15 @@
                 "logPresentation": 3,
                 "other": 4
             },
+            "uncoveredCategories": {
+                "block": 5,
+                "string": 5,
+                "logPresentation": 1,
+                "branch": 1
+            },
             "highValueSurvivors": 52,
             "equivalent": 0,
-            "openGaps": 60
+            "openGaps": 66
         },
         "src/features/authentication/services/authenticationService.ts": {
             "score": 43.77,
@@ -238,16 +289,23 @@
             "noCoverage": 48,
             "timeout": 0,
             "survivorCategories": {
+                "string": 36,
                 "logPresentation": 35,
                 "branch": 17,
-                "string": 36,
                 "other": 4,
                 "optionalChain": 6,
                 "block": 3
             },
+            "uncoveredCategories": {
+                "logPresentation": 10,
+                "block": 22,
+                "string": 8,
+                "branch": 7,
+                "other": 1
+            },
             "highValueSurvivors": 20,
             "equivalent": 8,
-            "openGaps": 22
+            "openGaps": 52
         },
         "src/commands/ResetAllCommand.ts": {
             "score": 35.56,
@@ -256,15 +314,22 @@
             "noCoverage": 19,
             "timeout": 0,
             "survivorCategories": {
-                "other": 5,
                 "string": 8,
+                "other": 5,
                 "branch": 7,
                 "logPresentation": 12,
                 "block": 7
             },
+            "uncoveredCategories": {
+                "block": 6,
+                "logPresentation": 5,
+                "other": 4,
+                "branch": 3,
+                "string": 1
+            },
             "highValueSurvivors": 14,
             "equivalent": 0,
-            "openGaps": 19
+            "openGaps": 32
         },
         "src/commands/claudeSessionStore.ts": {
             "score": 91.67,
@@ -275,6 +340,7 @@
             "survivorCategories": {
                 "string": 1
             },
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
             "openGaps": 0
@@ -289,13 +355,21 @@
                 "other": 15,
                 "optionalChain": 1,
                 "string": 14,
-                "logPresentation": 2,
                 "branch": 7,
+                "logPresentation": 2,
                 "block": 2
+            },
+            "uncoveredCategories": {
+                "block": 37,
+                "string": 34,
+                "branch": 33,
+                "logPresentation": 7,
+                "other": 4,
+                "optionalChain": 2
             },
             "highValueSurvivors": 9,
             "equivalent": 0,
-            "openGaps": 25
+            "openGaps": 101
         },
         "src/commands/diagnostics.ts": {
             "score": 17.98,
@@ -307,9 +381,17 @@
                 "string": 2,
                 "logPresentation": 1
             },
+            "uncoveredCategories": {
+                "block": 11,
+                "optionalChain": 6,
+                "branch": 24,
+                "logPresentation": 13,
+                "other": 10,
+                "string": 6
+            },
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 0
+            "openGaps": 51
         },
         "src/commands/diagnosticsChecks.ts": {
             "score": 25.11,
@@ -318,14 +400,22 @@
             "noCoverage": 109,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 42,
                 "other": 11,
+                "branch": 42,
                 "optionalChain": 1,
                 "string": 7
             },
+            "uncoveredCategories": {
+                "block": 24,
+                "other": 23,
+                "string": 22,
+                "branch": 33,
+                "logPresentation": 5,
+                "optionalChain": 2
+            },
             "highValueSurvivors": 42,
             "equivalent": 0,
-            "openGaps": 54
+            "openGaps": 136
         },
         "src/commands/migrateStorefrontNames.ts": {
             "score": 52.99,
@@ -340,9 +430,15 @@
                 "branch": 12,
                 "block": 1
             },
+            "uncoveredCategories": {
+                "string": 4,
+                "other": 1,
+                "block": 2,
+                "logPresentation": 1
+            },
             "highValueSurvivors": 13,
             "equivalent": 0,
-            "openGaps": 23
+            "openGaps": 26
         },
         "src/commands/openInClaude.ts": {
             "score": 67.86,
@@ -352,15 +448,21 @@
             "timeout": 0,
             "survivorCategories": {
                 "string": 16,
-                "block": 3,
                 "optionalChain": 1,
+                "block": 3,
                 "branch": 6,
                 "logPresentation": 2,
                 "other": 2
             },
+            "uncoveredCategories": {
+                "string": 11,
+                "branch": 1,
+                "block": 2,
+                "logPresentation": 1
+            },
             "highValueSurvivors": 9,
             "equivalent": 0,
-            "openGaps": 12
+            "openGaps": 15
         },
         "src/commands/openModernizationAgent.ts": {
             "score": 69.23,
@@ -370,6 +472,9 @@
             "timeout": 0,
             "survivorCategories": {
                 "string": 3
+            },
+            "uncoveredCategories": {
+                "string": 1
             },
             "highValueSurvivors": 0,
             "equivalent": 0,
@@ -387,6 +492,7 @@
                 "optionalChain": 4,
                 "other": 1
             },
+            "uncoveredCategories": {},
             "highValueSurvivors": 10,
             "equivalent": 0,
             "openGaps": 15
@@ -403,9 +509,14 @@
                 "string": 2,
                 "block": 1
             },
+            "uncoveredCategories": {
+                "block": 2,
+                "string": 3,
+                "branch": 5
+            },
             "highValueSurvivors": 5,
             "equivalent": 0,
-            "openGaps": 8
+            "openGaps": 15
         },
         "src/core/auth/adobeAuthGuard.ts": {
             "score": 91.11,
@@ -417,6 +528,7 @@
                 "logPresentation": 2,
                 "branch": 2
             },
+            "uncoveredCategories": {},
             "highValueSurvivors": 2,
             "equivalent": 0,
             "openGaps": 2
@@ -430,9 +542,17 @@
             "survivorCategories": {
                 "block": 1
             },
+            "uncoveredCategories": {
+                "block": 13,
+                "other": 3,
+                "branch": 11,
+                "logPresentation": 6,
+                "string": 8,
+                "optionalChain": 3
+            },
             "highValueSurvivors": 1,
             "equivalent": 0,
-            "openGaps": 1
+            "openGaps": 31
         },
         "src/core/base/baseWebviewCommand.ts": {
             "score": 10.14,
@@ -446,9 +566,17 @@
                 "other": 5,
                 "string": 9
             },
+            "uncoveredCategories": {
+                "block": 31,
+                "branch": 31,
+                "string": 13,
+                "logPresentation": 6,
+                "optionalChain": 3,
+                "other": 3
+            },
             "highValueSurvivors": 23,
             "equivalent": 0,
-            "openGaps": 28
+            "openGaps": 96
         },
         "src/core/build/buildInfo.ts": {
             "score": 71.6,
@@ -461,9 +589,13 @@
                 "block": 1,
                 "other": 1
             },
+            "uncoveredCategories": {
+                "branch": 1,
+                "block": 1
+            },
             "highValueSurvivors": 20,
             "equivalent": 0,
-            "openGaps": 21
+            "openGaps": 23
         },
         "src/core/build/buildStampUi.ts": {
             "score": 44.83,
@@ -474,9 +606,15 @@
             "survivorCategories": {
                 "string": 1
             },
+            "uncoveredCategories": {
+                "block": 1,
+                "string": 11,
+                "other": 2,
+                "branch": 1
+            },
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 0
+            "openGaps": 4
         },
         "src/core/cache/cacheUtils.ts": {
             "score": 95.24,
@@ -487,6 +625,7 @@
             "survivorCategories": {
                 "branch": 1
             },
+            "uncoveredCategories": {},
             "highValueSurvivors": 1,
             "equivalent": 0,
             "openGaps": 1
@@ -504,9 +643,13 @@
                 "other": 4,
                 "string": 7
             },
+            "uncoveredCategories": {
+                "block": 3,
+                "string": 1
+            },
             "highValueSurvivors": 52,
             "equivalent": 0,
-            "openGaps": 56
+            "openGaps": 59
         },
         "src/core/config/backendOwnedScope.ts": {
             "score": 95,
@@ -517,6 +660,7 @@
             "survivorCategories": {
                 "branch": 2
             },
+            "uncoveredCategories": {},
             "highValueSurvivors": 2,
             "equivalent": 0,
             "openGaps": 2
@@ -530,9 +674,15 @@
             "survivorCategories": {
                 "string": 3
             },
+            "uncoveredCategories": {
+                "block": 2,
+                "branch": 2,
+                "other": 2,
+                "optionalChain": 1
+            },
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 0
+            "openGaps": 7
         },
         "src/core/handlers/dispatchHandler.ts": {
             "score": 100,
@@ -541,6 +691,7 @@
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {},
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
             "openGaps": 0
@@ -555,6 +706,7 @@
                 "branch": 4,
                 "string": 1
             },
+            "uncoveredCategories": {},
             "highValueSurvivors": 4,
             "equivalent": 0,
             "openGaps": 4
@@ -566,6 +718,7 @@
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {},
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
             "openGaps": 0
@@ -584,9 +737,16 @@
                 "logPresentation": 21,
                 "optionalChain": 1
             },
+            "uncoveredCategories": {
+                "string": 10,
+                "other": 5,
+                "block": 8,
+                "logPresentation": 8,
+                "branch": 10
+            },
             "highValueSurvivors": 25,
             "equivalent": 0,
-            "openGaps": 32
+            "openGaps": 55
         },
         "src/core/logging/errorLogger.ts": {
             "score": 83.7,
@@ -600,6 +760,7 @@
                 "string": 2,
                 "other": 2
             },
+            "uncoveredCategories": {},
             "highValueSurvivors": 7,
             "equivalent": 0,
             "openGaps": 9
@@ -613,11 +774,12 @@
             "survivorCategories": {
                 "string": 29,
                 "branch": 6,
-                "block": 1,
                 "logPresentation": 1,
+                "block": 1,
                 "other": 1,
                 "optionalChain": 1
             },
+            "uncoveredCategories": {},
             "highValueSurvivors": 7,
             "equivalent": 0,
             "openGaps": 9
@@ -635,6 +797,9 @@
                 "logPresentation": 11,
                 "branch": 3,
                 "other": 4
+            },
+            "uncoveredCategories": {
+                "string": 3
             },
             "highValueSurvivors": 4,
             "equivalent": 0,
@@ -654,9 +819,16 @@
                 "optionalChain": 4,
                 "logPresentation": 6
             },
+            "uncoveredCategories": {
+                "string": 10,
+                "block": 5,
+                "logPresentation": 2,
+                "other": 8,
+                "branch": 1
+            },
             "highValueSurvivors": 101,
             "equivalent": 0,
-            "openGaps": 116
+            "openGaps": 130
         },
         "src/core/shell/commandSequencer.ts": {
             "score": 44.12,
@@ -667,13 +839,18 @@
             "survivorCategories": {
                 "branch": 9,
                 "string": 1,
-                "block": 1,
                 "logPresentation": 18,
+                "block": 1,
                 "other": 3
+            },
+            "uncoveredCategories": {
+                "string": 1,
+                "block": 1,
+                "logPresentation": 4
             },
             "highValueSurvivors": 10,
             "equivalent": 0,
-            "openGaps": 13
+            "openGaps": 14
         },
         "src/core/shell/ensureNodeVersion.ts": {
             "score": 63.64,
@@ -688,9 +865,15 @@
                 "optionalChain": 1,
                 "logPresentation": 1
             },
+            "uncoveredCategories": {
+                "other": 3,
+                "optionalChain": 1,
+                "string": 2,
+                "branch": 1
+            },
             "highValueSurvivors": 1,
             "equivalent": 0,
-            "openGaps": 6
+            "openGaps": 11
         },
         "src/core/shell/environmentSetup.ts": {
             "score": 65.7,
@@ -706,9 +889,15 @@
                 "block": 8,
                 "string": 16
             },
+            "uncoveredCategories": {
+                "string": 1,
+                "block": 4,
+                "logPresentation": 2,
+                "branch": 2
+            },
             "highValueSurvivors": 37,
             "equivalent": 0,
-            "openGaps": 50
+            "openGaps": 56
         },
         "src/core/shell/fileWatcher.ts": {
             "score": 72.22,
@@ -721,6 +910,7 @@
                 "block": 1,
                 "string": 1
             },
+            "uncoveredCategories": {},
             "highValueSurvivors": 1,
             "equivalent": 0,
             "openGaps": 1
@@ -738,9 +928,13 @@
                 "block": 1,
                 "other": 1
             },
+            "uncoveredCategories": {
+                "block": 1,
+                "string": 1
+            },
             "highValueSurvivors": 3,
             "equivalent": 0,
-            "openGaps": 4
+            "openGaps": 5
         },
         "src/core/shell/processCleanup.ts": {
             "score": 50,
@@ -5800,6 +5994,5593 @@
             "highValueSurvivors": 3,
             "equivalent": 0,
             "openGaps": 4
+        },
+        "src/core/ui/components/forms/InlineRenameField.tsx": {
+            "score": 80.95,
+            "killed": 68,
+            "survived": 16,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 2,
+                "branch": 8,
+                "optionalChain": 3,
+                "other": 3
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 8,
+            "equivalent": 0,
+            "openGaps": 14
+        },
+        "src/core/ui/components/layout/StepAreaShell.tsx": {
+            "score": 100,
+            "killed": 2,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/core/ui/components/navigation/SearchHeader.tsx": {
+            "score": 47.86,
+            "killed": 56,
+            "survived": 17,
+            "noCoverage": 44,
+            "timeout": 0,
+            "survivorCategories": {
+                "block": 1,
+                "branch": 14,
+                "other": 1,
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "branch": 24,
+                "other": 4,
+                "string": 16
+            },
+            "highValueSurvivors": 15,
+            "equivalent": 0,
+            "openGaps": 44
+        },
+        "src/core/ui/components/navigation/StepRail.tsx": {
+            "score": 64.58,
+            "killed": 31,
+            "survived": 14,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 9,
+                "string": 2,
+                "block": 1,
+                "optionalChain": 1,
+                "other": 1
+            },
+            "uncoveredCategories": {
+                "other": 1,
+                "string": 2
+            },
+            "highValueSurvivors": 10,
+            "equivalent": 0,
+            "openGaps": 13
+        },
+        "src/core/ui/components/selection/ApiAccessPicker.tsx": {
+            "score": 79.6,
+            "killed": 160,
+            "survived": 38,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 18,
+                "branch": 17,
+                "string": 3
+            },
+            "uncoveredCategories": {
+                "branch": 1,
+                "other": 1,
+                "string": 1
+            },
+            "highValueSurvivors": 17,
+            "equivalent": 0,
+            "openGaps": 37
+        },
+        "src/core/ui/hooks/useActivateOnKey.ts": {
+            "score": 100,
+            "killed": 15,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/core/ui/hooks/useElapsedStage.ts": {
+            "score": 75,
+            "killed": 21,
+            "survived": 7,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 2,
+                "other": 3,
+                "string": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 0,
+            "openGaps": 5
+        },
+        "src/core/ui/hooks/useFocusTrap.ts": {
+            "score": 45.97,
+            "killed": 57,
+            "survived": 64,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 45,
+                "other": 3,
+                "block": 6,
+                "string": 9,
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {
+                "block": 2,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 51,
+            "equivalent": 0,
+            "openGaps": 56
+        },
+        "src/core/ui/hooks/usePollingWithTimeout.ts": {
+            "score": 71.43,
+            "killed": 40,
+            "survived": 15,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 12,
+                "block": 2,
+                "other": 1
+            },
+            "uncoveredCategories": {
+                "branch": 1
+            },
+            "highValueSurvivors": 14,
+            "equivalent": 0,
+            "openGaps": 16
+        },
+        "src/core/ui/hooks/useVerificationMessage.ts": {
+            "score": 100,
+            "killed": 28,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/authentication/ui/components/AdobeEntityFields.tsx": {
+            "score": 55.24,
+            "killed": 58,
+            "survived": 36,
+            "noCoverage": 11,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 5,
+                "string": 10,
+                "branch": 16,
+                "optionalChain": 3,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "string": 5,
+                "block": 4,
+                "branch": 1,
+                "optionalChain": 1
+            },
+            "highValueSurvivors": 18,
+            "equivalent": 0,
+            "openGaps": 32
+        },
+        "src/features/components/ui/hooks/useAutoStoreDetect.ts": {
+            "score": 55.24,
+            "killed": 58,
+            "survived": 33,
+            "noCoverage": 14,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 15,
+                "other": 9,
+                "block": 2,
+                "string": 7
+            },
+            "uncoveredCategories": {
+                "branch": 8,
+                "block": 4,
+                "string": 2
+            },
+            "highValueSurvivors": 17,
+            "equivalent": 0,
+            "openGaps": 38
+        },
+        "src/features/components/ui/hooks/useComponentConfig.ts": {
+            "score": 31.54,
+            "killed": 89,
+            "survived": 67,
+            "noCoverage": 137,
+            "timeout": 5,
+            "survivorCategories": {
+                "branch": 37,
+                "string": 6,
+                "block": 5,
+                "logPresentation": 3,
+                "other": 12,
+                "optionalChain": 4
+            },
+            "uncoveredCategories": {
+                "block": 26,
+                "branch": 84,
+                "string": 13,
+                "logPresentation": 1,
+                "optionalChain": 7,
+                "other": 6
+            },
+            "highValueSurvivors": 42,
+            "equivalent": 0,
+            "openGaps": 181
+        },
+        "src/features/dashboard/ui/hooks/useDashboardActions.ts": {
+            "score": 45.98,
+            "killed": 40,
+            "survived": 20,
+            "noCoverage": 27,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 20
+            },
+            "uncoveredCategories": {
+                "block": 5,
+                "branch": 13,
+                "string": 5,
+                "other": 4
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 42
+        },
+        "src/features/dashboard/ui/hooks/useDashboardStatus.ts": {
+            "score": 58.39,
+            "killed": 167,
+            "survived": 56,
+            "noCoverage": 63,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 27,
+                "block": 3,
+                "string": 15,
+                "optionalChain": 4,
+                "other": 7
+            },
+            "uncoveredCategories": {
+                "branch": 31,
+                "string": 20,
+                "block": 2,
+                "optionalChain": 1,
+                "other": 9
+            },
+            "highValueSurvivors": 30,
+            "equivalent": 0,
+            "openGaps": 84
+        },
+        "src/features/dashboard/ui/hooks/useFieldSyncWithBackend.ts": {
+            "score": 57.41,
+            "killed": 31,
+            "survived": 22,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 15,
+                "block": 3,
+                "other": 4
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 18,
+            "equivalent": 0,
+            "openGaps": 22
+        },
+        "src/features/dashboard/ui/hooks/useInlineRename.ts": {
+            "score": 71.43,
+            "killed": 10,
+            "survived": 3,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 2,
+                "other": 1
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 3
+        },
+        "src/features/dashboard/ui/hooks/useLiveDaLiveUrl.ts": {
+            "score": 87.5,
+            "killed": 7,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/dashboard/ui/hooks/useLiveDestination.ts": {
+            "score": 90.91,
+            "killed": 10,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/dashboard/ui/hooks/useOrgSwitchFlow.ts": {
+            "score": 95.65,
+            "killed": 22,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/dashboard/ui/hooks/useRowStatusOverrides.ts": {
+            "score": 87.5,
+            "killed": 28,
+            "survived": 4,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 2,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 4
+        },
+        "src/features/dashboard/ui/integrationsSurface/EventingSection.tsx": {
+            "score": 46.28,
+            "killed": 56,
+            "survived": 57,
+            "noCoverage": 8,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 8,
+                "branch": 41,
+                "other": 5,
+                "optionalChain": 3
+            },
+            "uncoveredCategories": {
+                "block": 2,
+                "string": 3,
+                "branch": 3
+            },
+            "highValueSurvivors": 41,
+            "equivalent": 0,
+            "openGaps": 54
+        },
+        "src/features/data-installer/services/importJobRunner.ts": {
+            "score": 83.7,
+            "killed": 65,
+            "survived": 13,
+            "noCoverage": 2,
+            "timeout": 12,
+            "survivorCategories": {
+                "optionalChain": 5,
+                "other": 1,
+                "branch": 7
+            },
+            "uncoveredCategories": {
+                "other": 1,
+                "block": 1
+            },
+            "highValueSurvivors": 7,
+            "equivalent": 0,
+            "openGaps": 15
+        },
+        "src/features/data-installer/services/sampleDataInstall.ts": {
+            "score": 73.87,
+            "killed": 82,
+            "survived": 24,
+            "noCoverage": 5,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 2,
+                "branch": 11,
+                "string": 10,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "string": 2,
+                "block": 1,
+                "other": 1,
+                "branch": 1
+            },
+            "highValueSurvivors": 12,
+            "equivalent": 0,
+            "openGaps": 17
+        },
+        "src/features/data-installer/services/sampleDataInstallDeps.ts": {
+            "score": 54.29,
+            "killed": 38,
+            "survived": 7,
+            "noCoverage": 25,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 3,
+                "branch": 3,
+                "other": 1
+            },
+            "uncoveredCategories": {
+                "block": 8,
+                "branch": 9,
+                "other": 4,
+                "string": 2,
+                "logPresentation": 2
+            },
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 25
+        },
+        "src/features/data-installer/services/workspaceConfigDownload.ts": {
+            "score": 83.33,
+            "killed": 15,
+            "survived": 3,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1,
+                "other": 1,
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 2
+        },
+        "src/features/data-installer/ui/DataInstallerScreen.tsx": {
+            "score": 92.86,
+            "killed": 13,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/data-installer/ui/components/DatapackCard.tsx": {
+            "score": 70.31,
+            "killed": 45,
+            "survived": 18,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 4,
+                "other": 5,
+                "string": 4,
+                "branch": 5
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 5,
+            "equivalent": 0,
+            "openGaps": 14
+        },
+        "src/features/data-installer/ui/components/DatapackDetailPanel.tsx": {
+            "score": 80,
+            "killed": 48,
+            "survived": 10,
+            "noCoverage": 2,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 3,
+                "other": 1,
+                "branch": 3,
+                "optionalChain": 2,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "other": 1,
+                "string": 1
+            },
+            "highValueSurvivors": 4,
+            "equivalent": 0,
+            "openGaps": 8
+        },
+        "src/features/data-installer/ui/components/ExportDatapackModal.tsx": {
+            "score": 61.59,
+            "killed": 85,
+            "survived": 45,
+            "noCoverage": 8,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 11,
+                "branch": 16,
+                "other": 12,
+                "block": 2,
+                "optionalChain": 4
+            },
+            "uncoveredCategories": {
+                "other": 3,
+                "branch": 3,
+                "string": 2
+            },
+            "highValueSurvivors": 18,
+            "equivalent": 0,
+            "openGaps": 40
+        },
+        "src/features/data-installer/ui/components/ImportDatapackModal.tsx": {
+            "score": 70.3,
+            "killed": 211,
+            "survived": 83,
+            "noCoverage": 7,
+            "timeout": 2,
+            "survivorCategories": {
+                "branch": 37,
+                "block": 9,
+                "string": 20,
+                "other": 17
+            },
+            "uncoveredCategories": {
+                "branch": 1,
+                "string": 6
+            },
+            "highValueSurvivors": 46,
+            "equivalent": 0,
+            "openGaps": 64
+        },
+        "src/features/data-installer/ui/components/ViewSwitcher.tsx": {
+            "score": 55.56,
+            "killed": 10,
+            "survived": 8,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 6,
+                "string": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 6,
+            "equivalent": 0,
+            "openGaps": 6
+        },
+        "src/features/data-installer/ui/components/importResult.ts": {
+            "score": 5.6,
+            "killed": 7,
+            "survived": 10,
+            "noCoverage": 108,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 1,
+                "other": 2,
+                "string": 7
+            },
+            "uncoveredCategories": {
+                "branch": 46,
+                "string": 41,
+                "block": 12,
+                "other": 8,
+                "optionalChain": 1
+            },
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 70
+        },
+        "src/features/data-installer/ui/dataTypeLabel.ts": {
+            "score": 100,
+            "killed": 22,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/data-installer/ui/hooks/useDataInstallerRequest.ts": {
+            "score": 71.79,
+            "killed": 28,
+            "survived": 11,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "branch": 9,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 10
+        },
+        "src/features/data-installer/ui/hooks/useImportProgress.ts": {
+            "score": 92.31,
+            "killed": 12,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/data-installer/ui/importDependencies.ts": {
+            "score": 92.41,
+            "killed": 68,
+            "survived": 6,
+            "noCoverage": 0,
+            "timeout": 5,
+            "survivorCategories": {
+                "other": 5,
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 6
+        },
+        "src/features/data-installer/ui/views/DatapackActivityView.tsx": {
+            "score": 72.45,
+            "killed": 71,
+            "survived": 24,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 15,
+                "other": 3,
+                "block": 2,
+                "string": 4
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "other": 1,
+                "string": 1
+            },
+            "highValueSurvivors": 17,
+            "equivalent": 0,
+            "openGaps": 22
+        },
+        "src/features/data-installer/ui/views/DatapackCatalogView.tsx": {
+            "score": 70.8,
+            "killed": 80,
+            "survived": 21,
+            "noCoverage": 12,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 13,
+                "branch": 4,
+                "block": 1,
+                "optionalChain": 1,
+                "string": 2
+            },
+            "uncoveredCategories": {
+                "block": 3,
+                "string": 2,
+                "branch": 5,
+                "other": 2
+            },
+            "highValueSurvivors": 5,
+            "equivalent": 0,
+            "openGaps": 29
+        },
+        "src/features/eds/handlers/authoringExperience.ts": {
+            "score": 80.77,
+            "killed": 21,
+            "survived": 1,
+            "noCoverage": 4,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "string": 1,
+                "block": 1,
+                "optionalChain": 2
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 3
+        },
+        "src/features/eds/handlers/blockLibraryPublish.ts": {
+            "score": 55.41,
+            "killed": 40,
+            "survived": 23,
+            "noCoverage": 10,
+            "timeout": 1,
+            "survivorCategories": {
+                "branch": 11,
+                "other": 3,
+                "logPresentation": 2,
+                "string": 6,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "string": 8,
+                "branch": 2
+            },
+            "highValueSurvivors": 12,
+            "equivalent": 0,
+            "openGaps": 17
+        },
+        "src/features/eds/handlers/byomOverlay.ts": {
+            "score": 62.99,
+            "killed": 97,
+            "survived": 41,
+            "noCoverage": 16,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 24,
+                "branch": 12,
+                "block": 4,
+                "other": 1
+            },
+            "uncoveredCategories": {
+                "block": 3,
+                "string": 7,
+                "branch": 4,
+                "other": 2
+            },
+            "highValueSurvivors": 16,
+            "equivalent": 0,
+            "openGaps": 26
+        },
+        "src/features/eds/handlers/checkRepoReadinessHandler.ts": {
+            "score": 85,
+            "killed": 17,
+            "survived": 3,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 2,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/handlers/credentialServiceHandler.ts": {
+            "score": 72,
+            "killed": 18,
+            "survived": 7,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 2,
+                "other": 1,
+                "logPresentation": 1,
+                "string": 3
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 3
+        },
+        "src/features/eds/handlers/daLive/daLiveSiteConfig.ts": {
+            "score": 57.14,
+            "killed": 48,
+            "survived": 16,
+            "noCoverage": 20,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 12,
+                "branch": 2,
+                "other": 1,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "string": 2,
+                "block": 8,
+                "logPresentation": 6,
+                "branch": 3,
+                "other": 1
+            },
+            "highValueSurvivors": 2,
+            "equivalent": 0,
+            "openGaps": 16
+        },
+        "src/features/eds/handlers/daLive/edsDaLiveAuthHandlers.ts": {
+            "score": 21.95,
+            "killed": 27,
+            "survived": 33,
+            "noCoverage": 63,
+            "timeout": 0,
+            "survivorCategories": {
+                "block": 2,
+                "logPresentation": 5,
+                "branch": 10,
+                "string": 10,
+                "other": 4,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {
+                "block": 13,
+                "logPresentation": 12,
+                "branch": 17,
+                "string": 7,
+                "other": 13,
+                "optionalChain": 1
+            },
+            "highValueSurvivors": 12,
+            "equivalent": 0,
+            "openGaps": 62
+        },
+        "src/features/eds/handlers/edsHandlers.ts": {
+            "score": 0.63,
+            "killed": 1,
+            "survived": 0,
+            "noCoverage": 158,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {
+                "block": 20,
+                "optionalChain": 6,
+                "branch": 63,
+                "other": 27,
+                "logPresentation": 4,
+                "string": 38
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 116
+        },
+        "src/features/eds/handlers/refreshBlockLibraryHandler.ts": {
+            "score": 90,
+            "killed": 27,
+            "survived": 1,
+            "noCoverage": 2,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "other": 1,
+                "string": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/eds/handlers/storeStructureHandler.ts": {
+            "score": 76.27,
+            "killed": 45,
+            "survived": 10,
+            "noCoverage": 4,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 4,
+                "branch": 2,
+                "optionalChain": 3,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "other": 1,
+                "branch": 1,
+                "string": 1
+            },
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 9
+        },
+        "src/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydration.ts": {
+            "score": 67.57,
+            "killed": 25,
+            "survived": 12,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 7,
+                "branch": 4,
+                "other": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 4,
+            "equivalent": 0,
+            "openGaps": 5
+        },
+        "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts": {
+            "score": 31.98,
+            "killed": 71,
+            "survived": 22,
+            "noCoverage": 129,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 6,
+                "optionalChain": 2,
+                "logPresentation": 2,
+                "string": 8,
+                "other": 3,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "block": 22,
+                "optionalChain": 7,
+                "logPresentation": 9,
+                "branch": 50,
+                "string": 25,
+                "other": 16
+            },
+            "highValueSurvivors": 7,
+            "equivalent": 0,
+            "openGaps": 107
+        },
+        "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase1.ts": {
+            "score": 32.72,
+            "killed": 53,
+            "survived": 60,
+            "noCoverage": 49,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 24,
+                "string": 28,
+                "other": 5,
+                "block": 1,
+                "logPresentation": 2
+            },
+            "uncoveredCategories": {
+                "block": 8,
+                "string": 14,
+                "branch": 23,
+                "other": 2,
+                "logPresentation": 2
+            },
+            "highValueSurvivors": 25,
+            "equivalent": 0,
+            "openGaps": 63
+        },
+        "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts": {
+            "score": 9.47,
+            "killed": 16,
+            "survived": 59,
+            "noCoverage": 94,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 15,
+                "branch": 22,
+                "string": 18,
+                "logPresentation": 2,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "block": 19,
+                "string": 18,
+                "branch": 44,
+                "other": 8,
+                "logPresentation": 5
+            },
+            "highValueSurvivors": 24,
+            "equivalent": 0,
+            "openGaps": 110
+        },
+        "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase3.ts": {
+            "score": 33.64,
+            "killed": 37,
+            "survived": 61,
+            "noCoverage": 12,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 38,
+                "other": 6,
+                "block": 2,
+                "logPresentation": 1,
+                "branch": 12,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {
+                "block": 3,
+                "logPresentation": 2,
+                "optionalChain": 2,
+                "string": 4,
+                "other": 1
+            },
+            "highValueSurvivors": 14,
+            "equivalent": 0,
+            "openGaps": 28
+        },
+        "src/features/eds/handlers/storefrontSetup/storefrontSetupPhaseHelpers.ts": {
+            "score": 57.69,
+            "killed": 30,
+            "survived": 22,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 13,
+                "other": 1,
+                "logPresentation": 1,
+                "branch": 7
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 7,
+            "equivalent": 0,
+            "openGaps": 8
+        },
+        "src/features/eds/handlers/storefrontSetup/storefrontSetupPhases.ts": {
+            "score": 31.02,
+            "killed": 58,
+            "survived": 50,
+            "noCoverage": 79,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 6,
+                "block": 2,
+                "branch": 26,
+                "string": 13,
+                "logPresentation": 2,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "block": 8,
+                "branch": 27,
+                "other": 23,
+                "string": 19,
+                "optionalChain": 2
+            },
+            "highValueSurvivors": 28,
+            "equivalent": 0,
+            "openGaps": 95
+        },
+        "src/features/eds/services/accsDiscoveryConfig.ts": {
+            "score": 85.71,
+            "killed": 48,
+            "survived": 8,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "string": 2,
+                "branch": 4,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 5,
+            "equivalent": 0,
+            "openGaps": 6
+        },
+        "src/features/eds/services/authoringExperienceFlip.ts": {
+            "score": 81.03,
+            "killed": 47,
+            "survived": 9,
+            "noCoverage": 2,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 2,
+                "branch": 3,
+                "string": 4
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "string": 1
+            },
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 6
+        },
+        "src/features/eds/services/b2bReadinessDetection.ts": {
+            "score": 73.53,
+            "killed": 25,
+            "survived": 9,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "string": 1,
+                "branch": 5,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 5,
+            "equivalent": 0,
+            "openGaps": 8
+        },
+        "src/features/eds/services/blockCollectionHelpers.ts": {
+            "score": 77.45,
+            "killed": 292,
+            "survived": 79,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 46,
+                "other": 7,
+                "string": 13,
+                "block": 1,
+                "logPresentation": 8,
+                "optionalChain": 4
+            },
+            "uncoveredCategories": {
+                "branch": 3,
+                "block": 1,
+                "other": 2
+            },
+            "highValueSurvivors": 47,
+            "equivalent": 0,
+            "openGaps": 64
+        },
+        "src/features/eds/services/brandAssetPublisher.ts": {
+            "score": 82.25,
+            "killed": 139,
+            "survived": 27,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 9,
+                "other": 7,
+                "block": 1,
+                "logPresentation": 6,
+                "optionalChain": 2,
+                "string": 2
+            },
+            "uncoveredCategories": {
+                "string": 3
+            },
+            "highValueSurvivors": 10,
+            "equivalent": 0,
+            "openGaps": 19
+        },
+        "src/features/eds/services/catalogPrewarmService.ts": {
+            "score": 61.63,
+            "killed": 156,
+            "survived": 89,
+            "noCoverage": 10,
+            "timeout": 3,
+            "survivorCategories": {
+                "optionalChain": 8,
+                "branch": 30,
+                "block": 10,
+                "logPresentation": 8,
+                "string": 28,
+                "other": 5
+            },
+            "uncoveredCategories": {
+                "string": 7,
+                "block": 2,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 40,
+            "equivalent": 0,
+            "openGaps": 55
+        },
+        "src/features/eds/services/cleanupService.ts": {
+            "score": 46.5,
+            "killed": 73,
+            "survived": 33,
+            "noCoverage": 51,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 11,
+                "branch": 20,
+                "string": 2
+            },
+            "uncoveredCategories": {
+                "block": 13,
+                "string": 5,
+                "branch": 25,
+                "logPresentation": 3,
+                "other": 5
+            },
+            "highValueSurvivors": 20,
+            "equivalent": 0,
+            "openGaps": 63
+        },
+        "src/features/eds/services/commerceStoreDiscovery.ts": {
+            "score": 76.68,
+            "killed": 148,
+            "survived": 33,
+            "noCoverage": 12,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 9,
+                "branch": 18,
+                "other": 3,
+                "block": 3
+            },
+            "uncoveredCategories": {
+                "string": 5,
+                "block": 2,
+                "branch": 4,
+                "other": 1
+            },
+            "highValueSurvivors": 21,
+            "equivalent": 0,
+            "openGaps": 31
+        },
+        "src/features/eds/services/configGenerator.ts": {
+            "score": 69.5,
+            "killed": 139,
+            "survived": 55,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 19,
+                "branch": 24,
+                "optionalChain": 6,
+                "block": 3,
+                "logPresentation": 3
+            },
+            "uncoveredCategories": {
+                "string": 1,
+                "block": 2,
+                "logPresentation": 1,
+                "other": 1,
+                "branch": 1
+            },
+            "highValueSurvivors": 27,
+            "equivalent": 0,
+            "openGaps": 37
+        },
+        "src/features/eds/services/configService/configAccessRecovery.ts": {
+            "score": 48.6,
+            "killed": 49,
+            "survived": 14,
+            "noCoverage": 41,
+            "timeout": 3,
+            "survivorCategories": {
+                "string": 7,
+                "block": 1,
+                "logPresentation": 2,
+                "other": 2,
+                "branch": 2
+            },
+            "uncoveredCategories": {
+                "branch": 22,
+                "string": 13,
+                "other": 2,
+                "block": 3,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 32
+        },
+        "src/features/eds/services/configService/configServiceAccess.ts": {
+            "score": 70.45,
+            "killed": 186,
+            "survived": 57,
+            "noCoverage": 21,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 8,
+                "string": 13,
+                "branch": 19,
+                "logPresentation": 11,
+                "optionalChain": 3,
+                "block": 3
+            },
+            "uncoveredCategories": {
+                "block": 5,
+                "string": 5,
+                "other": 6,
+                "branch": 3,
+                "logPresentation": 2
+            },
+            "highValueSurvivors": 22,
+            "equivalent": 0,
+            "openGaps": 47
+        },
+        "src/features/eds/services/configService/configServiceProbe.ts": {
+            "score": 52.25,
+            "killed": 93,
+            "survived": 66,
+            "noCoverage": 19,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 12,
+                "branch": 31,
+                "string": 15,
+                "other": 5,
+                "block": 3
+            },
+            "uncoveredCategories": {
+                "block": 3,
+                "string": 11,
+                "other": 4,
+                "branch": 1
+            },
+            "highValueSurvivors": 34,
+            "equivalent": 0,
+            "openGaps": 59
+        },
+        "src/features/eds/services/configService/configurationService.ts": {
+            "score": 55.93,
+            "killed": 99,
+            "survived": 47,
+            "noCoverage": 31,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 10,
+                "block": 6,
+                "logPresentation": 7,
+                "branch": 17,
+                "other": 3,
+                "optionalChain": 4
+            },
+            "uncoveredCategories": {
+                "block": 5,
+                "string": 8,
+                "other": 5,
+                "branch": 10,
+                "optionalChain": 3
+            },
+            "highValueSurvivors": 23,
+            "equivalent": 0,
+            "openGaps": 53
+        },
+        "src/features/eds/services/configService/repairSiteConfigForProject.ts": {
+            "score": 94.74,
+            "killed": 18,
+            "survived": 0,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/configService/repairSiteConfigHeadless.ts": {
+            "score": 68.57,
+            "killed": 48,
+            "survived": 17,
+            "noCoverage": 5,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 13,
+                "string": 3,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "string": 3,
+                "other": 2
+            },
+            "highValueSurvivors": 14,
+            "equivalent": 0,
+            "openGaps": 16
+        },
+        "src/features/eds/services/configService/siteAccessManagerHeadless.ts": {
+            "score": 62.57,
+            "killed": 112,
+            "survived": 52,
+            "noCoverage": 15,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 28,
+                "string": 13,
+                "other": 6,
+                "optionalChain": 2,
+                "logPresentation": 2,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "string": 6,
+                "other": 5,
+                "branch": 4
+            },
+            "highValueSurvivors": 29,
+            "equivalent": 0,
+            "openGaps": 46
+        },
+        "src/features/eds/services/configService/siteConfigRegistrar.ts": {
+            "score": 69.89,
+            "killed": 64,
+            "survived": 28,
+            "noCoverage": 0,
+            "timeout": 1,
+            "survivorCategories": {
+                "logPresentation": 8,
+                "branch": 9,
+                "string": 4,
+                "block": 1,
+                "other": 6
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 10,
+            "equivalent": 0,
+            "openGaps": 16
+        },
+        "src/features/eds/services/configSyncService.ts": {
+            "score": 49.07,
+            "killed": 53,
+            "survived": 36,
+            "noCoverage": 19,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 11,
+                "logPresentation": 10,
+                "string": 8,
+                "optionalChain": 3,
+                "block": 2,
+                "other": 2
+            },
+            "uncoveredCategories": {
+                "logPresentation": 2,
+                "string": 6,
+                "block": 5,
+                "other": 1,
+                "branch": 5
+            },
+            "highValueSurvivors": 13,
+            "equivalent": 0,
+            "openGaps": 29
+        },
+        "src/features/eds/services/credentialServiceProbe.ts": {
+            "score": 56.92,
+            "killed": 37,
+            "survived": 15,
+            "noCoverage": 13,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 7,
+                "other": 2,
+                "branch": 4,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {
+                "string": 4,
+                "block": 3,
+                "branch": 6
+            },
+            "highValueSurvivors": 4,
+            "equivalent": 0,
+            "openGaps": 17
+        },
+        "src/features/eds/services/daAuthHelperToken.ts": {
+            "score": 71.11,
+            "killed": 64,
+            "survived": 18,
+            "noCoverage": 8,
+            "timeout": 0,
+            "survivorCategories": {
+                "block": 2,
+                "string": 6,
+                "branch": 9,
+                "other": 1
+            },
+            "uncoveredCategories": {
+                "block": 2,
+                "string": 3,
+                "branch": 2,
+                "other": 1
+            },
+            "highValueSurvivors": 11,
+            "equivalent": 0,
+            "openGaps": 17
+        },
+        "src/features/eds/services/daLive/daLiveApiClient.ts": {
+            "score": 53.42,
+            "killed": 39,
+            "survived": 17,
+            "noCoverage": 17,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 5,
+                "branch": 9,
+                "other": 2,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "string": 5,
+                "branch": 10,
+                "block": 1,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 10,
+            "equivalent": 0,
+            "openGaps": 23
+        },
+        "src/features/eds/services/daLive/daLiveAuthService.ts": {
+            "score": 65.97,
+            "killed": 126,
+            "survived": 35,
+            "noCoverage": 30,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 21,
+                "block": 5,
+                "other": 2,
+                "string": 3,
+                "optionalChain": 1,
+                "logPresentation": 3
+            },
+            "uncoveredCategories": {
+                "block": 10,
+                "string": 5,
+                "branch": 12,
+                "other": 2,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 26,
+            "equivalent": 0,
+            "openGaps": 53
+        },
+        "src/features/eds/services/daLive/daLiveConfigOperations.ts": {
+            "score": 36.94,
+            "killed": 58,
+            "survived": 36,
+            "noCoverage": 63,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 16,
+                "branch": 8,
+                "other": 10,
+                "logPresentation": 1,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "block": 12,
+                "string": 11,
+                "other": 17,
+                "branch": 22,
+                "optionalChain": 1
+            },
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 71
+        },
+        "src/features/eds/services/daLive/daLiveConfigService.ts": {
+            "score": 62.79,
+            "killed": 216,
+            "survived": 92,
+            "noCoverage": 36,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 26,
+                "logPresentation": 16,
+                "other": 10,
+                "branch": 28,
+                "block": 6,
+                "optionalChain": 6
+            },
+            "uncoveredCategories": {
+                "block": 7,
+                "other": 5,
+                "string": 17,
+                "branch": 5,
+                "logPresentation": 2
+            },
+            "highValueSurvivors": 34,
+            "equivalent": 0,
+            "openGaps": 67
+        },
+        "src/features/eds/services/daLive/daLiveConstants.ts": {
+            "score": 100,
+            "killed": 9,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/daLive/daLiveContentCopy.ts": {
+            "score": 6.31,
+            "killed": 37,
+            "survived": 57,
+            "noCoverage": 492,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 13,
+                "branch": 26,
+                "block": 5,
+                "string": 13
+            },
+            "uncoveredCategories": {
+                "block": 86,
+                "other": 122,
+                "branch": 183,
+                "string": 92,
+                "logPresentation": 7,
+                "optionalChain": 2
+            },
+            "highValueSurvivors": 31,
+            "equivalent": 0,
+            "openGaps": 437
+        },
+        "src/features/eds/services/daLive/daLiveContentDiscovery.ts": {
+            "score": 92.11,
+            "killed": 35,
+            "survived": 2,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 2
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/daLive/daLiveContentHelpers.ts": {
+            "score": 89.39,
+            "killed": 59,
+            "survived": 6,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 4,
+                "branch": 1,
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 5
+        },
+        "src/features/eds/services/daLive/daLiveContentOperations.ts": {
+            "score": 36.36,
+            "killed": 12,
+            "survived": 1,
+            "noCoverage": 20,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1
+            },
+            "uncoveredCategories": {
+                "block": 13,
+                "branch": 4,
+                "other": 3
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 21
+        },
+        "src/features/eds/services/daLive/daLiveSourceOperations.ts": {
+            "score": 44.32,
+            "killed": 77,
+            "survived": 57,
+            "noCoverage": 41,
+            "timeout": 1,
+            "survivorCategories": {
+                "string": 24,
+                "other": 14,
+                "branch": 12,
+                "block": 3,
+                "logPresentation": 3,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "string": 12,
+                "other": 9,
+                "branch": 15,
+                "block": 5
+            },
+            "highValueSurvivors": 15,
+            "equivalent": 0,
+            "openGaps": 59
+        },
+        "src/features/eds/services/edsPipeline.ts": {
+            "score": 52.33,
+            "killed": 191,
+            "survived": 122,
+            "noCoverage": 52,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 44,
+                "block": 6,
+                "other": 11,
+                "string": 45,
+                "logPresentation": 12,
+                "optionalChain": 4
+            },
+            "uncoveredCategories": {
+                "branch": 9,
+                "string": 25,
+                "other": 7,
+                "block": 9,
+                "optionalChain": 1,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 50,
+            "equivalent": 0,
+            "openGaps": 91
+        },
+        "src/features/eds/services/errorFormatters.ts": {
+            "score": 60.63,
+            "killed": 174,
+            "survived": 106,
+            "noCoverage": 7,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 25,
+                "optionalChain": 16,
+                "branch": 28,
+                "string": 36,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "string": 7
+            },
+            "highValueSurvivors": 29,
+            "equivalent": 0,
+            "openGaps": 70
+        },
+        "src/features/eds/services/ewSettingChangeListener.ts": {
+            "score": 77.45,
+            "killed": 79,
+            "survived": 17,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 10,
+                "block": 1,
+                "other": 4,
+                "optionalChain": 1,
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "block": 3,
+                "logPresentation": 2,
+                "other": 1
+            },
+            "highValueSurvivors": 11,
+            "equivalent": 0,
+            "openGaps": 20
+        },
+        "src/features/eds/services/fstabGenerator.ts": {
+            "score": 100,
+            "killed": 11,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/github/githubAppService.ts": {
+            "score": 64.49,
+            "killed": 89,
+            "survived": 44,
+            "noCoverage": 5,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 2,
+                "block": 5,
+                "optionalChain": 4,
+                "string": 21,
+                "logPresentation": 2,
+                "branch": 10
+            },
+            "uncoveredCategories": {
+                "string": 4,
+                "block": 1
+            },
+            "highValueSurvivors": 15,
+            "equivalent": 0,
+            "openGaps": 22
+        },
+        "src/features/eds/services/github/githubCredentialProbe.ts": {
+            "score": 59.46,
+            "killed": 88,
+            "survived": 45,
+            "noCoverage": 15,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 13,
+                "other": 4,
+                "optionalChain": 7,
+                "string": 20,
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {
+                "block": 4,
+                "other": 1,
+                "string": 10
+            },
+            "highValueSurvivors": 13,
+            "equivalent": 0,
+            "openGaps": 29
+        },
+        "src/features/eds/services/github/githubFileOperations.ts": {
+            "score": 37.96,
+            "killed": 104,
+            "survived": 47,
+            "noCoverage": 123,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 7,
+                "string": 16,
+                "branch": 12,
+                "optionalChain": 4,
+                "logPresentation": 7,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "string": 33,
+                "block": 28,
+                "other": 25,
+                "branch": 32,
+                "logPresentation": 5
+            },
+            "highValueSurvivors": 13,
+            "equivalent": 0,
+            "openGaps": 109
+        },
+        "src/features/eds/services/github/githubHelpers.ts": {
+            "score": 88.24,
+            "killed": 15,
+            "survived": 0,
+            "noCoverage": 2,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {
+                "block": 1,
+                "other": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 2
+        },
+        "src/features/eds/services/github/githubOAuthService.ts": {
+            "score": 40.54,
+            "killed": 15,
+            "survived": 19,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 2,
+                "logPresentation": 1,
+                "block": 6,
+                "branch": 10
+            },
+            "uncoveredCategories": {
+                "block": 2,
+                "other": 1
+            },
+            "highValueSurvivors": 16,
+            "equivalent": 0,
+            "openGaps": 19
+        },
+        "src/features/eds/services/github/githubRepoOperations.ts": {
+            "score": 24.91,
+            "killed": 67,
+            "survived": 32,
+            "noCoverage": 173,
+            "timeout": 1,
+            "survivorCategories": {
+                "branch": 12,
+                "optionalChain": 3,
+                "string": 7,
+                "other": 4,
+                "logPresentation": 5,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "block": 35,
+                "string": 33,
+                "other": 24,
+                "branch": 57,
+                "logPresentation": 24
+            },
+            "highValueSurvivors": 13,
+            "equivalent": 0,
+            "openGaps": 136
+        },
+        "src/features/eds/services/github/githubTokenService.ts": {
+            "score": 37.84,
+            "killed": 28,
+            "survived": 13,
+            "noCoverage": 33,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 3,
+                "branch": 6,
+                "block": 4
+            },
+            "uncoveredCategories": {
+                "block": 6,
+                "other": 5,
+                "branch": 21,
+                "string": 1
+            },
+            "highValueSurvivors": 10,
+            "equivalent": 0,
+            "openGaps": 42
+        },
+        "src/features/eds/services/helix/helixApiClient.ts": {
+            "score": 78.65,
+            "killed": 70,
+            "survived": 16,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 6,
+                "block": 2,
+                "string": 8
+            },
+            "uncoveredCategories": {
+                "string": 1,
+                "other": 2
+            },
+            "highValueSurvivors": 8,
+            "equivalent": 0,
+            "openGaps": 10
+        },
+        "src/features/eds/services/helix/helixBulkJobs.ts": {
+            "score": 65.67,
+            "killed": 82,
+            "survived": 42,
+            "noCoverage": 4,
+            "timeout": 6,
+            "survivorCategories": {
+                "logPresentation": 5,
+                "branch": 23,
+                "other": 5,
+                "string": 7,
+                "optionalChain": 1,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "string": 4
+            },
+            "highValueSurvivors": 24,
+            "equivalent": 0,
+            "openGaps": 30
+        },
+        "src/features/eds/services/helix/helixService.ts": {
+            "score": 55.35,
+            "killed": 142,
+            "survived": 68,
+            "noCoverage": 53,
+            "timeout": 8,
+            "survivorCategories": {
+                "block": 4,
+                "branch": 25,
+                "other": 6,
+                "optionalChain": 4,
+                "logPresentation": 10,
+                "string": 19
+            },
+            "uncoveredCategories": {
+                "block": 13,
+                "string": 18,
+                "branch": 16,
+                "other": 3,
+                "logPresentation": 3
+            },
+            "highValueSurvivors": 29,
+            "equivalent": 0,
+            "openGaps": 71
+        },
+        "src/features/eds/services/patches/codePatchPipelineHelpers.ts": {
+            "score": 63.16,
+            "killed": 48,
+            "survived": 21,
+            "noCoverage": 7,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 15,
+                "other": 1,
+                "block": 1,
+                "logPresentation": 2,
+                "optionalChain": 1,
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "other": 1,
+                "block": 3,
+                "logPresentation": 3
+            },
+            "highValueSurvivors": 16,
+            "equivalent": 0,
+            "openGaps": 22
+        },
+        "src/features/eds/services/patches/contentPatchRegistry.ts": {
+            "score": 78.46,
+            "killed": 51,
+            "survived": 14,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 7,
+                "block": 2,
+                "other": 2,
+                "logPresentation": 2,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 11
+        },
+        "src/features/eds/services/patches/externalPatchFetcher.ts": {
+            "score": 61.54,
+            "killed": 24,
+            "survived": 12,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 3,
+                "branch": 3,
+                "other": 3,
+                "optionalChain": 1,
+                "logPresentation": 2
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "string": 1,
+                "other": 1
+            },
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 9
+        },
+        "src/features/eds/services/patches/lkgPinHelper.ts": {
+            "score": 66.67,
+            "killed": 12,
+            "survived": 6,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 2,
+                "logPresentation": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/patches/lkgReader.ts": {
+            "score": 79.31,
+            "killed": 23,
+            "survived": 6,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 3,
+                "branch": 2,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 0,
+            "openGaps": 5
+        },
+        "src/features/eds/services/patches/patchMissTracker.ts": {
+            "score": 68.29,
+            "killed": 28,
+            "survived": 13,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 7,
+                "branch": 5,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 6,
+            "equivalent": 0,
+            "openGaps": 6
+        },
+        "src/features/eds/services/patches/patchReportHelper.ts": {
+            "score": 65.45,
+            "killed": 72,
+            "survived": 28,
+            "noCoverage": 10,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 4,
+                "branch": 16,
+                "string": 7,
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "other": 4,
+                "branch": 1,
+                "optionalChain": 1,
+                "string": 1,
+                "logPresentation": 2
+            },
+            "highValueSurvivors": 16,
+            "equivalent": 0,
+            "openGaps": 27
+        },
+        "src/features/eds/services/patches/patchTargetPolicy.ts": {
+            "score": 60,
+            "killed": 27,
+            "survived": 18,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 6,
+                "string": 7,
+                "block": 3,
+                "other": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 11
+        },
+        "src/features/eds/services/pdp/pdp404HandlerPublisher.ts": {
+            "score": 67.41,
+            "killed": 91,
+            "survived": 38,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 13,
+                "optionalChain": 2,
+                "branch": 9,
+                "other": 2,
+                "logPresentation": 8,
+                "block": 4
+            },
+            "uncoveredCategories": {
+                "string": 3,
+                "block": 1,
+                "logPresentation": 1,
+                "other": 1
+            },
+            "highValueSurvivors": 13,
+            "equivalent": 0,
+            "openGaps": 19
+        },
+        "src/features/eds/services/pdp/pdpUrlEncoding.ts": {
+            "score": 97.22,
+            "killed": 33,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 2,
+            "survivorCategories": {
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/pdp/publishKeyRegistrar.ts": {
+            "score": 55.93,
+            "killed": 33,
+            "survived": 24,
+            "noCoverage": 2,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 2,
+                "logPresentation": 6,
+                "string": 10,
+                "branch": 4,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "string": 1
+            },
+            "highValueSurvivors": 6,
+            "equivalent": 0,
+            "openGaps": 9
+        },
+        "src/features/eds/services/pdp/publishKeyRenewalSweep.ts": {
+            "score": 70.49,
+            "killed": 43,
+            "survived": 17,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 1,
+                "branch": 7,
+                "other": 2,
+                "logPresentation": 1,
+                "string": 4,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "branch": 1
+            },
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 13
+        },
+        "src/features/eds/services/placeholderStubs.ts": {
+            "score": 93.75,
+            "killed": 30,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/services/quickEditPublisher.ts": {
+            "score": 69.74,
+            "killed": 53,
+            "survived": 21,
+            "noCoverage": 2,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 8,
+                "branch": 5,
+                "string": 7,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "string": 2
+            },
+            "highValueSurvivors": 6,
+            "equivalent": 0,
+            "openGaps": 6
+        },
+        "src/features/eds/services/refreshBlockLibraryHeadless.ts": {
+            "score": 67.19,
+            "killed": 41,
+            "survived": 11,
+            "noCoverage": 10,
+            "timeout": 2,
+            "survivorCategories": {
+                "optionalChain": 1,
+                "logPresentation": 2,
+                "branch": 4,
+                "string": 3,
+                "other": 1
+            },
+            "uncoveredCategories": {
+                "string": 6,
+                "other": 2,
+                "branch": 2
+            },
+            "highValueSurvivors": 4,
+            "equivalent": 0,
+            "openGaps": 10
+        },
+        "src/features/eds/services/reset/edsResetConfigStep.ts": {
+            "score": 45.16,
+            "killed": 28,
+            "survived": 28,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 7,
+                "branch": 7,
+                "string": 10,
+                "optionalChain": 1,
+                "block": 2,
+                "other": 1
+            },
+            "uncoveredCategories": {
+                "logPresentation": 2,
+                "string": 2,
+                "block": 2
+            },
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 13
+        },
+        "src/features/eds/services/reset/edsResetMeshHelper.ts": {
+            "score": 15.38,
+            "killed": 8,
+            "survived": 16,
+            "noCoverage": 28,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 2,
+                "string": 4,
+                "other": 2,
+                "branch": 5,
+                "optionalChain": 2,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "branch": 13,
+                "string": 8,
+                "block": 3,
+                "logPresentation": 2,
+                "other": 2
+            },
+            "highValueSurvivors": 6,
+            "equivalent": 0,
+            "openGaps": 28
+        },
+        "src/features/eds/services/reset/edsResetParams.ts": {
+            "score": 31.4,
+            "killed": 38,
+            "survived": 47,
+            "noCoverage": 36,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 24,
+                "block": 4,
+                "other": 10,
+                "string": 6,
+                "optionalChain": 3
+            },
+            "uncoveredCategories": {
+                "block": 9,
+                "string": 11,
+                "other": 10,
+                "branch": 6
+            },
+            "highValueSurvivors": 28,
+            "equivalent": 0,
+            "openGaps": 66
+        },
+        "src/features/eds/services/reset/edsResetRepoHelper.ts": {
+            "score": 8.53,
+            "killed": 11,
+            "survived": 50,
+            "noCoverage": 68,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 26,
+                "other": 8,
+                "string": 10,
+                "logPresentation": 4,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "block": 19,
+                "branch": 23,
+                "string": 15,
+                "other": 7,
+                "logPresentation": 4
+            },
+            "highValueSurvivors": 28,
+            "equivalent": 0,
+            "openGaps": 85
+        },
+        "src/features/eds/services/reset/edsResetService.ts": {
+            "score": 25,
+            "killed": 29,
+            "survived": 45,
+            "noCoverage": 48,
+            "timeout": 2,
+            "survivorCategories": {
+                "string": 10,
+                "block": 5,
+                "branch": 19,
+                "other": 7,
+                "logPresentation": 4
+            },
+            "uncoveredCategories": {
+                "logPresentation": 4,
+                "string": 11,
+                "block": 11,
+                "branch": 18,
+                "other": 4
+            },
+            "highValueSurvivors": 24,
+            "equivalent": 0,
+            "openGaps": 64
+        },
+        "src/features/eds/services/reset/edsResetUI.ts": {
+            "score": 30.11,
+            "killed": 81,
+            "survived": 88,
+            "noCoverage": 100,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 25,
+                "branch": 33,
+                "optionalChain": 3,
+                "other": 17,
+                "block": 7,
+                "logPresentation": 3
+            },
+            "uncoveredCategories": {
+                "branch": 37,
+                "string": 34,
+                "block": 17,
+                "logPresentation": 5,
+                "other": 4,
+                "optionalChain": 3
+            },
+            "highValueSurvivors": 40,
+            "equivalent": 0,
+            "openGaps": 121
+        },
+        "src/features/eds/services/resourceCleanupHelpers.ts": {
+            "score": 77.78,
+            "killed": 140,
+            "survived": 34,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "block": 2,
+                "optionalChain": 1,
+                "branch": 18,
+                "other": 5,
+                "logPresentation": 5,
+                "string": 3
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "other": 1,
+                "string": 3,
+                "branch": 1
+            },
+            "highValueSurvivors": 20,
+            "equivalent": 0,
+            "openGaps": 29
+        },
+        "src/features/eds/services/runtimeSurfaceResolver.ts": {
+            "score": 41.86,
+            "killed": 18,
+            "survived": 4,
+            "noCoverage": 21,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 1,
+                "other": 1,
+                "block": 1,
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "block": 6,
+                "string": 5,
+                "branch": 8,
+                "other": 2
+            },
+            "highValueSurvivors": 2,
+            "equivalent": 0,
+            "openGaps": 19
+        },
+        "src/features/eds/services/storeStructureReader.ts": {
+            "score": 81.25,
+            "killed": 104,
+            "survived": 16,
+            "noCoverage": 8,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 7,
+                "string": 5,
+                "block": 1,
+                "optionalChain": 1,
+                "other": 2
+            },
+            "uncoveredCategories": {
+                "block": 3,
+                "other": 2,
+                "string": 3
+            },
+            "highValueSurvivors": 8,
+            "equivalent": 0,
+            "openGaps": 16
+        },
+        "src/features/eds/services/storefront/repoStorefrontReadiness.ts": {
+            "score": 85.71,
+            "killed": 54,
+            "survived": 8,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 2,
+                "other": 2,
+                "logPresentation": 4
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 2
+        },
+        "src/features/eds/services/storefront/servedStorefrontConfig.ts": {
+            "score": 75,
+            "killed": 45,
+            "survived": 14,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 6,
+                "other": 1,
+                "logPresentation": 3,
+                "block": 3,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 11
+        },
+        "src/features/eds/services/storefront/storefrontNameMigration.ts": {
+            "score": 81.36,
+            "killed": 48,
+            "survived": 9,
+            "noCoverage": 2,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 4,
+                "logPresentation": 2,
+                "branch": 2,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "string": 2
+            },
+            "highValueSurvivors": 2,
+            "equivalent": 0,
+            "openGaps": 3
+        },
+        "src/features/eds/services/storefront/storefrontNameMigrationForProject.ts": {
+            "score": 91.49,
+            "killed": 43,
+            "survived": 4,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 1,
+                "block": 1,
+                "logPresentation": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 2
+        },
+        "src/features/eds/services/storefront/storefrontProbe.ts": {
+            "score": 76.51,
+            "killed": 114,
+            "survived": 29,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 11,
+                "other": 2,
+                "branch": 13,
+                "optionalChain": 2,
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "other": 2,
+                "string": 2,
+                "branch": 1
+            },
+            "highValueSurvivors": 13,
+            "equivalent": 0,
+            "openGaps": 21
+        },
+        "src/features/eds/services/storefront/storefrontStalenessDetector.ts": {
+            "score": 61.9,
+            "killed": 52,
+            "survived": 22,
+            "noCoverage": 10,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 16,
+                "logPresentation": 2,
+                "block": 2,
+                "string": 2
+            },
+            "uncoveredCategories": {
+                "block": 3,
+                "other": 4,
+                "branch": 2,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 18,
+            "equivalent": 0,
+            "openGaps": 27
+        },
+        "src/features/eds/services/storefront/storefrontSyncService.ts": {
+            "score": 68.79,
+            "killed": 119,
+            "survived": 48,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 35,
+                "other": 4,
+                "branch": 7,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "string": 5,
+                "block": 1
+            },
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 14
+        },
+        "src/features/eds/services/toolManager.ts": {
+            "score": 55.2,
+            "killed": 122,
+            "survived": 86,
+            "noCoverage": 13,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 28,
+                "branch": 28,
+                "logPresentation": 8,
+                "block": 5,
+                "other": 17
+            },
+            "uncoveredCategories": {
+                "block": 5,
+                "string": 8
+            },
+            "highValueSurvivors": 33,
+            "equivalent": 0,
+            "openGaps": 55
+        },
+        "src/features/eds/ui/components/DaLiveServiceCard.tsx": {
+            "score": 30.23,
+            "killed": 26,
+            "survived": 51,
+            "noCoverage": 9,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 16,
+                "block": 3,
+                "branch": 25,
+                "string": 7
+            },
+            "uncoveredCategories": {
+                "block": 3,
+                "branch": 2,
+                "other": 2,
+                "string": 2
+            },
+            "highValueSurvivors": 28,
+            "equivalent": 0,
+            "openGaps": 51
+        },
+        "src/features/eds/ui/components/GitHubServiceCard.tsx": {
+            "score": 81.25,
+            "killed": 13,
+            "survived": 3,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "branch": 1,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 2
+        },
+        "src/features/eds/ui/components/VerifiedField.tsx": {
+            "score": 70.83,
+            "killed": 17,
+            "survived": 7,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 1,
+                "string": 4,
+                "other": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 3
+        },
+        "src/features/eds/ui/helpers/codeSyncInstallContent.ts": {
+            "score": 100,
+            "killed": 12,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/eds/ui/hooks/useDaLiveAuth.ts": {
+            "score": 40.94,
+            "killed": 70,
+            "survived": 73,
+            "noCoverage": 28,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 42,
+                "logPresentation": 7,
+                "optionalChain": 9,
+                "string": 4,
+                "block": 2,
+                "other": 9
+            },
+            "uncoveredCategories": {
+                "string": 6,
+                "block": 8,
+                "branch": 9,
+                "other": 2,
+                "logPresentation": 3
+            },
+            "highValueSurvivors": 44,
+            "equivalent": 0,
+            "openGaps": 81
+        },
+        "src/features/eds/ui/hooks/useGitHubAuth.ts": {
+            "score": 35.71,
+            "killed": 25,
+            "survived": 30,
+            "noCoverage": 15,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 17,
+                "optionalChain": 1,
+                "other": 6,
+                "logPresentation": 4,
+                "string": 1,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "block": 3,
+                "logPresentation": 3,
+                "string": 2,
+                "other": 2,
+                "branch": 5
+            },
+            "highValueSurvivors": 18,
+            "equivalent": 0,
+            "openGaps": 35
+        },
+        "src/features/eds/ui/steps/RepoSelectionInline.tsx": {
+            "score": 30.26,
+            "killed": 102,
+            "survived": 127,
+            "noCoverage": 115,
+            "timeout": 3,
+            "survivorCategories": {
+                "optionalChain": 17,
+                "branch": 57,
+                "string": 22,
+                "block": 5,
+                "other": 26
+            },
+            "uncoveredCategories": {
+                "string": 18,
+                "block": 19,
+                "branch": 50,
+                "other": 22,
+                "optionalChain": 5,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 62,
+            "equivalent": 0,
+            "openGaps": 201
+        },
+        "src/features/eds/ui/steps/StorefrontSetupStep.tsx": {
+            "score": 28.69,
+            "killed": 72,
+            "survived": 108,
+            "noCoverage": 71,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 33,
+                "block": 6,
+                "branch": 45,
+                "other": 22,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {
+                "branch": 22,
+                "string": 23,
+                "block": 7,
+                "other": 17,
+                "optionalChain": 2
+            },
+            "highValueSurvivors": 51,
+            "equivalent": 0,
+            "openGaps": 123
+        },
+        "src/features/lifecycle/commands/deleteProject.ts": {
+            "score": 61.39,
+            "killed": 61,
+            "survived": 35,
+            "noCoverage": 4,
+            "timeout": 1,
+            "survivorCategories": {
+                "block": 6,
+                "string": 12,
+                "branch": 9,
+                "logPresentation": 7,
+                "other": 1
+            },
+            "uncoveredCategories": {
+                "block": 2,
+                "logPresentation": 2
+            },
+            "highValueSurvivors": 15,
+            "equivalent": 0,
+            "openGaps": 18
+        },
+        "src/features/lifecycle/commands/managedStorefrontFiles.ts": {
+            "score": 62.5,
+            "killed": 5,
+            "survived": 3,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 2,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 2
+        },
+        "src/features/lifecycle/commands/startDemo.ts": {
+            "score": 46.46,
+            "killed": 116,
+            "survived": 113,
+            "noCoverage": 23,
+            "timeout": 2,
+            "survivorCategories": {
+                "branch": 45,
+                "other": 14,
+                "logPresentation": 24,
+                "block": 8,
+                "string": 21,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "block": 7,
+                "logPresentation": 6,
+                "branch": 2,
+                "string": 6,
+                "other": 2
+            },
+            "highValueSurvivors": 53,
+            "equivalent": 0,
+            "openGaps": 79
+        },
+        "src/features/lifecycle/commands/stopDemo.ts": {
+            "score": 59.2,
+            "killed": 74,
+            "survived": 41,
+            "noCoverage": 10,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 19,
+                "other": 5,
+                "logPresentation": 6,
+                "string": 10,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "block": 4,
+                "logPresentation": 2,
+                "other": 2,
+                "string": 2
+            },
+            "highValueSurvivors": 20,
+            "equivalent": 0,
+            "openGaps": 31
+        },
+        "src/features/lifecycle/commands/syncStorefront.ts": {
+            "score": 43.28,
+            "killed": 132,
+            "survived": 141,
+            "noCoverage": 32,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 62,
+                "optionalChain": 9,
+                "other": 20,
+                "branch": 38,
+                "block": 12
+            },
+            "uncoveredCategories": {
+                "other": 2,
+                "block": 11,
+                "string": 12,
+                "branch": 6,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 50,
+            "equivalent": 0,
+            "openGaps": 98
+        },
+        "src/features/lifecycle/services/lifecycleService.ts": {
+            "score": 100,
+            "killed": 9,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/lifecycle/services/projectResetService.ts": {
+            "score": 17.75,
+            "killed": 41,
+            "survived": 16,
+            "noCoverage": 174,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 4,
+                "branch": 3,
+                "string": 3,
+                "other": 3,
+                "logPresentation": 3
+            },
+            "uncoveredCategories": {
+                "block": 24,
+                "branch": 76,
+                "string": 31,
+                "other": 29,
+                "logPresentation": 10,
+                "optionalChain": 4
+            },
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 143
+        },
+        "src/features/mesh/commands/deployMesh.ts": {
+            "score": 39.19,
+            "killed": 29,
+            "survived": 25,
+            "noCoverage": 20,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 12,
+                "block": 2,
+                "string": 10,
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {
+                "block": 5,
+                "logPresentation": 1,
+                "string": 8,
+                "branch": 6
+            },
+            "highValueSurvivors": 14,
+            "equivalent": 0,
+            "openGaps": 25
+        },
+        "src/features/mesh/handlers/checkHandler.ts": {
+            "score": 29.26,
+            "killed": 55,
+            "survived": 61,
+            "noCoverage": 72,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 26,
+                "optionalChain": 7,
+                "string": 6,
+                "logPresentation": 16,
+                "other": 4,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "other": 12,
+                "block": 6,
+                "string": 15,
+                "branch": 33,
+                "logPresentation": 6
+            },
+            "highValueSurvivors": 28,
+            "equivalent": 0,
+            "openGaps": 90
+        },
+        "src/features/mesh/handlers/deleteHandler.ts": {
+            "score": 43.18,
+            "killed": 19,
+            "survived": 20,
+            "noCoverage": 5,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 6,
+                "string": 2,
+                "branch": 5,
+                "optionalChain": 4,
+                "other": 2,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "other": 2,
+                "branch": 1,
+                "string": 1
+            },
+            "highValueSurvivors": 6,
+            "equivalent": 0,
+            "openGaps": 16
+        },
+        "src/features/mesh/handlers/deployHandler.ts": {
+            "score": 77.78,
+            "killed": 28,
+            "survived": 7,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 5,
+                "branch": 2
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 2,
+            "equivalent": 0,
+            "openGaps": 2
+        },
+        "src/features/mesh/handlers/shared.ts": {
+            "score": 96.43,
+            "killed": 27,
+            "survived": 0,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {
+                "block": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/mesh/handlers/subscribeHandler.ts": {
+            "score": 81.48,
+            "killed": 22,
+            "survived": 4,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 3,
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {
+                "other": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/mesh/services/deployMeshHeadless.ts": {
+            "score": 63.44,
+            "killed": 59,
+            "survived": 26,
+            "noCoverage": 8,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 10,
+                "other": 3,
+                "branch": 9,
+                "optionalChain": 3,
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {
+                "string": 7,
+                "optionalChain": 1
+            },
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 16
+        },
+        "src/features/mesh/services/deployMeshWithFeedback.ts": {
+            "score": 81.82,
+            "killed": 18,
+            "survived": 3,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 2,
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "block": 1
+            },
+            "highValueSurvivors": 2,
+            "equivalent": 0,
+            "openGaps": 3
+        },
+        "src/features/mesh/services/meshCheckHelpers.ts": {
+            "score": 80.63,
+            "killed": 129,
+            "survived": 25,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 4,
+                "other": 5,
+                "block": 3,
+                "branch": 10,
+                "string": 3
+            },
+            "uncoveredCategories": {
+                "other": 2,
+                "branch": 2,
+                "string": 2
+            },
+            "highValueSurvivors": 13,
+            "equivalent": 0,
+            "openGaps": 26
+        },
+        "src/features/mesh/services/meshDeployment.ts": {
+            "score": 60,
+            "killed": 117,
+            "survived": 62,
+            "noCoverage": 16,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 14,
+                "block": 3,
+                "other": 4,
+                "logPresentation": 9,
+                "branch": 23,
+                "optionalChain": 9
+            },
+            "uncoveredCategories": {
+                "string": 12,
+                "other": 1,
+                "optionalChain": 2,
+                "block": 1
+            },
+            "highValueSurvivors": 26,
+            "equivalent": 0,
+            "openGaps": 43
+        },
+        "src/features/mesh/services/meshDeploymentVerifier.ts": {
+            "score": 64.67,
+            "killed": 68,
+            "survived": 39,
+            "noCoverage": 14,
+            "timeout": 29,
+            "survivorCategories": {
+                "branch": 17,
+                "optionalChain": 2,
+                "logPresentation": 8,
+                "other": 8,
+                "block": 2,
+                "string": 2
+            },
+            "uncoveredCategories": {
+                "block": 2,
+                "logPresentation": 9,
+                "string": 1,
+                "other": 2
+            },
+            "highValueSurvivors": 19,
+            "equivalent": 0,
+            "openGaps": 33
+        },
+        "src/features/mesh/services/meshEndpoint.ts": {
+            "score": 67.12,
+            "killed": 49,
+            "survived": 21,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 6,
+                "string": 1,
+                "logPresentation": 12,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "logPresentation": 2
+            },
+            "highValueSurvivors": 8,
+            "equivalent": 0,
+            "openGaps": 9
+        },
+        "src/features/mesh/services/meshRedeploy.ts": {
+            "score": 100,
+            "killed": 6,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/mesh/services/meshStatusResolver.ts": {
+            "score": 90.77,
+            "killed": 59,
+            "survived": 6,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 4,
+                "block": 1,
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 0,
+            "openGaps": 2
+        },
+        "src/features/mesh/services/meshUpdateDecline.ts": {
+            "score": 92.86,
+            "killed": 13,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/mesh/services/meshVerifier.ts": {
+            "score": 53.02,
+            "killed": 123,
+            "survived": 77,
+            "noCoverage": 32,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 19,
+                "block": 7,
+                "other": 8,
+                "string": 4,
+                "branch": 39
+            },
+            "uncoveredCategories": {
+                "block": 4,
+                "logPresentation": 5,
+                "other": 18,
+                "branch": 3,
+                "string": 2
+            },
+            "highValueSurvivors": 46,
+            "equivalent": 0,
+            "openGaps": 79
+        },
+        "src/features/mesh/services/stalenessDetector.ts": {
+            "score": 69.46,
+            "killed": 232,
+            "survived": 98,
+            "noCoverage": 4,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 11,
+                "branch": 31,
+                "other": 16,
+                "block": 10,
+                "string": 21,
+                "optionalChain": 9
+            },
+            "uncoveredCategories": {
+                "block": 2,
+                "logPresentation": 2
+            },
+            "highValueSurvivors": 41,
+            "equivalent": 0,
+            "openGaps": 68
+        },
+        "src/features/mesh/utils/errorFormatter.ts": {
+            "score": 28.08,
+            "killed": 41,
+            "survived": 13,
+            "noCoverage": 92,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 9,
+                "block": 1,
+                "branch": 2,
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "block": 10,
+                "other": 32,
+                "string": 18,
+                "branch": 32
+            },
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 86
+        },
+        "src/features/mesh/utils/meshHelpers.ts": {
+            "score": 73.64,
+            "killed": 93,
+            "survived": 29,
+            "noCoverage": 5,
+            "timeout": 2,
+            "survivorCategories": {
+                "other": 4,
+                "block": 2,
+                "branch": 20,
+                "string": 3
+            },
+            "uncoveredCategories": {
+                "block": 3,
+                "branch": 2
+            },
+            "highValueSurvivors": 22,
+            "equivalent": 0,
+            "openGaps": 31
+        },
+        "src/features/prerequisites/handlers/checkHandler.ts": {
+            "score": 36.18,
+            "killed": 108,
+            "survived": 168,
+            "noCoverage": 26,
+            "timeout": 2,
+            "survivorCategories": {
+                "other": 18,
+                "branch": 88,
+                "block": 5,
+                "optionalChain": 11,
+                "logPresentation": 35,
+                "string": 11
+            },
+            "uncoveredCategories": {
+                "block": 5,
+                "other": 9,
+                "string": 4,
+                "branch": 6,
+                "optionalChain": 1,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 93,
+            "equivalent": 0,
+            "openGaps": 143
+        },
+        "src/features/prerequisites/handlers/continueHandler.ts": {
+            "score": 61.35,
+            "killed": 127,
+            "survived": 79,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 16,
+                "branch": 41,
+                "string": 13,
+                "block": 6,
+                "logPresentation": 1,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 47,
+            "equivalent": 0,
+            "openGaps": 65
+        },
+        "src/features/prerequisites/handlers/shared.ts": {
+            "score": 37.65,
+            "killed": 122,
+            "survived": 28,
+            "noCoverage": 174,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 7,
+                "branch": 14,
+                "block": 2,
+                "string": 2,
+                "logPresentation": 2,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "block": 26,
+                "branch": 85,
+                "other": 17,
+                "string": 43,
+                "logPresentation": 3
+            },
+            "highValueSurvivors": 16,
+            "equivalent": 0,
+            "openGaps": 152
+        },
+        "src/features/prerequisites/services/PrerequisitesManager.ts": {
+            "score": 33.63,
+            "killed": 76,
+            "survived": 76,
+            "noCoverage": 74,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 17,
+                "other": 9,
+                "optionalChain": 3,
+                "branch": 43,
+                "block": 3,
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {
+                "block": 19,
+                "logPresentation": 4,
+                "branch": 32,
+                "string": 5,
+                "other": 9,
+                "optionalChain": 5
+            },
+            "highValueSurvivors": 46,
+            "equivalent": 0,
+            "openGaps": 123
+        },
+        "src/features/prerequisites/services/prerequisitesCacheManager.ts": {
+            "score": 83.33,
+            "killed": 90,
+            "survived": 18,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 10,
+                "other": 2,
+                "string": 5,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 11,
+            "equivalent": 0,
+            "openGaps": 13
+        },
+        "src/features/prerequisites/services/versioning/MultiVersionDetector.ts": {
+            "score": 84,
+            "killed": 42,
+            "survived": 6,
+            "noCoverage": 2,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 1,
+                "branch": 3,
+                "other": 2
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 6
+        },
+        "src/features/prerequisites/services/versioning/VersionSatisfactionChecker.ts": {
+            "score": 66.67,
+            "killed": 22,
+            "survived": 11,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 5,
+                "other": 2,
+                "branch": 2,
+                "block": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 4,
+            "equivalent": 0,
+            "openGaps": 6
+        },
+        "src/features/prerequisites/ui/steps/PrerequisitesStep.tsx": {
+            "score": 22.96,
+            "killed": 31,
+            "survived": 48,
+            "noCoverage": 56,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 22,
+                "block": 3,
+                "string": 14,
+                "other": 8,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "branch": 15,
+                "string": 15,
+                "block": 2,
+                "other": 24
+            },
+            "highValueSurvivors": 25,
+            "equivalent": 0,
+            "openGaps": 75
+        },
+        "src/features/prerequisites/ui/steps/hooks/prerequisiteRenderers.tsx": {
+            "score": 23.4,
+            "killed": 44,
+            "survived": 37,
+            "noCoverage": 107,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 13,
+                "branch": 23,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "block": 14,
+                "branch": 44,
+                "string": 25,
+                "optionalChain": 5,
+                "other": 19
+            },
+            "highValueSurvivors": 23,
+            "equivalent": 0,
+            "openGaps": 106
+        },
+        "src/features/project-creation/commands/createProject.ts": {
+            "score": 28.45,
+            "killed": 101,
+            "survived": 113,
+            "noCoverage": 141,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 45,
+                "block": 9,
+                "other": 10,
+                "string": 45,
+                "logPresentation": 2,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {
+                "branch": 47,
+                "block": 31,
+                "string": 31,
+                "optionalChain": 4,
+                "logPresentation": 13,
+                "other": 15
+            },
+            "highValueSurvivors": 54,
+            "equivalent": 0,
+            "openGaps": 163
+        },
+        "src/features/project-creation/handlers/addIntegrationFlowHandlers.ts": {
+            "score": 57.69,
+            "killed": 15,
+            "survived": 11,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 1,
+                "string": 9,
+                "other": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 2
+        },
+        "src/features/project-creation/handlers/checkGitHubAppHandler.ts": {
+            "score": 47.31,
+            "killed": 44,
+            "survived": 41,
+            "noCoverage": 8,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 15,
+                "logPresentation": 4,
+                "block": 2,
+                "branch": 14,
+                "other": 4,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {
+                "logPresentation": 2,
+                "string": 1,
+                "other": 2,
+                "block": 1,
+                "branch": 2
+            },
+            "highValueSurvivors": 16,
+            "equivalent": 0,
+            "openGaps": 27
+        },
+        "src/features/project-creation/handlers/consoleApiHandlers.ts": {
+            "score": 90.57,
+            "killed": 48,
+            "survived": 5,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 1,
+                "other": 3,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 4
+        },
+        "src/features/project-creation/handlers/createHandler.ts": {
+            "score": 66.99,
+            "killed": 138,
+            "survived": 61,
+            "noCoverage": 7,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 22,
+                "block": 1,
+                "other": 12,
+                "string": 16,
+                "logPresentation": 7,
+                "optionalChain": 3
+            },
+            "uncoveredCategories": {
+                "branch": 4,
+                "block": 1,
+                "string": 2
+            },
+            "highValueSurvivors": 23,
+            "equivalent": 0,
+            "openGaps": 43
+        },
+        "src/features/project-creation/handlers/executor.ts": {
+            "score": 36.36,
+            "killed": 40,
+            "survived": 54,
+            "noCoverage": 16,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 10,
+                "branch": 21,
+                "block": 5,
+                "string": 15,
+                "logPresentation": 2,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "block": 5,
+                "branch": 3,
+                "other": 1,
+                "string": 6,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 26,
+            "equivalent": 0,
+            "openGaps": 46
+        },
+        "src/features/project-creation/handlers/validateHandler.ts": {
+            "score": 100,
+            "killed": 14,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/project-creation/handlers/wizardLifecycleHandlers.ts": {
+            "score": 69.64,
+            "killed": 78,
+            "survived": 23,
+            "noCoverage": 11,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 6,
+                "optionalChain": 2,
+                "string": 4,
+                "other": 3,
+                "branch": 7,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "block": 2,
+                "logPresentation": 4,
+                "string": 1,
+                "other": 2,
+                "branch": 2
+            },
+            "highValueSurvivors": 8,
+            "equivalent": 0,
+            "openGaps": 19
+        },
+        "src/features/project-creation/helpers/envFileGenerator.ts": {
+            "score": 32.86,
+            "killed": 115,
+            "survived": 38,
+            "noCoverage": 197,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 7,
+                "other": 8,
+                "branch": 16,
+                "string": 5,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "block": 41,
+                "optionalChain": 7,
+                "branch": 100,
+                "other": 13,
+                "string": 35,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 18,
+            "equivalent": 0,
+            "openGaps": 194
+        },
+        "src/features/project-creation/helpers/formatters.ts": {
+            "score": 100,
+            "killed": 8,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/project-creation/services/ProjectSetupContext.ts": {
+            "score": 34.29,
+            "killed": 12,
+            "survived": 0,
+            "noCoverage": 23,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {
+                "block": 2,
+                "other": 6,
+                "branch": 15
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 23
+        },
+        "src/features/project-creation/services/aiBundle/aiBundleActivationRefresh.ts": {
+            "score": 70.09,
+            "killed": 82,
+            "survived": 32,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 5,
+                "optionalChain": 1,
+                "branch": 15,
+                "other": 4,
+                "string": 6,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "string": 2
+            },
+            "highValueSurvivors": 16,
+            "equivalent": 0,
+            "openGaps": 22
+        },
+        "src/features/project-creation/services/aiBundle/aiBundleService.ts": {
+            "score": 83.33,
+            "killed": 30,
+            "survived": 5,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 2,
+                "optionalChain": 1,
+                "other": 2
+            },
+            "uncoveredCategories": {
+                "other": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 4
+        },
+        "src/features/project-creation/services/aiBundle/aiContextWriter.ts": {
+            "score": 66.67,
+            "killed": 8,
+            "survived": 4,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 2,
+                "other": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 2
+        },
+        "src/features/project-creation/services/aiBundle/aiDefaultsInstaller.ts": {
+            "score": 76.84,
+            "killed": 73,
+            "survived": 9,
+            "noCoverage": 13,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 4,
+                "string": 2,
+                "branch": 3
+            },
+            "uncoveredCategories": {
+                "string": 5,
+                "other": 3,
+                "branch": 3,
+                "block": 1,
+                "optionalChain": 1
+            },
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 15
+        },
+        "src/features/project-creation/services/aiBundle/aiToolingGate.ts": {
+            "score": 52,
+            "killed": 39,
+            "survived": 1,
+            "noCoverage": 35,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "block": 6,
+                "other": 4,
+                "branch": 20,
+                "string": 3,
+                "optionalChain": 2
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 33
+        },
+        "src/features/project-creation/services/aiBundle/claudeSettingsWriter.ts": {
+            "score": 78.85,
+            "killed": 123,
+            "survived": 20,
+            "noCoverage": 13,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 7,
+                "optionalChain": 5,
+                "other": 4,
+                "branch": 4
+            },
+            "uncoveredCategories": {
+                "other": 1,
+                "block": 3,
+                "branch": 8,
+                "string": 1
+            },
+            "highValueSurvivors": 4,
+            "equivalent": 0,
+            "openGaps": 25
+        },
+        "src/features/project-creation/services/aiBundle/generatedFileWriter.ts": {
+            "score": 89.93,
+            "killed": 124,
+            "survived": 13,
+            "noCoverage": 1,
+            "timeout": 1,
+            "survivorCategories": {
+                "string": 4,
+                "block": 2,
+                "branch": 7
+            },
+            "uncoveredCategories": {
+                "branch": 1
+            },
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 10
+        },
+        "src/features/project-creation/services/aiBundle/globalMcpRegistration.ts": {
+            "score": 76.47,
+            "killed": 52,
+            "survived": 15,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 3,
+                "branch": 10,
+                "optionalChain": 1,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "branch": 1
+            },
+            "highValueSurvivors": 11,
+            "equivalent": 0,
+            "openGaps": 13
+        },
+        "src/features/project-creation/services/aiBundle/homeAiContextWriter.ts": {
+            "score": 37.82,
+            "killed": 45,
+            "survived": 73,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 3,
+                "branch": 6,
+                "string": 61,
+                "block": 2,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "block": 1
+            },
+            "highValueSurvivors": 8,
+            "equivalent": 0,
+            "openGaps": 13
+        },
+        "src/features/project-creation/services/aiBundle/mcpConfigWriter.ts": {
+            "score": 55.42,
+            "killed": 46,
+            "survived": 14,
+            "noCoverage": 23,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 10,
+                "branch": 2,
+                "block": 1,
+                "other": 1
+            },
+            "uncoveredCategories": {
+                "block": 4,
+                "string": 7,
+                "other": 4,
+                "branch": 8
+            },
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 20
+        },
+        "src/features/project-creation/services/aiBundle/skillsWriter.ts": {
+            "score": 78.26,
+            "killed": 90,
+            "survived": 21,
+            "noCoverage": 4,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 6,
+                "branch": 12,
+                "string": 3
+            },
+            "uncoveredCategories": {
+                "block": 3,
+                "string": 1
+            },
+            "highValueSurvivors": 12,
+            "equivalent": 0,
+            "openGaps": 21
+        },
+        "src/features/project-creation/services/appBuilderComponentSelection.ts": {
+            "score": 96.77,
+            "killed": 30,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/project-creation/services/catalogPrewarmPhase.ts": {
+            "score": 66.67,
+            "killed": 14,
+            "survived": 7,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 2,
+                "branch": 3,
+                "string": 1,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 4,
+            "equivalent": 0,
+            "openGaps": 4
+        },
+        "src/features/project-creation/services/componentInstallationOrchestrator.ts": {
+            "score": 13.51,
+            "killed": 10,
+            "survived": 25,
+            "noCoverage": 39,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 3,
+                "string": 5,
+                "block": 3,
+                "branch": 9,
+                "optionalChain": 3,
+                "other": 2
+            },
+            "uncoveredCategories": {
+                "block": 7,
+                "string": 9,
+                "logPresentation": 4,
+                "branch": 15,
+                "other": 4
+            },
+            "highValueSurvivors": 12,
+            "equivalent": 0,
+            "openGaps": 43
+        },
+        "src/features/project-creation/services/customBlockLibraryUtils.ts": {
+            "score": 88.89,
+            "killed": 32,
+            "survived": 4,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 3,
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 4
+        },
+        "src/features/project-creation/services/edsContentSetup.ts": {
+            "score": 48.21,
+            "killed": 54,
+            "survived": 29,
+            "noCoverage": 29,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 5,
+                "logPresentation": 8,
+                "other": 4,
+                "branch": 10,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "block": 4,
+                "logPresentation": 4,
+                "string": 16,
+                "branch": 3,
+                "optionalChain": 2
+            },
+            "highValueSurvivors": 12,
+            "equivalent": 0,
+            "openGaps": 25
+        },
+        "src/features/project-creation/services/envVarClassifier.ts": {
+            "score": 100,
+            "killed": 19,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/project-creation/services/meshSetupService.ts": {
+            "score": 25.89,
+            "killed": 57,
+            "survived": 88,
+            "noCoverage": 78,
+            "timeout": 1,
+            "survivorCategories": {
+                "branch": 44,
+                "optionalChain": 5,
+                "string": 12,
+                "other": 13,
+                "block": 4,
+                "logPresentation": 10
+            },
+            "uncoveredCategories": {
+                "block": 12,
+                "optionalChain": 3,
+                "branch": 34,
+                "string": 15,
+                "logPresentation": 6,
+                "other": 8
+            },
+            "highValueSurvivors": 48,
+            "equivalent": 0,
+            "openGaps": 123
+        },
+        "src/features/project-creation/services/projectFinalizationService.ts": {
+            "score": 57.14,
+            "killed": 32,
+            "survived": 11,
+            "noCoverage": 13,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 4,
+                "branch": 4,
+                "string": 1,
+                "block": 1,
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {
+                "block": 5,
+                "logPresentation": 3,
+                "branch": 4,
+                "optionalChain": 1
+            },
+            "highValueSurvivors": 5,
+            "equivalent": 0,
+            "openGaps": 19
+        },
+        "src/features/project-creation/services/sanitization.ts": {
+            "score": 97.06,
+            "killed": 33,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/project-creation/ui/components/BlockLibrariesStepContent.tsx": {
+            "score": 85.19,
+            "killed": 23,
+            "survived": 4,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 4,
+            "equivalent": 0,
+            "openGaps": 4
+        },
+        "src/features/project-creation/ui/components/BrandGallery.tsx": {
+            "score": 27.59,
+            "killed": 32,
+            "survived": 55,
+            "noCoverage": 29,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 8,
+                "branch": 42,
+                "string": 4,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "string": 10,
+                "branch": 15,
+                "other": 3,
+                "optionalChain": 1
+            },
+            "highValueSurvivors": 43,
+            "equivalent": 0,
+            "openGaps": 70
+        },
+        "src/features/project-creation/ui/components/BuildYourProjectSummary.tsx": {
+            "score": 76.47,
+            "killed": 13,
+            "survived": 4,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 4,
+            "equivalent": 0,
+            "openGaps": 4
+        },
+        "src/features/project-creation/ui/components/ChoiceCard.tsx": {
+            "score": 72.22,
+            "killed": 13,
+            "survived": 5,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 2,
+                "branch": 3
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 3
+        },
+        "src/features/project-creation/ui/components/ConnectStoreStepContent.tsx": {
+            "score": 73.17,
+            "killed": 60,
+            "survived": 20,
+            "noCoverage": 2,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 7,
+                "other": 10,
+                "block": 1,
+                "string": 2
+            },
+            "uncoveredCategories": {
+                "other": 2
+            },
+            "highValueSurvivors": 8,
+            "equivalent": 0,
+            "openGaps": 20
+        },
+        "src/features/project-creation/ui/components/commerceSectionValidity.ts": {
+            "score": 100,
+            "killed": 14,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx": {
+            "score": 80.22,
+            "killed": 73,
+            "survived": 18,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 7,
+                "branch": 3,
+                "string": 8
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 10
+        },
+        "src/features/project-creation/ui/components/integration-flow/flowStages.ts": {
+            "score": 93.1,
+            "killed": 161,
+            "survived": 12,
+            "noCoverage": 0,
+            "timeout": 1,
+            "survivorCategories": {
+                "branch": 6,
+                "block": 1,
+                "string": 5
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 7,
+            "equivalent": 0,
+            "openGaps": 7
+        },
+        "src/features/project-creation/ui/components/integration-flow/instanceId.ts": {
+            "score": 97.5,
+            "killed": 38,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 1,
+            "survivorCategories": {
+                "other": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/project-creation/ui/components/integration-flow/integrationCards.ts": {
+            "score": 95.31,
+            "killed": 61,
+            "survived": 3,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 2,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/project-creation/ui/components/integration-flow/integrationRows.ts": {
+            "score": 96.19,
+            "killed": 101,
+            "survived": 3,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 2,
+                "other": 1
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 2,
+            "equivalent": 0,
+            "openGaps": 3
+        },
+        "src/features/project-creation/ui/components/integration-flow/stages/ApiPickerStage.tsx": {
+            "score": 58.7,
+            "killed": 27,
+            "survived": 14,
+            "noCoverage": 5,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 6,
+                "other": 5,
+                "block": 1,
+                "string": 2
+            },
+            "uncoveredCategories": {
+                "string": 1,
+                "block": 1,
+                "branch": 3
+            },
+            "highValueSurvivors": 7,
+            "equivalent": 0,
+            "openGaps": 16
+        },
+        "src/features/project-creation/ui/components/integration-flow/stages/BlankStage.tsx": {
+            "score": 41.67,
+            "killed": 15,
+            "survived": 21,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 11,
+                "other": 7,
+                "string": 1,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 11,
+            "equivalent": 0,
+            "openGaps": 20
+        },
+        "src/features/project-creation/ui/components/integration-flow/stages/CatalogStage.tsx": {
+            "score": 95.45,
+            "killed": 21,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/project-creation/ui/components/integration-flow/stages/CustomStage.tsx": {
+            "score": 92,
+            "killed": 23,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/project-creation/ui/components/integration-flow/stages/DestinationStage.tsx": {
+            "score": 83.33,
+            "killed": 55,
+            "survived": 10,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 5,
+                "string": 3,
+                "other": 1,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 5,
+            "equivalent": 0,
+            "openGaps": 7
+        },
+        "src/features/project-creation/ui/components/integration-flow/stages/KindStage.tsx": {
+            "score": 80,
+            "killed": 24,
+            "survived": 6,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 3,
+                "string": 3
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 3
+        },
+        "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts": {
+            "score": 80.95,
+            "killed": 170,
+            "survived": 39,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 25,
+                "other": 13,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 26,
+            "equivalent": 0,
+            "openGaps": 39
+        },
+        "src/features/project-creation/ui/helpers/stackHelpers.ts": {
+            "score": 80.77,
+            "killed": 41,
+            "survived": 10,
+            "noCoverage": 0,
+            "timeout": 1,
+            "survivorCategories": {
+                "other": 1,
+                "branch": 9
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 10
+        },
+        "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts": {
+            "score": 73.91,
+            "killed": 136,
+            "survived": 42,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 13,
+                "optionalChain": 16,
+                "branch": 9,
+                "string": 4
+            },
+            "uncoveredCategories": {
+                "string": 3,
+                "block": 1,
+                "branch": 2
+            },
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 41
+        },
+        "src/features/project-creation/ui/hooks/useStepValidation.ts": {
+            "score": 90.91,
+            "killed": 20,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 2
+        },
+        "src/features/project-creation/ui/steps/BuildYourProjectStep.tsx": {
+            "score": 71.43,
+            "killed": 20,
+            "survived": 8,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 4,
+                "optionalChain": 3,
+                "string": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 7
+        },
+        "src/features/project-creation/ui/steps/CommerceStep.tsx": {
+            "score": 67.82,
+            "killed": 59,
+            "survived": 22,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 6,
+                "other": 14,
+                "string": 1,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "other": 3,
+                "string": 2,
+                "branch": 1
+            },
+            "highValueSurvivors": 6,
+            "equivalent": 0,
+            "openGaps": 25
+        },
+        "src/features/project-creation/ui/steps/IntegrationsStep.tsx": {
+            "score": 57.69,
+            "killed": 105,
+            "survived": 68,
+            "noCoverage": 9,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 36,
+                "optionalChain": 6,
+                "string": 4,
+                "branch": 22
+            },
+            "uncoveredCategories": {
+                "optionalChain": 1,
+                "string": 3,
+                "other": 3,
+                "branch": 2
+            },
+            "highValueSurvivors": 22,
+            "equivalent": 0,
+            "openGaps": 70
+        },
+        "src/features/project-creation/ui/steps/ProjectCreationStep.tsx": {
+            "score": 40,
+            "killed": 100,
+            "survived": 67,
+            "noCoverage": 83,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 42,
+                "string": 11,
+                "optionalChain": 2,
+                "block": 6,
+                "other": 6
+            },
+            "uncoveredCategories": {
+                "block": 17,
+                "branch": 41,
+                "optionalChain": 2,
+                "string": 15,
+                "other": 6,
+                "logPresentation": 2
+            },
+            "highValueSurvivors": 48,
+            "equivalent": 0,
+            "openGaps": 122
+        },
+        "src/features/project-creation/ui/steps/ReviewStep.tsx": {
+            "score": 20.49,
+            "killed": 50,
+            "survived": 86,
+            "noCoverage": 108,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 46,
+                "string": 13,
+                "other": 19,
+                "block": 6,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {
+                "branch": 74,
+                "string": 15,
+                "optionalChain": 8,
+                "block": 3,
+                "other": 8
+            },
+            "highValueSurvivors": 52,
+            "equivalent": 0,
+            "openGaps": 166
+        },
+        "src/features/project-creation/ui/steps/SampleDataStep.tsx": {
+            "score": 50,
+            "killed": 38,
+            "survived": 24,
+            "noCoverage": 14,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 11,
+                "branch": 8,
+                "block": 1,
+                "string": 4
+            },
+            "uncoveredCategories": {
+                "string": 1,
+                "other": 6,
+                "block": 2,
+                "branch": 4,
+                "optionalChain": 1
+            },
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 33
+        },
+        "src/features/project-creation/ui/steps/StorefrontStep.tsx": {
+            "score": 33.33,
+            "killed": 43,
+            "survived": 43,
+            "noCoverage": 43,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 14,
+                "branch": 25,
+                "optionalChain": 1,
+                "string": 3
+            },
+            "uncoveredCategories": {
+                "block": 10,
+                "branch": 23,
+                "string": 3,
+                "other": 7
+            },
+            "highValueSurvivors": 25,
+            "equivalent": 0,
+            "openGaps": 80
+        },
+        "src/features/project-creation/ui/steps/WelcomeStep.tsx": {
+            "score": 50.65,
+            "killed": 78,
+            "survived": 66,
+            "noCoverage": 10,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 43,
+                "other": 11,
+                "string": 4,
+                "block": 2,
+                "optionalChain": 6
+            },
+            "uncoveredCategories": {
+                "block": 2,
+                "branch": 5,
+                "string": 1,
+                "other": 2
+            },
+            "highValueSurvivors": 45,
+            "equivalent": 0,
+            "openGaps": 71
+        },
+        "src/features/project-creation/ui/steps/areaSubSteps.ts": {
+            "score": 47.92,
+            "killed": 46,
+            "survived": 21,
+            "noCoverage": 29,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 14,
+                "other": 4,
+                "string": 2,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "other": 6,
+                "branch": 12,
+                "string": 3,
+                "block": 7,
+                "optionalChain": 1
+            },
+            "highValueSurvivors": 14,
+            "equivalent": 0,
+            "openGaps": 45
+        },
+        "src/features/project-creation/ui/steps/buildSummary.ts": {
+            "score": 83.74,
+            "killed": 103,
+            "survived": 19,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 8,
+                "other": 5,
+                "optionalChain": 3,
+                "string": 3
+            },
+            "uncoveredCategories": {
+                "branch": 1
+            },
+            "highValueSurvivors": 8,
+            "equivalent": 0,
+            "openGaps": 17
+        },
+        "src/features/project-creation/ui/steps/buildYourProjectAreas.ts": {
+            "score": 96.15,
+            "killed": 25,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/project-creation/ui/steps/commerceSections.ts": {
+            "score": 86.38,
+            "killed": 203,
+            "survived": 31,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 10,
+                "optionalChain": 1,
+                "other": 4,
+                "string": 16
+            },
+            "uncoveredCategories": {
+                "other": 1
+            },
+            "highValueSurvivors": 10,
+            "equivalent": 0,
+            "openGaps": 16
+        },
+        "src/features/project-creation/ui/steps/edsConfigFromStorefront.ts": {
+            "score": 100,
+            "killed": 1,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/project-creation/ui/steps/reviewPredicates.ts": {
+            "score": 69.23,
+            "killed": 18,
+            "survived": 6,
+            "noCoverage": 2,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "branch": 3,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {
+                "branch": 2
+            },
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 8
+        },
+        "src/features/project-creation/ui/steps/storefrontSections.ts": {
+            "score": 98.08,
+            "killed": 51,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/project-creation/ui/steps/tileStatus.ts": {
+            "score": 85.39,
+            "killed": 76,
+            "survived": 13,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 8,
+                "other": 1,
+                "optionalChain": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 8,
+            "equivalent": 0,
+            "openGaps": 13
+        },
+        "src/features/project-creation/ui/steps/useProjectBuilder.ts": {
+            "score": 83.58,
+            "killed": 168,
+            "survived": 30,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 11,
+                "other": 11,
+                "string": 1,
+                "optionalChain": 7
+            },
+            "uncoveredCategories": {
+                "other": 2,
+                "branch": 1
+            },
+            "highValueSurvivors": 11,
+            "equivalent": 0,
+            "openGaps": 32
+        },
+        "src/features/project-creation/ui/wizard/WizardContainer.tsx": {
+            "score": 32.67,
+            "killed": 46,
+            "survived": 54,
+            "noCoverage": 47,
+            "timeout": 3,
+            "survivorCategories": {
+                "string": 11,
+                "block": 6,
+                "other": 10,
+                "branch": 26,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "block": 7,
+                "other": 8,
+                "logPresentation": 2,
+                "optionalChain": 2,
+                "branch": 23,
+                "string": 5
+            },
+            "highValueSurvivors": 32,
+            "equivalent": 0,
+            "openGaps": 83
+        },
+        "src/features/project-creation/ui/wizard/appBuilderComponentSelectionState.ts": {
+            "score": 100,
+            "killed": 15,
+            "survived": 0,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/features/project-creation/ui/wizard/hooks/useWizardState.ts": {
+            "score": 18.05,
+            "killed": 50,
+            "survived": 87,
+            "noCoverage": 140,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 20,
+                "branch": 54,
+                "block": 4,
+                "logPresentation": 4,
+                "string": 3,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {
+                "block": 8,
+                "branch": 70,
+                "string": 30,
+                "other": 26,
+                "logPresentation": 4,
+                "optionalChain": 2
+            },
+            "highValueSurvivors": 58,
+            "equivalent": 0,
+            "openGaps": 186
+        },
+        "src/features/project-creation/ui/wizard/stepFiltering.ts": {
+            "score": 67.27,
+            "killed": 37,
+            "survived": 10,
+            "noCoverage": 8,
+            "timeout": 0,
+            "survivorCategories": {
+                "block": 1,
+                "branch": 9
+            },
+            "uncoveredCategories": {
+                "branch": 6,
+                "optionalChain": 1,
+                "block": 1
+            },
+            "highValueSurvivors": 10,
+            "equivalent": 0,
+            "openGaps": 18
+        },
+        "src/features/project-creation/ui/wizard/wizardHelpers.ts": {
+            "score": 73.47,
+            "killed": 287,
+            "survived": 53,
+            "noCoverage": 51,
+            "timeout": 1,
+            "survivorCategories": {
+                "branch": 32,
+                "other": 6,
+                "block": 6,
+                "optionalChain": 8,
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "block": 5,
+                "branch": 17,
+                "optionalChain": 2,
+                "other": 6,
+                "string": 19,
+                "logPresentation": 2
+            },
+            "highValueSurvivors": 38,
+            "equivalent": 0,
+            "openGaps": 82
+        },
+        "src/features/projects-dashboard/commands/showProjectsList.ts": {
+            "score": 35.16,
+            "killed": 32,
+            "survived": 7,
+            "noCoverage": 52,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 5,
+                "string": 1,
+                "block": 1
+            },
+            "uncoveredCategories": {
+                "block": 18,
+                "string": 13,
+                "branch": 13,
+                "other": 7,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 6,
+            "equivalent": 0,
+            "openGaps": 44
+        },
+        "src/features/projects-dashboard/handlers/dashboardHandlers.ts": {
+            "score": 36.38,
+            "killed": 159,
+            "survived": 39,
+            "noCoverage": 239,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 5,
+                "branch": 21,
+                "string": 9,
+                "logPresentation": 1,
+                "block": 3
+            },
+            "uncoveredCategories": {
+                "other": 35,
+                "block": 53,
+                "string": 46,
+                "branch": 77,
+                "logPresentation": 17,
+                "optionalChain": 11
+            },
+            "highValueSurvivors": 24,
+            "equivalent": 0,
+            "openGaps": 205
+        },
+        "src/features/projects-dashboard/services/projectDeletionService.ts": {
+            "score": 36.56,
+            "killed": 150,
+            "survived": 199,
+            "noCoverage": 70,
+            "timeout": 5,
+            "survivorCategories": {
+                "branch": 89,
+                "string": 48,
+                "other": 27,
+                "logPresentation": 13,
+                "block": 10,
+                "optionalChain": 12
+            },
+            "uncoveredCategories": {
+                "block": 11,
+                "branch": 23,
+                "string": 21,
+                "other": 11,
+                "logPresentation": 4
+            },
+            "highValueSurvivors": 99,
+            "equivalent": 0,
+            "openGaps": 183
+        },
+        "src/features/projects-dashboard/services/projectRenameService.ts": {
+            "score": 63.57,
+            "killed": 82,
+            "survived": 41,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 2,
+                "block": 4,
+                "branch": 15,
+                "string": 15,
+                "optionalChain": 3,
+                "logPresentation": 2
+            },
+            "uncoveredCategories": {
+                "string": 3,
+                "block": 3
+            },
+            "highValueSurvivors": 19,
+            "equivalent": 0,
+            "openGaps": 27
+        },
+        "src/features/projects-dashboard/services/settingsSerializer.ts": {
+            "score": 94.57,
+            "killed": 87,
+            "survived": 4,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1,
+                "branch": 1,
+                "block": 1,
+                "other": 1
+            },
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 2,
+            "equivalent": 0,
+            "openGaps": 3
+        },
+        "src/features/projects-dashboard/ui/ProjectsDashboard.tsx": {
+            "score": 36.46,
+            "killed": 35,
+            "survived": 27,
+            "noCoverage": 34,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 20,
+                "other": 5,
+                "block": 1,
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "block": 3,
+                "optionalChain": 1,
+                "branch": 25,
+                "string": 5
+            },
+            "highValueSurvivors": 21,
+            "equivalent": 0,
+            "openGaps": 55
+        },
+        "src/features/projects-dashboard/ui/components/DashboardEmptyState.tsx": {
+            "score": 53.85,
+            "killed": 7,
+            "survived": 2,
+            "noCoverage": 4,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 1,
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "other": 1,
+                "string": 2
+            },
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 3
+        },
+        "src/features/projects-dashboard/ui/components/ProjectActionsMenu.tsx": {
+            "score": 71.43,
+            "killed": 95,
+            "survived": 32,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 3,
+                "optionalChain": 1,
+                "branch": 7,
+                "string": 21
+            },
+            "uncoveredCategories": {
+                "block": 2,
+                "other": 1,
+                "string": 3
+            },
+            "highValueSurvivors": 7,
+            "equivalent": 0,
+            "openGaps": 14
+        },
+        "src/features/projects-dashboard/ui/components/ProjectCard.tsx": {
+            "score": 51.61,
+            "killed": 16,
+            "survived": 10,
+            "noCoverage": 5,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 3,
+                "string": 1,
+                "branch": 6
+            },
+            "uncoveredCategories": {
+                "other": 1,
+                "string": 4
+            },
+            "highValueSurvivors": 6,
+            "equivalent": 0,
+            "openGaps": 10
+        },
+        "src/features/projects-dashboard/ui/components/ProjectRow.tsx": {
+            "score": 31.82,
+            "killed": 7,
+            "survived": 10,
+            "noCoverage": 5,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 2,
+                "string": 2,
+                "branch": 6
+            },
+            "uncoveredCategories": {
+                "string": 4,
+                "other": 1
+            },
+            "highValueSurvivors": 6,
+            "equivalent": 0,
+            "openGaps": 9
+        },
+        "src/features/projects-dashboard/ui/components/ProjectsGrid.tsx": {
+            "score": 40,
+            "killed": 2,
+            "survived": 3,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 3
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 3
+        },
+        "src/features/projects-dashboard/utils/projectStatusUtils.ts": {
+            "score": 58.06,
+            "killed": 126,
+            "survived": 41,
+            "noCoverage": 50,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 17,
+                "branch": 18,
+                "other": 4,
+                "block": 2
+            },
+            "uncoveredCategories": {
+                "block": 8,
+                "string": 13,
+                "branch": 26,
+                "other": 3
+            },
+            "highValueSurvivors": 20,
+            "equivalent": 0,
+            "openGaps": 61
+        },
+        "src/features/sidebar/providers/sidebarProvider.ts": {
+            "score": 32.64,
+            "killed": 79,
+            "survived": 47,
+            "noCoverage": 116,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 4,
+                "string": 15,
+                "branch": 18,
+                "block": 6,
+                "optionalChain": 1,
+                "logPresentation": 3
+            },
+            "uncoveredCategories": {
+                "block": 46,
+                "branch": 16,
+                "logPresentation": 17,
+                "string": 35,
+                "other": 2
+            },
+            "highValueSurvivors": 24,
+            "equivalent": 0,
+            "openGaps": 93
+        },
+        "src/features/sidebar/ui/Sidebar.tsx": {
+            "score": 71.43,
+            "killed": 5,
+            "survived": 2,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 0,
+            "openGaps": 2
+        },
+        "src/features/sidebar/ui/views/UtilityBar.tsx": {
+            "score": 92.86,
+            "killed": 13,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 1
+        },
+        "src/features/updates/commands/checkUpdates.ts": {
+            "score": 53.46,
+            "killed": 170,
+            "survived": 126,
+            "noCoverage": 22,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 80,
+                "other": 12,
+                "string": 25,
+                "block": 4,
+                "logPresentation": 5
+            },
+            "uncoveredCategories": {
+                "block": 6,
+                "logPresentation": 2,
+                "string": 6,
+                "branch": 8
+            },
+            "highValueSurvivors": 84,
+            "equivalent": 0,
+            "openGaps": 110
+        },
+        "src/features/updates/commands/updateExecutor.ts": {
+            "score": 22.55,
+            "killed": 53,
+            "survived": 27,
+            "noCoverage": 155,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 13,
+                "branch": 7,
+                "block": 1,
+                "other": 4,
+                "optionalChain": 1,
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {
+                "string": 34,
+                "branch": 58,
+                "block": 38,
+                "logPresentation": 4,
+                "optionalChain": 2,
+                "other": 19
+            },
+            "highValueSurvivors": 8,
+            "equivalent": 0,
+            "openGaps": 130
+        },
+        "src/features/updates/services/addonUpdateChecker.ts": {
+            "score": 57.53,
+            "killed": 42,
+            "survived": 27,
+            "noCoverage": 4,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 7,
+                "optionalChain": 5,
+                "block": 3,
+                "logPresentation": 6,
+                "other": 4,
+                "string": 2
+            },
+            "uncoveredCategories": {
+                "block": 2,
+                "string": 1,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 10,
+            "equivalent": 0,
+            "openGaps": 21
+        },
+        "src/features/updates/services/adobeMcpUpdateChecker.ts": {
+            "score": 56.25,
+            "killed": 27,
+            "survived": 21,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 2,
+                "logPresentation": 5,
+                "branch": 7,
+                "block": 5,
+                "string": 2
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 12,
+            "equivalent": 0,
+            "openGaps": 14
+        },
+        "src/features/updates/services/adobeMcpUpdateCore.ts": {
+            "score": 73.91,
+            "killed": 17,
+            "survived": 5,
+            "noCoverage": 1,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 2,
+                "optionalChain": 2,
+                "logPresentation": 1
+            },
+            "uncoveredCategories": {
+                "other": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 3
+        },
+        "src/features/updates/services/collaboratorGate.ts": {
+            "score": 67.65,
+            "killed": 46,
+            "survived": 22,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 11,
+                "block": 2,
+                "string": 4,
+                "other": 1,
+                "logPresentation": 4
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 13,
+            "equivalent": 0,
+            "openGaps": 14
+        },
+        "src/features/updates/services/componentRepositoryResolver.ts": {
+            "score": 81.25,
+            "killed": 39,
+            "survived": 6,
+            "noCoverage": 3,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 2,
+                "string": 1,
+                "other": 3
+            },
+            "uncoveredCategories": {
+                "block": 2,
+                "string": 1
+            },
+            "highValueSurvivors": 2,
+            "equivalent": 0,
+            "openGaps": 7
+        },
+        "src/features/updates/services/extensionUpdater.ts": {
+            "score": 90.7,
+            "killed": 39,
+            "survived": 4,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "logPresentation": 2,
+                "other": 1,
+                "block": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 2
+        },
+        "src/features/updates/services/forkSyncService.ts": {
+            "score": 68.24,
+            "killed": 58,
+            "survived": 21,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 4,
+                "other": 3,
+                "branch": 7,
+                "logPresentation": 4,
+                "optionalChain": 3
+            },
+            "uncoveredCategories": {
+                "block": 2,
+                "logPresentation": 1,
+                "string": 3
+            },
+            "highValueSurvivors": 7,
+            "equivalent": 0,
+            "openGaps": 15
+        },
+        "src/features/updates/services/githubApiClient.ts": {
+            "score": 78.57,
+            "killed": 44,
+            "survived": 12,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "block": 3,
+                "branch": 7,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {},
+            "highValueSurvivors": 10,
+            "equivalent": 0,
+            "openGaps": 12
+        },
+        "src/features/updates/services/releaseTrack.ts": {
+            "score": 90.11,
+            "killed": 82,
+            "survived": 5,
+            "noCoverage": 4,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "branch": 4
+            },
+            "uncoveredCategories": {
+                "block": 1,
+                "branch": 3
+            },
+            "highValueSurvivors": 4,
+            "equivalent": 0,
+            "openGaps": 9
+        },
+        "src/features/updates/services/templateSyncService.ts": {
+            "score": 29.41,
+            "killed": 75,
+            "survived": 107,
+            "noCoverage": 73,
+            "timeout": 0,
+            "survivorCategories": {
+                "optionalChain": 2,
+                "branch": 26,
+                "string": 29,
+                "other": 28,
+                "logPresentation": 17,
+                "block": 5
+            },
+            "uncoveredCategories": {
+                "block": 19,
+                "other": 8,
+                "branch": 15,
+                "string": 22,
+                "logPresentation": 7,
+                "optionalChain": 2
+            },
+            "highValueSurvivors": 31,
+            "equivalent": 0,
+            "openGaps": 105
+        },
+        "src/features/updates/services/templateUpdateChecker.ts": {
+            "score": 68.32,
+            "killed": 69,
+            "survived": 23,
+            "noCoverage": 9,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 14,
+                "optionalChain": 3,
+                "logPresentation": 3,
+                "block": 3
+            },
+            "uncoveredCategories": {
+                "branch": 4,
+                "string": 1,
+                "block": 2,
+                "logPresentation": 2
+            },
+            "highValueSurvivors": 17,
+            "equivalent": 0,
+            "openGaps": 26
+        },
+        "src/features/updates/services/updateApplyService.ts": {
+            "score": 37.33,
+            "killed": 81,
+            "survived": 24,
+            "noCoverage": 112,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 9,
+                "logPresentation": 3,
+                "string": 7,
+                "other": 5
+            },
+            "uncoveredCategories": {
+                "string": 21,
+                "branch": 29,
+                "block": 24,
+                "other": 27,
+                "logPresentation": 6,
+                "optionalChain": 5
+            },
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 99
+        },
+        "src/types/errorCodes.ts": {
+            "score": 12.64,
+            "killed": 11,
+            "survived": 40,
+            "noCoverage": 36,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 1,
+                "other": 1,
+                "string": 38
+            },
+            "uncoveredCategories": {
+                "branch": 15,
+                "string": 15,
+                "other": 6
+            },
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 23
+        },
+        "src/types/typeGuards.ts": {
+            "score": 67.21,
+            "killed": 164,
+            "survived": 24,
+            "noCoverage": 56,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 1,
+                "branch": 10,
+                "optionalChain": 12,
+                "string": 1
+            },
+            "uncoveredCategories": {
+                "block": 9,
+                "branch": 35,
+                "optionalChain": 3,
+                "other": 3,
+                "string": 6
+            },
+            "highValueSurvivors": 10,
+            "equivalent": 0,
+            "openGaps": 73
+        },
+        "src/utils/autoUpdater.ts": {
+            "score": 23.62,
+            "killed": 30,
+            "survived": 34,
+            "noCoverage": 63,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 11,
+                "logPresentation": 4,
+                "branch": 13,
+                "other": 2,
+                "block": 3,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "block": 18,
+                "logPresentation": 9,
+                "branch": 18,
+                "string": 14,
+                "optionalChain": 1,
+                "other": 3
+            },
+            "highValueSurvivors": 16,
+            "equivalent": 0,
+            "openGaps": 59
         }
     }
 }

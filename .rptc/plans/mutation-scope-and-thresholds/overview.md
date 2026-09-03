@@ -88,6 +88,21 @@ density at **r = −0.72**.
 | mixed | 69.2 · 84.5 (2) | 76.9% | **80%** |
 | orchestration | 43.8 · 46.3 · 51.4 · 66.9 · 71.2 · 82.6 · 83.3 · 95.7 (8) | 69.0% | **70%** |
 
+> **Re-read at 610 modules, 2026-09-03.** The rows above were fitted to sixteen
+> deliberately chosen, already-worked modules. The full measurable set looks different:
+>
+> | Tier | n | Median | 25th–75th | Pass the proposed floor |
+> |---|---|---|---|---|
+> | pure | 286 | 79.6% | 58.7–93.0 | 34% |
+> | mixed | 109 | 65.5% | 52.2–77.5 | 21% |
+> | orchestration | 215 | 63.4% | 44.1–73.5 | 32% |
+>
+> The tier ORDER holds — pure above mixed above orchestration, as the async argument
+> predicts — so the model is right. The floors sit far above where the code actually
+> is, and they still answer the wrong question: across 610 modules the floor verdict and
+> "zero open gaps" disagree on 126. Ratify the tiers; treat the floors as targets;
+> gate on `openGaps`. Detail and per-area figures in [[PL-22]].
+
 ### Why the gap is structural, not effort
 
 A pure function maps inputs to outputs; almost every mutation changes an output, so almost

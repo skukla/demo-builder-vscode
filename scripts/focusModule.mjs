@@ -194,6 +194,15 @@ function main() {
         console.error(`No test suites mirror ${arg}. Refusing to write a config that would report a confident zero.`);
         process.exit(1);
     }
+    // NO check here for whether the suites actually EXERCISE the module. Two were tried
+    // on 2026-09-03 and both were wrong: "does the suite import it by path" would have
+    // refused 34 modules that measure fine, and "does the suite mention its name at all"
+    // would still have refused three — suites reach their subject through `.testUtils`
+    // re-exports and feature barrels, and no text heuristic sees an import graph.
+    // Stryker does. A suite that matches by name and never touches the module makes
+    // Stryker report "No tests were executed", and `mutationSweep.mjs` files that as a
+    // skip rather than a failure. That is the one place the answer is reliable.
+
     const previous = stryker.mutate[0];
     stryker.mutate = [arg];
     writeFileSync(STRYKER, JSON.stringify(stryker, null, 4) + '\n');

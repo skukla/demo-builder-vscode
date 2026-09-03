@@ -40,14 +40,29 @@ in exactly that gap with twelve tests staying green.
 
 ## What is measured now
 
-16 modules are pinned in `reports/mutation/baseline.json`, shrink-only. Min 43.77,
-median 83.33, max 100. Note this is a snapshot of the CURRENT state, after test work —
-not a virgin measurement.
+**610 of 622 measurable modules — 98% — pinned in `reports/mutation/baseline.json`**
+(sweep completed 2026-09-03; `npm run test:mutation:sweep`, resumable, skips a pinned
+module so a re-measure can never silently lower a floor). The 12 unpinned: 11 have no
+test suite at all; 1 has a suite named for it that never touches it.
 
-That is 16 of the 507 files the scope rule then included: **3.2%**. That coverage number
-is the one to track rather than any average score. The denominator has since grown to
-**622** as the React gap closed, and a resumable sweep
-(`npm run test:mutation:sweep`) is working through it.
+| Tier | n | Median score | 25th–75th | At proposed floor | Done (0 gaps) | Open gaps |
+|---|---|---|---|---|---|---|
+| pure | 286 | 79.6% | 58.7–93.0 | 96 (34%) | 57 (20%) | 4,775 |
+| mixed | 109 | 65.5% | 52.2–77.5 | 23 (21%) | 3 (3%) | 3,744 |
+| orchestration | 215 | 63.4% | 44.1–73.5 | 68 (32%) | 11 (5%) | 8,956 |
+| **all** | **610** | **69.2%** | 52.3–84.5 | 187 (31%) | 71 (12%) | **17,475** |
+
+**17,475 real gaps** — surviving or uncovered mutants that are not wording changes and not
+recorded as equivalent. By area, ranked: eds 3,926 (103 modules) · project-creation
+2,257 · dashboard 1,521 · ai 1,242 · data-installer 909 · core/ui 812 · authentication
+812 · prerequisites 775 · updates 734 · components 731 · projects-dashboard 617 · mesh 532.
+
+Worst twelve by open gaps: `daLiveContentCopy.ts` 437 (6.31%), `dashboard/commands/
+configure.ts` 262, `projects-dashboard/handlers/dashboardHandlers.ts` 205,
+`RepoSelectionInline.tsx` 201, `envFileGenerator.ts` 194, `useWizardState.ts` 186,
+`projectDeletionService.ts` 183, `useComponentConfig.ts` 181,
+`adobeWorkspaceCredentials.ts` 178, `ReviewStep.tsx` 166, `createProject.ts` 163,
+`prerequisites/handlers/shared.ts` 152.
 
 ## What the burn-down has moved
 
@@ -113,14 +128,26 @@ unreachable by arithmetic, not by neglect.
   remaining survivor is triaged as equivalent or wording-only — a file at 69% can be done
   and a file at 85% can be neglected.
 
+### The same question at 610 modules
+
+The 16-module medians the floors were fitted to were the BEST-tested code in the repo,
+not the middle of it. At 610: the pure median is 79.6% against a 90% floor (34% pass),
+mixed 65.5% against 80% (21%), orchestration 63.4% against 70% (32%). Ratified as a gate
+today, the floors would fail two modules in three.
+
+And the floor still answers the wrong question. Across 610 modules the floor verdict and
+"zero open gaps" **disagree on 126** — 121 modules clear their floor with real gaps
+left, 5 fall short of it with none. The recommendation stands and is now grounded in
+the full set rather than sixteen: the tiers are right, the floors are targets, and
+`openGaps` is the gate.
+
 ## What keeps this open
 
 1. **Nothing is ratified yet** — not the tiers, not the floors, not the gate. The
    recommendation above is what awaits a decision.
-2. **The burn-down is at 3.2%.** The plan's step 1 is one long unattended run baselining
-   every included module; everything else is guesswork until it exists. `highValueSurvivors`
-   is only recorded for the 16 pinned modules, so the gate proposed above has no reading
-   for the other 491.
+2. ~~The burn-down is at 3.2%.~~ **The map exists — 98% measured.** What remains is
+   working it: 17,475 open gaps, 71 modules done. The plan's step 6 says order by
+   consequence, not score; the area table above is the input to that ordering.
 3. ~~115 React files are invisible to the instrument.~~ **FIXED 2026-09-03**, and it was
    156 files rather than 115 — the 115 `.tsx` sources plus 41 `.ts` sources whose suites
    are all React suites, a group no count had included. The focused runner now picks its
@@ -164,3 +191,6 @@ which point the cadence drops to release cuts.
 - 2026-09-03  Item rewritten to lead with the ANSWER rather than the question. Documents: the 59.29% representative sample and the two qualifications on it (config undercount, corrected); r=-0.72 async correlation; the 16 pinned modules (min 43.77, median 83.33) = 3.2% of the 507-file included set; the four modules the burn-down moved (installHandler 41.77->71.16, daLiveAuthPrompt 67.04->82.58, siteTools 57.33->69.20, stateManager 56.49->66.88); the three PROPOSED tier floors (pure 90 / mixed 80 / orchestration 70) marked unratified; and the four things keeping it open.
 - 2026-09-03  Thresholds assessed against the data rather than accepted from the plan. Finding: the tier model is sound (mechanical, r=-0.72) but the floors are the WRONG GATE — floor verdict and highValueSurvivors disagree on 7 of 16 pinned modules. installHandler PASSES at 71.16% holding 55 high-value survivors (most of any module) while updateManager FAILS at 51.40% holding 52; mcpSocketPath FAILS the 90% pure floor at 77.78% with ZERO high-value survivors and cannot reach 90% at all (9 mutants, steps of 11.1pt). Also corrected the plan's pure tier: n=6 not n=5 (spectrumTokens 88.24 omitted), median 93.2 not 94.4. Recommendation recorded: ratify tiers + floors-as-targets, gate on highValueSurvivors. Title now states the answer.
 - 2026-09-03  feat(mutation): make "finished" recordable, and a sweep that can measure all 507 (`6017a6c15`)
+- 2026-09-03  fix(mutation): a per-file jest environment defeats Stryker — decide it in config instead (`b59512bd1`)
+- 2026-09-03  feat(mutation): the runner picks its jest project, unblocking a third of the codebase (`c3dadd694`)
+- 2026-09-03  Baseline sweep COMPLETE: 610 of 622 included modules pinned (98%). Tally across runs: 11 skipped (no mirrored suite), 1 name-only suite that never exercises its module (DashboardStatusHeader.tsx — Stryker 'No tests were executed', now filed as a skip rather than a failure), 0 timeouts. Three runner defects found and fixed on the way: React modules unmeasurable (jest project chosen from suites now; +156 files), @jest-environment docblocks defeating Stryker's coverage hook (61 files, decided in jest.config.js now, enforcer added), and openGaps ignoring uncovered mutants (4 modules read finished that no test entered). Two text heuristics for 'does the suite exercise the module' were tried and both refused modules that measure fine; that decision is left to Stryker. 48 early rows being re-measured for the uncovered breakdown.
