@@ -120,3 +120,4 @@ is currently `off` for `tests/` in `eslint.config.mjs`; that line goes too.
 - 2026-09-01  feat(codemod): adopt ts-morph, with a harness tuned to this repo (`a60ab0379`)
 - 2026-09-03  Every remaining cast converted: 431 across 177 files, in one parallel pass over the compiler's load-bearing worklist. Ledger pinned at 0/0; the last six text matches were architecture-rules' own control fixtures, now in the detector's exclusion list. Left: delete the ledger test and add the eslint ban
 - 2026-09-02  test: type-erasing casts in tests reach zero — 431 removed across 177 files (`cc96e598b`)
+- 2026-09-03  Merge loop/2026-09-02-goal-queue: PL-32 to zero, PL-16 two families closed (`54aae2213`)
