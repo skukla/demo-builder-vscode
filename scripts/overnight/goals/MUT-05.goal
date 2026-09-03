@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-05. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/authentication/services/adobeOrgServices.ts  (orchestration, 22.92%, 59 open gaps)
-  - src/features/authentication/services/authenticationService.ts  (orchestration, 43.77%, 52 open gaps)
-  - src/features/authentication/ui/hooks/useAuthStatus.ts  (pure, 59.5%, 38 open gaps)
-  - src/features/authentication/ui/components/AdobeEntityFields.tsx  (mixed, 55.24%, 32 open gaps)
-  - src/features/authentication/services/tokenManager.ts  (orchestration, 68.49%, 29 open gaps)
+  - src/core/state/projectConfigWriter.ts  (orchestration, 37.59%, 63 open gaps)
+  - src/core/state/stateManager.ts  (orchestration, 66.88%, 31 open gaps)
+  - src/core/state/appBuilderComponentState.ts  (pure, 57.63%, 23 open gaps)
+  - src/core/state/manifestFormatSweep.ts  (orchestration, 51.79%, 19 open gaps)
+  - src/core/state/apiRowState.ts  (pure, 75.93%, 13 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts

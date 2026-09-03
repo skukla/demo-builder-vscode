@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-06. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/authentication/ui/components/AdobeWorkspacePicker.tsx  (pure, 51.43%, 25 open gaps)
-  - src/features/authentication/ui/steps/AdobeAuthStep.tsx  (pure, 67.21%, 25 open gaps)
-  - src/features/authentication/services/authCacheManager.ts  (pure, 73.68%, 23 open gaps)
-  - src/features/authentication/ui/components/AdobeProjectPicker.tsx  (mixed, 72.57%, 20 open gaps)
-  - src/features/authentication/handlers/deleteAdobeProjectHandler.ts  (orchestration, 85.54%, 17 open gaps)
+  - src/core/state/projectDirectoryScanner.ts  (orchestration, 44.44%, 11 open gaps)
+  - src/core/state/manifestValidation.ts  (pure, 64.86%, 10 open gaps)
+  - src/core/state/componentSelectionReconcile.ts  (pure, 86.36%, 5 open gaps)
+  - src/core/state/componentApiPicks.ts  (pure, 89.13%, 4 open gaps)
+  - src/core/state/appBuilderComponentMigration.ts  (pure, 81.82%, 3 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts

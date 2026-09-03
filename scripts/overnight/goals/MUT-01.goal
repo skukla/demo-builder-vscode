@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-01. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/updates/commands/updateExecutor.ts  (orchestration, 22.55%, 130 open gaps)
-  - src/features/updates/commands/checkUpdates.ts  (orchestration, 53.46%, 110 open gaps)
-  - src/features/updates/services/templateSyncService.ts  (orchestration, 29.41%, 105 open gaps)
-  - src/features/updates/services/componentUpdater.ts  (orchestration, 46.34%, 101 open gaps)
-  - src/features/updates/services/updateApplyService.ts  (orchestration, 37.33%, 99 open gaps)
+  - src/features/authentication/handlers/workspaceHandlers.ts  (orchestration, 73.53%, 15 open gaps)
+  - src/features/authentication/services/adobeSDKClient.ts  (orchestration, 60.42%, 14 open gaps)
+  - src/features/authentication/services/eventProviderLifecycle.ts  (orchestration, 81.91%, 13 open gaps)
+  - src/features/authentication/services/ensureProjectOrgContext.ts  (orchestration, 64.81%, 12 open gaps)
+  - src/features/authentication/handlers/organizationHandlers.ts  (orchestration, 27.78%, 10 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts
