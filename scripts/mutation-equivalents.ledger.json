@@ -864,6 +864,69 @@
             "decision": "none",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (AdobeProjectPicker)"
+        },
+        {
+            "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
+            "anchors": [
+                "if (!payload?.projectId || !payload?.orgId) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the `?.` on the SECOND operand only. `||` short-circuits: `!payload?.orgId` is evaluated only when `payload?.projectId` was truthy, and then `payload` is defined, so `payload.orgId` cannot throw. The first operand's `?.` is what carries the undefined-payload case, and it is pinned.",
+            "decision": "none \u2014 the second `?.` is symmetry, not a decision",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (deleteAdobeProjectHandler)"
+        },
+        {
+            "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
+            "anchors": [
+                "const cached = context.authManager?.getCachedProject();",
+                "await context.authManager?.clearConsoleContext();",
+                "const projects = await context.authManager?.getProjects({ orgId });"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "All three sit in module-private helpers that run only after the handler's `if (!context.authManager) return` guard, so `authManager` is defined at each read and dropping the `?.` changes nothing. The `?.` is what `HandlerContext`'s optional `authManager` demands at the read site; the helpers are not exported, so no test reaches them with a guard-less context.",
+            "decision": "none \u2014 the `?.` is required by the HandlerContext type",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (deleteAdobeProjectHandler)"
+        },
+        {
+            "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
+            "anchors": [
+                "if (cached?.id === projectId) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "With nothing cached, `cached.id` throws \u2014 inside the best-effort try whose catch swallows it and writes one debug line, after which the delete succeeds exactly as it does when the comparison is simply false. The only trace is the presence of that debug line, and asserting a log's absence is the padding the ratchet refuses.",
+            "decision": "none \u2014 the guard is correct; the surrounding catch is what makes it indistinguishable",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (deleteAdobeProjectHandler)"
+        },
+        {
+            "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
+            "anchors": [
+                "context.debugLogger.debug('[Project] Post-delete selection clear failed:', clearError);",
+                "context.debugLogger.debug('[Project] Post-delete refresh failed:', refreshError);"
+            ],
+            "mutants": 2,
+            "category": "block",
+            "reason": "The two best-effort catch bodies (`} catch (clearError) {` and `} catch (refreshError) {`; the anchors are the bodies' own lines). Each is a single debug line; emptied, the failure is swallowed all the same and the delete still succeeds \u2014 both failure paths are pinned to succeed. Distinguishing them means asserting a log string.",
+            "decision": "none \u2014 the debug line is kept for diagnosis, not behaviour",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (deleteAdobeProjectHandler)"
+        },
+        {
+            "module": "src/features/authentication/handlers/deleteAdobeProjectHandler.ts",
+            "anchors": [
+                "if (projects) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Rewritten to `true`, an undefined project list reaches `stampProjectsDeletable`, whose `projects.map` throws \u2014 inside the same best-effort try, so the push is skipped and the delete succeeds exactly as when the guard declines. The refresh path with an undefined list is otherwise pinned (no `get-projects` push).",
+            "decision": "none \u2014 the guard states the intent the catch would otherwise enforce by accident",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (deleteAdobeProjectHandler)"
         }
     ]
 }

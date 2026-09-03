@@ -64,6 +64,7 @@ const DELETED_RESULT: ConsoleProjectTeardownResult = {
     items: [
         { kind: 'registration', id: 'reg-1', outcome: 'deleted' },
         { kind: 'registration', id: 'reg-2', outcome: 'deleted' },
+        { kind: 'registration', id: 'reg-3', outcome: 'skipped' },
         { kind: 'provider', id: 'prov-1', outcome: 'deleted' },
         { kind: 'project', id: 'proj-1', outcome: 'deleted' },
     ],
@@ -134,9 +135,13 @@ describe('handleDeleteAdobeProject', () => {
         ])('returns a shaped error and shows no modal when %s', async (_label, payload) => {
             const result = await handleDeleteAdobeProject(mockContext, payload);
 
-            expect(result.success).toBe(false);
-            expect(result.error).toBeTruthy();
-            expect(result.code).toBeTruthy();
+            expect(result).toEqual({
+                success: false,
+                error: 'projectId and orgId are required to delete an Adobe project.',
+                code: ErrorCode.PROJECT_INVALID,
+            });
+            // Rejected BEFORE the org gate: no org lookup, no modal, no teardown.
+            expect(mockContext.authManager.getOrganizations).not.toHaveBeenCalled();
             expect(mockShowWarning).not.toHaveBeenCalled();
             expect(mockTeardown).not.toHaveBeenCalled();
         });
@@ -468,7 +473,9 @@ describe('handleDeleteAdobeProject', () => {
 
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
-            expect(mockContext.authManager.getProjects).toHaveBeenCalledWith({ orgId: 'org-123' });
+            // The first call is the ownership gate; the refresh is the second, and
+            // must carry the org too (toHaveBeenCalledWith would match the first).
+            expect(mockContext.authManager.getProjects.mock.calls[1][0]).toEqual({ orgId: 'org-123' });
             // The refresh push goes through the same deletable stamping as get-projects.
             expect(mockContext.sendMessage).toHaveBeenCalledWith('get-projects', [
                 { ...OWNED_PROJECT, deletable: true },
@@ -491,6 +498,15 @@ describe('handleDeleteAdobeProject', () => {
             await handleDeleteAdobeProject(mockContext, PAYLOAD);
 
             expect(mockContext.authManager.clearConsoleContext).toHaveBeenCalledTimes(1);
+        });
+
+        it('does NOT clear the selection when the teardown says not to, even for the cached project', async () => {
+            mockTeardown.mockResolvedValue({ ...DELETED_RESULT, shouldClearConsoleSelection: false });
+            mockContext.authManager.getCachedProject.mockReturnValue({ id: 'proj-1', name: 'My Project' });
+
+            await handleDeleteAdobeProject(mockContext, PAYLOAD);
+
+            expect(mockContext.authManager.clearConsoleContext).not.toHaveBeenCalled();
         });
 
         it('does NOT clear the console selection when the cached project differs', async () => {
@@ -555,6 +571,7 @@ describe('handleDeleteAdobeProject', () => {
             // First call is the confirm modal; the outcome warning follows it.
             const warning = mockShowWarning.mock.calls[1][0] as string;
             expect(warning).toContain('My Provider');
+            expect(warning).not.toContain('reg-1'); // deleted fine — not a failure
             expect(warning).toContain('NOT deleted');
             expect(warning).toContain('run Delete again');
             expect(mockShowInfo).not.toHaveBeenCalled();
