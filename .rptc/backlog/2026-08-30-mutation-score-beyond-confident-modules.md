@@ -214,3 +214,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(updates): bring collaboratorGate to zero open mutation gaps (`137525a36`)
 - 2026-09-03  test(updates): bring githubApiClient to zero open mutation gaps (`8673b1ba3`)
 - 2026-09-03  test(updates): bring releaseTrack to zero open mutation gaps (`7a66d62fd`)
+- 2026-09-03  test(updates): bring componentRepositoryResolver to zero open mutation gaps (`fc45b3f5a`)
