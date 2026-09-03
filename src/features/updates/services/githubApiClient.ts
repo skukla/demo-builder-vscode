@@ -47,7 +47,7 @@ export async function buildGitHubHeaders(
     secrets: vscode.SecretStorage,
 ): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
-        'Accept': 'application/vnd.github.v3+json',
+        Accept: 'application/vnd.github.v3+json',
         'User-Agent': 'Demo-Builder-VSCode',
     };
 
@@ -69,10 +69,7 @@ export async function buildGitHubHeaders(
  * Returns the raw `Response` — callers decide how to interpret
  * status codes and parse the body.
  */
-export async function fetchWithTimeout(
-    url: string,
-    options: RequestInit = {},
-): Promise<Response> {
+export async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), TIMEOUTS.QUICK);
 
@@ -135,10 +132,11 @@ export async function getLatestRelease(
 
         if (!response.ok) return null;
 
-        const data = await response.json() as { tag_name?: string };
+        const data = (await response.json()) as { tag_name?: string };
         const tag = data.tag_name;
-        if (typeof tag !== 'string' || tag.length === 0) return null;
+        if (typeof tag !== 'string') return null;
 
+        // An empty tag coerces to null here, so it needs no check of its own.
         const version = semver.valid(semver.coerce(tag));
         if (!version) return null;
 
@@ -173,7 +171,7 @@ export async function compareCommits(
             return null;
         }
 
-        return await response.json() as GitHubCompareResponse;
+        return (await response.json()) as GitHubCompareResponse;
     } catch {
         return null;
     }

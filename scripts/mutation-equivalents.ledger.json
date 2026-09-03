@@ -270,6 +270,18 @@
             "decision": "none — required by the type and correct as written",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (collaboratorGate)"
+        },
+        {
+            "module": "src/features/updates/services/githubApiClient.ts",
+            "anchors": [
+                "return data.commit?.sha ?? null;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the `?.` makes a branch body with no `commit` throw a TypeError instead of reading undefined — into the catch that wraps the whole lookup and returns null, which is what the `?? null` returns on the original path. Return value, requests and logs (there are none) are identical; the body is `any` from response.json(), so no type demands the chain either. Killing it would mean testing that a malformed body is handled by a read rather than by a throw, which is not a decision anyone depends on. GitHub's branch response always carries `commit`.",
+            "decision": "none — reading defensively is clearer than relying on the catch",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (githubApiClient)"
         }
     ]
 }

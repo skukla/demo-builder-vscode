@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/updates/services/collaboratorGate.ts"
+        "src/features/updates/services/githubApiClient.ts"
     ],
     "reporters": [
         "clear-text",

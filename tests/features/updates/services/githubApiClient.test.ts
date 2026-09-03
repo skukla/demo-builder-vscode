@@ -2,7 +2,6 @@
  * Unit tests for githubApiClient shared utilities
  */
 
-
 // Mock global fetch
 global.fetch = jest.fn();
 
@@ -14,6 +13,7 @@ import {
     getLatestRelease,
 } from '@/features/updates/services/githubApiClient';
 
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 describe('githubApiClient', () => {
     const mockFetch = global.fetch as jest.Mock;
@@ -76,6 +76,34 @@ describe('githubApiClient', () => {
                 'The operation was aborted'
             );
         });
+
+        describe('the abort timer', () => {
+            beforeEach(() => jest.useFakeTimers());
+            afterEach(() => jest.useRealTimers());
+
+            /** The signal handed to fetch on the most recent call. */
+            function signalGivenToFetch(): AbortSignal {
+                return mockFetch.mock.calls[mockFetch.mock.calls.length - 1][1].signal;
+            }
+
+            it('aborts the request at exactly TIMEOUTS.QUICK and not before', async () => {
+                mockFetch.mockReturnValueOnce(new Promise(() => undefined)); // never settles
+                void fetchWithTimeout('https://api.github.com/slow');
+
+                jest.advanceTimersByTime(TIMEOUTS.QUICK - 1);
+                expect(signalGivenToFetch().aborted).toBe(false);
+                jest.advanceTimersByTime(1);
+                expect(signalGivenToFetch().aborted).toBe(true);
+            });
+
+            it('cancels the timer once fetch has settled, so a late tick aborts nothing', async () => {
+                mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+                await fetchWithTimeout('https://api.github.com/fast');
+
+                jest.advanceTimersByTime(TIMEOUTS.QUICK);
+                expect(signalGivenToFetch().aborted).toBe(false);
+            });
+        });
     });
 
     describe('getLatestBranchCommit', () => {
@@ -102,6 +130,16 @@ describe('githubApiClient', () => {
             const sha = await getLatestBranchCommit(mockSecrets, 'owner', 'repo', 'main');
 
             expect(sha).toBeNull();
+        });
+
+        it('does not read the body of a non-ok response', async () => {
+            const json = jest.fn(async () => ({ commit: { sha: 'stale' } }));
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json });
+
+            const sha = await getLatestBranchCommit(mockSecrets, 'owner', 'repo', 'main');
+
+            expect(sha).toBeNull();
+            expect(json).not.toHaveBeenCalled();
         });
 
         it('should return null on network error', async () => {
@@ -161,6 +199,32 @@ describe('githubApiClient', () => {
             expect(await getLatestRelease(mockSecrets, 'owner', 'repo')).toBeNull();
         });
 
+        it('does not read the body of a non-ok response', async () => {
+            const json = jest.fn(async () => ({ tag_name: 'v9.9.9' }));
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json });
+
+            expect(await getLatestRelease(mockSecrets, 'owner', 'repo')).toBeNull();
+            expect(json).not.toHaveBeenCalled();
+        });
+
+        it('should return null when tag_name is not a string, even one semver could coerce', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ tag_name: 3 }),
+            });
+
+            expect(await getLatestRelease(mockSecrets, 'owner', 'repo')).toBeNull();
+        });
+
+        it('should return null when tag_name is empty', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ tag_name: '' }),
+            });
+
+            expect(await getLatestRelease(mockSecrets, 'owner', 'repo')).toBeNull();
+        });
+
         it('should return null on network error', async () => {
             mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
@@ -205,6 +269,16 @@ describe('githubApiClient', () => {
             const result = await compareCommits(mockSecrets, 'owner', 'repo', 'aaa', 'bbb');
 
             expect(result).toBeNull();
+        });
+
+        it('does not read the body of a non-ok response', async () => {
+            const json = jest.fn(async () => ({ ahead_by: 5 }));
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 403, json });
+
+            const result = await compareCommits(mockSecrets, 'owner', 'repo', 'aaa', 'bbb');
+
+            expect(result).toBeNull();
+            expect(json).not.toHaveBeenCalled();
         });
 
         it('should return null on network error', async () => {
