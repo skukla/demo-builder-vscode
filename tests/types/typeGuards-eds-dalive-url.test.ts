@@ -23,9 +23,9 @@
  */
 
 import { getEdsDaLiveTarget, getEdsDaLiveUrl } from '@/types/typeGuards';
-import { Project } from '@/types/base';
+import { createMockProject } from '../helpers/projectFake';
 
-const edsProject = {
+const edsProject = createMockProject({
     selectedStack: 'eds-dalive',
     componentInstances: {
         'eds-storefront': {
@@ -38,7 +38,7 @@ const edsProject = {
             },
         },
     },
-} as unknown as Project;
+});
 
 describe('getEdsDaLiveUrl - experience branch', () => {
     it('returns the Universal Editor URL for a valid EDS project', () => {
@@ -89,36 +89,49 @@ describe('getEdsDaLiveUrl - experience branch', () => {
     });
 
     it('returns undefined for a non-EDS project', () => {
-        const headless = {
+        const headless = createMockProject({
             selectedStack: 'headless',
             componentInstances: {
                 'eds-storefront': {
+                    id: 'eds-storefront',
+                    name: 'Edge Delivery Services',
+                    status: 'deployed',
                     metadata: { daLiveOrg: 'org', daLiveSite: 'site' },
                 },
             },
-        } as unknown as Project;
+        });
 
         expect(getEdsDaLiveUrl(headless, 'experience-workspace')).toBeUndefined();
     });
 
     it('returns undefined when daLiveOrg is missing', () => {
-        const noOrg = {
+        const noOrg = createMockProject({
             selectedStack: 'eds-dalive',
             componentInstances: {
-                'eds-storefront': { metadata: { daLiveSite: 'leah-b2b-demo' } },
+                'eds-storefront': {
+                    id: 'eds-storefront',
+                    name: 'Edge Delivery Services',
+                    status: 'deployed',
+                    metadata: { daLiveSite: 'leah-b2b-demo' },
+                },
             },
-        } as unknown as Project;
+        });
 
         expect(getEdsDaLiveUrl(noOrg, 'da-live-classic')).toBeUndefined();
     });
 
     it('returns undefined when daLiveSite is missing', () => {
-        const noSite = {
+        const noSite = createMockProject({
             selectedStack: 'eds-dalive',
             componentInstances: {
-                'eds-storefront': { metadata: { daLiveOrg: 'leahrayard' } },
+                'eds-storefront': {
+                    id: 'eds-storefront',
+                    name: 'Edge Delivery Services',
+                    status: 'deployed',
+                    metadata: { daLiveOrg: 'leahrayard' },
+                },
             },
-        } as unknown as Project;
+        });
 
         expect(getEdsDaLiveUrl(noSite, 'experience-workspace')).toBeUndefined();
     });
@@ -128,14 +141,17 @@ describe('getEdsDaLiveUrl - experience branch', () => {
 // strips `daLiveSite` from the manifest when it equals the repo name, so most
 // projects carry only `githubRepo`. Readers must derive the site from it.
 describe('daLiveSite repo-name fallback', () => {
-    const strippedProject = {
+    const strippedProject = createMockProject({
         selectedStack: 'eds-dalive',
         componentInstances: {
             'eds-storefront': {
+                id: 'eds-storefront',
+                name: 'Edge Delivery Services',
+                status: 'deployed',
                 metadata: { daLiveOrg: 'leahrayard', githubRepo: 'leahrayard/leah-b2b-demo' },
             },
         },
-    } as unknown as Project;
+    });
 
     it('getEdsDaLiveUrl derives the site from githubRepo when daLiveSite is stripped', () => {
         expect(getEdsDaLiveUrl(strippedProject, 'da-live-classic')).toBe(
@@ -151,10 +167,13 @@ describe('daLiveSite repo-name fallback', () => {
     });
 
     it('an explicit daLiveSite (unmigrated legacy project) still wins over the repo name', () => {
-        const legacy = {
+        const legacy = createMockProject({
             selectedStack: 'eds-dalive',
             componentInstances: {
                 'eds-storefront': {
+                    id: 'eds-storefront',
+                    name: 'Edge Delivery Services',
+                    status: 'deployed',
                     metadata: {
                         daLiveOrg: 'skukla',
                         daLiveSite: 'b2b-boilerplate-content',
@@ -162,7 +181,7 @@ describe('daLiveSite repo-name fallback', () => {
                     },
                 },
             },
-        } as unknown as Project;
+        });
 
         expect(getEdsDaLiveTarget(legacy)).toEqual({
             org: 'skukla',

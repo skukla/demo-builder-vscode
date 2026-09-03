@@ -11,9 +11,10 @@
 
 import { getEdsGithubRepo } from '@/types/typeGuards';
 import { Project } from '@/types/base';
+import { createMockProject } from '../helpers/projectFake';
 
 function projectWith(metadata: Record<string, unknown>, stack = 'eds-dalive'): Project {
-    return {
+    return createMockProject({
         selectedStack: stack,
         componentInstances: {
             'eds-storefront': {
@@ -23,7 +24,7 @@ function projectWith(metadata: Record<string, unknown>, stack = 'eds-dalive'): P
                 metadata,
             },
         },
-    } as unknown as Project;
+    });
 }
 
 describe('getEdsGithubRepo', () => {
@@ -43,7 +44,7 @@ describe('getEdsGithubRepo', () => {
     });
 
     it('returns undefined for a missing storefront component instance', () => {
-        const bare = { selectedStack: 'eds-dalive', componentInstances: {} } as unknown as Project;
+        const bare = createMockProject({ selectedStack: 'eds-dalive', componentInstances: {} });
         expect(getEdsGithubRepo(bare)).toBeUndefined();
     });
 

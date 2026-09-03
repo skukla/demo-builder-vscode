@@ -2,7 +2,7 @@
   "logger": [],
   "_castCeilings_what": "A literal cast to a real type is a fake the compiler has been told not to check. Every one of these types ALREADY has a builder in tests/helpers, so the target for each is ZERO and the number may only fall. Seeded 2026-08-31 from a measurement of 1,735 literal-casts across the test tree; these nine are the ones with a builder standing right next to them.",
   "castCeilings": {
-    "Project": 134,
+    "Project": 99,
     "HandlerContext": 1
   },
   "_logger_closed": "CLOSED 2026-09-01. Seeded at 296 hand-rolled logger fakes; the last four were converted the same day (two EDS service suites, one rate-limiting suite whose fake is read inside a jest.mock factory, and one handler testUtils). The list stays as an EMPTY ARRAY rather than being deleted because the two tests below read it: one bans a new hand-rolled fake outright, the other fails on a stale row. With the array empty the first is a flat ban.",
