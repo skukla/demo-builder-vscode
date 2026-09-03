@@ -8,30 +8,20 @@
  * when the comparison cannot be made, and a throwing collaborator answering null.
  */
 
-jest.mock('@/features/updates/services/githubApiClient', () => ({
-    getLatestBranchCommit: jest.fn(),
-    compareCommits: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/patches/lkgReader', () => ({
-    readLkgSha: jest.fn(),
-}));
-
-import { COMPONENT_IDS } from '@/core/constants';
-import { readLkgSha } from '@/features/eds/services/patches/lkgReader';
-import { compareCommits, getLatestBranchCommit } from '@/features/updates/services/githubApiClient';
-import { TemplateUpdateChecker } from '@/features/updates/services/templateUpdateChecker';
-import type { Project } from '@/types/base';
+// The shared mock wall FIRST, so its jest.mock calls register before the subject binds.
+import { TemplateUpdateChecker } from './templateUpdateChecker.testUtils';
+import {
+    NEW_SHA,
+    OLD_SHA,
+    edsProject,
+    mockCompareCommits,
+    mockGetLatestBranchCommit,
+    mockReadLkgSha,
+} from './templateUpdateChecker.testUtils';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
-const mockGetLatestBranchCommit = getLatestBranchCommit as jest.Mock;
-const mockCompareCommits = compareCommits as jest.Mock;
-const mockReadLkgSha = readLkgSha as jest.Mock;
-
-const OLD_SHA = 'a'.repeat(40);
-const NEW_SHA = 'b'.repeat(40);
 const OWNER = 'hlxsites';
 const REPO = 'aem-boilerplate-commerce';
 const LKG = { owner: 'skukla', repo: 'eds-demo-patches' };
@@ -39,20 +29,6 @@ const LKG = { owner: 'skukla', repo: 'eds-demo-patches' };
 let logger: ReturnType<typeof createMockLogger>;
 let secrets: ReturnType<typeof createMockSecretStorage>['secrets'];
 let checker: TemplateUpdateChecker;
-
-function projectWith(metadata: Record<string, unknown> | undefined): Project {
-    return createMockProject({
-        name: 'test-storefront',
-        componentInstances: {
-            [COMPONENT_IDS.EDS_STOREFRONT]: {
-                id: COMPONENT_IDS.EDS_STOREFRONT,
-                name: 'EDS Storefront',
-                status: 'ready',
-                ...(metadata ? { metadata } : {}),
-            },
-        },
-    });
-}
 
 const complete = { templateOwner: OWNER, templateRepo: REPO, lastSyncedCommit: OLD_SHA };
 
@@ -81,7 +57,7 @@ describe('the metadata gate — refused before any request', () => {
     });
 
     it('an EDS instance that carries no metadata', async () => {
-        await expect(checker.checkForUpdates(projectWith(undefined))).resolves.toBeNull();
+        await expect(checker.checkForUpdates(edsProject(undefined))).resolves.toBeNull();
         expectNothingAsked();
     });
 
@@ -91,7 +67,7 @@ describe('the metadata gate — refused before any request', () => {
         ['lastSyncedCommit', { ...complete, lastSyncedCommit: undefined }],
         ['an empty lastSyncedCommit', { ...complete, lastSyncedCommit: '' }],
     ])('missing %s, with the other fields present', async (_label, metadata) => {
-        await expect(checker.checkForUpdates(projectWith(metadata))).resolves.toBeNull();
+        await expect(checker.checkForUpdates(edsProject(metadata))).resolves.toBeNull();
         expectNothingAsked();
     });
 });
@@ -106,7 +82,7 @@ describe('the lkgSource shape decides the path', () => {
     ])(
         '%s is not an lkgSource: the forked path runs and the LKG reader is never asked',
         async (_label, lkgSource) => {
-            await checker.checkForUpdates(projectWith({ ...complete, lkgSource }));
+            await checker.checkForUpdates(edsProject({ ...complete, lkgSource }));
 
             expect(mockReadLkgSha).not.toHaveBeenCalled();
             expect(mockGetLatestBranchCommit).toHaveBeenCalledWith(secrets, OWNER, REPO, 'main');
@@ -114,7 +90,7 @@ describe('the lkgSource shape decides the path', () => {
     );
 
     it('owner and repo alone are enough: handed to the reader as-is with the logger', async () => {
-        await checker.checkForUpdates(projectWith({ ...complete, lkgSource: LKG }));
+        await checker.checkForUpdates(edsProject({ ...complete, lkgSource: LKG }));
 
         expect(mockReadLkgSha).toHaveBeenCalledWith(LKG, logger);
         expect(mockGetLatestBranchCommit).not.toHaveBeenCalled();
@@ -123,7 +99,7 @@ describe('the lkgSource shape decides the path', () => {
     it('a string lkgFile travels with them', async () => {
         const withFile = { ...LKG, lkgFile: 'b2b/last-known-good' };
 
-        await checker.checkForUpdates(projectWith({ ...complete, lkgSource: withFile }));
+        await checker.checkForUpdates(edsProject({ ...complete, lkgSource: withFile }));
 
         expect(mockReadLkgSha).toHaveBeenCalledWith(withFile, logger);
     });
@@ -135,7 +111,7 @@ describe('thin-layer path', () => {
     it('LKG advanced: compares lastSyncedCommit against the LKG SHA on the template repo', async () => {
         mockCompareCommits.mockResolvedValue({ ahead_by: 4 });
 
-        const result = await checker.checkForUpdates(projectWith(metadata));
+        const result = await checker.checkForUpdates(edsProject(metadata));
 
         expect(mockCompareCommits).toHaveBeenCalledWith(secrets, OWNER, REPO, OLD_SHA, NEW_SHA);
         expect(result).toEqual({
@@ -156,7 +132,7 @@ describe('thin-layer path', () => {
         async (_label, comparison) => {
             mockCompareCommits.mockResolvedValue(comparison);
 
-            const result = await checker.checkForUpdates(projectWith(metadata));
+            const result = await checker.checkForUpdates(edsProject(metadata));
 
             expect(result).toEqual({
                 hasUpdates: false,
@@ -172,7 +148,7 @@ describe('thin-layer path', () => {
     it('a throwing LKG reader answers null rather than rejecting', async () => {
         mockReadLkgSha.mockRejectedValue(new Error('patches repo unreachable'));
 
-        await expect(checker.checkForUpdates(projectWith(metadata))).resolves.toBeNull();
+        await expect(checker.checkForUpdates(edsProject(metadata))).resolves.toBeNull();
         expect(logger.error).toHaveBeenCalledTimes(1);
     });
 });
@@ -181,7 +157,7 @@ describe('forked path', () => {
     it('up to date: the full shape, with no comparison made', async () => {
         mockGetLatestBranchCommit.mockResolvedValue(OLD_SHA);
 
-        const result = await checker.checkForUpdates(projectWith(complete));
+        const result = await checker.checkForUpdates(edsProject(complete));
 
         expect(result).toEqual({
             hasUpdates: false,
@@ -197,7 +173,7 @@ describe('forked path', () => {
     it('main advanced: compares lastSyncedCommit against main HEAD', async () => {
         mockCompareCommits.mockResolvedValue({ ahead_by: 5 });
 
-        const result = await checker.checkForUpdates(projectWith(complete));
+        const result = await checker.checkForUpdates(edsProject(complete));
 
         expect(mockCompareCommits).toHaveBeenCalledWith(secrets, OWNER, REPO, OLD_SHA, NEW_SHA);
         expect(result).toEqual({
@@ -218,7 +194,7 @@ describe('forked path', () => {
         async (_label, comparison) => {
             mockCompareCommits.mockResolvedValue(comparison);
 
-            const result = await checker.checkForUpdates(projectWith(complete));
+            const result = await checker.checkForUpdates(edsProject(complete));
 
             expect(result).toEqual({
                 hasUpdates: false,
@@ -234,14 +210,14 @@ describe('forked path', () => {
     it('main HEAD unavailable: null, with no comparison made', async () => {
         mockGetLatestBranchCommit.mockResolvedValue(null);
 
-        await expect(checker.checkForUpdates(projectWith(complete))).resolves.toBeNull();
+        await expect(checker.checkForUpdates(edsProject(complete))).resolves.toBeNull();
         expect(mockCompareCommits).not.toHaveBeenCalled();
     });
 
     it('a throwing branch lookup answers null rather than rejecting', async () => {
         mockGetLatestBranchCommit.mockRejectedValue(new Error('boom'));
 
-        await expect(checker.checkForUpdates(projectWith(complete))).resolves.toBeNull();
+        await expect(checker.checkForUpdates(edsProject(complete))).resolves.toBeNull();
         expect(logger.error).toHaveBeenCalledTimes(1);
     });
 });
