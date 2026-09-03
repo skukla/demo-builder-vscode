@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/updates/services/adobeMcpUpdateCore.ts"
+        "src/features/updates/services/extensionUpdater.ts"
     ],
     "reporters": [
         "clear-text",

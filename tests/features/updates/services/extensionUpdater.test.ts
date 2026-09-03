@@ -224,6 +224,59 @@ describe('ExtensionUpdater', () => {
             await expect(updater.updateExtension(downloadUrl, newVersion)).rejects.toThrow();
         });
 
+        describe('download timeout timer', () => {
+            const DOWNLOAD_TIMEOUT_MS = 60000; // the mocked TIMEOUTS.AUTH.BROWSER above
+
+            beforeEach(() => {
+                jest.useFakeTimers();
+            });
+
+            afterEach(() => {
+                jest.useRealTimers();
+            });
+
+            /** The signal fetch was handed — the only thing the timer can act on. */
+            function signalHandedToFetch(): AbortSignal {
+                const [, init] = (global.fetch as jest.Mock).mock.calls[0] as [string, RequestInit];
+                return init.signal as AbortSignal;
+            }
+
+            it('aborts the download when the timeout elapses before fetch answers', async () => {
+                // A fetch that only settles when its signal fires — so a timer whose
+                // callback does NOT abort would leave this hanging forever.
+                (global.fetch as jest.Mock).mockImplementation(
+                    (_url: string, init: RequestInit) =>
+                        new Promise((_resolve, reject) => {
+                            init.signal?.addEventListener('abort', () =>
+                                reject(new Error('The operation was aborted')),
+                            );
+                        }),
+                );
+
+                const pending = updater.updateExtension(downloadUrl, newVersion);
+                // Mark the rejection handled BEFORE the clock moves: it fires inside
+                // the timer tick, and an unhandled one fails the test. Asserted below.
+                void pending.catch(() => undefined);
+                // Let the async validation import settle so fetch has been called.
+                await jest.advanceTimersByTimeAsync(0);
+                expect(signalHandedToFetch().aborted).toBe(false);
+
+                await jest.advanceTimersByTimeAsync(DOWNLOAD_TIMEOUT_MS);
+
+                expect(signalHandedToFetch().aborted).toBe(true);
+                await expect(pending).rejects.toThrow('The operation was aborted');
+            });
+
+            it('clears the timer once the download completes, so it never aborts late', async () => {
+                await updater.updateExtension(downloadUrl, newVersion);
+                const signal = signalHandedToFetch();
+
+                expect(jest.getTimerCount()).toBe(0);
+                jest.advanceTimersByTime(DOWNLOAD_TIMEOUT_MS);
+                expect(signal.aborted).toBe(false);
+            });
+        });
+
         it('should handle installation command failure', async () => {
             (vscode.commands.executeCommand as jest.Mock).mockRejectedValue(
                 new Error('Installation failed'),
