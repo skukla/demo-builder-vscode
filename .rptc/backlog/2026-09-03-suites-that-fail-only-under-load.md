@@ -62,3 +62,4 @@ caught at either number.
 ## Shipped so far
 
 - 2026-09-03  fix(test): the socket step budget stops guessing, and the load problem gets an item (`c1407098a`)
+- 2026-09-03  fix(tests): the two suites that fail only under load get the headroom the third already had (`96234cfe2`)

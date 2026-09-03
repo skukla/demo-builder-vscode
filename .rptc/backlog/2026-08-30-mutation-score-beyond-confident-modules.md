@@ -232,3 +232,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  docs(backlog): log the updateApplyService commit against PL-22 (`37b906283`)
 - 2026-09-03  test(auth): bring authenticationService to zero open mutation gaps (`96f2ec2cf`)
 - 2026-09-03  test(auth): bring useAuthStatus to zero open mutation gaps (`270042ffb`)
+- 2026-09-03  test(auth): bring AdobeEntityFields to zero open mutation gaps (`937915b26`)
