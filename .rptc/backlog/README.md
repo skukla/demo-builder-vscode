@@ -291,7 +291,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-14` | chore | └ [ADR-016 enforcement tooling — the seven artifacts](2026-08-28-adr-016-enforcement-tooling.md) | — | high | built |
 | `PL-15` | chore | └ [Run-noise burn-down to zero](2026-08-28-noise-burndown.md) | PL-14 | med | shipped |
 | `PL-16` | fix | └ [Give StateManager and Project fixtures a shared builder, the way HandlerContext has one](2026-08-28-shared-test-builders.md) | — | high | shipped |
-| `PL-22` | question | └ [Does the 93% mutation score hold outside the modules we already trusted?](2026-08-30-mutation-score-beyond-confident-modules.md) | PL-9 | med | open |
+| `PL-22` | question | └ [93% was the ceiling, not the norm — mutation scores fall as async density rises](2026-08-30-mutation-score-beyond-confident-modules.md) | PL-9 | med | open |
 | `PL-32` | chore | └ [Work the type-erasing casts in tests to zero](2026-08-31-type-erasing-casts.md) | — | med | shipped |
 | `PL-12` | question | [Pattern-conformance audit — one architecture, or one per feature?](2026-08-28-pattern-conformance-audit.md) | — | med | shipped |
 | `PL-17` | question | [The architecture is written for the extension host only; the frontend has rules but no document](2026-08-28-adr015-webview-jurisdiction.md) | — | high | shipped |
@@ -409,7 +409,7 @@ the table cannot hold: why the layers are ordered this way.*
 
 - `AI-1a` [AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?](2026-08-16-mcp-surface-for-sc-design-work.md) — active
 - `AI-1b` [104 tools, and agents reach 20 of them](2026-08-25-agents-barely-use-the-tool-surface.md) — open
-- `PL-22` [Does the 93% mutation score hold outside the modules we already trusted?](2026-08-30-mutation-score-beyond-confident-modules.md) — open
+- `PL-22` [93% was the ceiling, not the norm — mutation scores fall as async density rises](2026-08-30-mutation-score-beyond-confident-modules.md) — open
 
 **B** — 6 items
 

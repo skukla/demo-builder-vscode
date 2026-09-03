@@ -17,6 +17,54 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 /** A line that only feeds a logger is presentation. Mutating it proves nothing. */
 const LOGGY = /[Ll]ogger|\.log\(|\.debug\(|\.warn\(|\.info\(|\.error\(|\.trace\(/;
 
+/** Mutants proved unkillable, with evidence. See the file's own `_what`. */
+export const EQUIVALENTS_LEDGER = 'scripts/mutation-equivalents.ledger.json';
+
+/**
+ * Read the equivalent-mutant ledger and total its counts per module.
+ *
+ * WHY THIS EXISTS. The plan defines a module as finished when every remaining
+ * survivor is either killed or recorded as equivalent with a reason. Until this
+ * ledger was wired in there was nowhere to record the second half, so triage work
+ * did not move any number and no module could ever read as done — the 2026-09-02
+ * triage went into a prose handoff note the instrument could not see.
+ *
+ * Returns `{ counts, problems }`. A STALE entry — one whose anchor no longer
+ * appears in its module — is reported rather than silently skipped, because an
+ * anchor that stopped matching means the code moved and the equivalence claim has
+ * not been re-checked against it.
+ */
+export function loadEquivalents(ledgerPath = EQUIVALENTS_LEDGER) {
+    const counts = {};
+    const problems = [];
+    if (!existsSync(ledgerPath)) return { counts, problems };
+
+    for (const e of JSON.parse(readFileSync(ledgerPath, 'utf8')).entries ?? []) {
+        if (!existsSync(e.module)) {
+            problems.push(`${e.module}: named in the equivalents ledger but the file is gone.`);
+            continue;
+        }
+        const lines = readFileSync(e.module, 'utf8').split('\n');
+        for (const anchor of e.anchors) {
+            const hits = lines.filter((l) => l.trim() === anchor).length;
+            if (hits === 0) {
+                problems.push(
+                    `${e.module}: equivalent-mutant anchor no longer in the source — ` +
+                        `"${anchor}". The code moved; re-triage the entry rather than ` +
+                        `editing the anchor to match.`
+                );
+            } else if (hits > 1) {
+                problems.push(
+                    `${e.module}: equivalent-mutant anchor matches ${hits} lines — ` +
+                        `"${anchor}". It no longer names one mutant site.`
+                );
+            }
+        }
+        counts[e.module] = (counts[e.module] ?? 0) + e.mutants;
+    }
+    return { counts, problems };
+}
+
 /**
  * Categories, ordered by how much a survivor there should worry you.
  *
@@ -45,8 +93,14 @@ export function classify(mutatorName, sourceLine) {
     }
 }
 
-/** Read a Stryker JSON report into per-module rows. */
-export function summarise(reportPath) {
+/**
+ * Read a Stryker JSON report into per-module rows.
+ *
+ * @param equivalents  per-module counts from `loadEquivalents`. Supplying them adds
+ *   `equivalent` and `openGaps` to each row; `openGaps` is the number that reaching
+ *   zero means DONE, where the score never can.
+ */
+export function summarise(reportPath, equivalents = {}) {
     const report = JSON.parse(readFileSync(reportPath, 'utf8'));
     const rows = {};
 
@@ -70,11 +124,19 @@ export function summarise(reportPath) {
         const total = counts.killed + counts.survived + counts.noCoverage + counts.timeout;
         // Stryker's mutation score: killed + timeout count as detected.
         const score = total ? ((counts.killed + counts.timeout) / total) * 100 : 0;
+        const behavioural =
+            counts.survived - (categories.string ?? 0) - (categories.logPresentation ?? 0);
+        const equivalent = equivalents[path] ?? 0;
         rows[path] = {
             score: Number(score.toFixed(2)),
             ...counts,
             survivorCategories: categories,
             highValueSurvivors: HIGH_VALUE.reduce((n, c) => n + (categories[c] ?? 0), 0),
+            equivalent,
+            // Never negative: a ledger row can outlive the mutant it described (the code
+            // was rewritten so the survivor no longer exists), and a negative count would
+            // read as credit rather than as the stale entry it is.
+            openGaps: Math.max(0, behavioural - equivalent),
         };
     }
     return rows;
@@ -91,7 +153,7 @@ export function summarise(reportPath) {
  *   instead would delete the rows the focused run never measured, which is worse.
  */
 export function writeBaseline(reportPath, baselinePath, note, merge = false) {
-    const measured = summarise(reportPath);
+    const measured = summarise(reportPath, loadEquivalents().counts);
     const kept =
         merge && existsSync(baselinePath)
             ? JSON.parse(readFileSync(baselinePath, 'utf8')).modules
@@ -106,7 +168,13 @@ export function writeBaseline(reportPath, baselinePath, note, merge = false) {
                     'may not raise its score while leaving highValueSurvivors unchanged or ' +
                     'higher — that combination is the signature of a score raised by ' +
                     'asserting log strings. Regenerate with `npm run test:mutation:baseline` ' +
-                    'ONLY when the new numbers are genuinely better.',
+                    'ONLY when the new numbers are genuinely better. `openGaps` is the ' +
+                    'number that says whether a module is FINISHED: behavioural survivors ' +
+                    'minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. ' +
+                    'openGaps zero means done; the score never says that, because a small ' +
+                    'module can be complete below its tier floor and a large one neglected ' +
+                    'above it. The ratchet still gates on behavioural survivors, NOT on ' +
+                    'openGaps, so a ledger entry can never be what makes a run pass.',
                 _note: note,
                 modules,
             },
@@ -159,9 +227,13 @@ function behaviouralSurvivors(row) {
  *   vanishing from `mutate` is how a measurement quietly stops measuring.
  */
 export function compare(reportPath, baselinePath, partial = false) {
-    const now = summarise(reportPath);
+    // The ledger's counts annotate the rows for reporting, but the ratchet below
+    // deliberately gates on behavioural survivors instead, so recording a mutant as
+    // equivalent can never be the thing that makes a run pass.
+    const { counts, problems: ledgerProblems } = loadEquivalents();
+    const now = summarise(reportPath, counts);
     const base = JSON.parse(readFileSync(baselinePath, 'utf8')).modules;
-    const problems = [];
+    const problems = [...ledgerProblems];
 
     for (const [path, b] of Object.entries(base)) {
         const n = now[path];

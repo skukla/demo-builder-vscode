@@ -1,0 +1,77 @@
+{
+    "_what": "Mutants that survive and that NO test can kill without lying about how the code is reached. Each entry names the code by its source TEXT rather than a line number, because line numbers drift and a stale entry must fail loudly rather than point at the wrong code. `mutants` is how many surviving mutants the entry accounts for; the ratchet subtracts it from the module's behavioural survivors to give `openGaps`, and a module is DONE when openGaps reaches zero. Adding a row here is a claim that must carry evidence — see `reason` and the section named in `source`.",
+    "_rules": [
+        "An anchor must appear EXACTLY ONCE in its module, or the entry names the line too.",
+        "If the anchor no longer appears, the entry is STALE: re-triage it, do not edit the anchor to match.",
+        "Deleting the code is better than recording it here. Nine mutants left this ledger that way in 66ad43d8d.",
+        "This ledger may not be used to reach a threshold. It records what cannot be killed, not what we did not get to."
+    ],
+    "entries": [
+        {
+            "module": "src/features/prerequisites/handlers/installHandler.ts",
+            "anchors": [
+                "const isDynamicInstall = prereq.id === 'node' && prereq.install?.dynamic;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the `?.`, which would throw only if `prereq.install` were undefined. The type makes `install` optional so the compiler requires the `?.`, but a prerequisite without an install block cannot reach this line: getInstallSteps returns null for one, and the handler throws 'No installation steps defined' on a null plan before executeInstallSteps runs. Killing it would mean mocking getInstallSteps to return a plan for a prerequisite that has no install block, which the real collaborator cannot produce.",
+            "decision": "none — the `?.` is required by the type and correct as written",
+            "recorded": "2026-09-02",
+            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
+        },
+        {
+            "module": "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts",
+            "anchors": ["if (!clipped) {"],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Deleting the empty-clipboard guard changes nothing observable: an empty string fails validateDaLiveTokenStrict on the next line and returns undefined by the other route. The only difference is one debug log line, and asserting log text is what the ratchet exists to refuse to reward.",
+            "decision": "none — the guard skips a pointless validation call and says what it means",
+            "recorded": "2026-09-02",
+            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
+        },
+        {
+            "module": "src/core/state/stateManager.ts",
+            "anchors": ["lastUpdated: new Date(parsed.lastUpdated || Date.now()),"],
+            "mutants": 3,
+            "category": "other",
+            "reason": "The value never reaches anything. Every read of this.state.lastUpdated is inside saveState, nine lines after it has already been overwritten with new Date(). Nothing outside stateManager.ts reads the state file's lastUpdated. So the parse, the default and the Date construction are all discarded.",
+            "decision": "OPEN — either drop lastUpdated from the load, or keep it so the state shape round-trips and add a comment saying the value is deliberately unused",
+            "recorded": "2026-09-02",
+            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
+        },
+        {
+            "module": "src/core/state/stateManager.ts",
+            "anchors": ["if (!parsed) {"],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Removing the guard does not change the outcome. parsed is undefined, the next line reads a property off it, that throws, and the surrounding try/catch swallows it into exactly the same defaults the guard returns to. The only observable difference is which of two log lines is written.",
+            "decision": "none — the guard earns its place by being explicit; the reader should not have to know the catch is there",
+            "recorded": "2026-09-02",
+            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
+        },
+        {
+            "module": "src/features/updates/services/componentUpdater.ts",
+            "anchors": ["if (project.componentInstances?.[componentId]) {"],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "updateComponent reads the component out of componentInstances in its first statement and throws if it is not there, so by this line the entry is guaranteed to exist. A test that removed it never reaches this line — it gets the refusal instead, which is what happened when one was written. The version sync on this line is real and is tested; only the guard around it is unreachable.",
+            "decision": "none, but worth a comment — it reads as if the entry might be missing, which sent one test after a state the method forbids",
+            "recorded": "2026-09-02",
+            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
+        },
+        {
+            "module": "src/features/authentication/services/authenticationService.ts",
+            "anchors": [
+                "this.debugLogger.error('[Auth] Quick authentication check failed', error as Error);",
+                "this.debugLogger.error('[Auth] Authentication check failed', error as Error);"
+            ],
+            "mutants": 8,
+            "category": "block",
+            "reason": "Both authentication checks wrap their token read in a try/catch that logs, caches a brief negative and returns false. Neither catch can be entered: making the CLI config store throw does not reach them because the in-process reader has its own fallback and answers rather than propagating, and TokenManager.isTokenValid adds no catch of its own. Reaching the catch would mean replacing TokenManager, which the service constructs itself.",
+            "decision": "none — a defensive catch around an external read is correct even when the current collaborator cannot trigger it; the reader's fallback is not a contract",
+            "note": "The source note records 8 mutants across both catch blocks without splitting them between the two. The split is not known; the count is.",
+            "recorded": "2026-09-02",
+            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
+        }
+    ]
+}

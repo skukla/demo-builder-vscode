@@ -728,6 +728,23 @@ breaks the code on purpose and reports what nothing noticed.
 > `scripts/mutationBaseline.selftest.mjs`; breaking the rule makes one of them print
 > FAIL and exit non-zero, which is how the file's own value was checked.
 
+> **Convention.** A mutant recorded as unkillable names its code by source TEXT, not
+> by line number, and carries the argument for why no test can kill it.
+> *Why:* a module is finished when every surviving mutant is either killed or proved
+> equivalent — so the second half has to be recordable, or no module can ever read as
+> done and the count never reaches zero. It was not recordable until 2026-09-03: the
+> baseline tracked seven fields per module and none of them was "triaged", so a day's
+> triage went into a prose handoff note the instrument could not read, and
+> `updateManager` sat at 51.4% with seventeen misses that were one deliberate
+> swallowed log line. The ledger that fixes it can also rot, which is why entries are
+> anchored to text: two of the six migrated from that note had already drifted by line
+> number within a day. A stale entry is worse than a missing one, because it quietly
+> subtracts from a module's open-gap count on the strength of an argument about code
+> that is no longer there. The ratchet still gates on behavioural survivors and never
+> on `openGaps`, so adding a ledger row can never be what makes a run pass.
+> Enforced by `tests/sop/mutation-equivalents-ledger.test.ts`, which fails when an
+> anchor no longer resolves to exactly one line of its module.
+
 > **Convention.** A canonical fake covers its subject's WHOLE public surface, and
 > invents nothing.
 > *Why:* both halves have failed here. A fake NARROWER than the need is one nobody
@@ -1066,11 +1083,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 39 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 40 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 80 conventions. 79 of them are enforced; 1 is not.**
+**This handbook states 81 conventions. 80 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

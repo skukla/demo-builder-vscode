@@ -19,7 +19,8 @@
  * Judgement calls that the rules genuinely cannot make live in mutation-scope.ledger.json,
  * each with a reason. That file may only shrink for `include` overrides.
  */
-import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { readFileSync, existsSync, readdirSync, statSync, realpathSync } from 'fs';
 import { join, dirname, basename } from 'path';
 
 const LEDGER = 'scripts/mutation-scope.ledger.json';
@@ -220,4 +221,13 @@ function main() {
     }
 }
 
-main();
+/**
+ * Only run the CLI when this file IS the command, not when another script imports it.
+ * Without this, importing `tierOf` executes main() against the IMPORTER's argv — the sweep
+ * runner's `--minutes 480` was read as a module path and exited 1 before doing anything.
+ */
+const isEntryPoint =
+    !!process.argv[1] &&
+    existsSync(process.argv[1]) &&
+    realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (isEntryPoint) main();

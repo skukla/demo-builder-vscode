@@ -9,68 +9,130 @@ status: open
 layer: A
 ---
 
-# Does the 93% mutation score hold outside the modules we already trusted?
+# 93% was the ceiling, not the norm — mutation scores fall as async density rises
 
-**This is a question, not a feature.** It closes when evidence answers it, not when
-something ships. The answer decides whether a test-strengthening pass is worth
-running at all — so filing it as work to do would presuppose the answer.
+**Answered 2026-08-30: no.** It stays open because answering it started a burn-down that
+is not finished, and because the thresholds the answer implies are proposed rather than
+ratified. See "What keeps this open".
 
-## What we know
+## The answer
 
-The Stryker pilot (`npm run test:mutation`, shipped 2026-08-30) scores **93.37%**:
-166 deliberate defects planted across four modules, 155 caught by an existing test.
+The pilot's 93.37% came from four modules picked because we believed they were well
+tested. Pointed at eight modules picked for importance instead, the same instrument
+scored **59.29%** — 1,329 planted defects, 16m15s. So 93% was the ceiling, not the norm.
 
-That is a good number and it is real. It is also **not an average.** The four modules
-were chosen deliberately as ones we believed were well tested — pure, decision-carrying,
-already covered. So 93% describes our best work, not the middle of the distribution.
+Two qualifications on that headline number, both found afterwards and both recorded here
+rather than quietly dropped:
 
-The pilot's own first run is the reason not to assume the rest looks the same.
-`envMerge.ts` was in that hand-picked four. Its tests had been written that same day,
-deliberately, against a criterion recorded in advance, and line coverage was high. It
-scored **78%**: five planted defects survived, every one a real input a hand-edited
-`.env` produces. Coverage said the code was tested. It was not.
+- **59.29% is understated.** The run's jest config named 12 of installHandler's 13 suites
+  and 1 of integrationCardModel's 5, so mutants counted as uncovered were merely unrun.
+  Corrected, integrationCardModel went 42.96% → 91.90% — it had never been badly tested.
+  `tests/sop/mutation-config-pairing.test.ts` now fails when a mutated module's suites are
+  not all named, so this cannot recur.
+- **The answer survives the correction.** The corrected distribution still runs from
+  43.77% to 100%, which is the finding.
 
-If a module written that carefully scores 78%, the honest position is that we do not
-know what a module nobody has thought about in a year scores.
+**The cause is structural, not carelessness.** Across the measured modules, score
+correlates with async density at **r = −0.72**. A mock cannot see a malformed call — it
+answers the same however it is invoked — so a mutant in *how* a collaborator is called
+survives unless the test asserts the arguments. Four production defects in this repo hid
+in exactly that gap with twelve tests staying green.
 
-## The question
+## What is measured now
 
-Point the same instrument at modules we are NOT confident about, and find out whether
-93% was the ceiling or the norm.
+16 modules are pinned in `reports/mutation/baseline.json`, shrink-only. Min 43.77,
+median 83.33, max 100. Note this is a snapshot of the CURRENT state, after test work —
+not a virgin measurement.
 
-## How to answer it
+That is 16 of the 507 files the scope rule includes: **3.2%**. Per
+`.rptc/plans/mutation-scope-and-thresholds/overview.md`, that coverage number is the one
+to track rather than any average score.
 
-Cheap now that the tool exists. Per module: add it to `mutate` in
-`stryker.config.json` AND its suite to `testMatch` in `jest.stryker.config.js` —
-nothing enforces that pair, and adding only the first scores 0 for the wrong reason.
+## What the burn-down has moved
 
-**Choose the sample to answer the question, not to look good.** Candidates should be
-the opposite of the pilot's four:
+Four modules were worked end to end, each score change tied to commits that added tests:
 
-- modules whose suites were flagged `module-wall` by the craft census (73 of them) —
-  a wall of module mocks is where a test most easily ends up asserting its own mock
-- the coverage laggards that phase 6 raised by writing NEW tests
-  (`projectDeletionService` 16→84%, `templateSyncService` 18→82%). Fresh high coverage
-  is exactly the condition under which `envMerge` scored worst
-- something old, load-bearing and untouched for months
+| Module | First pinned | Now | Notes |
+|---|---|---|---|
+| `prerequisites/handlers/installHandler.ts` | 41.77% | **71.16%** | six commits; ~8 points of the rise was the config correction above, the rest new tests |
+| `eds/handlers/daLive/daLiveAuthPrompt.ts` | 67.04% | **82.58%** | dipped 0.19 when dead code was deleted — tested code removed, not coverage lost |
+| `ai/server/siteTools.ts` | 57.33% | **69.20%** | complete at 69.2%: one survivor left, triaged |
+| `core/state/stateManager.ts` | 56.49% | **66.88%** | |
 
-Keep the sample small — 4–6 modules. The pilot runs 166 mutants in 33 seconds because
-its scope is four files; mutation testing re-runs the related suites once PER MUTANT,
-so this grows fast.
+Barely started: `authenticationService.ts` 39.25% → 43.77%, `componentUpdater.ts`
+44.60% → 46.34%. Unmoved by design: `updateManager.ts` at 51.40%, whose 17 misses are all
+one swallowed log line — killable only by asserting log text, which the ratchet exists to
+refuse to reward.
 
-**Poor candidates:** timer-heavy modules. Mutations that break a delay hit `timeoutMS`
-and report as timeouts rather than survivors, which tells you nothing.
+## Thresholds — the tiers hold, the floors are targets not a gate
 
-## What the answer means
+One number cannot fit, so the plan proposes three, by tier. `tierOf()` in
+`scripts/mutationScope.mjs` assigns them mechanically: no `await` is pure, async density
+above 4% is orchestration, the rest is mixed.
 
-- **Comparable to 93%** → the suite is genuinely strong; no strengthening pass is
-  warranted, and that is worth knowing rather than assuming.
-- **Materially lower** → we have located where the tests are thin, with named surviving
-  mutants rather than a coverage percentage. THAT becomes the work item, scoped by
-  evidence.
+| Tier | Observed (n) | Median | Proposed floor | Currently passing |
+|---|---|---|---|---|
+| pure | 77.8 · 88.2 · 91.9 · 94.4 · 100 · 100 (6) | 93.2% | **90%** | 4 of 6 |
+| mixed | 69.2 · 84.5 (2) | 76.9% | **80%** | 1 of 2 |
+| orchestration | 43.8 · 46.3 · 51.4 · 66.9 · 71.2 · 82.6 · 83.3 · 95.7 (8) | 69.0% | **70%** | 4 of 8 |
 
-Either way, record the per-module scores in `.claude/skills/mutation-test-pilot/SKILL.md`
-beside the existing baseline table, so the next run has something to compare against.
+The plan's own table lists pure as n=5 with a 94.4% median; it omits `spectrumTokens.ts`
+at 88.24%. Recomputed over all six, the median is 93.2% — which still supports a 90% floor,
+but two of six modules fail it rather than one of five.
+
+### Why the floors must not be the gate
+
+The baseline records `highValueSurvivors` beside each score — surviving mutants that are
+not wording-only. That field, not the score, is what the plan's definition of "done"
+actually describes. **The two disagree on 7 of the 16 pinned modules.**
+
+| Module | Score vs floor | High-value survivors |
+|---|---|---|
+| `prerequisites/handlers/installHandler.ts` | **PASS** 71.16% | **55** — the most of any module |
+| `updates/services/updateManager.ts` | FAIL 51.40% | 52 |
+| `core/utils/mcpSocketPath.ts` | **FAIL** 77.78% | **0** — finished |
+| `ai/server/siteTools.ts` | **FAIL** 69.20% | **1** — finished |
+
+`installHandler` cleared its floor after six commits of test work while holding more real
+untested decisions than `updateManager`, which fails its floor. Ratifying the floors as a
+pass/fail gate would grade those two the wrong way round.
+
+`mcpSocketPath` additionally **cannot reach 90%**: it has 9 mutants, so the only attainable
+scores near the floor are 77.8%, 88.9% and 100%. A hard floor on a small module is
+unreachable by arithmetic, not by neglect.
+
+### The recommendation
+
+- **Ratify the tier model.** It is mechanical, objective, and grounded — score correlates
+  with async density at r = −0.72.
+- **Ratify the floors as TARGETS** — what a properly worked module of that tier should
+  reach. `mixed` stays provisional at n=2.
+- **Do NOT gate on the floors.** Gate on `highValueSurvivors` falling to zero, which the
+  baseline already records and the ratchet already guards. A module is done when every
+  remaining survivor is triaged as equivalent or wording-only — a file at 69% can be done
+  and a file at 85% can be neglected.
+
+## What keeps this open
+
+1. **Nothing is ratified yet** — not the tiers, not the floors, not the gate. The
+   recommendation above is what awaits a decision.
+2. **The burn-down is at 3.2%.** The plan's step 1 is one long unattended run baselining
+   every included module; everything else is guesswork until it exists. `highValueSurvivors`
+   is only recorded for the 16 pinned modules, so the gate proposed above has no reading
+   for the other 491.
+3. **115 React `.tsx` files — a fifth of the codebase — are invisible to the instrument.**
+   Permanently, unless fixed.
+4. **70 files have no tests at all.** A coverage question, not a mutation one. (The plan
+   says 72; `mutationScope.mjs` reports 70 and 120-with-no-own-suite as of today.)
+
+The plan states PL-22 closes once every included module is measured and ratcheted, at
+which point the cadence drops to release cuts.
+
+## Tooling that now exists
+
+`scripts/focusModule.mjs` (one module in 1–3 minutes), `scripts/mutationWorklist.mjs`,
+`scripts/mutationScope.mjs` + `scripts/mutation-scope.ledger.json`,
+`stryker.focus.config.json` + `jest.focus.config.js`, and the pairing enforcer above.
 
 ## Related
 
@@ -95,3 +157,5 @@ beside the existing baseline table, so the next run has something to compare aga
 - 2026-08-31  2026-08-31  Mutation numbers CORRECTED, not improved: jest.pl22.config.js named 12 of installHandler's 13 suites and 1 of integrationCardModel's 5. integrationCardModel 42.96% -> 91.90% (comes off the target list, was never badly tested); installHandler 49.17% -> 57.12% and remains the real worst, its NoCoverage 112 -> 36 converting into Survived. Ten unmoved modules are the control. Baseline carries _supersedes + _correction so this cannot be counted as progress. mutation-config-pairing now requires EVERY suite for a mutated module.
 - 2026-08-31  chore(health): snapshot, with the mutation half marked as a correction (`3b0223654`)
 - 2026-08-31  docs(backlog): record the mutation correction against PL-22 (`02cfbea46`)
+- 2026-09-03  Item rewritten to lead with the ANSWER rather than the question. Documents: the 59.29% representative sample and the two qualifications on it (config undercount, corrected); r=-0.72 async correlation; the 16 pinned modules (min 43.77, median 83.33) = 3.2% of the 507-file included set; the four modules the burn-down moved (installHandler 41.77->71.16, daLiveAuthPrompt 67.04->82.58, siteTools 57.33->69.20, stateManager 56.49->66.88); the three PROPOSED tier floors (pure 90 / mixed 80 / orchestration 70) marked unratified; and the four things keeping it open.
+- 2026-09-03  Thresholds assessed against the data rather than accepted from the plan. Finding: the tier model is sound (mechanical, r=-0.72) but the floors are the WRONG GATE — floor verdict and highValueSurvivors disagree on 7 of 16 pinned modules. installHandler PASSES at 71.16% holding 55 high-value survivors (most of any module) while updateManager FAILS at 51.40% holding 52; mcpSocketPath FAILS the 90% pure floor at 77.78% with ZERO high-value survivors and cannot reach 90% at all (9 mutants, steps of 11.1pt). Also corrected the plan's pure tier: n=6 not n=5 (spectrumTokens 88.24 omitted), median 93.2 not 94.4. Recommendation recorded: ratify tiers + floors-as-targets, gate on highValueSurvivors. Title now states the answer.

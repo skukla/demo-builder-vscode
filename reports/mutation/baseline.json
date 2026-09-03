@@ -1,6 +1,6 @@
 {
-    "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better.",
-    "_note": "daLiveAuthPrompt 82.77% -> 82.58%: three KILLED mutants removed with the invented 24-hour expiry fallback, survivors and uncovered both unchanged. The ratio fell because tested code was deleted, not because anything became less constrained.",
+    "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: behavioural survivors minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
+    "_note": "baseline sweep",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -12,7 +12,9 @@
                 "branch": 11,
                 "string": 5
             },
-            "highValueSurvivors": 11
+            "highValueSurvivors": 11,
+            "equivalent": 0,
+            "openGaps": 11
         },
         "src/features/ai/server/siteTools.ts": {
             "score": 69.2,
@@ -26,7 +28,9 @@
                 "optionalChain": 5,
                 "branch": 1
             },
-            "highValueSurvivors": 1
+            "highValueSurvivors": 1,
+            "equivalent": 0,
+            "openGaps": 15
         },
         "src/features/dashboard/ui/components/integrations/integrationCardModel.ts": {
             "score": 91.9,
@@ -40,7 +44,9 @@
                 "other": 2,
                 "string": 5
             },
-            "highValueSurvivors": 7
+            "highValueSurvivors": 7,
+            "equivalent": 0,
+            "openGaps": 14
         },
         "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts": {
             "score": 82.58,
@@ -56,7 +62,9 @@
                 "block": 3,
                 "logPresentation": 10
             },
-            "highValueSurvivors": 14
+            "highValueSurvivors": 14,
+            "equivalent": 2,
+            "openGaps": 23
         },
         "src/features/eds/services/patches/codePatchRegistry.ts": {
             "score": 84.54,
@@ -69,7 +77,9 @@
                 "branch": 6,
                 "logPresentation": 4
             },
-            "highValueSurvivors": 6
+            "highValueSurvivors": 6,
+            "equivalent": 0,
+            "openGaps": 6
         },
         "src/features/prerequisites/handlers/installHandler.ts": {
             "score": 71.16,
@@ -85,7 +95,9 @@
                 "branch": 45,
                 "block": 10
             },
-            "highValueSurvivors": 55
+            "highValueSurvivors": 55,
+            "equivalent": 1,
+            "openGaps": 82
         },
         "src/core/ui/utils/spectrumTokens.ts": {
             "score": 88.24,
@@ -98,7 +110,9 @@
                 "block": 1,
                 "string": 1
             },
-            "highValueSurvivors": 3
+            "highValueSurvivors": 3,
+            "equivalent": 0,
+            "openGaps": 3
         },
         "src/core/utils/mcpSocketPath.ts": {
             "score": 77.78,
@@ -110,7 +124,9 @@
                 "string": 1,
                 "other": 1
             },
-            "highValueSurvivors": 0
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
         },
         "src/features/components/services/commerceCredentialStore.ts": {
             "score": 95.65,
@@ -121,7 +137,9 @@
             "survivorCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 0
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
         },
         "src/features/data-installer/ui/importProgress.ts": {
             "score": 94.44,
@@ -133,7 +151,9 @@
                 "string": 1,
                 "other": 1
             },
-            "highValueSurvivors": 0
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 1
         },
         "src/features/project-creation/ui/helpers/buttonTextHelpers.ts": {
             "score": 100,
@@ -142,7 +162,9 @@
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {},
-            "highValueSurvivors": 0
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
         },
         "src/features/updates/services/envMerge.ts": {
             "score": 100,
@@ -151,7 +173,9 @@
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {},
-            "highValueSurvivors": 0
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
         },
         "src/core/state/stateManager.ts": {
             "score": 66.88,
@@ -167,7 +191,9 @@
                 "other": 5,
                 "optionalChain": 5
             },
-            "highValueSurvivors": 17
+            "highValueSurvivors": 17,
+            "equivalent": 5,
+            "openGaps": 22
         },
         "src/features/updates/services/componentUpdater.ts": {
             "score": 46.34,
@@ -183,7 +209,9 @@
                 "block": 13,
                 "optionalChain": 10
             },
-            "highValueSurvivors": 49
+            "highValueSurvivors": 49,
+            "equivalent": 3,
+            "openGaps": 67
         },
         "src/features/updates/services/updateManager.ts": {
             "score": 51.4,
@@ -199,7 +227,9 @@
                 "logPresentation": 3,
                 "other": 4
             },
-            "highValueSurvivors": 52
+            "highValueSurvivors": 52,
+            "equivalent": 0,
+            "openGaps": 60
         },
         "src/features/authentication/services/authenticationService.ts": {
             "score": 43.77,
@@ -215,7 +245,57 @@
                 "optionalChain": 6,
                 "block": 3
             },
-            "highValueSurvivors": 20
+            "highValueSurvivors": 20,
+            "equivalent": 8,
+            "openGaps": 22
+        },
+        "src/commands/ResetAllCommand.ts": {
+            "score": 35.56,
+            "killed": 32,
+            "survived": 39,
+            "noCoverage": 19,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 5,
+                "string": 8,
+                "branch": 7,
+                "logPresentation": 12,
+                "block": 7
+            },
+            "highValueSurvivors": 14,
+            "equivalent": 0,
+            "openGaps": 19
+        },
+        "src/commands/claudeSessionStore.ts": {
+            "score": 91.67,
+            "killed": 11,
+            "survived": 1,
+            "noCoverage": 0,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 0,
+            "equivalent": 0,
+            "openGaps": 0
+        },
+        "src/commands/commandManager.ts": {
+            "score": 32.19,
+            "killed": 75,
+            "survived": 41,
+            "noCoverage": 117,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 15,
+                "optionalChain": 1,
+                "string": 14,
+                "logPresentation": 2,
+                "branch": 7,
+                "block": 2
+            },
+            "highValueSurvivors": 9,
+            "equivalent": 0,
+            "openGaps": 25
         }
     }
 }

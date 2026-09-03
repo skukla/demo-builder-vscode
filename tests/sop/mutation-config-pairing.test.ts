@@ -24,7 +24,7 @@
  */
 import { execSync } from 'child_process';
 import { existsSync, readdirSync, readFileSync } from 'fs';
-import { basename, join } from 'path';
+import { basename, dirname, join } from 'path';
 
 const ROOT = join(__dirname, '..', '..');
 
@@ -181,11 +181,21 @@ describe('the mutation baseline covers what the config mutates', () => {
     /**
      * The per-build half of the mutation ratchet. The comparison itself only runs
      * when Stryker runs (minutes to hours), so what CAN be checked every build is
-     * that the two lists still line up: a module added to `mutate` without a
-     * baseline row would be measured against nothing, and a baseline row for a
-     * module no longer mutated is a number nobody can reproduce.
+     * that a module in `mutate` has a baseline row — without one it is measured
+     * against nothing — and that every row is still REPRODUCIBLE.
      *
-     * Same both-directions contract as every other ledger here.
+     * THIS USED TO BE A BOTH-DIRECTIONS CHECK, and the second direction was
+     * "a baseline row for a module the sample does not mutate is a number nobody
+     * can reproduce". That was true while the ~16-minute sample run was the only way
+     * to measure anything. It stopped being true when the focused runner landed: any
+     * single module reproduces in under a minute via `scripts/focusModule.mjs`, and
+     * `scripts/mutationSweep.mjs` baselines the whole 507-module included set that
+     * way. Requiring every row to be in a 16-module sample config would cap the
+     * baseline at 16 rows forever — which is the 3.2% coverage the sweep exists to fix.
+     *
+     * So the direction that still means something is kept, in the form that is now
+     * true: a row must name a file that exists AND has a mirrored suite, because
+     * either one missing is a number that cannot be produced again.
      */
     const BASELINE = join(ROOT, 'reports/mutation/baseline.json');
 
@@ -195,16 +205,32 @@ describe('the mutation baseline covers what the config mutates', () => {
         expect(Object.keys(modules).length).toBeGreaterThan(3);
     });
 
-    it('the baseline and the sample config agree, in both directions', () => {
+    it('every module the sample mutates has a baseline row', () => {
         const modules: Record<string, unknown> = JSON.parse(readFileSync(BASELINE, 'utf8')).modules;
         const mutate: string[] = JSON.parse(
             readFileSync(join(ROOT, 'stryker.pl22.config.json'), 'utf8')
         ).mutate;
+        expect(mutate.filter((m) => !(m in modules))).toEqual([]);
+    });
 
-        expect({
-            mutatedWithNoBaseline: mutate.filter((m) => !(m in modules)),
-            baselineForNothingMutated: Object.keys(modules).filter((m) => !mutate.includes(m)),
-        }).toEqual({ mutatedWithNoBaseline: [], baselineForNothingMutated: [] });
+    it('every baseline row names a module that can still be re-measured', () => {
+        const modules: Record<string, unknown> = JSON.parse(readFileSync(BASELINE, 'utf8')).modules;
+        const unreproducible = Object.keys(modules).filter((m) => {
+            if (!existsSync(join(ROOT, m))) return true;
+            // The same mirror convention focusModule.mjs uses to select suites. No
+            // suite means a re-run would report a confident zero rather than fail.
+            const stem = basename(m).replace(/\.tsx?$/, '');
+            const dir = join(ROOT, 'tests', dirname(m).slice('src/'.length));
+            if (!existsSync(dir)) return true;
+            return !readdirSync(dir).some(
+                (f) =>
+                    f === `${stem}.test.ts` ||
+                    f === `${stem}.test.tsx` ||
+                    ((f.startsWith(`${stem}-`) || f.startsWith(`${stem}.`)) &&
+                        /\.test\.tsx?$/.test(f))
+            );
+        });
+        expect(unreproducible).toEqual([]);
     });
 
     it('every baseline row carries the fields the ratchet compares', () => {

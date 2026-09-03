@@ -21,7 +21,8 @@
  * Suites are found by this repo's mirror convention: a module under src is tested by the
  * same path under tests, plus any suite split from it with a hyphenated suffix.
  */
-import { readFileSync, writeFileSync, existsSync, readdirSync, rmSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { readFileSync, writeFileSync, existsSync, readdirSync, rmSync, realpathSync } from 'fs';
 import { dirname, basename, join } from 'path';
 
 const STRYKER = 'stryker.focus.config.json';
@@ -170,4 +171,13 @@ function main() {
     if (previous !== arg) console.log(`\nWas: ${previous}. Incremental cache cleared — the next run is cold.`);
 }
 
-main();
+/**
+ * Only run the CLI when this file IS the command, not when another script imports it.
+ * Without this, importing `suitesFor` executes main() against the IMPORTER's argv — the sweep
+ * runner's `--minutes 480` was read as a module path and exited 1 before doing anything.
+ */
+const isEntryPoint =
+    !!process.argv[1] &&
+    existsSync(process.argv[1]) &&
+    realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (isEntryPoint) main();
