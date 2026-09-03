@@ -51,12 +51,16 @@ function uri(p: string): unknown {
  * @param initial - seed entries, for a suite that starts with state already there.
  */
 export function createStatefulGlobalState(initial: Record<string, unknown> = {}): {
-    globalState: vscode.ExtensionContext['globalState'];
+    globalState: jest.Mocked<vscode.ExtensionContext['globalState']>;
     store: Map<string, unknown>;
 } {
     const store = new Map<string, unknown>(Object.entries(initial));
     const globalState = {
-        get: jest.fn((key: string) => store.get(key)),
+        // Honours the (key, defaultValue) overload the real Memento has: a caller
+        // that passes a default gets it back for an absent key, as in VS Code.
+        get: jest.fn((key: string, defaultValue?: unknown) =>
+            store.has(key) ? store.get(key) : defaultValue
+        ),
         update: jest.fn((key: string, value: unknown) => {
             if (value === undefined) store.delete(key);
             else store.set(key, value);
@@ -64,7 +68,7 @@ export function createStatefulGlobalState(initial: Record<string, unknown> = {})
         }),
         keys: jest.fn(() => [...store.keys()]),
         setKeysForSync: jest.fn(),
-    } as unknown as vscode.ExtensionContext['globalState'];
+    } as unknown as jest.Mocked<vscode.ExtensionContext['globalState']>;
     return { globalState, store };
 }
 

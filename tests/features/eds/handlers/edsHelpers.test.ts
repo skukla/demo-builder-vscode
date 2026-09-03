@@ -18,10 +18,11 @@ import {
 } from '@/features/eds/handlers/edsHelpers';
 import type { HandlerContext } from '@/types/handlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
-import type { ExtensionContext } from 'vscode';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 // Mock the extracted service classes
 jest.mock('@/features/eds/services/github/githubTokenService', () => ({
@@ -86,28 +87,15 @@ jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {
 /**
  * Creates a mock HandlerContext for testing
  */
-function createMockHandlerContext(overrides?: Partial<HandlerContext>): HandlerContext {
-    const mockSecrets = {
-        get: jest.fn(),
-        store: jest.fn(),
-        delete: jest.fn(),
-        onDidChange: jest.fn(),
-    };
-
-    const mockExtensionContext = createMockExtensionContext({
-        secrets: mockSecrets as unknown as ExtensionContext['secrets'],
-    });
-
-    return {
-        context: mockExtensionContext,
-        logger: createMockLogger(),
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-        authManager: {
-            isAuthenticated: jest.fn(),
-            getAccessToken: jest.fn(),
-        },
+function makeEdsContext(overrides?: Partial<HandlerContext>): HandlerContext {
+    const { secrets } = createMockSecretStorage();
+    return createMockHandlerContext({
+        context: createMockExtensionContext({ secrets }),
+        // Nothing here asserts a signed-in state, so `isAuthenticated` stays a
+        // bare mock rather than the builder's signed-in default.
+        authManager: createMockAuthenticationService({ isAuthenticated: jest.fn() }),
         ...overrides,
-    } as unknown as HandlerContext;
+    });
 }
 
 /**
@@ -140,7 +128,7 @@ describe('edsHelpers', () => {
     describe('Service Cache - getGitHubServices', () => {
         it('should create GitHub services on first call', () => {
             // Given: A fresh context with no cached services
-            const context = createMockHandlerContext();
+            const context = makeEdsContext();
 
             // When: Getting the GitHub services
             const services = getGitHubServices(context.context.secrets);
@@ -155,7 +143,7 @@ describe('edsHelpers', () => {
 
         it('should return cached GitHub services on subsequent calls', () => {
             // Given: A context with previously created services
-            const context = createMockHandlerContext();
+            const context = makeEdsContext();
             const firstServices = getGitHubServices(context.context.secrets);
 
             // When: Getting the services again
@@ -167,7 +155,7 @@ describe('edsHelpers', () => {
 
         it('should use context.secrets for GitHubTokenService', () => {
             // Given: A context with specific secrets
-            const context = createMockHandlerContext();
+            const context = makeEdsContext();
 
             // When: Getting the GitHub services
             const services = getGitHubServices(context.context.secrets);
@@ -182,7 +170,7 @@ describe('edsHelpers', () => {
     describe('Service Cache - getDaLiveAuthService', () => {
         it('should create DaLiveAuthService on first call', () => {
             // Given: A fresh extension context
-            const context = createMockHandlerContext();
+            const context = makeEdsContext();
 
             // When: Getting the DaLive auth service with ExtensionContext
             const service = getDaLiveAuthService(context.context);
@@ -194,7 +182,7 @@ describe('edsHelpers', () => {
 
         it('should return cached DaLiveAuthService on subsequent calls', () => {
             // Given: A context with previously created service
-            const context = createMockHandlerContext();
+            const context = makeEdsContext();
             const firstService = getDaLiveAuthService(context.context);
 
             // When: Getting the service again
@@ -206,7 +194,7 @@ describe('edsHelpers', () => {
 
         it('should use extension context for DaLiveAuthService', () => {
             // Given: A context with specific extension context
-            const context = createMockHandlerContext();
+            const context = makeEdsContext();
 
             // When: Getting the DaLive auth service
             const service = getDaLiveAuthService(context.context);
@@ -219,7 +207,7 @@ describe('edsHelpers', () => {
     describe('clearServiceCache', () => {
         it('should clear cached GitHubServices', () => {
             // Given: Cached GitHub services
-            const context = createMockHandlerContext();
+            const context = makeEdsContext();
             const firstServices = getGitHubServices(context.context.secrets);
 
             // When: Clearing the cache
@@ -232,7 +220,7 @@ describe('edsHelpers', () => {
 
         it('should clear cached DaLiveAuthService and call dispose', () => {
             // Given: A cached DaLiveAuthService
-            const context = createMockHandlerContext();
+            const context = makeEdsContext();
             const firstService = getDaLiveAuthService(context.context);
             const disposeMock = (firstService as unknown as { dispose: jest.Mock }).dispose;
 

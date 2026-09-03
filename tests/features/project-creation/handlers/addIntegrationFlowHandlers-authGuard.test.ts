@@ -23,7 +23,8 @@ import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 
 const mockEnsureAdobeIOAuth = jest.fn();
@@ -60,11 +61,9 @@ const ENTITY_HANDLERS = [
  */
 const AUTH_HANDLERS = ['check-auth', 'authenticate', 'switchOrg'] as const;
 
-function createContext(): HandlerContext & { sendMessage: jest.Mock } {
-    return {
-        logger: createMockLogger(),
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-        authManager: {
+function createContext(): jest.Mocked<HandlerContext> {
+    return createMockHandlerContext({
+        authManager: createMockAuthenticationService({
             // If a guard is missing, the handler reaches these — the fetch that
             // drops to the CLI and opens a browser. They must never be called
             // while unauthenticated.
@@ -75,9 +74,9 @@ function createContext(): HandlerContext & { sendMessage: jest.Mock } {
             getWorkspacesSdkOnly: jest.fn().mockResolvedValue([]),
             getWorkspaces: jest.fn().mockResolvedValue([]),
             getCurrentOrganization: jest.fn().mockResolvedValue({ name: 'Org' }),
-        },
+        }),
         stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(undefined) }),
-    } as unknown as HandlerContext & { sendMessage: jest.Mock };
+    });
 }
 
 beforeEach(() => {

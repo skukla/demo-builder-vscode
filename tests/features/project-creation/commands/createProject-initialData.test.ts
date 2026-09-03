@@ -13,6 +13,7 @@ import { CreateProjectWebviewCommand } from '@/features/project-creation/command
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 import { internals } from '../../../helpers/commandInternals';
 // Factory mock keeping the real module: transitive deps (fetch-blob via the
@@ -36,29 +37,6 @@ jest.mock('@/core/di/serviceLocator', () => ({
 }));
 jest.mock('@/features/prerequisites/services/PrerequisitesManager');
 
-function createMockExtensionContext(): vscode.ExtensionContext {
-    return {
-        subscriptions: [],
-        extensionPath: '/mock/extension/path',
-        globalState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-            setKeysForSync: jest.fn(),
-        },
-        workspaceState: {
-            get: jest.fn(),
-            update: jest.fn(),
-            keys: jest.fn(() => []),
-        },
-        extensionUri: vscode.Uri.file('/mock/extension/path'),
-        extensionMode: vscode.ExtensionMode.Test,
-        asAbsolutePath: (relativePath: string) => `/mock/extension/path/${relativePath}`,
-        secrets: {},
-    } as unknown as vscode.ExtensionContext;
-}
-
-
 /** Serve `json` as the wizard-steps.json content; no other file exists. */
 function setupStepsFile(json: string): void {
     (fs.existsSync as jest.Mock).mockImplementation((p: unknown) =>
@@ -81,7 +59,7 @@ describe('CreateProjectWebviewCommand - getInitialData wizard-steps validation',
 
         mockLogger = createMockLogger();
         command = new CreateProjectWebviewCommand(
-            createMockExtensionContext(),
+            createMockExtensionContext({}, '/mock/extension/path'),
             createMockStateManager(),
             mockLogger
         );

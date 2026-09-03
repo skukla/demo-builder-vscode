@@ -10,6 +10,10 @@ import { toggleLogsPanel } from '@/features/lifecycle/services/lifecycleService'
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import {
+    createMockExtensionContext,
+    createStatefulGlobalState,
+} from '../../../helpers/extensionContextFake';
 
 // Mock the lifecycle toggle chokepoint so the sidebar's openLogs handler can
 // be asserted without touching the real VS Code panel/session state.
@@ -93,25 +97,12 @@ describe('SidebarProvider', () => {
 
     beforeEach(() => {
         // Create mock extension context. globalState backs the persistent
-        // update-check throttle (`lastUpdateCheck`); a no-op store is
+        // update-check throttle (`lastUpdateCheck`); a fresh store is
         // enough for tests that don't exercise the throttle.
-        const globalStateStore: Record<string, unknown> = {};
-        mockContext = {
-            extensionPath: '/mock/extension/path',
-            extensionUri: {
-                fsPath: '/mock/extension/path',
-                path: '/mock/extension/path',
-            },
-            subscriptions: [],
-            globalState: {
-                get: jest.fn((key: string, defaultValue?: unknown) =>
-                    key in globalStateStore ? globalStateStore[key] : defaultValue
-                ),
-                update: jest.fn(async (key: string, value: unknown) => {
-                    globalStateStore[key] = value;
-                }),
-            },
-        } as unknown as vscode.ExtensionContext;
+        mockContext = createMockExtensionContext(
+            { globalState: createStatefulGlobalState().globalState },
+            '/mock/extension/path'
+        );
 
         // Create mock state manager
         mockStateManager = createMockStateManager({
@@ -351,7 +342,7 @@ describe('SidebarProvider', () => {
         const NOW = 1_700_000_000_000;
         const ONE_HOUR_MS = 60 * 60 * 1000;
 
-        let globalStateStore: Record<string, unknown>;
+        let globalStateStore: Map<string, unknown>;
         let mockWebviewView: MockWebviewView;
         let executeCommandMock: jest.Mock;
 
@@ -359,20 +350,12 @@ describe('SidebarProvider', () => {
             jest.useFakeTimers();
             jest.setSystemTime(NOW);
 
-            globalStateStore = {};
-            mockContext = {
-                extensionPath: '/mock/extension/path',
-                extensionUri: { fsPath: '/mock/extension/path', path: '/mock/extension/path' },
-                subscriptions: [],
-                globalState: {
-                    get: jest.fn((key: string, defaultValue?: unknown) =>
-                        key in globalStateStore ? globalStateStore[key] : defaultValue
-                    ),
-                    update: jest.fn(async (key: string, value: unknown) => {
-                        globalStateStore[key] = value;
-                    }),
-                },
-            } as unknown as vscode.ExtensionContext;
+            const stateful = createStatefulGlobalState();
+            globalStateStore = stateful.store;
+            mockContext = createMockExtensionContext(
+                { globalState: stateful.globalState },
+                '/mock/extension/path'
+            );
 
             provider = new SidebarProvider(mockContext, mockStateManager, mockLogger);
 
@@ -412,7 +395,7 @@ describe('SidebarProvider', () => {
         });
 
         it('skips the update check when the last check was within the throttle window', () => {
-            globalStateStore['lastUpdateCheck'] = NOW - 30 * 60 * 1000; // 30 min ago
+            globalStateStore.set('lastUpdateCheck', NOW - 30 * 60 * 1000); // 30 min ago
 
             provider.resolveWebviewView(
                 mockWebviewView as unknown as vscode.WebviewView,
@@ -424,7 +407,7 @@ describe('SidebarProvider', () => {
         });
 
         it('runs the update check when the throttle window has elapsed', () => {
-            globalStateStore['lastUpdateCheck'] = NOW - (ONE_HOUR_MS + 1); // just past throttle
+            globalStateStore.set('lastUpdateCheck', NOW - (ONE_HOUR_MS + 1)); // just past throttle
 
             provider.resolveWebviewView(
                 mockWebviewView as unknown as vscode.WebviewView,
@@ -436,7 +419,7 @@ describe('SidebarProvider', () => {
         });
 
         it('skips the check at the throttle boundary (last check exactly THROTTLE_MS ago)', () => {
-            globalStateStore['lastUpdateCheck'] = NOW - ONE_HOUR_MS;
+            globalStateStore.set('lastUpdateCheck', NOW - ONE_HOUR_MS);
 
             provider.resolveWebviewView(
                 mockWebviewView as unknown as vscode.WebviewView,
@@ -464,7 +447,7 @@ describe('SidebarProvider', () => {
 
         it('rolls the timestamp back when the network call rejects (no throttle on retry)', async () => {
             const previous = NOW - 2 * ONE_HOUR_MS;
-            globalStateStore['lastUpdateCheck'] = previous;
+            globalStateStore.set('lastUpdateCheck', previous);
             executeCommandMock.mockImplementation((cmd: string) => {
                 if (cmd === 'demoBuilder.checkForUpdates') {
                     return Promise.reject(new Error('network unreachable'));
@@ -482,7 +465,7 @@ describe('SidebarProvider', () => {
             await Promise.resolve();
             await Promise.resolve();
 
-            expect(globalStateStore['lastUpdateCheck']).toBe(previous);
+            expect(globalStateStore.get('lastUpdateCheck')).toBe(previous);
         });
     });
 });

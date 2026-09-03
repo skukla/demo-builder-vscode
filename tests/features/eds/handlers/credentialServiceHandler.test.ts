@@ -20,16 +20,21 @@ jest.mock('@/features/eds/services/credentialServiceProbe', () => ({
 import { handleCheckCredentialService } from '@/features/eds/handlers/credentialServiceHandler';
 import { probeCredentialService } from '@/features/eds/services/credentialServiceProbe';
 import type { HandlerContext } from '@/types/handlers';
-import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 const mockedProbe = probeCredentialService as jest.MockedFunction<typeof probeCredentialService>;
 
 function context(currentProject?: unknown): HandlerContext {
-    return {
-        authManager: { getTokenManager: () => ({ inspectToken: async () => ({}) }) },
-        stateManager: { getCurrentProject: async () => currentProject },
-        logger: createMockLogger(),
-    } as unknown as HandlerContext;
+    return createMockHandlerContext({
+        authManager: createMockAuthenticationService({
+            getTokenManager: jest.fn().mockReturnValue({ inspectToken: async () => ({}) }),
+        }),
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(currentProject),
+        }),
+    });
 }
 
 beforeEach(() => {

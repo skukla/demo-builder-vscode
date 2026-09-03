@@ -532,7 +532,9 @@ describe('a watch that cannot run', () => {
     const settle = () => new Promise((r) => setTimeout(r, 25));
 
     /** The record written by the LAST transient set. */
-    function lastRecord(stores: { globalState: { update: jest.Mock } }): Record<string, unknown> {
+    function lastRecord(
+        stores: ReturnType<typeof makeImportHarness>['stores']
+    ): Record<string, unknown> {
         const calls = stores.globalState.update.mock.calls;
         return calls[calls.length - 1]?.[1] as Record<string, unknown>;
     }

@@ -13,7 +13,6 @@ import * as vscode from 'vscode';
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import { watchImportJob } from '@/features/data-installer/services/importJobRunner';
 import type { Project } from '@/types/base';
-import type { HandlerContext } from '@/types/handlers';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({
     ensureAdobeIOAuth: jest.fn().mockResolvedValue({ authenticated: true }),
@@ -33,6 +32,14 @@ jest.mock('@/features/data-installer/services/importJobRunner', () => ({
 import { importHandlers } from '@/features/data-installer/handlers/importHandlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import {
+    createMockExtensionContext,
+    createStatefulGlobalState,
+} from '../../../helpers/extensionContextFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
 export { importHandlers };
 
@@ -51,17 +58,9 @@ export function setupSettings(): void {
 
 /** In-memory globalState + secrets, standing in for the extension context. */
 export function makeStores() {
-    const mem = new Map<string, unknown>();
-    return {
-        globalState: {
-            get: jest.fn((k: string, d?: unknown) => (mem.has(k) ? mem.get(k) : d)),
-            update: jest.fn(async (k: string, v: unknown) => void mem.set(k, v)),
-            keys: jest.fn(() => [...mem.keys()]),
-            setKeysForSync: jest.fn(),
-        },
-        secrets: { get: jest.fn(async () => undefined), store: jest.fn(), delete: jest.fn() },
-        peek: (k: string) => mem.get(k),
-    };
+    const { globalState, store: mem } = createStatefulGlobalState();
+    const { secrets } = createMockSecretStorage();
+    return { globalState, secrets, peek: (k: string) => mem.get(k) };
 }
 
 /**
@@ -95,20 +94,21 @@ export function makeImportHarness(project: unknown = PAAS_PROJECT) {
     const tokenManager = {
         inspectToken: jest.fn().mockResolvedValue({ valid: true, token: 'tok' }),
     };
-    const context = {
-        logger: createMockLogger(),
+    const context = createMockHandlerContext({
         debugLogger: createMockLogger(),
-        authManager: {
+        authManager: createMockAuthenticationService({
             isAuthenticated: jest.fn().mockResolvedValue(true),
             getTokenManager: jest.fn().mockReturnValue(tokenManager),
-        },
-        panel: {} as vscode.WebviewPanel,
-        context: stores,
+        }),
+        panel: createMockWebviewPanel(),
+        context: createMockExtensionContext({
+            globalState: stores.globalState,
+            secrets: stores.secrets,
+        }),
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue(project),
         }),
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-    } as unknown as HandlerContext;
+    });
     return { context, stores };
 }
 

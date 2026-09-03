@@ -18,7 +18,7 @@ jest.mock('vscode', () => ({ env: { openExternal: jest.fn() }, Uri: { parse: (u:
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import type { HandlerContext, PrerequisiteCheckState } from '@/types/handlers';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/types';
-import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 const DOCKER: PrerequisiteDefinition = {
     id: 'docker',
@@ -38,22 +38,21 @@ const NODE: PrerequisiteDefinition = {
 const RESOLVED = [NODE, DOCKER];
 
 function createContext(): HandlerContext {
-    return {
-        logger: createMockLogger(),
-        debugLogger: { debug: jest.fn() },
-        errorLogger: { logError: jest.fn() },
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-        // Empty, exactly as the headless factory leaves it. Nothing in the id
-        // path may depend on this being populated.
-        sharedState: {},
+    return createMockHandlerContext({
+        errorLogger: { logError: jest.fn() } as unknown as HandlerContext['errorLogger'],
+        // Empty, exactly as the headless factory leaves it
+        // (`headlessHandlerContext.ts`: `{ isAuthenticating: false }`). Nothing in
+        // the id path may depend on this being populated.
+        sharedState: { isAuthenticating: false },
         panel: undefined,
+        // No PrerequisitesManager builder exists; four methods stand in for it.
         prereqManager: {
             loadConfig: jest.fn().mockResolvedValue({ prerequisites: RESOLVED }),
             resolveDependencies: jest.fn(() => RESOLVED),
             getInstallSteps: jest.fn(() => ({ manual: true, url: 'https://example.test/docker' })),
             checkPrerequisite: jest.fn(),
-        },
-    } as unknown as HandlerContext;
+        } as unknown as HandlerContext['prereqManager'],
+    });
 }
 
 describe('install-prerequisite addressed by prerequisiteId', () => {

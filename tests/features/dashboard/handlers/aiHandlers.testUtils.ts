@@ -146,6 +146,13 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import {
+    createMockExtensionContext,
+    createStatefulGlobalState,
+} from '../../../helpers/extensionContextFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 import type { AiPrompt, Project } from '@/types/base';
 
 // ==========================================================
@@ -153,70 +160,25 @@ import type { AiPrompt, Project } from '@/types/base';
 // ==========================================================
 
 export function createAiHandlerContext(overrides?: Partial<HandlerContext>): HandlerContext {
-    // Honor the (key, defaultValue) overload — matches the real VS Code Memento.
-    // Bare jest.fn() returns undefined for ALL args, which breaks code that
-    // relies on the default; this mock falls back to the supplied default when
-    // the second arg is present.
-    const memento = {
-        get: jest.fn((_key: string, defaultValue?: unknown) => defaultValue),
-        update: jest.fn(),
-        keys: jest.fn().mockReturnValue([]),
-    };
-    return {
-        context: {
-            extensionPath: '/mock/extension/path',
-            secrets: {
-                get: jest.fn(),
-                store: jest.fn(),
-                delete: jest.fn(),
-                onDidChange: jest.fn(),
-            },
-            globalState: memento,
-            subscriptions: [],
-        },
-        logger: createMockLogger(),
+    // The stateful globalState honours the (key, defaultValue) overload the real
+    // VS Code Memento has, so a handler that relies on the default gets it.
+    const { globalState } = createStatefulGlobalState();
+    return createMockHandlerContext({
+        context: createMockExtensionContext(
+            { globalState, secrets: createMockSecretStorage().secrets },
+            '/mock/extension/path'
+        ),
         debugLogger: createMockLogger(),
-        stateManager: {
+        stateManager: createMockStateManager({
             getCurrentProject: jest.fn().mockResolvedValue({
                 name: 'Test Project',
                 path: '/projects/test',
                 stack: 'paas',
             }),
-            saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
-        },
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-        panel: {
-            dispose: jest.fn(),
-        },
-        sharedState: {},
-        ...overrides,
-    } as unknown as HandlerContext;
-}
-
-/**
- * Stateful Memento mock used by the global-pin-store tests. Behaves like the
- * real VS Code Memento: `update(key, val)` persists, subsequent `get(key)`
- * returns the persisted value. The bare `createAiHandlerContext` memento only
- * echoes the default — fine for handlers that don't touch globalState, but
- * useless for handlers that read what they just wrote.
- */
-function makeStatefulMemento(initial: Record<string, unknown> = {}) {
-    const store = new Map<string, unknown>(Object.entries(initial));
-    return {
-        get: jest.fn((key: string, defaultValue?: unknown) =>
-            store.has(key) ? store.get(key) : defaultValue
-        ),
-        update: jest.fn((key: string, value: unknown) => {
-            if (value === undefined) {
-                store.delete(key);
-            } else {
-                store.set(key, value);
-            }
-            return Promise.resolve();
         }),
-        keys: jest.fn(() => Array.from(store.keys())),
-        _store: store,
-    };
+        panel: createMockWebviewPanel(),
+        ...overrides,
+    });
 }
 
 /**
@@ -249,21 +211,17 @@ export function makeScopedContext(
     const saveProject = jest.fn(async (next: Project) => {
         project.aiPrompts = next.aiPrompts ?? [];
     });
-    const memento = makeStatefulMemento({
+    // The global-pin-store tests read what the handler wrote, so the memento
+    // REMEMBERS; `_store` is the map behind it, exposed for those assertions.
+    const { globalState, store } = createStatefulGlobalState({
         'demoBuilder.ai.globalPrompts': [...(opts.globalPrompts ?? [])],
     });
+    const memento = Object.assign(globalState, { _store: store });
     const context = createAiHandlerContext({
-        context: {
-            extensionPath: '/mock/extension/path',
-            secrets: {
-                get: jest.fn(),
-                store: jest.fn(),
-                delete: jest.fn(),
-                onDidChange: jest.fn(),
-            },
-            globalState: memento,
-            subscriptions: [],
-        } as unknown as HandlerContext['context'],
+        context: createMockExtensionContext(
+            { globalState: memento, secrets: createMockSecretStorage().secrets },
+            '/mock/extension/path'
+        ),
         stateManager: createMockStateManager({
             getCurrentProject: jest.fn(async () => project),
             saveProject,

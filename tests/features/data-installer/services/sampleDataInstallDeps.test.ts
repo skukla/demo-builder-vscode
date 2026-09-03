@@ -35,6 +35,8 @@ import { resolveCommerceCredentials } from '@/features/data-installer/services/c
 import type { HandlerContext } from '@/types/handlers';
 import type { DataTypeStatus } from '@/features/data-installer/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 const mockedResolve = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
@@ -48,10 +50,12 @@ const PROJECT = {
 };
 
 function makeImportHarness(): HandlerContext {
-    return {
+    return createMockHandlerContext({
         debugLogger: createMockLogger(),
-        authManager: { getTokenManager: () => ({ inspectToken: jest.fn() }) },
-    } as unknown as HandlerContext;
+        authManager: createMockAuthenticationService({
+            getTokenManager: jest.fn().mockReturnValue({ inspectToken: jest.fn() }),
+        }),
+    });
 }
 
 beforeEach(() => {
