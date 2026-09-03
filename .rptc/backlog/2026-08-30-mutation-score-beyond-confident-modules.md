@@ -245,3 +245,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(auth): bring adobeSDKClient to zero open mutation gaps (`ba9383a52`)
 - 2026-09-03  test(auth): bring eventProviderLifecycle to zero open mutation gaps (`e24d74934`)
 - 2026-09-03  test(auth): bring ensureProjectOrgContext to zero open mutation gaps (`7c35219c8`)
+- 2026-09-03  test(auth): bring organizationHandlers to zero open mutation gaps (`cc93b8502`)
