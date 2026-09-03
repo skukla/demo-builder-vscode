@@ -71,11 +71,34 @@ describe('organizationHandlers', () => {
                 org: { id: 'o1', name: 'E', code: 'C1' },
             });
 
-            await handleReDetectContext(context);
+            const result = await handleReDetectContext(context);
 
+            // The re-read context itself travels — not an empty object in its place.
+            const adobeContext = { org: { id: 'o1', name: 'E', code: 'C1' } };
             expect(context.authManager.getCurrentContext).toHaveBeenCalled();
-            const sent = context.sendMessage.mock.calls.find((c: unknown[]) => c[0] === 're-detect-context');
-            expect(sent).toBeDefined();
+            expect(result).toEqual({ success: true, data: adobeContext });
+            expect(context.sendMessage).toHaveBeenCalledWith('re-detect-context', adobeContext);
+        });
+
+        it('answers an empty context, not a failure, when no auth manager is present', async () => {
+            const ctx = { ...context, authManager: undefined };
+
+            const result = await handleReDetectContext(ctx);
+
+            expect(result).toEqual({ success: true, data: {} });
+            expect(ctx.sendMessage).toHaveBeenCalledWith('re-detect-context', {});
+            expect(ctx.logger.error).not.toHaveBeenCalled();
+        });
+
+        it('reports a shaped failure to the UI and the caller when the re-read throws', async () => {
+            context.authManager.getCurrentContext.mockRejectedValue(new Error('console where failed'));
+
+            const result = await handleReDetectContext(context);
+
+            const message = 'Failed to re-detect Adobe context. Please try again.';
+            expect(result).toEqual({ success: false, error: message });
+            expect(context.sendMessage).toHaveBeenCalledWith('re-detect-context', { error: message });
+            expect(context.sendMessage).toHaveBeenCalledTimes(1);
         });
 
         it('does NOT use the cache-nuking clearAll (auth status / token must survive)', async () => {

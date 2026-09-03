@@ -244,3 +244,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  chore(mutation): the second queue — 40 modules, the rest of the consequence tier (`56e85b1fc`)
 - 2026-09-03  test(auth): bring adobeSDKClient to zero open mutation gaps (`ba9383a52`)
 - 2026-09-03  test(auth): bring eventProviderLifecycle to zero open mutation gaps (`e24d74934`)
+- 2026-09-03  test(auth): bring ensureProjectOrgContext to zero open mutation gaps (`7c35219c8`)
