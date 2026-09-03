@@ -330,6 +330,7 @@ never filed anywhere until now.
 - 2026-08-31  test(helpers): the StateManager fake covers the interface, and the typing caught four defects (`76190bd73`)
 - 2026-08-31  test(logging): the factory-logger group closes — 23 to zero, and the blind spot with it (`9371cc9be`)
 - 2026-09-01  fix(sop): the cast bans are narrower than they read, and the compiler named the next builders (`e7769713a`)
+- 2026-09-03  test(helpers): 18 HandlerContext and ExtensionContext literals adopt their builders (`d0576777b`)
 
 ## Reopened by the compiler, 2026-09-01 — and it named the next builders itself
 
