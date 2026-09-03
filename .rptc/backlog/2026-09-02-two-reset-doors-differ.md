@@ -4,7 +4,7 @@ kind: fix
 area: eds
 needs: []
 value: med
-status: active
+status: built
 ---
 
 # Resetting the same EDS project does less from the dashboard than from the projects list
