@@ -91,3 +91,8 @@ work is wasted anyway.
 
 Questions 1 and 2 answered with evidence recorded here, and a one-line verdict:
 delete, or rewire. Whichever it is becomes its own item.
+
+## Shipped so far
+
+- 2026-09-03  docs(backlog): PL-40 becomes a question — reachability decides delete vs rewire (`a02a3504d`)
+- 2026-09-03  docs(backlog): the wizard's configuration warnings reach nobody (PL-40) (`bb16b18d6`)

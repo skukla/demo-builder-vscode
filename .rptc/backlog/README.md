@@ -289,10 +289,10 @@ each item's own file; what has already landed against an item is in its
 | `PL-9` | chore | └ [Tests-tree dedup — the census after the first-ever scan](2026-08-27-tests-tree-dedup-census.md) | — | med | shipped |
 | `PL-10` | question | └ [Testing approach audit — do the tests need the same scan toolkit the code got?](2026-08-28-testing-approach-audit.md) | — | med | shipped |
 | `PL-14` | chore | └ [ADR-016 enforcement tooling — the seven artifacts](2026-08-28-adr-016-enforcement-tooling.md) | — | high | built |
-| `PL-15` | chore | └ [Run-noise burn-down to zero](2026-08-28-noise-burndown.md) | PL-14 | med | active |
-| `PL-16` | fix | └ [Give StateManager and Project fixtures a shared builder, the way HandlerContext has one](2026-08-28-shared-test-builders.md) | — | high | active |
+| `PL-15` | chore | └ [Run-noise burn-down to zero](2026-08-28-noise-burndown.md) | PL-14 | med | shipped |
+| `PL-16` | fix | └ [Give StateManager and Project fixtures a shared builder, the way HandlerContext has one](2026-08-28-shared-test-builders.md) | — | high | shipped |
 | `PL-22` | question | └ [Does the 93% mutation score hold outside the modules we already trusted?](2026-08-30-mutation-score-beyond-confident-modules.md) | PL-9 | med | open |
-| `PL-32` | chore | └ [Work the type-erasing casts in tests to zero](2026-08-31-type-erasing-casts.md) | — | med | active |
+| `PL-32` | chore | └ [Work the type-erasing casts in tests to zero](2026-08-31-type-erasing-casts.md) | — | med | shipped |
 | `PL-12` | question | [Pattern-conformance audit — one architecture, or one per feature?](2026-08-28-pattern-conformance-audit.md) | — | med | shipped |
 | `PL-17` | question | [The architecture is written for the extension host only; the frontend has rules but no document](2026-08-28-adr015-webview-jurisdiction.md) | — | high | shipped |
 | `PL-18` | feature | [ADR-017 §6 is stated but unenforced — the check that closes it](2026-08-29-adr017-stylesheet-bundle-check.md) | — | high | shipped |
@@ -311,7 +311,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-33` | chore | └ [Every convention is enforced, or it stops being a convention](2026-08-31-every-convention-enforced.md) | — | high | built |
 | `PL-34` | chore | └ [Every open finding from the 2026-09-01 toolchain day, in one list](2026-09-01-cast-and-builder-worklog.md) | — | high | active |
 | `PL-37` | chore | [The webview handshake's `stateVersion` is write-only](2026-09-02-webview-state-version-dead.md) | — | low | backlog |
-| `PL-38` | chore | [Our two most-mocked modules are faked 122 different ways](2026-09-02-webviewclient-mock-divergence.md) | — | med | built |
+| `PL-38` | chore | [Our two most-mocked modules are faked 122 different ways](2026-09-02-webviewclient-mock-divergence.md) | — | med | shipped |
 | `PL-39` | chore | [An item can be marked done while its own body says what is left](2026-09-02-finished-items-carrying-remainders.md) | — | med | backlog |
 | `PL-40` | question | [Can the wizard's configuration warnings even fire, and does anyone need them?](2026-09-03-webview-warnings-reach-nobody.md) | — | med | open |
 

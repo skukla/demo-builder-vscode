@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: active
+status: shipped
 parent: PL-11
 ---
 
@@ -339,6 +339,7 @@ never filed anywhere until now.
 - 2026-09-03  test(types): 35 accessor-suite Project literals adopt the builder (`58bac5ead`)
 - 2026-09-03  docs(backlog): log the batch-2 and batch-3 PL-16 commits (`bf114ec14`)
 - 2026-09-03  docs(backlog): the Project cast sites are exhausted — six must stay, and here is why (`9659d8f8f`)
+- 2026-09-03  Merge loop/2026-09-03-goal-queue: the Project cast sites are exhausted (`a2be3612d`)
 
 ## Reopened by the compiler, 2026-09-01 — and it named the next builders itself
 

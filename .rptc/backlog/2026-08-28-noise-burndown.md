@@ -5,7 +5,7 @@ area: platform
 parent: PL-11
 needs: PL-14
 value: med
-status: active
+status: shipped
 ---
 
 # Run-noise burn-down to zero
@@ -39,6 +39,8 @@ convergence batches plus dedicated passes for the top emitters.
 - 2026-08-28  test(noise): six webviewLogger mocks deleted — the canonical form was zero (`5a81d4e92`)
 - 2026-08-28  test(noise): real-output noise 102 -> 32, and the gate's own comment was wrong (`4959dea36`)
 - 2026-08-28  test(noise): phase 4 begins — 17 suites go silent by fixing one shared filter (`86764c226`)
+- 2026-09-03  Merge fix/pl-15-webview-log-noise: run noise reaches zero, and PL-40 opens (`fbc66e61c`)
+- 2026-09-03  fix(webview): the last two console.log statements in the test run (`821125055`)
 
 ## Shipped so far
 
