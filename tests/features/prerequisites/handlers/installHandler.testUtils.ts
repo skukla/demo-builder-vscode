@@ -13,9 +13,13 @@
  * own set.
  */
 
-import { HandlerContext } from '@/types/handlers';
+import { HandlerContext, PrerequisiteCheckState } from '@/types/handlers';
 import type { PrerequisiteStatusPayload } from '@/types/webviewPayloads';
 import { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/types';
+import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import type { ErrorLogger } from '@/core/logging/errorLogger';
+import type { ProgressUnifier } from '@/core/utils/progressUnifier/ProgressUnifier';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -182,9 +186,12 @@ export function setupSharedUtilityMocks() {
  * Helper to create mock HandlerContext
  */
 export function createInstallHandlerContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
-    const states = new Map();
+    const states = new Map<number, PrerequisiteCheckState>();
     states.set(0, { prereq: mockNpmPrereq, result: mockNodeResult });
 
+    // The manager, step logger, error logger and progress unifier are CLASSES
+    // with private members, so no literal can satisfy them; each fake carries
+    // only the methods the install handlers call.
     return createMockHandlerContextBase({
         prereqManager: {
             /**
@@ -195,10 +202,11 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
              * "Cannot read properties of undefined" before the handler runs.
              *
              * A fake smaller than its subject does not fail; it makes a branch
-             * UNTESTABLE, and the branch then looks merely uncovered. The `as any`
-             * at the end of this object is what let it drift — with the real type
-             * named, a missing method is a compile error rather than a TypeError
-             * three layers into a handler.
+             * UNTESTABLE, and the branch then looks merely uncovered. The cast
+             * at the end of this object is what let it drift — the class has
+             * private members, so the literal cannot be checked against it, and
+             * a missing method is a TypeError three layers into a handler rather
+             * than a compile error.
              */
             resolveDependencies: jest.fn().mockReturnValue([]),
             getPrerequisiteById: jest.fn(),
@@ -225,29 +233,30 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
                 get: jest.fn(),
                 set: jest.fn(),
             }),
-        } as any,
+        } as unknown as PrerequisitesManager,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         logger: createMockLogger(),
         debugLogger: createMockDebugLogger(),
         stepLogger: {
             log: jest.fn(),
-        } as any,
+        } as unknown as StepLogger,
         errorLogger: {
             logError: jest.fn(),
-        } as any,
+        } as unknown as ErrorLogger,
         progressUnifier: {
             executeStep: jest.fn().mockImplementation(async (step, current, total, callback, _options) => {
                 // Call the progress callback
                 await callback?.({ current: current + 1, total, message: step.message });
                 // Return void (no return value needed)
             }),
-        } as any,
+        } as unknown as ProgressUnifier,
         sharedState: {
+            isAuthenticating: false,
             currentPrerequisiteStates: states,
             currentComponentSelection: undefined,
         },
         ...overrides,
-    } as never)
+    });
 }
 
 /**
@@ -258,7 +267,8 @@ export function createInstallHandlerContext(overrides?: Partial<HandlerContext>)
  *
  * It exists as a helper rather than a cast at each call site because reaching it
  * needs one, and one cast with a reason beats five without. The reason: the mock
- * is built as `as any` above, so its shape is not visible to the compiler here.
+ * is cast to the real manager class above, so its jest shape is not visible to
+ * the compiler here.
  *
  * WHY ANY TEST NEEDS IT. Mutation testing found `invalidateCaches` deletable in
  * full with every suite still green — nothing asserted the call. The cache manager

@@ -48,7 +48,6 @@ jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     createDaLiveServiceTokenProvider: jest.fn(() => ({ getToken: jest.fn() })),
 }));
 
-
 import type { HelixService } from '@/features/eds/services/helix/helixService';
 import { refreshBlockLibraryHeadless } from '@/features/eds/services/refreshBlockLibraryHeadless';
 import { executeEdsPipeline } from '@/features/eds/services/edsPipeline';
@@ -58,6 +57,7 @@ import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 const pipelineMock = executeEdsPipeline as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
@@ -82,7 +82,7 @@ const fakeHelix = {} as unknown as HelixService;
 function deps(overrides: Record<string, unknown> = {}) {
     return {
         project: PROJECT,
-        context: {} as never,
+        context: createMockExtensionContext(),
         logger: makeLogger(),
         helixService: fakeHelix,
         ...overrides,

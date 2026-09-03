@@ -29,11 +29,13 @@ jest.mock('@/core/di/serviceLocator');
 export * as shared from '@/features/prerequisites/handlers/shared';
 export { ServiceLocator } from '@/core/di/serviceLocator';
 
-import { HandlerContext } from '@/types/handlers';
+import { HandlerContext, PrerequisiteCheckState } from '@/types/handlers';
 import {
     PrerequisiteDefinition,
     PrerequisiteStatus,
 } from '@/features/prerequisites/services/types';
+import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import type { StepLogger } from '@/core/logging/stepLogger';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
@@ -86,10 +88,12 @@ export const mockNpmResult: PrerequisiteStatus = {
 export function createContinueHandlerContext(
     overrides?: Partial<HandlerContext>
 ): jest.Mocked<HandlerContext> {
-    const states = new Map();
+    const states = new Map<number, PrerequisiteCheckState>();
     states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
     states.set(1, { prereq: mockNpmPrereq, result: mockNpmResult });
 
+    // The manager and step logger are CLASSES with private members, so no
+    // literal can satisfy them; each fake carries only what continue calls.
     return createMockHandlerContextBase({
         prereqManager: {
             checkPrerequisite: jest.fn().mockResolvedValue(mockNodeResult),
@@ -97,19 +101,20 @@ export function createContinueHandlerContext(
                 { version: 'Node 18', component: 'v18.0.0', installed: true },
                 { version: 'Node 20', component: 'v20.0.0', installed: true },
             ]),
-        },
+        } as unknown as PrerequisitesManager,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
         stepLogger: {
             log: jest.fn(),
-        },
+        } as unknown as StepLogger,
         sharedState: {
+            isAuthenticating: false,
             currentPrerequisites: [mockNodePrereq, mockNpmPrereq],
             currentPrerequisiteStates: states,
         },
         ...overrides,
-    } as never);
+    });
 }
 
 import * as shared from '@/features/prerequisites/handlers/shared';

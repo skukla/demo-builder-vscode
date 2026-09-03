@@ -3,6 +3,10 @@
  */
 
 import * as vscode from 'vscode';
+import {
+    createMockExtensionContext,
+    createStatefulGlobalState,
+} from '../../helpers/extensionContextFake';
 
 // Mock VS Code API
 
@@ -20,24 +24,9 @@ export function createTransientStateHarness(): {
     globalState: Map<string, unknown>;
     setKeysForSyncMock: jest.Mock;
 } {
-    const globalState = new Map<string, unknown>();
-    const setKeysForSyncMock = jest.fn();
-
-    const context = {
-        globalState: {
-            get: <T>(key: string): T | undefined =>
-                globalState.get(key) as T | undefined,
-            update: async (key: string, value: unknown): Promise<void> => {
-                if (value === undefined) {
-                    globalState.delete(key);
-                } else {
-                    globalState.set(key, value);
-                }
-            },
-            setKeysForSync: setKeysForSyncMock,
-            keys: () => [...globalState.keys()],
-        },
-    } as unknown as vscode.ExtensionContext;
+    const { globalState: memento, store: globalState } = createStatefulGlobalState();
+    const setKeysForSyncMock = memento.setKeysForSync as jest.Mock;
+    const context = createMockExtensionContext({ globalState: memento });
 
     return { context, globalState, setKeysForSyncMock };
 }

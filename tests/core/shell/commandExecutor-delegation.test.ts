@@ -46,7 +46,8 @@ describe('CommandExecutor - Service Delegation', () => {
             const executor = new CommandExecutor(mockDependencies.deps);
 
             // Mock the polling service method
-            (executor as any).pollingService.pollUntilCondition = mockPollingService.pollUntilCondition;
+            (executor as unknown as { pollingService: PollingService }).pollingService.pollUntilCondition =
+                mockPollingService.pollUntilCondition;
 
             await executor.pollUntilCondition(checkFn, options);
 
@@ -62,7 +63,7 @@ describe('CommandExecutor - Service Delegation', () => {
                 { stdout: 'result2', stderr: '', code: 0, duration: 150 }
             ]);
 
-            (commandExecutor as any).commandSequencer = mockSequencer;
+            (commandExecutor as unknown as { commandSequencer: CommandSequencer }).commandSequencer = mockSequencer;
 
             const commands = [
                 { command: 'echo 1' },
@@ -88,7 +89,7 @@ describe('CommandExecutor - Service Delegation', () => {
                 { stdout: 'result2', stderr: '', code: 0, duration: 150 }
             ]);
 
-            (commandExecutor as any).commandSequencer = mockSequencer;
+            (commandExecutor as unknown as { commandSequencer: CommandSequencer }).commandSequencer = mockSequencer;
 
             const commands = [
                 { command: 'echo 1' },

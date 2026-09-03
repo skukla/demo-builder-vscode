@@ -9,6 +9,13 @@ import { handleCheckAuth, handleAuthenticate } from '@/features/authentication/h
 import type { HandlerContext } from '@/types/handlers';
 import { createAuthHandlerContext, mockOrg, mockProject, mockOrgs } from './testUtils';
 
+/**
+ * The fields these tests read off an `auth-status` push. The handler sends
+ * inline literals (no exported payload type), and `sendMessage` declares its
+ * data as `unknown`, so this is the narrowing the assertions need.
+ */
+type AuthStatusPayload = { isChecking?: boolean; message?: string; subMessage?: string };
+
 describe('authenticationHandlers - Message Patterns', () => {
     describe('STEP 2: Constant Message Pattern (Message Constancy During Loading)', () => {
         let mockContext: jest.Mocked<HandlerContext>;
@@ -128,12 +135,12 @@ describe('authenticationHandlers - Message Patterns', () => {
 
                 // Loading message should not reveal org count
                 const loadingCalls = mockContext.sendMessage.mock.calls.filter(
-                    call => (call[1] as any).isChecking === true
+                    call => (call[1] as AuthStatusPayload).isChecking === true
                 );
 
                 loadingCalls.forEach(call => {
                     // No org-specific info during loading
-                    const payload = call[1] as any;
+                    const payload = call[1] as AuthStatusPayload;
                     expect(payload.message).not.toContain('organization');
                     expect(payload.message).not.toContain('multiple');
                 });
@@ -343,7 +350,7 @@ describe('authenticationHandlers - Message Patterns', () => {
 
             it('should handle undefined/null error messages gracefully', async () => {
                 const undefinedError = new Error();
-                undefinedError.message = undefined as any;
+                undefinedError.message = undefined as unknown as string;
                 (mockContext.authManager!.isAuthenticated as jest.Mock).mockRejectedValue(undefinedError);
 
                 await handleCheckAuth(mockContext);
@@ -417,7 +424,7 @@ describe('authenticationHandlers - Message Patterns', () => {
 
                 // No partial messages (all must have message & subMessage)
                 authStatusCalls.forEach(call => {
-                    const payload = call[1] as any;
+                    const payload = call[1] as AuthStatusPayload;
                     expect(payload.message).toBeDefined();
                     expect(payload.subMessage).toBeDefined();
                 });

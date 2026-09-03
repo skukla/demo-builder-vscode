@@ -162,7 +162,10 @@ describe('handleAddConsoleApis', () => {
     it('rejects a missing/empty/non-string apis payload', async () => {
         const context = makeContext(makeProject());
         for (const payload of [undefined, {}, { apis: [] }, { apis: [42] }]) {
-            const result = await handleAddConsoleApis(context, payload as never);
+            const result = await handleAddConsoleApis(
+                context,
+                payload as unknown as Parameters<typeof handleAddConsoleApis>[1]
+            );
             expect(result.success).toBe(false);
         }
         expect(subscribeRequiredApis).not.toHaveBeenCalled();
@@ -316,7 +319,10 @@ describe('handleSetConsoleApis', () => {
     it('rejects a non-array / invalid-code payload', async () => {
         const context = makeContext(makeProject());
         for (const payload of [undefined, { apis: 'x' }, { apis: [42] }, { apis: ['Bad;rm'] }]) {
-            const result = await handleSetConsoleApis(context, payload as never);
+            const result = await handleSetConsoleApis(
+                context,
+                payload as unknown as Parameters<typeof handleSetConsoleApis>[1]
+            );
             expect(result.success).toBe(false);
         }
         expect(subscribeRequiredApis).not.toHaveBeenCalled();

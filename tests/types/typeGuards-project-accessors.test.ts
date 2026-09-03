@@ -31,11 +31,11 @@ describe('typeGuards - Project Accessors', () => {
 
     describe('getComponentVersion', () => {
         it('should return version when component exists', () => {
-            const project = {
+            const project = createMockProject({
                 componentVersions: {
                     headless: { version: '1.2.3', lastUpdated: '' },
                 },
-            } as Partial<Project> as Project;
+            });
             expect(getComponentVersion(project, 'headless')).toBe('1.2.3');
         });
 
@@ -48,11 +48,11 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return undefined when component not found', () => {
-            const project = {
+            const project = createMockProject({
                 componentVersions: {
                     'other-component': { version: '1.0.0', lastUpdated: '' },
                 },
-            } as Partial<Project> as Project;
+            });
             expect(getComponentVersion(project, 'headless')).toBeUndefined();
         });
 
@@ -68,11 +68,11 @@ describe('typeGuards - Project Accessors', () => {
 
     describe('getProjectFrontendPort', () => {
         it('should return port when frontend component exists', () => {
-            const project = {
+            const project = createMockProject({
                 componentInstances: {
                     headless: { id: 'headless', name: 'Headless', status: 'ready', type: 'frontend', port: 3000 },
                 },
-            } as Partial<Project> as Project;
+            });
             expect(getProjectFrontendPort(project)).toBe(3000);
         });
 
@@ -85,11 +85,11 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return undefined when frontend component not found', () => {
-            const project = {
+            const project = createMockProject({
                 componentInstances: {
                     'other-component': { id: 'other-component', name: 'Other', status: 'ready', port: 8080 },
                 },
-            } as Partial<Project> as Project;
+            });
             expect(getProjectFrontendPort(project)).toBeUndefined();
         });
 

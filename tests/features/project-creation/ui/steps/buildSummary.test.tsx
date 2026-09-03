@@ -240,15 +240,14 @@ describe('integrationsSummaryGroup', () => {
     // Removed-behavior pin (D3): the retired legacy dependency key alone no
     // longer surfaces a mesh — package seeding writes selectedAppBuilderComponents.
     it('surfaces NO row from the retired legacy dependency key alone', () => {
-        const group = integrationsSummaryGroup(
-            state({
-                selectedPackage: 'citisignal',
-                selectedStack: 'eds-accs',
-                selectedOptionalDependencies: [MESH_LEGACY_DEP],
-            } as never),
-            packages,
-            stacks
-        );
+        // The retired key is not on WizardState any more; the intersection carries
+        // it past the compiler so the pin still hands it in at runtime.
+        const legacy: Partial<WizardState> & { selectedOptionalDependencies: string[] } = {
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-accs',
+            selectedOptionalDependencies: [MESH_LEGACY_DEP],
+        };
+        const group = integrationsSummaryGroup(state(legacy), packages, stacks);
         expect(group.rows).toEqual([]);
     });
 

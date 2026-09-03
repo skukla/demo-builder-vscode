@@ -348,7 +348,8 @@ describe('AdobeEntityFetcher', () => {
                 stdout: '[]',
                 stderr: '',
                 code: 0,
-            } as never);
+                duration: 0,
+            });
 
             await fetcher.getProjects();
 

@@ -1,10 +1,11 @@
 import { DaLiveConfigOperations } from '@/features/eds/services/daLive/daLiveConfigOperations';
+import type { DaLiveApiClient } from '@/features/eds/services/daLive/daLiveApiClient';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
-const makeLogger = () =>
-    createMockLogger();
+const makeLogger = () => createMockLogger();
 
-const makeApiClient = () =>
+/** The three client calls these operations make; the class holds a private token provider. */
+const makeApiClient = (): DaLiveApiClient =>
     ({
         getImsToken: jest.fn().mockResolvedValue('tok-123'),
         // Faithful fake: delegate to global fetch (which the suite mocks) and
@@ -16,11 +17,11 @@ const makeApiClient = () =>
                 url,
                 typeof options === 'function'
                     ? (options as () => RequestInit)()
-                    : (options as RequestInit),
-            ),
+                    : (options as RequestInit)
+            )
         ),
         createErrorFromResponse: jest.fn(),
-    }) as never;
+    }) as unknown as DaLiveApiClient;
 
 // updateSiteConfig shares the 401 ownership-probe path with applySiteConfig:
 // org ownership governs site writes, so the probe is called with the ORG.

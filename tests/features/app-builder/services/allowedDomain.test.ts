@@ -11,7 +11,7 @@ import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
 
 function projectWithFrontend(frontendId: string, port?: number): Project {
-    return {
+    return createMockProject({
         name: 'p',
         created: new Date(),
         lastModified: new Date(),
@@ -21,7 +21,7 @@ function projectWithFrontend(frontendId: string, port?: number): Project {
         componentInstances: {
             [frontendId]: { id: frontendId, name: frontendId, status: 'ready', port },
         },
-    } as unknown as Project;
+    });
 }
 
 describe('deriveAllowedDomain', () => {

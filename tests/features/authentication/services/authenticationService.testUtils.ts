@@ -37,12 +37,19 @@ export { createMockCommandExecutor } from '../../../helpers/commandExecutorFake'
 /** Canonical logger fake (ADR-016). */
 export { createMockLogger } from '../../../helpers/loggerFake';
 
+/**
+ * Method list read from `src/core/logging/stepLogger.ts`. The previous literal
+ * carried three methods the class does not have (`logMessage`, `setCurrentStep`,
+ * `setStepName`); the cast is to the class because it has private fields.
+ */
 export const createMockStepLogger = (): jest.Mocked<StepLogger> => ({
+    getStepName: jest.fn(),
+    logStatus: jest.fn(),
     logTemplate: jest.fn(),
-    logMessage: jest.fn(),
-    setCurrentStep: jest.fn(),
-    setStepName: jest.fn(),
-} as any);
+    logStepStart: jest.fn(),
+    logStepComplete: jest.fn(),
+    forStep: jest.fn(),
+} as unknown as jest.Mocked<StepLogger>);
 
 // Command result helpers
 import { createSuccessResult } from '../../../helpers/commandResultFake';
@@ -72,7 +79,7 @@ export const createMockSDKClient = (): jest.Mocked<AdobeSDKClient> => ({
     initialize: jest.fn().mockResolvedValue(undefined),
     ensureInitialized: jest.fn().mockResolvedValue(true),
     clear: jest.fn(),
-} as any);
+} as unknown as jest.Mocked<AdobeSDKClient>);
 
 /**
  * Creates mock entity services matching the EntityServices shape.
@@ -88,7 +95,7 @@ export const createMockEntityServices = (): {
         getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
         getProjects: jest.fn().mockResolvedValue([mockProject]),
         getWorkspaces: jest.fn().mockResolvedValue([mockWorkspace]),
-    } as any;
+    } as unknown as jest.Mocked<EntityServices['fetcher']>;
 
     const resolver = {
         getCurrentOrganization: jest.fn().mockResolvedValue(mockOrg),
@@ -97,11 +104,11 @@ export const createMockEntityServices = (): {
         getCurrentContext: jest.fn().mockResolvedValue({
             org: mockOrg, project: mockProject, workspace: mockWorkspace,
         }),
-    } as any;
+    } as unknown as jest.Mocked<EntityServices['resolver']>;
 
     const selector = {
         clearConsoleContext: jest.fn().mockResolvedValue(undefined),
-    } as any;
+    } as unknown as jest.Mocked<EntityServices['selector']>;
 
     return {
         entities: { fetcher, resolver, selector },

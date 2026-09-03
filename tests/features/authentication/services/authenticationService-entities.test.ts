@@ -5,6 +5,7 @@ import type { Logger } from '@/types/logger';
 import {
     createMockCommandExecutor,
     createMockLogger,
+    createMockSDKClient,
     createMockStepLogger,
     mockOrg,
     mockProject,
@@ -57,11 +58,7 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
         StepLoggerMock.create = jest.fn().mockResolvedValue(mockStepLogger);
 
         // Setup mock SDK client
-        mockSDKClient = {
-            initialize: jest.fn().mockResolvedValue(undefined),
-            ensureInitialized: jest.fn().mockResolvedValue(true),
-            clear: jest.fn(),
-        } as any;
+        mockSDKClient = createMockSDKClient();
 
         // Create mock entity sub-services
         mockFetcher = {

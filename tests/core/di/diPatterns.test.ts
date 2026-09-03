@@ -10,6 +10,7 @@
  */
 
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import type { SidebarProvider } from '@/features/sidebar/providers/sidebarProvider';
 
 import { createMockAuthenticationService } from '../../helpers/authenticationServiceFake';
 // Mock dependencies
@@ -99,8 +100,7 @@ describe('DI Patterns', () => {
         it('should return same SidebarProvider instance on multiple calls', () => {
             const mockSidebarProvider = {
                 resolveWebviewView: jest.fn(),
-                setContext: jest.fn(),
-            } as any;
+            } as unknown as SidebarProvider;
 
             ServiceLocator.setSidebarProvider(mockSidebarProvider);
 
@@ -120,8 +120,7 @@ describe('DI Patterns', () => {
         it('should throw if SidebarProvider registered twice', () => {
             const mockSidebarProvider = {
                 resolveWebviewView: jest.fn(),
-                setContext: jest.fn(),
-            } as any;
+            } as unknown as SidebarProvider;
 
             ServiceLocator.setSidebarProvider(mockSidebarProvider);
 
@@ -135,8 +134,7 @@ describe('DI Patterns', () => {
 
             const mockSidebarProvider = {
                 resolveWebviewView: jest.fn(),
-                setContext: jest.fn(),
-            } as any;
+            } as unknown as SidebarProvider;
 
             ServiceLocator.setSidebarProvider(mockSidebarProvider);
 
@@ -150,7 +148,7 @@ describe('DI Patterns', () => {
             const { CommandExecutor } = require('@/core/shell/commandExecutor');
             ServiceLocator.setCommandExecutor(new CommandExecutor());
             ServiceLocator.setAuthenticationService(createMockAuthenticationService());
-            ServiceLocator.setSidebarProvider({ resolveWebviewView: jest.fn() } as any);
+            ServiceLocator.setSidebarProvider({ resolveWebviewView: jest.fn() } as unknown as SidebarProvider);
 
             expect(ServiceLocator.isInitialized()).toBe(true);
             expect(ServiceLocator.isSidebarInitialized()).toBe(true);

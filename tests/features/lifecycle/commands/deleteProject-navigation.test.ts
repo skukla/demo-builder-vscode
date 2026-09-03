@@ -16,6 +16,7 @@ import {
     setupDeleteProject,
 } from './deleteProject.testUtils';
 import type { StateManager } from '@/types/state';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // Mock fs/promises with explicit exports
 jest.mock('fs/promises', () => ({
@@ -51,11 +52,9 @@ describe('DeleteProjectCommand - Navigation', () => {
         describe('When the current project is deleted', () => {
             it('should execute showProjectsList command (not showWelcome)', async () => {
                 // Given: Project exists and user confirms deletion
-                mockStateManager.getCurrentProject.mockResolvedValue({
-                    name: 'test-project',
-                    path: testProjectPath,
-                    status: 'stopped',
-                } as any);
+                mockStateManager.getCurrentProject.mockResolvedValue(
+                    createMockProject({ name: 'test-project', path: testProjectPath, status: 'stopped' })
+                );
 
                 // When: User deletes the project
                 await command.execute();
@@ -97,11 +96,9 @@ describe('DeleteProjectCommand - Navigation', () => {
         describe('When that project is deleted', () => {
             it('should still show Projects List (empty state handled by UI)', async () => {
                 // Given: User has only one project (simulated - same test setup)
-                mockStateManager.getCurrentProject.mockResolvedValue({
-                    name: 'only-project',
-                    path: testProjectPath,
-                    status: 'stopped',
-                } as any);
+                mockStateManager.getCurrentProject.mockResolvedValue(
+                    createMockProject({ name: 'only-project', path: testProjectPath, status: 'stopped' })
+                );
 
                 // When: The last project is deleted
                 await command.execute();

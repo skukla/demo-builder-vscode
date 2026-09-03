@@ -5,6 +5,7 @@ import type { Logger } from '@/types/logger';
 import {
     createMockCommandExecutor,
     createMockLogger,
+    createMockSDKClient,
     createMockStepLogger,
     createOrgContextResult,
     createProjectListResult,
@@ -80,11 +81,7 @@ describe('AuthenticationService - Authentication Checks', () => {
         StepLoggerMock.create = jest.fn().mockResolvedValue(mockStepLogger);
 
         // Setup mock SDK client
-        mockSDKClient = {
-            initialize: jest.fn().mockResolvedValue(undefined),
-            ensureInitialized: jest.fn().mockResolvedValue(true),
-            clear: jest.fn(),
-        } as any;
+        mockSDKClient = createMockSDKClient();
 
         // Mock constructors
         (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(

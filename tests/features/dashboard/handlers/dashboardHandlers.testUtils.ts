@@ -72,7 +72,7 @@ export interface TestMocks {
  * Factory function to create a mock project with typical structure
  */
 export function createDashboardProject(overrides?: Partial<Project>): Project {
-    const baseProject = {
+    const baseProject: Partial<Project> = {
         name: 'test-project',
         path: '/path/to/project',
         status: 'running',
@@ -101,7 +101,9 @@ export function createDashboardProject(overrides?: Partial<Project>): Project {
                 subType: 'mesh',
                 status: 'deployed',
                 path: '/path/to/mesh',
-                endpoint: 'https://mesh.example.com/graphql',
+                // No `endpoint` here: ComponentInstance has no such field. It sat in
+                // this fixture behind a cast; the real home is
+                // appBuilderComponents.mesh.endpoint below, and nothing read it here.
             },
         },
         componentConfigs: {
@@ -122,7 +124,7 @@ export function createDashboardProject(overrides?: Partial<Project>): Project {
                 endpoint: 'https://mesh.example.com/graphql',
             },
         },
-    } as unknown as Project;
+    };
 
     return createMockProjectBase({
         ...baseProject,

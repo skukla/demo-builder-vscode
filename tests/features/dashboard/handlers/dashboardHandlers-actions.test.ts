@@ -19,6 +19,7 @@ import {
 import { ErrorCode } from '@/types/errorCodes';
 import { setupMocks, createDashboardProject } from './dashboardHandlers.testUtils';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 import { mockWindow } from '../../../helpers/vscodeMockViews';
 // Mock vscode
@@ -85,7 +86,7 @@ describe('Dashboard Action Handlers', () => {
 
     describe('handleConfigure', () => {
         it('should execute configureProject command', async () => {
-            const result = await handleConfigure({} as any);
+            const result = await handleConfigure(createMockHandlerContext());
 
             expect(result).toEqual({ success: true });
             expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.configureProject');
@@ -141,14 +142,11 @@ describe('Dashboard Action Handlers', () => {
                     },
                 },
             });
-            const mockContext = {
+            const mockContext = createMockHandlerContext({
                 stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(projectWithoutPort),
                 }),
-                logger: {
-                    debug: jest.fn(),
-                },
-            } as any;
+            });
 
             const result = await handleOpenBrowser(mockContext);
 
@@ -157,14 +155,11 @@ describe('Dashboard Action Handlers', () => {
         });
 
         it('should not open browser when no project', async () => {
-            const mockContext = {
+            const mockContext = createMockHandlerContext({
                 stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(null),
                 }),
-                logger: {
-                    debug: jest.fn(),
-                },
-            } as any;
+            });
 
             const result = await handleOpenBrowser(mockContext);
 
@@ -185,14 +180,11 @@ describe('Dashboard Action Handlers', () => {
                     },
                 },
             });
-            const mockContext = {
+            const mockContext = createMockHandlerContext({
                 stateManager: createMockStateManager({
                     getCurrentProject: jest.fn().mockResolvedValue(projectWithCustomPort),
                 }),
-                logger: {
-                    debug: jest.fn(),
-                },
-            } as any;
+            });
 
             const result = await handleOpenBrowser(mockContext);
 
@@ -249,7 +241,7 @@ describe('Dashboard Action Handlers', () => {
                         ADOBE_COMMERCE_ADMIN_URL: adminUrl,
                     },
                 },
-            } as any);
+            });
 
         it('should open the configured admin URL in the browser', async () => {
             const { mockContext } = setupWithAdminUrl();
@@ -279,7 +271,7 @@ describe('Dashboard Action Handlers', () => {
         });
 
         it('should show a notification when no admin URL is configured', async () => {
-            const { mockContext } = setupMocks({ componentConfigs: {} } as any);
+            const { mockContext } = setupMocks({ componentConfigs: {} });
 
             const result = await handleOpenAdminPanel(mockContext);
 
@@ -292,7 +284,7 @@ describe('Dashboard Action Handlers', () => {
         });
 
         it('should open Configure when "Open Configure" is selected from the notification', async () => {
-            const { mockContext } = setupMocks({ componentConfigs: {} } as any);
+            const { mockContext } = setupMocks({ componentConfigs: {} });
             mockShowInformationMessage.mockResolvedValueOnce('Open Configure');
 
             const result = await handleOpenAdminPanel(mockContext);
@@ -303,7 +295,7 @@ describe('Dashboard Action Handlers', () => {
         });
 
         it('should not open Configure when the notification is dismissed', async () => {
-            const { mockContext } = setupMocks({ componentConfigs: {} } as any);
+            const { mockContext } = setupMocks({ componentConfigs: {} });
             mockShowInformationMessage.mockResolvedValueOnce(undefined);
 
             await handleOpenAdminPanel(mockContext);

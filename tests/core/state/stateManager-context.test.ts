@@ -30,7 +30,7 @@ describe('StateManager - Context Variables', () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            const project = createStateManagerProject() as any;
+            const project = createStateManagerProject();
 
             // When: saveProject is called successfully
             await stateManager.saveProject(project);
@@ -48,12 +48,12 @@ describe('StateManager - Context Variables', () => {
         it('should set demoBuilder.projectLoaded context to false when project is cleared', async () => {
             // Given: StateManager has a project loaded
             const { stateManager } = testMocks;
-            const project = createStateManagerProject() as any;
+            const project = createStateManagerProject();
             const mockState = {
                 version: 1,
                 currentProject: project,
                 processes: {},
-                lastUpdated: new Date().toISOString()
+                lastUpdated: new Date().toISOString(),
             };
 
             (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockState));
@@ -75,12 +75,12 @@ describe('StateManager - Context Variables', () => {
         it('should set demoBuilder.projectLoaded context to false when all state is cleared', async () => {
             // Given: StateManager has state loaded
             const { stateManager } = testMocks;
-            const project = createStateManagerProject() as any;
+            const project = createStateManagerProject();
             const mockState = {
                 version: 1,
                 currentProject: project,
                 processes: {},
-                lastUpdated: new Date().toISOString()
+                lastUpdated: new Date().toISOString(),
             };
 
             (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockState));

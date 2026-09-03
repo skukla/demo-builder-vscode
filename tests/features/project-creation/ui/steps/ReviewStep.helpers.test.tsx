@@ -16,6 +16,12 @@ import type {
     ComponentData,
     ComponentsData,
 } from '@/features/project-creation/ui/steps/ReviewStep';
+import type { WizardState } from '@/types/webview';
+
+/** The house WizardState fixture shape (see tileStatus.test.ts, buildSummary.test.tsx). */
+function wizardState(overrides: Partial<WizardState> = {}): WizardState {
+    return overrides as WizardState;
+}
 
 describe('reviewStepHelpers', () => {
     describe('resolveServiceNames', () => {
@@ -394,7 +400,7 @@ describe('reviewStepHelpers', () => {
                     {
                         integrations: ['analytics'],
                         appBuilder: ['custom-app'],
-                    } as never,
+                    } as unknown as Parameters<typeof buildComponentInfoList>[0],
                     undefined,
                     mockComponentsData,
                     []
@@ -485,7 +491,7 @@ describe('reviewStepHelpers', () => {
                 },
             };
 
-            expect(resolveReviewIntegrationNames(state as never, [], [])).toEqual([
+            expect(resolveReviewIntegrationNames(wizardState(state), [], [])).toEqual([
                 'ERP Sync',
                 'crm-connector',
             ]);
@@ -498,7 +504,7 @@ describe('reviewStepHelpers', () => {
                 appBuilderComponentSources: {},
             };
 
-            expect(resolveReviewIntegrationNames(state as never, [], [])).toEqual([
+            expect(resolveReviewIntegrationNames(wizardState(state), [], [])).toEqual([
                 'Custom Integration',
             ]);
         });
@@ -511,8 +517,8 @@ describe('reviewStepHelpers', () => {
                 appBuilderComponentSources: {},
             };
 
-            expect(resolveReviewIntegrationNames(state as never, [], [])).toEqual([]);
-            expect(resolveReviewIntegrationNames({} as never, [], [])).toEqual([]);
+            expect(resolveReviewIntegrationNames(wizardState(state), [], [])).toEqual([]);
+            expect(resolveReviewIntegrationNames(wizardState(), [], [])).toEqual([]);
         });
     });
 });

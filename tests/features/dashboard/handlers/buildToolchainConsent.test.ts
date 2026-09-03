@@ -8,15 +8,17 @@
 
 import { buildToolchainConsent } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
-function contextWith(panel: unknown): HandlerContext {
-    return { panel } as HandlerContext;
+function contextWith(panel: HandlerContext['panel']): HandlerContext {
+    return createMockHandlerContext({ panel });
 }
 
 describe('buildToolchainConsent', () => {
     it('interactive (panel present): returns undefined so the factory prompt applies', () => {
-        expect(buildToolchainConsent(contextWith({}), undefined)).toBeUndefined();
-        expect(buildToolchainConsent(contextWith({}), true)).toBeUndefined();
+        expect(buildToolchainConsent(contextWith(createMockWebviewPanel()), undefined)).toBeUndefined();
+        expect(buildToolchainConsent(contextWith(createMockWebviewPanel()), true)).toBeUndefined();
     });
 
     it('headless + refreshCli true: consents without any prompt', async () => {

@@ -88,13 +88,15 @@ jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
                 source: { type: 'git', url: 'https://github.com/test/headless' },
             },
         ]),
-        getDependencies: jest.fn().mockResolvedValue([{
-            id: 'eds-commerce-mesh',
-            name: 'EDS Commerce Mesh',
-            type: 'dependency',
-            subType: 'mesh',
-            source: { type: 'git', url: 'https://github.com/test/eds-mesh' },
-        }]),
+        getDependencies: jest.fn().mockResolvedValue([
+            {
+                id: 'eds-commerce-mesh',
+                name: 'EDS Commerce Mesh',
+                type: 'dependency',
+                subType: 'mesh',
+                source: { type: 'git', url: 'https://github.com/test/eds-mesh' },
+            },
+        ]),
         getComponentById: jest.fn().mockResolvedValue(undefined),
     })),
 }));
@@ -103,7 +105,6 @@ jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
     generateComponentEnvFile: jest.fn().mockResolvedValue(undefined),
     generateComponentConfigFiles: jest.fn().mockResolvedValue(undefined),
 }));
-
 
 jest.mock('@/features/project-creation/services/componentInstallationOrchestrator', () => ({
     cloneAllComponents: jest.fn().mockImplementation(({ componentDefinitions, project }) => {
@@ -173,21 +174,21 @@ describe('Executor - EDS Standard Flow', () => {
         // as a parameter is what broke the first version of this extraction.
         (cloneAllComponents as jest.Mock).mockImplementation(
             ({ componentDefinitions, project }: any) => {
-            capture.definitions = componentDefinitions;
-            componentDefinitionIds = Array.from(componentDefinitions.keys());
-            for (const [id, entry] of componentDefinitions.entries()) {
-                project.componentInstances = project.componentInstances || {};
-                project.componentInstances[id] = {
-                    id,
-                    name: entry.definition.name,
-                    type: entry.definition.type,
-                    status: 'installed',
-                    path: `${project.path}/components/${id}`,
-                    lastUpdated: new Date(),
-                };
-            }
+                capture.definitions = componentDefinitions;
+                componentDefinitionIds = Array.from(componentDefinitions.keys());
+                for (const [id, entry] of componentDefinitions.entries()) {
+                    project.componentInstances = project.componentInstances || {};
+                    project.componentInstances[id] = {
+                        id,
+                        name: entry.definition.name,
+                        type: entry.definition.type,
+                        status: 'installed',
+                        path: `${project.path}/components/${id}`,
+                        lastUpdated: new Date(),
+                    };
+                }
                 return Promise.resolve();
-            },
+            }
         );
         return capture;
     }
@@ -197,10 +198,9 @@ describe('Executor - EDS Standard Flow', () => {
         componentDefinitionIds = [];
         clonedComponents.clear();
         mockContext = createMockContext();
-        mockContext.componentRegistry = new (
-            jest.requireMock('@/features/components/services/ComponentRegistryManager')
-                .ComponentRegistryManager
-        )();
+        mockContext.componentRegistry = new (jest.requireMock(
+            '@/features/components/services/ComponentRegistryManager'
+        ).ComponentRegistryManager)();
     });
 
     describe('EDS Frontend Inclusion in componentDefinitions', () => {
@@ -256,10 +256,9 @@ describe('Executor - EDS Standard Flow', () => {
             const capture = await captureComponentDefinitions();
 
             mockContext = createMockContext();
-            mockContext.componentRegistry = new (
-                jest.requireMock('@/features/components/services/ComponentRegistryManager')
-                    .ComponentRegistryManager
-            )();
+            mockContext.componentRegistry = new (jest.requireMock(
+                '@/features/components/services/ComponentRegistryManager'
+            ).ComponentRegistryManager)();
             const { executeProjectCreation } = await import(
                 '@/features/project-creation/handlers/executor'
             );
@@ -294,10 +293,9 @@ describe('Executor - EDS Standard Flow', () => {
             };
 
             mockContext = createMockContext();
-            mockContext.componentRegistry = new (
-                jest.requireMock('@/features/components/services/ComponentRegistryManager')
-                    .ComponentRegistryManager
-            )();
+            mockContext.componentRegistry = new (jest.requireMock(
+                '@/features/components/services/ComponentRegistryManager'
+            ).ComponentRegistryManager)();
             const { executeProjectCreation } = await import(
                 '@/features/project-creation/handlers/executor'
             );
@@ -341,18 +339,17 @@ describe('Executor - EDS Standard Flow', () => {
             };
 
             mockContext = createMockContext();
-            mockContext.componentRegistry = new (
-                jest.requireMock('@/features/components/services/ComponentRegistryManager')
-                    .ComponentRegistryManager
-            )();
+            mockContext.componentRegistry = new (jest.requireMock(
+                '@/features/components/services/ComponentRegistryManager'
+            ).ComponentRegistryManager)();
             // Capture saved projects to verify metadata
-            mockContext.stateManager = {
+            mockContext.stateManager = createMockStateManager({
                 getCurrentProject: jest.fn().mockResolvedValue(null),
                 saveProject: jest.fn().mockImplementation((project) => {
                     savedProjects.push(JSON.parse(JSON.stringify(project)));
                     return Promise.resolve();
                 }),
-            } as any;
+            });
 
             const { executeProjectCreation } = await import(
                 '@/features/project-creation/handlers/executor'
@@ -361,8 +358,8 @@ describe('Executor - EDS Standard Flow', () => {
             await executeProjectCreation(mockContext as HandlerContext, edsConfig);
 
             // Find the project save that has metadata populated (githubRepo is the source for URL derivation)
-            const projectWithMetadata = savedProjects.find(p =>
-                p.componentInstances?.['eds-storefront']?.metadata?.githubRepo
+            const projectWithMetadata = savedProjects.find(
+                (p) => p.componentInstances?.['eds-storefront']?.metadata?.githubRepo
             );
 
             expect(projectWithMetadata).toBeDefined();
@@ -400,10 +397,9 @@ describe('Executor - EDS Standard Flow', () => {
             const capture = await captureComponentDefinitions();
 
             mockContext = createMockContext();
-            mockContext.componentRegistry = new (
-                jest.requireMock('@/features/components/services/ComponentRegistryManager')
-                    .ComponentRegistryManager
-            )();
+            mockContext.componentRegistry = new (jest.requireMock(
+                '@/features/components/services/ComponentRegistryManager'
+            ).ComponentRegistryManager)();
             const { executeProjectCreation } = await import(
                 '@/features/project-creation/handlers/executor'
             );
@@ -414,7 +410,9 @@ describe('Executor - EDS Standard Flow', () => {
             expect(capture.definitions).not.toBeNull();
             const headlessEntry = capture.definitions!.get('headless');
             expect(headlessEntry).toBeDefined();
-            expect(headlessEntry.definition.source.url).toBe('https://github.com/adobe/citisignal-nextjs');
+            expect(headlessEntry.definition.source.url).toBe(
+                'https://github.com/adobe/citisignal-nextjs'
+            );
         });
     });
 });

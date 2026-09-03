@@ -192,8 +192,8 @@ describe('node-version disclosure', () => {
                     description: 'Sync scaffolding.',
                     kind: 'integration',
                     nodeVersion: '24',
-                    source: { owner: 'adobe', repo: 'kit' },
-                } as never,
+                    source: { owner: 'adobe', repo: 'kit', branch: 'main' },
+                },
             ],
         });
 

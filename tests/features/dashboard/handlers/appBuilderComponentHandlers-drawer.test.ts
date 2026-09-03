@@ -40,6 +40,7 @@ import {
 } from './appBuilderComponentHandlers.testUtils';
 
 import type { Project } from '@/types/base';
+import type { HandlerContext } from '@/types/handlers';
 beforeEach(() => {
     resetHandlerMocks();
 });
@@ -567,14 +568,14 @@ describe('status refresh after a set-changing operation', () => {
     // The context must be built INSIDE the test, after the permission mock —
     // an it.each table is evaluated at describe time, before any beforeEach.
     it.each([
-        ['add', (ctx: never) => handleAddAppBuilderComponent(ctx, { id: 'erp-sync' })],
-        ['deploy', (ctx: never) => handleDeployAppBuilderComponent(ctx, { id: 'erp-sync' })],
-        ['remove', (ctx: never) => handleRemoveAppBuilderComponent(ctx, { id: 'erp-sync' })],
+        ['add', (ctx: HandlerContext) => handleAddAppBuilderComponent(ctx, { id: 'erp-sync' })],
+        ['deploy', (ctx: HandlerContext) => handleDeployAppBuilderComponent(ctx, { id: 'erp-sync' })],
+        ['remove', (ctx: HandlerContext) => handleRemoveAppBuilderComponent(ctx, { id: 'erp-sync' })],
     ])('%s re-runs the project status', async (_label, run) => {
         const { mockContext } = setupMocks();
         mockTestDeveloperPermissions(true);
 
-        await run(mockContext as never);
+        await run(mockContext);
 
         expect(mockHandleRequestStatus).toHaveBeenCalled();
     });

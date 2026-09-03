@@ -13,6 +13,8 @@
  */
 
 import { repairSiteConfig } from '@/features/eds/services/configService/repairSiteConfigHeadless';
+import type { RepairSiteConfigParams } from '@/features/eds/services/configService/repairSiteConfigHeadless';
+import type { ConfigurationService } from '@/features/eds/services/configService/configurationService';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -46,20 +48,24 @@ const project = {
     },
 } as unknown as Project;
 
-const makeService = (overlayUrl?: string, readable = true) => ({
-    readSiteOverlayUrl: jest.fn().mockResolvedValue({ readable, overlayUrl }),
-});
+/** Only the read-back is called here; the class holds private token/logger state. */
+const makeService = (overlayUrl?: string, readable = true): ConfigurationService =>
+    ({
+        readSiteOverlayUrl: jest.fn().mockResolvedValue({ readable, overlayUrl }),
+    }) as unknown as ConfigurationService;
 
-const run = (over: Record<string, unknown> = {}) =>
+const run = (over: Partial<RepairSiteConfigParams> = {}) =>
     repairSiteConfig({
         project,
         configurationService: makeService('https://overlay.example/render-pdp'),
-        tokenProvider: {},
+        // Forwarded to the (mocked) registrar and admin pin; the SHAPE is what the
+        // callee declares, so a wrong one fails here rather than in production.
+        tokenProvider: { getAccessToken: jest.fn().mockResolvedValue('ims-token') },
         logger,
         userEmail: 'someone@adobe.com',
         resolveOverlayUrl: () => 'https://overlay.example/render-pdp',
         ...over,
-    } as never);
+    });
 
 describe('repairSiteConfig', () => {
     beforeEach(() => {

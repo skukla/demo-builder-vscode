@@ -18,11 +18,22 @@ jest.setTimeout(5000);
 // =============================================================================
 
 const mockGetCachedOrganization = jest.fn().mockReturnValue(undefined);
+/**
+ * The org-reachability check (`detectProjectOrgMismatch`) lists the token's
+ * orgs and looks for the project's. Until 2026-09-02 the auth fake was `{}`
+ * cast to the service, so this read THREW, the check swallowed the error as
+ * "could not run, proceed", and the redeploy went ahead. With the real fake
+ * the list must actually contain the project's org for the same path to run.
+ */
+const mockGetOrganizations = jest.fn();
 
 /** CONVERTED 2026-08-28 (ADR-015): the executor is handed in, not fetched. */
 const executor = createMockCommandExecutor({ execute: jest.fn() });
 /** ADR-015: the auth service is handed in too. */
-const authManagerFake = { getCachedOrganization: mockGetCachedOrganization } as never;
+const authManagerFake = createMockAuthenticationService({
+    getCachedOrganization: mockGetCachedOrganization,
+    getOrganizations: mockGetOrganizations,
+});
 
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
@@ -72,6 +83,7 @@ jest.mock('@/types/typeGuards', () => ({
 import { handleMeshRedeployment } from '@/features/lifecycle/services/projectResetService';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
@@ -116,6 +128,9 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
         });
         mockGetMeshComponentInstance.mockReturnValue({ path: '/test/mesh' });
         mockGetCachedOrganization.mockReturnValue(undefined);
+        mockGetOrganizations.mockResolvedValue([
+            { id: 'org-123', code: 'CODE@AdobeOrg', name: 'Acme Inc' },
+        ]);
     });
 
     it('should wrap the mesh redeploy in withOrgContext', async () => {

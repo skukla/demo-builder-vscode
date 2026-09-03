@@ -22,6 +22,7 @@ import { importHandlers } from '@/features/data-installer/handlers/importHandler
 import { discoverStoreStructure } from '@/features/eds/services/commerceStoreDiscovery';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import type { Project } from '@/types/base';
+import type { CommerceStoreStructure } from '@/types/commerceStore';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -49,7 +50,7 @@ const mockedCredentials = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
 >;
 
-const STRUCTURE = {
+const STRUCTURE: CommerceStoreStructure = {
     websites: [
         { id: 1, code: 'base', name: 'Main Website' },
         { id: 2, code: 'bodea', name: 'Bodea' },
@@ -65,8 +66,22 @@ const STRUCTURE = {
         { id: 2, website_id: 2, code: 'bodea_store', name: 'Bodea Store', root_category_id: 3 },
     ],
     storeViews: [
-        { id: 1, store_group_id: 1, website_id: 1, code: 'default', name: 'Default View' },
-        { id: 2, store_group_id: 2, website_id: 2, code: 'bodea_view', name: 'Bodea View' },
+        {
+            id: 1,
+            store_group_id: 1,
+            website_id: 1,
+            code: 'default',
+            name: 'Default View',
+            is_active: 1,
+        },
+        {
+            id: 2,
+            store_group_id: 2,
+            website_id: 2,
+            code: 'bodea_view',
+            name: 'Bodea View',
+            is_active: 1,
+        },
     ],
 };
 
@@ -114,8 +129,8 @@ describe('list-datapack-import-scopes', () => {
         mockedCredentials.mockResolvedValue({
             ok: true,
             credentials: { kind: 'paas', username: 'admin', password: 'fake-test-pw-not-a-secret' },
-        } as never);
-        mockedDiscover.mockResolvedValue({ success: true, data: STRUCTURE } as never);
+        });
+        mockedDiscover.mockResolvedValue({ success: true, data: STRUCTURE });
     });
 
     it('returns each website with the store views that belong to it', async () => {
@@ -155,7 +170,7 @@ describe('list-datapack-import-scopes', () => {
         mockedDiscover.mockResolvedValue({
             success: false,
             error: 'Connection timed out.',
-        } as never);
+        });
         const context = makeImportHarness();
 
         const result = await importHandlers['list-datapack-import-scopes'](context);
@@ -183,7 +198,7 @@ describe('list-datapack-import-scopes', () => {
     });
 
     it('does not attempt discovery when the project has no usable credentials', async () => {
-        mockedCredentials.mockResolvedValue({ ok: false, reason: 'missing-paas-admin' } as never);
+        mockedCredentials.mockResolvedValue({ ok: false, reason: 'missing-paas-admin' });
         const context = makeImportHarness();
 
         const result = await importHandlers['list-datapack-import-scopes'](context);

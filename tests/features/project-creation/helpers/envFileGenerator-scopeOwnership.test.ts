@@ -18,7 +18,7 @@
  */
 
 import { promises as fsPromises } from 'fs';
-import type { ComponentConfigs } from '@/types/components';
+import type { ComponentConfigs, EnvVarDefinition } from '@/types/components';
 import { generateComponentEnvFile } from '@/features/project-creation/helpers/envFileGenerator';
 import { TransformedComponentDefinition } from '@/types/components';
 import { createMockSetupContext, TEST_COMPONENT_PATH } from './envFileGenerator.testUtils';
@@ -29,7 +29,7 @@ jest.mock('@/features/project-creation/helpers/formatters', () => ({
     formatGroupName: (g: string) => g,
 }));
 
-const ENV_VARS = {
+const ENV_VARS: Record<string, Omit<EnvVarDefinition, 'key'>> = {
     ACCS_WEBSITE_CODE: { label: 'Website', type: 'text', description: 'Website code' },
     ACCS_GRAPHQL_ENDPOINT: { label: 'Endpoint', type: 'text', description: 'GraphQL endpoint' },
 };
@@ -64,18 +64,17 @@ async function envFor(componentConfigs: ComponentConfigs, backendId?: string) {
         componentSelections: { backend: backendId },
     });
     const context = createMockSetupContext({
-        registry: { envVars: ENV_VARS } as never,
+        registry: { envVars: ENV_VARS },
         project,
         // getBackendId() reads config.components.backend — not componentSelections.
-        config: { projectName: 'test-project', componentConfigs, components: { backend: backendId } },
+        config: {
+            projectName: 'test-project',
+            componentConfigs,
+            components: { backend: backendId },
+        },
     });
 
-    await generateComponentEnvFile(
-        TEST_COMPONENT_PATH,
-        'eds-accs-mesh',
-        meshComponent,
-        context,
-    );
+    await generateComponentEnvFile(TEST_COMPONENT_PATH, 'eds-accs-mesh', meshComponent, context);
     const calls = (fsPromises.writeFile as jest.Mock).mock.calls;
     return String(calls[calls.length - 1][1]);
 }
@@ -98,7 +97,7 @@ describe('generated .env takes the store scope from the backend', () => {
         };
 
         expect(await envFor(reversed, 'adobe-commerce-accs')).toContain(
-            'ACCS_WEBSITE_CODE=citisignal',
+            'ACCS_WEBSITE_CODE=citisignal'
         );
     });
 

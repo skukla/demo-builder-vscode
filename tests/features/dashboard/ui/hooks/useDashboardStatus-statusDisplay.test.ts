@@ -15,6 +15,7 @@ import '../../../../helpers/webviewClientMock';
 import { renderHook, act } from '@testing-library/react';
 
 import { useDashboardStatus } from '@/features/dashboard/ui/hooks/useDashboardStatus';
+import type { EdsStorefrontStatus } from '@/features/dashboard/ui/hooks/dashboardStatusTypes';
 import { setupMocks, type TestMocks } from './useDashboardStatus.testUtils';
 
 describe('useDashboardStatus — Status Display Strings', () => {
@@ -288,10 +289,8 @@ describe('demoStatusDisplay — remedy', () => {
         mocksForRemedy = setupMocks();
     });
 
-    const edsHook = (storefront?: string) =>
-        renderHook(() =>
-            useDashboardStatus({ initialEdsStorefrontStatus: storefront as never }, true)
-        );
+    const edsHook = (storefront?: EdsStorefrontStatus) =>
+        renderHook(() => useDashboardStatus({ initialEdsStorefrontStatus: storefront }, true));
 
     it('asks for a republish when the storefront has drifted', () => {
         expect(edsHook('stale').result.current.demoStatusDisplay).toEqual({
@@ -311,11 +310,14 @@ describe('demoStatusDisplay — remedy', () => {
         });
     });
 
-    it.each(['published', 'not-published'])('offers no remedy when %s', (status) => {
-        // Not-published is not drift — publishing for the first time is Sync
-        // Storefront's job, and offering "Republish" would name the wrong verb.
-        expect(edsHook(status).result.current.demoStatusDisplay.remedy).toBeUndefined();
-    });
+    it.each<EdsStorefrontStatus>(['published', 'not-published'])(
+        'offers no remedy when %s',
+        (status) => {
+            // Not-published is not drift — publishing for the first time is Sync
+            // Storefront's job, and offering "Republish" would name the wrong verb.
+            expect(edsHook(status).result.current.demoStatusDisplay.remedy).toBeUndefined();
+        }
+    );
 
     it('spells the empty state the same way the project card does', () => {
         // The casing the two old switches disagreed on.

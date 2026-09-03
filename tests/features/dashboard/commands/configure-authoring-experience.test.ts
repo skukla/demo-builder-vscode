@@ -17,6 +17,7 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 
 
@@ -171,10 +172,12 @@ function captureSaveHandler(
  */
 beforeEach(() => {
     ServiceLocator.setCommandExecutor(createMockCommandExecutor());
-    ServiceLocator.setAuthenticationService({
-        getCachedOrganization: jest.fn(),
-        getTokenStatus: jest.fn(async () => ({ isAuthenticated: true })),
-    } as never);
+    ServiceLocator.setAuthenticationService(
+        createMockAuthenticationService({
+            getCachedOrganization: jest.fn(),
+            getTokenStatus: jest.fn(async () => ({ isAuthenticated: true, expiresInMinutes: 60 })),
+        })
+    );
 });
 
 describe('ConfigureProjectWebviewCommand - save-configuration authoring experience', () => {

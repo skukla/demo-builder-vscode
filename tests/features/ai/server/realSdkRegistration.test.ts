@@ -50,9 +50,11 @@ import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { registerDescriptorTools } from '@/features/ai/server/toolDescriptors';
 import { registerValidateSelectionTool } from '@/features/ai/server/validateSelectionTool';
-import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
+import type { McpToolSchema, McpToolServer } from '@/features/ai/server/mcpToolServer';
+import { ToolTraceRecorder } from '@/features/ai/server/toolTraceRecorder';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 /**
  * A REAL SDK server, handed over as our narrowed `McpToolServer`.
@@ -68,6 +70,7 @@ const server = () => new McpServer({ name: 'test', version: '0.0.0' }) as unknow
 const ctxFactory = () => createMockHandlerContext({ sendMessage: async () => {} });
 // The builder's `getCurrentProject` already resolves null, so there is nothing to override.
 const stateManager = createMockStateManager();
+const authService = () => createMockAuthenticationService();
 
 describe('registration against the real MCP SDK', () => {
     it('accepts every descriptor row', () => {
@@ -95,7 +98,7 @@ describe('registration against the real MCP SDK', () => {
         ['adobe resource tools', (s: McpToolServer) => registerAdobeResourceTools(s, ctxFactory)],
         [
             'event provider tools',
-            (s: McpToolServer) => registerEventProviderTools(s, ctxFactory, () => ({}) as never),
+            (s: McpToolServer) => registerEventProviderTools(s, ctxFactory, authService),
         ],
         ['configure_project', (s: McpToolServer) => registerConfigureProjectTool(s, stateManager)],
         ['cloud resource tools', (s: McpToolServer) => registerCloudResourceTools(s, ctxFactory)],
@@ -129,18 +132,14 @@ describe('registration against the real MCP SDK', () => {
             registerAdobeTools(s, ctxFactory);
             registerCreateProjectTool(s, ctxFactory);
             registerCurrentProjectTool(s, ctxFactory);
-            registerAgentTraceTool(
-                s,
-                { all: () => [], repeats: () => [] } as never,
-                '/nonexistent-trace-dir'
-            );
+            registerAgentTraceTool(s, new ToolTraceRecorder(), '/nonexistent-trace-dir');
             registerProjectStatusTool(s, stateManager);
             registerCommerceEndpointsTool(s, stateManager);
-            registerCommerceQueryTool(s, {} as never);
+            registerCommerceQueryTool(s, stateManager);
             registerValidateSelectionTool(s, ctxFactory);
             registerComponentRequirementsTool(s);
             registerAdobeResourceTools(s, ctxFactory);
-            registerEventProviderTools(s, ctxFactory, () => ({}) as never);
+            registerEventProviderTools(s, ctxFactory, authService);
             registerConfigureProjectTool(s, stateManager);
             registerCloudResourceTools(s, ctxFactory);
             registerStorefrontTools(s, ctxFactory);
@@ -200,7 +199,10 @@ describe('registration against the real MCP SDK', () => {
                     needsAuth: false,
                     description: 'the e26bd01e mistake',
 
-                    inputSchema: { componentId: { type: 'string' } } as any,
+                    // Deliberately the wrong shape: a raw JSON Schema where zod is declared.
+                    inputSchema: {
+                        componentId: { type: 'string' },
+                    } as unknown as McpToolSchema['inputSchema'],
                 },
                 async () => ({ content: [] })
             )

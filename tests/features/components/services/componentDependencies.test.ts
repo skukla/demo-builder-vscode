@@ -93,7 +93,7 @@ describe('ComponentDependencies', () => {
 
             await deps.installNpmDependencies(
                 '/p',
-                componentDef({ source: { timeouts: { install: 1234 } } } as never)
+                componentDef({ source: { type: 'git', timeouts: { install: 1234 } } })
             );
 
             expect(mockExecute).toHaveBeenCalledWith(
@@ -221,7 +221,7 @@ describe('strictInstall', () => {
 
         const result = await new ComponentDependencies(logger(), executor).installNpmDependencies(
             '/p',
-            componentDef({ configuration: { strictInstall: true } } as never)
+            componentDef({ configuration: { strictInstall: true } })
         );
 
         expect(result.success).toBe(false);
@@ -235,7 +235,7 @@ describe('strictInstall', () => {
 
         const result = await new ComponentDependencies(logger(), executor).installDependenciesForComponent(
             '/p',
-            componentDef({ configuration: { strictInstall: true } } as never),
+            componentDef({ configuration: { strictInstall: true } }),
             false
         );
 

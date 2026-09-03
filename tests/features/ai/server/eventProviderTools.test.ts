@@ -30,6 +30,7 @@ jest.mock('@/features/authentication/handlers/deleteAdobeProjectHandler', () => 
 
 import { registerEventProviderTools } from '@/features/ai/server/eventProviderTools';
 import type { HandlerContext } from '@/types/handlers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 const PROJECT_WITH_ADOBE = {
     name: 'bodea',
@@ -65,7 +66,7 @@ function makeCtx(project: unknown, authenticated = true): () => HandlerContext {
         }) as unknown as HandlerContext;
 }
 
-const authService = () => ({}) as never;
+const authService = () => createMockAuthenticationService();
 
 describe('registerEventProviderTools', () => {
     beforeEach(() => {

@@ -36,7 +36,13 @@ export function createMockHandlerContext(
         progressUnifier: {} as jest.Mocked<HandlerContext['progressUnifier']>,
         stepLogger: {} as jest.Mocked<HandlerContext['stepLogger']>,
         logger: mockLogger,
-        debugLogger: {} as jest.Mocked<HandlerContext['debugLogger']>,
+        /**
+         * A real logger fake, not `{}`, for the same reason `stateManager` below
+         * has methods: handlers call `context.debugLogger.debug(...)`, and as `{}`
+         * the cast hid it until installHandler answered a request with
+         * "context.debugLogger.debug is not a function" (2026-09-03).
+         */
+        debugLogger: createMockLogger(),
         /**
          * Handlers read this through `componentRegistryFrom`, which THROWS when
          * it is absent — deliberately, so a wiring bug names itself instead of

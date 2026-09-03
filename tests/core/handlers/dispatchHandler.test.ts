@@ -12,6 +12,7 @@ import type { HandlerMap, HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../helpers/loggerFake';
 
 import { createMockExtensionContext } from '../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../helpers/stateManagerFake';
 // Mock handler context factory
 function createMockContext(): HandlerContext {
     return {
@@ -19,7 +20,7 @@ function createMockContext(): HandlerContext {
         debugLogger: createMockLogger(),
         context: createMockExtensionContext(),
         panel: undefined,
-        stateManager: {} as any,
+        stateManager: createMockStateManager(),
         communicationManager: undefined,
         sendMessage: jest.fn(),
         sharedState: { isAuthenticating: false },

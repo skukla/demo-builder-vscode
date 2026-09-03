@@ -231,7 +231,7 @@ describe('recordDeployOutcome also advances the component instance', () => {
     });
 
     it('is a no-op when the project has no such instance', () => {
-        const project = { appBuilderComponents: {} } as never;
+        const project = createMockProject({ appBuilderComponents: {} });
 
         expect(() =>
             recordDeployOutcome(project, 'mesh', 'eds-accs-mesh', { status: 'deployed' })

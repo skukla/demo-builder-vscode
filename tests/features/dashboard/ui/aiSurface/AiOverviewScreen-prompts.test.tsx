@@ -12,7 +12,6 @@ import {
     makeProjectWithUserPrompts,
     renderScreen,
 } from './AiOverviewScreen.testUtils';
-import type { Project } from '@/types/base';
 
 describe('AiOverviewScreen — user prompts', () => {
     beforeEach(() => {
@@ -24,7 +23,7 @@ describe('AiOverviewScreen — user prompts', () => {
             const { webviewClient } = await renderScreen({
                 projectOverrides: {
                     aiPrompts: [{ id: 'u1', title: 'My launchable', prompt: 'Body to launch' }],
-                } as Partial<Project>,
+                },
             });
             const body = screen.getByTestId('page-layout-body');
             const cards = within(body).getAllByTestId('ai-prompt-card');
@@ -44,7 +43,7 @@ describe('AiOverviewScreen — user prompts', () => {
                     aiPrompts: [
                         { id: 'u1', title: 'My first user prompt', prompt: 'Do thing one' },
                     ],
-                } as Partial<Project>,
+                },
             });
             expect(screen.getByText('My first user prompt')).toBeInTheDocument();
             expect(screen.queryAllByTestId('ai-prompt-card')).toHaveLength(1);
@@ -60,7 +59,7 @@ describe('AiOverviewScreen — user prompts', () => {
             await renderScreen({
                 // project.aiPrompts intentionally empty — the pinned prompts
                 // arrive from list-ai-prompts, not the project prop.
-                projectOverrides: { aiPrompts: [] } as Partial<Project>,
+                projectOverrides: { aiPrompts: [] },
                 requestOverrides: {
                     'list-ai-prompts': {
                         success: true,
@@ -350,7 +349,7 @@ describe('AiOverviewScreen — user prompts', () => {
             const { webviewClient } = await renderScreen({
                 projectOverrides: {
                     aiPrompts: [{ id: 'u1', title: 'Copy me', prompt: 'This is the body' }],
-                } as Partial<Project>,
+                },
             });
             (webviewClient.postMessage as jest.Mock).mockClear();
 

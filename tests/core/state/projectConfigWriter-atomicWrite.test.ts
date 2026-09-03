@@ -134,9 +134,7 @@ describe('ProjectConfigWriter atomic writes', () => {
             // Given: A project with specific data
             const project = createTestProject({
                 name: 'my-demo-project',
-                adobe: {
-                    organization: { id: 'org-123', name: 'Test Org' },
-                } as any,
+                adobe: { organization: 'org-123', organizationName: 'Test Org' },
             });
 
             // When: Saving project config

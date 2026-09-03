@@ -1,7 +1,10 @@
 import React from 'react';
-import { renderWithProviders, screen } from "../../../../helpers/react-test-utils";
+import { renderWithProviders, screen } from '../../../../helpers/react-test-utils';
 import { Item, Text } from '@adobe/react-spectrum';
-import { SearchableList } from '@/core/ui/components/navigation/SearchableList';
+import {
+    SearchableList,
+    type SearchableListItem,
+} from '@/core/ui/components/navigation/SearchableList';
 import { mockItems, defaultProps, TestItem, cleanupTests } from './SearchableList.testUtils';
 
 /**
@@ -15,9 +18,7 @@ describe('SearchableList - Display Customization', () => {
 
     describe('Item Count Display', () => {
         it('shows item count when loaded', () => {
-            renderWithProviders(
-                <SearchableList {...defaultProps} />
-            );
+            renderWithProviders(<SearchableList {...defaultProps} />);
 
             // When not filtering, shows just count (not "Showing X of Y")
             expect(screen.getByText('4 items')).toBeInTheDocument();
@@ -26,11 +27,7 @@ describe('SearchableList - Display Customization', () => {
         it('shows singular "item" for single item', () => {
             const singleItem = [mockItems[0]];
             renderWithProviders(
-                <SearchableList
-                    {...defaultProps}
-                    items={singleItem}
-                    filteredItems={singleItem}
-                />
+                <SearchableList {...defaultProps} items={singleItem} filteredItems={singleItem} />
             );
 
             // When not filtering, shows just count (not "Showing X of Y")
@@ -40,11 +37,7 @@ describe('SearchableList - Display Customization', () => {
         it('shows filtered count vs total', () => {
             const filtered = mockItems.slice(0, 2);
             renderWithProviders(
-                <SearchableList
-                    {...defaultProps}
-                    searchQuery="Project"
-                    filteredItems={filtered}
-                />
+                <SearchableList {...defaultProps} searchQuery="Project" filteredItems={filtered} />
             );
 
             expect(screen.getByText('Showing 2 of 4 items')).toBeInTheDocument();
@@ -67,12 +60,7 @@ describe('SearchableList - Display Customization', () => {
 
     describe('AutoFocus', () => {
         it('does not autofocus by default', () => {
-            renderWithProviders(
-                <SearchableList
-                    {...defaultProps}
-                    searchThreshold={3}
-                />
-            );
+            renderWithProviders(<SearchableList {...defaultProps} searchThreshold={3} />);
 
             expect(screen.getByRole('searchbox')).toBeInTheDocument();
         });
@@ -100,12 +88,7 @@ describe('SearchableList - Display Customization', () => {
                 </Item>
             );
 
-            renderWithProviders(
-                <SearchableList
-                    {...defaultProps}
-                    renderItem={customRenderer}
-                />
-            );
+            renderWithProviders(<SearchableList {...defaultProps} renderItem={customRenderer} />);
 
             // Custom renderer is used - check for custom text format
             expect(screen.getByText('Custom: Project Alpha')).toBeInTheDocument();
@@ -114,13 +97,7 @@ describe('SearchableList - Display Customization', () => {
 
     describe('Edge Cases', () => {
         it('handles empty items array', () => {
-            renderWithProviders(
-                <SearchableList
-                    {...defaultProps}
-                    items={[]}
-                    filteredItems={[]}
-                />
-            );
+            renderWithProviders(<SearchableList {...defaultProps} items={[]} filteredItems={[]} />);
 
             // When not filtering, shows just count (not "Showing X of Y")
             expect(screen.getByText('0 items')).toBeInTheDocument();
@@ -129,15 +106,11 @@ describe('SearchableList - Display Customization', () => {
         it('handles items without descriptions', () => {
             const noDescItems: TestItem[] = [
                 { id: '1', title: 'Item 1' },
-                { id: '2', title: 'Item 2' }
+                { id: '2', title: 'Item 2' },
             ];
 
             renderWithProviders(
-                <SearchableList
-                    {...defaultProps}
-                    items={noDescItems}
-                    filteredItems={noDescItems}
-                />
+                <SearchableList {...defaultProps} items={noDescItems} filteredItems={noDescItems} />
             );
 
             expect(screen.getByText('Item 1')).toBeInTheDocument();
@@ -145,16 +118,10 @@ describe('SearchableList - Display Customization', () => {
         });
 
         it('handles items with name instead of title', () => {
-            const nameItems = [
-                { id: '1', name: 'Named Item' },
-            ] as any[];
+            const nameItems: SearchableListItem[] = [{ id: '1', name: 'Named Item' }];
 
             renderWithProviders(
-                <SearchableList
-                    {...defaultProps}
-                    items={nameItems}
-                    filteredItems={nameItems}
-                />
+                <SearchableList {...defaultProps} items={nameItems} filteredItems={nameItems} />
             );
 
             expect(screen.getByText('Named Item')).toBeInTheDocument();

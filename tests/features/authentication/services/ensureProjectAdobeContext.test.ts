@@ -20,6 +20,7 @@ import { ensureProjectOrgContext } from '@/features/authentication/services/ensu
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 jest.mock('@/core/auth/adobeAuthGuard', () => ({ ensureAdobeIOAuth: jest.fn() }));
 jest.mock('@/features/authentication/services/ensureProjectOrgContext', () => ({
@@ -34,7 +35,7 @@ function createLogger(): Logger {
 }
 
 function createProject(): Project {
-    return {
+    return createMockProject({
         name: 'Acme Demo',
         path: '/test/acme',
         status: 'ready',
@@ -43,7 +44,7 @@ function createProject(): Project {
         adobe: { organization: 'org-expected', projectId: 'proj-1', workspace: 'ws-1' },
         componentInstances: {},
         componentConfigs: {},
-    } as unknown as Project;
+    });
 }
 
 describe('ensureProjectAdobeContext', () => {

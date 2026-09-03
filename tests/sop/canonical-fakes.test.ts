@@ -357,11 +357,19 @@ describe('a fake of a real type is not a literal the compiler was told to ignore
         // An empty list would make every assertion below vacuous.
         expect(BANNED.length).toBeGreaterThanOrEqual(5);
         expect(BANNED.filter((t) => t in CEILINGS)).toEqual([]);
+        // And a generic type is caught — a `\b` after `>` would have missed it.
+        expect(BANNED).toContain('Partial<Project>');
+        const generic = /\}\s*as\s+(?:unknown\s+as\s+)?Partial<Project>(?!\w)/;
+        // Assembled from two halves so this file does not trip its own ban.
+        expect(generic.test('const p = {} as ' + 'Partial<Project>;')).toBe(true);
+        expect(generic.test('const p = {} as ' + 'Partial<ProjectManifest>;')).toBe(false);
     });
 
     it.each(BANNED)('%s: no object literal is cast to it', (type) => {
+        // `(?!\w)` rather than `\b`: a word boundary after a type that ENDS in
+        // `>` (Partial<Project>) never matches, which would make its ban vacuous.
         const re = new RegExp(
-            String.raw`\}\s*as\s+(?:unknown\s+as\s+)?${type.replace(/[.[\]'$]/g, '\\$&')}\b`,
+            String.raw`\}\s*as\s+(?:unknown\s+as\s+)?${type.replace(/[.[\]'$<>]/g, '\\$&')}(?!\w)`,
             'g'
         );
         const offenders: string[] = [];

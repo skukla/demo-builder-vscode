@@ -44,6 +44,7 @@ jest.mock('@/core/build/buildInfo', () => ({
 import * as vscode from 'vscode';
 import { registerBuildStamp } from '@/core/build/buildStampUi';
 import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 
 const INFO = {
     checkoutPath: '/checkout/main',
@@ -54,11 +55,7 @@ const INFO = {
 };
 
 function ctx(mode: number) {
-    return {
-        extensionPath: '/checkout/main',
-        extensionMode: mode,
-        subscriptions: [] as unknown[],
-    } as unknown as vscode.ExtensionContext;
+    return createMockExtensionContext({ extensionMode: mode }, '/checkout/main');
 }
 
 const logger = createMockLogger();

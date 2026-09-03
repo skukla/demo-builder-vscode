@@ -174,20 +174,18 @@ describe('appBuilderComponentState accessors', () => {
     });
 
     it("prefers the canonical 'mesh' key, matching getMeshAppBuilderComponent", () => {
-        const project = {
+        const project = makeProject({
             appBuilderComponents: {
                 'other-mesh': { kind: 'mesh', status: 'error', source: { owner: 'a', repo: 'b' } },
                 mesh: { kind: 'mesh', status: 'deployed', source: { owner: 'a', repo: 'b' } },
             },
-        } as never as Parameters<typeof getIdentifiedMeshAppBuilderComponent>[0];
+        });
 
         expect(getIdentifiedMeshAppBuilderComponent(project)!.id).toBe('mesh');
     });
 
     it('returns undefined when the project has no mesh component', () => {
-        const project = { appBuilderComponents: {} } as never as Parameters<
-            typeof getIdentifiedMeshAppBuilderComponent
-        >[0];
+        const project = makeProject({ appBuilderComponents: {} });
 
         expect(getIdentifiedMeshAppBuilderComponent(project)).toBeUndefined();
     });

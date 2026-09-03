@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { mockWorkspace } from '../../../helpers/vscodeMockViews';
 /**
  * Shared test utilities for createHandler tests
@@ -38,17 +39,22 @@ export interface TestSetup {
  * fixture that fills every gap with a truthy empty object is not neutral.
  */
 export function createProjectCreationContext(
-    overrides?: Partial<HandlerContext>
+    overrides?: Partial<jest.Mocked<HandlerContext>>
 ): jest.Mocked<HandlerContext> {
     return {
         sendMessage: jest.fn().mockResolvedValue(undefined),
         logger: createMockLogger(),
-        context: {
+        debugLogger: createMockLogger(),
+        context: createMockExtensionContext({
             globalState: {
                 get: jest.fn().mockReturnValue(false),
                 update: jest.fn().mockResolvedValue(undefined),
+                keys: jest.fn().mockReturnValue([]),
+                setKeysForSync: jest.fn(),
             },
-        },
+        }),
+        panel: undefined,
+        communicationManager: undefined,
         stateManager: createMockStateManager({
             getAllProjects: jest.fn().mockResolvedValue([]),
             getCurrentProject: jest.fn().mockResolvedValue(undefined),
@@ -56,12 +62,13 @@ export function createProjectCreationContext(
             clearProject: jest.fn().mockResolvedValue(undefined),
         }),
         sharedState: {
+            isAuthenticating: false,
             projectCreationAbortController: undefined,
             meshCreatedForWorkspace: undefined,
             meshExistedBeforeSession: undefined,
         },
         ...overrides,
-    } as any;
+    };
 }
 
 /**

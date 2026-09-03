@@ -320,7 +320,7 @@ describe('projectStatusUtils', () => {
                     dependencies: ['eds-accs-mesh'],
                     integrations: [],
                     appBuilder: [],
-                } as never,
+                },
                 meshStatusSummary: undefined,
                 appBuilderComponents: {},
             });
@@ -441,14 +441,16 @@ describe('projectStatusUtils', () => {
 // ACTS on the mesh, and this is a read.
 describe('mesh status resolution matches the canonical resolver', () => {
     it('prefers the canonical `mesh` key over another mesh entry', () => {
-        const project = {
+        const source = { owner: 'adobe', repo: 'commerce-mesh' };
+        const project = createProjectsDashboardProject({
+            meshStatusSummary: undefined,
             appBuilderComponents: {
                 // Insertion order deliberately puts the non-canonical one FIRST,
                 // which is what a bare find() would return.
-                'eds-accs-mesh': { kind: 'mesh', status: 'error' },
-                mesh: { kind: 'mesh', status: 'deployed' },
+                'eds-accs-mesh': { kind: 'mesh', status: 'error', source },
+                mesh: { kind: 'mesh', status: 'deployed', source },
             },
-        } as never;
+        });
 
         // The two entries disagree, so the verdict names which one was read: the
         // canonical 'deployed' gives "Deployed", the stray 'error' would not.
@@ -456,9 +458,16 @@ describe('mesh status resolution matches the canonical resolver', () => {
     });
 
     it('still falls back to the only mesh when there is no canonical key', () => {
-        const project = {
-            appBuilderComponents: { 'eds-accs-mesh': { kind: 'mesh', status: 'deployed' } },
-        } as never;
+        const project = createProjectsDashboardProject({
+            meshStatusSummary: undefined,
+            appBuilderComponents: {
+                'eds-accs-mesh': {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: 'adobe', repo: 'commerce-mesh' },
+                },
+            },
+        });
 
         // The two entries disagree, so the verdict names which one was read: the
         // canonical 'deployed' gives "Deployed", the stray 'error' would not.

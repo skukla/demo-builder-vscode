@@ -50,7 +50,7 @@ describe('StalenessDetector - State Detection', () => {
                         lastDeployed: '2024-01-01T00:00:00Z',
                     },
                 },
-            } as unknown as Partial<Project>);
+            });
 
             const result = getCurrentMeshState(project);
 
@@ -81,7 +81,7 @@ describe('StalenessDetector - State Detection', () => {
                         lastDeployed: '',
                     },
                 },
-            } as unknown as Partial<Project>);
+            });
 
             const result = getCurrentMeshState(project);
 
@@ -108,7 +108,7 @@ describe('StalenessDetector - State Detection', () => {
                             lastDeployed: '2026-07-01T00:00:00Z',
                         },
                     },
-                } as unknown as Partial<Project>);
+                });
 
                 const result = getCurrentMeshState(project);
 
@@ -128,7 +128,7 @@ describe('StalenessDetector - State Detection', () => {
                             source: { owner: '', repo: '' },
                         },
                     },
-                } as unknown as Partial<Project>);
+                });
 
                 expect(getCurrentMeshState(project)).toBeNull();
             });
@@ -157,7 +157,7 @@ describe('StalenessDetector - State Detection', () => {
                         lastDeployed: '',
                     },
                 },
-            } as unknown as Partial<Project>);
+            });
 
             setupMockCommandExecutor(
                 { code: 0, stdout: '{"org":"test"}' },
@@ -194,7 +194,7 @@ describe('StalenessDetector - State Detection', () => {
                         sourceHash: null,
                     },
                 },
-            } as unknown as Partial<Project>);
+            });
 
             const deployedConfig = {
                 ADOBE_COMMERCE_GRAPHQL_ENDPOINT: 'https://example.com/graphql',
@@ -258,7 +258,7 @@ describe('StalenessDetector - State Detection', () => {
                         lastDeployed: '',
                     },
                 },
-            } as unknown as Partial<Project>);
+            });
 
             setupMockCommandExecutor({
                 code: 1,

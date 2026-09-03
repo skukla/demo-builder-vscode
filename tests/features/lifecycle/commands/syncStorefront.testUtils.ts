@@ -105,6 +105,7 @@ import {
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // Re-exported so specs never import the SUT directly (see the header note).
 export { PushRejectedError, SyncStorefrontCommand };
@@ -130,7 +131,8 @@ export function makeSyncStorefrontContext(): vscode.ExtensionContext {
         delete: jest.fn(),
         onDidChange: jest.fn(),
     };
-    return { secrets, globalState: { get: jest.fn(), update: jest.fn() } } as never;
+    // The canonical context's globalState is already bare jest.fn get/update.
+    return createMockExtensionContext({ secrets });
 }
 
 /** Canonical state-manager fake (ADR-016). */
@@ -165,7 +167,7 @@ export function makeSyncTargetProject(): Project {
                 metadata: { githubRepo: 'demo-org/demo-repo', liveUrl: 'https://live.example' },
             },
         },
-    } as Partial<Project>);
+    });
 }
 
 export function setGitHubTokenServiceReturns(token: string | undefined): void {

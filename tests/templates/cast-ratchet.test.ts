@@ -59,7 +59,7 @@ function countCasts(): { total: number; asAny: string[]; sites: string[] } {
 describe('boundary-cast ratchet', () => {
     const { total, asAny, sites } = countCasts();
 
-    it('src has ZERO `as any`', () => {
+    it('src has ZERO any-erasing casts', () => {
         expect(asAny).toEqual([]);
     });
 

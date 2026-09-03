@@ -1,4 +1,6 @@
 import { CommandExecutor } from '@/core/shell/commandExecutor';
+import type { CommandQueue } from '@/core/shell/commandQueue';
+import type { FileWatcher } from '@/core/shell/fileWatcher';
 import { createMockExecaSubprocess, setupMockDependencies, simulateSubprocessComplete } from './commandExecutor.testUtils';
 
 // Mock execa - must be before importing CommandExecutor
@@ -66,8 +68,7 @@ describe('CommandExecutor - Basic Execution', () => {
 
             // Simulate timeout error from execa
             setImmediate(() => {
-                const timeoutError = new Error('Command timed out') as any;
-                timeoutError.timedOut = true;
+                const timeoutError = Object.assign(new Error('Command timed out'), { timedOut: true });
                 mockSubprocess._reject(timeoutError);
             });
 
@@ -227,14 +228,14 @@ describe('CommandExecutor - Basic Execution', () => {
             expect(mockDependencies.mockEnvironmentSetup().resetSession).toHaveBeenCalled();
 
             // FileWatcher disposal is called on internal instance
-            const fileWatcher = (commandExecutor as any).fileWatcher;
+            const { fileWatcher } = commandExecutor as unknown as { fileWatcher: FileWatcher };
             expect(fileWatcher.disposeAll).toBeDefined();
         });
 
         it('should reject queued commands on dispose', async () => {
             // Set isProcessing on the internal CommandQueue to prevent immediate processing
-            const commandQueue = (commandExecutor as any).commandQueue;
-            (commandQueue as any).isProcessing = true;
+            const { commandQueue } = commandExecutor as unknown as { commandQueue: CommandQueue };
+            (commandQueue as unknown as { isProcessing: boolean }).isProcessing = true;
 
             // Now queue a command - it won't start because queue is locked
             const promise = commandExecutor.queueCommand('echo test');

@@ -38,10 +38,7 @@ describe('ComponentManager - Installation (Git Clone)', () => {
         // (its 404 fell back to the configured tag, so tests passed while the
         // in-flight TLS handle outlived the worker — the "failed to exit
         // gracefully" warning). A mocked 404 exercises the same fallback.
-        jest.spyOn(globalThis, 'fetch').mockResolvedValue({
-            ok: false,
-            status: 404,
-        } as never);
+        jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
 
         ({ componentManager, mockProject, mockCommandExecutor } = setupComponentManager());
 

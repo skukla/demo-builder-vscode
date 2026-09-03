@@ -16,26 +16,26 @@
 
 import type { Project } from '@/types/base';
 import { getMeshEndpointUrl } from '@/types/typeGuards';
+import { createMockProject } from '../../../helpers/projectFake';
 
 describe('Executor - Edit Mode Mesh Reuse', () => {
     describe('Mesh reuse logic', () => {
         it('should reuse mesh when editMode=true and project has a legacy meshState.endpoint', () => {
             // Given: Edit mode flags
             const isEditMode = true;
-            const existingProject: Project = {
+            const existingProject: Project = createMockProject({
                 name: 'test-project',
                 path: '/mock/path',
-                created: new Date().toISOString(),
                 appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
                         status: 'deployed',
                         source: { owner: '', repo: '' },
-                            endpoint: 'https://graph.adobe.io/api/mesh/abc123',
-                            sourceHash: 'hash123',
-                                    },
+                        endpoint: 'https://graph.adobe.io/api/mesh/abc123',
+                        sourceHash: 'hash123',
+                    },
                 },
-            } as any;
+            });
 
             // When: checking if we should reuse mesh
             const shouldReuseMesh = isEditMode && Boolean(getMeshEndpointUrl(existingProject));
@@ -46,10 +46,9 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
 
         it('should reuse mesh when the endpoint lives only on the keyed entry (keyed-only, Steps 07+09)', () => {
             const isEditMode = true;
-            const existingProject: Project = {
+            const existingProject: Project = createMockProject({
                 name: 'test-project',
                 path: '/mock/path',
-                created: new Date().toISOString(),
                 appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
@@ -58,7 +57,7 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
                         endpoint: 'https://graph.adobe.io/api/mesh/abc123',
                     },
                 },
-            } as any;
+            });
 
             const shouldReuseMesh = isEditMode && Boolean(getMeshEndpointUrl(existingProject));
 
@@ -68,12 +67,11 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
         it('should NOT reuse mesh when editMode=true but project has NO mesh deployment record', () => {
             // Given: Edit mode but no mesh
             const isEditMode = true;
-            const existingProject: Project = {
+            const existingProject: Project = createMockProject({
                 name: 'test-project',
                 path: '/mock/path',
-                created: new Date().toISOString(),
                 // No meshState and no keyed mesh entry
-            } as any;
+            });
 
             // When: checking if we should reuse mesh
             const shouldReuseMesh = isEditMode && Boolean(getMeshEndpointUrl(existingProject));
@@ -98,18 +96,17 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
     describe('Mesh data extraction', () => {
         it('should extract correct mesh data from existing project', () => {
             // Given: Existing project with mesh
-            const existingProject: Project = {
+            const existingProject: Project = createMockProject({
                 name: 'test-project',
                 path: '/mock/path',
-                created: new Date().toISOString(),
                 appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
                         status: 'deployed',
                         source: { owner: '', repo: '' },
-                            endpoint: 'https://graph.adobe.io/api/mesh/abc123',
-                            sourceHash: 'hash123',
-                                    },
+                        endpoint: 'https://graph.adobe.io/api/mesh/abc123',
+                        sourceHash: 'hash123',
+                    },
                 },
                 componentInstances: {
                     'commerce-mesh': {
@@ -124,14 +121,15 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
                         },
                     },
                 },
-            } as any;
+            });
 
             const workspaceId = 'workspace-123';
 
             // When: extracting mesh data for linkExistingMesh
             const meshData = {
                 endpoint: existingProject.appBuilderComponents!.mesh!.endpoint,
-                meshId: existingProject.componentInstances?.['commerce-mesh']?.metadata?.meshId || '',
+                meshId:
+                    existingProject.componentInstances?.['commerce-mesh']?.metadata?.meshId || '',
                 meshStatus: 'deployed' as const,
                 workspace: workspaceId,
             };
@@ -147,18 +145,17 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
 
         it('should handle missing meshId gracefully', () => {
             // Given: Existing project with endpoint but no meshId in metadata
-            const existingProject: Project = {
+            const existingProject: Project = createMockProject({
                 name: 'test-project',
                 path: '/mock/path',
-                created: new Date().toISOString(),
                 appBuilderComponents: {
                     mesh: {
                         kind: 'mesh',
                         status: 'deployed',
                         source: { owner: '', repo: '' },
-                            endpoint: 'https://graph.adobe.io/api/mesh/abc123',
-                            sourceHash: 'hash123',
-                                    },
+                        endpoint: 'https://graph.adobe.io/api/mesh/abc123',
+                        sourceHash: 'hash123',
+                    },
                 },
                 componentInstances: {
                     'commerce-mesh': {
@@ -170,14 +167,15 @@ describe('Executor - Edit Mode Mesh Reuse', () => {
                         // No metadata!
                     },
                 },
-            } as any;
+            });
 
             const workspaceId = 'workspace-123';
 
             // When: extracting mesh data
             const meshData = {
                 endpoint: existingProject.appBuilderComponents!.mesh!.endpoint,
-                meshId: existingProject.componentInstances?.['commerce-mesh']?.metadata?.meshId || '',
+                meshId:
+                    existingProject.componentInstances?.['commerce-mesh']?.metadata?.meshId || '',
                 meshStatus: 'deployed' as const,
                 workspace: workspaceId,
             };

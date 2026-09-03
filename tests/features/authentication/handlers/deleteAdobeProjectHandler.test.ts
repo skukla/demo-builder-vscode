@@ -19,6 +19,7 @@ import { validateProjectId } from '@/core/validation/validators/AdobeResourceVal
 import {
     handleDeleteAdobeProject,
     createTeardownDeps,
+    type DeleteAdobeProjectPayload,
 } from '@/features/authentication/handlers/deleteAdobeProjectHandler';
 import { teardownConsoleProject } from '@/features/authentication/services/consoleProjectTeardown';
 import type { ConsoleProjectTeardownResult } from '@/features/authentication/services/consoleProjectTeardown';
@@ -141,7 +142,10 @@ describe('handleDeleteAdobeProject', () => {
         });
 
         it('returns a shaped error when the payload is missing entirely', async () => {
-            const result = await handleDeleteAdobeProject(mockContext, undefined as any);
+            const result = await handleDeleteAdobeProject(
+                mockContext,
+                undefined as unknown as DeleteAdobeProjectPayload,
+            );
 
             expect(result.success).toBe(false);
             expect(mockShowWarning).not.toHaveBeenCalled();

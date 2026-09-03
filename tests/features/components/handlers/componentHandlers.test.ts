@@ -17,6 +17,8 @@ import {
 } from '@/features/components/handlers/componentHandlers';
 import { HandlerContext } from '@/types/handlers';
 
+type ResolvedDependencies = Awaited<ReturnType<DependencyResolver['resolveDependencies']>>;
+
 describe('componentHandlers - Pattern B (request-response)', () => {
     let mockContext: HandlerContext;
     let mockRegistryManager: jest.Mocked<ComponentRegistryManager>;
@@ -37,13 +39,13 @@ describe('componentHandlers - Pattern B (request-response)', () => {
     describe('handleLoadDependencies', () => {
         it('should return dependencies with success=true (Pattern B)', async () => {
             // Arrange: mock resolver returning required + optional
-            const mockResolved = {
+            const mockResolved: ResolvedDependencies = {
                 required: [
                     {
                         id: 'dep-a',
                         name: 'Dep A',
                         description: 'Required dep',
-                        configuration: { impact: 'Required for checkout' },
+                        configuration: { impact: 'significant' },
                     },
                 ],
                 optional: [
@@ -52,7 +54,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                 selected: [],
                 all: [],
             };
-            mockDependencyResolver.resolveDependencies.mockResolvedValue(mockResolved as any);
+            mockDependencyResolver.resolveDependencies.mockResolvedValue(mockResolved);
 
             // Act
             const result = await handleLoadDependencies(mockContext, {
@@ -71,7 +73,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                             name: 'Dep A',
                             description: 'Required dep',
                             required: true,
-                            impact: 'Required for checkout',
+                            impact: 'significant',
                         },
                         {
                             id: 'dep-b',
@@ -117,14 +119,14 @@ describe('componentHandlers - Pattern B (request-response)', () => {
     describe('handleValidateSelection', () => {
         it('should return validation result with success=true (Pattern B)', async () => {
             // Arrange: mock resolver returning dependencies + validation result
-            const mockResolved = {
+            const mockResolved: ResolvedDependencies = {
                 required: [],
                 optional: [],
                 selected: [],
                 all: [{ id: 'dep-a', name: 'Dep A', description: 'A dep', configuration: {} }],
             };
             const mockValidation = { valid: true, errors: [], warnings: [] };
-            mockDependencyResolver.resolveDependencies.mockResolvedValue(mockResolved as any);
+            mockDependencyResolver.resolveDependencies.mockResolvedValue(mockResolved);
             mockDependencyResolver.validateDependencyChain.mockResolvedValue(mockValidation);
 
             // Act

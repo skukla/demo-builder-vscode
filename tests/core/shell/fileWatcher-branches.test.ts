@@ -74,7 +74,6 @@ describe('FileWatcher Branch Coverage', () => {
 
         // Create FileWatcher and inject mock polling service
         fileWatcher = new FileWatcher(mockPollingService);
-        (fileWatcher as any).pollingService = mockPollingService;
 
         // Setup mock watcher factory
         (vscode.workspace.createFileSystemWatcher as jest.Mock).mockImplementation(() => {

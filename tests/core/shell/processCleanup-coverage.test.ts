@@ -80,7 +80,7 @@ describe('ProcessCleanup - Coverage Gaps', () => {
 
             // Create fresh instance and spy on isTreeKillAvailable to return false
             processCleanup = new ProcessCleanup({ gracefulTimeout: 5000 });
-            jest.spyOn(processCleanup as any, 'isTreeKillAvailable').mockReturnValue(false);
+            jest.spyOn(processCleanup as unknown as { isTreeKillAvailable(): boolean }, 'isTreeKillAvailable').mockReturnValue(false);
         });
 
         it('should use killWithTimeout when tree-kill unavailable', async () => {
@@ -155,7 +155,7 @@ describe('ProcessCleanup - Coverage Gaps', () => {
 
             // Create fresh instance with short graceful timeout
             processCleanup = new ProcessCleanup({ gracefulTimeout: 1000 });
-            jest.spyOn(processCleanup as any, 'isTreeKillAvailable').mockReturnValue(false);
+            jest.spyOn(processCleanup as unknown as { isTreeKillAvailable(): boolean }, 'isTreeKillAvailable').mockReturnValue(false);
 
             // When: killProcessTree is called
             const promise = processCleanup.killProcessTree(pid, 'SIGTERM');
@@ -194,7 +194,7 @@ describe('ProcessCleanup - Coverage Gaps', () => {
             // Create fresh instance
             processCleanup = new ProcessCleanup({ gracefulTimeout: 5000 });
             // Disable tree-kill for this suite
-            jest.spyOn(processCleanup as any, 'isTreeKillAvailable').mockReturnValue(false);
+            jest.spyOn(processCleanup as unknown as { isTreeKillAvailable(): boolean }, 'isTreeKillAvailable').mockReturnValue(false);
         });
 
         it('should handle EPERM error during initial signal in killWithTimeout', async () => {

@@ -54,6 +54,7 @@ import { createMockAuthenticationService } from '../../../helpers/authentication
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import type { DeployMeshHeadlessDeps } from '@/features/mesh/services/deployMeshHeadless';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const mockPreflight = ensureProjectAdobeContext as jest.Mock;
 const mockDeploy = deployMeshComponent as jest.MockedFunction<typeof deployMeshComponent>;
@@ -62,7 +63,7 @@ const mockFetchInfo = fetchMeshInfoFromAdobeIO as jest.MockedFunction<
 >;
 
 function project(withMesh = true): Project {
-    return {
+    return createMockProject({
         name: 'p',
         path: '/p',
         status: 'ready',
@@ -82,7 +83,7 @@ function project(withMesh = true): Project {
               }
             : {},
         componentConfigs: {},
-    } as Project;
+    });
 }
 
 /**

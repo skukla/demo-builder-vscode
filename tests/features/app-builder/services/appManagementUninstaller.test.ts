@@ -211,7 +211,7 @@ describe('uninstallAppManagementApp', () => {
             clearAssociation: jest.fn().mockRejectedValue(new Error('nope')),
         });
         const deps = makeDeps(client, {
-            logger: { debug: jest.fn(), info: jest.fn(), warn, error: jest.fn() } as never,
+            logger: createMockLogger({ warn }),
         });
 
         const result = await uninstallAppManagementApp(paasProject(), DEPLOYED_URLS, deps);

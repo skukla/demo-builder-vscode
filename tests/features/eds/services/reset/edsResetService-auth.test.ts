@@ -61,6 +61,7 @@ import {
     createResetContext,
     meshDeps,
 } from './edsResetService.testUtils';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 
 
@@ -85,7 +86,7 @@ function createProjectWithMesh(adobeContext?: {
     projectId?: string;
     workspace?: string;
 }): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         path: '/test/project',
         status: 'running',
@@ -114,7 +115,7 @@ function createProjectWithMesh(adobeContext?: {
                 status: 'deployed',
             },
         },
-    } as unknown as Project;
+    });
 }
 
 // =============================================================================

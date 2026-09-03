@@ -8,7 +8,7 @@
  * outcome — a mock cannot see a malformed call.
  */
 
-import type { Project } from '@/types/base';
+import type { AppBuilderComponentState, Project } from '@/types/base';
 
 // ---- runner deps + auth resolver (all mocked) ------------------------------
 const mockInstallAppManagement = jest.fn();
@@ -95,7 +95,7 @@ const APP_URLS = {
         'https://ns.adobeioruntime.net/api/v1/web/app-management/installation',
 };
 
-const KIT_STATE = {
+const KIT_STATE: AppBuilderComponentState = {
     kind: 'integration',
     status: 'deployed',
     name: 'Kit App',
@@ -105,7 +105,7 @@ const KIT_STATE = {
 };
 
 function kitProject(): Partial<Project> {
-    return { appBuilderComponents: { 'kit-app': { ...KIT_STATE } } } as never;
+    return { appBuilderComponents: { 'kit-app': { ...KIT_STATE } } };
 }
 
 function mockDeveloperPermissions(): void {
@@ -217,7 +217,7 @@ describe('handleGetAppBuilderInstallStatus', () => {
                     deployedUrls: { 'web/x': 'https://ns.adobeioruntime.net/api/v1/web/x' },
                 },
             },
-        } as never);
+        });
 
         const result = await handleGetAppBuilderInstallStatus(mockContext, { id: 'plain' });
 
@@ -293,7 +293,7 @@ describe('handleInstallAppBuilderComponent', () => {
             appBuilderComponents: {
                 'kit-app': { ...KIT_STATE, status: 'error' },
             },
-        } as never);
+        });
 
         const result = await handleInstallAppBuilderComponent(mockContext, { id: 'kit-app' });
 

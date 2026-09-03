@@ -85,29 +85,28 @@ const PAYLOAD = {
     dataTypes: ['categories'],
 };
 
+/** The class carries private state no literal can supply; the methods stand in. */
+function stubWriteClient(methods: Partial<DataInstallerWriteClient>): void {
+    MockedWriteClient.mockImplementation(() => methods as DataInstallerWriteClient);
+}
+
 function happyClient() {
-    MockedWriteClient.mockImplementation(
-        () =>
-            ({
-                validateImport: jest.fn().mockResolvedValue({ valid: true }),
-                startImport: jest.fn().mockResolvedValue({ activationId: 'act-1' }),
-                startDelete: jest.fn().mockResolvedValue({ activationId: 'act-9' }),
-                checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
-            }) as never
-    );
+    stubWriteClient({
+        validateImport: jest.fn().mockResolvedValue({ valid: true }),
+        startImport: jest.fn().mockResolvedValue({ activationId: 'act-1' }),
+        startDelete: jest.fn().mockResolvedValue({ activationId: 'act-9' }),
+        checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
+    });
 }
 
 /** A client whose validate REFUSES, so the job is never accepted. */
 function refusingClient() {
-    MockedWriteClient.mockImplementation(
-        () =>
-            ({
-                validateImport: jest.fn().mockResolvedValue({ valid: false, reason: 'nope' }),
-                startImport: jest.fn(),
-                startDelete: jest.fn(),
-                checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
-            }) as never
-    );
+    stubWriteClient({
+        validateImport: jest.fn().mockResolvedValue({ valid: false, reason: 'nope' }),
+        startImport: jest.fn(),
+        startDelete: jest.fn(),
+        checkCredentials: jest.fn().mockResolvedValue({ usable: true }),
+    });
 }
 
 beforeEach(() => {

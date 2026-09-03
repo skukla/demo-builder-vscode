@@ -61,7 +61,7 @@ describe('CommandExecutor — untargeted org-scoped command warning', () => {
 
     const run = async (command: string, wrap: boolean) => {
         const mockSubprocess = createMockExecaSubprocess();
-        mockExeca.mockReturnValue(mockSubprocess as never);
+        mockExeca.mockReturnValue(mockSubprocess);
         const exec = () => {
             const p = commandExecutor.execute(command, { configureTelemetry: false });
             process.nextTick(() => simulateSubprocessComplete(mockSubprocess, 'ok\n', '', 0));

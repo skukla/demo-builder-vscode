@@ -33,6 +33,11 @@ describe('DeleteProjectCommand - Error Handling', () => {
     // Store original setTimeout
     const originalSetTimeout = global.setTimeout;
 
+    /** Collapse the retry back-off so the five attempts run without waiting. */
+    function runTimeoutsImmediately(): void {
+        jest.spyOn(global, 'setTimeout').mockImplementation((fn) => originalSetTimeout(fn, 0));
+    }
+
     beforeEach(() => {
         jest.clearAllMocks();
         mockRm.mockClear();
@@ -54,9 +59,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             mockRm.mockRejectedValue(error);
 
             // Mock setTimeout to execute immediately
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted with 5 retries
             await command.execute();
@@ -77,9 +80,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             error.code = 'ENOTEMPTY';
             mockRm.mockRejectedValue(error);
 
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();
@@ -95,9 +96,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             error.code = 'ENOTEMPTY';
             mockRm.mockRejectedValue(error);
 
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();
@@ -117,9 +116,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             error.code = 'ENOTEMPTY';
             mockRm.mockRejectedValue(error);
 
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();
@@ -147,9 +144,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             mockRm.mockRejectedValue(error);
 
             // Mock setTimeout to execute immediately (for any retry logic)
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();
@@ -168,9 +163,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             mockRm.mockRejectedValue(error);
 
             // Mock setTimeout to execute immediately (for any retry logic)
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();
@@ -190,9 +183,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             error.code = 'ENOTEMPTY';
             mockRm.mockRejectedValue(error);
 
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();
@@ -208,9 +199,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             error.code = 'ENOTEMPTY';
             mockRm.mockRejectedValue(error);
 
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            runTimeoutsImmediately();
 
             // When: Deletion attempted
             await command.execute();

@@ -16,7 +16,7 @@
  * ("rejects a NON-standalone integration at the add door" and siblings).
  */
 
-import type { Project } from '@/types/base';
+import type { AppBuilderComponentState, ComponentInstance, Project } from '@/types/base';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
 jest.setTimeout(5000);
@@ -91,8 +91,8 @@ async function addAllIntegrations(deps: ReturnType<typeof createDeps>): Promise<
 
 /** A project already carrying all N integrations (for the remove tests). */
 function projectWithAllIntegrations(): Project {
-    const componentInstances: Record<string, unknown> = {};
-    const appBuilderComponents: Record<string, unknown> = {};
+    const componentInstances: Record<string, ComponentInstance> = {};
+    const appBuilderComponents: Record<string, AppBuilderComponentState> = {};
     for (const id of INTEGRATION_IDS) {
         componentInstances[id] = {
             id,
@@ -108,10 +108,7 @@ function projectWithAllIntegrations(): Project {
             url: `https://app/${id}`,
         };
     }
-    return createProject({
-        componentInstances: componentInstances as never,
-        appBuilderComponents: appBuilderComponents as never,
-    });
+    return createProject({ componentInstances, appBuilderComponents });
 }
 
 beforeEach(() => {

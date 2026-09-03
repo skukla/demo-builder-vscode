@@ -448,7 +448,7 @@ describe('WebviewCommunicationManager - Handshake & Lifecycle', () => {
             manager.dispose();
 
             // Verify isDisposed is set (access private field for testing)
-            expect((manager as any).isDisposed).toBe(true);
+            expect((manager as unknown as { isDisposed: boolean }).isDisposed).toBe(true);
         });
 
         it('should not throw error when sending to disposed webview', async () => {
@@ -460,7 +460,7 @@ describe('WebviewCommunicationManager - Handshake & Lifecycle', () => {
             ).resolves.not.toThrow();
 
             // Verify isDisposed flag remains true
-            expect((manager as any).isDisposed).toBe(true);
+            expect((manager as unknown as { isDisposed: boolean }).isDisposed).toBe(true);
         });
     });
 });

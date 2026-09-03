@@ -33,6 +33,7 @@ import { handleForcedOrgSwitch } from '@/features/authentication/handlers/orgSwi
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 const PROJECT_ADOBE = {
     organization: 'org123',
@@ -41,11 +42,10 @@ const PROJECT_ADOBE = {
 };
 
 function makeContext(project: unknown = { adobe: PROJECT_ADOBE }): HandlerContext {
-    return {
+    return createMockHandlerContext({
         stateManager: createMockStateManager({ getCurrentProject: jest.fn().mockResolvedValue(project) }),
-        logger: createMockLogger(),
-        debugLogger: { debug: jest.fn(), trace: jest.fn() },
-    } as unknown as HandlerContext;
+        debugLogger: createMockLogger(),
+    });
 }
 
 function mockLogin(result: boolean): jest.Mock {

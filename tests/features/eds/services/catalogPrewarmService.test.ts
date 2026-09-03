@@ -429,7 +429,7 @@ describe('pickSampleSku', () => {
     it('returns undefined for a non-ACCS backend', async () => {
         const paas = makeAccsProject({
             componentSelections: { backend: 'adobe-commerce-paas' },
-        } as Partial<Project>);
+        });
 
         expect(await pickSampleSku(paas, mockLogger)).toBeUndefined();
         expect(global.fetch).not.toHaveBeenCalled();

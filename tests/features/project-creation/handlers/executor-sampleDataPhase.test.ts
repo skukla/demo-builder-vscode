@@ -21,6 +21,7 @@
 
 import { executeSampleDataPhase } from '@/features/project-creation/handlers/executor';
 import { installSampleData } from '@/features/data-installer/services/sampleDataInstall';
+import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
@@ -51,7 +52,7 @@ function makeContext() {
     });
 }
 
-function makeProject() {
+function makeProject(): Project {
     return createMockProject({
         name: 'demo-1',
         datapack: { name: 'bodea', version: 'main' },
@@ -62,7 +63,7 @@ function makeProject() {
                 ACCS_STORE_VIEW_CODE: 'default',
             },
         },
-    }) as never;
+    });
 }
 
 beforeEach(() => {
@@ -136,7 +137,7 @@ describe('executeSampleDataPhase', () => {
     /** A project with no pack must cost the build nothing at all. */
     it('stays silent for a project that chose no sample data', async () => {
         const progress = jest.fn();
-        const project = { ...(makeProject() as object), datapack: undefined } as never;
+        const project: Project = { ...makeProject(), datapack: undefined };
 
         await executeSampleDataPhase(makeContext(), project, progress);
 

@@ -40,9 +40,20 @@ import {
     BrokeredCredentialFields,
     type BrokeredCredentialFieldsProps,
 } from '@/features/components/ui/components/BrokeredCredentialFields';
+import type { UniqueField } from '@/features/components/ui/hooks/useComponentConfig';
 
-export const ID_FIELD = { key: 'ACCS_OAUTH_CLIENT_ID', label: 'OAuth client ID' } as any;
-export const SECRET_FIELD = { key: 'ACCS_OAUTH_CLIENT_SECRET', label: 'OAuth client secret' } as any;
+export const ID_FIELD: UniqueField = {
+    key: 'ACCS_OAUTH_CLIENT_ID',
+    label: 'OAuth client ID',
+    type: 'text',
+    componentIds: ['commerce-accs'],
+};
+export const SECRET_FIELD: UniqueField = {
+    key: 'ACCS_OAUTH_CLIENT_SECRET',
+    label: 'OAuth client secret',
+    type: 'password',
+    componentIds: ['commerce-accs'],
+};
 
 export function renderFields(overrides: Partial<BrokeredCredentialFieldsProps> = {}) {
     const values: Record<string, string> = {};

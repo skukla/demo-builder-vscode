@@ -39,15 +39,17 @@ import {
     handleGetEventEntities,
 } from '@/features/dashboard/handlers/eventingHandlers';
 import type { HandlerContext } from '@/types/handlers';
-import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 const ADOBE = { organization: 'org-1', projectId: 'proj-1', workspace: 'ws-1' };
 
 function makeContext(adobe: unknown = ADOBE): HandlerContext {
-    return {
-        stateManager: { getCurrentProject: jest.fn(async () => ({ name: 'bodea', adobe })) },
-        logger: createMockLogger(),
-    } as unknown as HandlerContext;
+    return createMockHandlerContext({
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue({ name: 'bodea', adobe }),
+        }),
+    });
 }
 
 describe('handleGetEventEntities', () => {

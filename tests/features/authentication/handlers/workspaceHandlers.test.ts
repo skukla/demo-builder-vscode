@@ -13,6 +13,7 @@ import {
 import { HandlerContext } from '@/types/handlers';
 import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 // Mock dependencies
 jest.mock('@/core/validation/validators/AdobeResourceValidator');
@@ -31,7 +32,7 @@ describe('workspaceHandlers', () => {
         };
 
         // Create mock context
-        mockContext = {
+        mockContext = createMockHandlerContext({
             authManager: mockAuthManager,
             logger: createMockLogger(),
             debugLogger: createMockLogger(),
@@ -39,7 +40,7 @@ describe('workspaceHandlers', () => {
             sharedState: {
                 isAuthenticating: false,
             },
-        } as any;
+        });
     });
 
     describe('handleGetWorkspaces', () => {

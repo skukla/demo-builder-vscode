@@ -34,21 +34,35 @@ jest.mock('@/features/prerequisites/handlers/shared', () => ({
 
 import { handleContinuePrerequisites } from '@/features/prerequisites/handlers/continueHandler';
 import type { HandlerContext } from '@/types/handlers';
-import { createMockLogger } from '../../../helpers/loggerFake';
+import type { PrerequisiteDefinition } from '@/features/prerequisites/services/types';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
-/** aio-cli's real shape: per-node tool whose plugins serve the mesh only. */
-const MESH_SCOPED_PREREQ = {
+/**
+ * aio-cli's real shape: per-node tool whose plugins serve the mesh only. The
+ * plugin is copied from `prerequisites.json` (only `requiredFor` is read here).
+ */
+const MESH_SCOPED_PREREQ: PrerequisiteDefinition = {
     id: 'aio-cli',
     name: 'Adobe I/O CLI',
     description: 'Adobe I/O command-line tool',
     perNodeVersion: true,
-    plugins: [{ requiredFor: ['eds-commerce-mesh'] }],
+    plugins: [
+        {
+            id: 'api-mesh',
+            name: 'API Mesh Plugin',
+            description: 'Adobe API Mesh management plugin',
+            check: { command: 'aio plugins', contains: '@adobe/aio-cli-plugin-api-mesh' },
+            install: { commands: ['aio plugins:install @adobe/aio-cli-plugin-api-mesh'] },
+            requiredFor: ['eds-commerce-mesh'],
+        },
+    ],
     check: { command: 'aio --version', parseVersion: '@adobe/aio-cli/(\\S+)' },
 };
 
 function makeContext(): HandlerContext {
     const states = new Map();
-    return {
+    return createMockHandlerContext({
+        // No PrerequisitesManager builder exists; two methods stand in for it.
         prereqManager: {
             checkPrerequisite: jest.fn().mockResolvedValue({
                 id: 'aio-cli',
@@ -59,15 +73,13 @@ function makeContext(): HandlerContext {
                 canInstall: true,
             }),
             checkMultipleNodeVersions: jest.fn().mockResolvedValue([]),
-        },
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-        logger: createMockLogger(),
-        debugLogger: { debug: jest.fn() },
+        } as unknown as HandlerContext['prereqManager'],
         sharedState: {
+            isAuthenticating: false,
             currentPrerequisites: [MESH_SCOPED_PREREQ],
             currentPrerequisiteStates: states,
         },
-    } as unknown as HandlerContext;
+    });
 }
 
 beforeEach(() => {

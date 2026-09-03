@@ -105,7 +105,14 @@ describe('handleGetProjectUrls', () => {
 
         // Stopped / no port → storefront omitted.
         const stopped = createDashboardProject({
-            componentInstances: { headless: { id: 'headless', type: 'frontend' } } as never,
+            componentInstances: {
+                headless: {
+                    id: 'headless',
+                    name: 'CitiSignal Next.js',
+                    type: 'frontend',
+                    status: 'stopped',
+                },
+            },
         });
         mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(stopped);
         const noPort = await run(mockContext);
@@ -121,7 +128,7 @@ describe('handleGetProjectUrls', () => {
         const withAdmin = createDashboardProject({
             componentConfigs: {
                 'commerce-paas': { ADOBE_COMMERCE_ADMIN_URL: 'https://admin.example.com' },
-            } as never,
+            },
         });
         mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(withAdmin);
         const result2 = await run(mockContext);
@@ -137,7 +144,7 @@ describe('handleGetProjectUrls', () => {
     });
 
     it('falls back to the generic Console URL when Adobe IDs are absent', async () => {
-        const noAdobe = createDashboardProject({ adobe: undefined } as never);
+        const noAdobe = createDashboardProject({ adobe: undefined });
         const { mockContext } = setupMocks();
         mockContext.stateManager.getCurrentProject = jest.fn().mockResolvedValue(noAdobe);
 
@@ -149,7 +156,7 @@ describe('handleGetProjectUrls', () => {
         const { mockContext } = setupMocks();
         mockContext.stateManager.getCurrentProject = jest
             .fn()
-            .mockResolvedValue(createDashboardProject(edsProject() as never));
+            .mockResolvedValue(createDashboardProject(edsProject()));
 
         const urls = urlsOf(await run(mockContext));
         expect(urls.liveSite).toBe('https://main--site--owner.aem.live');

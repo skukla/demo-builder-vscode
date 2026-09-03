@@ -69,7 +69,7 @@ describe('a dashboard mesh add lands the full deployment record', () => {
             captureMeshBaseline: jest.fn().mockResolvedValue(BASELINE),
         });
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         expect(deps.captureMeshBaseline).toHaveBeenCalledWith('/proj/components/commerce-mesh');
 
@@ -91,7 +91,7 @@ describe('a dashboard mesh add lands the full deployment record', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, MESH_ENTRY, deps as never);
+        await addAppBuilderComponent(project, MESH_ENTRY, deps);
 
         // meshVerifier reads componentInstances[id].metadata.meshId. A null
         // metadata is what sent it to `api-mesh:describe` on every status request.
@@ -102,7 +102,7 @@ describe('a dashboard mesh add lands the full deployment record', () => {
         const project = createProject();
         const deps = createDeps();
 
-        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps as never);
+        await addAppBuilderComponent(project, INTEGRATION_ENTRY, deps);
 
         const entry = project.appBuilderComponents?.[INTEGRATION_ENTRY.id];
         expect(entry?.status).toBe('deployed');

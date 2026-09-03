@@ -21,23 +21,19 @@ import type { Project } from '@/types/base';
 import * as path from 'path';
 
 import { codedError } from '../../helpers/codedErrorFake';
+import { createMockLogger } from '../../helpers/loggerFake';
 // Mock fs/promises
 jest.mock('fs/promises');
 
 const mockFs = fs as jest.Mocked<typeof fs>;
 
-// Create a detailed mock logger that captures all calls for debugging
+// The canonical logger, plus the one view of its calls these tests read.
 const createDetailedMockLogger = () => {
-    const calls: Array<{ level: string; message: string; args: unknown[] }> = [];
+    const logger = createMockLogger();
     return {
-        debug: jest.fn((...args: unknown[]) => calls.push({ level: 'debug', message: String(args[0]), args })),
-        info: jest.fn((...args: unknown[]) => calls.push({ level: 'info', message: String(args[0]), args })),
-        warn: jest.fn((...args: unknown[]) => calls.push({ level: 'warn', message: String(args[0]), args })),
-        error: jest.fn((...args: unknown[]) => calls.push({ level: 'error', message: String(args[0]), args })),
-        getCalls: () => calls,
-        getDebugCalls: () => calls.filter((c) => c.level === 'debug'),
-        getErrorCalls: () => calls.filter((c) => c.level === 'error'),
-        printCalls: () => calls.forEach((c) => console.log(`[${c.level}] ${c.message}`)),
+        ...logger,
+        getErrorCalls: () =>
+            logger.error.mock.calls.map(([message]) => ({ message: String(message) })),
     };
 };
 
@@ -62,7 +58,7 @@ describe('Manifest Error Investigation', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockLogger = createDetailedMockLogger();
-        writer = new ProjectConfigWriter(mockLogger as any);
+        writer = new ProjectConfigWriter(mockLogger);
 
         // Default mock implementations
         mockFs.access.mockResolvedValue(undefined);
@@ -78,15 +74,19 @@ describe('Manifest Error Investigation', () => {
             const project = createTestProject({ path: '' });
 
             // When: Attempting to save
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Invalid project path');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Invalid project path'
+            );
         });
 
         it('should reject undefined path', async () => {
             // Given: A project with undefined path
-            const project = createTestProject({ path: undefined as any });
+            const project = createTestProject({ path: undefined as unknown as string });
 
             // When: Attempting to save
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Invalid project path');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Invalid project path'
+            );
         });
 
         it('should reject whitespace-only path', async () => {
@@ -94,15 +94,19 @@ describe('Manifest Error Investigation', () => {
             const project = createTestProject({ path: '   ' });
 
             // When: Attempting to save
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Invalid project path');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Invalid project path'
+            );
         });
 
         it('should reject null path', async () => {
             // Given: A project with null path
-            const project = createTestProject({ path: null as any });
+            const project = createTestProject({ path: null as unknown as string });
 
             // When: Attempting to save
-            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow('Invalid project path');
+            await expect(writer.saveProjectConfig(project, project.path)).rejects.toThrow(
+                'Invalid project path'
+            );
         });
 
         it('should accept valid path', async () => {
@@ -146,7 +150,9 @@ describe('Manifest Error Investigation', () => {
 
             // Then: Error should be logged
             const errorCalls = mockLogger.getErrorCalls();
-            expect(errorCalls.some((c) => c.message.includes('Failed to update project manifest'))).toBe(true);
+            expect(
+                errorCalls.some((c) => c.message.includes('Failed to update project manifest'))
+            ).toBe(true);
         });
 
         it('should verify temp file exists before rename', async () => {
@@ -163,7 +169,10 @@ describe('Manifest Error Investigation', () => {
         it('should handle ENOENT during rename', async () => {
             // Given: rename fails with ENOENT (the exact error we see in production)
             const project = createTestProject();
-            const enoentError = codedError("ENOENT: no such file or directory, rename '/test/path/.demo-builder.json.tmp' -> '/test/path/.demo-builder.json'", { code: 'ENOENT' });
+            const enoentError = codedError(
+                "ENOENT: no such file or directory, rename '/test/path/.demo-builder.json.tmp' -> '/test/path/.demo-builder.json'",
+                { code: 'ENOENT' }
+            );
 
             mockFs.rename.mockRejectedValue(enoentError);
 
@@ -172,7 +181,9 @@ describe('Manifest Error Investigation', () => {
 
             // Then: Error should be logged
             const errorCalls = mockLogger.getErrorCalls();
-            expect(errorCalls.some((c) => c.message.includes('Failed to update project manifest'))).toBe(true);
+            expect(
+                errorCalls.some((c) => c.message.includes('Failed to update project manifest'))
+            ).toBe(true);
         });
     });
 
@@ -295,7 +306,9 @@ describe('Manifest Error Investigation', () => {
 
             // And: Error should be logged
             const errorCalls = mockLogger.getErrorCalls();
-            expect(errorCalls.some((c) => c.message.includes('Failed to update project manifest'))).toBe(true);
+            expect(
+                errorCalls.some((c) => c.message.includes('Failed to update project manifest'))
+            ).toBe(true);
         });
     });
 

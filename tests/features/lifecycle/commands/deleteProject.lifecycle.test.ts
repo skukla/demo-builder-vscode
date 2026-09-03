@@ -13,6 +13,7 @@ import {
     setupDeleteProject,
 } from './deleteProject.testUtils';
 import type { StateManager } from '@/types/state';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // Mock fs/promises with explicit exports
 jest.mock('fs/promises', () => ({
@@ -84,11 +85,9 @@ describe('DeleteProjectCommand - Lifecycle', () => {
     describe('Test 2: Delete running project (stops demo first)', () => {
         it('should stop demo before deleting if project is running', async () => {
             // Given: Project with status 'running'
-            mockStateManager.getCurrentProject.mockResolvedValue({
-                name: 'test-project',
-                path: testProjectPath,
-                status: 'running',
-            } as any);
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ name: 'test-project', path: testProjectPath, status: 'running' })
+            );
 
             // When: deleteProject command executes
             await command.execute();
@@ -102,11 +101,9 @@ describe('DeleteProjectCommand - Lifecycle', () => {
 
         it('should not call stopDemo if project is already stopped', async () => {
             // Given: Project with status 'stopped'
-            mockStateManager.getCurrentProject.mockResolvedValue({
-                name: 'test-project',
-                path: testProjectPath,
-                status: 'stopped',
-            } as any);
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ name: 'test-project', path: testProjectPath, status: 'stopped' })
+            );
 
             // When: deleteProject command executes
             await command.execute();

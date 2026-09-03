@@ -43,16 +43,20 @@ import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockProject } from '../../../helpers/projectFake';
 const logger = createMockLogger() as unknown as Logger;
 
 /** A project the extractor accepts: repo, DA.live pair and a component path. */
 function edsProject(metadata: Record<string, unknown> = {}) {
-    return {
+    return createMockProject({
         name: 'p',
         path: '/p',
         componentInstances: {
             'eds-storefront': {
                 id: 'eds-storefront',
+                name: 'EDS Storefront',
+                type: 'frontend',
+                status: 'ready',
                 path: '/p/storefront',
                 metadata: {
                     githubRepo: 'me/shop',
@@ -62,7 +66,7 @@ function edsProject(metadata: Record<string, unknown> = {}) {
                 },
             },
         },
-    } as never;
+    });
 }
 
 function run(over: Record<string, unknown> = {}, project = edsProject()) {
@@ -110,7 +114,7 @@ describe('republishStorefrontConfig — persisting the cleared flag', () => {
         // The early return that made this worth checking: a successful CONTENT
         // republish tolerates this step failing, so a flag cleared here on a
         // metadata-less project would be a lie.
-        const bare = { name: 'p', path: '/p', componentInstances: {} } as never;
+        const bare = createMockProject({ name: 'p', path: '/p', componentInstances: {} });
         const { project, persist, result } = run({}, bare);
         await result;
 

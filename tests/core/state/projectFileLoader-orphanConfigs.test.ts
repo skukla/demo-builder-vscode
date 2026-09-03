@@ -60,10 +60,14 @@ describe('stripOrphanedComponentConfigs', () => {
             },
             selectedAddons: ['adobe-commerce-aco'],
             componentInstances: {
-                'instance-only': { id: 'instance-only' },
+                'instance-only': { id: 'instance-only', name: 'Instance Only', status: 'ready' },
             },
             appBuilderComponents: {
-                'keyed-only': { kind: 'integration', status: 'deployed' },
+                'keyed-only': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: 'acme', repo: 'keyed-only' },
+                },
             },
             componentConfigs: {
                 'eds-storefront': { A: '1' },
@@ -75,7 +79,7 @@ describe('stripOrphanedComponentConfigs', () => {
                 'instance-only': { G: '7' },
                 'keyed-only': { H: '8' },
             },
-        } as never);
+        });
 
         const changed = stripOrphanedComponentConfigs(p);
 

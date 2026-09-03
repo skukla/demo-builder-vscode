@@ -56,7 +56,7 @@ describe('HelixService - Auth & Keys', () => {
                     headers: expect.objectContaining({
                         'x-content-source-authorization': 'Bearer valid-dalive-ims-token',
                     }),
-                }),
+                })
             );
             expect(mockFetch).not.toHaveBeenCalledWith(
                 expect.any(String),
@@ -64,21 +64,26 @@ describe('HelixService - Auth & Keys', () => {
                     headers: expect.objectContaining({
                         'x-content-source-authorization': 'Bearer valid-adobe-ims-token',
                     }),
-                }),
+                })
             );
         });
 
         it('should throw error when DA.live token provider not configured', async () => {
             const module = await loadHelixServiceModule();
-            const serviceWithoutDaLiveProvider = new module.HelixService(undefined, mockGitHubTokenService as unknown as GitHubTokenService);
-            await expect(serviceWithoutDaLiveProvider.previewPage('testuser', 'my-site', '/products')).rejects.toThrow(
-                /DA\.live token provider not configured/i,
+            const serviceWithoutDaLiveProvider = new module.HelixService(
+                undefined,
+                mockGitHubTokenService as unknown as GitHubTokenService
             );
+            await expect(
+                serviceWithoutDaLiveProvider.previewPage('testuser', 'my-site', '/products')
+            ).rejects.toThrow(/DA\.live token provider not configured/i);
         });
 
         it('should throw error when DA.live token provider returns null', async () => {
             mockDaLiveTokenProvider.getAccessToken.mockResolvedValue(null);
-            await expect(service.previewPage('testuser', 'my-site', '/')).rejects.toThrow(/DA\.live session expired/i);
+            await expect(service.previewPage('testuser', 'my-site', '/')).rejects.toThrow(
+                /DA\.live session expired/i
+            );
         });
 
         it('should use DA.live token for bulk preview operations', async () => {
@@ -90,7 +95,7 @@ describe('HelixService - Auth & Keys', () => {
                     headers: expect.objectContaining({
                         'x-content-source-authorization': 'Bearer valid-dalive-ims-token',
                     }),
-                }),
+                })
             );
         });
 
@@ -103,7 +108,7 @@ describe('HelixService - Auth & Keys', () => {
                     headers: expect.objectContaining({
                         'x-content-source-authorization': 'Bearer valid-dalive-ims-token',
                     }),
-                }),
+                })
             );
         });
     });
@@ -119,8 +124,14 @@ describe('HelixService - Auth & Keys', () => {
 
         it('should cache API key and reuse on subsequent calls', async () => {
             mockFetch.mockResolvedValueOnce({
-                ok: true, status: 200,
-                json: () => Promise.resolve({ id: 'key-1', value: 'api-key-value-1', expiration: '2027-01-01T00:00:00Z' }),
+                ok: true,
+                status: 200,
+                json: () =>
+                    Promise.resolve({
+                        id: 'key-1',
+                        value: 'api-key-value-1',
+                        expiration: '2027-01-01T00:00:00Z',
+                    }),
             });
             const key1 = await service.createAdminApiKey('testorg', 'testsite');
             expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -133,8 +144,26 @@ describe('HelixService - Auth & Keys', () => {
 
         it('should create separate keys for different org/site combinations', async () => {
             mockFetch
-                .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'key-for-site-a', expiration: '2027-01-01T00:00:00Z' }) })
-                .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-2', value: 'key-for-site-b', expiration: '2027-01-01T00:00:00Z' }) });
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: () =>
+                        Promise.resolve({
+                            id: 'key-1',
+                            value: 'key-for-site-a',
+                            expiration: '2027-01-01T00:00:00Z',
+                        }),
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: () =>
+                        Promise.resolve({
+                            id: 'key-2',
+                            value: 'key-for-site-b',
+                            expiration: '2027-01-01T00:00:00Z',
+                        }),
+                });
 
             const keyA = await service.createAdminApiKey('org-a', 'site-a');
             const keyB = await service.createAdminApiKey('org-b', 'site-b');
@@ -144,10 +173,20 @@ describe('HelixService - Auth & Keys', () => {
         });
 
         it('should not cache failed key creation (null result)', async () => {
-            mockFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Internal Server Error' });
             mockFetch.mockResolvedValueOnce({
-                ok: true, status: 200,
-                json: () => Promise.resolve({ id: 'key-1', value: 'api-key-after-retry', expiration: '2027-01-01T00:00:00Z' }),
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error',
+            });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () =>
+                    Promise.resolve({
+                        id: 'key-1',
+                        value: 'api-key-after-retry',
+                        expiration: '2027-01-01T00:00:00Z',
+                    }),
             });
 
             const key1 = await service.createAdminApiKey('testorg', 'testsite');
@@ -159,8 +198,26 @@ describe('HelixService - Auth & Keys', () => {
 
         it('should create new key when cached key expires', async () => {
             mockFetch
-                .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'old-key', expiration: '2027-01-01T00:00:00Z' }) })
-                .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-2', value: 'new-key', expiration: '2027-01-01T00:00:00Z' }) });
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: () =>
+                        Promise.resolve({
+                            id: 'key-1',
+                            value: 'old-key',
+                            expiration: '2027-01-01T00:00:00Z',
+                        }),
+                })
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: () =>
+                        Promise.resolve({
+                            id: 'key-2',
+                            value: 'new-key',
+                            expiration: '2027-01-01T00:00:00Z',
+                        }),
+                });
 
             await service.createAdminApiKey('testorg', 'testsite');
             const originalDateNow = Date.now;
@@ -175,22 +232,53 @@ describe('HelixService - Auth & Keys', () => {
         });
 
         it('should clear all cached keys via clearApiKeyCache', async () => {
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'cached-key', expiration: '2027-01-01T00:00:00Z' }) });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () =>
+                    Promise.resolve({
+                        id: 'key-1',
+                        value: 'cached-key',
+                        expiration: '2027-01-01T00:00:00Z',
+                    }),
+            });
             await service.createAdminApiKey('testorg', 'testsite');
             expect(mockFetch).toHaveBeenCalledTimes(1);
 
             HelixServiceClass.clearApiKeyCache();
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-2', value: 'fresh-key', expiration: '2027-01-01T00:00:00Z' }) });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () =>
+                    Promise.resolve({
+                        id: 'key-2',
+                        value: 'fresh-key',
+                        expiration: '2027-01-01T00:00:00Z',
+                    }),
+            });
             const key = await service.createAdminApiKey('testorg', 'testsite');
             expect(mockFetch).toHaveBeenCalledTimes(2);
             expect(key).toBe('fresh-key');
         });
 
         it('should share cache across HelixService instances', async () => {
-            mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ id: 'key-1', value: 'shared-key', expiration: '2027-01-01T00:00:00Z' }) });
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: () =>
+                    Promise.resolve({
+                        id: 'key-1',
+                        value: 'shared-key',
+                        expiration: '2027-01-01T00:00:00Z',
+                    }),
+            });
             await service.createAdminApiKey('testorg', 'testsite');
 
-            const service2 = new HelixServiceClass(undefined, mockGitHubTokenService as unknown as GitHubTokenService, mockDaLiveTokenProvider);
+            const service2 = new HelixServiceClass(
+                undefined,
+                mockGitHubTokenService as unknown as GitHubTokenService,
+                mockDaLiveTokenProvider
+            );
             const key = await service2.createAdminApiKey('testorg', 'testsite');
             expect(mockFetch).toHaveBeenCalledTimes(1);
             expect(key).toBe('shared-key');
@@ -220,9 +308,9 @@ describe('HelixService - Auth & Keys', () => {
                 expect.objectContaining({
                     method: 'DELETE',
                     headers: expect.objectContaining({
-                        'Authorization': 'Bearer valid-dalive-ims-token',
+                        Authorization: 'Bearer valid-dalive-ims-token',
                     }),
-                }),
+                })
             );
         });
 
@@ -234,7 +322,10 @@ describe('HelixService - Auth & Keys', () => {
             mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
             mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
 
-            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about', '/products']);
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', [
+                '/about',
+                '/products',
+            ]);
             expect(result).toMatchObject({ success: true, count: 2 });
             expect(mockFetch).toHaveBeenCalledTimes(4);
         });
@@ -247,7 +338,10 @@ describe('HelixService - Auth & Keys', () => {
             mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
             mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
 
-            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about', '/products']);
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', [
+                '/about',
+                '/products',
+            ]);
             expect(result).toMatchObject({ success: true, count: 2 });
         });
 
@@ -269,7 +363,10 @@ describe('HelixService - Auth & Keys', () => {
             mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
             mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
 
-            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about', '/products']);
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', [
+                '/about',
+                '/products',
+            ]);
 
             expect(result).toMatchObject({ total: 2, liveFailed: 1, previewFailed: 0 });
             // The aggregate still says "true" — which is exactly why it is not enough.
@@ -278,10 +375,17 @@ describe('HelixService - Auth & Keys', () => {
 
         it('reports every path as failed when the credential is refused throughout', async () => {
             for (let i = 0; i < 4; i++) {
-                mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
+                mockFetch.mockResolvedValueOnce({
+                    ok: false,
+                    status: 403,
+                    statusText: 'Forbidden',
+                });
             }
 
-            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about', '/products']);
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', [
+                '/about',
+                '/products',
+            ]);
 
             expect(result).toMatchObject({ total: 2, liveFailed: 2, previewFailed: 2 });
         });
@@ -294,7 +398,10 @@ describe('HelixService - Auth & Keys', () => {
             mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
             mockFetch.mockResolvedValueOnce({ ok: false, status: 403, statusText: 'Forbidden' });
 
-            const result = await service.unpublishPages('testorg', 'testsite', 'main', ['/about', '/products']);
+            const result = await service.unpublishPages('testorg', 'testsite', 'main', [
+                '/about',
+                '/products',
+            ]);
             expect(result).toMatchObject({ success: false, count: 0 });
         });
 
@@ -319,8 +426,10 @@ describe('HelixService - default DA.live token provider', () => {
     let HelixSvc: typeof import('@/features/eds/services/helix/helixService').HelixService;
     // previewPage needs BOTH credentials; only the DA.live one is under test.
     const githubTokens = {
-        getToken: jest.fn().mockResolvedValue({ token: 'gh', tokenType: 'bearer', scopes: ['repo'] }),
-    } as never;
+        getToken: jest
+            .fn()
+            .mockResolvedValue({ token: 'gh', tokenType: 'bearer', scopes: ['repo'] }),
+    } as unknown as GitHubTokenService;
 
     beforeEach(async () => {
         jest.clearAllMocks();

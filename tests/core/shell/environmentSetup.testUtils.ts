@@ -42,7 +42,7 @@ export function setupMocks() {
  */
 export function createEnvironmentSetup(mockHomeDir: string = '/mock/home'): EnvironmentSetup {
     // Mock vscode.extensions API
-    (vscode as any).extensions = {
+    (vscode as { extensions: Pick<typeof vscode.extensions, 'getExtension'> }).extensions = {
         getExtension: jest.fn(),
     };
 
@@ -55,14 +55,16 @@ export function createEnvironmentSetup(mockHomeDir: string = '/mock/home'): Envi
     // set, so the next test would inherit the previous one's telemetry state.
     envSetupStatics().telemetryConfigured = false;
     envSetupStatics().checkingTelemetry = false;
-    (EnvironmentSetup as any).nodeVersionConfigured = false;
-    (EnvironmentSetup as any).checkingNodeVersion = false;
 
     const instance = new EnvironmentSetup();
 
     // Reset instance caches
-    (instance as any).cachedFnmPath = undefined;
-    (instance as any).cachedAdobeCLINodeVersion = undefined;
+    const caches = instance as unknown as {
+        cachedFnmPath: string | null | undefined;
+        cachedAdobeCLINodeVersion: string | null | undefined;
+    };
+    caches.cachedFnmPath = undefined;
+    caches.cachedAdobeCLINodeVersion = undefined;
 
     return instance;
 }

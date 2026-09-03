@@ -33,7 +33,10 @@ jest.mock('@/core/shell/pollingService', () => ({
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import type { HandlerContext } from '@/types/handlers';
+import type { DataTypeStatus } from '@/features/data-installer/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 const mockedResolve = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
@@ -47,10 +50,12 @@ const PROJECT = {
 };
 
 function makeImportHarness(): HandlerContext {
-    return {
+    return createMockHandlerContext({
         debugLogger: createMockLogger(),
-        authManager: { getTokenManager: () => ({ inspectToken: jest.fn() }) },
-    } as unknown as HandlerContext;
+        authManager: createMockAuthenticationService({
+            getTokenManager: jest.fn().mockReturnValue({ inspectToken: jest.fn() }),
+        }),
+    });
 }
 
 beforeEach(() => {
@@ -226,7 +231,7 @@ describe('buildSampleDataDeps — progress wording', () => {
     // Since 2026-08-22 the report is STRUCTURED (verb/done/total/processing)
     // and each surface composes its own line — the invariants below are the
     // same ones the old string assertions guarded.
-    const perType = { categories: 'success', products: 'pending' } as never;
+    const perType: Record<string, DataTypeStatus> = { categories: 'success', products: 'pending' };
 
     it('says Removing when built for a removal', () => {
         const report = jest.fn();
@@ -251,7 +256,10 @@ describe('buildSampleDataDeps — progress wording', () => {
 
     it('names the types processing right now, with friendly labels', () => {
         const report = jest.fn();
-        const live = { categories: 'success', customer_groups: 'processing' } as never;
+        const live: Record<string, DataTypeStatus> = {
+            categories: 'success',
+            customer_groups: 'processing',
+        };
         buildSampleDataDeps(makeImportHarness(), PROJECT, report, 'install').onProgress?.(live);
 
         expect(report).toHaveBeenCalledWith(

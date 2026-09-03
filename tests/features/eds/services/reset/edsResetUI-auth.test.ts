@@ -52,6 +52,7 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockSecretStorage } from '../../../../helpers/secretStorageFake';
 import { createMockExtensionContext } from '../../../../helpers/extensionContextFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 /**
  * ADR-015 (2026-08-28): the mesh-redeploy step receives its collaborators now
@@ -83,7 +84,7 @@ const testPackages = [
 // =============================================================================
 
 function createProject(hasMesh = false): Project {
-    const project: Project = {
+    const project: Project = createMockProject({
         name: 'test-project',
         path: '/test/project',
         status: 'running' as ProjectStatus,
@@ -109,7 +110,7 @@ function createProject(hasMesh = false): Project {
                 },
             },
         },
-    } as unknown as Project;
+    });
 
     if (hasMesh) {
         project.componentInstances!['commerce-mesh'] = {

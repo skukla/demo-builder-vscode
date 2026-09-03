@@ -17,12 +17,14 @@
 
 import { buildInitialProject } from '@/features/project-creation/handlers/executor';
 import type { Project } from '@/types/base';
+import type { CommerceStoreStructure } from '@/types/commerceStore';
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import { createMockProject } from '../../../helpers/projectFake';
 
 const PROJECT_PATH = '/home/user/.demo-builder/projects/demo';
 
-function config(overrides: Record<string, unknown> = {}) {
-    return { projectName: 'demo', ...overrides } as never;
+function config(overrides: Partial<ProjectCreationConfig> = {}): ProjectCreationConfig {
+    return { projectName: 'demo', ...overrides };
 }
 
 describe('buildInitialProject', () => {
@@ -168,42 +170,38 @@ describe('buildInitialProject', () => {
  * recovery is a Configure open the user has no reason to suspect they need.
  */
 describe('buildInitialProject — commerceStoreStructure across an edit', () => {
-    const STRUCTURE = {
+    const STRUCTURE: CommerceStoreStructure = {
         websites: [{ id: 2, code: 'citisignal', name: 'CitiSignal' }],
         storeGroups: [],
         storeViews: [],
     };
 
     it('keeps the existing structure when the edit session discovered none', () => {
-        const existing = { commerceStoreStructure: STRUCTURE } as never;
+        const existing = createMockProject({ commerceStoreStructure: STRUCTURE });
 
-        const project = buildInitialProject(
-            { projectName: 'p' } as never,
-            '/p',
-            existing,
-        );
+        const project = buildInitialProject(config({ projectName: 'p' }), '/p', existing);
 
         expect(project.commerceStoreStructure).toEqual(STRUCTURE);
     });
 
     it('prefers a freshly discovered structure over the stored one', () => {
-        const fresh = {
+        const fresh: CommerceStoreStructure = {
             websites: [{ id: 3, code: 'renamed', name: 'Renamed' }],
             storeGroups: [],
             storeViews: [],
         };
 
         const project = buildInitialProject(
-            { projectName: 'p', commerceStoreStructure: fresh } as never,
+            config({ projectName: 'p', commerceStoreStructure: fresh }),
             '/p',
-            { commerceStoreStructure: STRUCTURE } as never,
+            createMockProject({ commerceStoreStructure: STRUCTURE })
         );
 
         expect(project.commerceStoreStructure).toEqual(fresh);
     });
 
     it('carries none on a fresh create with no discovery — control', () => {
-        const project = buildInitialProject({ projectName: 'p' } as never, '/p');
+        const project = buildInitialProject(config({ projectName: 'p' }), '/p');
 
         expect(project.commerceStoreStructure).toBeUndefined();
     });

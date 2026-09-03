@@ -42,17 +42,16 @@ jest.mock('@/features/eds/services/catalogPrewarmService', () => ({
 
 import { executeCatalogPrewarmPhase } from '@/features/project-creation/services/catalogPrewarmPhase';
 import type { HandlerContext } from '@/types/handlers';
-import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
 const PROJECT = createMockProject({ name: 'bodea', path: '/projects/bodea' });
-const SECRETS = { get: jest.fn() };
+const { secrets: SECRETS } = createMockSecretStorage();
 
 function makeContext(): HandlerContext {
-    return {
-        logger: createMockLogger(),
-        context: { secrets: SECRETS },
-    } as unknown as HandlerContext;
+    return createMockHandlerContext({ context: createMockExtensionContext({ secrets: SECRETS }) });
 }
 
 const OK_PARAMS = { success: true, daLiveOrg: 'skukla', daLiveSite: 'bodea' };

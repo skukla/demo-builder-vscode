@@ -13,6 +13,8 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext as createMockHandlerContextBase } from '../../../helpers/handlerContextTestHelpers';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
 export { createMockLogger };
 
 /**
@@ -27,16 +29,18 @@ export function createEnvFileGeneratorContext(
     return createMockHandlerContextBase({
         logger: createMockLogger(),
         debugLogger: createMockLogger(),
-        context: {
+        context: createMockExtensionContext({
             extensionPath: '/test/extension/path',
             secrets: createMockSecretStorage().secrets,
             globalState: {
                 get: jest.fn(),
                 update: jest.fn().mockResolvedValue(undefined),
+                keys: jest.fn().mockReturnValue([]),
+                setKeysForSync: jest.fn(),
             },
-        } as any,
+        }),
         panel: undefined,
-        stateManager: {} as any,
+        stateManager: createMockStateManager(),
         communicationManager: undefined,
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: {
@@ -44,7 +48,7 @@ export function createEnvFileGeneratorContext(
         },
         authManager: createMockAuthenticationService(),
         ...overrides,
-    })
+    });
 }
 
 /**
@@ -56,13 +60,14 @@ export function createEnvFileGeneratorContext(
 export function createMockSetupContext(
     overrides?: Partial<{
         handlerContext: HandlerContext;
-        registry: ComponentRegistry;
+        /** Merged over the default registry, so a suite can hand in just `envVars`. */
+        registry: Partial<ComponentRegistry>;
         project: Project;
         config: ProjectCreationConfig;
     }>
 ): ProjectSetupContext {
     const mockHandlerContext = overrides?.handlerContext || createEnvFileGeneratorContext();
-    const mockRegistry: ComponentRegistry = overrides?.registry || {
+    const mockRegistry: ComponentRegistry = {
         version: '1.0.0',
         envVars: sharedEnvVars,
         components: {
@@ -73,6 +78,7 @@ export function createMockSetupContext(
             integrations: [],
         },
         services: {},
+        ...overrides?.registry,
     };
     const mockProject: Project = overrides?.project || {
         name: 'test-project',

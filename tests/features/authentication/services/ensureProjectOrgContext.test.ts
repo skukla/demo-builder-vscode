@@ -21,6 +21,7 @@ import { detectProjectOrgMismatch } from '@/features/authentication/services/det
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => ({
     detectProjectOrgMismatch: jest.fn(),
@@ -39,7 +40,7 @@ function createMockAuthManager(
 }
 
 function createProject(): Project {
-    return {
+    return createMockProject({
         name: 'Acme Demo',
         path: '/test/acme',
         status: 'ready',
@@ -52,7 +53,7 @@ function createProject(): Project {
         },
         componentInstances: {},
         componentConfigs: {},
-    } as unknown as Project;
+    });
 }
 
 describe('ensureProjectOrgContext', () => {

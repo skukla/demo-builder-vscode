@@ -48,11 +48,13 @@ import { resetPrerequisitesManager } from '@/features/prerequisites/services/pre
 import type { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockStatus } from './prerequisitesCacheManager.testUtils';
 
 /** The parts a webview surface hands the factory, identical between messages. */
 function panelParts() {
     return {
-        context: { extensionPath: '/ext' } as never,
+        context: createMockExtensionContext({ extensionPath: '/ext' }),
         panel: undefined,
         stateManager: createMockStateManager(),
         communicationManager: undefined,
@@ -81,7 +83,7 @@ describe('the prerequisite cache and the handler context it lives in', () => {
         const [manager] = twoMessages();
         const cache = manager.getCacheManager();
 
-        cache.setCachedResult('node', { installed: true } as never);
+        cache.setCachedResult('node', createMockStatus({ installed: true }));
 
         expect(cache.getCachedResult('node')).toBeDefined();
     });
@@ -101,7 +103,7 @@ describe('the prerequisite cache and the handler context it lives in', () => {
         // 500-3000ms CLI round trip on every message, on all six surfaces.
         const [first, second] = twoMessages();
 
-        first.getCacheManager().setCachedResult('node', { installed: true } as never);
+        first.getCacheManager().setCachedResult('node', createMockStatus({ installed: true }));
 
         expect(second.getCacheManager().getCachedResult('node')).toBeDefined();
     });
@@ -122,7 +124,7 @@ describe('the prerequisite cache and the handler context it lives in', () => {
          */
         const [first, second] = twoMessages();
 
-        first.getCacheManager().setCachedResult('node', { installed: true } as never);
+        first.getCacheManager().setCachedResult('node', createMockStatus({ installed: true }));
         first.getCacheManager().invalidate('node'); // as installHandler does
 
         expect(second.getCacheManager().getCachedResult('node')).toBeUndefined();
@@ -133,7 +135,7 @@ describe('the prerequisite cache and the handler context it lives in', () => {
         // hatch when something changed OUTSIDE the extension.
         const [first, second] = twoMessages();
 
-        first.getCacheManager().setCachedResult('node', { installed: true } as never);
+        first.getCacheManager().setCachedResult('node', createMockStatus({ installed: true }));
         first.getCacheManager().clearAll();
 
         expect(second.getCacheManager().getCachedResult('node')).toBeUndefined();

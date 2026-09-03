@@ -73,13 +73,14 @@ global.fetch = jest.fn().mockResolvedValue({ ok: false });
 
 import { executeEdsReset } from '@/features/eds/services/reset/edsResetService';
 import { createResetContext, meshDeps, resetParams } from './edsResetService.testUtils';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
 function createProjectWithMesh(): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         path: '/test/project',
         status: 'ready',
@@ -114,7 +115,7 @@ function createProjectWithMesh(): Project {
                 metadata: { meshId: 'mesh-123' },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 const mockTokenProvider = { getAccessToken: jest.fn().mockResolvedValue('mock-token') };

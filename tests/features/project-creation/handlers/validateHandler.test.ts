@@ -1,6 +1,8 @@
 import { handleValidate } from '@/features/project-creation/handlers/validateHandler';
 import { HandlerContext } from '@/types/handlers';
 import { validateField } from '@/features/project-creation/helpers/validateField';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockLogger } from '../../../helpers/loggerFake';
 
 // Mock dependencies
 jest.mock('@/features/project-creation/helpers/validateField');
@@ -14,12 +16,10 @@ describe('Project Creation - Validate Handler', () => {
     });
 
     function createMockContext(): jest.Mocked<HandlerContext> {
-        return {
+        return createMockHandlerContext({
             sendMessage: jest.fn().mockResolvedValue(undefined),
-            logger: {
-                error: jest.fn(),
-            },
-        } as any;
+            logger: createMockLogger(),
+        });
     }
 
     describe('happy path', () => {

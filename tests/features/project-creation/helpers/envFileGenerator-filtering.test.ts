@@ -44,7 +44,7 @@ describe('envFileGenerator - Filtering and Grouping', () => {
             } as TransformedComponentDefinition;
 
             const setupContext = createMockSetupContext({
-                registry: { envVars: sharedEnvVars } as any,
+                registry: { envVars: sharedEnvVars },
                 config: { projectName: 'test-project' },
             });
 
@@ -74,7 +74,7 @@ describe('envFileGenerator - Filtering and Grouping', () => {
             } as TransformedComponentDefinition;
 
             const setupContext = createMockSetupContext({
-                registry: { envVars: sharedEnvVars } as any,
+                registry: { envVars: sharedEnvVars },
                 config: { projectName: 'test-project' },
             });
 
@@ -102,7 +102,7 @@ describe('envFileGenerator - Filtering and Grouping', () => {
             } as TransformedComponentDefinition;
 
             const setupContext = createMockSetupContext({
-                registry: { envVars: sharedEnvVars } as any,
+                registry: { envVars: sharedEnvVars },
                 config: { projectName: 'test-project' },
             });
 

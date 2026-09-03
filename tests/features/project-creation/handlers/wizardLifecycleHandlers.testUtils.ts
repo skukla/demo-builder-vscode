@@ -5,8 +5,11 @@
  */
 
 import { HandlerContext } from '@/types/handlers';
+import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { createMockWebviewPanel } from '../../../helpers/webviewPanelFake';
 
 /**
  * Creates a mock HandlerContext for testing
@@ -14,39 +17,29 @@ import { createMockLogger } from '../../../helpers/loggerFake';
  * CRITICAL: Returns a FUNCTION that creates fresh mocks, not a shared object.
  * This prevents test pollution from shared references.
  */
-export function createWizardLifecycleContext() {
-    // Mock webview panel
-    const mockPanel = {
-        dispose: jest.fn()
-    };
-
+export function createWizardLifecycleContext(): jest.Mocked<HandlerContext> {
     // Mock state manager - with proper jest mock types
     const mockStateManager = createMockStateManager({
-        getCurrentProject: jest.fn() as jest.MockedFunction<() => Promise<any>>
+        getCurrentProject: jest.fn() as jest.MockedFunction<() => Promise<any>>,
     });
 
-    // Mock communication manager
+    // Mock communication manager. The real one is a class with private state;
+    // the handlers only ever call `sendMessage` on it.
     const mockCommunicationManager = {
-        sendMessage: jest.fn().mockResolvedValue(undefined)
+        sendMessage: jest.fn().mockResolvedValue(undefined),
     };
 
-    // Create mock context
-    const context = {
-        panel: mockPanel,
+    return createMockHandlerContext({
+        panel: createMockWebviewPanel(),
         stateManager: mockStateManager,
-        communicationManager: mockCommunicationManager,
-        extensionPath: '/mock/extension/path',
+        communicationManager:
+            mockCommunicationManager as unknown as jest.Mocked<WebviewCommunicationManager>,
         logger: createMockLogger(),
-        debugLogger: {
-            debug: jest.fn()
-        } as any,
+        debugLogger: createMockLogger(),
         sendMessage: jest.fn().mockResolvedValue(undefined),
         sharedState: {
             isAuthenticating: false,
-            projectCreationAbortController: undefined
-        }
-    } as any;
-
-    return context as jest.Mocked<HandlerContext>;
+            projectCreationAbortController: undefined,
+        },
+    });
 }
-

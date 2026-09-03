@@ -12,7 +12,7 @@ import {
     parseSettingsFile,
     extractSettingsFromProject,
 } from '@/features/projects-dashboard/services/settingsSerializer';
-import type { Project } from '@/types/base';
+import type { AppBuilderComponentState, Project } from '@/types/base';
 import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
 
 describe('settingsSerializer', () => {
@@ -132,7 +132,7 @@ describe('settingsSerializer', () => {
                     'broken-entry': {
                         kind: 'integration',
                         status: 'error',
-                    } as never,
+                    } as unknown as AppBuilderComponentState,
                     'acme-widget': CUSTOM_IMPORT_STATE,
                 },
             });

@@ -187,7 +187,10 @@ beforeEach(() => {
     mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
     mockEnsureProjectOrgContext.mockResolvedValue({ reachable: true });
     mockedRemove.mockResolvedValue({ ran: true, outcome: 'success' });
-    mockedCredentials.mockResolvedValue({ ok: true, credentials: { kind: 'accs' } } as never);
+    mockedCredentials.mockResolvedValue({
+        ok: true,
+        credentials: { kind: 'accs', clientId: 'id', clientSecret: 'fake-test-pw-not-a-secret' },
+    });
 });
 
 describe('resetEdsProjectWithUI — sample data', () => {
@@ -326,7 +329,7 @@ describe('resetEdsProjectWithUI — asks only when it can deliver', () => {
         mockedCredentials.mockResolvedValue({
             ok: false,
             reason: 'needs-accs-credentials',
-        } as never);
+        });
         answers(RESET);
 
         await run(createProject({ name: 'bodea', version: 'main' }));

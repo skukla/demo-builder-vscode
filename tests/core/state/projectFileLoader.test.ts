@@ -16,6 +16,7 @@ import { extractSettingsFromProject } from '@/features/projects-dashboard/servic
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockProject } from '../../helpers/projectFake';
 
 jest.mock('fs/promises');
 
@@ -244,7 +245,7 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
         mockedFs.rename.mockResolvedValue(undefined);
         mockedFs.unlink.mockResolvedValue(undefined);
 
-        const project = {
+        const project = createMockProject({
             name: 'round-trip',
             path: PROJECT_PATH,
             created: new Date('2026-07-15T00:00:00Z'),
@@ -253,7 +254,7 @@ describe('ProjectFileLoader — persisted appBuilderComponents (ADR-011 D3 Step 
             componentConfigs: {},
             componentVersions: {},
             appBuilderComponents: persistedMap,
-        } as unknown as Project;
+        });
 
         const writer = new ProjectConfigWriter(makeLogger());
         await writer.saveProjectConfig(project, PROJECT_PATH);
@@ -509,7 +510,7 @@ describe('§E edit-mode round-trip — keyed instances → manifest → edit set
         mockedFs.unlink.mockResolvedValue(undefined);
         mockedFs.writeFile.mockClear();
 
-        const project = {
+        const project = createMockProject({
             name: 'round-trip-e2e',
             path: PROJECT_PATH,
             created: new Date('2026-07-15T00:00:00Z'),
@@ -521,7 +522,7 @@ describe('§E edit-mode round-trip — keyed instances → manifest → edit set
             // Keyed picks are what persist since step 07; the loader migrates
             // legacy flat-only manifests into this shape on load anyway.
             componentApiPicks: { __existing__: ['FireflySDK'] },
-        } as unknown as Project;
+        });
 
         const writer = new ProjectConfigWriter(makeLogger());
         await writer.saveProjectConfig(project, PROJECT_PATH);

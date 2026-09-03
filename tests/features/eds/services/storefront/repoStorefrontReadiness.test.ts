@@ -23,13 +23,17 @@
  */
 
 import { classifyRepoForStorefront } from '@/features/eds/services/storefront/repoStorefrontReadiness';
+import type { RepoReadiness } from '@/features/eds/services/storefront/repoStorefrontReadiness';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 import type { GithubFake } from '../../../../helpers/githubFake';
 const logger = createMockLogger();
 
 /** Stub GitHubFileOperations: `present` lists the paths that exist. */
-function fileOps(present: string[], opts: { emptyRepo?: boolean; throwOn?: string } = {}): GithubFake {
+function fileOps(
+    present: string[],
+    opts: { emptyRepo?: boolean; throwOn?: string } = {}
+): GithubFake {
     return {
         getFileContent: jest.fn().mockImplementation(async (_o: string, _r: string, p: string) => {
             if (opts.throwOn && p === opts.throwOn) throw new Error('network down');
@@ -134,7 +138,7 @@ describe('classifyRepoForStorefront', () => {
 });
 
 describe('consent policy', () => {
-    it.each([
+    it.each<[RepoReadiness['kind'], boolean]>([
         ['empty', false],
         ['storefront', true],
         ['not-a-storefront', false],
@@ -142,7 +146,7 @@ describe('consent policy', () => {
         const { shouldAskBeforeReset } = await import(
             '@/features/eds/services/storefront/repoStorefrontReadiness'
         );
-        expect(shouldAskBeforeReset(kind as never)).toBe(expected);
+        expect(shouldAskBeforeReset(kind)).toBe(expected);
     });
 
     it('does not ask when the state is undetermined', async () => {

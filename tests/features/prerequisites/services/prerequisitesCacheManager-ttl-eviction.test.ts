@@ -1,5 +1,6 @@
 import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
 import { createMockStatus, setupMockTime, setupMockRandom } from './prerequisitesCacheManager.testUtils';
+import type { CachedPrerequisiteResult } from '@/features/prerequisites/services/types';
 
 /**
  * PrerequisitesCacheManager TTL & Eviction Test Suite
@@ -96,8 +97,11 @@ describe('PrerequisitesCacheManager - TTL & Eviction', () => {
                 manager.setCachedResult('node', result, baseTTL);
 
                 // Access private field (for testing only)
-                const cache = (manager as any).cache.get('node');
-                const actualTTL = cache.expiry - 1000000;
+                const cache = (
+                    manager as unknown as { cache: Map<string, CachedPrerequisiteResult> }
+                ).cache.get('node');
+                expect(cache).toBeDefined();
+                const actualTTL = cache!.expiry - 1000000;
                 samples.push(actualTTL);
             }
 

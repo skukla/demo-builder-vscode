@@ -63,7 +63,7 @@ function createProject(): Project {
                 path: '/p/f',
                 status: 'ready',
                 port: 3000,
-            } as any,
+            },
         },
         componentConfigs: {},
     };
@@ -85,7 +85,7 @@ function createAuthService(): jest.Mocked<AuthenticationService> {
         // Default: nothing subscribed yet → the subscribe paths proceed.
         getSubscribedServiceCodes: jest.fn().mockResolvedValue([]),
         getCachedOrganization: jest.fn().mockReturnValue(undefined),
-    });;
+    });
 }
 
 describe('ensureMeshApiSubscribed', () => {

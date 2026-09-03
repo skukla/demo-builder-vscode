@@ -10,6 +10,8 @@ import { ensureEdsContent } from '@/features/project-creation/services/edsConten
 import type { EdsContentHelix } from '@/features/project-creation/services/edsContentSetup';
 import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 const mockCopyContentFromSource = jest.fn();
 const mockCreateBlockLibraryFromTemplate = jest.fn();
@@ -120,8 +122,8 @@ function makeConfig(overrides = {}) {
 function makeDeps() {
     return {
         logger: createMockLogger(),
-        secrets: {} as any,
-        extensionContext: {} as any,
+        secrets: createMockSecretStorage().secrets,
+        extensionContext: createMockExtensionContext(),
         makeHelix: () => helixSeam,
     };
 }

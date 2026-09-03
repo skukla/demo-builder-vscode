@@ -55,7 +55,7 @@ describe('execa options', () => {
 
     async function runOnce(command = 'aio console project list --json') {
         const mockSubprocess = createMockExecaSubprocess();
-        mockExeca.mockReturnValue(mockSubprocess as never);
+        mockExeca.mockReturnValue(mockSubprocess);
         const promise = commandExecutor.execute(command);
         simulateSubprocessComplete(mockSubprocess, '[]', '', 0);
         await promise;
@@ -72,7 +72,7 @@ describe('execa options', () => {
         // The reason `stdin: 'pipe'` was added. execa's default stdio already
         // provides a writable stdin, so the prompt handler keeps working.
         const mockSubprocess = createMockExecaSubprocess();
-        mockExeca.mockReturnValue(mockSubprocess as never);
+        mockExeca.mockReturnValue(mockSubprocess);
 
         const promise = commandExecutor.execute('aio console project list --json');
         // `execute` awaits node-version resolution before it attaches the stdout

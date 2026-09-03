@@ -13,7 +13,6 @@ import {
     deployAppBuilderComponent,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { Project } from '@/types/base';
 import {
     INTEGRATION_ENTRY,
     createDeps,
@@ -124,9 +123,14 @@ describe('S2S deploy-env wiring', () => {
                 },
             },
             componentInstances: {
-                [KIT_ENTRY.id]: { id: KIT_ENTRY.id, path: '/proj/components/kit' },
-            } as never,
-        } as never);
+                [KIT_ENTRY.id]: {
+                    id: KIT_ENTRY.id,
+                    name: KIT_ENTRY.name,
+                    status: 'ready',
+                    path: '/proj/components/kit',
+                },
+            },
+        });
 
         await deployAppBuilderComponent(project, KIT_ENTRY.id, deps);
 
@@ -146,10 +150,12 @@ describe('S2S deploy-env wiring', () => {
             componentInstances: {
                 [INTEGRATION_ENTRY.id]: {
                     id: INTEGRATION_ENTRY.id,
+                    name: INTEGRATION_ENTRY.name,
+                    status: 'ready',
                     path: '/proj/components/erp',
                 },
-            } as never,
-        } as never);
+            },
+        });
 
         await deployAppBuilderComponent(project, INTEGRATION_ENTRY.id, deps);
 
@@ -222,9 +228,14 @@ describe('install-after-deploy wiring', () => {
                 },
             },
             componentInstances: {
-                'order-sync': { id: 'order-sync', path: '/proj/components/order-sync' },
-            } as never,
-        } as Partial<Project>);
+                'order-sync': {
+                    id: 'order-sync',
+                    name: 'Order Sync',
+                    status: 'ready',
+                    path: '/proj/components/order-sync',
+                },
+            },
+        });
 
         const result = await deployAppBuilderComponent(project, 'order-sync', deps);
 
@@ -243,9 +254,14 @@ describe('install-after-deploy wiring', () => {
                 },
             },
             componentInstances: {
-                'my-app': { id: 'my-app', path: '/proj/components/my-app' },
-            } as never,
-        } as Partial<Project>);
+                'my-app': {
+                    id: 'my-app',
+                    name: 'My App',
+                    status: 'ready',
+                    path: '/proj/components/my-app',
+                },
+            },
+        });
 
         await deployAppBuilderComponent(project, 'my-app', deps);
 

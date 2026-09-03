@@ -212,7 +212,7 @@ describe('WebviewApp', () => {
         it('passes init data to render function', async () => {
             render(
                 <WebviewApp>
-                    {(data) => <div>Custom: {(data as any)?.customProp || 'missing'}</div>}
+                    {(data) => <div>Custom: {String(data?.customProp || 'missing')}</div>}
                 </WebviewApp>
             );
 

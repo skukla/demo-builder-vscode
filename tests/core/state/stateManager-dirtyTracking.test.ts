@@ -114,7 +114,7 @@ describe('StateManager - Dirty Tracking', () => {
     describe('saveProject clears dirty state', () => {
         it('should clear dirty fields after successful save', async () => {
             const { stateManager } = testMocks;
-            const project = createStateManagerProject() as any;
+            const project = createStateManagerProject();
 
             // Setup mocks for save
             (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
@@ -135,7 +135,7 @@ describe('StateManager - Dirty Tracking', () => {
 
         it('should not clear dirty fields if save fails', async () => {
             const { stateManager } = testMocks;
-            const project = createStateManagerProject() as any;
+            const project = createStateManagerProject();
 
             // Setup mocks for failed save
             (fs.access as jest.Mock).mockResolvedValue(undefined);

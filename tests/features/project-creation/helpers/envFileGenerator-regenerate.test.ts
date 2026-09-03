@@ -13,6 +13,7 @@ import { regenerateProjectEnvFiles } from '@/features/project-creation/helpers/e
 import { ComponentRegistry } from '@/types/components';
 import type { Project } from '@/types/base';
 import { createMockLogger, sharedEnvVars } from './envFileGenerator.testUtils';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
 jest.mock('fs', () => ({
     promises: {
@@ -22,7 +23,10 @@ jest.mock('fs', () => ({
 
 jest.mock('@/features/project-creation/helpers/formatters', () => ({
     formatGroupName: (group: string) =>
-        group.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+        group
+            .split('-')
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(' '),
 }));
 
 function buildRegistry(): ComponentRegistry {
@@ -38,7 +42,7 @@ function buildRegistry(): ComponentRegistry {
                         requiredEnvVars: ['API_URL'],
                         optionalEnvVars: [],
                     },
-                } as never,
+                },
             ],
             backends: [],
             dependencies: [],
@@ -64,12 +68,11 @@ function buildProject(overrides: Partial<Project> = {}): Project {
     } as unknown as Project;
 }
 
-
 /**
  * ADR-015 (2026-08-28): the secret store is handed in rather than fetched, so
  * this suite passes a plain fake at each call site.
  */
-const secretsFake = { get: jest.fn(), store: jest.fn(), delete: jest.fn() } as never;
+const secretsFake = createMockSecretStorage().secrets;
 
 describe('regenerateProjectEnvFiles', () => {
     beforeEach(() => {
@@ -77,7 +80,12 @@ describe('regenerateProjectEnvFiles', () => {
     });
 
     it('writes a per-component .env via the canonical generator (resolved values)', async () => {
-        await regenerateProjectEnvFiles(buildProject(), buildRegistry(), createMockLogger(), secretsFake);
+        await regenerateProjectEnvFiles(
+            buildProject(),
+            buildRegistry(),
+            createMockLogger(),
+            secretsFake
+        );
 
         expect(fsPromises.writeFile).toHaveBeenCalledTimes(1);
         const [filePath, content] = (fsPromises.writeFile as jest.Mock).mock.calls[0];
@@ -88,19 +96,32 @@ describe('regenerateProjectEnvFiles', () => {
     });
 
     it('does NOT write a project root .env (root is owned by ProjectConfigWriter)', async () => {
-        await regenerateProjectEnvFiles(buildProject(), buildRegistry(), createMockLogger(), secretsFake);
+        await regenerateProjectEnvFiles(
+            buildProject(),
+            buildRegistry(),
+            createMockLogger(),
+            secretsFake
+        );
 
         const rootPath = path.join('/test/acme', '.env');
-        const wroteRoot = (fsPromises.writeFile as jest.Mock).mock.calls.some(([p]) => p === rootPath);
+        const wroteRoot = (fsPromises.writeFile as jest.Mock).mock.calls.some(
+            ([p]) => p === rootPath
+        );
         expect(wroteRoot).toBe(false);
     });
 
     it('skips installed components that have no path', async () => {
         const project = buildProject({
             componentInstances: {
-                'eds-storefront': { path: '/test/acme/eds-storefront' },
-                'ghost-component': {},
-            } as never,
+                'eds-storefront': {
+                    id: 'eds-storefront',
+                    name: 'EDS Storefront',
+                    status: 'ready',
+                    path: '/test/acme/eds-storefront',
+                },
+                // Installed on record, but no path on disk.
+                'ghost-component': { id: 'ghost-component', name: 'Ghost', status: 'ready' },
+            },
         });
 
         await regenerateProjectEnvFiles(project, buildRegistry(), createMockLogger(), secretsFake);
@@ -112,9 +133,19 @@ describe('regenerateProjectEnvFiles', () => {
         const logger = createMockLogger();
         const project = buildProject({
             componentInstances: {
-                'eds-storefront': { path: '/test/acme/eds-storefront' },
-                'unknown-comp': { path: '/test/acme/unknown' },
-            } as never,
+                'eds-storefront': {
+                    id: 'eds-storefront',
+                    name: 'EDS Storefront',
+                    status: 'ready',
+                    path: '/test/acme/eds-storefront',
+                },
+                'unknown-comp': {
+                    id: 'unknown-comp',
+                    name: 'Unknown',
+                    status: 'ready',
+                    path: '/test/acme/unknown',
+                },
+            },
         });
 
         await regenerateProjectEnvFiles(project, buildRegistry(), logger, secretsFake);
@@ -128,9 +159,11 @@ describe('regenerateProjectEnvFiles', () => {
     // same .env content.
     it('resolves MESH_ENDPOINT from the keyed mesh entry (keyed-only project)', async () => {
         const registry = buildRegistry();
-        (registry.components.frontends[0] as unknown as {
-            configuration: { requiredEnvVars: string[] };
-        }).configuration.requiredEnvVars = ['API_URL', 'MESH_ENDPOINT'];
+        (
+            registry.components.frontends[0] as unknown as {
+                configuration: { requiredEnvVars: string[] };
+            }
+        ).configuration.requiredEnvVars = ['API_URL', 'MESH_ENDPOINT'];
 
         const project = buildProject({
             appBuilderComponents: {
@@ -141,7 +174,7 @@ describe('regenerateProjectEnvFiles', () => {
                     endpoint: 'https://keyed-mesh.adobe.io/graphql',
                 },
             },
-        } as Partial<Project>);
+        });
 
         await regenerateProjectEnvFiles(project, registry, createMockLogger(), secretsFake);
 

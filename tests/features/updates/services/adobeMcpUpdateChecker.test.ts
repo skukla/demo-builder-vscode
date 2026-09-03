@@ -80,7 +80,7 @@ describe('AdobeMcpUpdateChecker', () => {
                         id: COMPONENT_IDS.EDS_STOREFRONT,
                         name: 'EDS',
                         status: 'ready',
-                    } as never,
+                    },
                 },
             });
 
@@ -183,7 +183,7 @@ describe('AdobeMcpUpdateChecker', () => {
         it('queries adobe-commerce/commerce-extensibility-tools on GitHub', async () => {
             readFileMock.mockResolvedValue(JSON.stringify({ version: '3.4.0' }));
             getLatestReleaseMock.mockResolvedValue({ tag: 'v3.4.0', version: '3.4.0' });
-            const secrets = {} as never;
+            const secrets = createMockSecretStorage().secrets;
             const checker = new AdobeMcpUpdateChecker(secrets, makeLogger());
 
             await checker.checkForUpdates(makeProject());
@@ -197,7 +197,7 @@ describe('AdobeMcpUpdateChecker', () => {
             readFileMock.mockResolvedValue(JSON.stringify({ version: '3.4.0' }));
             getLatestReleaseMock.mockImplementation(() => { throw new Error('boom'); });
             const logger = makeLogger();
-            const checker = new AdobeMcpUpdateChecker({} as never, logger);
+            const checker = new AdobeMcpUpdateChecker(createMockSecretStorage().secrets, logger);
 
             expect(await checker.checkForUpdates(makeProject())).toBeNull();
             expect(logger.error).toHaveBeenCalled();

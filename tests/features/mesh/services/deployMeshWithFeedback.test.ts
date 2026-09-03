@@ -32,7 +32,12 @@ jest.mock('@/features/mesh/services/deployMeshHeadless', () => ({
 
 import * as vscode from 'vscode';
 import { deployMeshWithFeedback } from '@/features/mesh/services/deployMeshWithFeedback';
+import type { DeployMeshWithFeedbackDeps } from '@/features/mesh/services/deployMeshWithFeedback';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
 /** Capture the reporter withProgress hands the task. */
 function stubWithProgress(): { report: jest.Mock; title: () => string } {
@@ -47,13 +52,16 @@ function stubWithProgress(): { report: jest.Mock; title: () => string } {
     return { report, title: () => seenTitle };
 }
 
-function deps() {
+function deps(): DeployMeshWithFeedbackDeps {
     return {
-        project: { name: 'p', path: '/p' },
-        stateManager: {},
+        project: createMockProject({ name: 'p', path: '/p' }),
+        stateManager: createMockStateManager(),
         logger: createMockLogger(),
         extensionPath: '/ext',
-    } as never;
+        authManager: createMockAuthenticationService(),
+        commandManager: createMockCommandExecutor(),
+        secrets: undefined,
+    };
 }
 
 beforeEach(() => {
