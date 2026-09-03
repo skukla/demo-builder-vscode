@@ -86,13 +86,22 @@ export const handleResetProject: MessageHandler = async (context) => {
     if (isEdsProject(project)) {
         const { resetEdsProjectWithUI } = await import('@/features/eds/services/reset/edsResetUI');
         return resetEdsProjectWithUI({
-        meshDeps: {
-            commandManager: ServiceLocator.getCommandExecutor(),
-            authManager: ServiceLocator.getAuthenticationService(),
-        },
+            meshDeps: {
+                commandManager: ServiceLocator.getCommandExecutor(),
+                authManager: ServiceLocator.getAuthenticationService(),
+            },
             project,
             context,
             logPrefix: '[Dashboard]',
+            // Same reset as the projects list performs. These three defaulted to
+            // false here until 2026-09-02, so the same project reset from the
+            // dashboard kept its block library configuration, skipped the CDN
+            // check, and hid "Show Logs" on failure — while the projects list
+            // did all three. A reset that leaves configuration behind has not
+            // returned the project to zero.
+            includeBlockLibrary: true,
+            verifyCdn: true,
+            showLogsOnError: true,
         });
     }
 

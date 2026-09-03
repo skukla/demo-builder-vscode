@@ -327,13 +327,20 @@ describe('handleResetProject', () => {
         // When: handleResetProject is called
         await handleResetProject(context);
 
-        // Then: Should delegate to resetEdsProjectWithUI
+        // Then: Should delegate to resetEdsProjectWithUI with the SAME options the
+        // projects list passes. Asserted as a whole object on purpose: the three
+        // flags below default to false, so a partial assertion would have passed
+        // for the two years this door quietly did a lighter reset than the other
+        // one (EDS-12, fixed 2026-09-02).
         expect(mockResetEdsProjectWithUI).toHaveBeenCalledWith({
             // ADR-015: collaborators the mesh-redeploy step receives.
             meshDeps: expect.anything(),
             project,
             context,
             logPrefix: '[Dashboard]',
+            includeBlockLibrary: true,
+            verifyCdn: true,
+            showLogsOnError: true,
         });
     });
 
