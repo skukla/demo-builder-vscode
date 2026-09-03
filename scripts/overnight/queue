@@ -1,8 +1,8 @@
 # The order items run in, one name per line. Blank lines and # comments ignored.
 #
-# Order is a decision, not an accident: a default glob ran PL-16 before PL-32
-# because "1" sorts before "3". Put the cleanest end state first — it is the one
-# most likely to finish, and it finishes while the night is young.
+# Run 2 (2026-09-03): PL-32 is finished and out. Only PL-16 remains, with a
+# condition that means exhaustion rather than movement — the first run's
+# condition ("the ceiling is lower than it starts") was satisfied by batch one
+# and ended the goal with 134 sites still unread.
 
-PL-32
 PL-16

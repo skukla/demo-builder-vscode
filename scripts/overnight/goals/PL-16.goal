@@ -1,27 +1,38 @@
-Work backlog item PL-16 — give StateManager and Project fixtures a shared builder,
-the way HandlerContext already has one.
+Work backlog item PL-16 — continue converting `Project` cast sites to the shared
+builder. Two families already closed; `Project` stands at 134 and is all that is
+left.
 
-WHAT DONE MEANS FOR TONIGHT. The `castCeilings` in
-tests/sop/canonical-fakes.ledger.json are lower than they start (Project 145,
-Partial<Project> 38, HandlerContext 13, vscode.ExtensionContext 6 as of
-2026-09-02), and `npm run gate` exits 0. Reaching zero is NOT expected tonight
-and is not the condition.
+WHAT DONE MEANS. Every one of the 134 sites has been READ and dispositioned, so
+that: converted + must-stay = 134, and the ledger's `Project` ceiling equals the
+must-stay count. Reaching ZERO is not the target and is not expected — some
+sites legitimately cannot convert. EXHAUSTION is the target.
+
+A previous run set the condition as "the ceiling is lower than it starts", which
+was satisfied by the first batch and ended the goal after three. Lower is not
+done. Do not stop because the number moved.
 
 HOW TO PROVE IT EACH TURN. After every batch run
 `npx jest --no-coverage tests/sop/canonical-fakes.test.ts > /tmp/fakes.txt 2>&1`
-and paste the four ceiling numbers into your reply.
+and paste the `Project` ceiling. Also paste a running count: "converted N,
+must-stay M, unread R" where N+M+R = 134. The evaluator reads only what you
+surface, so an unpasted number does not exist.
 
-THE TRAP, AND IT IS THE WHOLE REASON THIS GOAL IS CAPPED. `createMockProject`
-supplies rich defaults, and several suites assert on the ABSENCE of fields. A
-blind substitution typechecks, passes, and silently changes what those tests
-mean. Before converting any site, read what the test asserts. If it asserts on a
-missing or empty field, LEAVE IT and record the file in your reply.
+THE TRAP. `createMockProject` supplies rich defaults and several suites assert on
+the ABSENCE of fields. A blind substitution typechecks, passes, and silently
+changes what the test means. Before converting a site, read what the SUBJECT
+consumes and what the test asserts. If it turns on a missing or empty field,
+classify it must-stay and record the file and the reason — that is a result, not
+a failure.
 
-RULES. Lower ceilings only, never raise. One `Backlog: PL-16` commit per batch,
-each gated on `npm run gate` exiting 0 with the code captured in a variable.
-You are already on the work branch loop/<date>-goal-queue — stay on it, do
-NOT checkout or merge develop, and push the branch after each commit. No cloud writes.
+RULES. Stay on the current work branch; never checkout or merge develop. Lower
+ceilings only. One `Backlog: PL-16` commit per batch, each gated on
+`npm run gate` exiting 0 with the exit code captured in a variable, never read
+through a pipe. Push after each commit. Touch nothing under `src/`. No cloud
+writes.
 
-STOP AND HAND BACK — this is expected, not a failure — as soon as the only
-remaining sites are absence-asserting ones, or any conversion needs a judgement
-about what a test is for. List those files and stop. Also stop after 20 turns.
+FINISH BY WRITING THE MUST-STAY LIST into the backlog item as a dated section —
+every file, with the one-line reason it cannot convert. That list is the real
+deliverable; the ceiling is just its count.
+
+Stop after 40 turns, or earlier if two consecutive batches fail the gate for the
+same reason.
