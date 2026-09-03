@@ -70,11 +70,49 @@ function check(label, beforeRep, afterRep, mustFlag, stripCategories = false) {
 const beforeD = report([[1,'StringLiteral','Survived'], [2,'ConditionalExpression','NoCoverage'], [2,'EqualityOperator','NoCoverage']]);
 const realD   = report([[1,'StringLiteral','Survived'], [2,'ConditionalExpression','Survived'], [2,'EqualityOperator','Killed']]);
 
+/**
+ * E: openGaps must count code NO TEST ENTERS, not only code a test ran past.
+ *
+ * The first version counted survivors alone. An uncovered mutant is not a survivor, so
+ * a module nothing tests came out at openGaps 0 — reading as FINISHED. Measured against
+ * the live baseline on 2026-09-03: four of the ten modules then reading finished had
+ * uncovered mutants, worst of them `diagnostics.ts` with seventy, and it had already
+ * been reported as "genuinely finished at 18%".
+ *
+ * A survivor means a test ran and did not notice. An uncovered mutant means no test went
+ * there at all — the worse case of the two, and it must not be the one that reads clean.
+ */
+function checkOpenGaps(label, rep, expected) {
+    const row = summarise(write(`${label}.json`, rep))['src/x.ts'];
+    const ok = row.openGaps === expected;
+    console.log(
+        `${ok ? 'PASS' : 'FAIL'}  ${label}: openGaps=${row.openGaps} expected=${expected}` +
+            `  (survived=${row.survived} noCoverage=${row.noCoverage})`
+    );
+    return ok;
+}
+
+// Two uncovered BEHAVIOURAL mutants and one uncovered string. The string is wording;
+// the other two are decisions nothing reaches. Finished would be a lie here.
+const uncovered = report([
+    [1, 'StringLiteral', 'NoCoverage'],
+    [2, 'ConditionalExpression', 'NoCoverage'],
+    [2, 'EqualityOperator', 'NoCoverage'],
+]);
+// The genuinely-clean case, so the check is not just "always non-zero".
+const clean = report([
+    [1, 'StringLiteral', 'Survived'],
+    [2, 'ConditionalExpression', 'Killed'],
+    [2, 'EqualityOperator', 'Killed'],
+]);
+
 const results = [
     check('A-padding-must-flag', before, padding, true),
     check('B-real-branch-must-pass', before, real, false),
     check('C-comparator-must-pass', beforeC, realC, false),
     check('D-newly-covered-must-pass', beforeD, realD, false),
+    checkOpenGaps('E-uncovered-counts-as-a-gap', uncovered, 2),
+    checkOpenGaps('F-wording-only-reads-finished', clean, 0),
 ];
 console.log(results.every(Boolean) ? '\nALL CONTROLS PASSED' : '\nSELF-TEST FAILED');
 const ok = results.every(Boolean);

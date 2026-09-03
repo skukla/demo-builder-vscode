@@ -109,34 +109,49 @@ export function summarise(reportPath, equivalents = {}) {
         const counts = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 };
         const categories = {};
 
+        // Uncovered mutants are categorised the SAME way survivors are, because for the
+        // question "is this module finished?" they are the worse case, not an exempt one:
+        // a survivor means a test ran and did not notice, an uncovered mutant means no
+        // test went there at all. Counting only survivors made `diagnostics.ts` — 70
+        // uncovered mutants, three string survivors — read as FINISHED (2026-09-03).
+        const uncoveredCategories = {};
+
         for (const m of file.mutants) {
+            const bucket =
+                m.status === 'Survived'
+                    ? categories
+                    : m.status === 'NoCoverage'
+                      ? uncoveredCategories
+                      : undefined;
             if (m.status === 'Killed') counts.killed++;
             else if (m.status === 'Timeout') counts.timeout++;
             else if (m.status === 'NoCoverage') counts.noCoverage++;
-            else if (m.status === 'Survived') {
-                counts.survived++;
+            else if (m.status === 'Survived') counts.survived++;
+            if (bucket) {
                 const line = lines[m.location.start.line - 1] ?? '';
                 const c = classify(m.mutatorName, line);
-                categories[c] = (categories[c] ?? 0) + 1;
+                bucket[c] = (bucket[c] ?? 0) + 1;
             }
         }
 
         const total = counts.killed + counts.survived + counts.noCoverage + counts.timeout;
         // Stryker's mutation score: killed + timeout count as detected.
         const score = total ? ((counts.killed + counts.timeout) / total) * 100 : 0;
-        const behavioural =
-            counts.survived - (categories.string ?? 0) - (categories.logPresentation ?? 0);
+        const wording = (c) => (c.string ?? 0) + (c.logPresentation ?? 0);
+        const behavioural = counts.survived - wording(categories);
+        const uncoveredBehavioural = counts.noCoverage - wording(uncoveredCategories);
         const equivalent = equivalents[path] ?? 0;
         rows[path] = {
             score: Number(score.toFixed(2)),
             ...counts,
             survivorCategories: categories,
+            uncoveredCategories,
             highValueSurvivors: HIGH_VALUE.reduce((n, c) => n + (categories[c] ?? 0), 0),
             equivalent,
             // Never negative: a ledger row can outlive the mutant it described (the code
             // was rewritten so the survivor no longer exists), and a negative count would
             // read as credit rather than as the stale entry it is.
-            openGaps: Math.max(0, behavioural - equivalent),
+            openGaps: Math.max(0, behavioural + uncoveredBehavioural - equivalent),
         };
     }
     return rows;
@@ -169,8 +184,12 @@ export function writeBaseline(reportPath, baselinePath, note, merge = false) {
                     'higher — that combination is the signature of a score raised by ' +
                     'asserting log strings. Regenerate with `npm run test:mutation:baseline` ' +
                     'ONLY when the new numbers are genuinely better. `openGaps` is the ' +
-                    'number that says whether a module is FINISHED: behavioural survivors ' +
-                    'minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. ' +
+                    'number that says whether a module is FINISHED: decisions nothing ' +
+                    'constrains — behavioural survivors PLUS behavioural mutants no test ' +
+                    'covers at all, minus the ones proved unkillable in ' +
+                    'scripts/mutation-equivalents.ledger.json. Uncovered counts because it ' +
+                    'is the worse case: a survivor means a test ran and did not notice, ' +
+                    'uncovered means no test went there. ' +
                     'openGaps zero means done; the score never says that, because a small ' +
                     'module can be complete below its tier floor and a large one neglected ' +
                     'above it. The ratchet still gates on behavioural survivors, NOT on ' +

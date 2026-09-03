@@ -114,6 +114,24 @@ export function testMentions(modulePath) {
     return referenceCorpus.filter((body) => body.includes(stem)).length;
 }
 
+/**
+ * Does this suite run under the REACT (jsdom) jest project rather than the node one?
+ *
+ * Mirrors the `testMatch` split in `jest.config.js`: the whole `tests/core/ui` subtree
+ * is react whatever the extension, and a `.test.tsx` under `tests/features` is too.
+ *
+ * WHY IT MATTERS HERE. The focused runner builds its config from the NODE project, so a
+ * module whose every suite is react gets measured with no test that can run — which is
+ * the confident-zero failure this instrument keeps producing. It bit on 2026-09-03: the
+ * scope rule blocked `.tsx` SOURCE files but said nothing about a `.ts` source whose
+ * TESTS are react, so twenty `src/core/ui/hooks/*.ts` modules entered the sweep and
+ * every one of them failed.
+ */
+export function isReactSuite(suitePath) {
+    if (suitePath.startsWith('tests/core/ui/')) return true;
+    return suitePath.startsWith('tests/features/') && suitePath.endsWith('.test.tsx');
+}
+
 /** Measurable properties, all of them checkable by reading the file. */
 export function profile(path) {
     const src = readFileSync(path, 'utf8');
@@ -133,6 +151,7 @@ export function profile(path) {
         declarations: count(/^(export\s+)?(interface|type|enum)\s/gm),
         isTsx: path.endsWith('.tsx'),
         suites: suitesFor(path).length,
+        nodeSuites: suitesFor(path).filter((s) => !isReactSuite(s)).length,
         mentions: testMentions(path),
     };
 }
@@ -167,12 +186,17 @@ export function classify(p, ledger) {
                   reason: 'no suite of its own — mentioned by other tests, may be covered indirectly',
               };
     }
-    if (p.isTsx) {
-        return {
-            verdict: 'blocked',
-            reason: 'React — the focused runner uses the node Jest project (tooling gap)',
-        };
-    }
+    // NO REACT BLOCK. Two rules used to sit here — one on `.tsx` sources, one on `.ts`
+    // sources whose every suite is a React suite — and both existed for a single reason:
+    // the focused runner built its jest config from the NODE project, so a jsdom suite
+    // could not run. `focusModule.mjs` now picks the project from the SUITES, and runs a
+    // module with suites in both environments under jsdom, which is a superset of what
+    // the node ones need. Verified 2026-09-03 with zero errors in each case:
+    // `useSelection.ts` (React hook) 90.00%, `BrandGallery.tsx` (both environments)
+    // 27.59%.
+    //
+    // 156 files — a third of the codebase — were invisible to this instrument for as
+    // long as those two rules stood, and the second of them was written the same day.
     return { verdict: 'include', reason: 'has decisions and a suite that can be re-run' };
 }
 

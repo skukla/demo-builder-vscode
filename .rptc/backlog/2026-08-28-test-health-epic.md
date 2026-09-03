@@ -125,3 +125,4 @@ coverage of split families) hold or improve across two release cuts.
 - 2026-09-02  docs(backlog): record the six enforcers that cannot see an uncommitted file (`187c7467f`)
 - 2026-09-02  test: split the two suites over the 750-line limit — CI has been red since 2026-08-31 (`e1db680d7`)
 - 2026-09-03  Five of seven children shipped as of 2026-09-03 — PL-9, PL-10, PL-15, PL-16, PL-32. Remaining: PL-14 (built; enforcement tooling needs use, not more code) and PL-22 (a question — does the 93% mutation score hold outside the modules already trusted). PL-22 is the last item track 3 of PL-30 names as outstanding.
+- 2026-09-03  docs(backlog): close out the test-health work — five of seven children shipped (`34e7ab6af`)

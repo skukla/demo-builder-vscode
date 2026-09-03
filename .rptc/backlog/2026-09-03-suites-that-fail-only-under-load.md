@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # Three suites fail only under full-suite load, and it costs real pushes
@@ -58,3 +58,7 @@ file's own 30s timeout rather than guessed from observed timings. It exists to
 NAME a hung step, not to assert performance, and at 3s and 8s it was doing the
 opposite — failing runs on a busy machine while a real hang would still be
 caught at either number.
+
+## Shipped so far
+
+- 2026-09-03  fix(test): the socket step budget stops guessing, and the load problem gets an item (`c1407098a`)

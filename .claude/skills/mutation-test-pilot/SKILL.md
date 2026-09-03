@@ -109,9 +109,32 @@ module under src is tested by the same path under tests, plus any suite split fr
 with a hyphenated suffix — and clears the incremental cache, which belongs to the module
 it was built for.
 
+**It picks the jest PROJECT from the suites, not from the file extension.** This repo
+runs two: `node`, and `react` on jsdom, which owns `tests/core/ui/**` and every
+`.test.tsx` under `tests/features`. The generated config takes whichever project the
+module's suites belong to, so a React hook or component measures like anything else.
+
+A module with suites in BOTH runs them together under jsdom — a superset of what the
+node suites need. It cannot run two projects: **Stryker's jest runner ignores a
+`projects` array**, collapsing to a single environment where every React suite dies on
+`ReferenceError: document is not defined`. Running only the React half instead would
+silently measure against a fraction of the tests, which is the defect that reported
+installHandler at 49% on 12 of its 13 suites.
+
+Until 2026-09-03 the config always used the node project, so **156 files — a third of
+the codebase — could not be measured at all**: 115 `.tsx` sources, plus 41 `.ts` sources
+whose suites are React suites, a group no count had ever included. The scope rule blocked
+the first group by extension and said nothing about the second, so those 41 entered a
+sweep and failed inside Stryker one after another.
+
 It **refuses** when no suite mirrors the module, and writes nothing in that case. That
 refusal is the point: a focused run with no suites reports 0% in seconds and reads
-exactly like a catastrophic result. `tests/sop/mutation-config-pairing.test.ts` still
+exactly like a catastrophic result.
+
+**One at a time.** `stryker.focus.config.json` and `jest.focus.config.js` are single
+generated files, so a manual focus run and a sweep collide — the sweep rewrote the config
+mid-measurement on 2026-09-03 and the report named a different module than the one asked
+for. Check nothing else is measuring before you start. `tests/sop/mutation-config-pairing.test.ts` still
 fails the build if the two files disagree — it exists because a run where they DID
 disagree reported 0% for seven modules in 19 seconds, and was a run that never executed
 the tests.

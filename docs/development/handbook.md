@@ -745,6 +745,24 @@ breaks the code on purpose and reports what nothing noticed.
 > Enforced by `tests/sop/mutation-equivalents-ledger.test.ts`, which fails when an
 > anchor no longer resolves to exactly one line of its module.
 
+> **Convention.** A measurement runs the tests a module ACTUALLY has — every one of
+> them, in the environment they need — or it does not run.
+> *Why:* every wrong answer this instrument has produced has the same shape, a plausible
+> number from a run that never executed the tests. Seven modules reported 0% in 19
+> seconds because their suites were not selected. installHandler reported 49% on 12 of
+> its 13 suites and integrationCardModel 43% on 1 of its 5; corrected, the second was
+> 91.90% and had never been badly tested. And for months the focused runner built its
+> config from the node jest project alone, so 156 files — a third of the codebase — could
+> not be measured: 115 `.tsx` sources, which the scope rule at least blocked by
+> extension, plus 41 `.ts` sources whose suites are React suites, which it did not block
+> and which failed one after another inside Stryker. `focusModule.mjs` now picks the
+> project from the module's suites, and runs a module with suites in both environments
+> under jsdom, because Stryker's jest runner ignores a `projects` array and collapses to
+> one environment. The rule that follows from all four: never let a run proceed against a
+> subset of a module's tests — refuse, or run them all.
+> Enforced by `tests/sop/mutation-config-pairing.test.ts`, which fails the build when a
+> mutated module has a suite on disk that its jest config does not name.
+
 > **Convention.** A canonical fake covers its subject's WHOLE public surface, and
 > invents nothing.
 > *Why:* both halves have failed here. A fake NARROWER than the need is one nobody
@@ -1087,7 +1105,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 81 conventions. 80 of them are enforced; 1 is not.**
+**This handbook states 82 conventions. 81 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

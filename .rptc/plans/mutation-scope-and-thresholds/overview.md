@@ -17,7 +17,12 @@ index, the tool catalog, the convention index — so this one is generated, with
 
 859 source files, excluding ambient declarations.
 
-### INCLUDE — 507 files, 68,017 code lines
+### INCLUDE — 622 files
+
+> **Updated 2026-09-03.** Was 507. The React gap in the table below is CLOSED — the
+> focused runner now picks its jest project from the module's own suites — so the 115
+> `.tsx` files and 41 `.ts` files whose suites are React suites moved from BLOCKED into
+> here. Tier split and code-line total below predate that move.
 
 Has decisions in it and a suite that can be re-run. Split by how much async it carries,
 which is what decides the realistic target (see §2):
@@ -31,14 +36,14 @@ which is what decides the realistic target (see §2):
 More than half the code we would measure is the hardest kind to measure well. That is the
 single most important number in this document.
 
-### BLOCKED — 305 files
+### BLOCKED — 190 files
 
 In scope in principle; cannot be measured today. Not excluded — "we have not got to it"
 is a plan, not a category.
 
 | Why | Files | What it needs |
 |---|---|---|
-| React (`.tsx`) | 115 | The focused runner uses the node Jest project; React tests need the react one. A tooling gap, and it hides `WizardContainer.tsx`, a Key File. |
+| ~~React (`.tsx`)~~ | ~~115~~ | **CLOSED 2026-09-03.** `focusModule.mjs` picks the jest project from the suites rather than always using the node one, and runs a module with suites in both environments under jsdom. Verified: `useSelection.ts` 90.00%, `BrandGallery.tsx` 27.59%, zero errors. A further 41 `.ts` files whose suites are all React suites were blocked by the same gap and were never counted in this table. |
 | No suite of its own, but other tests mention it | 118 | A look each. Some are genuinely covered through their callers; some are not. |
 | No tests at all — nothing in the suite mentions it | 72 | Tests, before mutation can say anything. This is a coverage question, not a mutation one. |
 
@@ -165,8 +170,11 @@ the right rhythm for that, and the burn-down phase is what earns the right to sl
 2. **Add `--changed` to the focus switcher** so a change measures its own modules in one
    command, then wire it into the pre-push gate.
 3. **Weekly sweep on a timer**, not on a release.
-4. **Fix the React gap** — 115 files, a fifth of the codebase, otherwise invisible
-   permanently.
+4. ~~**Fix the React gap**~~ — **DONE 2026-09-03.** It was 156 files, not 115: the 115
+   `.tsx` sources plus 41 `.ts` sources whose suites are React suites, which no count had
+   ever included. Stryker's jest runner ignores a `projects` array — it collapses to one
+   environment and every React suite dies on `document is not defined` — so a module with
+   suites in both runs under jsdom, which is a superset.
 5. **Triage the 72 files nothing tests.** A coverage question, answered first by deciding
    which of them matter.
 6. **Work the queue by consequence, not by score** — what breaks a consultant's existing

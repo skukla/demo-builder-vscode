@@ -44,9 +44,10 @@ in exactly that gap with twelve tests staying green.
 median 83.33, max 100. Note this is a snapshot of the CURRENT state, after test work —
 not a virgin measurement.
 
-That is 16 of the 507 files the scope rule includes: **3.2%**. Per
-`.rptc/plans/mutation-scope-and-thresholds/overview.md`, that coverage number is the one
-to track rather than any average score.
+That is 16 of the 507 files the scope rule then included: **3.2%**. That coverage number
+is the one to track rather than any average score. The denominator has since grown to
+**622** as the React gap closed, and a resumable sweep
+(`npm run test:mutation:sweep`) is working through it.
 
 ## What the burn-down has moved
 
@@ -120,8 +121,11 @@ unreachable by arithmetic, not by neglect.
    every included module; everything else is guesswork until it exists. `highValueSurvivors`
    is only recorded for the 16 pinned modules, so the gate proposed above has no reading
    for the other 491.
-3. **115 React `.tsx` files — a fifth of the codebase — are invisible to the instrument.**
-   Permanently, unless fixed.
+3. ~~115 React files are invisible to the instrument.~~ **FIXED 2026-09-03**, and it was
+   156 files rather than 115 — the 115 `.tsx` sources plus 41 `.ts` sources whose suites
+   are all React suites, a group no count had included. The focused runner now picks its
+   jest project from the module's suites instead of always using the node one. Measurable
+   set: 466 -> **622**.
 4. **70 files have no tests at all.** A coverage question, not a mutation one. (The plan
    says 72; `mutationScope.mjs` reports 70 and 120-with-no-own-suite as of today.)
 
@@ -159,3 +163,4 @@ which point the cadence drops to release cuts.
 - 2026-08-31  docs(backlog): record the mutation correction against PL-22 (`02cfbea46`)
 - 2026-09-03  Item rewritten to lead with the ANSWER rather than the question. Documents: the 59.29% representative sample and the two qualifications on it (config undercount, corrected); r=-0.72 async correlation; the 16 pinned modules (min 43.77, median 83.33) = 3.2% of the 507-file included set; the four modules the burn-down moved (installHandler 41.77->71.16, daLiveAuthPrompt 67.04->82.58, siteTools 57.33->69.20, stateManager 56.49->66.88); the three PROPOSED tier floors (pure 90 / mixed 80 / orchestration 70) marked unratified; and the four things keeping it open.
 - 2026-09-03  Thresholds assessed against the data rather than accepted from the plan. Finding: the tier model is sound (mechanical, r=-0.72) but the floors are the WRONG GATE — floor verdict and highValueSurvivors disagree on 7 of 16 pinned modules. installHandler PASSES at 71.16% holding 55 high-value survivors (most of any module) while updateManager FAILS at 51.40% holding 52; mcpSocketPath FAILS the 90% pure floor at 77.78% with ZERO high-value survivors and cannot reach 90% at all (9 mutants, steps of 11.1pt). Also corrected the plan's pure tier: n=6 not n=5 (spectrumTokens 88.24 omitted), median 93.2 not 94.4. Recommendation recorded: ratify tiers + floors-as-targets, gate on highValueSurvivors. Title now states the answer.
+- 2026-09-03  feat(mutation): make "finished" recordable, and a sweep that can measure all 507 (`6017a6c15`)
