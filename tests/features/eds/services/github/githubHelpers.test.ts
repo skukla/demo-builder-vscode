@@ -28,7 +28,9 @@ describe('githubHelpers', () => {
         });
 
         it('should have SERVICE_UNAVAILABLE message', () => {
-            expect(ERROR_MESSAGES.SERVICE_UNAVAILABLE).toBe('GitHub service is temporarily unavailable');
+            expect(ERROR_MESSAGES.SERVICE_UNAVAILABLE).toBe(
+                'GitHub service is temporarily unavailable'
+            );
         });
     });
 
@@ -49,22 +51,32 @@ describe('githubHelpers', () => {
     });
 
     describe('injectTokenIntoUrl', () => {
+        // Assertions read the URL back by PART rather than comparing against a
+        // user-colon-password-at-host literal. The literal is the function's real
+        // contract, but written out it is a credential-shaped string in a public repo,
+        // and the secret scanner flagged exactly that shape on 2026-09-03. Parsing the
+        // result proves the same thing without ever spelling it.
         it('should inject token into HTTPS URL', () => {
             const url = 'https://github.com/owner/repo.git';
             const token = 'test-token-123';
 
-            const result = injectTokenIntoUrl(url, token);
+            const parsed = new URL(injectTokenIntoUrl(url, token));
 
-            expect(result).toBe('https://test-token-123:x-oauth-basic@github.com/owner/repo.git');
+            expect(parsed.username).toBe(token);
+            expect(parsed.password).toBe('x-oauth-basic');
+            expect(parsed.host).toBe('github.com');
+            expect(parsed.pathname).toBe('/owner/repo.git');
         });
 
         it('should handle URL without path', () => {
             const url = 'https://github.com';
             const token = 'test-token';
 
-            const result = injectTokenIntoUrl(url, token);
+            const parsed = new URL(injectTokenIntoUrl(url, token));
 
-            expect(result).toContain('test-token:x-oauth-basic@github.com');
+            expect(parsed.username).toBe(token);
+            expect(parsed.password).toBe('x-oauth-basic');
+            expect(parsed.host).toBe('github.com');
         });
     });
 
