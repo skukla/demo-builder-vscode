@@ -99,6 +99,99 @@ describe('AdobeAuthStep - Error Handling', () => {
             expect(mockRequestAuth).toHaveBeenCalledWith(true);
         });
 
+        it('spells out the connection fallback when the backend gave no sub-message', () => {
+            const state = {
+                ...baseState,
+                adobeAuth: { isAuthenticated: false, isChecking: false, error: 'connection_error' },
+            };
+
+            render(
+                <AdobeAuthStep
+                    state={state as WizardState}
+                    updateState={mockUpdateState}
+                    setCanProceed={mockSetCanProceed}
+                />
+            );
+
+            expect(
+                screen.getByText(
+                    "We couldn't connect to Adobe services. Please check your internet connection.",
+                ),
+            ).toBeInTheDocument();
+        });
+
+        it('spells out the privileges fallback for the no-App-Builder code', () => {
+            const state = {
+                ...baseState,
+                adobeAuth: {
+                    isAuthenticated: false,
+                    isChecking: false,
+                    error: 'no_app_builder_access',
+                    code: ErrorCode.AUTH_NO_APP_BUILDER,
+                },
+            };
+
+            render(
+                <AdobeAuthStep
+                    state={state as WizardState}
+                    updateState={mockUpdateState}
+                    setCanProceed={mockSetCanProceed}
+                />
+            );
+
+            expect(
+                screen.getByText(
+                    'You need Developer or System Admin role in an Adobe organization ' +
+                        'with App Builder access.',
+                ),
+            ).toBeInTheDocument();
+        });
+
+        it('re-checks on Try Again — a SECOND check, after the one mount already sent', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const state = {
+                ...baseState,
+                adobeAuth: { isAuthenticated: false, isChecking: false, error: 'connection_error' },
+            };
+
+            render(
+                <AdobeAuthStep
+                    state={state as WizardState}
+                    updateState={mockUpdateState}
+                    setCanProceed={mockSetCanProceed}
+                />
+            );
+            // Mount checks once by itself; that call made the older retry test pass
+            // even when the button did nothing.
+            expect(mockPostMessage).toHaveBeenCalledWith('check-auth');
+            mockPostMessage.mockClear();
+
+            await user.click(screen.getByText('Try Again'));
+
+            expect(mockPostMessage).toHaveBeenCalledWith('check-auth');
+        });
+
+        it('signs in again WITHOUT forcing an account switch', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const state = {
+                ...baseState,
+                adobeAuth: { isAuthenticated: false, isChecking: false, error: 'connection_error' },
+            };
+
+            render(
+                <AdobeAuthStep
+                    state={state as WizardState}
+                    updateState={mockUpdateState}
+                    setCanProceed={mockSetCanProceed}
+                />
+            );
+
+            await user.click(screen.getByText('Sign In Again'));
+
+            expect(mockRequestAuth).toHaveBeenCalledTimes(1);
+            expect(mockRequestAuth).toHaveBeenCalledWith(false);
+        });
+
         it('should allow retry on error', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const state = {

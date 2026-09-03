@@ -46,6 +46,25 @@ describe('AdobeAuthStep - Organization Selection', () => {
             expect(screen.getByText('Switch IMS Org')).toBeInTheDocument();
         });
 
+        it('does not report Connected on a stale org when the session is signed out', () => {
+            const state = {
+                ...baseState,
+                adobeAuth: { isAuthenticated: false, isChecking: false },
+                adobeOrg: { id: 'org1', code: 'ORG1', name: 'Test Organization' },
+            };
+
+            render(
+                <AdobeAuthStep
+                    state={state as WizardState}
+                    updateState={jest.fn()}
+                    setCanProceed={mockSetCanProceed}
+                />
+            );
+
+            expect(screen.queryByText('Connected')).not.toBeInTheDocument();
+            expect(screen.getByText('Sign In with Adobe')).toBeInTheDocument();
+        });
+
         it('should display specific message when org lacks access', () => {
             const state = {
                 ...baseState,

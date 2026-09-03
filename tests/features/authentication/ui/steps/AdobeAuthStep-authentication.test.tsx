@@ -121,6 +121,18 @@ describe('AdobeAuthStep - Authentication Flow', () => {
             expect(screen.getByText('Connecting to Adobe services...')).toBeInTheDocument();
         });
 
+        it('shows loading when there is no verdict yet, even with no check in flight', () => {
+            // The Add Integration modal synthesizes a store where isAuthenticated is
+            // still undefined; the step must not flash "Sign in" before the first answer.
+            renderStep({
+                ...baseState,
+                adobeAuth: { isAuthenticated: undefined, isChecking: false },
+            });
+
+            expect(screen.getByTestId('loading-display')).toBeInTheDocument();
+            expect(screen.queryByText('Sign in to Adobe')).not.toBeInTheDocument();
+        });
+
         it('should display custom loading message from auth status', async () => {
             const messageCallback = setupAuthStatusMock();
 

@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/ui/components/AdobeWorkspacePicker.tsx"
+        "src/features/authentication/ui/steps/AdobeAuthStep.tsx"
     ],
     "reporters": [
         "clear-text",
