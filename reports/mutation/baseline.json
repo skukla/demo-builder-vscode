@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "extensionUpdater: timer abort + clearTimeout pinned by fake-timer tests",
+    "_note": "adobeWorkspaceCredentials: three direct suites; 30 try/catch-shadowed and log-argument mutants recorded",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -3989,28 +3989,24 @@
             "openGaps": 14
         },
         "src/features/authentication/services/adobeWorkspaceCredentials.ts": {
-            "score": 20.28,
-            "killed": 57,
-            "survived": 32,
-            "noCoverage": 192,
+            "score": 79.27,
+            "killed": 218,
+            "survived": 52,
+            "noCoverage": 5,
             "timeout": 0,
             "survivorCategories": {
-                "block": 1,
-                "branch": 16,
-                "optionalChain": 14,
-                "string": 1
+                "branch": 17,
+                "string": 18,
+                "optionalChain": 10,
+                "logPresentation": 4,
+                "block": 3
             },
             "uncoveredCategories": {
-                "block": 27,
-                "branch": 94,
-                "string": 41,
-                "optionalChain": 18,
-                "logPresentation": 4,
-                "other": 8
+                "string": 5
             },
-            "highValueSurvivors": 17,
-            "equivalent": 0,
-            "openGaps": 178
+            "highValueSurvivors": 20,
+            "equivalent": 30,
+            "openGaps": 0
         },
         "src/features/authentication/services/apiAccessCatalog.ts": {
             "score": 90.2,

@@ -294,6 +294,95 @@
             "decision": "none — required by the type and correct as written",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (releaseTrack)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeWorkspaceCredentials.ts",
+            "anchors": [
+                "'[Entity Fetcher] Cannot fetch credentials: missing org/project/workspace ID',",
+                "'[Entity Fetcher] Cannot create credential: missing org/project/workspace ID',"
+            ],
+            "mutants": 6,
+            "category": "optionalChain",
+            "reason": "getWorkspaceCredential and createWorkspaceCredential wrap their whole body in a try/catch that logs and returns undefined, and the guards inside answer undefined too. The three cache reads above each of these guards (`cachedOrg?.id`, `cachedProject?.id`, `cachedWorkspace?.id`) are typed optional, so the `?.` is required; dropping it throws on an empty cache, the catch swallows the throw, and the caller sees the same undefined the guard would have returned. The only difference is a debug line versus an error line. The two guard messages are the anchors because the three read lines are identical in both methods.",
+            "decision": "none — the `?.` is required by the type and correct as written",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeWorkspaceCredentials.ts",
+            "anchors": [
+                "const credentials = response?.body;",
+                "const apiKey = response?.body?.apiKey;"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "getWorkspaceCredential and createWorkspaceCredential wrap their whole body in a try/catch that logs and returns undefined, and the guards inside answer undefined too. Dropping either `?.` throws when the SDK answers nothing or answers without a body; the catch swallows it and returns undefined, which is what the guard on the next line returns. For the create, the catch also checks the message for 409/Conflict, which a TypeError never carries, so it lands on the same return. Only the log level differs.",
+            "decision": "none — the SDK response type makes `body` optional, so the `?.` is required",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeWorkspaceCredentials.ts",
+            "anchors": [
+                "if (!Array.isArray(credentials)) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "getWorkspaceCredential and createWorkspaceCredential wrap their whole body in a try/catch that logs and returns undefined, and the guards inside answer undefined too. Forcing this guard false, or emptying its body, sends a non-list into `credentials.length` and the for-of on the next lines, which throw, and the catch returns the undefined the guard would have returned. The `!credentials ||` half of the condition was deleted in the same change because `Array.isArray` already answers false for undefined, which removed one further mutant rather than recording it.",
+            "decision": "none — the guard is the correct shape; the try/catch makes its failure mode indistinguishable from its success mode",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeWorkspaceCredentials.ts",
+            "anchors": [
+                "if (anyCred?.client_id) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "getWorkspaceCredential and createWorkspaceCredential wrap their whole body in a try/catch that logs and returns undefined, and the guards inside answer undefined too. When no entry carries a client_id, `anyCred` is undefined: forcing the condition true, or dropping the `?.`, throws inside the branch (the log line reads `anyCred.integration_type`), the catch swallows it and returns undefined, which is what the fall-through after the branch returns. When an entry does carry one, both mutants behave as the original.",
+            "decision": "none — the `?.` is required by `find`'s return type",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeWorkspaceCredentials.ts",
+            "anchors": [
+                "'[Entity Fetcher] Failed to get workspace credentials',"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body of getWorkspaceCredential is one error log and `return undefined`. Emptied, control falls off the end of the method, which returns undefined too. Every failure path in the method produces the same value with or without the catch body; only whether the failure is logged changes. The anchor is the log line because `} catch (error) {` appears twice in this module.",
+            "decision": "none — the explicit return says what the method means on failure",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeWorkspaceCredentials.ts",
+            "anchors": [
+                "`[Entity Fetcher] Using cached credential: ${this.cachedCredential.name || 'unnamed'}`,",
+                "`  - ${c.integration_name || 'unnamed'}: flow_type=${c.flow_type}, integration_type=${c.integration_type}, client_id=${hasClientId}`,",
+                "`[Entity Fetcher] Using OAuth S2S credential: ${oauthS2S.integration_name || 'unnamed'}`,",
+                "`[Entity Fetcher] Using ${anyCred.integration_type || 'unknown'} credential: ${anyCred.integration_name || 'unnamed'}`,"
+            ],
+            "mutants": 15,
+            "category": "branch",
+            "reason": "Five `x || 'unnamed'` / `x || 'unknown'` fallbacks inside four debug messages, three mutants each. They are log presentation — the same operator on a one-line debug call is classified as such and not counted — but each message wraps onto its own line, and the classifier reads one line, so it does not see the `this.debugLogger.debug(` that opens the statement above. Killing them means asserting the wording of a debug line, which the ratchet exists to refuse to reward.",
+            "decision": "OPEN for the instrument, not the module — the same finding as the addonUpdateChecker row: classify() could look at the enclosing statement rather than the single line",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeWorkspaceCredentials.ts",
+            "anchors": [
+                "for (const c of credentials) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The loop body is a single debug line per credential (plus the `hasClientId` string it interpolates). Emptying it changes what is logged and nothing else. The worklist's own filter skips bodies that only feed a logger; the ratchet's classifier counts the block because it sees the `for` line, not the body.",
+            "decision": "none — the per-credential log is the diagnostic this method exists to leave behind when the wrong credential is picked",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
         }
     ]
 }

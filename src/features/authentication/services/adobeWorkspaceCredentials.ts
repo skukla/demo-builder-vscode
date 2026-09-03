@@ -119,7 +119,7 @@ export class AdobeWorkspaceCredentials {
             const response = await client.getCredentials(orgId, projectId, workspaceId);
             const credentials = response?.body;
 
-            if (!credentials || !Array.isArray(credentials)) {
+            if (!Array.isArray(credentials)) {
                 this.debugLogger.debug('[Entity Fetcher] No credentials returned from SDK');
                 return undefined;
             }
@@ -153,7 +153,7 @@ export class AdobeWorkspaceCredentials {
             }
 
             // Fall back to any credential with a client_id
-            const anyCred = credentials.find((c: RawWorkspaceCredential) => !!c.client_id);
+            const anyCred = credentials.find((c: RawWorkspaceCredential) => c.client_id);
             if (anyCred?.client_id) {
                 this.debugLogger.debug(
                     `[Entity Fetcher] Using ${anyCred.integration_type || 'unknown'} credential: ${anyCred.integration_name || 'unnamed'}`,
@@ -325,7 +325,7 @@ export class AdobeWorkspaceCredentials {
         const match = existing?.find(
             (c) =>
                 (c.integration_type === 'apikey' || c.flow_type === 'adobeid') &&
-                !!c.integration_name &&
+                c.integration_name &&
                 acceptableNames.has(c.integration_name) &&
                 c.id_integration,
         );
