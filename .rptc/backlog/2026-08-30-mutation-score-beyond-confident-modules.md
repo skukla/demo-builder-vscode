@@ -220,3 +220,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(auth): bring adobeWorkspaceCredentials to zero open mutation gaps (`2b190a9c8`)
 - 2026-09-03  test(auth): bring projectHandlers to zero open mutation gaps (`d1060d458`)
 - 2026-09-03  test(auth): bring adobeContextResolver to zero open mutation gaps (`8a7b1e20e`)
+- 2026-09-03  test(auth): bring authenticationHandlers to zero open mutation gaps (`8a8c5c038`)
