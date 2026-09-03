@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/adobeContextResolver.ts"
+        "src/features/authentication/handlers/authenticationHandlers.ts"
     ],
     "reporters": [
         "clear-text",

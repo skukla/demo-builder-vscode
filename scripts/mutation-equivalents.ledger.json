@@ -539,6 +539,105 @@
             "decision": "none — the early return reads as intended",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeContextResolver)"
+        },
+        {
+            "module": "src/features/authentication/handlers/authenticationHandlers.ts",
+            "anchors": [
+                "if (tokenInspection && !tokenInspection.valid) {",
+                "const tokenExpiresIn = tokenInspection.expiresIn;",
+                "const validation = context.authManager?.getValidationCache();",
+                "const cachedOrg = context.authManager?.getCachedOrganization();",
+                "const currentOrg = orgs?.[0];",
+                "context.authManager?.setCachedOrganization(currentOrg);",
+                "const tokenValid = await checkTokenExpiry(context);",
+                "if (orgs?.length === 1) {",
+                "context.authManager?.setCachedOrganization(org);",
+                "context.logger.debug('[Auth] Already authenticated, skipping login');",
+                "const currentOrg = await context.authManager?.getCurrentOrganization();",
+                "? context.authManager?.wasOrgClearedDueToValidation()"
+            ],
+            "mutants": 16,
+            "category": "optionalChain",
+            "reason": "`authManager` is optional on HandlerContext, so every read of it needs the `?.`, and `orgs` inherits the same optionality from `authManager?.getOrganizations()`. But each of these sites is reached only AFTER a step that needs the service to answer: a successful `login`, an `isAuthenticated()` that returned true, or a cached org that only the service could have set. With no service those answers are undefined and the flow leaves before any of these lines, which the check-auth test without a service pins ('Not signed in', not a crash). So dropping a `?.` here can never throw on any reachable input. The two `tokenManager?.inspectToken()` reads are the same shape one level down: a missing token manager makes the inspection undefined, and both callers treat an undefined inspection and a thrown one identically (their catch returns the same value). Anchors name a unique neighbouring line where the mutated line appears twice in this module.",
+            "decision": "none — the `?.` is required by the type at every site",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
+        },
+        {
+            "module": "src/features/authentication/handlers/authenticationHandlers.ts",
+            "anchors": [
+                "const isAlreadyAuth = await context.authManager?.isAuthenticated();",
+                "const loginSuccess = await context.authManager?.login(force);"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "These two ARE reachable without an auth service, and the difference is observable: with the `?.`, a missing service reads as a login that returned nothing, so the user is told the sign-in timed out; without it, the TypeError lands in the outer catch as a generic authentication failure. Neither is the right message for a wiring gap. The only test that kills the mutants would pin 'Sign-in timed out' as the answer to a missing service, and a test that guards a misleading message is worse than a survivor. Recorded rather than pinned; the honest fix is a guard that names the gap, which is a behaviour change outside this batch.",
+            "decision": "OPEN for the module — handleAuthenticate could refuse up front when the context has no auth service, as resolveOrgContext in projectHandlers does",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
+        },
+        {
+            "module": "src/features/authentication/handlers/authenticationHandlers.ts",
+            "anchors": [
+                "`[Auth] Token valid, expires in ${formatMinutes(tokenInspection?.expiresIn || 0)}`,"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "`tokenInspection?.expiresIn || 0` is the argument of a debug line that wraps onto its own line, so the one-line classifier does not see the `debug(` above it. The expression feeds nothing else. Killing any of the four means asserting the wording of the debug line.",
+            "decision": "OPEN for the instrument — enclosing-statement classification, as in the addonUpdateChecker row",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
+        },
+        {
+            "module": "src/features/authentication/handlers/authenticationHandlers.ts",
+            "anchors": [
+                "if (!tokenInspection) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Forcing this guard false, or emptying it, sends an undefined inspection into `.expiresIn`, which throws into the catch below, and the catch returns exactly the object the guard returns. The check-auth test with a failing inspection pins that value; the guard's only distinct effect is that the no-inspection case does not go through the catch.",
+            "decision": "none — the early return says what an absent inspection means",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
+        },
+        {
+            "module": "src/features/authentication/handlers/authenticationHandlers.ts",
+            "anchors": [
+                "if (tokenExpiringSoon) {",
+                "context.logger.error('[Auth] Failed to fetch organizations:', error as Error);"
+            ],
+            "mutants": 4,
+            "category": "block",
+            "reason": "Two bodies that only log. The first is a warning when the token is about to expire; `tokenExpiringSoon` itself is returned and pinned by the expiry tests, so forcing or emptying the guard changes only whether the warning is written. The second is the catch around post-login org resolution: it logs and lets `orgResult` keep its default, which the failed-fetch test pins ('Sign-in complete', selection required); emptied, it does the same without the log.",
+            "decision": "none — both logs are the operator's only trace of the condition",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
+        },
+        {
+            "module": "src/features/authentication/handlers/authenticationHandlers.ts",
+            "anchors": [
+                "return { currentOrg: undefined };",
+                ": { currentOrg: undefined };"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "Both literals are destructured by the caller as `const { currentOrg } = …`, and destructuring `{}` yields the same undefined. The explicit field is the typed contract (`{ currentOrg?: AdobeOrg }`), not a runtime difference.",
+            "decision": "none — the explicit shape documents the contract; `{}` would typecheck too but say less",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
+        },
+        {
+            "module": "src/features/authentication/handlers/authenticationHandlers.ts",
+            "anchors": [
+                "if (orgs && orgs.length > 1) {",
+                "return { requiresOrgSelection: true, orgLacksAccess: true };"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "`> 1` versus `>= 1` differs only at exactly one org, which the `=== 1` branch above has already taken. And `requiresOrgSelection` on the zero-org result is never read: sendPostLoginStatus checks `orgLacksAccess` first and hardcodes `requiresOrgSelection: true` in that message, which the zero-org tests pin.",
+            "decision": "none — the result carries both flags for the type's sake; the consumer's precedence is the pinned behaviour",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
         }
     ]
 }

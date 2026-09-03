@@ -107,4 +107,61 @@ describe('authenticationHandlers - handleAuthenticate - Re-authentication', () =
 			});
 		});
 	});
+	describe('already authenticated — the final status, field by field', () => {
+		beforeEach(() => {
+			(mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
+			(mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+		});
+
+		it('with a current org: already signed in, connected to it, no selection needed', async () => {
+			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg);
+
+			const result = await handleAuthenticate(mockContext);
+
+			expect(result).toEqual({ success: true });
+			expect(mockContext.sharedState.isAuthenticating).toBe(false);
+			expect(mockContext.sendMessage).toHaveBeenLastCalledWith('auth-status', {
+				authenticated: true,
+				isAuthenticated: true,
+				isChecking: false,
+				organization: mockOrg,
+				message: 'Already signed in',
+				subMessage: 'Connected to Test Organization',
+				requiresOrgSelection: false,
+				orgLacksAccess: false,
+			});
+		});
+
+		it('with an org that has no name: connected to "your organization"', async () => {
+			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue({
+				...mockOrg,
+				name: '',
+			});
+
+			await handleAuthenticate(mockContext);
+
+			expect(mockContext.sendMessage).toHaveBeenLastCalledWith(
+				'auth-status',
+				expect.objectContaining({ subMessage: 'Connected to your organization' }),
+			);
+		});
+
+		it('with no org and no validation clearing: already signed in, selection needed', async () => {
+			(mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(undefined);
+			(mockContext.authManager!.wasOrgClearedDueToValidation as jest.Mock).mockReturnValue(false);
+
+			await handleAuthenticate(mockContext);
+
+			expect(mockContext.sendMessage).toHaveBeenLastCalledWith('auth-status', {
+				authenticated: true,
+				isAuthenticated: true,
+				isChecking: false,
+				organization: undefined,
+				message: 'Already signed in',
+				subMessage: 'Please complete authentication to continue',
+				requiresOrgSelection: true,
+				orgLacksAccess: false,
+			});
+		});
+	});
 });

@@ -508,4 +508,90 @@ describe('authenticationHandlers - handleCheckAuth', () => {
             expect(mockContext.authManager!.getCurrentProject).not.toHaveBeenCalled();
         });
     });
+    describe('token expiry on a verified check', () => {
+        beforeEach(() => {
+            (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
+            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+        });
+
+        it.each([
+            [120, false],
+            [5, false],
+            [4, true],
+        ])('%s minutes left reports tokenExpiringSoon=%s', async (expiresIn, expiringSoon) => {
+            (mockContext.authManager!.getTokenManager as jest.Mock).mockReturnValue({
+                inspectToken: jest.fn().mockResolvedValue({ valid: true, expiresIn }),
+            });
+
+            const result = await handleCheckAuth(mockContext);
+
+            expect(result).toEqual({ success: true });
+            expect(mockContext.sendMessage).toHaveBeenLastCalledWith(
+                'auth-status',
+                expect.objectContaining({ tokenExpiresIn: expiresIn, tokenExpiringSoon: expiringSoon }),
+            );
+        });
+
+        it('an inspection that throws reports no expiry, and the check still succeeds', async () => {
+            (mockContext.authManager!.getTokenManager as jest.Mock).mockReturnValue({
+                inspectToken: jest.fn().mockRejectedValue(new Error('CLI timeout')),
+            });
+
+            const result = await handleCheckAuth(mockContext);
+
+            expect(result).toEqual({ success: true });
+            expect(mockContext.sendMessage).toHaveBeenLastCalledWith(
+                'auth-status',
+                expect.objectContaining({ tokenExpiresIn: undefined, tokenExpiringSoon: false }),
+            );
+        });
+    });
+
+    describe('the validation cache only hides the org it names', () => {
+        it('a failed validation for ANOTHER org leaves the cached org shown', async () => {
+            (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
+            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
+            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue({
+                org: 'SOMEOTHERORG',
+                isValid: false,
+            });
+
+            await handleCheckAuth(mockContext);
+
+            expect(mockContext.sendMessage).toHaveBeenLastCalledWith(
+                'auth-status',
+                expect.objectContaining({ organization: mockOrg, subMessage: `Signed in as ${mockOrg.name}` }),
+            );
+        });
+    });
+
+    describe('a cache miss with no orgs on the token', () => {
+        it('caches nothing and asks for org selection', async () => {
+            (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
+            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([]);
+
+            await handleCheckAuth(mockContext);
+
+            expect(mockContext.authManager!.setCachedOrganization).not.toHaveBeenCalled();
+            expect(mockContext.sendMessage).toHaveBeenLastCalledWith(
+                'auth-status',
+                expect.objectContaining({ organization: undefined, subMessage: 'Organization selection required' }),
+            );
+        });
+    });
+
+    describe('without an auth service on the context', () => {
+        it('reports not signed in, as a success, rather than a connection problem', async () => {
+            const ctx = createAuthHandlerContext({ authManager: undefined });
+
+            const result = await handleCheckAuth(ctx);
+
+            expect(result).toEqual({ success: true });
+            expect(ctx.sendMessage).toHaveBeenLastCalledWith(
+                'auth-status',
+                expect.objectContaining({ isChecking: false, message: 'Not signed in' }),
+            );
+        });
+    });
 });

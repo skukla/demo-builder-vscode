@@ -164,4 +164,61 @@ describe('Token Expiry Detection - handleAuthenticate()', () => {
             expect(mockContext.authManager!.getOrganizations).toHaveBeenCalled();
         });
     });
+    describe('the login flow, step by step', () => {
+        beforeEach(() => {
+            (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(false);
+            (mockContext.authManager!.login as jest.Mock).mockResolvedValue(true);
+            (mockContext.authManager!.ensureSDKInitialized as jest.Mock).mockResolvedValue(undefined);
+            mockTokenManager.inspectToken.mockResolvedValue({ valid: true, expiresIn: 120 });
+        });
+
+        it('announces the org load, then the auto-select, as signed-in progress', async () => {
+            (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
+
+            await handleAuthenticate(mockContext);
+
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
+                isChecking: true,
+                message: 'Signing in...',
+                subMessage: 'Loading organizations...',
+                isAuthenticated: true,
+            });
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('auth-status', {
+                isChecking: true,
+                message: 'Signing in...',
+                subMessage: 'Selecting organization...',
+                isAuthenticated: true,
+            });
+        });
+
+        it('an org list that cannot be fetched still completes sign-in and asks for a selection', async () => {
+            (mockContext.authManager!.getOrganizations as jest.Mock).mockRejectedValue(new Error('network'));
+
+            const result = await handleAuthenticate(mockContext);
+
+            expect(result).toEqual({ success: true });
+            expect(mockContext.sendMessage).toHaveBeenLastCalledWith(
+                'auth-status',
+                expect.objectContaining({
+                    message: 'Sign-in complete',
+                    requiresOrgSelection: true,
+                    orgLacksAccess: false,
+                }),
+            );
+        });
+
+        it('holds the in-progress flag while the browser login runs, and drops it after', async () => {
+            let flagDuringLogin: boolean | undefined;
+            (mockContext.authManager!.login as jest.Mock).mockImplementation(async () => {
+                flagDuringLogin = mockContext.sharedState.isAuthenticating;
+                return true;
+            });
+            (mockContext.authManager!.getOrganizations as jest.Mock).mockResolvedValue([mockOrg]);
+
+            await handleAuthenticate(mockContext);
+
+            expect(flagDuringLogin).toBe(true);
+            expect(mockContext.sharedState.isAuthenticating).toBe(false);
+        });
+    });
 });

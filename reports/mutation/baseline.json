@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "adobeContextResolver: CLI call, list matching by name/code/id, field shaping pinned; 23 catch-shadowed and log-only mutants recorded",
+    "_note": "authenticationHandlers: expiry thresholds, login progress, already-authenticated status pinned; 32 unreachable-without-service and log-only mutants recorded",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -3746,29 +3746,26 @@
             "openGaps": 0
         },
         "src/features/authentication/handlers/authenticationHandlers.ts": {
-            "score": 72.41,
-            "killed": 252,
-            "survived": 77,
-            "noCoverage": 19,
+            "score": 83.62,
+            "killed": 291,
+            "survived": 55,
+            "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 24,
-                "block": 2,
-                "string": 12,
-                "optionalChain": 20,
-                "logPresentation": 15,
-                "other": 4
+                "optionalChain": 19,
+                "logPresentation": 16,
+                "string": 7,
+                "branch": 8,
+                "block": 3,
+                "other": 2
             },
             "uncoveredCategories": {
-                "string": 5,
-                "branch": 7,
-                "block": 3,
-                "other": 2,
-                "logPresentation": 2
+                "logPresentation": 1,
+                "string": 1
             },
-            "highValueSurvivors": 26,
-            "equivalent": 0,
-            "openGaps": 62
+            "highValueSurvivors": 11,
+            "equivalent": 32,
+            "openGaps": 0
         },
         "src/features/authentication/handlers/deleteAdobeProjectHandler.ts": {
             "score": 85.54,
