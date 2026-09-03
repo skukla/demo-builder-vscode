@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/updates/services/forkSyncService.ts"
+        "src/features/updates/services/collaboratorGate.ts"
     ],
     "reporters": [
         "clear-text",

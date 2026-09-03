@@ -246,6 +246,30 @@
             "decision": "OPEN, small — a `if (!repoData.parent) return null` guard before the compare would make both chains unnecessary and the impossible case explicit; outside this batch's remit",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (forkSyncService)"
+        },
+        {
+            "module": "src/features/updates/services/collaboratorGate.ts",
+            "anchors": [
+                "if (!stored) return null;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The guard on an absent secret. Without it, JSON.parse(undefined) throws a SyntaxError into the catch two lines down, which also returns null; the caller then logs the same no-token line and returns false. Every observable — return value, requests made (none), log channel and text — is identical. Deleting the guard would make the no-secret path depend on JSON.parse rejecting the string \"undefined\", which is worse code for a mutant nobody can see.",
+            "decision": "none — an explicit guard beats relying on a parse error",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (collaboratorGate)"
+        },
+        {
+            "module": "src/features/updates/services/collaboratorGate.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch around JSON.parse returns null; emptied, the function falls off its end and returns undefined. The only caller tests the result with `!token`, which treats null and undefined alike, so no request, return value or log differs. The `return null` is required by noImplicitReturns and the declared `string | null` type; Stryker mutates with type checking off.",
+            "decision": "none — required by the type and correct as written",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (collaboratorGate)"
         }
     ]
 }
