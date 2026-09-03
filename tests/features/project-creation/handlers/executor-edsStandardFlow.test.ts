@@ -104,20 +104,6 @@ jest.mock('@/features/project-creation/helpers/envFileGenerator', () => ({
     generateComponentConfigFiles: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('vscode', () => ({
-    workspace: {
-        getConfiguration: jest.fn().mockReturnValue({
-            get: jest.fn().mockReturnValue(3000),
-        }),
-    },
-    window: { setStatusBarMessage: jest.fn() },
-    commands: { executeCommand: jest.fn() },
-}), { virtual: true });
-
-// Mock services to track what component definitions are used
-jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
-    generateAIContextFiles: jest.fn().mockResolvedValue(undefined),
-}));
 
 jest.mock('@/features/project-creation/services/componentInstallationOrchestrator', () => ({
     cloneAllComponents: jest.fn().mockImplementation(({ componentDefinitions, project }) => {

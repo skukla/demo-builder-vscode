@@ -34,10 +34,6 @@ jest.mock('@/features/prerequisites/services/versioning/MultiVersionDetector', (
     ...jest.requireActual('@/features/prerequisites/services/versioning/MultiVersionDetector'),
     getInstalledNodeVersions: jest.fn(),
 }));
-jest.mock('vscode', () => ({
-    env: { openExternal: jest.fn() },
-    Uri: { parse: jest.fn((url: string) => ({ url })) },
-}));
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
 import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning/MultiVersionDetector';

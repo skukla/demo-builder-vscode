@@ -259,3 +259,5 @@ the family's shared setup), so the weaker directory check still carries those.
 - 2026-09-02  test(eds): the last clone-ledger pair — the reset suites share their walls and params (`32d185aae`)
 - 2026-09-03  Clone ledger reaches ZERO outstanding: 62 pairs / 2,506 duplicated lines at the start, 0 pairs / 0 lines now, with 2 pairs adjudicated as variants and their reasons recorded. 41 commits on loop/2026-09-02-clone-burndown-2, each gated on the full suite (1222 files, 15,668 tests). Findings filed along the way: EDS-12, PL-35, PL-36, PL-37, PL-38.
 - 2026-09-02  docs(handoff): the clone burn-down report — zero outstanding, and one product bug (`2fb3496cb`)
+- 2026-09-02  Merge loop/2026-09-02-clone-burndown-2: the test-tree duplication burn-down reaches zero (`798637134`)
+- 2026-09-02  docs(backlog): log the burn-down close to PL-9 (`5138b5d32`)

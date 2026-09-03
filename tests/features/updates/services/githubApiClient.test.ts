@@ -2,10 +2,6 @@
  * Unit tests for githubApiClient shared utilities
  */
 
-jest.mock('vscode', () => ({}), { virtual: true });
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000 },
-}));
 
 // Mock global fetch
 global.fetch = jest.fn();

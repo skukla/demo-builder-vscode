@@ -19,21 +19,6 @@ jest.setTimeout(5000);
 // Mock Setup
 // =============================================================================
 
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            showErrorMessage: jest.fn(),
-            showInformationMessage: jest.fn(),
-        },
-        env: { openExternal: jest.fn() },
-        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-        workspace: {
-            getConfiguration: jest.fn().mockReturnValue({ get: jest.fn().mockReturnValue('') }),
-        },
-    }),
-    { virtual: true }
-);
 
 const mockStoreToken = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/eds/services/daLive/daLiveAuthService', () => {

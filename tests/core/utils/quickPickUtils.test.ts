@@ -1,12 +1,6 @@
 import * as vscode from 'vscode';
 import { showWebviewQuickPick, showWebviewQuickPickMany } from '@/core/utils/quickPickUtils';
 
-// Mock vscode
-jest.mock('vscode', () => ({
-    window: {
-        createQuickPick: jest.fn(),
-    },
-}));
 
 describe('quickPickUtils', () => {
     let mockQuickPick: {

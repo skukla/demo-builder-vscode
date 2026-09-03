@@ -7,11 +7,6 @@
  * reader is mocked here; its own parsing is covered by daAuthHelperToken.test.
  */
 
-jest.mock('vscode', () => ({
-    env: { openExternal: jest.fn().mockResolvedValue(true) },
-    Uri: { parse: jest.fn((s: string) => s) },
-    EventEmitter: require('../../../../helpers/vscodeEventEmitter').VscodeEventEmitter,
-}));
 
 jest.mock('@/features/eds/services/daAuthHelperToken', () => ({
     readDaAuthHelperToken: jest.fn(() => null),

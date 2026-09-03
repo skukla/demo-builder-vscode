@@ -110,53 +110,6 @@ jest.mock('fs/promises', () => ({
     writeFile: jest.fn().mockResolvedValue(undefined),
 }));
 
-jest.mock('vscode', () => ({
-    workspace: {
-        isTrusted: true,
-        getConfiguration: jest.fn(() => ({
-            get: jest.fn().mockReturnValue(false), // Disable auto-update for tests
-        })),
-        onDidChangeConfiguration: jest.fn(() => ({ dispose: jest.fn() })),
-        workspaceFolders: [],
-    },
-    window: {
-        // activate() creates the Agent Activity channel (AI-2c).
-        createOutputChannel: jest.fn(() => ({ appendLine: jest.fn(), dispose: jest.fn() })),
-        createTreeView: jest.fn(() => ({
-            title: '',
-            dispose: jest.fn(),
-        })),
-        registerWebviewViewProvider: jest.fn(() => ({ dispose: jest.fn() })),
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn(),
-        activeColorTheme: { kind: 2 },
-    },
-    commands: {
-        registerCommand: jest.fn(() => ({ dispose: jest.fn() })),
-        executeCommand: jest.fn().mockImplementation(() => Promise.resolve(undefined)),
-    },
-    Uri: {
-        file: (path: string) => ({ fsPath: path, path }),
-    },
-    EventEmitter: class {
-        private _listeners: Array<(data: unknown) => void> = [];
-        get event() {
-            return (listener: (data: unknown) => void) => {
-                this._listeners.push(listener);
-                return { dispose: jest.fn() };
-            };
-        }
-        fire(data?: unknown) {
-            this._listeners.forEach((listener) => listener(data));
-        }
-        dispose() {
-            this._listeners = [];
-        }
-    },
-    ExtensionMode: {
-        Test: 3,
-    },
-}));
 
 // The SUT and the mocked vscode module — imported AFTER the mocks above
 // register (jest hoists the mock calls over these imports within this module),

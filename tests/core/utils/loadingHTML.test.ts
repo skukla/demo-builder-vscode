@@ -3,20 +3,6 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import * as vscode from 'vscode';
 
 import { mockWindow } from '../../helpers/vscodeMockViews';
-// Mock vscode with ColorThemeKind
-jest.mock('vscode', () => ({
-    ColorThemeKind: {
-        Light: 1,
-        Dark: 2,
-        HighContrast: 3,
-        HighContrastLight: 4,
-    },
-    window: {
-        activeColorTheme: {
-            kind: 2, // Dark
-        },
-    },
-}));
 
 describe('loadingHTML', () => {
     let mockPanel: vscode.WebviewPanel;

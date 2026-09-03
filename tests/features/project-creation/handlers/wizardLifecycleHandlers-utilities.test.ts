@@ -10,31 +10,6 @@ import { handleLog } from '@/features/project-creation/handlers/wizardLifecycleH
 import { HandlerContext as _HandlerContext } from '@/types/handlers';
 import { createWizardLifecycleContext } from './wizardLifecycleHandlers.testUtils';
 
-// Mock vscode inline to avoid hoisting issues
-jest.mock(
-    'vscode',
-    () => ({
-        Uri: {
-            file: jest.fn((path: string) => ({ fsPath: path, path })),
-            parse: jest.fn((uri: string) => ({ fsPath: uri, path: uri })),
-        },
-        window: {
-            showErrorMessage: jest.fn(),
-            showInformationMessage: jest.fn(),
-            showWarningMessage: jest.fn(),
-        },
-        workspace: {
-            updateWorkspaceFolders: jest.fn(),
-        },
-        commands: {
-            executeCommand: jest.fn(),
-        },
-        env: {
-            openExternal: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
 describe('lifecycleHandlers - Utilities', () => {
     let mockContext: any;
 

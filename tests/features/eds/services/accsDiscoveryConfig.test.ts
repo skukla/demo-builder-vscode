@@ -12,9 +12,6 @@
  * same rule `pdp404Snippet` applies to its own sibling derivation.
  */
 
-jest.mock('vscode', () => ({
-    workspace: { getConfiguration: jest.fn() },
-}));
 
 import * as vscode from 'vscode';
 import {

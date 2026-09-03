@@ -24,30 +24,6 @@ import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
-// Mock VS Code API
-jest.mock('vscode', () => ({
-    window: {
-        withProgress: jest.fn(),
-        showInformationMessage: jest.fn(),
-        showWarningMessage: jest.fn(),
-        showErrorMessage: jest.fn().mockResolvedValue(undefined),
-        showQuickPick: jest.fn(),
-    },
-    workspace: {
-        getConfiguration: jest.fn(() => ({
-            get: jest.fn((_key: string, defaultValue: unknown) => defaultValue),
-        })),
-    },
-    ProgressLocation: {
-        Notification: 15,
-    },
-    QuickPickItemKind: {
-        Separator: 1,
-    },
-    commands: {
-        executeCommand: jest.fn(),
-    },
-}));
 
 // The block-library update path reaches the shared GitHub services for a token.
 // The real accessor calls getLogger(), which throws in a suite that initialises

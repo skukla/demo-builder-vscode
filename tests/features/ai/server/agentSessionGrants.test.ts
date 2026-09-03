@@ -28,11 +28,6 @@ import { AGENT_ALERT_COPY } from '@/features/ai/server/agentAlertCopy';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-jest.mock('vscode', () => ({
-    window: { showWarningMessage: jest.fn(), setStatusBarMessage: jest.fn(), withProgress: jest.fn() },
-    workspace: { getConfiguration: jest.fn() },
-    ProgressLocation: { Notification: 15 },
-}));
 
 const mockShow = vscode.window.showWarningMessage as unknown as jest.Mock;
 const mockConfig = vscode.workspace.getConfiguration as unknown as jest.Mock;

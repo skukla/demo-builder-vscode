@@ -5,17 +5,6 @@
  * { path, includesSecrets } (secrets stay on disk, never in the response).
  */
 
-jest.mock(
-    'vscode',
-    () => ({
-        window: { activeColorTheme: { kind: 1 } },
-        ColorThemeKind: { Dark: 2, Light: 1 },
-        commands: { executeCommand: jest.fn() },
-        env: { openExternal: jest.fn() },
-        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-    }),
-    { virtual: true }
-);
 
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn() },

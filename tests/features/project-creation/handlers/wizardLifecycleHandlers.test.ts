@@ -77,16 +77,6 @@ describe('lifecycleHandlers', () => {
     });
 });
 
-// Mock vscode module
-jest.mock('vscode', () => ({
-    env: {
-        openExternal: jest.fn().mockResolvedValue(true),
-    },
-    Uri: {
-        parse: jest.fn((url: string) => ({ toString: () => url })),
-        file: jest.fn((path: string) => ({ fsPath: path })),
-    },
-}));
 
 describe('handleOpenExternal - Security', () => {
     // Create mock context factory

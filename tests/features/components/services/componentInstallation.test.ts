@@ -32,13 +32,6 @@ jest.mock('fs/promises', () => ({
     writeFile: jest.fn().mockResolvedValue(undefined),
     readFile: jest.fn().mockRejectedValue(new Error('ENOENT')),
 }));
-jest.mock(
-    'vscode',
-    () => ({
-        workspace: { getConfiguration: () => ({ get: (_k: string, d: string) => d }) },
-    }),
-    { virtual: true }
-);
 
 import { ComponentInstallation } from '@/features/components/services/componentInstallation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

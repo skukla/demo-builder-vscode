@@ -17,34 +17,6 @@ jest.setTimeout(5000);
 // Mock Setup - All mocks must be defined before imports
 // =============================================================================
 
-// Mock vscode
-jest.mock(
-    'vscode',
-    () => ({
-        commands: {
-            executeCommand: jest.fn().mockResolvedValue(undefined),
-        },
-        window: {
-            activeColorTheme: { kind: 1 },
-            showWarningMessage: jest.fn(),
-            showErrorMessage: jest.fn(),
-            showInformationMessage: jest.fn(),
-            setStatusBarMessage: jest.fn(),
-            withProgress: jest.fn(),
-        },
-        ColorThemeKind: { Dark: 2, Light: 1 },
-        ProgressLocation: {
-            Notification: 15,
-        },
-        env: {
-            openExternal: jest.fn(),
-        },
-        Uri: {
-            parse: jest.fn((url: string) => ({ toString: () => url })),
-        },
-    }),
-    { virtual: true }
-);
 
 // Mock ServiceLocator
 jest.mock('@/core/di/serviceLocator', () => ({

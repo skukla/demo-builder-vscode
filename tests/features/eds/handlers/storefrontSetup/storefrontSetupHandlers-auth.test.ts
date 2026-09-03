@@ -52,17 +52,6 @@ jest.mock('@/features/eds/handlers/storefrontSetup/storefrontSetupPhases', () =>
     executeStorefrontSetupPhases: jest.fn(),
 }));
 
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            showWarningMessage: jest.fn(),
-            showInformationMessage: jest.fn(),
-            showErrorMessage: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
 
 // Mock remaining imports
 jest.mock('@/features/eds/services/cleanupService');

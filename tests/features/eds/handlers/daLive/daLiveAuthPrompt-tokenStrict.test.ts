@@ -17,11 +17,6 @@
  *     sees the specific reason rather than a generic one
  */
 
-jest.mock('vscode', () => ({
-    window: { showInputBox: jest.fn(), showInformationMessage: jest.fn(), showErrorMessage: jest.fn() },
-    env: { openExternal: jest.fn(), clipboard: { readText: jest.fn() } },
-    Uri: { parse: jest.fn((url: string) => ({ url })) },
-}));
 
 import {
     validateDaLiveToken,

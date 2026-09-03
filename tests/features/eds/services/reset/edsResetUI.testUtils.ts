@@ -41,23 +41,6 @@ jest.mock('@/core/di/serviceLocator', () => ({
 jest.mock('@/features/authentication/services/ensureProjectOrgContext', () => ({
     ensureProjectOrgContext: (...args: unknown[]) => mockEnsureProjectOrgContext(...args),
 }));
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            showWarningMessage: jest.fn(),
-            showInformationMessage: jest.fn(),
-            showErrorMessage: jest.fn(),
-            withProgress: jest.fn().mockImplementation(async (_options: any, callback: any) => {
-                return callback({ report: jest.fn() });
-            }),
-        },
-        ProgressLocation: { Notification: 15 },
-        env: { openExternal: jest.fn() },
-        Uri: { parse: jest.fn((url: string) => ({ toString: () => url })) },
-    }),
-    { virtual: true }
-);
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         NORMAL: 30000,

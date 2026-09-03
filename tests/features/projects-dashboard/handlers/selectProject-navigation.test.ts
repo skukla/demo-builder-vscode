@@ -4,28 +4,6 @@
  * Tests that selectProject navigates to project dashboard after selecting a project.
  */
 
-// Mock vscode - must be before imports due to hoisting
-jest.mock('vscode', () => ({
-    commands: {
-        executeCommand: jest.fn(),
-    },
-    workspace: {
-        workspaceFolders: undefined as { uri: { fsPath: string } }[] | undefined,
-    },
-    Uri: {
-        file: jest.fn((p: string) => ({ fsPath: p, scheme: 'file' })),
-    },
-}), { virtual: true });
-
-// Make filesystem path-safety checks deterministic and independent of the host.
-// validateProjectPath() canonicalizes via fs.realpathSync; identity realpathSync
-// lets valid in-tree project paths validate without requiring a real
-// ~/.demo-builder/projects directory on disk (the security prefix check is
-// unaffected — traversal paths still resolve outside the allowed base).
-jest.mock('fs', () => ({
-    ...jest.requireActual('fs'),
-    realpathSync: jest.fn((p: string) => p),
-}));
 
 import * as vscode from 'vscode';
 import {

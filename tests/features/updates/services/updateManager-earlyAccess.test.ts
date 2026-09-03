@@ -6,13 +6,6 @@
  * its own behavior is covered by collaboratorGate.test.ts.
  */
 
-jest.mock(
-    'vscode',
-    () => ({
-        workspace: { getConfiguration: jest.fn() },
-    }),
-    { virtual: true }
-);
 
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: { QUICK: 5000 },

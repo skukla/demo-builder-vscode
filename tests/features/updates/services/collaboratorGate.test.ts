@@ -6,14 +6,6 @@
  * fails closed (returns false) on ANY error. Never logs the token.
  */
 
-// Mock vscode (only the SecretStorage type/namespace is referenced)
-jest.mock('vscode', () => ({}), { virtual: true });
-
-// Mock timeout/cache constants
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: { QUICK: 5000 },
-    CACHE_TTL: { MEDIUM: 300000 },
-}));
 
 // Mock the shared GitHub client so we control fetch behavior
 jest.mock('@/features/updates/services/githubApiClient', () => ({

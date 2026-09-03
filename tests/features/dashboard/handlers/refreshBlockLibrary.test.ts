@@ -7,26 +7,6 @@
  *   3. EDS project → executes 'demoBuilder.refreshBlockLibrary' and returns success
  */
 
-// IMPORTANT: Mock declarations must precede imports
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            activeColorTheme: { kind: 1 },
-        },
-        ColorThemeKind: { Dark: 2, Light: 1 },
-        commands: {
-            executeCommand: jest.fn().mockResolvedValue(undefined),
-        },
-        env: {
-            openExternal: jest.fn(),
-        },
-        Uri: {
-            parse: jest.fn((url: string) => ({ toString: () => url })),
-        },
-    }),
-    { virtual: true }
-);
 
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {

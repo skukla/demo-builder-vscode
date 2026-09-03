@@ -12,17 +12,6 @@
  * Total tests: 8
  */
 
-// Mock vscode
-jest.mock('vscode', () => ({}), { virtual: true });
-
-// Mock Logger
-
-// Mock timeoutConfig (used by githubApiClient)
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        QUICK: 5000,
-    },
-}));
 
 // Mock global fetch
 global.fetch = jest.fn();

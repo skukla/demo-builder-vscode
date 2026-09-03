@@ -62,16 +62,6 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     ).BYOM_OVERLAY_NOT_AUTHORIZED_MESSAGE,
 }));
 
-jest.mock(
-    'vscode',
-    () => ({
-        window: {
-            showWarningMessage: jest.fn(),
-            showErrorMessage: jest.fn(),
-        },
-    }),
-    { virtual: true }
-);
 
 jest.mock('@/features/eds/services/github/githubRepoOperations', () => ({
     GitHubRepoOperations: jest.fn().mockImplementation(() => ({
