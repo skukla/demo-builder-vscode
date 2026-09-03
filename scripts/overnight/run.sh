@@ -49,17 +49,37 @@ done
 # The owner's standing rule for unattended work: commits go to a WORK BRANCH,
 # never to develop. Made here rather than left to each condition, because git
 # mechanics in prose is how a rule gets skipped on turn nineteen.
+#
+# THE BRANCH IS ALWAYS CUT FROM THE CURRENT HEAD. This used to reuse a branch of
+# the same date-name if one existed, and on 2026-09-03 the second run of the day
+# checked out the morning's branch — an old commit without the day's work OR the
+# goal files — then skipped every goal as missing and printed "queue done" in
+# under a second, exit 0. A branch that is fully merged is deleted and recut; one
+# carrying unmerged commits is a decision for a human, not a script.
 BRANCH="loop/$(date +%Y-%m-%d)-goal-queue"
+START_SHA="$(git -C "$REPO" rev-parse --short HEAD)"
 if [[ $DRY -eq 0 ]]; then
     if git -C "$REPO" show-ref --verify --quiet "refs/heads/$BRANCH"; then
-        git -C "$REPO" checkout -q "$BRANCH"
-    else
-        git -C "$REPO" checkout -q -b "$BRANCH"
+        if [[ -z "$(git -C "$REPO" log --oneline "HEAD..$BRANCH")" ]]; then
+            git -C "$REPO" branch -q -D "$BRANCH"
+            echo "branch:   $BRANCH existed, fully merged — recut"
+        else
+            echo "REFUSING: $BRANCH exists with commits not in HEAD. Merge or rename it first."
+            git -C "$REPO" log --oneline "HEAD..$BRANCH" | sed 's/^/    /'
+            exit 1
+        fi
     fi
-    echo "branch:   $BRANCH (from $(git -C "$REPO" rev-parse --short HEAD))"
+    git -C "$REPO" checkout -q -b "$BRANCH"
+    echo "branch:   $BRANCH (from $START_SHA)"
 else
-    echo "branch:   $BRANCH (would be created)"
+    echo "branch:   $BRANCH (would be cut from $START_SHA)"
 fi
+
+# The goal files were listed BEFORE the checkout. Prove they survived it — a goal
+# that is not on the branch would otherwise be skipped silently below.
+for f in "${FILES[@]}"; do
+    [[ -f "$f" ]] || { echo "ABORT: $f is not present on $BRANCH"; exit 1; }
+done
 
 echo "queue:    ${#FILES[@]} item(s)"
 echo "logs:     $LOGDIR"
@@ -67,10 +87,11 @@ echo "started:  $(date)"
 [[ $DRY -eq 1 ]] && echo "MODE:     dry run — nothing will be invoked"
 mkdir -p "$LOGDIR"
 
+RAN=0
 for f in "${FILES[@]}"; do
-    [[ -f "$f" ]] || continue
     name="$(basename "$f" .goal)"
     log="$LOGDIR/$name.jsonl"
+    RAN=$((RAN + 1))
 
     echo
     echo "════ $name — $(date +%H:%M) ════"
@@ -95,5 +116,9 @@ for f in "${FILES[@]}"; do
 done
 
 echo
-echo "queue done: $(date)"
+if [[ $DRY -eq 0 && $RAN -eq 0 ]]; then
+    echo "NOTHING RAN — exiting non-zero so this cannot read as success."
+    exit 1
+fi
+echo "queue done: $(date) — $RAN item(s) invoked"
 echo "read the logs with:  scripts/overnight/summarise.sh $LOGDIR"
