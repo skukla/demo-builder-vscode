@@ -210,3 +210,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(updates): bring updateManager to zero open mutation gaps (`39cea6edd`)
 - 2026-09-03  test(updates): bring templateUpdateChecker to zero open mutation gaps (`15299ba5b`)
 - 2026-09-03  test(updates): share the templateUpdateChecker family setup, repairing the pushed family-rule failure (`605718810`)
+- 2026-09-03  test(updates): bring addonUpdateChecker to zero open mutation gaps (`b488b68bb`)
