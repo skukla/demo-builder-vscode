@@ -927,6 +927,43 @@
             "decision": "none \u2014 the guard states the intent the catch would otherwise enforce by accident",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (deleteAdobeProjectHandler)"
+        },
+        {
+            "module": "src/features/authentication/handlers/workspaceHandlers.ts",
+            "category": "optionalChain",
+            "mutants": 2,
+            "anchors": [
+                "const currentProject = await context.authManager?.getCurrentProject();",
+                "const workspacesPromise = context.authManager?.getWorkspaces(payload);"
+            ],
+            "reason": "With no authManager, dropping either `?.` throws a TypeError at that read instead of reaching the `if (!workspacesPromise)` guard's own Error. Both land in the same catch, which maps every non-timeout failure to the same user message and UNKNOWN code, pushes the same `get-workspaces` error envelope and returns the same result \u2014 the pinned no-authManager outcome. The only trace is the message inside the logged error object, and asserting that is asserting a log string.",
+            "decision": "none \u2014 the guard after them is what carries the absence case, and it is pinned",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (workspaceHandlers)"
+        },
+        {
+            "module": "src/features/authentication/handlers/workspaceHandlers.ts",
+            "category": "optionalChain",
+            "mutants": 1,
+            "anchors": [
+                "projectId: payload?.projectId,"
+            ],
+            "reason": "The post-create refresh runs only after `if (!name) return`, and an absent payload yields an empty name, so the refresh is never reached with `payload` undefined. The missing-payload case is pinned at the name guard; a test that reaches the refresh without a payload would have to bypass the guard that makes the `?.` unreachable.",
+            "decision": "none \u2014 the read sits behind the guard that makes it unreachable",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (workspaceHandlers)"
+        },
+        {
+            "module": "src/features/authentication/handlers/workspaceHandlers.ts",
+            "category": "block",
+            "mutants": 1,
+            "anchors": [
+                "context.debugLogger.debug('[Workspace] Post-create refresh failed:', refreshError);"
+            ],
+            "reason": "The best-effort catch body (`} catch (refreshError) {`; the anchor is the body's own line) is a single debug line. Emptied, the refresh failure is swallowed all the same and the create still succeeds with `workspaces` omitted \u2014 which is pinned. Distinguishing the two means asserting a log string.",
+            "decision": "none \u2014 the debug line is kept for diagnosis, not behaviour",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (workspaceHandlers)"
         }
     ]
 }

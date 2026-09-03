@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/handlers/deleteAdobeProjectHandler.ts"
+        "src/features/authentication/handlers/workspaceHandlers.ts"
     ],
     "reporters": [
         "clear-text",

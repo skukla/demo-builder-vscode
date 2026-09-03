@@ -54,8 +54,20 @@ describe('workspaceHandlers - Create', () => {
 
         const result = await handleCreateAdobeWorkspace(ctx, { name: 'Stage' });
 
-        expect(result.success).toBe(false);
-        expect(result.error).toBeTruthy();
+        // The guard's OWN verdict — not the TypeError the try/catch would otherwise
+        // wrap as "Failed to create workspace: Cannot read properties of undefined".
+        expect(result).toEqual({ success: false, error: 'Authentication not available' });
+        expect(mockContext.authManager.testDeveloperPermissions).not.toHaveBeenCalled();
+    });
+
+    it('treats a missing payload as an empty name rather than throwing', async () => {
+        const result = await handleCreateAdobeWorkspace(
+            mockContext,
+            undefined as unknown as Parameters<typeof handleCreateAdobeWorkspace>[1],
+        );
+
+        expect(result).toEqual({ success: false, error: 'Workspace name is required.' });
+        expect(mockContext.authManager.createWorkspace).not.toHaveBeenCalled();
     });
 
     it('returns a permission-typed error and does NOT create when permission is denied', async () => {
@@ -66,8 +78,29 @@ describe('workspaceHandlers - Create', () => {
 
         const result = await handleCreateAdobeWorkspace(mockContext, { name: 'Stage' });
 
-        expect(result.success).toBe(false);
-        expect(result.code).toBe(ErrorCode.AUTH_FORBIDDEN);
+        // Console's own reason travels verbatim; the generic sentence is a fallback only.
+        expect(result).toEqual({
+            success: false,
+            code: ErrorCode.AUTH_FORBIDDEN,
+            error: 'Developer or System Admin role required.',
+        });
+        expect(mockContext.authManager.createWorkspace).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the generic permission sentence when the probe gives no reason', async () => {
+        mockContext.authManager.testDeveloperPermissions.mockResolvedValue({
+            hasPermissions: false,
+        });
+
+        const result = await handleCreateAdobeWorkspace(mockContext, { name: 'Stage' });
+
+        expect(result).toEqual({
+            success: false,
+            code: ErrorCode.AUTH_FORBIDDEN,
+            error:
+                'You do not have permission to create workspaces in this organization. ' +
+                'Select an existing workspace instead.',
+        });
         expect(mockContext.authManager.createWorkspace).not.toHaveBeenCalled();
     });
 

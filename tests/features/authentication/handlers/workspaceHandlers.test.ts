@@ -10,6 +10,8 @@ import {
     handleGetWorkspaces,
     handleSelectWorkspace,
 } from '@/features/authentication/handlers/workspaceHandlers';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { ErrorCode } from '@/types/errorCodes';
 import { HandlerContext } from '@/types/handlers';
 import { validateWorkspaceId } from '@/core/validation/validators/AdobeResourceValidator';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -183,6 +185,56 @@ describe('workspaceHandlers', () => {
             // Should still succeed but might not show loading message
             expect(result.success).toBe(true);
         });
+
+        it('fails closed when no auth manager is available', async () => {
+            const ctx = { ...mockContext, authManager: undefined };
+
+            const result = await handleGetWorkspaces(ctx);
+
+            // Without the presence guard an undefined promise reaches `withTimeout`,
+            // whose race settles at once with `undefined` — a SUCCESS carrying no list.
+            expect(result).toEqual({
+                success: false,
+                error: 'Failed to load workspaces. Please try again.',
+                code: ErrorCode.UNKNOWN,
+            });
+            expect(ctx.sendMessage).toHaveBeenCalledWith('get-workspaces', {
+                error: 'Failed to load workspaces. Please try again.',
+                code: ErrorCode.UNKNOWN,
+            });
+            expect(ctx.sendMessage).not.toHaveBeenCalledWith(
+                'workspace-loading-status',
+                expect.anything(),
+            );
+        });
+
+        it('times out the fetch at TIMEOUTS.NORMAL and not a moment sooner', async () => {
+            jest.useFakeTimers();
+            try {
+                mockAuthManager.getCurrentProject.mockResolvedValue(null);
+                mockAuthManager.getWorkspaces.mockReturnValue(new Promise(() => undefined));
+                let settled = false;
+                const pending = handleGetWorkspaces(mockContext).then((r) => {
+                    settled = true;
+                    return r;
+                });
+
+                // The deadline is the decision under test: emptied timeout options fire
+                // the race's timer at 0ms, which a fast-resolving mock never notices.
+                await jest.advanceTimersByTimeAsync(TIMEOUTS.NORMAL - 1);
+                expect(settled).toBe(false);
+
+                await jest.advanceTimersByTimeAsync(1);
+                const result = await pending;
+                expect(result).toMatchObject({ success: false, code: ErrorCode.TIMEOUT });
+                expect(mockContext.sendMessage).toHaveBeenCalledWith('get-workspaces', {
+                    error: expect.any(String),
+                    code: ErrorCode.TIMEOUT,
+                });
+            } finally {
+                jest.useRealTimers();
+            }
+        });
     });
 
     describe('handleSelectWorkspace', () => {
@@ -269,6 +321,15 @@ describe('workspaceHandlers', () => {
 
             await expect(handleSelectWorkspace(mockContext, { workspaceId })).rejects.toThrow(
                 'No project selected'
+            );
+            // The UI is told WHAT failed, not handed an empty envelope.
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('error', {
+                message: 'Failed to select workspace',
+                details: 'No project selected - cannot select workspace without project context',
+            });
+            expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
+                'workspaceSelected',
+                expect.anything(),
             );
         });
 
