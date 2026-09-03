@@ -460,6 +460,85 @@
             "decision": "none — the comment above the catch says why the list is omitted rather than emptied; the log is the trace of that",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeContextResolver.ts",
+            "anchors": [
+                "`[${orgList.map((o) => `\"${o.name}\" (${o.id})`).join(', ')}], using name as fallback`,",
+                "const projectName = projectValue.name || projectValue.id || 'Unknown';"
+            ],
+            "mutants": 6,
+            "category": "branch",
+            "reason": "Both anchors exist only to word a debug line. The first is the org-list rendering inside the 'could not find org' warning, wrapped onto its own line so the one-line classifier does not see the `warn(` above it. The second computes `projectName`, which is read by nothing but the debug line beneath it — the returned project is built from `projectValue` directly. Killing any of the six means asserting the wording of a log line.",
+            "decision": "OPEN for the instrument on the first anchor (enclosing-statement classification, as in the addonUpdateChecker row); none on the second — the name is the log's business",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeContextResolver)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeContextResolver.ts",
+            "anchors": [
+                "'[Context Resolver] Workspace is string format (not supported)',"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else branch for a string-shaped workspace is one debug line; control then reaches the same 'no workspace' return either way. Emptying it changes what is logged and nothing else.",
+            "decision": "none — the log says WHY there is no workspace, which the return value cannot",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeContextResolver)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeContextResolver.ts",
+            "anchors": [
+                "this.debugLogger.debug('[Context Resolver] Failed to get current organization:', error);",
+                "'[Context Resolver] Failed to fetch project list for ID lookup:',",
+                "this.debugLogger.debug('[Context Resolver] Failed to get current project:', error);",
+                "this.debugLogger.debug('[Context Resolver] Failed to get current workspace:', error);"
+            ],
+            "mutants": 4,
+            "category": "block",
+            "reason": "Four catch bodies, each one debug line and `return undefined`. Emptied, control falls off the end of an async function that returns undefined anyway. Every failure produces the same value with or without the catch body; only whether it is logged changes.",
+            "decision": "none — each explicit return says what the method means on failure",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeContextResolver)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeContextResolver.ts",
+            "anchors": [
+                "if (!context?.org) {",
+                "if (!context?.project) {",
+                "if (context.workspace) {"
+            ],
+            "mutants": 9,
+            "category": "branch",
+            "reason": "The three current-* readers wrap their body in the catch above, which returns undefined. For org and project: dropping the `?.` throws on a missing context, forcing the guard false (or emptying it) hands `undefined` to the parser, whose final 'not string or object' branch returns undefined — three mutants each, all landing on the value the guard returns. For workspace: the `!context` guard four lines above the anchor (its line is not unique in this module) and the anchor itself, forced open, reach `context.workspace` / `typeof undefined`, which throw into the catch or fall to the 'no workspace' return. Only the log lines differ.",
+            "decision": "none — the guards are the correct shape; the catch and the parsers' fall-through make their failure mode indistinguishable from their success mode",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeContextResolver)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeContextResolver.ts",
+            "anchors": [
+                "if (typeof orgValue === 'object') {",
+                "if (typeof projectValue === 'object') {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "After the string branch, the parameter type is the object shape, so the compiler already knows this check is true. What it guards is `aio console where` JSON the parseJSON cast does not validate — a number or boolean in the org/project slot. No typed fixture can carry that shape: the cache manager's return type and the response type both forbid it, so killing the mutant means a cast at the fixture boundary. Same shape as the installHandler and projectHandlers `payload?.` rows.",
+            "decision": "none — a boundary guard on unvalidated CLI JSON is correct even when the typed signature cannot exercise it; deleting it would turn a malformed answer into an org named 'Unknown'",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeContextResolver)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeContextResolver.ts",
+            "anchors": [
+                "if (matched) return matched;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this true returns `matched` unconditionally: the project on a hit, and `undefined` on a miss, which is exactly what the fall-through below returns after its debug line. The miss test pins the undefined and the absence of a cache write; the guard's only distinct effect is the debug line.",
+            "decision": "none — the early return reads as intended",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeContextResolver)"
         }
     ]
 }

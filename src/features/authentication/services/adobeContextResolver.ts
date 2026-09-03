@@ -75,8 +75,6 @@ export class AdobeContextResolver {
                 }
                 context = parsedContext;
                 this.cacheManager.setCachedConsoleWhere(context);
-            } else {
-                return undefined;
             }
         }
 

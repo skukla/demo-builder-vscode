@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "projectHandlers: probe streams, quiet reads, org-gate copy pinned; 13 catch-shadowed and log-only mutants recorded",
+    "_note": "adobeContextResolver: CLI call, list matching by name/code/id, field shaping pinned; 23 catch-shadowed and log-only mutants recorded",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -3872,29 +3872,27 @@
             "openGaps": 15
         },
         "src/features/authentication/services/adobeContextResolver.ts": {
-            "score": 51.27,
-            "killed": 101,
-            "survived": 63,
-            "noCoverage": 33,
+            "score": 74.49,
+            "killed": 146,
+            "survived": 40,
+            "noCoverage": 10,
             "timeout": 0,
             "survivorCategories": {
-                "string": 8,
-                "other": 4,
-                "logPresentation": 7,
-                "branch": 37,
+                "logPresentation": 8,
+                "string": 12,
+                "other": 1,
+                "branch": 12,
                 "block": 5,
                 "optionalChain": 2
             },
             "uncoveredCategories": {
-                "block": 8,
-                "string": 8,
-                "other": 7,
-                "branch": 4,
-                "logPresentation": 6
+                "string": 2,
+                "logPresentation": 5,
+                "block": 3
             },
-            "highValueSurvivors": 42,
-            "equivalent": 0,
-            "openGaps": 67
+            "highValueSurvivors": 17,
+            "equivalent": 23,
+            "openGaps": 0
         },
         "src/features/authentication/services/adobeEntityFetcher.ts": {
             "score": 83.33,

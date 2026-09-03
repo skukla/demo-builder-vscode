@@ -14,6 +14,8 @@ import type { AdobeEntityFetcher } from '@/features/authentication/services/adob
 jest.mock('@/types/typeGuards');
 
 import { getLogger } from '@/core/logging/debugLogger';
+import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { parseJSON } from '@/types/typeGuards';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
@@ -332,6 +334,234 @@ describe('AdobeContextResolver', () => {
             expect(result.org).toBeDefined();
             expect(result.project).toBeUndefined();
             expect(result.workspace).toBeUndefined();
+        });
+    });
+    describe('getConsoleWhereContext() — the CLI call and what counts as an answer', () => {
+        const cliAnswer = (code: number, stdout: string) => ({ stdout, stderr: '', code, duration: 0 });
+
+        it('runs console where as JSON, under the mesh node version, with the NORMAL timeout', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(cliAnswer(0, '{}'));
+
+            await resolver.getConsoleWhereContext();
+
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith('aio console where --json', {
+                encoding: 'utf8',
+                timeout: TIMEOUTS.NORMAL,
+                useNodeVersion: getMeshNodeVersion(),
+            });
+        });
+
+        it.each([
+            ['a non-zero exit with output', cliAnswer(1, '{"org":"Org"}')],
+            ['a zero exit with no output', cliAnswer(0, '')],
+        ])('%s is no context and caches nothing', async (_what, answer) => {
+            mockCommandExecutor.execute.mockResolvedValue(answer);
+
+            await expect(resolver.getConsoleWhereContext()).resolves.toBeUndefined();
+            expect(mockCacheManager.setCachedConsoleWhere).not.toHaveBeenCalled();
+        });
+
+        it('output that is not JSON is no context and caches nothing', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(cliAnswer(0, 'not json'));
+
+            await expect(resolver.getConsoleWhereContext()).resolves.toBeUndefined();
+            expect(mockCacheManager.setCachedConsoleWhere).not.toHaveBeenCalled();
+        });
+
+        it('caches exactly what the CLI answered', async () => {
+            const answered = { org: { id: 'org1', name: 'CLI Org', code: 'ORG@AdobeOrg' } };
+            mockCommandExecutor.execute.mockResolvedValue(cliAnswer(0, JSON.stringify(answered)));
+
+            await expect(resolver.getConsoleWhereContext()).resolves.toEqual(answered);
+            expect(mockCacheManager.setCachedConsoleWhere).toHaveBeenCalledWith(answered);
+        });
+    });
+
+    describe('getCurrentOrganization() — resolving a string org against the list', () => {
+        const ORG1 = { id: 'Org1', code: 'ORG@AdobeOrg', name: 'Organization Name' };
+        const ORG2 = { id: 'Org2', code: 'OTHER@AdobeOrg', name: 'Other Org' };
+
+        beforeEach(() => {
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
+        });
+
+        it.each([
+            ['its name, ignoring case and padding', '  organization NAME  '],
+            ['its code, ignoring case', 'org@adobeorg'],
+            ['its id, ignoring case', 'org1'],
+        ])('matches an org by %s', async (_how, consoleOrg) => {
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({ org: consoleOrg });
+            mockCacheManager.getCachedOrgList.mockReturnValue([ORG2, ORG1]);
+
+            await expect(resolver.getCurrentOrganization()).resolves.toEqual(ORG1);
+            expect(mockCacheManager.setCachedOrganization).toHaveBeenCalledWith(ORG1);
+        });
+
+        it.each([
+            ['name', 'organization name'],
+            ['code', 'org@adobeorg'],
+            ['id', 'org1'],
+        ])('padding on the LIST side never decides a %s match either', async (_field, consoleOrg) => {
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({ org: consoleOrg });
+            const padded = { id: ' Org1 ', code: ' ORG@AdobeOrg ', name: '  Organization Name ' };
+            mockCacheManager.getCachedOrgList.mockReturnValue([ORG2, padded]);
+
+            await expect(resolver.getCurrentOrganization()).resolves.toEqual(padded);
+        });
+
+        it('an EMPTY cached list is a miss: the list is fetched', async () => {
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({ org: 'Organization Name' });
+            mockCacheManager.getCachedOrgList.mockReturnValue([]);
+            mockFetcher.getOrganizations.mockResolvedValue([ORG1]);
+
+            await expect(resolver.getCurrentOrganization()).resolves.toEqual(ORG1);
+            expect(mockFetcher.getOrganizations).toHaveBeenCalledTimes(1);
+        });
+
+        it('an org in neither list nor fetch falls back to a name-shaped org, and caches it', async () => {
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({ org: 'Unknown Org' });
+            mockFetcher.getOrganizations.mockResolvedValue([ORG1]);
+
+            const fallback = { id: 'Unknown Org', code: 'Unknown Org', name: 'Unknown Org' };
+            await expect(resolver.getCurrentOrganization()).resolves.toEqual(fallback);
+            expect(mockCacheManager.setCachedOrganization).toHaveBeenCalledWith(fallback);
+        });
+
+        it('a list fetch that fails is an empty list: the name-shaped fallback, not nothing', async () => {
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({ org: 'Organization Name' });
+            mockFetcher.getOrganizations.mockRejectedValue(new Error('network'));
+
+            await expect(resolver.getCurrentOrganization()).resolves.toEqual({
+                id: 'Organization Name',
+                code: 'Organization Name',
+                name: 'Organization Name',
+            });
+        });
+
+        it('a whitespace-only org is no org: nothing is resolved or cached', async () => {
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({ org: '   ' });
+
+            await expect(resolver.getCurrentOrganization()).resolves.toBeUndefined();
+            expect(mockFetcher.getOrganizations).not.toHaveBeenCalled();
+            expect(mockCacheManager.setCachedOrganization).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('getCurrentOrganization() — an object org is taken field by field', () => {
+        beforeEach(() => {
+            mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
+        });
+
+        it('keeps id, code and name when all three are present', async () => {
+            const org = { id: 'org1', code: 'ORG@AdobeOrg', name: 'Context Org' };
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({ org });
+
+            await expect(resolver.getCurrentOrganization()).resolves.toEqual(org);
+        });
+
+        it('fills a missing id and code from the name', async () => {
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                org: { id: '', code: '', name: 'Named Only' },
+            });
+
+            await expect(resolver.getCurrentOrganization()).resolves.toEqual({
+                id: 'Named Only',
+                code: 'Named Only',
+                name: 'Named Only',
+            });
+        });
+
+        it('fills a missing name and code from the id', async () => {
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                org: { id: 'org1', code: '', name: '' },
+            });
+
+            await expect(resolver.getCurrentOrganization()).resolves.toEqual({
+                id: 'org1',
+                code: 'org1',
+                name: 'org1',
+            });
+        });
+    });
+
+    describe('getCurrentProject() — matching and shaping', () => {
+        beforeEach(() => {
+            mockCacheManager.getCachedProject.mockReturnValue(undefined);
+        });
+
+        it.each([
+            ['name', 'Kukla Mesh'],
+            ['title', 'KM'],
+        ])('a string project matches the list by %s alone', async (_by, consoleProject) => {
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({ project: consoleProject });
+            const listed = { id: 'proj1', name: 'Kukla Mesh', title: 'KM' };
+            mockFetcher.getProjects.mockResolvedValue([{ id: 'proj0', name: 'Other', title: 'Other' }, listed]);
+
+            await expect(resolver.getCurrentProject()).resolves.toEqual(listed);
+            expect(mockCacheManager.setCachedProject).toHaveBeenCalledWith(listed);
+        });
+
+        it('an object project keeps its own title', async () => {
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                project: { id: 'proj1', name: 'Context Project', title: 'A Title', description: 'd', org_id: 'org1' },
+            });
+
+            await expect(resolver.getCurrentProject()).resolves.toEqual({
+                id: 'proj1',
+                name: 'Context Project',
+                title: 'A Title',
+                description: 'd',
+                org_id: 'org1',
+            });
+        });
+
+        it('an object project without a title is titled by its name', async () => {
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                project: { id: 'proj1', name: 'Context Project' },
+            });
+
+            await expect(resolver.getCurrentProject()).resolves.toEqual({
+                id: 'proj1',
+                name: 'Context Project',
+                title: 'Context Project',
+                description: undefined,
+                org_id: undefined,
+            });
+        });
+    });
+
+    describe('getCurrentWorkspace() — shaping', () => {
+        beforeEach(() => {
+            mockCacheManager.getCachedWorkspace.mockReturnValue(undefined);
+        });
+
+        it('keeps the workspace title when it differs from the name', async () => {
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                workspace: { id: 'ws1', name: 'Stage', title: 'Staging' },
+            });
+
+            const shaped = { id: 'ws1', name: 'Stage', title: 'Staging' };
+            await expect(resolver.getCurrentWorkspace()).resolves.toEqual(shaped);
+            expect(mockCacheManager.setCachedWorkspace).toHaveBeenCalledWith(shaped);
+        });
+
+        it('titles a workspace without a title by its name', async () => {
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                workspace: { id: 'ws1', name: 'Stage' },
+            });
+
+            await expect(resolver.getCurrentWorkspace()).resolves.toEqual({
+                id: 'ws1',
+                name: 'Stage',
+                title: 'Stage',
+            });
+        });
+
+        it('no console context at all is no workspace, and caches nothing', async () => {
+            mockCommandExecutor.execute.mockResolvedValue({ stdout: '', stderr: '', code: 1, duration: 0 });
+
+            await expect(resolver.getCurrentWorkspace()).resolves.toBeUndefined();
+            expect(mockCacheManager.setCachedWorkspace).not.toHaveBeenCalled();
         });
     });
 });
