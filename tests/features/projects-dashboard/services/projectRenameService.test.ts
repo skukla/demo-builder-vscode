@@ -372,7 +372,7 @@ describe('remote Adobe I/O project title sync', () => {
                 projectId: 'proj-1',
                 projectTitle: remoteTitle,
             },
-        } as Partial<Project>);
+        });
     }
 
     beforeEach(() => {

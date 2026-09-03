@@ -167,7 +167,7 @@ export function makeSyncTargetProject(): Project {
                 metadata: { githubRepo: 'demo-org/demo-repo', liveUrl: 'https://live.example' },
             },
         },
-    } as Partial<Project>);
+    });
 }
 
 export function setGitHubTokenServiceReturns(token: string | undefined): void {

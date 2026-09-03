@@ -17,7 +17,6 @@ import { makeEdsProject, EDS_STOREFRONT_PATH, makeHeadlessProject } from './aiBu
 import * as path from 'path';
 import { makeTestWriter } from './generatedFileWriter.testUtils';
 import { resolveMcpSocketPath } from '@/core/utils/mcpSocketPath';
-import type { Project } from '@/types/base';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -178,7 +177,7 @@ describe('MCP config content', () => {
                     path: '/projects/headless-project/components/headless-commerce-mesh',
                 },
             },
-        } as Partial<Project>);
+        });
         await writeMcpConfigs(
             '/projects/headless-project',
             project,

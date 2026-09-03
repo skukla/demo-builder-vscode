@@ -78,7 +78,7 @@ function edsProject(): Project {
                 },
             },
         },
-    } as Partial<Project>);
+    });
 }
 
 function service(): TemplateSyncService {

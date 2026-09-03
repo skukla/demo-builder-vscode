@@ -174,7 +174,7 @@ describe('regenerateProjectEnvFiles', () => {
                     endpoint: 'https://keyed-mesh.adobe.io/graphql',
                 },
             },
-        } as Partial<Project>);
+        });
 
         await regenerateProjectEnvFiles(project, registry, createMockLogger(), secretsFake);
 

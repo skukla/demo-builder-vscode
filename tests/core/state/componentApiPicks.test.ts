@@ -27,14 +27,14 @@ describe('resolveDesiredApis', () => {
                 'erp-sync': ['AssetsSDK', 'FireflySDK'],
                 loyalty: ['AssetsSDK', 'EventsSDK'],
             },
-        } as Partial<Project>);
+        });
 
         expect(resolveDesiredApis(p).sort()).toEqual(['AssetsSDK', 'EventsSDK', 'FireflySDK']);
     });
 
     it('returns an empty list when nothing is picked', () => {
         expect(resolveDesiredApis(project())).toEqual([]);
-        expect(resolveDesiredApis(project({ componentApiPicks: {} } as Partial<Project>))).toEqual(
+        expect(resolveDesiredApis(project({ componentApiPicks: {} }))).toEqual(
             []
         );
     });
@@ -43,7 +43,7 @@ describe('resolveDesiredApis', () => {
         // Un-migrated project (older manifest, or one loaded by a path that does
         // not migrate). The union must still be correct, not empty — an empty
         // desired set would unsubscribe everything on the next PUT.
-        const p = project({ additionalConsoleApis: ['AssetsSDK'] } as Partial<Project>);
+        const p = project({ additionalConsoleApis: ['AssetsSDK'] });
 
         expect(resolveDesiredApis(p)).toEqual(['AssetsSDK']);
     });
@@ -52,7 +52,7 @@ describe('resolveDesiredApis', () => {
         const p = project({
             componentApiPicks: { 'erp-sync': ['FireflySDK'] },
             additionalConsoleApis: ['AssetsSDK'],
-        } as Partial<Project>);
+        });
 
         expect(resolveDesiredApis(p)).toEqual(['FireflySDK']);
     });
@@ -60,7 +60,7 @@ describe('resolveDesiredApis', () => {
     it('drops empty entries so a cleared component contributes nothing', () => {
         const p = project({
             componentApiPicks: { 'erp-sync': [], loyalty: ['AssetsSDK'] },
-        } as Partial<Project>);
+        });
 
         expect(resolveDesiredApis(p)).toEqual(['AssetsSDK']);
     });
@@ -73,7 +73,7 @@ describe('migrateApiPicks', () => {
         // models (RESERVED_EXISTING_KEY) for exactly this case.
         const p = project({
             additionalConsoleApis: ['AssetsSDK', 'FireflySDK'],
-        } as Partial<Project>);
+        });
 
         const migrated = migrateApiPicks(p);
 
@@ -87,7 +87,7 @@ describe('migrateApiPicks', () => {
         const p = project({
             componentApiPicks: picks,
             additionalConsoleApis: ['FireflySDK'],
-        } as Partial<Project>);
+        });
 
         expect(migrateApiPicks(p).componentApiPicks).toBe(picks);
     });
@@ -97,13 +97,13 @@ describe('migrateApiPicks', () => {
         // empty object would persist a meaningless field into every manifest.
         expect(migrateApiPicks(project()).componentApiPicks).toBeUndefined();
         expect(
-            migrateApiPicks(project({ additionalConsoleApis: [] } as Partial<Project>))
+            migrateApiPicks(project({ additionalConsoleApis: [] }))
                 .componentApiPicks
         ).toBeUndefined();
     });
 
     it('does not mutate the input project', () => {
-        const p = project({ additionalConsoleApis: ['AssetsSDK'] } as Partial<Project>);
+        const p = project({ additionalConsoleApis: ['AssetsSDK'] });
 
         migrateApiPicks(p);
 
@@ -123,7 +123,7 @@ describe('migration is UNION-PRESERVING', () => {
         [['AssetsSDK', 'FireflySDK', 'EventsSDK']],
         [['AssetsSDK', 'AssetsSDK']], // a duplicated legacy entry
     ])('resolveDesiredApis(migrate(p)) === the pre-migration set: %j', (flat) => {
-        const before = project({ additionalConsoleApis: flat } as Partial<Project>);
+        const before = project({ additionalConsoleApis: flat });
 
         const beforeSet = [...new Set(resolveDesiredApis(before))].sort();
         const afterSet = [...new Set(resolveDesiredApis(migrateApiPicks(before)))].sort();

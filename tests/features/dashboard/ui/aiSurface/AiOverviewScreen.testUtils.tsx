@@ -120,7 +120,7 @@ export function makeProjectWithUserPrompts(): Project {
             { id: 'u1', title: 'My first user prompt', prompt: 'Do thing one' },
             { id: 'u2', title: 'My second user prompt', prompt: 'Do thing two' },
         ],
-    } as Partial<Project>);
+    });
 }
 
 // ─── Render helpers ──────────────────────────────────────────────────────────

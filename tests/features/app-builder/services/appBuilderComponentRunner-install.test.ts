@@ -13,7 +13,6 @@ import {
     deployAppBuilderComponent,
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { Project } from '@/types/base';
 import {
     INTEGRATION_ENTRY,
     createDeps,
@@ -236,7 +235,7 @@ describe('install-after-deploy wiring', () => {
                     path: '/proj/components/order-sync',
                 },
             },
-        } as Partial<Project>);
+        });
 
         const result = await deployAppBuilderComponent(project, 'order-sync', deps);
 
@@ -262,7 +261,7 @@ describe('install-after-deploy wiring', () => {
                     path: '/proj/components/my-app',
                 },
             },
-        } as Partial<Project>);
+        });
 
         await deployAppBuilderComponent(project, 'my-app', deps);
 

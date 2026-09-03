@@ -36,9 +36,14 @@ describe('pickSampleSku', () => {
                 selectedStack: 'eds-accs',
                 edsStorefrontStatusSummary: status,
                 componentInstances: {
-                    'eds-storefront': { metadata: { githubRepo: 'acme/shop' } },
+                    'eds-storefront': {
+                        id: 'eds-storefront',
+                        name: 'EDS Storefront',
+                        status: 'ready',
+                        metadata: { githubRepo: 'acme/shop' },
+                    },
                 },
-            } as unknown as Partial<Project>);
+            });
         }
 
         /** Route by URL: the CDN config vs the Catalog Service GraphQL POST. */

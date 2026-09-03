@@ -115,6 +115,7 @@ function edsProject(over: Partial<Project> = {}): Project {
         componentInstances: {
             'eds-storefront': {
                 id: 'eds-storefront',
+                name: 'EDS Storefront',
                 type: 'frontend',
                 status: 'ready',
                 metadata: {
@@ -125,7 +126,7 @@ function edsProject(over: Partial<Project> = {}): Project {
             },
         },
         ...over,
-    } as Partial<Project>);
+    });
 }
 
 function context(): HandlerContext {
@@ -448,14 +449,14 @@ describe('the surrounding cleanup that a delete must not skip', () => {
         // orphaned process holding a port.
         await deleteProjectFiles(
             context(),
-            plainProject({ status: 'running' } as Partial<Project>)
+            plainProject({ status: 'running' })
         );
 
         expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.stopDemo');
     });
 
     it('does not try to stop a demo that is not running', async () => {
-        await deleteProjectFiles(context(), plainProject({ status: 'ready' } as Partial<Project>));
+        await deleteProjectFiles(context(), plainProject({ status: 'ready' }));
 
         expect(mockExecuteCommand).not.toHaveBeenCalledWith('demoBuilder.stopDemo');
     });
