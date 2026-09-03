@@ -196,6 +196,43 @@
             "decision": "OPEN product question, not a test question — graceful degradation means a rate-limited SC sees \"no update\" indefinitely, identically to being current, with only a debug line to say why. If the extension should ever say \"I could not check\", this is where that decision lives.",
             "recorded": "2026-09-03",
             "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md — \"Measured, and deliberately NOT tested: updateManager's HTTP branches\""
+        },
+        {
+            "module": "src/features/updates/services/addonUpdateChecker.ts",
+            "anchors": [
+                "if (!lib.source?.owner || !lib.source?.repo || !lib.source?.branch) {"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "The type says source is required, so the three `?.` only guard a persisted manifest older than the type. Dropping any of them makes a missing source throw inside the same per-library try whose catch warns and continues — exactly what the guard does — so the outcome (the library skipped, one warning, the next library still checked) is identical and only the warning's text differs. That text is what the ratchet refuses to reward.",
+            "decision": "none — the guard says what it means, and the catch is the safety net for everything else on the line",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (addonUpdateChecker)"
+        },
+        {
+            "module": "src/features/updates/services/addonUpdateChecker.ts",
+            "anchors": [
+                "this.logger.warn(`[Updates] Could not fetch latest commit for ${lib.source.owner}/${lib.source.repo}`);"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The guard on a null branch lookup (`if (!latestCommit)` above this line — the anchor is its body because the same condition also opens the SDK guard). With the guard removed or its body emptied, a null latestCommit reaches the debug line that calls latestCommit.slice, which throws into the per-library catch: one warning, continue, no comparison — the same outcome as the guard. Only the warning's text differs. The SDK twin of this guard IS killed, because there the catch logs on a different channel (error, not warn).",
+            "decision": "none — an explicit skip beats relying on a TypeError in a log line",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (addonUpdateChecker)"
+        },
+        {
+            "module": "src/features/updates/services/addonUpdateChecker.ts",
+            "anchors": [
+                "`[Updates] Library \"${lib.name}\": ${lib.commitSha.slice(0, 7)} → ${latestCommit.slice(0, 7)}`,",
+                "`[Updates] Inspector SDK: ${currentCommit.slice(0, 7)} → ${latestCommit.slice(0, 7)}`,"
+            ],
+            "mutants": 4,
+            "category": "other",
+            "reason": "Four `.slice(0, 7)` calls that shorten SHAs inside two debug messages. They are log presentation — the same mutants on the one-line debug calls a few lines up are classified as such and not counted — but here the message wraps onto its own line, and the classifier reads one line, so it does not see the `this.logger.debug(` that opens the statement above. Killing them means asserting the wording of a debug line.",
+            "decision": "OPEN for the instrument, not the module — classify() in scripts/mutationBaseline.mjs could look at the enclosing statement rather than the single line; then these four rows are not needed",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (addonUpdateChecker)"
         }
     ]
 }

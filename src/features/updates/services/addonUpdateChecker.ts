@@ -56,7 +56,7 @@ export class AddonUpdateChecker {
      */
     async checkBlockLibraries(project: Project): Promise<BlockLibraryUpdateResult[]> {
         const libraries = project.installedBlockLibraries;
-        if (!libraries || libraries.length === 0) {
+        if (!libraries) {
             return [];
         }
 

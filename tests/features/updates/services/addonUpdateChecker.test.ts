@@ -8,12 +8,9 @@ import {
     BlockLibraryUpdateResult,
     InspectorSdkUpdateResult,
 } from '@/features/updates/services/addonUpdateChecker';
-import type { Project } from '@/types/base';
-import type { InstalledBlockLibrary } from '@/types/blockLibraries';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
-
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { makeCheckerSecrets, makeLibrary, makeProject } from './addonUpdateChecker.testUtils';
 jest.mock('@/features/eds/services/inspectorHelpers', () => ({
     SDK_SOURCE: {
         owner: 'skukla',
@@ -30,45 +27,17 @@ global.fetch = jest.fn();
 describe('AddonUpdateChecker', () => {
     let checker: AddonUpdateChecker;
     let mockLogger: Logger;
-    let mockSecrets: ReturnType<typeof createMockSecretStorage>['secrets'];
+    let mockSecrets: ReturnType<typeof makeCheckerSecrets>;
 
     beforeEach(() => {
         jest.clearAllMocks();
 
         mockLogger = createMockLogger() as unknown as Logger;
 
-        // Keyed store rather than a blanket `get`: production reads `githubToken`,
-        // and a fake that answers to every key cannot notice if that name changes.
-        mockSecrets = createMockSecretStorage({ githubToken: 'fake-github-token' }).secrets;
+        mockSecrets = makeCheckerSecrets();
 
         checker = new AddonUpdateChecker(mockSecrets, mockLogger);
     });
-
-    // -------------------------------------------------------------------------
-    // Helper factories
-    // -------------------------------------------------------------------------
-
-    function makeLibrary(overrides: Partial<InstalledBlockLibrary> = {}): InstalledBlockLibrary {
-        return {
-            name: 'Test Library',
-            source: { owner: 'acme', repo: 'blocks', branch: 'main' },
-            commitSha: 'aaa111',
-            blockIds: ['hero', 'footer'],
-            installedAt: '2025-01-01T00:00:00Z',
-            ...overrides,
-        };
-    }
-
-    function makeProject(overrides: Partial<Project> = {}): Project {
-        return {
-            name: 'test-project',
-            created: new Date(),
-            lastModified: new Date(),
-            path: '/tmp/test',
-            status: 'ready',
-            ...overrides,
-        };
-    }
 
     /** Mock fetch to respond to branches and compare endpoints */
     function mockGitHubApi(
