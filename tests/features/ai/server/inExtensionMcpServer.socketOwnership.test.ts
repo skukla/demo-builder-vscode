@@ -74,8 +74,28 @@ const GATE_WAIT_MS = 300;
  */
 const REACHABLE_BUDGET_MS = 5_000;
 
-/** Ceiling on one `start()` — well under jest's 10s, so the step is named. */
-const STEP_BUDGET_MS = 3_000;
+/**
+ * This file binds and rebinds REAL unix sockets, so its steps are at the mercy
+ * of whatever else the run is doing. Raised above the 10s project default —
+ * never below it, which `tests/sop/no-lowered-test-timeout.test.ts` bans — so a
+ * slow machine reports a slow step instead of a failed suite.
+ */
+jest.setTimeout(30_000);
+
+/**
+ * Ceiling on one `start()`.
+ *
+ * 3s failed a full-suite run on 2026-09-03 while the same file passed alone four
+ * times in 1.26s — so `start()` was not hanging, it was SLOW under the
+ * contention of 1,222 suites, and the ceiling was measuring the machine rather
+ * than the code.
+ *
+ * The budget exists to NAME a hung step, not to fail on load. 8s is far above
+ * anything observed in isolation and still well inside this file's raised
+ * timeout, so a genuine hang is still reported as `start() did not settle`
+ * rather than as a bare jest timeout naming nothing.
+ */
+const STEP_BUDGET_MS = 8_000;
 
 /** Let the socket close / cleanup callbacks settle before asserting. */
 const SETTLE_MS = 50;
