@@ -26,7 +26,10 @@
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { generateAIContextFiles } from '@/features/project-creation/services/aiBundle/aiBundleService';
+import {
+    generateAIContextFiles,
+    type AiBundleRefreshResult,
+} from '@/features/project-creation/services/aiBundle/aiBundleService';
 import { resolveMcpToolsDir } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
@@ -66,7 +69,7 @@ export async function applyAdobeMcpUpdate(
         throw new Error(`npm update failed: ${result.stderr || result.stdout}`);
     }
 
-    let generated;
+    let generated: AiBundleRefreshResult;
     try {
         generated = await generateAIContextFiles(project.path, project, ctx.extensionPath);
     } catch (err) {
@@ -84,7 +87,7 @@ export async function applyAdobeMcpUpdate(
     // user-edited files alone — name them so the skip is an event.
     ctx.logger.info(
         `[Updates] Regenerated AI bundle after ${packageName} npm update; ` +
-            `skipped (user-edited): [${(generated?.report?.skipped ?? []).join(', ')}]`,
+            `skipped (user-edited): [${generated.report.skipped.join(', ')}]`,
     );
 
     // Persist the freshness stamp + hashes generateAIContextFiles set on
