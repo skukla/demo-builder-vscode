@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/updates/services/releaseTrack.ts"
+        "src/features/updates/services/componentRepositoryResolver.ts"
     ],
     "reporters": [
         "clear-text",

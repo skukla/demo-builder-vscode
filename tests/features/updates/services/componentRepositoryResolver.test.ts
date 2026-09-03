@@ -4,7 +4,9 @@
  * Tests the resolver that extracts Git repository URLs from components.json
  */
 
+import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { ComponentRepositoryResolver } from '@/features/updates/services/componentRepositoryResolver';
+import type { RawComponentRegistry } from '@/types/components';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
@@ -127,6 +129,72 @@ describe('ComponentRepositoryResolver', () => {
         it('should return null for invalid URLs', () => {
             const result = resolver.extractRepositoryFromUrl('not-a-url');
             expect(result).toBeNull();
+        });
+
+        it('accepts a plain http URL', () => {
+            expect(resolver.extractRepositoryFromUrl('http://github.com/skukla/repo')).toBe(
+                'skukla/repo'
+            );
+        });
+
+        it('strips .git only as a suffix, so a Pages repo keeps its name', () => {
+            expect(
+                resolver.extractRepositoryFromUrl('https://github.com/skukla/skukla.github.io')
+            ).toBe('skukla/skukla.github.io');
+        });
+
+        it('rejects a URL that merely mentions github.com after another host', () => {
+            expect(
+                resolver.extractRepositoryFromUrl(
+                    'https://example.com/redirect?to=https://github.com/skukla/repo'
+                )
+            ).toBeNull();
+        });
+    });
+
+    describe('a registry the real components.json cannot produce', () => {
+        /** Stand in for the real load; this is the one seam the resolver reads through. */
+        function loadRegistry(registry: RawComponentRegistry): void {
+            jest.spyOn(ConfigurationLoader.prototype, 'load').mockResolvedValue(registry);
+        }
+
+        afterEach(() => jest.restoreAllMocks());
+
+        it('skips a category the registry does not have, and keeps the others', async () => {
+            loadRegistry({
+                version: '3.0.0',
+                mesh: {
+                    'some-mesh': {
+                        name: 'Some Mesh',
+                        source: { type: 'git', url: 'https://github.com/skukla/some-mesh' },
+                    },
+                },
+            });
+
+            const repositories = await resolver.getAllRepositories();
+
+            expect([...repositories.keys()]).toEqual(['some-mesh']);
+        });
+
+        it('leaves out a component whose git URL cannot be parsed, and warns once', async () => {
+            loadRegistry({
+                version: '3.0.0',
+                tools: {
+                    'odd-tool': {
+                        name: 'Odd Tool',
+                        source: { type: 'git', url: 'git@github.com:skukla/odd-tool.git' },
+                    },
+                    'fine-tool': {
+                        name: 'Fine Tool',
+                        source: { type: 'git', url: 'https://github.com/skukla/fine-tool' },
+                    },
+                },
+            });
+
+            const repositories = await resolver.getAllRepositories();
+
+            expect([...repositories.keys()]).toEqual(['fine-tool']);
+            expect(mockLogger.warn).toHaveBeenCalledTimes(1);
         });
     });
 
