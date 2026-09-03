@@ -206,3 +206,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(updates): bring templateSyncService to zero open mutation gaps (`23b3aae84`)
 - 2026-09-03  fix(updates): a failed component update reported "rollback failed" even when the rollback worked (`f83e47d89`)
 - 2026-09-03  fix(tests): assert the injected clone URL by part, not as a credential-shaped literal (`06f45af6a`)
+- 2026-09-03  test(updates): bring updateApplyService to zero open mutation gaps (`e251295e9`)
