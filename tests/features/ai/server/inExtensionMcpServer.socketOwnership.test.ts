@@ -83,19 +83,25 @@ const REACHABLE_BUDGET_MS = 5_000;
 jest.setTimeout(30_000);
 
 /**
- * Ceiling on one `start()`.
+ * Ceiling on one `start()` — a HANG detector, not a performance assertion.
  *
- * 3s failed a full-suite run on 2026-09-03 while the same file passed alone four
- * times in 1.26s — so `start()` was not hanging, it was SLOW under the
- * contention of 1,222 suites, and the ceiling was measuring the machine rather
- * than the code.
+ * Set twice too low already: 3s, then 8s, and both failed a full run while the
+ * file passed alone in 1.26s. That is not a slow `start()`. `start()` is a
+ * mkdir, a liveness probe capped at 500ms, and a bind — nothing in it can take
+ * seconds. What takes seconds is CPU starvation: under 1,222 suites this worker
+ * gets a fraction of a core, and every await measures the machine.
  *
- * The budget exists to NAME a hung step, not to fail on load. 8s is far above
- * anything observed in isolation and still well inside this file's raised
- * timeout, so a genuine hang is still reported as `start() did not settle`
- * rather than as a bare jest timeout naming nothing.
+ * So the budget is no longer guessed from observed timings, which is what made
+ * it wrong twice. It is bounded by the only number here that is not a guess —
+ * the file's own 30s timeout — and set well below it. A genuine hang still
+ * fails as `start() did not settle` rather than a bare jest timeout naming
+ * nothing, which is the entire reason this exists; a starved worker no longer
+ * fails at all.
+ *
+ * The contention itself is a real finding and is filed separately: three suites
+ * in this repo now fail only under full-suite load.
  */
-const STEP_BUDGET_MS = 8_000;
+const STEP_BUDGET_MS = 20_000;
 
 /** Let the socket close / cleanup callbacks settle before asserting. */
 const SETTLE_MS = 50;
