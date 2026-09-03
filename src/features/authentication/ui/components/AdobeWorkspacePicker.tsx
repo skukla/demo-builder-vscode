@@ -101,7 +101,7 @@ export function AdobeWorkspacePicker({
             : (items) =>
                   items.find(
                       (ws) =>
-                          ws.name?.toLowerCase().includes('stage') ||
+                          ws.name.toLowerCase().includes('stage') ||
                           ws.title?.toLowerCase().includes('stage'),
                   ),
         onSelect: (workspace) => {

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeWorkspacePicker } from '@/features/authentication/ui/components/AdobeWorkspacePicker';
-import { WizardState } from '@/types/webview';
+import type { WizardState, Workspace } from '@/types/webview';
 import '@testing-library/jest-dom';
 
 // Mock WebviewClient
@@ -82,6 +82,64 @@ describe('AdobeWorkspacePicker', () => {
 
         it('searches title and name', () => {
             expect(configPassed().searchFields).toEqual(['title', 'name']);
+        });
+
+        it('threads an undefined orgId when no org is selected, rather than throwing', () => {
+            // The Add-Integration flow can mount this picker before an org is chosen.
+            const config = configPassed({ ...baseState, adobeOrg: undefined });
+            expect(config.messagePayload).toEqual({ orgId: undefined, projectId: 'project1' });
+        });
+
+        it('lets the load proceed once a project is selected', () => {
+            const validateBeforeLoad = configPassed().validateBeforeLoad as () => unknown;
+            expect(validateBeforeLoad()).toEqual({ valid: true });
+        });
+    });
+
+    /**
+     * The Stage finder is handed to the hook and called by IT, so the only way to
+     * pin what it decides is to call it with lists that differ in one respect each.
+     * The fixture list has Stage FIRST, which is why "returns the first item" passed
+     * as "finds Stage" until these were written.
+     */
+    describe('the Stage finder it hands useSelectionStep', () => {
+        function stageFinder(): (items: Workspace[]) => Workspace | undefined {
+            mockUseSelectionStep.mockReturnValue(createMockUseSelectionStepReturn({}));
+            render(
+                <Provider theme={defaultTheme}>
+                    <AdobeWorkspacePicker
+                        state={baseState as WizardState}
+                        updateState={mockUpdateState}
+                    />
+                </Provider>
+            );
+            return mockUseSelectionStep.mock.calls[0][0].autoSelectCustom;
+        }
+
+        it('finds Stage wherever it sits in the list', () => {
+            const [stage, production, development] = mockWorkspaces;
+            expect(stageFinder()([production, development, stage])?.id).toBe('workspace1');
+        });
+
+        it('finds nothing when no workspace mentions stage', () => {
+            const [, production, development] = mockWorkspaces;
+            expect(stageFinder()([production, development])).toBeUndefined();
+        });
+
+        it('matches on the name alone', () => {
+            const byName: Workspace = { id: 'w', name: 'stage-eu', title: 'Pre-Production' };
+            expect(stageFinder()([mockWorkspaces[1], byName])?.id).toBe('w');
+        });
+
+        it('matches on the title alone', () => {
+            const byTitle: Workspace = { id: 'w', name: 'ws-2', title: 'Stage Environment' };
+            expect(stageFinder()([mockWorkspaces[1], byTitle])?.id).toBe('w');
+        });
+
+        it('matches regardless of case, and tolerates a workspace with no title', () => {
+            const untitled: Workspace = { id: 'p', name: 'Production' };
+            const shouting: Workspace = { id: 'w', name: 'STAGE' };
+            expect(stageFinder()([untitled, shouting])?.id).toBe('w');
         });
     });
     const mockUpdateState = jest.fn();

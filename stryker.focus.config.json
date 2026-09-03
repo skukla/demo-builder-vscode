@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/tokenManager.ts"
+        "src/features/authentication/ui/components/AdobeWorkspacePicker.tsx"
     ],
     "reporters": [
         "clear-text",
