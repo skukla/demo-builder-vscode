@@ -233,6 +233,19 @@
             "decision": "OPEN for the instrument, not the module — classify() in scripts/mutationBaseline.mjs could look at the enclosing statement rather than the single line; then these four rows are not needed",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (addonUpdateChecker)"
+        },
+        {
+            "module": "src/features/updates/services/forkSyncService.ts",
+            "anchors": [
+                "const parentFullName = repoData.parent?.full_name;",
+                "const parentBranch = repoData.parent?.default_branch ?? defaultBranch;"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "GitHub's payload for a repository with fork:true always carries `parent`; the `?.` exist because the response type declares it optional. The only test that kills either chain hands the service a fork WITHOUT a parent and then pins what the code does next — a compare against the head `undefined:main` — which is a behaviour nobody wants asserted. Dropping the chains would turn that impossible payload into a caught TypeError and a null, which is arguably better, but is a behaviour change, not dead code.",
+            "decision": "OPEN, small — a `if (!repoData.parent) return null` guard before the compare would make both chains unnecessary and the impossible case explicit; outside this batch's remit",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (forkSyncService)"
         }
     ]
 }

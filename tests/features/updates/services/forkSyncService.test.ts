@@ -13,31 +13,17 @@
  */
 
 
-// Mock global fetch
-global.fetch = jest.fn();
-
-import { ForkSyncService } from '@/features/updates/services/forkSyncService';
+import { ForkSyncService } from './forkSyncService.testUtils';
+import { createForkSyncHarness, fetchMock as mockFetch } from './forkSyncService.testUtils';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
 describe('ForkSyncService', () => {
     let service: ForkSyncService;
-    let mockSecrets: any;
-    let mockLogger: any;
-    const mockFetch = global.fetch as jest.Mock;
+    let mockLogger: ReturnType<typeof createMockLogger>;
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        mockSecrets = {
-            get: jest.fn().mockResolvedValue('test-github-token'),
-            store: jest.fn(),
-            delete: jest.fn(),
-            onDidChange: jest.fn(),
-        };
-
-        mockLogger = createMockLogger();
-
-        service = new ForkSyncService(mockSecrets, mockLogger);
+        ({ service, logger: mockLogger } = createForkSyncHarness());
     });
 
     describe('checkForkStatus', () => {
