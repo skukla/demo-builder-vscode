@@ -282,6 +282,18 @@
             "decision": "none — reading defensively is clearer than relying on the catch",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (githubApiClient)"
+        },
+        {
+            "module": "src/features/updates/services/releaseTrack.ts",
+            "anchors": [
+                "if (!latestFinalVersion) return false;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The null guard on the latest final version. Without it a null reaches cleanTag inside the try below, where .replace on null throws a TypeError into the catch that returns the same false; an empty string reaches semver.gte, which throws the same way. The guard is required by the declared `string | null` type (cleanTag takes a string) and Stryker mutates with type checking off. Killing it would mean moving the cleanTag call out of the try so the mutant throws — a src change made only to expose a mutant.",
+            "decision": "none — required by the type and correct as written",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (releaseTrack)"
         }
     ]
 }

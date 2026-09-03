@@ -54,6 +54,10 @@ describe('releaseTrack', () => {
             expect(classifyTrack('v2.0.0-rc.1')).toBe('other');
         });
 
+        it('strips only a leading v; a v inside a prerelease identifier is kept', () => {
+            expect(classifyTrack('2.0.0-alpha.v')).toBe('early-access');
+        });
+
         it('classifies garbage as other without throwing', () => {
             expect(() => classifyTrack('invalid-version')).not.toThrow();
             expect(classifyTrack('invalid-version')).toBe('other');
@@ -107,6 +111,16 @@ describe('releaseTrack', () => {
             expect(selectLatestForChannel(alphas, 'early-access')?.tag_name).toBe('v2.0.0-alpha.5');
         });
 
+        it('picks the highest semver whatever order GitHub lists them in', () => {
+            const descending = [release('v2.0.0-alpha.5'), release('v2.0.0-alpha.1')];
+            expect(selectLatestForChannel(descending, 'early-access')?.tag_name).toBe(
+                'v2.0.0-alpha.5'
+            );
+
+            const shuffled = [release('v1.2.0'), release('v1.10.0'), release('v1.3.0')];
+            expect(selectLatestForChannel(shuffled, 'stable')?.tag_name).toBe('v1.10.0');
+        });
+
         it('never selects a draft release', () => {
             const withDraft = [release('v2.0.0-alpha.9', true), release('v2.0.0-alpha.1')];
             expect(selectLatestForChannel(withDraft, 'early-access')?.tag_name).toBe('v2.0.0-alpha.1');
@@ -141,6 +155,11 @@ describe('releaseTrack', () => {
 
         it('is false when the installed version is a beta (not an alpha)', () => {
             expect(shouldOfferGraduation('2.0.0-beta.1', '2.0.0')).toBe(false);
+        });
+
+        it('is false (no throw) when the latest final does not parse', () => {
+            expect(() => shouldOfferGraduation('2.0.0-alpha.1', 'garbage')).not.toThrow();
+            expect(shouldOfferGraduation('2.0.0-alpha.1', 'garbage')).toBe(false);
         });
 
         it('is false (no throw) for garbage input or a null final', () => {

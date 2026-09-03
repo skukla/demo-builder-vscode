@@ -46,8 +46,8 @@ export function shouldOfferGraduation(
     if (!latestFinalVersion) return false;
     const parsed = semver.parse(cleanTag(installedVersion));
     if (!parsed) return false;
-    const isAlpha = parsed.prerelease.length > 0 && String(parsed.prerelease[0]) === 'alpha';
-    if (!isAlpha) return false;
+    // A final has no identifiers, so the first one is undefined and fails this too.
+    if (String(parsed.prerelease[0]) !== 'alpha') return false;
     const base = `${parsed.major}.${parsed.minor}.${parsed.patch}`;
     try {
         return semver.gte(cleanTag(latestFinalVersion), base);
@@ -70,12 +70,7 @@ export function selectLatestForChannel(
     });
     if (eligible.length === 0) return null;
 
-    eligible.sort((a, b) => {
-        const va = cleanTag(a.tag_name);
-        const vb = cleanTag(b.tag_name);
-        if (semver.gt(va, vb)) return -1;
-        if (semver.lt(va, vb)) return 1;
-        return 0;
-    });
+    // Highest first. Every eligible tag parsed in classifyTrack, so this cannot throw.
+    eligible.sort((a, b) => semver.rcompare(cleanTag(a.tag_name), cleanTag(b.tag_name)));
     return eligible[0];
 }
