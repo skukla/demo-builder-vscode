@@ -313,7 +313,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-37` | chore | [The webview handshake's `stateVersion` is write-only](2026-09-02-webview-state-version-dead.md) | — | low | backlog |
 | `PL-38` | chore | [Our two most-mocked modules are faked 122 different ways](2026-09-02-webviewclient-mock-divergence.md) | — | med | built |
 | `PL-39` | chore | [An item can be marked done while its own body says what is left](2026-09-02-finished-items-carrying-remainders.md) | — | med | backlog |
-| `PL-40` | fix | [The wizard's configuration warnings reach nobody](2026-09-03-webview-warnings-reach-nobody.md) | — | med | backlog |
+| `PL-40` | question | [Can the wizard's configuration warnings even fire, and does anyone need them?](2026-09-03-webview-warnings-reach-nobody.md) | — | med | open |
 
 <!-- END GENERATED registry -->
 
