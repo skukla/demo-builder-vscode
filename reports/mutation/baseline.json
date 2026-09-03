@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "workspaceHandlers to zero open gaps (MUT-01)",
+    "_note": "adobeSDKClient to zero open gaps (MUT-01)",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -3946,23 +3946,19 @@
             "openGaps": 0
         },
         "src/features/authentication/services/adobeSDKClient.ts": {
-            "score": 60.42,
-            "killed": 29,
-            "survived": 17,
-            "noCoverage": 2,
+            "score": 84.21,
+            "killed": 32,
+            "survived": 6,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 7,
-                "block": 6,
-                "logPresentation": 4
+                "logPresentation": 5,
+                "block": 1
             },
-            "uncoveredCategories": {
-                "block": 1,
-                "logPresentation": 1
-            },
-            "highValueSurvivors": 13,
-            "equivalent": 0,
-            "openGaps": 14
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/features/authentication/services/adobeWorkspaceCredentials.ts": {
             "score": 79.27,

@@ -13,7 +13,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
  * - Error handling and fallback
  * - Security validation
  *
- * Total tests: 18
+ * Total tests: 21
  */
 
 // Mock dependencies
@@ -98,6 +98,7 @@ describe('AdobeSDKClient', () => {
         });
 
         it('should validate token before using it', async () => {
+            const sdk = require('@adobe/aio-lib-console');
             const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
 
             mockTokenManager.inspectToken.mockResolvedValue({
@@ -109,10 +110,73 @@ describe('AdobeSDKClient', () => {
             validateAccessToken.mockImplementation(() => {
                 throw new Error('Invalid token format');
             });
+            // An SDK that WOULD succeed, so a rejected token reaching it is visible.
+            sdk.init.mockResolvedValue({ initialized: true });
 
             await sdkClient.initialize();
 
+            expect(validateAccessToken).toHaveBeenCalledWith('token-with-metacharacters');
+            expect(sdk.init).not.toHaveBeenCalled();
             expect(sdkClient.isInitialized()).toBe(false);
+        });
+
+        it('never hands an expired-but-present token to the SDK', async () => {
+            const sdk = require('@adobe/aio-lib-console');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
+
+            // inspectToken returns the token alongside valid=false for an expired or
+            // corrupted store, so `valid` is the decision — not the token's presence.
+            mockTokenManager.inspectToken.mockResolvedValue({
+                valid: false,
+                token: 'expired-token',
+                expiresIn: -10,
+            });
+            sdk.init.mockResolvedValue({ initialized: true });
+
+            await sdkClient.initialize();
+
+            expect(validateAccessToken).not.toHaveBeenCalled();
+            expect(sdk.init).not.toHaveBeenCalled();
+            expect(sdkClient.isInitialized()).toBe(false);
+        });
+
+        it('does not call the SDK when a valid inspection carries no token', async () => {
+            const sdk = require('@adobe/aio-lib-console');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
+
+            mockTokenManager.inspectToken.mockResolvedValue({
+                valid: true,
+                expiresIn: 60,
+            });
+            sdk.init.mockResolvedValue({ initialized: true });
+
+            await sdkClient.initialize();
+
+            expect(validateAccessToken).not.toHaveBeenCalled();
+            expect(sdk.init).not.toHaveBeenCalled();
+            expect(sdkClient.isInitialized()).toBe(false);
+        });
+
+        it('retries on the next call after an attempt that produced no client', async () => {
+            const sdk = require('@adobe/aio-lib-console');
+            const { validateAccessToken } = require('@/core/validation/validators/AccessTokenValidator');
+
+            mockTokenManager.inspectToken
+                .mockResolvedValueOnce({ valid: false, expiresIn: -10 })
+                .mockResolvedValueOnce({ valid: true, token: 'valid-token', expiresIn: 60 });
+            validateAccessToken.mockImplementation(() => {});
+            sdk.init.mockResolvedValue({ initialized: true });
+
+            await sdkClient.initialize();
+            expect(sdk.init).not.toHaveBeenCalled();
+
+            // The finished attempt must release its in-flight slot, or the second
+            // call joins a settled promise and never re-inspects the token.
+            await sdkClient.initialize();
+
+            expect(mockTokenManager.inspectToken).toHaveBeenCalledTimes(2);
+            expect(sdk.init).toHaveBeenCalledWith('valid-token', 'aio-cli-console-auth');
+            expect(sdkClient.isInitialized()).toBe(true);
         });
 
         it('should handle SDK init failure gracefully', async () => {

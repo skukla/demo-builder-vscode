@@ -964,6 +964,18 @@
             "decision": "none \u2014 the debug line is kept for diagnosis, not behaviour",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (workspaceHandlers)"
+        },
+        {
+            "module": "src/features/authentication/services/adobeSDKClient.ts",
+            "category": "block",
+            "mutants": 1,
+            "anchors": [
+                "this.debugLogger.debug('[Auth SDK] Failed to initialize SDK, will use CLI fallback:', error);"
+            ],
+            "reason": "The fallback catch body (`} catch (error) {` in doInitialize; the anchor is the body's own line) is a single debug line. It used to also reset `sdkClient`, which was a no-op \u2014 doInitialize runs only behind initialize()'s guard, so the client is undefined on entry and only the awaited init could set it \u2014 and that dead assignment was deleted rather than ledgered. Emptied, the failure is swallowed all the same and the client stays undefined, which is pinned (`should handle SDK init failure gracefully`). Distinguishing the two means asserting a log string.",
+            "decision": "none \u2014 the debug line is kept for diagnosis, not behaviour",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeSDKClient)"
         }
     ]
 }

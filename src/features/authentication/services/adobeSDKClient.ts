@@ -40,22 +40,12 @@ export class AdobeSDKClient {
      * Waits for SDK initialization if in progress
      * Returns true if SDK is available, false if fallback to CLI needed
      *
-     * PERFORMANCE FIX: Reuses in-flight initialization promise to prevent concurrent calls
-     * If multiple callers request SDK init simultaneously, they all wait for the same promise
+     * `initialize()` already returns at once when the client exists and joins an
+     * in-flight initialization when one is running, so there is nothing to guard
+     * here. Two guards that duplicated it were removed on 2026-09-03: a mutation
+     * run showed neither could change the outcome.
      */
     async ensureInitialized(): Promise<boolean> {
-        // Already initialized
-        if (this.sdkClient) {
-            return true;
-        }
-
-        // PERFORMANCE FIX: If initialization is in flight, wait for it
-        if (this.sdkInitPromise) {
-            await this.sdkInitPromise;
-            return this.sdkClient !== undefined;
-        }
-
-        // Not initialized and not in flight, start now (blocking)
         await this.initialize();
 
         return this.sdkClient !== undefined;
@@ -129,7 +119,6 @@ export class AdobeSDKClient {
                 validateAccessToken(accessToken);
             } catch (validationError) {
                 this.debugLogger.error('[Auth SDK] Invalid access token format', validationError as Error);
-                this.sdkClient = undefined;
                 return;
             }
 
@@ -139,9 +128,10 @@ export class AdobeSDKClient {
             this.debugLogger.debug('[Auth SDK] SDK initialized successfully - enabling 30x faster operations');
 
         } catch (error) {
-            // SDK initialization failure is not critical - we'll fall back to CLI
+            // SDK initialization failure is not critical - we'll fall back to CLI.
+            // Nothing to reset: this runs only behind initialize()'s guard, so the
+            // client is undefined on entry and only the awaited init could set it.
             this.debugLogger.debug('[Auth SDK] Failed to initialize SDK, will use CLI fallback:', error);
-            this.sdkClient = undefined;
         }
     }
 
