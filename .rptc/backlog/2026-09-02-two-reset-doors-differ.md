@@ -30,9 +30,15 @@ reset restores the block library configuration and verifies the CDN afterwards;
 the dashboard reset does neither, and hides the "Show Logs" button when it
 fails.
 
-## Is this deliberate?
+## Answered: not deliberate
 
-Unknown, and that is the decision this item is asking for. Nothing in either
+The owner's call, 2026-09-02: "I don't think the dashboard should have a lighter
+reset." The dashboard handler now passes the same three options, and its test
+asserts the whole options object rather than a subset — a partial assertion is
+what let the two doors drift apart unnoticed.
+
+The original question, kept because it is what the evidence supported at the
+time: Nothing in either
 file says why. Two readings are both plausible:
 
 1. **Oversight.** The projects-list handler grew the three options later and
@@ -67,3 +73,10 @@ changed, which is why the difference had gone unnoticed.
 ## Shipped so far
 
 - 2026-09-02  docs(backlog): resetting a project does less from the dashboard than from the projects list (EDS-12) (`0cdfbc505`)
+
+## Shipped so far
+
+- 2026-09-02  Dashboard reset passes includeBlockLibrary, verifyCdn and
+  showLogsOnError, matching the projects list. `resetEdsProjectWithUI` has
+  exactly two callers in `src/` and their option sets are now identical
+  (verified by listing both). Test updated to assert the full object.
