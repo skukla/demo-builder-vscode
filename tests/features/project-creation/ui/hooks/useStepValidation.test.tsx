@@ -4,7 +4,6 @@
  * Tests for the wizard step validation hook.
  * Verifies validation logic based on step name and wizard state.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook } from '@testing-library/react';

@@ -763,6 +763,21 @@ breaks the code on purpose and reports what nothing noticed.
 > Enforced by `tests/sop/mutation-config-pairing.test.ts`, which fails the build when a
 > mutated module has a suite on disk that its jest config does not name.
 
+> **Convention.** A test file's environment is decided by a rule in `jest.config.js`,
+> never by a `@jest-environment` docblock in the file.
+> *Why:* the docblock works for jest and silently defeats mutation testing. Stryker
+> measures per-test coverage through an environment of its own, substituted for the
+> project's at run time; a per-file docblock names plain `jsdom`, bypasses the
+> substitution, and the run fails with "Missing coverage results" behind a stack trace
+> that names none of this. Found 2026-09-03, the first day the React layer was
+> measured: 61 files carried one, and every module they covered failed one after
+> another. Forty-three were redundant — already in the jsdom project by `testMatch`.
+> Eighteen were load-bearing, feature hook suites named `use*.test.ts` that the
+> extension rule handed to node; they are now placed by a rule in the config, which is
+> where the decision belongs — made once, and read by jest and by
+> `scripts/mutationScope.mjs` through jest's own matcher, so the two cannot disagree.
+> Enforced by `tests/sop/no-jest-environment-docblocks.test.ts`.
+
 > **Convention.** A canonical fake covers its subject's WHOLE public surface, and
 > invents nothing.
 > *Why:* both halves have failed here. A fake NARROWER than the need is one nobody
@@ -1101,11 +1116,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 40 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 41 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 82 conventions. 81 of them are enforced; 1 is not.**
+**This handbook states 83 conventions. 82 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

@@ -17,7 +17,6 @@
  * routing + gate wiring rather than re-testing the bodies (covered by their own
  * suites).
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

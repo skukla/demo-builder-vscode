@@ -42,7 +42,15 @@ module.exports = {
         // suites moved to their subjects' mirror, so the exclusion follows the
         // subject instead of the old tree.
         '!**/tests/core/ui/**/*.test.ts',
-        '!**/tests/core/ui/**/*.test.tsx'
+        '!**/tests/core/ui/**/*.test.tsx',
+        // A feature's React HOOK suites are `.test.ts`, not `.test.tsx`, so the
+        // extension rule above would hand them to node. Until 2026-09-03 each carried
+        // a `@jest-environment jsdom` docblock instead — eighteen of them — which
+        // works for jest and silently defeats Stryker: a per-file environment
+        // bypasses the coverage hook, and every mutation run on those modules failed.
+        // The environment is decided HERE, once, and a docblock is now an enforcer
+        // failure (`tests/sop/no-jest-environment-docblocks.test.ts`).
+        '!**/tests/features/**/ui/**/use*.test.ts'
       ],
       // `roots` (top-level) does not propagate into `projects`, so Jest would
       // otherwise crawl the whole repo — including agent worktrees under
@@ -106,6 +114,8 @@ module.exports = {
         '**/tests/features/**/*.test.tsx',
         '**/tests/core/ui/**/*.test.ts',
         '**/tests/core/ui/**/*.test.tsx',
+        // See the node project's matching exclusion for why hook suites are named here.
+        '**/tests/features/**/ui/**/use*.test.ts',
         '**/src/features/**/*.test.tsx'
       ],
       // See node project: ignore agent worktrees so their stale duplicate test

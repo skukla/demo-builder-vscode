@@ -10,7 +10,6 @@
  * `deploying` override, so the grid kept a GHOST card stuck on "Deploying…"
  * (reported 2026-07-31, with a screenshot of exactly that).
  *
- * @jest-environment jsdom
  */
 
 import { webviewClientHandlers } from '../../../../helpers/webviewClientMock';

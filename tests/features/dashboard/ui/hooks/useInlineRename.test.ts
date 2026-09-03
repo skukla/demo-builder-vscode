@@ -6,7 +6,6 @@
  * init so the title refreshes) and maps the response to the InlineRenameField
  * contract — null on success, an error message string otherwise.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook } from '@testing-library/react';

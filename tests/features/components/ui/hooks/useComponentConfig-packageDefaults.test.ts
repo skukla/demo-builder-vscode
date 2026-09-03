@@ -13,7 +13,6 @@
  * package switch is WelcomeStep's job (handlePackageSelect clears the old
  * package's keys), not this hook's.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook, act } from '@testing-library/react';

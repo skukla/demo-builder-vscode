@@ -18,7 +18,6 @@
  * the mid-pipeline checks still run. What it withholds is the *destructive*
  * default, never the user's ability to proceed.
  *
- * @jest-environment jsdom
  */
 
 import { computeRepoValid } from '@/features/eds/ui/steps/repoSelectionInline.helpers';

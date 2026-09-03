@@ -24,7 +24,6 @@
  * buttons are the REAL ones rendered by WizardContainer, and WizardContainer
  * computes the Commerce sub-steps directly from wizard state.
  *
- * @jest-environment jsdom
  */
 
 // Import shared step/vscode/loader mocks FIRST.

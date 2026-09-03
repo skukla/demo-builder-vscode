@@ -8,7 +8,6 @@
  * `selectedConsoleApis[id]` picks, without churning state when no picks exist
  * and without disturbing the mesh selection handling.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook, act } from '@testing-library/react';

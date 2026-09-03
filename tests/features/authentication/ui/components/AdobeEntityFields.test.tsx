@@ -14,7 +14,6 @@
  * "New" button is observable); the webview mockRequest layer is mocked so the handler
  * protocol is observable.
  *
- * @jest-environment jsdom
  */
 
 import { mockRequest } from '../../../../helpers/webviewClientMock';

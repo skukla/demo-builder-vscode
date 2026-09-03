@@ -5,7 +5,6 @@
  * shared name field). Nothing validates or gates here: the label is a
  * convenience, identity is minted at commit (owner design, 2026-08-27).
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

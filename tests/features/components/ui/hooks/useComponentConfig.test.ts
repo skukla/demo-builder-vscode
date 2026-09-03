@@ -5,7 +5,6 @@
  * (selectedStack, componentConfigs, packageConfigDefaults,
  * onConfigsChange, onValidationChange) instead of full WizardState.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';

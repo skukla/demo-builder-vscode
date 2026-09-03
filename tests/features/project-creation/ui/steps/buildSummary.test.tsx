@@ -8,7 +8,6 @@
  * integration-flow module INDEX — whose re-exports include .tsx components the
  * node project cannot resolve. The tests themselves are pure.
  *
- * @jest-environment jsdom
  */
 
 // Deterministic catalog for the Integrations group: one mesh (a REAL id so the

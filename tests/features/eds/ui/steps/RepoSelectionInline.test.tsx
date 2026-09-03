@@ -15,7 +15,6 @@
  * - Validity flows out via onRepoValidChange / onCodeSyncValidChange
  * - daLiveSite is locked to repoName on new-repo input
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

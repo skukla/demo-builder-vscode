@@ -23,6 +23,11 @@ import { fileURLToPath } from 'url';
 import { readFileSync, existsSync, readdirSync, statSync, realpathSync } from 'fs';
 import { join, dirname, basename } from 'path';
 
+import micromatch from 'micromatch';
+
+// jest's own project split, so `isReactSuite` answers exactly as jest would.
+import jestConfig from '../jest.config.js';
+
 const LEDGER = 'scripts/mutation-scope.ledger.json';
 
 /** Every source file the extension ships, excluding ambient declarations. */
@@ -128,8 +133,13 @@ export function testMentions(modulePath) {
  * every one of them failed.
  */
 export function isReactSuite(suitePath) {
-    if (suitePath.startsWith('tests/core/ui/')) return true;
-    return suitePath.startsWith('tests/features/') && suitePath.endsWith('.test.tsx');
+    // Decided by jest's OWN config, with jest's own matcher, so this cannot drift from
+    // it. The first version mirrored the two testMatch rules by hand and was wrong the
+    // same day: a third rule (feature hook suites, `use*.test.ts`) was added to
+    // jest.config.js and this function did not know, so eighteen modules were handed
+    // to the node project and failed.
+    const react = jestConfig.projects.find((p) => p.displayName === 'react');
+    return micromatch.isMatch(suitePath, react.testMatch);
 }
 
 /** Measurable properties, all of them checkable by reading the file. */

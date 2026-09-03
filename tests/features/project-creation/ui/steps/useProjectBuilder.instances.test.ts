@@ -8,7 +8,6 @@
  * onRenameAppBuilderComponent (display name only). Shared fixtures + setup in
  * useProjectBuilder.testUtils.ts.
  *
- * @jest-environment jsdom
  */
 
 import { act } from '@testing-library/react';

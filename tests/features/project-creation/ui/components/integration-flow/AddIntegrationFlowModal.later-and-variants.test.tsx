@@ -8,7 +8,6 @@
  * Mocks, fixtures, harness and helpers live in AddIntegrationFlowModal.testUtils
  * (shared with the base suite) — import the SUT from there only.
  *
- * @jest-environment jsdom
  */
 
 import { screen, waitFor } from '@testing-library/react';

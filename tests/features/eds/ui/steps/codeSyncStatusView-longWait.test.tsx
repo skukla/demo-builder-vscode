@@ -16,7 +16,6 @@
  * "attempt 2 of 5" is measured progress, while the elapsed line is a
  * time-based guess, and a guess must never overwrite a measurement.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

@@ -8,7 +8,6 @@
  * which the two sibling suites already use — this file had carried its own
  * byte-identical copy since the split.
  *
- * @jest-environment jsdom
  */
 
 import { act } from '@testing-library/react';

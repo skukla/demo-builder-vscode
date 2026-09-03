@@ -4,7 +4,6 @@
  * Tests for the verification message formatting hook.
  * Maps status values to formatted messages with type indicators.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook } from '@testing-library/react';

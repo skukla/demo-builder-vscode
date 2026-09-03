@@ -12,7 +12,6 @@
  * `webviewClient.request` is mocked with per-type deferreds so each phase's
  * message/payload/commit is observable mid-flight.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook, act } from '@testing-library/react';

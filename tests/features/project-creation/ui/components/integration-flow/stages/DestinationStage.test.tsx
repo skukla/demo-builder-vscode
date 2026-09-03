@@ -11,7 +11,6 @@
  * The phase hook is mocked so each phase view is drivable; AdobeAuthStep + the entity
  * fields are mocked to sentinels exposing the props under test (no real fetch fires).
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

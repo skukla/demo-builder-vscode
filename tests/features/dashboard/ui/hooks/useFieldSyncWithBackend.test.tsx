@@ -4,7 +4,6 @@
  * Tests for the debounced backend sync hook.
  * Verifies debouncing behavior, backend calls, and cleanup.
  *
- * @jest-environment jsdom
  */
 
 import '../../../../helpers/webviewClientMock';

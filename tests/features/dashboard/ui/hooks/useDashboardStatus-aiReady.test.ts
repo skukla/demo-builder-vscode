@@ -13,7 +13,6 @@
  * Core hook behavior is in `useDashboardStatus.test.ts`; display string
  * computations are in `useDashboardStatus-statusDisplay.test.ts`.
  *
- * @jest-environment jsdom
  */
 
 import '../../../../helpers/webviewClientMock';

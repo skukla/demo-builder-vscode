@@ -7,7 +7,6 @@
  * `useDashboardStatus-statusDisplay.test.ts`; AI badge state is tested in
  * `useDashboardStatus-aiReady.test.ts`.
  *
- * @jest-environment jsdom
  */
 
 import '../../../../helpers/webviewClientMock';

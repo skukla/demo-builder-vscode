@@ -6,7 +6,6 @@
  * LATEST stage whose threshold has passed, nothing before the first, and reset
  * when the wait ends so a second wait starts from the beginning.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook, act } from '@testing-library/react';

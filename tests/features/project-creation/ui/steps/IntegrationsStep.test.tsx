@@ -19,7 +19,6 @@
  * module-external boundaries are mocked (webviewClient, useProjectCreationPhases,
  * AdobeAuthStep, AdobeEntityFields, and one appended catalog entry).
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

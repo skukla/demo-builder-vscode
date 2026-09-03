@@ -4,7 +4,6 @@
  * Tests for the extracted dashboard action handlers hook.
  * Verifies all action handlers work correctly.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook, act } from '@testing-library/react';

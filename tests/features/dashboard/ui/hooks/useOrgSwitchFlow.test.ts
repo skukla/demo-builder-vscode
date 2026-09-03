@@ -7,7 +7,6 @@
  * reset-on-clean effect (only a RESOLVED clean check clears the attempt —
  * the transient 'checking' a re-check passes through must not).
  *
- * @jest-environment jsdom
  */
 
 import { renderHook, act } from '@testing-library/react';

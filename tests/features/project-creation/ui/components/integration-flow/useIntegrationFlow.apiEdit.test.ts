@@ -8,7 +8,6 @@
  * `selectedConsoleApis[componentId]` — even an EMPTY set clears the key. No
  * builder toggle runs (the integration already exists) and there is no Back.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook, act } from '@testing-library/react';

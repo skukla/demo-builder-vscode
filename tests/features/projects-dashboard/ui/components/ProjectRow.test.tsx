@@ -6,7 +6,6 @@
  * through actions.onRenameSubmit, contained so the click-to-open row neither
  * opens during rename nor loses its name-click open.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

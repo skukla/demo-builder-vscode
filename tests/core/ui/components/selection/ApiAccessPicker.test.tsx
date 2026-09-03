@@ -9,7 +9,6 @@
  *   - search across name + code (SearchHeader reuse, catalog threshold);
  *   - display names primary, codes secondary; optional helper copy line at top.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

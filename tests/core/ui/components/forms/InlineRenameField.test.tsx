@@ -9,7 +9,6 @@
  * The wrapper stops click/keydown propagation so a hosting click-to-open card
  * neither opens on interaction nor hijacks Enter.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

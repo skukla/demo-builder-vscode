@@ -6,7 +6,6 @@
  * the parsed {owner, repo}; anything else emits undefined (with an inline message for
  * invalid/duplicate input). There is NO Add button — the footer's Continue commits.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

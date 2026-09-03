@@ -8,7 +8,6 @@
  * Core hook behavior is in `useDashboardStatus.test.ts`; AI badge state is
  * in `useDashboardStatus-aiReady.test.ts`.
  *
- * @jest-environment jsdom
  */
 
 import '../../../../helpers/webviewClientMock';

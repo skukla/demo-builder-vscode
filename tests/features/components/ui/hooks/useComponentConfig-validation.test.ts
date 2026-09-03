@@ -11,7 +11,6 @@
  * the trap was armed and waiting for the first boolean env var. These cases are the
  * ammunition check.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook, waitFor } from '@testing-library/react';

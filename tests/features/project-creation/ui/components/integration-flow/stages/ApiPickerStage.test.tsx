@@ -5,7 +5,6 @@
  * baseline + already-covered APIs flagged `locked`) and renders the shared
  * ApiAccessPicker so the user can pick the APIs they know the app needs up front.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

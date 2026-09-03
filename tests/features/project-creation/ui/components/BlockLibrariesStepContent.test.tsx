@@ -5,7 +5,6 @@
  * toggle buttons (`aria-pressed`); native libraries are locked, always-selected (disabled)
  * cards. Tests pin that contract for native, available, and custom libraries.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

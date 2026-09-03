@@ -6,7 +6,6 @@
  * by the `authoringExperienceUpdate` message a Configure save pushes, and only
  * ever moved to a new DEFINED value (never cleared).
  *
- * @jest-environment jsdom
  */
 
 import '../../../../helpers/webviewClientMock';

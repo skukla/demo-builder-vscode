@@ -7,7 +7,6 @@
  * pre-built catalog tile is disabled with a "None available yet" note when the
  * finished catalog is empty. The selected tile reflects `kind`.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

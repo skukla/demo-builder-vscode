@@ -6,7 +6,6 @@
  * header appears past the same threshold as the old catalog modal and filters across
  * name + description.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

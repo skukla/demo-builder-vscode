@@ -6,7 +6,6 @@
  * (FetchStoresParams) so the extension receives them in the discover-store-structure
  * payload — no out-of-band credential cache. ACCS discovery carries no credentials.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook } from '@testing-library/react';

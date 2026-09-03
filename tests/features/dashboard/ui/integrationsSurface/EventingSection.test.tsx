@@ -1,7 +1,6 @@
 /**
  * EventingSection — lazy load, the three loaded states, and delete wiring.
  *
- * @jest-environment jsdom
  */
 
 const mockRequest = jest.fn();

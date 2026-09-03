@@ -6,7 +6,6 @@
  * DOM contract the four of them share, because their own suites query it by class
  * (`commerceStepTestHarness` reaches for `.step-nav` / `.step-view-anim`).
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

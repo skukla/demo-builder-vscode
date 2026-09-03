@@ -12,7 +12,6 @@
  * useProjectBuilder.instances.test.ts; shared fixtures + setup in
  * useProjectBuilder.testUtils.ts.
  *
- * @jest-environment jsdom
  */
 
 import { act } from '@testing-library/react';

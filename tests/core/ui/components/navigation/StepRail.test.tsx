@@ -10,7 +10,6 @@
  * only — NO per-status marks, no numbered circles, no connector rail. No business
  * logic, no internal state — parent owns activeId / onSelect.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

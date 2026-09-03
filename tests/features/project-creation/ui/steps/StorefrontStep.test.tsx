@@ -15,7 +15,6 @@
  * stubs so the tests assert the STEP's wiring (nav, view routing, gate, persistence)
  * rather than re-testing children.
  *
- * @jest-environment jsdom
  */
 
 import React from 'react';

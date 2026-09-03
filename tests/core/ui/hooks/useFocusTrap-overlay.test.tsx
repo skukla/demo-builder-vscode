@@ -9,7 +9,6 @@
  * Fix: useFocusTrap whitelists overlay content (role="listbox", role="menu", etc.)
  * so focus on Spectrum portal elements is not pulled back.
  *
- * @jest-environment jsdom
  */
 
 import { render } from '@testing-library/react';

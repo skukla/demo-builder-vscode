@@ -10,7 +10,6 @@
  * later, at the rebuild/deploy. Cancel is the modal closing without onContinue —
  * draft mutations never write wizard state.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook, act } from '@testing-library/react';

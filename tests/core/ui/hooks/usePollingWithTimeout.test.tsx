@@ -4,7 +4,6 @@
  * Tests for the generic polling hook with timeout support.
  * Verifies polling behavior, condition detection, timeout handling, and cleanup.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook, act } from '@testing-library/react';

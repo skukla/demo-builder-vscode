@@ -17,7 +17,6 @@
  * ./commerceStepTestHarness. jest.mock is hoisted per file, so the module factories are
  * declared here and delegate to the harness's exported mock factories.
  *
- * @jest-environment jsdom
  */
 
 import './CommerceStep.testUtils';

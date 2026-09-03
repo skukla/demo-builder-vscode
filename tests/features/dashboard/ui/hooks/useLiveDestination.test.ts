@@ -6,7 +6,6 @@
  * change left the header naming the OLD target for the rest of the session while
  * every card deployed to the new one (reported live 2026-08-07).
  *
- * @jest-environment jsdom
  */
 
 import '../../../../helpers/webviewClientMock';

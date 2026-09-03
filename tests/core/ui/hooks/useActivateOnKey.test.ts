@@ -9,7 +9,6 @@
  * `preventDefault` is the clause that matters: without it Space scrolls the page
  * while activating the tile, which is easy to ship and hard to notice.
  *
- * @jest-environment jsdom
  */
 
 import { renderHook } from '@testing-library/react';
