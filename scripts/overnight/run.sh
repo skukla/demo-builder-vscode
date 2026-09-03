@@ -59,7 +59,12 @@ done
 BRANCH="loop/$(date +%Y-%m-%d)-goal-queue"
 START_SHA="$(git -C "$REPO" rev-parse --short HEAD)"
 if [[ $DRY -eq 0 ]]; then
-    if git -C "$REPO" show-ref --verify --quiet "refs/heads/$BRANCH"; then
+    if [[ "$(git -C "$REPO" rev-parse --abbrev-ref HEAD)" == "$BRANCH" ]]; then
+        # A RESUME: the queue was stopped mid-run (a fix went in between batches on
+        # 2026-09-03) and is being restarted on the same branch. Nothing to cut.
+        echo "branch:   $BRANCH (already checked out — resuming on it at $START_SHA)"
+        RESUME=1
+    elif git -C "$REPO" show-ref --verify --quiet "refs/heads/$BRANCH"; then
         if [[ -z "$(git -C "$REPO" log --oneline "HEAD..$BRANCH")" ]]; then
             git -C "$REPO" branch -q -D "$BRANCH"
             echo "branch:   $BRANCH existed, fully merged — recut"
@@ -69,8 +74,10 @@ if [[ $DRY -eq 0 ]]; then
             exit 1
         fi
     fi
-    git -C "$REPO" checkout -q -b "$BRANCH"
-    echo "branch:   $BRANCH (from $START_SHA)"
+    if [[ "${RESUME:-0}" -eq 0 ]]; then
+        git -C "$REPO" checkout -q -b "$BRANCH"
+        echo "branch:   $BRANCH (from $START_SHA)"
+    fi
 else
     echo "branch:   $BRANCH (would be cut from $START_SHA)"
 fi
