@@ -152,7 +152,7 @@ export async function handleGetProjects(
             await context.sendMessage('project-loading-status', {
                 isLoading: true,
                 message: 'Loading your Adobe projects...',
-                subMessage: `Fetching from organization: ${currentOrg?.name || 'your organization'}`,
+                subMessage: `Fetching from organization: ${currentOrg.name || 'your organization'}`,
             });
         }
 
@@ -371,11 +371,7 @@ export async function handleCheckProjectApis(
                     context.logger.warn('[Adobe Setup] API Mesh not enabled for selected project');
                     return { success: true, data: { hasMesh: false } };
                 }
-                // If the error indicates unknown command, try next variant
-                const unknown = /is not a aio command|Unknown argument|Did you mean/i.test(
-                    combined,
-                );
-                if (unknown) continue;
+                // Any other failure — an unknown command included — tries the next variant.
             }
         }
 

@@ -383,6 +383,83 @@
             "decision": "none — the per-credential log is the diagnostic this method exists to leave behind when the wrong credential is picked",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
+        },
+        {
+            "module": "src/features/authentication/handlers/projectHandlers.ts",
+            "anchors": [
+                "if (currentOrg) {",
+                "? context.authManager?.getProjectsSdkOnly(orgId ? { orgId } : undefined)",
+                "? context.authManager?.getProjects({ orgId })",
+                ": context.authManager?.getProjects();"
+            ],
+            "mutants": 4,
+            "category": "optionalChain",
+            "reason": "handleGetProjects reads `context.authManager` through `?.` four times and then throws 'Auth manager not available' when the fetch promise is missing. All of it sits inside the try whose catch maps every non-timeout, non-org, non-AUTH_EXPIRED failure to the one generic user message and the one generic error code. Dropping any `?.`, or forcing the guard, turns the missing auth manager into a TypeError that lands in the same catch with the same user-facing result: same `success:false`, same message, same code, same `get-projects` push. Only the error object handed to the logger differs, and asserting that is asserting a log string. The first anchor is the guard on the line below the `getCurrentOrganization` read, because that read's line appears three times in this module.",
+            "decision": "none — `authManager` is optional on HandlerContext, so every `?.` is required by the type",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
+        },
+        {
+            "module": "src/features/authentication/handlers/projectHandlers.ts",
+            "anchors": [
+                "if (!projectsPromise) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "handleGetProjects reads `context.authManager` through `?.` four times and then throws 'Auth manager not available' when the fetch promise is missing. All of it sits inside the try whose catch maps every non-timeout, non-org, non-AUTH_EXPIRED failure to the one generic user message and the one generic error code. Dropping any `?.`, or forcing the guard, turns the missing auth manager into a TypeError that lands in the same catch with the same user-facing result: same `success:false`, same message, same code, same `get-projects` push. Only the error object handed to the logger differs, and asserting that is asserting a log string. Forcing this guard false, or emptying it, awaits an undefined promise and fails one line later in `stampProjectsDeletable`, inside the same catch.",
+            "decision": "none — the explicit throw names the wiring gap in the debug log, which is the only place it can be seen",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
+        },
+        {
+            "module": "src/features/authentication/handlers/projectHandlers.ts",
+            "anchors": [
+                "if (!plugins) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "A null plugin list (parseJSON refused the CLI output) answers 'no mesh' and runs no further probe. Forcing the guard false, or emptying it, sends null through `Array.isArray` (false) and `JSON.stringify(null).includes('api-mesh')` (false), which answers 'no mesh' and runs no further probe. The test that reaches this line pins both the answer and the command trail; the guard's only distinct effect is which warning is logged.",
+            "decision": "none — the two warnings are different diagnoses ('could not parse' versus 'not installed') and are worth keeping apart in the log",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
+        },
+        {
+            "module": "src/features/authentication/handlers/projectHandlers.ts",
+            "anchors": [
+                "'[Adobe Setup] Could not confirm project context (non-fatal)',",
+                "{ error: String(e) },"
+            ],
+            "mutants": 2,
+            "category": "block",
+            "reason": "The project-context probe is best-effort by design: its catch is one debug line, and the object literal on the second anchor is that line's argument, wrapped so the one-line classifier does not see the `debug(` above it. Emptying the catch, or emptying the argument, changes what is logged and nothing else.",
+            "decision": "none — the comment on the probe says non-fatal; the code is the comment",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
+        },
+        {
+            "module": "src/features/authentication/handlers/projectHandlers.ts",
+            "anchors": [
+                "const name = (payload?.name ?? '').trim();",
+                "const description = payload?.description ?? '';"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "`payload` is declared required, so no typed call can omit it; the `?.` guards a malformed webview message at the dispatch boundary (`requireAdobeAuth('create-adobe-project', …)`), which the handler's own signature says cannot happen. Killing either means calling the handler with `undefined as never`, a cast at the call boundary that this repo treats as a silenced type error. Same shape as the installHandler row.",
+            "decision": "none — a boundary guard on an untyped message is correct even when the typed signature cannot exercise it",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
+        },
+        {
+            "module": "src/features/authentication/handlers/projectHandlers.ts",
+            "anchors": [
+                "} catch (refreshError) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The post-create refresh is best-effort: a failure leaves `projects` undefined and is logged at debug. Emptying the catch leaves `projects` undefined and logs nothing. The test for a failed refresh pins the omitted list and the success; only the log line separates the two.",
+            "decision": "none — the comment above the catch says why the list is omitted rather than emptied; the log is the trace of that",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (projectHandlers)"
         }
     ]
 }

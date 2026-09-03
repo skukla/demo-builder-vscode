@@ -8,6 +8,7 @@
  */
 
 import { handleGetProjects } from '@/features/authentication/handlers/projectHandlers';
+import { withTimeout } from '@/core/utils/promiseUtils';
 import {
     makeJwt,
     TEST_OTHER_USER_ID as OTHER_USER_ID,
@@ -217,6 +218,84 @@ describe('projectHandlers - Fetch', () => {
             expect(payload.targetOrg).toEqual({ id: 'org-missing' });
             expect(payload.error).not.toContain('aio console org select');
             expect(payload.error.toLowerCase()).not.toContain('terminal');
+        });
+
+        it('sends no loading status when there is no current organization', async () => {
+            mockContext.authManager.getCurrentOrganization.mockResolvedValue(undefined);
+            mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
+
+            const result = await handleGetProjects(mockContext);
+
+            // Still a successful fetch — the status is skipped, not the work.
+            expect(result).toEqual({ success: true, data: stampedFalse(mockProjects) });
+            expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
+                'project-loading-status',
+                expect.anything(),
+            );
+        });
+
+        it('bounds the fetch with the NORMAL timeout and a connection message', async () => {
+            mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+            mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
+
+            await handleGetProjects(mockContext);
+
+            expect(withTimeout).toHaveBeenCalledWith(expect.any(Promise), {
+                timeoutMs: 30000,
+                timeoutMessage: expect.stringMatching(/timed out/i),
+            });
+        });
+
+        describe('quiet reads (background hydration) take the SDK-only fetch', () => {
+            it('with an orgId: getProjectsSdkOnly is targeted and getProjects never runs', async () => {
+                mockContext.authManager.getOrganizations.mockResolvedValue([mockOrganization]);
+                mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+                mockContext.authManager.getProjectsSdkOnly.mockResolvedValue(mockProjects);
+
+                const result = await handleGetProjects(mockContext, { orgId: 'org-123', quiet: true });
+
+                expect(result.success).toBe(true);
+                expect(mockContext.authManager.getProjectsSdkOnly).toHaveBeenCalledWith({ orgId: 'org-123' });
+                expect(mockContext.authManager.getProjects).not.toHaveBeenCalled();
+            });
+
+            it('without an orgId: getProjectsSdkOnly runs untargeted', async () => {
+                mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+                mockContext.authManager.getProjectsSdkOnly.mockResolvedValue([]);
+
+                await handleGetProjects(mockContext, { quiet: true });
+
+                expect(mockContext.authManager.getProjectsSdkOnly).toHaveBeenCalledWith(undefined);
+                expect(mockContext.authManager.getProjects).not.toHaveBeenCalled();
+            });
+
+            it('quiet must be literally true — a truthy string still takes the interactive fetch', async () => {
+                mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+                mockContext.authManager.getProjects.mockResolvedValue(mockProjects);
+
+                await handleGetProjects(mockContext, { quiet: 'yes' as unknown as boolean });
+
+                expect(mockContext.authManager.getProjects).toHaveBeenCalledWith();
+                expect(mockContext.authManager.getProjectsSdkOnly).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('which failure message reaches the user', () => {
+            it.each([
+                ['an AUTH_EXPIRED failure', 'AUTH_EXPIRED: Your session has expired', 'Your session has expired'],
+                ['an organization failure', 'No organization selected', 'No organization selected'],
+            ])('%s passes its own wording through, prefix stripped', async (_what, raised, shown) => {
+                mockContext.authManager.getCurrentOrganization.mockResolvedValue(mockOrganization);
+                mockContext.authManager.getProjects.mockRejectedValue(new Error(raised));
+
+                const result = await handleGetProjects(mockContext);
+
+                expect(result).toEqual({ success: false, error: shown, code: expect.any(String) });
+                expect(mockContext.sendMessage).toHaveBeenCalledWith('get-projects', {
+                    error: shown,
+                    code: expect.any(String),
+                });
+            });
         });
 
         it('fetches normally when no orgId is in the payload (back-compat)', async () => {

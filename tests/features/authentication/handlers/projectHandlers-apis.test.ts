@@ -9,6 +9,8 @@
 
 import { handleCheckProjectApis } from '@/features/authentication/handlers/projectHandlers';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { getMeshNodeVersion } from '@/core/utils/meshConfig';
+import { parseJSON } from '@/types/typeGuards';
 import { createMockContext, createMockCommandExecutor } from './projectHandlers.testUtils';
 
 // Mock dependencies
@@ -39,6 +41,11 @@ describe('projectHandlers - API Verification', () => {
         // Mock ServiceLocator
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
     });
+
+    /** A successful CLI result carrying `stdout`. */
+    const ok = (stdout: string) => ({ stdout, stderr: '', code: 0, duration: 0 });
+    /** The commands run, in order — the decision trail the handler leaves. */
+    const commandsRun = () => mockCommandExecutor.execute.mock.calls.map((c) => c[0]);
 
     describe('handleCheckProjectApis', () => {
         it('should detect API Mesh when enabled', async () => {
@@ -262,6 +269,102 @@ describe('projectHandlers - API Verification', () => {
 
             expect(result.success).toBe(true);
             expect(result.data!.hasMesh).toBe(false);
+        });
+
+        it('runs the CLI probes under the mesh node version', async () => {
+            mockCommandExecutor.execute
+                .mockResolvedValueOnce(ok(JSON.stringify([{ name: '@adobe/aio-cli-plugin-api-mesh' }])))
+                .mockResolvedValueOnce(ok('{}'))
+                .mockResolvedValueOnce(ok('{}'));
+
+            await handleCheckProjectApis(mockContext);
+
+            const options = { useNodeVersion: getMeshNodeVersion() };
+            expect(mockCommandExecutor.execute.mock.calls).toEqual([
+                ['aio plugins --json', options],
+                ['aio console projects get --json', options],
+                ['aio api-mesh:get --active --json', options],
+            ]);
+        });
+
+        it('an unparseable plugin list answers no mesh and probes nothing further', async () => {
+            mockCommandExecutor.execute.mockResolvedValueOnce(ok('not json'));
+            (parseJSON as jest.Mock).mockReturnValueOnce(null);
+
+            const result = await handleCheckProjectApis(mockContext);
+
+            expect(result).toEqual({ success: true, data: { hasMesh: false } });
+            expect(commandsRun()).toEqual(['aio plugins --json']);
+        });
+
+        it('finds the mesh plugin wherever it sits in the list, not only first', async () => {
+            mockCommandExecutor.execute
+                .mockResolvedValueOnce(
+                    ok(JSON.stringify([{ name: '@adobe/aio-cli-plugin-app' }, { id: '@adobe/aio-cli-plugin-api-mesh' }]))
+                )
+                .mockResolvedValueOnce(ok('{}'))
+                .mockResolvedValueOnce(ok('{}'));
+
+            const result = await handleCheckProjectApis(mockContext);
+
+            expect(result.data).toEqual({ hasMesh: true });
+        });
+
+        describe('the active-mesh probe reads a refusal from ANY stream of the failure', () => {
+            it.each([
+                ['message', { message: '403 Forbidden' }],
+                ['stderr', { stderr: 'API Mesh is not enabled for this project' }],
+                ['stdout', { stdout: 'no access to mesh' }],
+            ])('a refusal in %s settles on no mesh without the fallback probes', async (_stream, failure) => {
+                mockCommandExecutor.execute
+                    .mockResolvedValueOnce(ok(JSON.stringify([{ name: '@adobe/aio-cli-plugin-api-mesh' }])))
+                    .mockResolvedValueOnce(ok('{}'))
+                    .mockRejectedValueOnce(failure);
+
+                const result = await handleCheckProjectApis(mockContext);
+
+                expect(result).toEqual({ success: true, data: { hasMesh: false } });
+                expect(commandsRun()).toEqual([
+                    'aio plugins --json',
+                    'aio console projects get --json',
+                    'aio api-mesh:get --active --json',
+                ]);
+            });
+        });
+
+        describe('the fallback probes read a refusal from ANY stream of the failure', () => {
+            it.each([
+                ['message', { message: 'missing permission: mesh' }],
+                ['stderr', { stderr: 'not authorized' }],
+                ['stdout', { stdout: 'forbidden' }],
+            ])('a refusal in %s settles on no mesh and stops probing', async (_stream, failure) => {
+                mockCommandExecutor.execute
+                    .mockResolvedValueOnce(ok(JSON.stringify([{ name: '@adobe/aio-cli-plugin-api-mesh' }])))
+                    .mockResolvedValueOnce(ok('{}'))
+                    .mockRejectedValueOnce({ message: 'Unknown' })
+                    .mockRejectedValueOnce(failure)
+                    .mockResolvedValueOnce(ok('Usage: aio api-mesh'));
+
+                const result = await handleCheckProjectApis(mockContext);
+
+                expect(result).toEqual({ success: true, data: { hasMesh: false } });
+                expect(commandsRun()).toEqual([
+                    'aio plugins --json',
+                    'aio console projects get --json',
+                    'aio api-mesh:get --active --json',
+                    'aio api-mesh:get --help',
+                ]);
+            });
+        });
+
+        it('a missing command executor is an error the caller sees, not a quiet no-mesh', async () => {
+            (ServiceLocator.getCommandExecutor as jest.Mock).mockImplementation(() => {
+                throw new Error('No command executor registered');
+            });
+
+            await expect(handleCheckProjectApis(mockContext)).rejects.toThrow(
+                'No command executor registered'
+            );
         });
 
         it('should handle general errors', async () => {

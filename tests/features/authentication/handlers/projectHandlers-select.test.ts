@@ -83,6 +83,25 @@ describe('projectHandlers - Selection', () => {
             );
         });
 
+        it('reports the missing org on the error channel with its exact wording', async () => {
+            mockContext.authManager.getCurrentOrganization.mockResolvedValue(undefined);
+
+            await expect(handleSelectProject(mockContext, { projectId: 'proj-123' })).rejects.toThrow();
+
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('error', {
+                message: 'Failed to select project',
+                details: 'No organization selected - cannot select project without org context',
+            });
+        });
+
+        it('without an auth manager: the same missing-org refusal, not a crash', async () => {
+            const ctx = { ...mockContext, authManager: undefined };
+
+            await expect(handleSelectProject(ctx, { projectId: 'proj-123' })).rejects.toThrow(
+                'No organization selected'
+            );
+        });
+
         it('should reject invalid project ID', async () => {
             const projectId = '../../../etc/passwd';
             const validationError = new Error('Invalid project ID');

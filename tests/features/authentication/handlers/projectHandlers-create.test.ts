@@ -40,8 +40,27 @@ describe('projectHandlers - Create', () => {
 
             const result = await handleCreateAdobeProject(ctx, { name: 'My Demo' });
 
-            expect(result.success).toBe(false);
-            expect(result.error).toBeTruthy();
+            expect(result).toEqual({ success: false, error: 'Authentication not available' });
+        });
+
+        it("a denial carries the service's own reason when it gives one", async () => {
+            mockContext.authManager.testDeveloperPermissions.mockResolvedValue({
+                hasPermissions: false,
+                error: 'Developer or System Admin role required.',
+            });
+
+            const result = await handleCreateAdobeProject(mockContext, { name: 'My Demo' });
+
+            expect(result.error).toBe('Developer or System Admin role required.');
+        });
+
+        it('a denial without a reason falls back to the select-an-existing-project copy', async () => {
+            mockContext.authManager.testDeveloperPermissions.mockResolvedValue({ hasPermissions: false });
+
+            const result = await handleCreateAdobeProject(mockContext, { name: 'My Demo' });
+
+            expect(result.error).toMatch(/do not have permission to create projects/);
+            expect(result.error).toMatch(/Select an existing project instead/);
         });
 
         it('returns a permission-typed error and does NOT create when permission is denied', async () => {

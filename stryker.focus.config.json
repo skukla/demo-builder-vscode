@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/adobeWorkspaceCredentials.ts"
+        "src/features/authentication/handlers/projectHandlers.ts"
     ],
     "reporters": [
         "clear-text",
