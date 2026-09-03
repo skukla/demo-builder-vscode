@@ -235,3 +235,8 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(auth): bring AdobeEntityFields to zero open mutation gaps (`937915b26`)
 - 2026-09-03  test(auth): bring tokenManager to zero open mutation gaps (`26229dc2d`)
 - 2026-09-03  fix(overnight): resume on the branch already checked out instead of trying to recut it (`d8e93608e`)
+- 2026-09-03  test(auth): bring deleteAdobeProjectHandler to zero open mutation gaps (`eb78824d4`)
+- 2026-09-03  test(auth): bring AdobeProjectPicker to zero open mutation gaps (`7a9d79775`)
+- 2026-09-03  test(auth): bring authCacheManager to zero open mutation gaps (`72006b633`)
+- 2026-09-03  test(auth): bring AdobeAuthStep to zero open mutation gaps (`d65ad63be`)
+- 2026-09-03  test(auth): bring AdobeWorkspacePicker to zero open mutation gaps (`fb4d3d170`)
