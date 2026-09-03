@@ -1075,6 +1075,43 @@
             "decision": "none \u2014 the fallback makes the call well-formed and no substituted content can match the one reason it is checked against",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (apiAccessCatalog)"
+        },
+        {
+            "module": "src/features/authentication/services/projectOwnership.ts",
+            "anchors": [
+                "const inspection = await authService?.getTokenManager().inspectToken();",
+                "if (!inspection?.valid || !inspection.token) {"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both `?.` reads sit inside a try whose catch returns undefined, which is also what the guarded path returns. The only input that makes either chain short-circuit is a missing auth service (the type admits undefined and the compiler requires the first `?.`; the second guards the value the first produces). Drop either `?.` and that input throws a TypeError the catch turns into the same undefined. No other input reaches the short-circuit, so no assertion on the return or on any collaborator can tell the mutant from the original; the module has no side effects by design.",
+            "decision": "none \u2014 the chains are required by the type and the catch is the documented fail-closed contract, which is what makes them unobservable",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (projectOwnership)"
+        },
+        {
+            "module": "src/features/authentication/services/projectOwnership.ts",
+            "anchors": [
+                "return decodeImsUserId(inspection.token);"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch on the line after this anchor holds only `return undefined`; emptied, the function falls off its end and returns undefined too. Every throwing input (a rejecting inspectToken, a missing token manager) yields the same value either way, and the function has no other observable effect. The anchor names the last try-body line because `} catch {` appears twice in this module.",
+            "decision": "none \u2014 the explicit return states the fail-closed decision the file header promises",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (projectOwnership)"
+        },
+        {
+            "module": "src/features/authentication/services/projectOwnership.ts",
+            "anchors": [
+                "return isProjectOwnedBy(project?.who_created, userId);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "`project` is undefined exactly when the target id is not in the org's list. The original then passes undefined to isProjectOwnedBy, which answers false; the mutant throws a TypeError that the enclosing catch answers with false. The project-not-in-list test covers this line and cannot separate the two, and there is no collaborator call after the find that an argument assertion could catch. The `?.` is required by the type of Array.prototype.find.",
+            "decision": "none \u2014 required by the type; the security gate's catch is what makes it unobservable",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (projectOwnership)"
         }
     ]
 }

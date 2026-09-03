@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/adobeEntityFetcher.ts"
+        "src/features/authentication/services/projectOwnership.ts"
     ],
     "reporters": [
         "clear-text",
