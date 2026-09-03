@@ -38,8 +38,8 @@ import {
     readSiteAccess,
     revokeSiteAdmin,
 } from '@/features/eds/services/configService/configServiceAccess';
-import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../../helpers/loggerFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 const mockReadSiteAccess = readSiteAccess as jest.Mock;
 const mockReadOrgAdmins = readOrgAdmins as jest.Mock;
@@ -64,14 +64,14 @@ const context = createMockExtensionContext();
  * `componentInstances['eds-storefront'].metadata.githubRepo`. An invented shape
  * here resolves to "no site" and every assertion fails for the wrong reason.
  */
-const project = {
+const project = createMockProject({
     name: 'bodea',
     path: '/tmp/bodea',
     selectedStack: 'eds-accs',
     componentInstances: {
-        'eds-storefront': { metadata: { githubRepo: 'skukla/bodea-source' } },
+        'eds-storefront': { id: 'eds-storefront', name: 'eds-storefront', status: 'ready', metadata: { githubRepo: 'skukla/bodea-source' } },
     },
-} as unknown as Project;
+});
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -101,12 +101,12 @@ describe('listSiteAccess', () => {
     });
 
     it('fails cleanly for a project with no EDS storefront repo', async () => {
-        const noRepo = {
+        const noRepo = createMockProject({
             name: 'x',
             path: '/tmp/x',
             selectedStack: 'eds-accs',
             componentInstances: {},
-        } as unknown as Project;
+        });
 
         const result = await listSiteAccess(noRepo, context, logger);
 

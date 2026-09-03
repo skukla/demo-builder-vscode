@@ -11,6 +11,7 @@
 
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 export const mockLogger = createMockLogger();
 
@@ -29,7 +30,7 @@ export function makePublisher() {
 
 /** Minimal ACCS project shape that satisfies extractConfigParams. */
 export function makeAccsProject(overrides: Partial<Project> = {}): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         componentSelections: { backend: 'adobe-commerce-accs' },
         componentConfigs: {
@@ -42,7 +43,7 @@ export function makeAccsProject(overrides: Partial<Project> = {}): Project {
             },
         },
         ...overrides,
-    } as Project;
+    });
 }
 
 /** One page of Catalog Service productSearch results. */

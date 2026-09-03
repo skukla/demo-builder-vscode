@@ -86,20 +86,21 @@ import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake'
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // =============================================================================
 // Helpers
 // =============================================================================
 
 function createProject(): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         adobe: {
             organization: 'org-123',
             projectId: 'proj-456',
             workspace: 'ws-789',
         },
-    } as unknown as Project;
+    });
 }
 
 function createContext(): HandlerContext {

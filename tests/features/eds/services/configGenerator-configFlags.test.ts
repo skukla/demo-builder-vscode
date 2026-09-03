@@ -15,6 +15,7 @@ import { COMPONENT_IDS } from "@/core/constants";
 import type { Project } from "@/types/base";
 import type { Logger } from "@/types/logger";
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 describe("configGenerator — flags, escaping & params", () => {
     let mockLogger: Logger;
@@ -225,11 +226,11 @@ describe("configGenerator — flags, escaping & params", () => {
         });
 
         it('extractConfigParams threads selectedPackage from the project (reset path)', () => {
-            const project = {
+            const project = createMockProject({
                 selectedPackage: 'custom',
                 componentConfigs: {},
                 componentSelections: { backend: 'adobe-commerce-paas' },
-            } as unknown as Project;
+            });
 
             const params = extractConfigParams(project);
 
@@ -239,12 +240,15 @@ describe("configGenerator — flags, escaping & params", () => {
 
     describe('buildConfigGeneratorParams', () => {
         function projectWithEdsMetadata(overrides: Record<string, unknown> = {}): Project {
-            return {
+            return createMockProject({
                 selectedPackage: 'custom',
                 componentConfigs: {},
                 componentSelections: { backend: 'adobe-commerce-paas' },
                 componentInstances: {
                     [COMPONENT_IDS.EDS_STOREFRONT]: {
+                        id: COMPONENT_IDS.EDS_STOREFRONT,
+                        name: 'EDS Storefront',
+                        status: 'ready',
                         path: '/test/eds',
                         metadata: {
                             githubRepo: 'acme-org/acme-repo',
@@ -254,7 +258,7 @@ describe("configGenerator — flags, escaping & params", () => {
                     },
                 },
                 ...overrides,
-            } as unknown as Project;
+            });
         }
 
         it('derives repo coordinates from EDS metadata and threads config params', () => {
@@ -280,10 +284,10 @@ describe("configGenerator — flags, escaping & params", () => {
         });
 
         it('falls back to empty coordinates when EDS metadata is missing', () => {
-            const params = buildConfigGeneratorParams({
+            const params = buildConfigGeneratorParams(createMockProject({
                 componentConfigs: {},
                 componentSelections: {},
-            } as unknown as Project);
+            }));
 
             expect(params.githubOwner).toBe('');
             expect(params.repoName).toBe('');

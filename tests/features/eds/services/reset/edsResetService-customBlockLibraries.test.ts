@@ -74,6 +74,7 @@ import {
     getBlockLibrarySource,
     getBlockLibraryName,
 } from '@/features/components/services/blockLibraryLoader';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 // Cast imported mocks
 const mockInstallBlockCollections = installBlockCollections as jest.MockedFunction<
@@ -91,7 +92,7 @@ const mockGetBlockLibraryName = getBlockLibraryName as jest.MockedFunction<
 // =============================================================================
 
 function createProject(overrides?: Partial<Project>): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         path: '/test/project',
         status: 'ready',
@@ -114,7 +115,7 @@ function createProject(overrides?: Partial<Project>): Project {
             },
         },
         ...overrides,
-    } as unknown as Project;
+    });
 }
 
 const mockTokenProvider = { getAccessToken: jest.fn().mockResolvedValue('mock-token') };

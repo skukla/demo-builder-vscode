@@ -41,6 +41,7 @@ import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { resetComponentRegistryManager } from '@/features/components/services/componentRegistryInstance';
 import { validateGitHubDownloadURL } from '@/core/validation/URLValidator';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 export { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 
@@ -108,18 +109,20 @@ export function setupUpdater(): UpdaterHarness {
         executor as unknown as CommandExecutor
     );
 
-    const project = {
+    const project = createMockProject({
         path: '/path/to/project',
         name: 'test-project',
         componentInstances: {
             'test-component': {
+                name: 'test-component',
+                status: 'ready',
                 id: 'test-component',
                 path: '/path/to/project/components/test-component',
                 port: 3000,
             },
         },
         componentVersions: {},
-    } as unknown as Project;
+    });
 
     return { updater, logger, executor, project };
 }

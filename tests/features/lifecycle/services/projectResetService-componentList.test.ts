@@ -13,8 +13,8 @@ import {
     buildComponentList,
     buildAppBuilderDefinitionFromInstance,
 } from '@/features/lifecycle/services/projectResetService';
-import type { Project } from '@/types/base';
 import type { Stack } from '@/types/stacks';
+import { createMockProject } from '../../../helpers/projectFake';
 
 function createStack(overrides: Partial<Stack> = {}): Stack {
     return {
@@ -30,9 +30,9 @@ function createStack(overrides: Partial<Stack> = {}): Stack {
 describe('buildComponentList — app-builder derivation', () => {
     it('includes the app from componentSelections.appBuilder', () => {
         const stack = createStack();
-        const project = {
+        const project = createMockProject({
             componentSelections: { appBuilder: ['my-app'] },
-        } as unknown as Project;
+        });
 
         const list = buildComponentList(stack, project);
 
@@ -43,11 +43,11 @@ describe('buildComponentList — app-builder derivation', () => {
         const stack = createStack({
             optionalAddons: [{ id: 'opt-addon' }],
         });
-        const project = {
+        const project = createMockProject({
             // An addon that is NOT in optionalAddons used to leak into app-builder.
             selectedAddons: ['some-addon'],
             componentSelections: {},
-        } as unknown as Project;
+        });
 
         const list = buildComponentList(stack, project);
 
@@ -57,9 +57,9 @@ describe('buildComponentList — app-builder derivation', () => {
 
     it('still includes frontend and dependencies unchanged', () => {
         const stack = createStack();
-        const project = {
+        const project = createMockProject({
             componentSelections: { appBuilder: ['my-app'], dependencies: ['commerce-mesh'] },
-        } as unknown as Project;
+        });
 
         const list = buildComponentList(stack, project);
 
@@ -69,7 +69,7 @@ describe('buildComponentList — app-builder derivation', () => {
 
     it('produces no app-builder entry when appBuilder selection is empty/absent', () => {
         const stack = createStack();
-        const project = { componentSelections: {} } as unknown as Project;
+        const project = createMockProject({ componentSelections: {} });
 
         const list = buildComponentList(stack, project);
 
@@ -82,19 +82,19 @@ describe('buildAppBuilderDefinitionFromInstance — runtime app reconstruction',
     // its definition (with a git source) from the saved componentInstance — else
     // it is dropped from the re-clone and silently lost on reset.
     it('reconstructs a git component definition from the saved instance', () => {
-        const project = {
+        const project = createMockProject({
             componentInstances: {
                 'my-app': {
                     id: 'my-app',
                     name: 'my-app',
-                    status: 'installed',
+                    status: 'ready',
                     subType: 'app',
                     repoUrl: 'https://github.com/acme/my-app.git',
                     branch: 'main',
                     path: '/tmp/proj/my-app',
                 },
             },
-        } as unknown as Project;
+        });
 
         const def = buildAppBuilderDefinitionFromInstance(project, 'my-app');
 
@@ -108,11 +108,11 @@ describe('buildAppBuilderDefinitionFromInstance — runtime app reconstruction',
     });
 
     it('defaults the branch to main when the saved instance has none', () => {
-        const project = {
+        const project = createMockProject({
             componentInstances: {
-                'my-app': { id: 'my-app', name: 'my-app', status: 'installed', repoUrl: 'https://github.com/acme/my-app.git' },
+                'my-app': { id: 'my-app', name: 'my-app', status: 'ready', repoUrl: 'https://github.com/acme/my-app.git' },
             },
-        } as unknown as Project;
+        });
 
         const def = buildAppBuilderDefinitionFromInstance(project, 'my-app');
 
@@ -120,17 +120,17 @@ describe('buildAppBuilderDefinitionFromInstance — runtime app reconstruction',
     });
 
     it('returns undefined when no instance exists for the id', () => {
-        const project = { componentInstances: {} } as unknown as Project;
+        const project = createMockProject({ componentInstances: {} });
 
         expect(buildAppBuilderDefinitionFromInstance(project, 'my-app')).toBeUndefined();
     });
 
     it('returns undefined when the saved instance has no repoUrl (nothing to clone)', () => {
-        const project = {
+        const project = createMockProject({
             componentInstances: {
-                'my-app': { id: 'my-app', name: 'my-app', status: 'installed', subType: 'app' },
+                'my-app': { id: 'my-app', name: 'my-app', status: 'ready', subType: 'app' },
             },
-        } as unknown as Project;
+        });
 
         expect(buildAppBuilderDefinitionFromInstance(project, 'my-app')).toBeUndefined();
     });

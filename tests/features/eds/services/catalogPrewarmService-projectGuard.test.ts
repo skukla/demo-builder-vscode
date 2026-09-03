@@ -21,14 +21,15 @@
 
 import { projectTargetsStorefront } from '@/features/eds/services/catalogPrewarmService';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../../helpers/projectFake';
 
 function projectFor(githubRepo: string | undefined): Project {
-    return {
+    return createMockProject({
         name: 'demo',
         componentInstances: {
-            'eds-storefront': { id: 'eds-storefront', metadata: { githubRepo } },
+            'eds-storefront': { name: 'eds-storefront', status: 'ready', id: 'eds-storefront', metadata: { githubRepo } },
         },
-    } as unknown as Project;
+    });
 }
 
 describe('projectTargetsStorefront', () => {

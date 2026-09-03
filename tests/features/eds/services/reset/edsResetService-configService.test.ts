@@ -111,6 +111,7 @@ import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockStateManager } from '../../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
 import { createMockAuthenticationService } from '../../../../helpers/authenticationServiceFake';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.MockedFunction<
     typeof surfaceOverlayRegistrationFailure
@@ -121,7 +122,7 @@ const mockSurfaceOverlayFailure = surfaceOverlayRegistrationFailure as jest.Mock
 // =============================================================================
 
 function createProject(): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         path: '/test/project',
         status: 'ready',
@@ -143,7 +144,7 @@ function createProject(): Project {
                 },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 function createContext(): HandlerContext {

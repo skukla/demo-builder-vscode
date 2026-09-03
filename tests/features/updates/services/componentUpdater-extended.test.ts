@@ -19,6 +19,7 @@ import {
     vscode,
     setupUpdater,
 } from './componentUpdater.testUtils';
+import { createMockProject } from '../../../helpers/projectFake';
 jest.mock('@/core/validation/URLValidator');
 
 describe('ComponentUpdater - Extended Coverage', () => {
@@ -328,16 +329,18 @@ describe('ComponentUpdater - Extended Coverage', () => {
                 }),
             }));
 
-            const meshProject = {
+            const meshProject = createMockProject({
                 ...mockProject,
                 componentInstances: {
                     'eds-commerce-mesh': {
+                        name: 'eds-commerce-mesh',
+                        status: 'ready',
                         id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
                         port: 3000,
                     },
                 },
-            } as unknown as Project;
+            });
 
             const meshUpdater = new ComponentUpdater(
                 mockLogger,

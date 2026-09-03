@@ -12,6 +12,7 @@
 
 import type { Project } from '@/types/base';
 import { extractResetParams } from '@/features/eds/services/reset/edsResetParams';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 type PackagesConfig = Parameters<typeof extractResetParams>[1];
 
@@ -39,11 +40,14 @@ const mockPackages = [{
 }] as unknown as PackagesConfig;
 
 function createProject(stackId: string): Project {
-    return {
+    return createMockProject({
         selectedPackage: 'citisignal',
         selectedStack: stackId,
         componentInstances: {
             'eds-storefront': {
+                id: 'eds-storefront',
+                name: 'eds-storefront',
+                status: 'ready',
                 metadata: {
                     githubRepo: 'test-owner/test-repo',
                     daLiveOrg: 'da-org',
@@ -51,7 +55,7 @@ function createProject(stackId: string): Project {
                 },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 describe('extractResetParams - BYOM overlay extraction', () => {

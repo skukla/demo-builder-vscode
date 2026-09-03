@@ -18,6 +18,7 @@ import {
     fs,
     setupUpdater,
 } from './componentUpdater.testUtils';
+import { createMockProject } from '../../../helpers/projectFake';
 jest.mock('@/core/validation/URLValidator');
 
 describe('ComponentUpdater - Core Workflow', () => {
@@ -205,16 +206,18 @@ describe('ComponentUpdater - Core Workflow', () => {
                 mockExecutor as unknown as CommandExecutor
             );
 
-            const edsProject = {
+            const edsProject = createMockProject({
                 ...mockProject,
                 componentInstances: {
                     'eds-storefront': {
+                        name: 'eds-storefront',
+                        status: 'ready',
                         id: 'eds-storefront',
                         path: '/path/to/project/components/eds-storefront',
                         port: 3000,
                     },
                 },
-            } as unknown as Project;
+            });
 
             await skipUpdater.updateComponent(
                 edsProject,
@@ -260,16 +263,18 @@ describe('ComponentUpdater - Core Workflow', () => {
             );
 
             // Add commerce-mesh to project
-            const meshProject = {
+            const meshProject = createMockProject({
                 ...mockProject,
                 componentInstances: {
                     'eds-commerce-mesh': {
+                        name: 'eds-commerce-mesh',
+                        status: 'ready',
                         id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
                         port: 3000,
                     },
                 },
-            } as unknown as Project;
+            });
 
             await buildUpdater.updateComponent(
                 meshProject,
@@ -360,16 +365,18 @@ describe('ComponentUpdater - Core Workflow', () => {
                 mockExecutor as unknown as CommandExecutor
             );
 
-            const meshProject = {
+            const meshProject = createMockProject({
                 ...mockProject,
                 componentInstances: {
                     'eds-commerce-mesh': {
+                        name: 'eds-commerce-mesh',
+                        status: 'ready',
                         id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
                         port: 3000,
                     },
                 },
-            } as unknown as Project;
+            });
 
             // Make npm install fail
             mockExecutor.execute
@@ -421,16 +428,18 @@ describe('ComponentUpdater - Core Workflow', () => {
                 mockExecutor as unknown as CommandExecutor
             );
 
-            const meshProject = {
+            const meshProject = createMockProject({
                 ...mockProject,
                 componentInstances: {
                     'eds-commerce-mesh': {
+                        name: 'eds-commerce-mesh',
+                        status: 'ready',
                         id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
                         port: 3000,
                     },
                 },
-            } as unknown as Project;
+            });
 
             // npm install succeeds, build fails
             mockExecutor.execute
@@ -474,16 +483,18 @@ describe('ComponentUpdater - Core Workflow', () => {
                 '/mock/extension/path',
                 mockExecutor as unknown as CommandExecutor
             );
-            const meshProject = {
+            const meshProject = createMockProject({
                 ...mockProject,
                 componentInstances: {
                     'eds-commerce-mesh': {
+                        name: 'eds-commerce-mesh',
+                        status: 'ready',
                         id: 'eds-commerce-mesh',
                         path: '/path/to/project/components/commerce-mesh',
                         port: 3000,
                     },
                 },
-            } as unknown as Project;
+            });
 
             const nodeCrash = [
                 '/Users/leah/.demo-builder/projects/demo/components/commerce-mesh/mesh.config.js:1',

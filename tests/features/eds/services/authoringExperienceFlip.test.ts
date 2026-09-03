@@ -17,6 +17,7 @@ import type { AuthoringExperience, Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import type { GitHubTokenService } from '@/features/eds/services/github/githubTokenService';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
@@ -70,18 +71,21 @@ function makeEdsProject(
 ): Project {
     const repo = githubRepo === NO_REPO ? undefined : githubRepo;
     const hasCoords = coords !== NO_COORDS;
-    return {
+    return createMockProject({
         name: 'Test Project',
         path: '/test/project',
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
                 metadata: {
                     ...(hasCoords ? { daLiveOrg: 'my-org', daLiveSite: 'my-site' } : {}),
                     ...(repo ? { githubRepo: repo } : {}),
                 },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 describe('applyAuthoringExperienceFlip', () => {

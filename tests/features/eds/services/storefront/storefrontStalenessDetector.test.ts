@@ -23,19 +23,22 @@ import {
     PAAS_WEBSITE_CODE,
 } from '@/core/config/envVarKeys';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../../../helpers/projectFake';
 
 /** An EDS/ACCS project with a published storefront state to diff against. */
 function makeAccsProject(publishedEnvVars: Record<string, string>): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         path: '/projects/test',
         selectedStack: 'eds-accs',
-        componentInstances: { 'eds-storefront': { metadata: {} } },
+        componentInstances: {
+            'eds-storefront': { id: 'eds-storefront', name: 'EDS Storefront', status: 'ready', metadata: {} },
+        },
         edsStorefrontState: {
             envVars: publishedEnvVars,
             lastPublished: new Date('2026-01-01').toISOString(),
         },
-    } as unknown as Project;
+    });
 }
 
 const CITISIGNAL = {
