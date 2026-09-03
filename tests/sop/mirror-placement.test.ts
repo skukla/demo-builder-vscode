@@ -88,7 +88,17 @@ const BANNED_TIER_DIRS = ['unit', 'contract', 'live', 'e2e'];
 
 function walk(dir: string): string[] {
     const out: string[] = [];
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    let entries: fs.Dirent[];
+    try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+        // A sibling suite's temp dir (eslint-type-aware's `tmp-probe`) can vanish
+        // between the listing and this read. This checks COMMITTED files, so a
+        // directory that no longer exists is not one — skip, as the
+        // canonical-fakes walker does. Failed the full run once on 2026-09-03.
+        return out;
+    }
+    for (const entry of entries) {
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) {
             if (entry.name === 'node_modules') continue;

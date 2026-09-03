@@ -18,6 +18,7 @@ import type { Project } from '@/types/base';
 import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
 import type { SettingsFile } from '@/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
+import { createMockProject } from '../../../helpers/projectFake';
 
 describe('settingsSerializer', () => {
     describe('parseSettingsFile', () => {
@@ -411,7 +412,7 @@ describe('settingsSerializer', () => {
      * label and the content agreeing.
      */
     describe('includeSecrets actually removes secret values', () => {
-        const withSecrets: Project = {
+        const withSecrets: Project = createMockProject({
             name: 'secret-test',
             created: new Date(),
             lastModified: new Date(),
@@ -430,7 +431,7 @@ describe('settingsSerializer', () => {
                     EXPERIENCE_PLATFORM_API_KEY: 'ep-key-value',
                 },
             },
-        } as unknown as Project;
+        });
 
         it('strips every secret-valued key when includeSecrets is false', () => {
             const result = extractSettingsFromProject(withSecrets, false);
