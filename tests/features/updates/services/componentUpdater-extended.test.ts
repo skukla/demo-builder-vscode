@@ -198,108 +198,79 @@ describe('ComponentUpdater - Extended Coverage', () => {
         });
     });
 
-    describe('formatUpdateError error formatting (tested via failed updates)', () => {
-        it('should detect network error and format with helpful message', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
+    describe('formatUpdateError — what the user is told after a rolled-back failure', () => {
+        // The friendly message is the REJECTION. Until 2026-09-03 it was thrown inside
+        // the rollback's own try, so the rollback catch swallowed it and every failed
+        // update — successful rollback included — surfaced as "Update failed AND
+        // rollback failed. Manual recovery required." These tests used to find the
+        // friendly text inside that CRITICAL log line, which is how the bug hid.
+        const DOWNLOAD = 'https://github.com/test/repo/archive/v1.0.0.zip';
 
+        async function failedUpdate(): Promise<string> {
+            let message = '';
+            await updater
+                .updateComponent(mockProject, 'test-component', DOWNLOAD, '1.0.0')
+                .catch((e: Error) => { message = e.message; });
+            expect(message).not.toBe('');
+            expect(mockLogger.error).not.toHaveBeenCalledWith(
+                '[Updates] CRITICAL: Rollback failed',
+                expect.anything()
+            );
+            return message;
+        }
+
+        it('network failure', async () => {
             (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('fetch failed'));
 
-            await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
+            expect(await failedUpdate()).toBe(
+                'Update failed: No internet connection. Please check your network and try again.'
+            );
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] Update failed, rolling back to snapshot',
                 expect.any(Error)
             );
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] CRITICAL: Rollback failed',
-                expect.objectContaining({
-                    message: expect.stringContaining('internet connection'),
-                })
-            );
         });
 
-        it('should detect timeout error and format with helpful message', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
-
+        it('timeout', async () => {
             (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('operation timed out'));
 
-            await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] CRITICAL: Rollback failed',
-                expect.objectContaining({
-                    message: expect.stringContaining('timed out'),
-                })
+            expect(await failedUpdate()).toBe(
+                'Update failed: Download timed out. Please try again with a better connection.'
             );
         });
 
-        it('should detect HTTP 404 error and format with version removed message', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
+        it('HTTP 404', async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 404 });
 
-            (global.fetch as jest.Mock).mockResolvedValueOnce({
-                ok: false,
-                status: 404,
-            });
-
-            await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] CRITICAL: Rollback failed',
-                expect.objectContaining({
-                    message: expect.stringContaining('not found'),
-                })
+            expect(await failedUpdate()).toBe(
+                'Update failed: Release not found on GitHub. The version may have been removed.'
             );
         });
 
-        it('should detect HTTP 403 error and format with rate limit message', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
+        it('HTTP 403', async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 403 });
 
-            (global.fetch as jest.Mock).mockResolvedValueOnce({
-                ok: false,
-                status: 403,
-            });
-
-            await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] CRITICAL: Rollback failed',
-                expect.objectContaining({
-                    message: expect.stringMatching(/rate limit|access denied/i),
-                })
+            expect(await failedUpdate()).toBe(
+                'Update failed: Access denied. GitHub rate limit may be exceeded.'
             );
         });
 
-        it('should detect generic HTTP error and format with server error message', async () => {
-            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
-            const newVersion = '1.0.0';
+        it('any other HTTP status', async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 500 });
 
-            (global.fetch as jest.Mock).mockResolvedValueOnce({
-                ok: false,
-                status: 500,
+            expect(await failedUpdate()).toBe(
+                'Update failed: Server error (Download failed: HTTP 500). Please try again later.'
+            );
+        });
+
+        it('anything else: the original reason, after a rollback', async () => {
+            mockExecutor.execute.mockResolvedValueOnce({
+                stdout: '', stderr: 'unzip: cannot open file', code: 1, duration: 1,
             });
 
-            await expect(
-                updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] CRITICAL: Rollback failed',
-                expect.objectContaining({
-                    message: expect.stringMatching(/server error/i),
-                })
+            expect(await failedUpdate()).toBe(
+                'Update failed and was rolled back: '
+                + 'Extraction failed (exit code 1): unzip: cannot open file'
             );
         });
     });
@@ -404,19 +375,14 @@ describe('ComponentUpdater - Extended Coverage', () => {
 
             await expect(
                 updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion)
-            ).rejects.toThrow();
+            ).rejects.toThrow(
+                'Update failed: Downloaded component is incomplete or corrupted. Please try again.'
+            );
 
             expect(mockLogger.error).toHaveBeenCalledWith(
                 '[Updates] Update failed, rolling back to snapshot',
                 expect.objectContaining({
                     message: expect.stringContaining('package.json is invalid'),
-                })
-            );
-
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Updates] CRITICAL: Rollback failed',
-                expect.objectContaining({
-                    message: expect.stringContaining('incomplete or corrupted'),
                 })
             );
         });

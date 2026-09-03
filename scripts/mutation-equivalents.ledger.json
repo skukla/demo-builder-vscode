@@ -60,12 +60,13 @@
             "anchors": [
                 "if (project.componentInstances?.[componentId]) {"
             ],
-            "mutants": 3,
+            "mutants": 2,
             "category": "branch",
             "reason": "updateComponent reads the component out of componentInstances in its first statement and throws if it is not there, so by this line the entry is guaranteed to exist. A test that removed it never reaches this line — it gets the refusal instead, which is what happened when one was written. The version sync on this line is real and is tested; only the guard around it is unreachable.",
             "decision": "none, but worth a comment — it reads as if the entry might be missing, which sent one test after a state the method forbids",
             "recorded": "2026-09-02",
-            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md"
+            "source": ".rptc/handoff/2026-09-02-equivalent-mutants.md",
+            "note": "Recorded as 3 on 2026-09-02; re-measured at 2 on 2026-09-03 after the plumbing suite pinned the version sync on a project whose instance exists (the ConditionalExpression->false mutant now dies). The two left are the guard-always-true and the dropped `?.`, both unreachable for the reason above."
         },
         {
             "module": "src/features/authentication/services/authenticationService.ts",
@@ -116,6 +117,45 @@
             "decision": "none — the line tells the Debug Logs reader why a preserved file was not restored",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-01, templateSyncService focus run"
+        },
+        {
+            "module": "src/features/updates/services/componentUpdater.ts",
+            "anchors": [
+                "this.logger.debug('[Updates] Could not determine node version from registry, using default');"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch body around the rollback's registry lookup changes nothing observable: the lookup failure is already tested (a rejecting registry still reinstalls, with the default node version), and the body is one debug line.",
+            "decision": "none — a swallowed lookup failure should say so in the debug channel",
+            "recorded": "2026-09-03",
+            "source": "PL-22 batch MUT-01, componentUpdater focus run"
+        },
+        {
+            "module": "src/features/updates/services/componentUpdater.ts",
+            "anchors": [
+                "this.logger.debug('[Updates] ✓ Dependencies reinstalled');"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else branch after the rollback reinstall is one debug line. The decision it belongs to is tested from the other side (a failed reinstall warns; a successful one does not), so only the confirmation line is unconstrained.",
+            "decision": "none",
+            "recorded": "2026-09-03",
+            "source": "PL-22 batch MUT-01, componentUpdater focus run"
+        },
+        {
+            "module": "src/features/updates/services/componentUpdater.ts",
+            "anchors": [
+                "const addedKeys = Array.from(parseEnvFile(newTemplate).keys()).filter(",
+                "(k) => !parseEnvFile(oldContent).has(k),",
+                "if (addedKeys.length > 0) {",
+                "this.logger.debug(`[Updates] Merged ${filename}: preserved user config, no new variables`);"
+            ],
+            "mutants": 9,
+            "category": "other",
+            "reason": "addedKeys is computed solely to choose between two debug lines after the merge; the merged content itself is written before it and is what the extended suite asserts. Every mutant on the filter, its predicate and the branch changes only which debug line is logged and what it lists. The value reaches nothing else.",
+            "decision": "OPEN — either keep the computation for the diagnostic (which keys a template added is useful in Debug Logs triage) or collapse both lines into one; either way it is not a test's job",
+            "recorded": "2026-09-03",
+            "source": "PL-22 batch MUT-01, componentUpdater focus run"
         }
     ]
 }

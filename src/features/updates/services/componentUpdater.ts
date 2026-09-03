@@ -8,6 +8,7 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project } from '@/types/base';
+import type { TransformedComponentDefinition } from '@/types/components';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -19,6 +20,11 @@ import { parseJSON } from '@/types/typeGuards';
  * these should find the same shape wherever a build or deploy step failed.
  */
 const BUILD_OUTPUT_LOG_LIMIT = 500;
+
+/** The node version a catalog entry asks for, or null when it does not say. */
+function nodeVersionOf(componentDef: TransformedComponentDefinition | undefined): string | null {
+    return componentDef?.configuration?.nodeVersion || null;
+}
 
 export class ComponentUpdater {
     private logger: Logger;
@@ -151,25 +157,11 @@ export class ComponentUpdater {
                     // During rollback, we just want to get dependencies installed
                     let nodeVersion: string | null = null;
                     try {
-                        const { getComponentRegistryManager } = await import(
-                '@/features/components/services/componentRegistryInstance'
-            );
-                        const registryManager = getComponentRegistryManager(this.extensionPath);
-                        const registry = await registryManager.loadRegistry();
-                        // Search for component across all categories
-                        const allComponents = [
-                            ...(registry.components.frontends || []),
-                            ...(registry.components.backends || []),
-                            ...(registry.components.dependencies || []),
-                            ...(registry.components.mesh || []),
-                            ...(registry.components.integrations || []),
-                        ];
-                        const componentDef = allComponents.find(c => c.id === componentId);
-                        nodeVersion = componentDef?.configuration?.nodeVersion || null;
+                        nodeVersion = nodeVersionOf(await this.componentDefinition(componentId));
                     } catch (_error) {
                         this.logger.debug('[Updates] Could not determine node version from registry, using default');
                     }
-                    
+
                     const installResult = await this.commandManager.execute('npm install --no-fund', {
                         cwd: component.path,
                         timeout: TIMEOUTS.VERY_LONG,
@@ -177,15 +169,12 @@ export class ComponentUpdater {
                         enhancePath: true,
                         useNodeVersion: nodeVersion,
                     });
-                    
+
                     if (installResult.code !== 0) {
                         this.logger.warn(`[Updates] Failed to reinstall dependencies after rollback: ${installResult.stderr}`);
                     } else {
                         this.logger.debug('[Updates] ✓ Dependencies reinstalled');
                     }
-          
-                    // RESILIENCE: Format user-friendly error message
-                    throw new Error(this.formatUpdateError(error as Error));
                 } catch (rollbackError) {
                     // Rollback itself failed - critical situation
                     this.logger.error('[Updates] CRITICAL: Rollback failed', rollbackError as Error);
@@ -193,6 +182,11 @@ export class ComponentUpdater {
                         `Update failed AND rollback failed. Manual recovery required. Snapshot at: ${snapshotPath}`,
                     );
                 }
+
+                // RESILIENCE: Format user-friendly error message. Thrown OUTSIDE the
+                // rollback try: inside it, the rollback catch caught this very throw and
+                // every failed update — rollback included — reported "rollback failed".
+                throw new Error(this.formatUpdateError(error as Error));
             }
         } finally {
             // Always release lock
@@ -288,31 +282,17 @@ export class ComponentUpdater {
      * runs the build script if one is configured.
      */
     private async runPostUpdateBuild(componentPath: string, componentId: string): Promise<void> {
-        // Get component configuration from registry
-        const { getComponentRegistryManager } = await import(
-                '@/features/components/services/componentRegistryInstance'
-            );
-        const registryManager = getComponentRegistryManager(this.extensionPath);
-        const componentDef = await registryManager.getComponentById(componentId);
+        const componentDef = await this.componentDefinition(componentId);
 
-        const nodeVersion = componentDef?.configuration?.nodeVersion || null;
+        const nodeVersion = nodeVersionOf(componentDef);
         const skipNpmInstall = componentDef?.configuration?.skipNpmInstall === true;
         const buildScript = componentDef?.configuration?.buildScript;
 
-        // Check if package.json exists (no package.json = nothing to install)
-        const hasPackageJson = await this.fileExists(path.join(componentPath, 'package.json'));
-
-        if (!hasPackageJson || skipNpmInstall) {
-            this.logger.debug(`[Updates] Skipping npm install for ${componentId} (packageJson=${hasPackageJson}, skipNpmInstall=${skipNpmInstall})`);
-            // If there's also no build script, nothing left to do
-            if (!buildScript) return;
-            // Otherwise fall through to run the build step only
-        }
-
-
+        // No package.json check here: verifyComponentStructure has already required
+        // one, so a guard on it could never be false when this runs.
         try {
             // 1. Install dependencies (always after zipball extraction, unless skipped)
-            if (hasPackageJson && !skipNpmInstall) {
+            if (!skipNpmInstall) {
                 this.logger.debug(`[Updates] Installing dependencies for ${componentId}...`);
                 const installResult = await this.commandManager.execute('npm install --no-fund', {
                     cwd: componentPath,
@@ -362,14 +342,14 @@ export class ComponentUpdater {
         }
     }
 
-    /** Check if a file exists without throwing */
-    private async fileExists(filePath: string): Promise<boolean> {
-        try {
-            await fs.access(filePath);
-            return true;
-        } catch {
-            return false;
-        }
+    /** The catalog entry for a component id — the one lookup both the build and the rollback use. */
+    private async componentDefinition(
+        componentId: string,
+    ): Promise<TransformedComponentDefinition | undefined> {
+        const { getComponentRegistryManager } = await import(
+            '@/features/components/services/componentRegistryInstance'
+        );
+        return getComponentRegistryManager(this.extensionPath).getComponentById(componentId);
     }
 
     /**

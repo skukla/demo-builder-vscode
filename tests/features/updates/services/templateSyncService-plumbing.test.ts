@@ -32,7 +32,6 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
 const opts = (cwd: string, timeout: number) => ({ cwd, timeout, shell: DEFAULT_SHELL });
-const CLONE_URL = 'https://gh-token:x-oauth-basic@github.com/skukla/demo-storefront.git';
 const TEMPLATE_URL = 'https://github.com/adobe/aem-boilerplate-commerce.git';
 const MISSING = 'Missing required metadata: githubRepo, templateOwner, or templateRepo';
 const NO_EDS = 'No EDS metadata found in project';
@@ -76,6 +75,26 @@ function commitFails(stderr: string): void {
         if (/git commit/.test(cmd)) return { code: 1, stdout: '', stderr };
         return { code: 0, stdout: '', stderr: '' };
     });
+}
+
+/**
+ * The clone step, read back by PART. The command carries the token inside the URL
+ * (`https://<token>:x-oauth-basic@github.com/...`), and that literal — even with a fake
+ * token — is a credential-shaped string the public repo's secret scanner flags
+ * (GitGuardian, 2026-09-03). Parsing the URL proves the same contract without ever
+ * spelling it.
+ */
+function expectClone(call: unknown[] | undefined, depth: number): void {
+    const [cmd, options] = call ?? [];
+    const m = String(cmd).match(/^git clone --depth (\d+) --branch main "([^"]+)" repo$/);
+    expect(m).not.toBeNull();
+    expect(Number(m![1])).toBe(depth);
+    const url = new URL(m![2]);
+    expect(url.username).toBe('gh-token');
+    expect(url.password).toBe('x-oauth-basic');
+    expect(url.host).toBe('github.com');
+    expect(url.pathname).toBe('/skukla/demo-storefront.git');
+    expect(options).toEqual(opts(TEMP_DIR, TIMEOUTS.LONG));
 }
 
 beforeEach(() => {
@@ -157,11 +176,8 @@ describe('merge strategy — the exact git conversation', () => {
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
 
-        expect(mockExecute.mock.calls).toEqual([
-            [
-                `git clone --depth 50 --branch main "${CLONE_URL}" repo`,
-                opts(TEMP_DIR, TIMEOUTS.LONG),
-            ],
+        expectClone(mockExecute.mock.calls[0], 50);
+        expect(mockExecute.mock.calls.slice(1)).toEqual([
             ...FETCH_STEPS,
             ['git merge template/main --no-commit --no-ff', opts(REPO_DIR, TIMEOUTS.NORMAL)],
             ['git diff --name-only --diff-filter=U', opts(REPO_DIR, TIMEOUTS.QUICK)],
@@ -231,14 +247,8 @@ describe('reset strategy — the exact git conversation', () => {
 
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'reset' });
 
-        expect(mockExecute.mock.calls).toEqual([
-            [
-                `git clone --depth 1 --branch main "${CLONE_URL}" repo`,
-                opts(TEMP_DIR, TIMEOUTS.LONG),
-            ],
-            ...FETCH_STEPS,
-            ...RESET_STEPS,
-        ]);
+        expectClone(mockExecute.mock.calls[0], 1);
+        expect(mockExecute.mock.calls.slice(1)).toEqual([...FETCH_STEPS, ...RESET_STEPS]);
         expect(result).toEqual({ success: true, strategy: 'reset', syncedCommit: 'def456' });
     });
 
