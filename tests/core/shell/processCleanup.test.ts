@@ -22,6 +22,8 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
  * healthy run (these finish in ~100-200ms in band).
  */
 jest.setTimeout(30_000);
+/** Inner deadline for a spawned parent to report its children — under the suite ceiling. */
+const CHILDREN_UP_BUDGET_MS = 25_000;
 
 describe('ProcessCleanup - Basic Operations', () => {
     let processCleanup: ProcessCleanup;
@@ -85,7 +87,10 @@ describe('ProcessCleanup - Basic Operations', () => {
 
         it('should not send SIGKILL if process exits on SIGTERM', async () => {
             // Given: Process that responds to SIGTERM
-            const childProcess = spawn('node', ['-e', 'process.on("SIGTERM", () => process.exit(0)); setTimeout(() => {}, 60000);']);
+            const childProcess = spawn('node', [
+                '-e',
+                'process.on("SIGTERM", () => process.exit(0)); setTimeout(() => {}, 60000);',
+            ]);
             const pid = childProcess.pid!;
 
             // OBSERVE the signals instead of inferring them from elapsed time. The
@@ -158,15 +163,19 @@ describe('ProcessCleanup - Basic Operations', () => {
                 const child2 = spawn('sleep', ['10']);
                 process.stdout.write('children-up\\n');
                 setTimeout(() => {}, 60000);
-                `
+                `,
             ]);
 
             const parentPid = parentProcess.pid!;
 
+            // The suite ceiling above is 30s, but this inner deadline was still 10s —
+            // so it fired first, five times in one evening (2026-09-03), each time on a
+            // spawn that completed in ~15s under full-suite load and in ~200ms alone.
+            // Same headroom as the suite: it does not slow a healthy run.
             await new Promise<void>((resolve, reject) => {
                 const timer = setTimeout(
                     () => reject(new Error('parent never reported its children up')),
-                    10_000
+                    CHILDREN_UP_BUDGET_MS
                 );
                 parentProcess.stdout?.on('data', (chunk: Buffer) => {
                     if (chunk.toString().includes('children-up')) {

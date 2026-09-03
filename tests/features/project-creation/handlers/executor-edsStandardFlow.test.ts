@@ -8,6 +8,13 @@
  * 4. Have metadata populated after cloning
  */
 
+// Everything here is mocked and the suite finishes in about a second alone. Under the
+// full suite's worker contention it still exceeded jest's 10s default twice on
+// 2026-09-02 and repeatedly on 2026-09-03, blocking pushes on commits that could not
+// have caused it. This is CPU starvation, not slow code: the same headroom the two
+// real-process suites carry. It buys scheduler room and does not slow a healthy run.
+jest.setTimeout(30_000);
+
 import { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
