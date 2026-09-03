@@ -143,6 +143,66 @@ describe('refreshStoredToken', () => {
         await expect(refreshStoredToken()).resolves.toBeUndefined();
     });
 
+    it('reads the CLI context — the one `aio login` writes', async () => {
+        contextGet.mockResolvedValue(contextWithRefreshToken());
+        getAccessToken.mockResolvedValue({ access_token: LIVE_ACCESS });
+
+        await refreshStoredToken();
+
+        expect(contextGet).toHaveBeenCalledWith('cli');
+    });
+
+    it('declines when the refresh token expires EXACTLY at the ten-minute floor', async () => {
+        // The library's rule is "more than ten minutes left", so a token with
+        // exactly ten minutes is on the unusable side. Pinned with the clock held
+        // still, because a moving clock would put this a millisecond either way.
+        const NOW = 1_700_000_000_000;
+        const TEN_MINUTES = 10 * 60 * 1000;
+        const now = jest.spyOn(Date, 'now').mockReturnValue(NOW);
+        try {
+            contextGet.mockResolvedValue(contextWithRefreshToken(NOW + TEN_MINUTES));
+            await expect(refreshStoredToken()).resolves.toBeUndefined();
+            expect(getAccessToken).not.toHaveBeenCalled();
+
+            // Control: one millisecond more and the exchange runs.
+            getAccessToken.mockResolvedValue({ access_token: LIVE_ACCESS });
+            contextGet.mockResolvedValue(contextWithRefreshToken(NOW + TEN_MINUTES + 1));
+            await refreshStoredToken();
+            expect(getAccessToken).toHaveBeenCalledTimes(1);
+        } finally {
+            now.mockRestore();
+        }
+    });
+
+    it('persists NOTHING when IMS answers without a token', async () => {
+        // The decline must come before the write: a `set` of undefined would
+        // clobber the stored access token with nothing.
+        contextGet.mockResolvedValue(contextWithRefreshToken());
+        getAccessToken.mockResolvedValue({});
+
+        await refreshStoredToken();
+
+        expect(contextSet).not.toHaveBeenCalled();
+    });
+
+    it('declines, rather than throwing, when IMS answers with nothing at all', async () => {
+        contextGet.mockResolvedValue(contextWithRefreshToken());
+        getAccessToken.mockResolvedValue(undefined);
+
+        await expect(refreshStoredToken()).resolves.toBeUndefined();
+        expect(contextSet).not.toHaveBeenCalled();
+    });
+
+    it('writes only the access token when IMS did not rotate the refresh token', async () => {
+        contextGet.mockResolvedValue(contextWithRefreshToken());
+        getAccessToken.mockResolvedValue({ access_token: LIVE_ACCESS });
+
+        await refreshStoredToken();
+
+        expect(contextSet).toHaveBeenCalledTimes(1);
+        expect(contextSet).toHaveBeenCalledWith('cli.access_token', LIVE_ACCESS, false);
+    });
+
     it('NEVER calls getToken — the call that can open a browser', async () => {
         // Every path, including the ones that decline. This is the regression.
         contextGet.mockResolvedValue(contextWithRefreshToken());

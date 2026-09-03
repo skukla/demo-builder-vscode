@@ -18,6 +18,8 @@
  * doing. What replaced them is one case for a reader that throws.
  */
 
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { AuthenticationErrorFormatter } from '@/features/authentication/services/authenticationErrorFormatter';
 import {
     TokenManager,
     type StoredTokenConfig,
@@ -262,5 +264,157 @@ describe('TokenManager — boundaries', () => {
         const nulls = { token: null, expiry: null } as unknown as StoredTokenConfig;
 
         await expect(managerReading(nulls).inspectToken()).resolves.toMatchObject({ valid: false });
+    });
+});
+
+/**
+ * The corruption path is REPORTED, not just returned: its verdict is the same
+ * `{ valid: false, expiresIn: 0, token }` an expired token yields, so the only
+ * thing that tells the two apart is the user-facing message built through the
+ * formatter. These assert the formatter's ARGUMENTS — the mock cannot see a
+ * malformed call, and asserting the returned verdict passes against a detector
+ * that never fires.
+ */
+describe('TokenManager — corruption reporting', () => {
+    let formatError: jest.SpyInstance;
+
+    beforeEach(() => {
+        formatError = jest.spyOn(AuthenticationErrorFormatter, 'formatError');
+    });
+
+    afterEach(() => {
+        formatError.mockRestore();
+    });
+
+    it('reports a long token with expiry 0 through the formatter, naming the operation', async () => {
+        await managerReading({ token: LONG_TOKEN, expiry: 0 }).inspectToken();
+
+        expect(formatError).toHaveBeenCalledTimes(1);
+        expect(formatError).toHaveBeenCalledWith(
+            expect.objectContaining({ message: 'Token corruption: expiry=0' }),
+            { operation: 'token-validation' },
+        );
+    });
+
+    // The corruption floor is the SAME floor the length check applies (exactly
+    // 100 passes both), so a token real enough to be valid is real enough to be
+    // corrupt. They used to disagree by one: a 100-character token with expiry 0
+    // cleared the length floor and was reported as merely expired.
+    it('a token of exactly 100 characters with expiry 0 is corruption, not an expired session', async () => {
+        const result = await managerReading({ token: 'x'.repeat(100), expiry: 0 }).inspectToken();
+
+        expect(formatError).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({ valid: false, expiresIn: 0, token: 'x'.repeat(100) });
+    });
+
+    it('a token under the length floor with expiry 0 is a length failure, not corruption', async () => {
+        const result = await managerReading({ token: 'short', expiry: 0 }).inspectToken();
+
+        expect(formatError).not.toHaveBeenCalled();
+        expect(result).toEqual({ valid: false, expiresIn: 0 });
+    });
+
+    it('a token that merely expired is never reported as corruption', async () => {
+        await managerReading({ token: LONG_TOKEN, expiry: Date.now() - HOUR_MS }).inspectToken();
+
+        expect(formatError).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The minutes arithmetic, with the clock pinned so the answer is exact rather
+ * than a range. A range would let the `/ 1000 / 60` be rewritten and still land
+ * on "some negative number".
+ */
+describe('TokenManager — expiry arithmetic', () => {
+    const NOW = 1_700_000_000_000;
+    let now: jest.SpyInstance;
+
+    beforeEach(() => {
+        now = jest.spyOn(Date, 'now').mockReturnValue(NOW);
+    });
+
+    afterEach(() => {
+        now.mockRestore();
+    });
+
+    it('reports an expired token as the exact negative minutes since expiry', async () => {
+        const result = await managerReading({
+            token: LONG_TOKEN,
+            expiry: NOW - 30 * 60 * 1000,
+        }).inspectToken();
+
+        expect(result).toEqual({ valid: false, expiresIn: -30, token: LONG_TOKEN });
+    });
+
+    // A store another tool wrote can hold a negative number. It is expired, and
+    // there is no meaningful "minutes ago" for it.
+    it('reports a negative stored expiry as expired with expiresIn 0', async () => {
+        const result = await managerReading({ token: LONG_TOKEN, expiry: -1 }).inspectToken();
+
+        expect(result).toEqual({ valid: false, expiresIn: 0, token: LONG_TOKEN });
+    });
+});
+
+/**
+ * How the silent refresh is ORCHESTRATED around the stored verdict — when it is
+ * consulted, how long it is given, and whose verdict wins.
+ */
+describe('TokenManager — silent refresh orchestration', () => {
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('an unreadable config store is not signed in — no refresh is attempted', async () => {
+        const refresh = jest.fn();
+        const manager = new TokenManager(
+            undefined,
+            undefined,
+            () => {
+                throw new Error('config store unreadable');
+            },
+            refresh,
+        );
+
+        await manager.inspectToken();
+
+        expect(refresh).not.toHaveBeenCalled();
+    });
+
+    it('a refresh that yields a still-bad token serves the ORIGINAL verdict, token and all', async () => {
+        const result = await managerReading(
+            { token: LONG_TOKEN, expiry: Date.now() - 30 * 60 * 1000 },
+            async () => ({ token: 'short', expiry: Date.now() + HOUR_MS }),
+        ).inspectToken();
+
+        expect(result.token).toBe(LONG_TOKEN);
+        expect(result.expiresIn).toBeLessThan(0);
+    });
+
+    it('a refresh that takes a moment is awaited, not cut off', async () => {
+        const fresh = { token: 'y'.repeat(150), expiry: Date.now() + 24 * HOUR_MS };
+        const slowRefresh = (): Promise<StoredTokenConfig> =>
+            new Promise((resolve) => setTimeout(() => resolve(fresh), 20));
+
+        const result = await managerReading(
+            { token: LONG_TOKEN, expiry: Date.now() - 30 * 60 * 1000 },
+            slowRefresh,
+        ).inspectToken();
+
+        expect(result.valid).toBe(true);
+        expect(result.token).toBe(fresh.token);
+    });
+
+    it('a refresh that never settles is timed out at TIMEOUTS.NORMAL; the stored verdict answers', async () => {
+        jest.useFakeTimers();
+        const never = (): Promise<StoredTokenConfig> => new Promise(() => undefined);
+        const manager = managerReading({ token: LONG_TOKEN, expiry: Date.now() - HOUR_MS }, never);
+
+        const pending = manager.inspectToken();
+        await jest.advanceTimersByTimeAsync(TIMEOUTS.NORMAL);
+        const result = await pending;
+
+        expect(result.valid).toBe(false);
+        expect(result.token).toBe(LONG_TOKEN);
     });
 });

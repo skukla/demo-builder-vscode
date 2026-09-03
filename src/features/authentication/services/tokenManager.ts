@@ -301,8 +301,10 @@ export class TokenManager {
         const expiry = tokenData.expiry || 0;
         const now = Date.now();
 
-        // CORRUPTION DETECTION (beta.42): expiry=0 indicates corrupted state
-        if (token && token.length > 100 && expiry === 0) {
+        // CORRUPTION DETECTION (beta.42): expiry=0 indicates corrupted state.
+        // The floor is the same `>= 100` the length check below applies, so
+        // every token long enough to be real is also long enough to be corrupt.
+        if (token && token.length >= 100 && expiry === 0) {
             this.logger.warn('[Token] CORRUPTION DETECTED: Token present but expiry=0');
 
             // Format user-friendly corruption message

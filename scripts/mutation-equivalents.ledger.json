@@ -802,6 +802,55 @@
             "decision": "none",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (AdobeEntityFields)"
+        },
+        {
+            "module": "src/features/authentication/services/tokenManager.ts",
+            "anchors": [
+                "await ims.context.set('cli.access_token', minted.access_token, stored?.local);",
+                "await ims.context.set('cli.refresh_token', minted.refresh_token, stored?.local);"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both `stored?.local` reads sit after `if (!config || !refreshable) return`, and `config` is `stored?.data` \u2014 so past that guard `stored` is defined and `stored.local` cannot throw. The `?.` is what the library's `context.get` return type demands at the read site, not a decision the code makes; there is no input on which the two spellings differ.",
+            "decision": "none \u2014 the `?.` is required by the aio-lib-ims context type",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (tokenManager)"
+        },
+        {
+            "module": "src/features/authentication/services/tokenManager.ts",
+            "anchors": [
+                "if (!refreshed) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The early return when the refresh yields nothing. Rewritten to `false`, or with its body emptied, `classifyStoredToken(undefined)` runs instead: it returns the same `{ valid: false, expiresIn: 0 }`, `second.valid` is false, and `return first` follows \u2014 the caller gets the identical stored verdict either way. The only difference is one debug line (`No access token found`), which on this path would be misleading, so the guard is kept for the log's sake and killing it would mean asserting that a log string is absent.",
+            "decision": "none \u2014 the guard is correct; the redundancy is what keeps the log honest",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (tokenManager)"
+        },
+        {
+            "module": "src/features/authentication/services/tokenManager.ts",
+            "anchors": [
+                "this.logger.debug(`[Token] Silent refresh unavailable: ${toError(error).message}`);"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The `catch` in `trySilentRefresh` (`} catch (error) {` appears twice in the module, so the anchor is the body's own line). Its body is a debug line and `return undefined`; emptied, the async function falls off its end and resolves undefined all the same. Every failing refresh \u2014 a throw, a timeout \u2014 is already pinned to yield the stored verdict, and both spellings do.",
+            "decision": "none \u2014 the explicit return states the contract",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (tokenManager)"
+        },
+        {
+            "module": "src/features/authentication/services/tokenManager.ts",
+            "anchors": [
+                "const expiresIn = expiry > 0 ? Math.floor((expiry - now) / 1000 / 60) : 0;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "`expiry > 0` rewritten to `expiry >= 0` differs only at expiry 0, and that value cannot reach this line: `tokenData.expiry || 0` folds every falsy expiry to 0, the corruption check takes every token of 100+ characters with expiry 0, and the length floor rejects every shorter one first. Negative and positive expiries are both pinned (`-1` reports 0; an expired one reports its exact minutes). This became unreachable when the corruption floor was aligned with the length floor in the same change.",
+            "decision": "none \u2014 the `> 0` is the readable form of the intent",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (tokenManager)"
         }
     ]
 }

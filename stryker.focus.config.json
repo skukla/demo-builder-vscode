@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/ui/components/AdobeEntityFields.tsx"
+        "src/features/authentication/services/tokenManager.ts"
     ],
     "reporters": [
         "clear-text",
