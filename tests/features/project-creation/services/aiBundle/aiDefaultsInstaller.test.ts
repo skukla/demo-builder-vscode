@@ -23,7 +23,6 @@ import {
     resolveMcpToolsDir,
 } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 import { COMPONENT_IDS } from '@/core/constants';
-import type { Project } from '@/types/base';
 import { createMockProject } from '../../../../helpers/projectFake';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
@@ -43,21 +42,21 @@ const executor = createMockCommandExecutor({ execute: executeMock });
 const PROJECT_PATH = '/projects/test';
 // EDS storefront project — both ai-defaults entries apply (Developer Agent
 // tooling AND Playwright).
-const EDS_PROJECT = {
+const EDS_PROJECT = createMockProject({
     name: 'Test',
     path: PROJECT_PATH,
     componentInstances: {
-        [COMPONENT_IDS.EDS_STOREFRONT]: { path: `${PROJECT_PATH}/components/eds-storefront` },
+        [COMPONENT_IDS.EDS_STOREFRONT]: { id: COMPONENT_IDS.EDS_STOREFRONT, name: 'EDS Storefront', status: 'ready', path: `${PROJECT_PATH}/components/eds-storefront` },
     },
-} as unknown as Project;
+});
 // Mesh-only project — only 'app-builder-tooling' entries apply.
-const MESH_PROJECT = {
+const MESH_PROJECT = createMockProject({
     name: 'Test',
     path: PROJECT_PATH,
     componentInstances: {
-        [COMPONENT_IDS.HEADLESS_COMMERCE_MESH]: { path: `${PROJECT_PATH}/components/mesh` },
+        [COMPONENT_IDS.HEADLESS_COMMERCE_MESH]: { id: COMPONENT_IDS.HEADLESS_COMMERCE_MESH, name: 'EDS Storefront', status: 'ready', path: `${PROJECT_PATH}/components/mesh` },
     },
-} as unknown as Project;
+});
 // Bare project — nothing applies; the installer no-ops.
 const BARE_PROJECT = createMockProject({ name: 'Test', path: PROJECT_PATH });
 const TOOLS_DIR = `${PROJECT_PATH}/.demo-builder-mcp`;

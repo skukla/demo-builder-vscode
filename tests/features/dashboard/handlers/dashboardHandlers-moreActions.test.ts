@@ -59,13 +59,14 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // =============================================================================
 // Test Utilities
 // =============================================================================
 
-function createMockProject(overrides?: Partial<Project>): Project {
-    return {
+function localProject(overrides?: Partial<Project>): Project {
+    return createMockProject({
         name: 'test-project',
         path: '/path/to/test-project',
         status: 'ready',
@@ -73,7 +74,7 @@ function createMockProject(overrides?: Partial<Project>): Project {
         lastModified: new Date('2025-01-26T12:00:00.000Z'),
         componentInstances: {},
         ...overrides,
-    } as unknown as Project;
+    });
 }
 
 function createMockContext(project: Project | undefined): HandlerContext {
@@ -98,7 +99,7 @@ describe('handleExportProject', () => {
     beforeEach(() => jest.clearAllMocks());
 
     it('should delegate to exportProjectSettings with the current project', async () => {
-        const project = createMockProject();
+        const project = localProject();
         const context = createMockContext(project);
 
         const result = await handleExportProject(context);
@@ -136,7 +137,7 @@ describe('handleRenameProject', () => {
     });
 
     it('should return error when newName is missing', async () => {
-        const project = createMockProject();
+        const project = localProject();
         const context = createMockContext(project);
 
         const result = await handleRenameProject(context, { newName: '' });
@@ -146,7 +147,7 @@ describe('handleRenameProject', () => {
     });
 
     it('should delegate to renameProjectCore with the current project and new name', async () => {
-        const project = createMockProject();
+        const project = localProject();
         const context = createMockContext(project);
 
         await handleRenameProject(context, { newName: 'renamed' });
@@ -155,7 +156,7 @@ describe('handleRenameProject', () => {
     });
 
     it('should return the result from renameProjectCore', async () => {
-        const project = createMockProject();
+        const project = localProject();
         const context = createMockContext(project);
         mockRenameProjectCore.mockResolvedValue({
             success: true,
@@ -168,7 +169,7 @@ describe('handleRenameProject', () => {
     });
 
     it('should refresh dashboard status after a successful rename', async () => {
-        const project = createMockProject();
+        const project = localProject();
         const context = createMockContext(project);
 
         await handleRenameProject(context, { newName: 'renamed' });
@@ -181,7 +182,7 @@ describe('handleRenameProject', () => {
     });
 
     it('should not refresh when rename fails', async () => {
-        const project = createMockProject();
+        const project = localProject();
         const context = createMockContext(project);
         mockRenameProjectCore.mockResolvedValue({ success: false, error: 'boom' });
 

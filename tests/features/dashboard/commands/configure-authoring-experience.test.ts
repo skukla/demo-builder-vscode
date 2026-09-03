@@ -22,6 +22,7 @@ import { createMockAuthenticationService } from '../../../helpers/authentication
 
 
 import { internals } from '../../../helpers/commandInternals';
+import { createMockProject } from '../../../helpers/projectFake';
 // Mesh / storefront staleness — return "no changes" so the save path stays simple.
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     detectMeshChanges: jest.fn().mockResolvedValue({ hasChanges: false }),
@@ -116,7 +117,7 @@ function makeEdsProject(
     githubRepo: string | typeof NO_REPO = 'acme-org/acme-storefront'
 ): Project {
     const repo = githubRepo === NO_REPO ? undefined : githubRepo;
-    return {
+    return createMockProject({
         name: 'Test Project',
         path: '/test/project',
         // EDS stack id so the real getEdsDaLiveUrl (typeGuards.isEdsProject) resolves
@@ -124,6 +125,9 @@ function makeEdsProject(
         selectedStack: 'eds-citisignal',
         componentInstances: {
             [COMPONENT_IDS.EDS_STOREFRONT]: {
+                id: COMPONENT_IDS.EDS_STOREFRONT,
+                name: 'EDS Storefront',
+                status: 'ready',
                 metadata: {
                     daLiveOrg: 'my-org',
                     daLiveSite: 'my-site',
@@ -132,7 +136,7 @@ function makeEdsProject(
                 },
             },
         },
-    } as unknown as Project;
+    });
 }
 
 /** Capture the save-configuration streaming handler registered by the command. */

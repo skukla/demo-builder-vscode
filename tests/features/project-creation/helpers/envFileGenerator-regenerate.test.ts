@@ -14,6 +14,7 @@ import { ComponentRegistry } from '@/types/components';
 import type { Project } from '@/types/base';
 import { createMockLogger, sharedEnvVars } from './envFileGenerator.testUtils';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 jest.mock('fs', () => ({
     promises: {
@@ -54,18 +55,18 @@ function buildRegistry(): ComponentRegistry {
 }
 
 function buildProject(overrides: Partial<Project> = {}): Project {
-    return {
+    return createMockProject({
         name: 'Acme Demo',
         path: '/test/acme',
         componentSelections: { backend: 'adobe-commerce-paas' },
         componentInstances: {
-            'eds-storefront': { path: '/test/acme/eds-storefront' },
+            'eds-storefront': { id: 'eds-storefront', name: 'eds-storefront', status: 'ready', path: '/test/acme/eds-storefront' },
         },
         componentConfigs: {
             'eds-storefront': { API_URL: 'https://api.example.com' },
         },
         ...overrides,
-    } as unknown as Project;
+    });
 }
 
 /**

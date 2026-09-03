@@ -22,6 +22,7 @@ import * as path from 'path';
 
 import { codedError } from '../../helpers/codedErrorFake';
 import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockProject } from '../../helpers/projectFake';
 // Mock fs/promises
 jest.mock('fs/promises');
 
@@ -39,16 +40,16 @@ const createDetailedMockLogger = () => {
 
 // Create a minimal valid project for testing
 function createTestProject(overrides: Partial<Project> = {}): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         path: '/test/path/my-project',
         created: new Date('2024-01-01T00:00:00Z'),
         componentSelections: {},
-        componentInstances: [],
+        componentInstances: {},
         componentConfigs: {},
         componentVersions: {},
         ...overrides,
-    } as Project;
+    });
 }
 
 describe('Manifest Error Investigation', () => {

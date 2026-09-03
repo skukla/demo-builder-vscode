@@ -23,10 +23,11 @@ import { moveAppBuilderComponentsToDestination } from '@/features/app-builder/se
 import type { Project } from '@/types/base';
 
 import { createDeps } from './appBuilderComponentRunner.testUtils';
+import { createMockProject } from '../../../helpers/projectFake';
 const PREVIOUS = { organization: '285361', projectId: 'old-proj', workspace: 'old-ws' };
 
 function makeProject(): Project {
-    return {
+    return createMockProject({
         name: 'demo',
         path: '/p/demo',
         adobe: { organization: '285361', projectId: 'new-proj', workspace: 'new-ws' },
@@ -34,20 +35,23 @@ function makeProject(): Project {
             'eds-accs-mesh': {
                 kind: 'mesh',
                 status: 'deployed',
+                source: { owner: '', repo: '' },
                 endpoint: 'https://old-ws.adobeio-static.net/eds-accs-mesh',
                 providesEnvVars: { MESH_ENDPOINT: 'endpoint' },
             },
-            'erp-sync': { kind: 'integration', status: 'deployed' },
+            'erp-sync': { kind: 'integration', status: 'deployed', source: { owner: '', repo: '' } },
         },
         componentInstances: {
             'eds-accs-mesh': {
+                id: 'eds-accs-mesh',
+                name: 'Mesh',
                 path: '/p/demo/components/eds-accs-mesh',
                 status: 'deployed',
                 metadata: { meshId: 'mesh-id-at-OLD-ws', meshStatus: 'deployed' },
             },
-            'erp-sync': { path: '/p/demo/components/erp-sync', status: 'ready' },
+            'erp-sync': { id: 'erp-sync', name: 'ERP Sync', path: '/p/demo/components/erp-sync', status: 'ready' },
         },
-    } as unknown as Project;
+    });
 }
 
 // Returns the REAL shape. `republishStorefront` resolves `{ success, error? }`;
@@ -147,7 +151,7 @@ describe('moveAppBuilderComponentsToDestination', () => {
     });
 
     it('is a no-op on a project with nothing deployed', async () => {
-        const empty = { ...makeProject(), appBuilderComponents: {} } as Project;
+        const empty = createMockProject({ ...makeProject(), appBuilderComponents: {} });
 
         const result = await moveAppBuilderComponentsToDestination(empty, PREVIOUS, makeDeps([]));
 

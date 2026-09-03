@@ -11,9 +11,9 @@ import { ConfigureProjectWebviewCommand } from './configure.testUtils';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/types/logger';
-import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // Mock VS Code API
 
@@ -59,11 +59,11 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
 
         // Create mock state manager
         mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({
+            getCurrentProject: jest.fn().mockResolvedValue(createMockProject({
                 name: 'Test Project',
                 path: '/test/project',
                 componentInstances: {},
-            } as Project),
+            })),
         } as unknown as jest.Mocked<StateManager>;
 
         // Create mock logger

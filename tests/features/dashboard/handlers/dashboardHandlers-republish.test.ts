@@ -56,13 +56,14 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // =============================================================================
 // Utilities
 // =============================================================================
 
 function createMockEdsProject(overrides?: Partial<Project>): Project {
-    return {
+    return createMockProject({
         name: 'test-eds-project',
         path: '/path/to/project',
         status: 'ready',
@@ -82,7 +83,7 @@ function createMockEdsProject(overrides?: Partial<Project>): Project {
             },
         },
         ...overrides,
-    } as unknown as Project;
+    });
 }
 
 function createMockContext(project: Project | undefined): HandlerContext {

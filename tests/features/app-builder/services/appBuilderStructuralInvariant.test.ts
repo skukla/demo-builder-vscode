@@ -44,7 +44,7 @@ import {
 } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
 
-import { createDeps as sharedCreateDeps } from './appBuilderComponentRunner.testUtils';
+import { createDeps as sharedCreateDeps, createProject } from './appBuilderComponentRunner.testUtils';
 // =============================================================================
 // Fixtures — N integrations
 // =============================================================================
@@ -67,16 +67,6 @@ function integrationEntry(id: string): AppBuilderComponentCatalogEntry {
  * drift — which is what the duplicate-fake scans exist to find.
  */
 const createDeps = sharedCreateDeps;
-
-function createProject(overrides: Partial<Project> = {}): Project {
-    return {
-        name: 'test-project',
-        path: '/proj',
-        adobe: { organization: 'org-123', projectId: 'proj-456', workspace: 'ws-789' },
-        componentInstances: {},
-        ...overrides,
-    } as unknown as Project;
-}
 
 /** Add every integration through the keyed runner, threading the persisted project. */
 async function addAllIntegrations(deps: ReturnType<typeof createDeps>): Promise<Project> {

@@ -24,14 +24,15 @@
 
 import { reconcileComponentSelections } from '@/core/state/componentSelectionReconcile';
 import type { Project } from '@/types/base';
+import { createMockProject } from '../../helpers/projectFake';
 
 function project(overrides: Partial<Project> = {}): Project {
-    return {
+    return createMockProject({
         name: 'p',
         path: '/p',
         componentSelections: { frontend: 'eds-storefront', backend: 'adobe-commerce-accs' },
         ...overrides,
-    } as Project;
+    });
 }
 
 const MESH_INSTANCE = {

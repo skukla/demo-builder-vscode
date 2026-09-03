@@ -11,6 +11,7 @@ import * as path from 'path';
 import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockProject } from '../../helpers/projectFake';
 
 // Mock fs/promises
 jest.mock('fs/promises');
@@ -22,16 +23,16 @@ const mockLogger = createMockLogger();
 
 // Create a minimal valid project for testing
 function createTestProject(overrides: Partial<Project> = {}): Project {
-    return {
+    return createMockProject({
         name: 'test-project',
         path: '/test/path',
         created: new Date('2024-01-01T00:00:00Z'),
         componentSelections: {},
-        componentInstances: [],
+        componentInstances: {},
         componentConfigs: {},
         componentVersions: {},
         ...overrides,
-    } as Project;
+    });
 }
 
 describe('ProjectConfigWriter atomic writes', () => {

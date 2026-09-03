@@ -11,6 +11,7 @@
 import { detectMeshChanges, calculateMeshSourceHash } from '@/features/mesh/services/stalenessDetector';
 import { Project } from '@/types/base';
 import { createMeshDepsFake } from '../../../helpers/meshDepsFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 // Mock dependencies
 jest.mock('@/features/mesh/services/stalenessDetector', () => ({
@@ -80,7 +81,7 @@ describe('detectMeshChanges - Timeout Handling', () => {
         jest.clearAllMocks();
 
         // Mock project with empty meshState.envVars (no baseline)
-        mockProject = {
+        mockProject = createMockProject({
             name: 'test-project',
             path: '/test/project',
             componentInstances: {
@@ -102,7 +103,7 @@ describe('detectMeshChanges - Timeout Handling', () => {
                         lastDeployed: '',
                             },
             },
-        } as unknown as Project;
+        });
 
         // Mock calculateMeshSourceHash to return null (no source hash captured yet)
         (calculateMeshSourceHash as jest.Mock).mockResolvedValue(null);

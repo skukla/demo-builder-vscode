@@ -13,6 +13,7 @@
 import { registerConfigureProjectTool } from '@/features/ai/server/configureProjectTool';
 import type { Project } from '@/types/base';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { createMockProject } from '../../../helpers/projectFake';
 
 const getCurrentProject = jest.fn();
 const saveProject = jest.fn();
@@ -51,12 +52,13 @@ function schema() {
  * `.demo-builder.json`, not invented.
  */
 function freshProject(): Project {
-    return {
+    return createMockProject({
         name: 'demo',
         path: '/p/demo',
         componentSelections: { frontend: 'eds-storefront', backend: 'adobe-commerce-accs' },
         componentInstances: {
             'eds-accs-mesh': {
+                name: 'eds-accs-mesh',
                 id: 'eds-accs-mesh',
                 type: 'dependency',
                 subType: 'mesh',
@@ -67,7 +69,7 @@ function freshProject(): Project {
         selectedAddons: [],
         selectedBlockLibraries: [],
         meshStatusSummary: 'deployed',
-    } as unknown as Project;
+    });
 }
 
 beforeEach(() => {
@@ -171,10 +173,10 @@ describe('configure_project — store scope moves as a triple', () => {
     });
 
     it('refuses when the project has no backend selected', async () => {
-        getCurrentProject.mockResolvedValue({
+        getCurrentProject.mockResolvedValue(createMockProject({
             ...freshProject(),
             componentSelections: {},
-        } as unknown as Project);
+        }));
 
         const out = await serve()({ storeScope: { website: 'b', store: 's', storeView: 'v' } });
         expect(out.error).toMatch(/no backend component selected/);
@@ -182,10 +184,10 @@ describe('configure_project — store scope moves as a triple', () => {
     });
 
     it('merges into existing component config rather than replacing it', async () => {
-        getCurrentProject.mockResolvedValue({
+        getCurrentProject.mockResolvedValue(createMockProject({
             ...freshProject(),
             componentConfigs: { 'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://keep.test' } },
-        } as unknown as Project);
+        }));
 
         await serve()({ storeScope: { website: 'b', store: 's', storeView: 'v' } });
 
@@ -234,10 +236,10 @@ describe('configure_project — mesh staleness', () => {
 
     // Rewriting a key with the value it already had is not a change.
     it('does NOT mark stale when the value is unchanged', async () => {
-        getCurrentProject.mockResolvedValue({
+        getCurrentProject.mockResolvedValue(createMockProject({
             ...freshProject(),
             componentConfigs: { 'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://same.test' } },
-        } as unknown as Project);
+        }));
 
         const out = await serve()({
             env: { 'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://same.test' } },
@@ -257,10 +259,10 @@ describe('configure_project — mesh staleness', () => {
     });
 
     it('does nothing for a project with no mesh', async () => {
-        getCurrentProject.mockResolvedValue({
+        getCurrentProject.mockResolvedValue(createMockProject({
             ...freshProject(),
             componentInstances: {},
-        } as unknown as Project);
+        }));
 
         const out = await serve()({
             storeScope: { website: 'b', store: 's', storeView: 'v' },
