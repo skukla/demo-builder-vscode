@@ -180,9 +180,6 @@ export function isEventsAccessDenied(error: unknown): boolean {
  * NEVER be deleted.
  */
 export function parseProviderBinding(updateHref: string): ProviderBinding | undefined {
-    if (!updateHref) {
-        return undefined;
-    }
     const match = PROVIDER_UPDATE_HREF_PATTERN.exec(updateHref);
     if (!match) {
         return undefined;

@@ -20,7 +20,7 @@ import {
     parseProviderBinding,
     type EventsAuth,
 } from '@/features/authentication/services/ioEventsClient';
-import { jsonResponse } from './ioEventsClient.testUtils';
+import { jsonResponse, nonJsonResponse } from './ioEventsClient.testUtils';
 
 const FAKE_TOKEN = 'fake-test-token-not-a-secret';
 const FAKE_API_KEY = 'fake-test-client-id-not-a-secret';
@@ -32,18 +32,6 @@ const EXPECTED_HEADERS = {
     'x-api-key': FAKE_API_KEY,
     Accept: 'application/hal+json',
 };
-
-/** Build a stub fetch Response with a JSON body. */
-
-/** Build a stub fetch Response whose body is not valid JSON. */
-function nonJsonResponse(status: number): Response {
-    return {
-        ok: status >= 200 && status < 300,
-        status,
-        statusText: 'Stub',
-        json: jest.fn().mockRejectedValue(new SyntaxError('Unexpected token < in JSON')),
-    } as unknown as Response;
-}
 
 function makeClient(mockFetch: jest.Mock): IoEventsClient {
     return new IoEventsClient(AUTH, mockFetch as unknown as typeof fetch);
@@ -142,6 +130,30 @@ describe('ioEventsClient', () => {
 
             // Pagination treats the foreign link as the end of the list —
             // the auth headers are never sent off api.adobe.io.
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            expect(result.map(p => p.id)).toEqual(['prov-1']);
+        });
+
+        it('treats a _links block without next as the last page (no second request)', async () => {
+            mockFetch.mockResolvedValueOnce(jsonResponse(200, {
+                _embedded: { providers: [{ id: 'prov-1' }] },
+                _links: { self: { href: 'https://api.adobe.io/events/org-1/providers' } },
+            }));
+
+            const result = await makeClient(mockFetch).listProviders('org-1');
+
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            expect(result.map(p => p.id)).toEqual(['prov-1']);
+        });
+
+        it('does NOT follow a _links.next.href that is not a parseable URL (stops, no request)', async () => {
+            mockFetch.mockResolvedValueOnce(jsonResponse(200, {
+                _embedded: { providers: [{ id: 'prov-1' }] },
+                _links: { next: { href: 'https://[not-a-url' } },
+            }));
+
+            const result = await makeClient(mockFetch).listProviders('org-1');
+
             expect(mockFetch).toHaveBeenCalledTimes(1);
             expect(result.map(p => p.id)).toEqual(['prov-1']);
         });

@@ -15,3 +15,13 @@ export function jsonResponse(status: number, body: unknown): Response {
         json: jest.fn().mockResolvedValue(body),
     } as unknown as Response;
 }
+
+/** A fetch `Response` whose body is not valid JSON, with `ok` derived from `status`. */
+export function nonJsonResponse(status: number): Response {
+    return {
+        ok: status >= 200 && status < 300,
+        status,
+        statusText: 'Stub',
+        json: jest.fn().mockRejectedValue(new SyntaxError('Unexpected token < in JSON')),
+    } as unknown as Response;
+}

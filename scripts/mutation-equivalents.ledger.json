@@ -1039,6 +1039,30 @@
             "decision": "none \u2014 an explicit fail-closed return over an empty catch",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (imsTokenClaims)"
+        },
+        {
+            "module": "src/features/authentication/services/ioEventsClient.ts",
+            "anchors": [
+                "const resolved = new URL(nextHref, IO_EVENTS_BASE_URL);"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch two lines below this anchor holds only `return undefined`, and emptying it makes the function fall off its end, which also yields undefined. On an unparseable next href the original and the mutant hand the loop the same value and it stops the same way, with no second request either way (that decision IS pinned by the not-a-parseable-URL test). The anchor names the throwing line rather than `} catch {` because that text appears twice in the module.",
+            "decision": "none \u2014 the explicit return says the stop is a decision, not a swallowed error",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (ioEventsClient)"
+        },
+        {
+            "module": "src/features/authentication/services/ioEventsClient.ts",
+            "anchors": [
+                "const entries = body._embedded?.registrations ?? [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the `[]` fallback with a one-string array. The filter on the next line keeps only entries carrying registration_id or id, and a string has neither, so the substituted element is dropped and the result is the same empty list. No body the API could return reaches the fallback with anything the filter would keep, and there is no other observable effect. The fallback exists so `.filter` has an array to run on, not to carry content.",
+            "decision": "none \u2014 the fallback is required for the call to be well-formed and its content is unreachable past the filter",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (ioEventsClient)"
         }
     ]
 }

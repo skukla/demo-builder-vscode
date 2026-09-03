@@ -17,7 +17,7 @@
  */
 
 import { IoEventsClient, type EventsAuth } from '@/features/authentication/services/ioEventsClient';
-import { jsonResponse } from './ioEventsClient.testUtils';
+import { jsonResponse, nonJsonResponse } from './ioEventsClient.testUtils';
 
 const FAKE_TOKEN = 'fake-test-token-not-a-secret';
 const FAKE_API_KEY = 'fake-test-client-id-not-a-secret';
@@ -74,6 +74,23 @@ describe('ioEventsClient — create path', () => {
                     .createProvider('o', 'p', 'w', { label: 'x' })
                     .catch((e) => e.message)
             ).resolves.not.toContain(FAKE_TOKEN);
+        });
+    });
+
+    describe('createProvider — non-JSON 2xx body', () => {
+        it('throws a sanitized typed error carrying the status (no token in the message)', async () => {
+            mockFetch.mockResolvedValueOnce(nonJsonResponse(201));
+
+            let caught: unknown;
+            try {
+                await makeClient(mockFetch).createProvider('org-1', 'proj-1', 'ws-1', { label: 'x' });
+            } catch (error) {
+                caught = error;
+            }
+            expect(caught).toBeInstanceOf(Error);
+            expect((caught as Error).name).toBe('IoEventsApiError');
+            expect((caught as { status?: number }).status).toBe(201);
+            expect((caught as Error).message).not.toContain(FAKE_TOKEN);
         });
     });
 
