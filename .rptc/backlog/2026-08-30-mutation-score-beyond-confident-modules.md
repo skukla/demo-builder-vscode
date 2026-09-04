@@ -284,3 +284,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  feat(mutation): measure test REDUNDANCY exactly — bail off, per module, with a minimal cover (`7b446298f`)
 - 2026-09-03  test(eds): bring edsResetService to zero open mutation gaps (`19724eeae`)
 - 2026-09-03  test(eds): bring edsResetMeshHelper to zero open mutation gaps (`3d25bc7b4`)
+- 2026-09-03  test(eds): bring edsResetConfigStep to zero open mutation gaps (`a5daae431`)

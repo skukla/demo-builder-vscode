@@ -250,6 +250,187 @@ describe('Project Reset Service - Mesh Redeployment Org-Context', () => {
         expect(mockDeployMeshComponent).not.toHaveBeenCalled();
     });
 
+    it('should return null when the mesh component has no path', async () => {
+        mockGetMeshComponentInstance.mockReturnValue({ id: 'commerce-mesh', path: undefined });
+
+        const result = await handleMeshRedeployment(
+            createProject(),
+            createContext(),
+            '[ProjectReset]',
+            progress,
+            vscode,
+            executor,
+            authManagerFake
+        );
+
+        expect(result).toBeNull();
+        expect(mockEnsureAdobeIOAuth).not.toHaveBeenCalled();
+    });
+
+    it('runs the auth preflight against THIS project with the reset wording, before targeting', async () => {
+        const project = createProject();
+        const context = createContext();
+
+        await handleMeshRedeployment(
+            project,
+            context,
+            '[Dashboard]',
+            progress,
+            vscode,
+            executor,
+            authManagerFake
+        );
+
+        expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
+            expect.objectContaining({
+                authManager: authManagerFake,
+                logger: context.logger,
+                logPrefix: '[Dashboard]',
+                warningMessage: expect.stringContaining('skip to finish without redeploying'),
+            })
+        );
+        expect(mockEnsureAdobeIOAuth.mock.invocationCallOrder[0]).toBeLessThan(
+            mockWithOrgContext.mock.invocationCallOrder[0]
+        );
+        expect(progress.report).toHaveBeenCalledWith({
+            message: 'Checking Adobe organization access…',
+        });
+    });
+
+    it('deploys the mesh at the component path through the handed-in executor and logger', async () => {
+        const project = createProject();
+        const context = createContext();
+
+        await handleMeshRedeployment(
+            project,
+            context,
+            '[ProjectReset]',
+            progress,
+            vscode,
+            executor,
+            authManagerFake
+        );
+
+        expect(mockDeployMeshComponent).toHaveBeenCalledWith(
+            '/test/mesh',
+            executor,
+            context.logger,
+            expect.any(Function),
+            'mesh-123'
+        );
+        expect(progress.report).toHaveBeenCalledWith({ message: 'Redeploying API Mesh…' });
+    });
+
+    it('relays deploy progress to the notification, preferring the sub-message', async () => {
+        await handleMeshRedeployment(
+            createProject(),
+            createContext(),
+            '[ProjectReset]',
+            progress,
+            vscode,
+            executor,
+            authManagerFake
+        );
+
+        const onProgress = mockDeployMeshComponent.mock.calls[0][3] as (
+            message: string,
+            subMessage?: string
+        ) => void;
+        onProgress('Deploying mesh', 'Provisioning…');
+        expect(progress.report).toHaveBeenLastCalledWith({ message: 'Provisioning…' });
+        onProgress('Deploying mesh', undefined);
+        expect(progress.report).toHaveBeenLastCalledWith({ message: 'Deploying mesh' });
+    });
+
+    describe('when the deploy fails', () => {
+        it('lands the project on ready, warns the SC, and returns the early result', async () => {
+            mockDeployMeshComponent.mockResolvedValue({ success: false, error: 'aio exploded' });
+            const project = createProject();
+            const context = createContext();
+
+            const result = await handleMeshRedeployment(
+                project,
+                context,
+                '[ProjectReset]',
+                progress,
+                vscode,
+                executor,
+                authManagerFake
+            );
+
+            expect(result).toEqual({
+                redeployed: false,
+                earlyReturn: {
+                    success: true,
+                    error: 'Reset completed but mesh redeployment failed: aio exploded',
+                },
+            });
+            expect(project.status).toBe('ready');
+            expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+                '"test-project" reset successfully, but mesh redeployment failed: aio exploded. ' +
+                    'You can redeploy manually from the dashboard.'
+            );
+            const { updateMeshState } = require('@/features/mesh/services/stalenessDetector');
+            expect(updateMeshState).not.toHaveBeenCalled();
+        });
+
+        it('a failure without a message gets the generic one', async () => {
+            mockDeployMeshComponent.mockResolvedValue({ success: false });
+
+            const result = await handleMeshRedeployment(
+                createProject(),
+                createContext(),
+                '[ProjectReset]',
+                progress,
+                vscode,
+                executor,
+                authManagerFake
+            );
+
+            expect(result?.earlyReturn?.error).toBe(
+                'Reset completed but mesh redeployment failed: Mesh deployment failed'
+            );
+        });
+
+        it('a "success" that carries no data is a failure too', async () => {
+            mockDeployMeshComponent.mockResolvedValue({ success: true });
+
+            const result = await handleMeshRedeployment(
+                createProject(),
+                createContext(),
+                '[ProjectReset]',
+                progress,
+                vscode,
+                executor,
+                authManagerFake
+            );
+
+            expect(result?.redeployed).toBe(false);
+            expect(result?.earlyReturn?.error).toBe(
+                'Reset completed but mesh redeployment failed: Mesh deployment failed'
+            );
+        });
+
+        it('a thrown deploy is reported the same way', async () => {
+            mockDeployMeshComponent.mockRejectedValue(new Error('socket hang up'));
+
+            const result = await handleMeshRedeployment(
+                createProject(),
+                createContext(),
+                '[ProjectReset]',
+                progress,
+                vscode,
+                executor,
+                authManagerFake
+            );
+
+            expect(result?.earlyReturn?.error).toBe(
+                'Reset completed but mesh redeployment failed: socket hang up'
+            );
+        });
+    });
+
     it('should return null when the project has no mesh component', async () => {
         mockGetMeshComponentInstance.mockReturnValue(undefined);
         const project = createProject();

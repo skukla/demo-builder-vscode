@@ -67,6 +67,13 @@ describe('buildComponentList — app-builder derivation', () => {
         expect(list).toContainEqual({ id: 'commerce-mesh', type: 'dependency' });
     });
 
+    it('is EMPTY for a stack with no frontend and no dependencies when the project saved none', () => {
+        const stack = createStack({ frontend: undefined, dependencies: undefined });
+        const project = createMockProject({ componentSelections: undefined });
+
+        expect(buildComponentList(stack, project)).toEqual([]);
+    });
+
     it('produces no app-builder entry when appBuilder selection is empty/absent', () => {
         const stack = createStack();
         const project = createMockProject({ componentSelections: {} });
@@ -117,6 +124,12 @@ describe('buildAppBuilderDefinitionFromInstance — runtime app reconstruction',
         const def = buildAppBuilderDefinitionFromInstance(project, 'my-app');
 
         expect(def?.source).toEqual(expect.objectContaining({ branch: 'main' }));
+    });
+
+    it('returns undefined for a project that has no instances at all', () => {
+        const project = createMockProject({ componentInstances: undefined });
+
+        expect(buildAppBuilderDefinitionFromInstance(project, 'my-app')).toBeUndefined();
     });
 
     it('returns undefined when no instance exists for the id', () => {
