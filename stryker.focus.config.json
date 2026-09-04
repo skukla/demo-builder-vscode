@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/steps/tileStatus.ts"
+        "src/features/project-creation/services/aiBundle/generatedFileWriter.ts"
     ],
     "reporters": [
         "clear-text",

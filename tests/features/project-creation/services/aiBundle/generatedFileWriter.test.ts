@@ -375,6 +375,32 @@ describe('createGeneratedFileWriter', () => {
         });
     });
 
+    describe('remove — the template proof applies ONLY to unrecorded files', () => {
+        it('keeps a recorded-but-edited file whose content happens to match the template', async () => {
+            // The two proofs are not interchangeable. A recorded hash means we
+            // have been tracking this file, so a mismatch is an edit and the
+            // file is the user's — even if what is on disk today looks like
+            // something we would write. Only an UNRECORDED file may be proved
+            // ours by comparing against the template.
+            const template = 'template body';
+            primeDisk({ [path.join(PROJECT, '.claude/skills/x.md')]: template });
+            const writer = createGeneratedFileWriter(
+                PROJECT,
+                { '.claude/skills/x.md': sha256('what we recorded earlier') },
+                logger
+            );
+
+            const outcome = await writer.remove('.claude/skills/x.md', template);
+
+            expect(outcome).toBe('skipped');
+            expect(fsPromises.unlink).not.toHaveBeenCalled();
+            expect(writer.report().skipped).toEqual(['.claude/skills/x.md']);
+            // The stale entry stays: dropping it would silently re-arm the
+            // unrecorded-file path on the next run.
+            expect(writer.hashes()['.claude/skills/x.md']).toBeDefined();
+        });
+    });
+
     describe('remove — matrix row: absent on disk', () => {
         it('returns absent and drops the stale hash entry without unlinking', async () => {
             primeDisk({});
@@ -591,6 +617,61 @@ describe('symlink and containment guards', () => {
 
         expect(outcome).toBe('skipped');
         expect(fsPromises.unlink).not.toHaveBeenCalled();
+    });
+
+    it('refuses a key that climbs out of the project even when nothing on the way exists', async () => {
+        // The ancestor walk has to TERMINATE at the filesystem root and answer
+        // "not contained" there. Nothing above /etc exists in this mock, so the
+        // walk runs out of parents rather than finding the project root.
+        (fsPromises.readFile as jest.Mock).mockRejectedValue(enoentError());
+        (fsPromises.realpath as jest.Mock).mockImplementation(async (p: string) => {
+            if (p === PROJECT) return PROJECT;
+            throw enoentError();
+        });
+        const writer = makeTestWriter(PROJECT);
+
+        const outcome = await writer.write('../../etc/passwd', 'pwned');
+
+        expect(outcome).toBe('skipped');
+        expect(fsPromises.mkdir).not.toHaveBeenCalled();
+        expect(fsPromises.writeFile).not.toHaveBeenCalled();
+    });
+
+    it('propagates a non-ENOENT realpath failure instead of walking past it', async () => {
+        // ENOENT means "not created yet, keep walking up". Anything else — a
+        // permissions failure on an ancestor — is a real error: swallowing it
+        // would silently downgrade an unreadable path to "not contained" and
+        // report a skip for a file we never actually looked at.
+        (fsPromises.readFile as jest.Mock).mockRejectedValue(enoentError());
+        (fsPromises.realpath as jest.Mock).mockImplementation(async (p: string) => {
+            if (p === PROJECT) return PROJECT;
+            throw Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' });
+        });
+        const writer = makeTestWriter(PROJECT);
+
+        await expect(writer.write('.claude/mcp.json', '{}')).rejects.toThrow('EACCES');
+    });
+
+    it('closes the file handle on the happy path and when the write fails', async () => {
+        // The handle is opened with O_NOFOLLOW and written through the fd, so
+        // nothing else closes it — a lost close leaks a descriptor per file,
+        // and the bundle writes dozens on every activation.
+        const close = jest.fn().mockResolvedValue(undefined);
+        (fsPromises.readFile as jest.Mock).mockRejectedValue(enoentError());
+        (fsPromises.open as jest.Mock).mockResolvedValue({
+            writeFile: jest
+                .fn()
+                .mockResolvedValueOnce(undefined)
+                .mockRejectedValueOnce(new Error('EIO')),
+            close,
+        });
+        const writer = makeTestWriter(PROJECT);
+
+        await writer.write('AGENTS.md', 'first');
+        expect(close).toHaveBeenCalledTimes(1);
+
+        await expect(writer.write('CLAUDE.md', 'second')).rejects.toThrow('EIO');
+        expect(close).toHaveBeenCalledTimes(2);
     });
 
     it('an absent target still writes normally — O_CREAT covers the first write', async () => {

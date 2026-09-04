@@ -5338,6 +5338,30 @@
             "decision": "none \u2014 the ?. is required by the optional type and unreachable-with-undefined by short-circuit",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/generatedFileWriter.ts",
+            "anchors": [
+                "const provablyOursByHash = recorded !== undefined && sha256(onDisk) === recorded;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the recorded !== undefined guard true leaves provablyOursByHash as sha256(onDisk) === recorded, and sha256 always returns a 64-character hex string, which is never equal to undefined. So for an unrecorded file both the guarded and the unguarded form evaluate to false, and for a recorded file the guard was true anyway. No input distinguishes them; the guard is there to state the precondition to a reader, not to change the answer.",
+            "decision": "none \u2014 the explicit guard says what proof-by-hash requires and costs nothing",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/generatedFileWriter.ts",
+            "anchors": [
+                "currentTemplate !== undefined &&"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true leaves provablyOursByTemplate as recorded === undefined && onDisk === currentTemplate. With currentTemplate undefined that comparison can only be true if onDisk is undefined too, and onDisk cannot be undefined here: the absent-on-disk case returns 'absent' several lines earlier, so every path reaching this expression has a string in onDisk. The guard and its absence therefore agree on every reachable input.",
+            "decision": "none \u2014 the guard names the precondition the removal matrix states, and the early return is what makes it redundant",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }
