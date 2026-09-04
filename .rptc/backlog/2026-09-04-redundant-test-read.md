@@ -84,3 +84,35 @@ raised here so the next queue is generated with the answer.
 ## Shipped so far
 
 - 2026-09-03  docs(backlog): PL-42 — read the redundancy lists and delete what pins nothing (`591c4c293`)
+
+## The sweep finished — 2026-09-04 02:20, all 143 modules, no failures
+
+Ran behind the goal queues overnight (`scripts/overnight/runs.sh` moved it to the end,
+since two Stryker runs starve each other). Every module whose gaps were closed was
+measured with bail off.
+
+| Across the 141 modules measured | Tests | Share |
+|---|---|---|
+| Tests in those suites | 3525 | 100% |
+| Make a catch nobody else makes | 1163 | 33% |
+| Smallest set keeping every catch | 1453 | 41% |
+| **Droppable together, losing no catch** | **1952** | **55%** |
+| Catch nothing at all | 120 | 3% |
+
+The two-module ratio held across the whole corpus: **about half of every suite is a
+candidate**, and only a third of tests make a catch nobody else makes. The caveats
+above are unchanged and now apply to 1,952 tests rather than 43 — this is a READ,
+and the reading is the work.
+
+Densest first, by how many tests could go:
+
+| Module | Tests | Droppable | Catch nothing |
+|---|---|---|---|
+| `stateManager.ts` | 161 | 121 | 5 |
+| `adobeEntityFetcher.ts` | 153 | 119 | 12 |
+| `fieldValidation.ts` | 90 | 84 | 0 |
+| `authenticationHandlers.ts` | 99 | 57 | 3 |
+| `adobeEntityService.ts` | 51 | 49 | 0 |
+| `authCacheManager.ts` | 62 | 38 | 6 |
+| `projectConfigWriter.ts` | 68 | 37 | 0 |
+| `tokenManager.ts` | 60 | 37 | 0 |

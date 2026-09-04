@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-04. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/project-creation/commands/createProject.ts  (mixed, 28.45%, 163 open gaps)
-  - src/features/project-creation/services/meshSetupService.ts  (orchestration, 25.89%, 123 open gaps)
-  - src/features/project-creation/ui/steps/ProjectCreationStep.tsx  (mixed, 40%, 122 open gaps)
   - src/features/project-creation/ui/wizard/WizardContainer.tsx  (pure, 32.67%, 83 open gaps)
   - src/features/project-creation/ui/wizard/wizardHelpers.ts  (pure, 73.47%, 82 open gaps)
+  - src/features/project-creation/ui/steps/StorefrontStep.tsx  (pure, 33.33%, 80 open gaps)
+  - src/features/project-creation/ui/steps/WelcomeStep.tsx  (pure, 50.65%, 71 open gaps)
+  - src/features/project-creation/ui/components/BrandGallery.tsx  (pure, 27.59%, 70 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts

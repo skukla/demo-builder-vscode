@@ -290,3 +290,8 @@ which point the cadence drops to release cuts.
 - 2026-09-04  test(lifecycle): bring syncStorefront to zero open mutation gaps (`6d40bb7f8`)
 - 2026-09-04  test(lifecycle): bring startDemo to zero open mutation gaps (`6b809148f`)
 - 2026-09-04  test(lifecycle): bring stopDemo to zero open mutation gaps (`059639eb5`)
+- 2026-09-04  test(prerequisites): bring shared.ts to zero open mutation gaps (`f7c7919c0`)
+- 2026-09-04  test(lifecycle): bring managedStorefrontFiles to zero open mutation gaps (`fa2a266cb`)
+- 2026-09-04  test(lifecycle): bring deleteProject to zero open mutation gaps (`748eaa283`)
+- 2026-09-04  chore(overnight): runs.sh commits each regenerated queue before running it (`37c0fd1c3`)
+- 2026-09-04  chore(overnight): run 3 queue — 40 modules, lifecycle tail then prerequisites (`46dc1ea84`)

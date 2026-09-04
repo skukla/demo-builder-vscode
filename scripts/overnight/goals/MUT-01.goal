@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-01. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/lifecycle/commands/deleteProject.ts  (orchestration, 61.39%, 18 open gaps)
-  - src/features/lifecycle/commands/managedStorefrontFiles.ts  (pure, 62.5%, 2 open gaps)
-  - src/features/prerequisites/handlers/shared.ts  (mixed, 37.65%, 152 open gaps)
   - src/features/prerequisites/handlers/checkHandler.ts  (orchestration, 36.18%, 143 open gaps)
   - src/features/prerequisites/services/PrerequisitesManager.ts  (mixed, 33.63%, 123 open gaps)
+  - src/features/prerequisites/ui/steps/hooks/prerequisiteRenderers.tsx  (pure, 23.4%, 106 open gaps)
+  - src/features/prerequisites/handlers/installHandler.ts  (orchestration, 71.16%, 86 open gaps)
+  - src/features/prerequisites/ui/steps/PrerequisitesStep.tsx  (pure, 22.96%, 75 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts
