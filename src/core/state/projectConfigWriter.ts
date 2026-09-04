@@ -161,8 +161,10 @@ export class ProjectConfigWriter {
      * We write exactly what's in the project object - no merging with disk.
      */
     private async writeManifest(project: Project): Promise<void> {
-        // GUARD: Validate project.path before proceeding
-        if (!project.path || typeof project.path !== 'string' || project.path.trim() === '') {
+        // GUARD: Validate project.path before proceeding. Every falsy value is
+        // already caught by one of the two checks (a non-string by `typeof`, an
+        // empty string by `trim`), so there is no separate truthiness test.
+        if (typeof project.path !== 'string' || project.path.trim() === '') {
             throw new Error(`Invalid project path: "${project.path}"`);
         }
 

@@ -7,8 +7,11 @@
  * to read back the JSON the writer actually handed to disk. Roughly forty lines,
  * identical in both.
  *
- * The subject is `ProjectConfigWriter`; the suites are named for the manifest
- * because that is what they assert about. This file owns the import, since
+ * The subject is `ProjectConfigWriter`, and the suites carry its stem so the
+ * mirror convention finds them: they were named `projectManifest-*` until
+ * 2026-09-03, and the focused mutation run (`scripts/focusModule.mjs`) never
+ * saw them, so every field they pin was reported as unconstrained. This file
+ * owns the import, since
  * `jest.mock('fs/promises')` hoists within this module and a suite importing
  * the writer itself could bind it before the mock was registered.
  */
@@ -41,9 +44,17 @@ export function createTestProject(overrides: Partial<Project> = {}): Project {
     });
 }
 
-/** The JSON the writer actually handed to disk. */
+/**
+ * The JSON the writer actually handed to disk.
+ *
+ * Found by its temp-file target rather than taken as the last write: through the
+ * public `saveProjectConfig` the last write is the `.env`, and a suite reading
+ * that as JSON fails on the first `#`.
+ */
 export function writtenManifest(): Record<string, unknown> {
-    const call = mockFs.writeFile.mock.calls.at(-1);
+    const call = mockFs.writeFile.mock.calls.find(([target]) =>
+        String(target).endsWith('.demo-builder.json.tmp'),
+    );
     return JSON.parse(String(call?.[1]));
 }
 
@@ -71,7 +82,7 @@ export function resetFsMocks(): void {
 }
 
 // Below the mock on purpose — see the note above about hoisting.
-import { ProjectConfigWriter } from '@/core/state/projectConfigWriter';
+import { MANIFEST_FORMAT_VERSION, ProjectConfigWriter } from '@/core/state/projectConfigWriter';
 import { createMockProject } from '../../helpers/projectFake';
 
-export { ProjectConfigWriter };
+export { MANIFEST_FORMAT_VERSION, ProjectConfigWriter };

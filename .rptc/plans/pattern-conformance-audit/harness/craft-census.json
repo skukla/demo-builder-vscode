@@ -469,12 +469,12 @@
    "doubleStyle": "light-mocks"
   },
   {
-   "unit": "tests/core/state/projectManifest-storeStructure.test.ts",
+   "unit": "tests/core/state/projectConfigWriter-storeStructure.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
   },
   {
-   "unit": "tests/core/state/projectManifest-title.test.ts",
+   "unit": "tests/core/state/projectConfigWriter-title.test.ts",
    "flags": [],
    "doubleStyle": "light-mocks"
   },

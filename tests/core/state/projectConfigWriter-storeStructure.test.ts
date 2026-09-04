@@ -15,7 +15,7 @@ import {
     mockLogger,
     resetFsMocks,
     writtenManifest,
-} from './projectManifest.testUtils';
+} from './projectConfigWriter.testUtils';
 
 const STRUCTURE = {
     websites: [{ id: 2, code: 'citisignal', name: 'CitiSignal' }],

@@ -11,7 +11,7 @@
  *
  * 1. The writer must OMIT the key when there is no title. `title: undefined`
  *    serialises a null into every legacy manifest for no gain. (Same contract
- *    as `commerceStoreStructure` — see projectManifest-storeStructure.test.ts.)
+ *    as `commerceStoreStructure` — see projectConfigWriter-storeStructure.test.ts.)
  * 2. Nothing may backfill it from the slug. Seeding `title = name` renders
  *    identically today and then persists the slug as a genuine user title; a
  *    later rename would move the folder and leave that stale title on screen.
@@ -22,7 +22,7 @@ import {
     resetFsMocks,
     write,
     writtenManifest,
-} from './projectManifest.testUtils';
+} from './projectConfigWriter.testUtils';
 
 beforeEach(resetFsMocks);
 

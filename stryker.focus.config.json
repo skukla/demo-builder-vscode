@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/state/projectFileLoader.ts"
+        "src/core/state/projectConfigWriter.ts"
     ],
     "reporters": [
         "clear-text",

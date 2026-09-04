@@ -1141,6 +1141,21 @@
             "decision": "none \u2014 the fallback is the empty contribution to a set, and only a config keyed by the injected literal could see it",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (projectFileLoader, MUT-04)"
+        },
+        {
+            "module": "src/core/state/projectConfigWriter.ts",
+            "anchors": [
+                "if (project.datapack !== undefined) {",
+                "if (project.selectedPackage !== undefined) {",
+                "if (project.selectedStack !== undefined) {",
+                "if (project.commerceStoreStructure) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Each guard copies one optional scalar-or-object field onto the manifest only when the project has it. The mutant forces the guard true, so the field is assigned whatever the project holds \u2014 which, in the only case the guard would have skipped, is undefined. The manifest reaches disk through JSON.stringify, which omits a key whose value is undefined, so the written file is byte-identical either way; the only value that would be written where the guard skipped is null, and `Project` types all four fields as `T | undefined`. The absent case IS tested (the key is asserted missing from the written manifest for each field); what no test reading the written artefact can see is whether the key was skipped or assigned-then-dropped. The list-valued siblings on the same lines are NOT here: an empty array survives stringify, so their guards are observable and are killed.",
+            "decision": "none \u2014 the guard keeps the in-memory object clean and states intent; removing it would change nothing on disk and make the field list read inconsistently with its list-valued neighbours",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (projectConfigWriter, MUT-05)"
         }
     ]
 }
