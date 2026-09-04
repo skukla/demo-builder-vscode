@@ -86,6 +86,22 @@ describe('handleForcedOrgSwitch', () => {
         expect(result.success).toBe(true);
     });
 
+    // The hint is read off `project.adobe`, which the Project type makes optional.
+    // A project on disk with no Adobe block is not the wizard case (there IS a
+    // current project) and must not throw on the way to the sign-in: every hint
+    // field is simply undefined and the forced switch still runs.
+    it('still switches org for a project that has no Adobe context block', async () => {
+        const login = mockLogin(true);
+
+        const result = await handleForcedOrgSwitch(makeContext({ name: 'no-adobe-block' }));
+
+        expect(login).toHaveBeenCalledWith(
+            { organization: undefined, projectId: undefined, workspace: undefined },
+            true
+        );
+        expect(result.success).toBe(true);
+    });
+
     it('reports failure when the sign-in is cancelled', async () => {
         mockLogin(false);
 
