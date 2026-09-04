@@ -250,3 +250,5 @@ which point the cadence drops to release cuts.
 - 2026-09-03  docs(backlog): log the MUT-01 batch commits against PL-22 (`07a93cf8f`)
 - 2026-09-03  test(auth): bring ioEventsClient to zero open mutation gaps (`1c20b2a7c`)
 - 2026-09-03  test(auth): bring apiAccessCatalog to zero open mutation gaps (`786da3b2f`)
+- 2026-09-03  test(auth): bring adobeEntityFetcher to zero open mutation gaps (`5053f4da3`)
+- 2026-09-03  test(auth): bring projectOwnership to zero open mutation gaps (`d89aad82c`)
