@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-03: WizardContainer at zero open gaps (ledger anchors merged)",
+    "_note": "MUT-03: wizardHelpers at zero open gaps",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -10547,29 +10547,27 @@
             "openGaps": 18
         },
         "src/features/project-creation/ui/wizard/wizardHelpers.ts": {
-            "score": 73.47,
-            "killed": 287,
-            "survived": 53,
-            "noCoverage": 51,
+            "score": 93.11,
+            "killed": 364,
+            "survived": 9,
+            "noCoverage": 18,
             "timeout": 1,
             "survivorCategories": {
-                "branch": 32,
-                "other": 6,
-                "block": 6,
-                "optionalChain": 8,
-                "string": 1
+                "branch": 5,
+                "block": 2,
+                "string": 1,
+                "other": 1
             },
             "uncoveredCategories": {
-                "block": 5,
-                "branch": 17,
-                "optionalChain": 2,
-                "other": 6,
-                "string": 19,
-                "logPresentation": 2
+                "block": 2,
+                "logPresentation": 8,
+                "branch": 6,
+                "optionalChain": 1,
+                "other": 1
             },
-            "highValueSurvivors": 38,
-            "equivalent": 0,
-            "openGaps": 82
+            "highValueSurvivors": 7,
+            "equivalent": 18,
+            "openGaps": 0
         },
         "src/features/projects-dashboard/commands/showProjectsList.ts": {
             "score": 35.16,

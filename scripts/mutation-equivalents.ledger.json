@@ -3355,6 +3355,105 @@
             "decision": "none \u2014 the one element that differs belongs to the step the user is standing on.",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
+            "anchors": [
+                "if (indices.buildStepIndex !== -1 && targetIndex < indices.buildStepIndex) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the first term true changes the guard to 'targetIndex < buildStepIndex' alone, which differs from the original only when there is no host step (buildStepIndex is -1) AND the target index is below -1. A step index is a position in an array and is never negative, so that combination cannot be constructed. The other four mutants on this line are reachable and are killed.",
+            "decision": "none \u2014 no caller can supply a target index below -1.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
+            "anchors": [
+                "if (!wizardSteps || wizardSteps.length === 0) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the length test false leaves the null check doing the work, and the only input it stops catching is an EMPTY array \u2014 which then falls through to filter and map over nothing and returns an empty array by the other route. Both forms answer the empty list identically, so no assertion separates them. The undefined case is still caught and is killed by a test.",
+            "decision": "none \u2014 filtering an empty list produces the same empty list the guard returns.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
+            "anchors": [
+                "): void {"
+            ],
+            "line": 476,
+            "mutants": 2,
+            "category": "block",
+            "reason": "This row covers the body-deletion mutant on BOTH validation helpers \u2014 validateStackPackageConfig at line 476 and validateStackLookup at line 511 \u2014 because their signature lines are textually identical and cannot be anchored apart. Each function returns void and does nothing but write to console.warn and console.log, so emptying either body changes nothing a caller or a test can observe, and the only way to notice would be to assert log output.",
+            "decision": "none \u2014 both bodies are console output and nothing else.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
+            "anchors": [
+                "if (wizardState.selectedStack && !wizardState.selectedPackage) {",
+                "if (wizardState.selectedStack && !stack) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Both of these guards wrap a body that is only console.warn plus console.log, so suppressing the guard (never warn) and deleting the body are equally invisible to any assertion. The always-warn direction IS observable, because this repo fails a suite that writes to the console at all, and those mutants are killed. What is left is the pair that produce silence, which is what a passing run already looks like.",
+            "decision": "none \u2014 the only difference is whether a warning is printed.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
+            "anchors": [
+                "hasPackages: !!packages,",
+                "stackFound: false,"
+            ],
+            "mutants": 3,
+            "category": "other",
+            "reason": "These fields exist only inside the console.log payload of a validation warning, so they are evaluated only on the path that prints. A test that reached them would itself fail the console gate, and the only assertion that could tell the mutants apart is one on the logged text \u2014 which the ratchet exists to refuse. Nothing but the log reads these values.",
+            "decision": "none \u2014 the values never leave the log payload.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
+            "anchors": [
+                "packagesCount: packages?.length || 0,"
+            ],
+            "mutants": 4,
+            "category": "other",
+            "reason": "Same as the fields beside it: this expression is built only to be logged inside a validation warning, and is evaluated only on the path that prints one. Reaching it in a test would fail the console gate, and separating the mutants would require asserting the logged text. The optional chain, the fallback and both branch directions are all invisible outside the log line.",
+            "decision": "none \u2014 the value never leaves the log payload.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
+            "anchors": [
+                "...(stack.dependencies || []),"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "The empty-array fallback is dead: Stack declares dependencies as a required string[], every one of the four catalog entries carries an array, and getStackComponentIds spreads it unguarded elsewhere \u2014 so the operand is never falsy. Both mutants (the fallback replaced by a junk array, and || relaxed to &&) therefore evaluate to the same array the original does, because a truthy left operand makes && return the right one, which is the same empty list.",
+            "decision": "none \u2014 the fallback cannot be reached; the field is always an array.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/wizardHelpers.ts",
+            "anchors": [
+                "...(wizardState.selectedAppBuilderComponents || []).filter(isMeshComponentId),"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Seeding this fallback with a junk element instead of an empty array is filtered straight back out: the very next call keeps only ids that isMeshComponentId recognises, and Stryker's placeholder string is not one. The list that reaches the wire is identical either way, so no assertion on the built config can tell them apart.",
+            "decision": "none \u2014 the mesh filter removes the injected element.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }

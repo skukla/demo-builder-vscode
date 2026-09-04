@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/wizard/WizardContainer.tsx"
+        "src/features/project-creation/ui/wizard/wizardHelpers.ts"
     ],
     "reporters": [
         "clear-text",
