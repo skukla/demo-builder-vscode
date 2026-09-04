@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-01. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/authentication/handlers/workspaceHandlers.ts  (orchestration, 73.53%, 15 open gaps)
-  - src/features/authentication/services/adobeSDKClient.ts  (orchestration, 60.42%, 14 open gaps)
-  - src/features/authentication/services/eventProviderLifecycle.ts  (orchestration, 81.91%, 13 open gaps)
-  - src/features/authentication/services/ensureProjectOrgContext.ts  (orchestration, 64.81%, 12 open gaps)
-  - src/features/authentication/handlers/organizationHandlers.ts  (orchestration, 27.78%, 10 open gaps)
+  - src/features/lifecycle/commands/deleteProject.ts  (orchestration, 61.39%, 18 open gaps)
+  - src/features/lifecycle/commands/managedStorefrontFiles.ts  (pure, 62.5%, 2 open gaps)
+  - src/features/prerequisites/handlers/shared.ts  (mixed, 37.65%, 152 open gaps)
+  - src/features/prerequisites/handlers/checkHandler.ts  (orchestration, 36.18%, 143 open gaps)
+  - src/features/prerequisites/services/PrerequisitesManager.ts  (mixed, 33.63%, 123 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts
@@ -29,6 +29,13 @@ single generated files and collide):
 
 A mutant that reveals a REAL defect or dead code may be fixed in src/ — say so, with the
 reason, in the commit. Any other src/ change is out of scope.
+
+NEVER kill a mutant by asserting a logger call's arguments (`expect(logger.x)
+.toHaveBeenCalledWith(...)`). That pins wording, not behaviour; the ratchet cannot see it
+when it is mixed with real kills, and an enforcer now refuses any file whose count rises.
+If the only observable difference is which log line prints, the mutant belongs in the
+ledger. Add ledger rows with `node scripts/mutationLedger.mjs add ...` — it writes one
+row in the file's own format and refuses an anchor that does not resolve.
 
 RULES. Stay on the current work branch; never checkout or merge develop. One commit per
 module, `Backlog: PL-22` trailer, each gated on `npm run gate` exiting 0 with the exit
