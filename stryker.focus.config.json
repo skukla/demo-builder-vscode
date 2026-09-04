@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/lifecycle/commands/deleteProject.ts"
+        "src/features/lifecycle/commands/managedStorefrontFiles.ts"
     ],
     "reporters": [
         "clear-text",

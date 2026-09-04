@@ -22,6 +22,28 @@ describe('isManagedStorefrontFile', () => {
         expect(isManagedStorefrontFile('/config.json')).toBe(true);
     });
 
+    it('strips every leading slash, not just the first', () => {
+        expect(isManagedStorefrontFile('//fstab.yaml')).toBe(true);
+    });
+
+    it('normalizes Windows back-slashes to POSIX before matching', () => {
+        expect(isManagedStorefrontFile('\\config.json')).toBe(true);
+    });
+
+    it('a back-slash nested path is still content, not a managed file', () => {
+        expect(isManagedStorefrontFile('blocks\\config.json')).toBe(false);
+    });
+
+    it('a back-slash inside the name is a separator, not dropped', () => {
+        // `config\.json` becomes `config/.json`, which is not a managed file.
+        expect(isManagedStorefrontFile('config\\.json')).toBe(false);
+    });
+
+    it('strips only leading slashes; one inside the name still makes it content', () => {
+        expect(isManagedStorefrontFile('config/.json')).toBe(false);
+        expect(isManagedStorefrontFile('fstab/.yaml')).toBe(false);
+    });
+
     it('does not treat a nested config.json as managed', () => {
         expect(isManagedStorefrontFile('blocks/config.json')).toBe(false);
     });
