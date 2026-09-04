@@ -23,6 +23,7 @@ import {
     resolveMcpToolsDir,
 } from '@/features/project-creation/services/aiBundle/aiDefaultsInstaller';
 import { COMPONENT_IDS } from '@/core/constants';
+import type { ExecuteOptions } from '@/core/shell/types';
 import { createMockProject } from '../../../../helpers/projectFake';
 import { createMockCommandExecutor } from '../../../../helpers/commandExecutorFake';
 
@@ -349,5 +350,177 @@ describe('readInstalledMcpPackages', () => {
     it('reads as [] when the manifest is unparseable', async () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValueOnce('not json');
         await expect(readInstalledMcpPackages(PROJECT_PATH)).resolves.toEqual([]);
+    });
+});
+
+// =============================================================================
+// What the installer HANDS the executor, and what it does with what comes back.
+// A mock answers the same whatever it is passed, so the options object and the
+// streaming callback are asserted as ARGUMENTS — nothing else can see them.
+// =============================================================================
+
+/** The options object the installer handed `execute` on its only call. */
+function capturedExecuteOptions(): ExecuteOptions {
+    expect(executeMock).toHaveBeenCalledTimes(1);
+    return executeMock.mock.calls[0][1] as ExecuteOptions;
+}
+
+describe('installAiDefaultsMcpTools — the npm execute options', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        executeMock.mockReset();
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+    });
+
+    it('asks for an enhanced PATH so npm resolves outside a login shell', async () => {
+        // The extension host does not inherit the SC's shell PATH; without this
+        // the install fails with "npm: command not found" on a machine that has npm.
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
+
+        expect(capturedExecuteOptions().enhancePath).toBe(true);
+    });
+
+    it('does NOT ask for streaming when no progress callback is supplied', async () => {
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
+
+        const options = capturedExecuteOptions();
+        expect(options.streaming).toBeUndefined();
+        expect(options.onOutput).toBeUndefined();
+    });
+
+    it('asks for streaming and hands over a sink when a progress callback IS supplied', async () => {
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor, jest.fn());
+
+        const options = capturedExecuteOptions();
+        expect(options.streaming).toBe(true);
+        expect(typeof options.onOutput).toBe('function');
+    });
+});
+
+describe('installAiDefaultsMcpTools — the progress stream', () => {
+    let onProgress: jest.Mock;
+
+    /** Run the installer with a progress callback and return the sink it handed over. */
+    async function sink(): Promise<(data: string) => void> {
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor, onProgress);
+        const forward = capturedExecuteOptions().onOutput;
+        if (!forward) throw new Error('no onOutput was handed to the executor');
+        return forward;
+    }
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        executeMock.mockReset();
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+        onProgress = jest.fn();
+    });
+
+    it('forwards the LAST line of a chunk, trimmed', async () => {
+        // npm writes in chunks, not lines; the progress line has room for one, so
+        // the newest is the one worth showing.
+        (await sink())('added 1 package\n  reify:glob: timing  \n');
+
+        expect(onProgress).toHaveBeenCalledTimes(1);
+        expect(onProgress).toHaveBeenCalledWith('reify:glob: timing');
+    });
+
+    it('forwards a single-line chunk as itself', async () => {
+        (await sink())('added 214 packages in 12s');
+
+        expect(onProgress).toHaveBeenCalledWith('added 214 packages in 12s');
+    });
+
+    it('says nothing for a whitespace-only chunk', async () => {
+        // An empty progress line would blank the step title for no reason.
+        (await sink())('   \n  \n');
+
+        expect(onProgress).not.toHaveBeenCalled();
+    });
+});
+
+describe('installAiDefaultsMcpTools — the failure message the SC sees', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        executeMock.mockReset();
+    });
+
+    it('trims the stderr tail onto the exit-code line', async () => {
+        executeMock.mockResolvedValue({ code: 1, stdout: '', stderr: 'npm ERR! boom\n' });
+
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
+
+        expect(result.error).toBe('npm install exited with code 1: npm ERR! boom');
+    });
+
+    it('reports the exit code alone when stderr is empty (no dangling colon)', async () => {
+        executeMock.mockResolvedValue({ code: 7, stdout: 'added 0 packages', stderr: '   ' });
+
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
+
+        expect(result.error).toBe('npm install exited with code 7');
+    });
+
+    it('keeps only the TAIL of a long stderr (the modal is not a log viewer)', async () => {
+        const head = `HEAD-MARKER${'x'.repeat(900)}`;
+        executeMock.mockResolvedValue({ code: 1, stdout: '', stderr: `${head}TAIL-MARKER` });
+
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
+
+        expect(result.error).toContain('TAIL-MARKER');
+        expect(result.error).not.toContain('HEAD-MARKER');
+        // The exit-code preamble plus at most the 500-byte tail.
+        expect(result.error?.length).toBeLessThan(600);
+    });
+
+    it('reports a thrown Error by its message alone, with no "Error:" prefix', async () => {
+        executeMock.mockRejectedValue(new Error('ENOENT: npm not found'));
+
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
+
+        expect(result).toEqual({ success: false, error: 'ENOENT: npm not found' });
+    });
+
+    it('reports a thrown NON-Error by its string form', async () => {
+        // execa can reject with a non-Error; `err.message` would be undefined and the
+        // modal would show nothing at all.
+        executeMock.mockRejectedValue('npm exploded');
+
+        const result = await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor);
+
+        expect(result).toEqual({ success: false, error: 'npm exploded' });
+    });
+});
+
+describe('installAiDefaultsMcpTools — which lines count as npm warnings', () => {
+    let logger: { debug: jest.Mock; warn: jest.Mock };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        executeMock.mockReset();
+        logger = { debug: jest.fn(), warn: jest.fn() };
+    });
+
+    it('says nothing at all when npm printed only whitespace', async () => {
+        executeMock.mockResolvedValue({ code: 0, stdout: '   \n  ', stderr: '  ' });
+
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor, undefined, logger);
+
+        expect(logger.warn).not.toHaveBeenCalled();
+        expect(logger.debug).not.toHaveBeenCalled();
+    });
+
+    it('raises only lines that START with npm’s warning prefix', async () => {
+        // A line that merely QUOTES the prefix is not itself a warning — raising it
+        // would put an error line on the warn channel twice over.
+        executeMock.mockResolvedValue({
+            code: 1,
+            stdout: '',
+            stderr: 'npm error Command failed: grep "npm warn" install.log',
+        });
+
+        await installAiDefaultsMcpTools(PROJECT_PATH, EDS_PROJECT, executor, undefined, logger);
+
+        expect(logger.warn).not.toHaveBeenCalled();
+        expect(logger.debug).toHaveBeenCalledTimes(1);
     });
 });

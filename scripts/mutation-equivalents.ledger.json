@@ -4170,6 +4170,18 @@
             "decision": "none \u2014 the condition documents which of the two reasons applies and costs nothing",
             "recorded": "2026-09-04",
             "source": "MUT-06 batch, commerceSections focus run 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/aiDefaultsInstaller.ts",
+            "anchors": [
+                "const line = data.trim().split('\\n').pop()?.trim();"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the `?.` after `pop()`. String.prototype.split always returns at least one element, so `pop()` on the result is never undefined and the removed guard can never fire. The compiler still requires it \u2014 lib.es5 types `Array<string>.pop()` as `string | undefined` with no way to express the non-empty result of split \u2014 so the code cannot be written without it and no input can distinguish the two forms.",
+            "decision": "none \u2014 the `?.` is demanded by the type and unreachable at runtime",
+            "recorded": "2026-09-04",
+            "source": "MUT-06 batch, aiDefaultsInstaller focus run 2026-09-04"
         }
     ]
 }
