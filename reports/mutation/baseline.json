@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "createHandler: 13 decision tests (edit-mode duplicate check, whole payloads, cancellation classification, elapsed formatting, edit-mode cleanup, mesh delete options, trust tip) + 6 ledger rows for the log-only remainder",
+    "_note": "componentInstallationOrchestrator: 9 phase tests (phase 1 had none at all) + 3 ledger rows for a log-only guard and two discarded return values",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -9653,29 +9653,24 @@
             "openGaps": 4
         },
         "src/features/project-creation/services/componentInstallationOrchestrator.ts": {
-            "score": 13.51,
-            "killed": 10,
+            "score": 63.51,
+            "killed": 47,
             "survived": 25,
-            "noCoverage": 39,
+            "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 3,
-                "string": 5,
-                "block": 3,
-                "branch": 9,
-                "optionalChain": 3,
+                "logPresentation": 9,
+                "branch": 5,
+                "string": 8,
+                "block": 1,
                 "other": 2
             },
             "uncoveredCategories": {
-                "block": 7,
-                "string": 9,
-                "logPresentation": 4,
-                "branch": 15,
-                "other": 4
+                "logPresentation": 2
             },
-            "highValueSurvivors": 12,
-            "equivalent": 0,
-            "openGaps": 43
+            "highValueSurvivors": 6,
+            "equivalent": 8,
+            "openGaps": 0
         },
         "src/features/project-creation/services/customBlockLibraryUtils.ts": {
             "score": 88.89,

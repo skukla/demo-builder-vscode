@@ -4427,6 +4427,43 @@
             "decision": "none \u2014 the finally-block log is the record of how a run ended, and the chain is required by the optional type",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/services/componentInstallationOrchestrator.ts",
+            "anchors": [
+                "if (componentsDir) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The body of this guard is a single logger.debug naming the override directory. The directory itself was already chosen five lines above and the mkdir has already run against it, so forcing the condition either way, or emptying the block, changes nothing a caller or the filesystem can see \u2014 only whether a run that used the default directory also announces one.",
+            "decision": "none \u2014 the line is how an edit-mode run shows in the log that it cloned somewhere else",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/services/componentInstallationOrchestrator.ts",
+            "anchors": [
+                "if (!componentPath) return { compId, success: true };",
+                "return { compId, success: true };"
+            ],
+            "mutants": 4,
+            "category": "other",
+            "reason": "Both statements build a value that is thrown away. installAllComponents awaits Promise.all(installPromises) and discards the array, so neither compId nor success is ever read by anything; emptying the object or flipping the flag is invisible to every caller. The throw on the line between them is what a failed install is actually signalled by.",
+            "decision": "OPEN \u2014 the two returns could be dropped to a bare return, which would delete four mutants instead of recording them; kept for now because the arrow's declared result type is shared with the phase-1 map, whose result IS read",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/services/componentInstallationOrchestrator.ts",
+            "anchors": [
+                "if (!mcpResult.success) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The MCP-tools install is deliberately non-fatal, so the whole body of this guard is one logger.warn and nothing else \u2014 no throw, no state change, no message. Forcing it true only makes a SUCCESSFUL install also write the non-fatal warning, which a test could catch only by asserting that a log line was absent.",
+            "decision": "none \u2014 the warning is the only trace an optional install leaving nothing behind can produce",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

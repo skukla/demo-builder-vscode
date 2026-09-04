@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/handlers/createHandler.ts"
+        "src/features/project-creation/services/componentInstallationOrchestrator.ts"
     ],
     "reporters": [
         "clear-text",
