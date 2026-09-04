@@ -80,3 +80,7 @@ raised here so the next queue is generated with the answer.
 - `scripts/mutationRedundantTests.mjs` — the analysis and its caveats, in its header
 - `scripts/mutationRedundancySweep.mjs` — why the configs must sit at the tree root
 - `.claude/skills/mutation-test-pilot/SKILL.md` — the cycle this extends
+
+## Shipped so far
+
+- 2026-09-03  docs(backlog): PL-42 — read the redundancy lists and delete what pins nothing (`591c4c293`)
