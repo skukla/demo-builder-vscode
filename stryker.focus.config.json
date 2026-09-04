@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/steps/IntegrationsStep.tsx"
+        "src/features/project-creation/handlers/executor.ts"
     ],
     "reporters": [
         "clear-text",

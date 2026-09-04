@@ -206,3 +206,58 @@ describe('buildInitialProject — commerceStoreStructure across an edit', () => 
         expect(project.commerceStoreStructure).toBeUndefined();
     });
 });
+
+describe('buildInitialProject — the fields the wire config decides', () => {
+    it('records a title the SC actually set', () => {
+        const project = buildInitialProject(config({ projectTitle: 'My Demo' }), PROJECT_PATH);
+
+        expect(project.title).toBe('My Demo');
+    });
+
+    it('leaves the title OFF when none was set, rather than seeding it from the slug', () => {
+        // A slug seeded as a real title would render identically and then move the
+        // folder on the next rename, leaving the old name on screen.
+        const project = buildInitialProject(config(), PROJECT_PATH);
+
+        expect('title' in project).toBe(false);
+    });
+
+    it('carries the selected dependencies and integrations through verbatim', () => {
+        const project = buildInitialProject(
+            config({
+                components: {
+                    dependencies: ['commerce-mesh'],
+                    integrations: ['adobe-analytics'],
+                },
+            } as Partial<ProjectCreationConfig>),
+            PROJECT_PATH
+        );
+
+        expect(project.componentSelections?.dependencies).toEqual(['commerce-mesh']);
+        expect(project.componentSelections?.integrations).toEqual(['adobe-analytics']);
+    });
+
+    it('starts both lists EMPTY when the config names none', () => {
+        const project = buildInitialProject(config(), PROJECT_PATH);
+
+        expect(project.componentSelections?.dependencies).toEqual([]);
+        expect(project.componentSelections?.integrations).toEqual([]);
+    });
+
+    it('takes the datapack from the config, not from a project that has none', () => {
+        const chosen = { name: 'citisignal', version: '2.0.0' };
+
+        const project = buildInitialProject(config({ datapack: chosen }), PROJECT_PATH);
+
+        expect(project.datapack).toEqual(chosen);
+    });
+
+    it('falls back to the existing project’s datapack when the config names none', () => {
+        const kept = { name: 'citisignal', version: '1.0.0' };
+        const existing = createMockProject({ datapack: kept });
+
+        const project = buildInitialProject(config(), PROJECT_PATH, existing);
+
+        expect(project.datapack).toEqual(kept);
+    });
+});
