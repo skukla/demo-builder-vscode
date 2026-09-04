@@ -269,3 +269,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(state): bring stateManager to zero open mutation gaps (`586a35f7a`)
 - 2026-09-03  test(state): bring appBuilderComponentState to zero open mutation gaps (`afd8e0d62`)
 - 2026-09-03  test(state): bring manifestFormatSweep to zero open mutation gaps (`d0384136c`)
+- 2026-09-03  test(state): bring apiRowState to zero open mutation gaps (`f212bdf6f`)
