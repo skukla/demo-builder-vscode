@@ -5386,6 +5386,54 @@
             "decision": "none \u2014 the stage list is correct and covered; only the static mutation cannot be activated under Jest",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/ui/helpers/stackHelpers.ts",
+            "anchors": [
+                "if (!oldStack || !currentConfigs || Object.keys(currentConfigs).length === 0) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Dropping the empty-configs arm changes nothing: with an oldStack and an empty currentConfigs the function falls through and every path that could add a key is gated on a lookup into that same empty object. The retained loop iterates ids and finds none of them in it, the frontend migration requires oldStack.frontend in currentConfigs, and the dependency migration requires oldDep in currentConfigs. So the long way round builds the same empty object the early return hands back.",
+            "decision": "none \u2014 the early return says the intent and skips two set constructions",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/ui/helpers/stackHelpers.ts",
+            "anchors": [
+                "if (oldStack.frontend !== newStack.frontend && oldStack.frontend in currentConfigs) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the frontends-differ half true leaves the guard as oldStack.frontend in currentConfigs, so the extra case it admits is: same frontend id, and that id has a config. The body then writes filteredConfigs[newStack.frontend] = currentConfigs[oldStack.frontend] with both sides naming the SAME id \u2014 a key the retained-components loop above has already written with that exact value, because a frontend present in both stacks is retained. The assignment is a no-op on every input it newly reaches.",
+            "decision": "none \u2014 the differ check states that this block is the ROLE migration, not the retain path",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/ui/helpers/stackHelpers.ts",
+            "anchors": [
+                "for (let i = 0; i < oldStack.dependencies.length; i++) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Relaxing the bound to i <= length adds one iteration past the end of both arrays, and the guard immediately above the loop has already established that the two dependency arrays are the same length. So the extra pass reads undefined from both, oldDep !== newDep is false for two undefineds, and the body never runs. There is no input where the extra iteration can write anything, because a shorter newStack array is excluded before the loop starts.",
+            "decision": "none \u2014 the bound is correct; the equal-length guard is what makes the off-by-one inert",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/ui/helpers/stackHelpers.ts",
+            "anchors": [
+                "if (oldDep !== newDep && oldDep in currentConfigs) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the ids-differ half true leaves the guard as oldDep in currentConfigs, so the extra case is: the dependency kept the same id at this position, and it has a config. The body then writes filteredConfigs[newDep] = currentConfigs[oldDep] with newDep and oldDep being the same string \u2014 a key the retained-components loop has already written with the same value, since a dependency present in both stacks is retained. Every newly admitted input produces an identical object.",
+            "decision": "none \u2014 the differ check marks this as the positional MIGRATION, distinct from the retain path above it",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx"
+        "src/features/project-creation/ui/helpers/stackHelpers.ts"
     ],
     "reporters": [
         "clear-text",

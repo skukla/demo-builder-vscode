@@ -102,7 +102,10 @@ describe('stackHelpers', () => {
             };
 
             const result = getStackComponentIds(stackNoAddons);
-            expect(result).toEqual(['frontend-a', 'backend-a', 'dep-a']);
+            // Strict: a stack with no addons must yield no addon slot at all.
+            // A placeholder entry here becomes a component id nothing can
+            // resolve, and toEqual would let an extra undefined through.
+            expect(result).toStrictEqual(['frontend-a', 'backend-a', 'dep-a']);
         });
 
         it('should return all component types in correct order', () => {
@@ -356,6 +359,21 @@ describe('stackHelpers', () => {
                 expect(result).toEqual({});
             });
 
+            it('does not invent a key for a retained component that has no config', () => {
+                // Only the components the user actually configured may appear.
+                // A key carrying undefined reads downstream as "configured with
+                // nothing", which is not the same as never configured, and
+                // toEqual cannot see the difference — hence Object.keys.
+                const result = filterComponentConfigsForStackChange(
+                    headlessPaasStack,
+                    headlessAccsStack,
+                    { 'adobe-commerce-aco': { ENABLED: true } }
+                );
+
+                expect(Object.keys(result).sort()).toEqual(['adobe-commerce-aco']);
+                expect(result['adobe-commerce-aco']).toEqual({ ENABLED: true });
+            });
+
             it('should handle configs with complex nested values', () => {
                 const currentConfigs: Record<string, Record<string, unknown>> = {
                     headless: {
@@ -461,6 +479,20 @@ describe('stackHelpers', () => {
                 // Frontend config migrated to new frontend component
                 expect(result['headless']).toEqual({ PORT: 3000, CUSTOM_VAR: 'value' });
                 expect(result['eds-storefront']).toBeUndefined();
+            });
+
+            it('migrates nothing when the roles changed but the old ids had no config', () => {
+                // Both migrations are conditional on the OLD id actually having
+                // a config to move. With nothing to move, the new frontend and
+                // the new mesh must not appear at all — an empty entry under
+                // the new id would look like a configured component.
+                const result = filterComponentConfigsForStackChange(
+                    realEdsPaasStack,
+                    realHeadlessPaasStack,
+                    { 'adobe-commerce-paas': { STORE_URL: 'https://store.com' } }
+                );
+
+                expect(Object.keys(result).sort()).toEqual(['adobe-commerce-paas']);
             });
 
             it('should not migrate when deps have different lengths', () => {
