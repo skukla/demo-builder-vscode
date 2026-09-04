@@ -343,3 +343,4 @@ which point the cadence drops to release cuts.
 - 2026-09-04  chore(mutation): log MUT-05 against PL-22 and leave the focus config on stepFiltering (`8b5f3e6cc`)
 - 2026-09-04  test(project-creation): bring useProjectCreationPhases to zero open mutation gaps (`2fd87a894`)
 - 2026-09-04  chore(backlog): log PL-22 commits from batch MUT-01 (`a200c6da5`)
+- 2026-09-04  test(project-creation): bring useIntegrationFlow to zero open mutation gaps (`455f872fb`)

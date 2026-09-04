@@ -4722,6 +4722,31 @@
             "decision": "none \u2014 the clamp makes an out-of-order stored stage indistinguishable from the first one",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/aiToolingGate.ts",
+            "anchors": [
+                "if (entry.thirdParty && !thirdPartyToolsEnabled()) {"
+            ],
+            "line": 170,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Control only reaches this line when aiDefaultsEntryApplies already returned false, which means either the opt-out fired or the requires gate failed. Both surviving mutants widen the guard, and the body then pushes a reason only when the requires gate PASSES. A project whose gate passes without the opt-out having fired would have made the entry apply, so it never arrives here \u2014 the widened guard can therefore only ever run against a project the gate rejects, where appliesOtherwise is false and nothing is pushed.",
+            "decision": "none \u2014 the mutant that NARROWS the same guard (flipping the setting call) is killed by the setting-disabled test",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/aiToolingGate.ts",
+            "anchors": [
+                "entry.requires === 'eds-storefront'"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this true takes the eds-storefront arm for every entry that reaches it. The only entries that reach it are third-party ones, ai-defaults ships exactly one \u2014 playwright \u2014 and its requires IS eds-storefront, so the forced arm is the arm it already takes. The equivalence is a property of the shipped config, and it stops holding the day a third-party entry requires app-builder-tooling; the FALSE-forcing mutant on the same line is killed by the mesh-only test, which is what will notice.",
+            "decision": "none while playwright is the only thirdParty entry \u2014 a second one with a different requires makes this killable",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }

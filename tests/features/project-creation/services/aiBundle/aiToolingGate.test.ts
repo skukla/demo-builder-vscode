@@ -7,9 +7,11 @@
 import {
     projectNeedsAppBuilderTooling,
     aiDefaultsEntryApplies,
+    gatedSkillReasons,
     resolveAvailableMcpToolIds,
     setThirdPartyToolsResolver,
 } from '@/features/project-creation/services/aiBundle/aiToolingGate';
+import { SKILL_MCP_TOOL_DEPENDENCIES } from '@/types/ai';
 import { COMPONENT_IDS } from '@/core/constants';
 import type { AiDefaultsMcpServer } from '@/types/aiDefaults';
 import type { Project } from '@/types/base';
@@ -41,6 +43,14 @@ function makeEntry(overrides: Partial<AiDefaultsMcpServer> = {}): AiDefaultsMcpS
 describe('projectNeedsAppBuilderTooling', () => {
     it('is false for a bare project (no storefront, no mesh, no app-builder components)', () => {
         expect(projectNeedsAppBuilderTooling(makeProject())).toBe(false);
+    });
+
+    // A manifest written before componentInstances existed has no such key at all,
+    // and the sweep reads those projects on activation.
+    it('is false for a project whose manifest carries no componentInstances at all', () => {
+        expect(projectNeedsAppBuilderTooling(makeProject({ componentInstances: undefined }))).toBe(
+            false
+        );
     });
 
     it('is true when an EDS storefront is installed (existing behavior preserved)', () => {
@@ -236,5 +246,120 @@ describe('third-party opt-out (the one code point for every seam)', () => {
     it('defaults to enabled when nothing injected the setting', () => {
         const ids = resolveAvailableMcpToolIds(edsProject, ['@playwright/mcp']);
         expect(ids.has('playwright')).toBe(true);
+    });
+});
+
+/**
+ * gatedSkillReasons — why a tool-driving skill the project QUALIFIES for is not
+ * there. The AI Capabilities modal renders these, so the distinction between
+ * "your setting turned this off" and "the package is not installed yet" is the
+ * whole output, not a detail of it.
+ *
+ * Bound to the REAL ai-defaults.json: `playwright` is the only third-party entry
+ * and it requires an EDS storefront.
+ */
+describe('gatedSkillReasons', () => {
+    const PLAYWRIGHT_PKG = '@playwright/mcp';
+    const EXTENSIBILITY_PKG = '@adobe-commerce/commerce-extensibility-tools';
+    const SCRAPE = { 'scrape-reference-site.md': 'playwright' };
+
+    function edsProject(): Project {
+        return makeProject({
+            componentInstances: {
+                [COMPONENT_IDS.EDS_STOREFRONT]: {
+                    id: COMPONENT_IDS.EDS_STOREFRONT,
+                    name: 'EDS Storefront',
+                    status: 'ready',
+                    path: '/projects/demo/storefront',
+                },
+            },
+        });
+    }
+
+    function meshOnlyProject(): Project {
+        return makeProject({
+            componentInstances: {
+                [COMPONENT_IDS.HEADLESS_COMMERCE_MESH]: {
+                    id: COMPONENT_IDS.HEADLESS_COMMERCE_MESH,
+                    name: 'API Mesh',
+                    status: 'ready',
+                    path: '/projects/demo/mesh',
+                },
+            },
+        });
+    }
+
+    afterEach(() => setThirdPartyToolsResolver(() => true));
+
+    it('names the skill, its tool and "tool-missing" when the package is not installed', () => {
+        // The extensibility package IS installed — proving the reason is decided by
+        // the PLAYWRIGHT entry's package, not by the first entry in ai-defaults.
+        const reasons = gatedSkillReasons(edsProject(), [EXTENSIBILITY_PKG], SCRAPE);
+
+        expect(reasons).toEqual([
+            {
+                file: 'scrape-reference-site.md',
+                toolId: 'playwright',
+                reason: 'tool-missing',
+            },
+        ]);
+    });
+
+    it('says nothing about a skill whose tool is installed', () => {
+        expect(gatedSkillReasons(edsProject(), [PLAYWRIGHT_PKG], SCRAPE)).toEqual([]);
+    });
+
+    it('says nothing about a skill whose tool does not apply — that is composition', () => {
+        expect(gatedSkillReasons(makeProject(), [], SCRAPE)).toEqual([]);
+    });
+
+    it('ignores a dependency naming a tool ai-defaults does not have', () => {
+        expect(gatedSkillReasons(edsProject(), [], { 'x.md': 'no-such-tool' })).toEqual([]);
+    });
+
+    it('reports every dependent skill of a missing tool', () => {
+        const reasons = gatedSkillReasons(
+            edsProject(),
+            [EXTENSIBILITY_PKG],
+            SKILL_MCP_TOOL_DEPENDENCIES
+        );
+
+        expect(reasons.map((r) => r.file)).toEqual([
+            'scrape-reference-site',
+            'connect-authenticated-site',
+            'refine-visual-match',
+        ]);
+        expect(reasons.every((r) => r.reason === 'tool-missing')).toBe(true);
+    });
+
+    describe('with third-party tooling switched off', () => {
+        beforeEach(() => setThirdPartyToolsResolver(() => false));
+
+        it('says "setting-disabled", not "tool-missing", even with the package installed', () => {
+            const reasons = gatedSkillReasons(edsProject(), [PLAYWRIGHT_PKG], SCRAPE);
+
+            expect(reasons).toEqual([
+                {
+                    file: 'scrape-reference-site.md',
+                    toolId: 'playwright',
+                    reason: 'setting-disabled',
+                },
+            ]);
+        });
+
+        // The setting only explains an absence the project would otherwise HAVE.
+        // Playwright requires a storefront, so a mesh-only project is not missing it.
+        it('stays silent when the project would not qualify for the tool anyway', () => {
+            expect(gatedSkillReasons(meshOnlyProject(), [PLAYWRIGHT_PKG], SCRAPE)).toEqual([]);
+        });
+
+        it('stays silent for a project with no components installed', () => {
+            expect(gatedSkillReasons(makeProject(), [PLAYWRIGHT_PKG], SCRAPE)).toEqual([]);
+        });
+
+        it('stays silent for a manifest carrying no componentInstances at all', () => {
+            const bare = makeProject({ componentInstances: undefined });
+            expect(gatedSkillReasons(bare, [PLAYWRIGHT_PKG], SCRAPE)).toEqual([]);
+        });
     });
 });
