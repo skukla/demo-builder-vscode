@@ -79,6 +79,14 @@ while :; do
         log "no module has open gaps — the burn-down is DONE"
         break
     fi
+    # Record what this run was asked to do: the regenerated queue and goals are
+    # tracked files, and a dirty tree is what the goal sessions inherit otherwise.
+    git add scripts/overnight/goals scripts/overnight/queue
+    git commit -q -F - <<MSG
+chore(overnight): run $run queue — $queued modules, regenerated from the baseline
+
+Backlog: PL-22
+MSG
     before="$(git rev-parse HEAD)"
     log "run $run: $queued modules queued; starting run.sh from $(git rev-parse --short HEAD)"
     "$HERE/run.sh" >> "$LOG" 2>&1
