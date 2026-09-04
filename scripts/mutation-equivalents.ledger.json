@@ -3990,6 +3990,30 @@
             "decision": "none \u2014 the guard entire body is one log line",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/wizardLifecycleHandlers.ts",
+            "anchors": [
+                "if (!project?.path) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the `?.`, so a null project throws a TypeError on this line instead of falling through to the explicit `throw new Error('Project not found')` two lines later. Both throws land in the SAME outer catch, which logs and calls showErrorMessage('Failed to return to projects list.'), and the handler returns { success: true } either way. The only difference is which Error object reaches the logger \u2014 wording, not behaviour. Killing it would require asserting the logged error's type or message.",
+            "decision": "none \u2014 the `?.` is required by the type (getCurrentProject can resolve undefined) and the guard reads correctly",
+            "recorded": "2026-09-04",
+            "source": "MUT-05 batch, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/handlers/wizardLifecycleHandlers.ts",
+            "anchors": [
+                "} catch (flagError) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch body removes a single logger.warn and nothing else. The reopen flag is best-effort: whether or not the failure is logged, execution continues to disposePanel and panel.dispose(), and the handler returns { success: true }. A test already proves the flag failure does not stop the wizard closing ('still returns to the projects list when the reopen flag cannot be written'); the residual mutant differs only in log output.",
+            "decision": "none \u2014 the warn is the right thing to keep; it is just not observable to a test that does not pin wording",
+            "recorded": "2026-09-04",
+            "source": "MUT-05 batch, 2026-09-04"
         }
     ]
 }

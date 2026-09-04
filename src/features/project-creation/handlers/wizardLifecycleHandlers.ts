@@ -130,10 +130,8 @@ export async function handleLog(
         case 'warn':
             context.logger.warn(`[Webview] ${message}`);
             break;
-        case 'debug':
-            context.logger.debug(`[Webview] ${message}`);
-            break;
         default:
+            // 'debug', 'info' and anything unrecognised all land here.
             context.logger.debug(`[Webview] ${message}`);
     }
     return { success: true };

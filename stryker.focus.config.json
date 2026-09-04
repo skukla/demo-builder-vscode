@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/handlers/executor.ts"
+        "src/features/project-creation/handlers/wizardLifecycleHandlers.ts"
     ],
     "reporters": [
         "clear-text",

@@ -52,6 +52,43 @@ describe('lifecycleHandlers - Initialization', () => {
             );
         });
 
+        it('does NOT push a componentsLoaded message when the load failed', async () => {
+            // A failed load still carries a `data` field; pushing it would blank the
+            // component step with an empty catalog instead of leaving it alone.
+            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
+            (handleLoadComponents as jest.Mock).mockResolvedValue({
+                success: false,
+                data: { components: [] },
+            });
+
+            const result = await handleReady(mockContext);
+
+            expect(mockContext.communicationManager.sendMessage).not.toHaveBeenCalled();
+            expect(result.success).toBe(true);
+        });
+
+        it('does NOT push a componentsLoaded message when the load returned no data', async () => {
+            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
+            (handleLoadComponents as jest.Mock).mockResolvedValue({ success: true });
+
+            await handleReady(mockContext);
+
+            expect(mockContext.communicationManager.sendMessage).not.toHaveBeenCalled();
+        });
+
+        it('skips the push when the webview has no communication manager', async () => {
+            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
+            (handleLoadComponents as jest.Mock).mockResolvedValue({
+                success: true,
+                data: { components: ['component1'] },
+            });
+            mockContext.communicationManager = undefined;
+
+            const result = await handleReady(mockContext);
+
+            expect(result.success).toBe(true);
+        });
+
         it('should handle component loading error gracefully', async () => {
             const error = new Error('Failed to load components');
             const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
