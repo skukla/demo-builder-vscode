@@ -5276,6 +5276,44 @@
             "decision": "keep \u2014 the empty default is correct; the difference is unreachable for real catalog ids",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/homeAiContextWriter.ts",
+            "anchors": [
+                "} catch (err) {"
+            ],
+            "line": 140,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch body changes nothing a test can observe. The contract is that ensureHomeAiContext never throws, and that is the catch itself, not its body; the body's only statement is a process.stderr.write. With the body gone the function still swallows the failure and still resolves undefined, and every file it did manage to write is still written. The only difference is whether a warning line reaches stderr, which is wording, and the tests already pin the never-throws half in 'never throws when a write fails'.",
+            "decision": "none \u2014 the warning is the right thing to emit on a best-effort path; there is nothing else to assert",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/homeAiContextWriter.ts",
+            "anchors": [
+                "} catch (err) {"
+            ],
+            "line": 182,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Same shape as the ensureHomeAiContext catch: the body is an ENOENT early return plus one process.stderr.write, so emptying it leaves refreshHomeAgentsMd resolving undefined on every failure exactly as it does now. No file is written either way and no value is returned either way, so the only observable difference is whether a warning line reaches stderr. The never-throws contract is pinned by two tests already.",
+            "decision": "none \u2014 the catch is correct; its body is reporting only",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/homeAiContextWriter.ts",
+            "anchors": [
+                "if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "This guard chooses between two ways of saying nothing. On the ENOENT arm it returns; on the other arm it writes one warning to stderr and then returns. Both arms resolve undefined, write no file and leave the previously written AGENTS.md in place, so forcing the condition true, forcing it false, flipping the equality, or emptying the return block all produce the same result for every caller. The only observable difference is whether a warning line prints, and the optional chain on the same line IS killed by a test (a rejection carrying no value must not throw).",
+            "decision": "none \u2014 a missing projects root is genuinely not worth reporting, and the guard is the only way to say that",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

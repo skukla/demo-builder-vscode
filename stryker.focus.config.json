@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/components/integration-flow/stages/BlankStage.tsx"
+        "src/features/project-creation/services/aiBundle/homeAiContextWriter.ts"
     ],
     "reporters": [
         "clear-text",
