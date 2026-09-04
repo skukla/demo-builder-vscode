@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-07. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/project-creation/services/aiBundle/generatedFileWriter.ts  (orchestration, 89.93%, 10 open gaps)
-  - src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx  (pure, 80.22%, 10 open gaps)
-  - src/features/project-creation/ui/helpers/stackHelpers.ts  (pure, 80.77%, 10 open gaps)
-  - src/features/project-creation/ui/steps/reviewPredicates.ts  (pure, 69.23%, 8 open gaps)
-  - src/features/project-creation/ui/components/integration-flow/flowStages.ts  (pure, 93.1%, 7 open gaps)
+  - src/features/project-creation/services/aiBundle/aiBundleService.ts  (orchestration, 83.33%, 4 open gaps)
+  - src/features/project-creation/services/catalogPrewarmPhase.ts  (orchestration, 66.67%, 4 open gaps)
+  - src/features/project-creation/services/customBlockLibraryUtils.ts  (pure, 88.89%, 4 open gaps)
+  - src/features/project-creation/ui/components/BlockLibrariesStepContent.tsx  (pure, 85.19%, 4 open gaps)
+  - src/features/project-creation/ui/components/BuildYourProjectSummary.tsx  (pure, 76.47%, 4 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts
