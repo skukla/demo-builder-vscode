@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/services/aiBundle/aiDefaultsInstaller.ts"
+        "src/features/project-creation/services/aiBundle/globalMcpRegistration.ts"
     ],
     "reporters": [
         "clear-text",

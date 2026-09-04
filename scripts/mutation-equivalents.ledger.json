@@ -4182,6 +4182,18 @@
             "decision": "none \u2014 the `?.` is demanded by the type and unreachable at runtime",
             "recorded": "2026-09-04",
             "source": "MUT-06 batch, aiDefaultsInstaller focus run 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/globalMcpRegistration.ts",
+            "anchors": [
+                "if (!servers || typeof servers !== 'object') return false;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker drops the `typeof servers !== 'object'` half of the guard, leaving `!servers`. Every truthy non-object this can reach behaves identically with or without it: `servers` comes from JSON.parse, so a truthy non-object is a string, a number or true, and indexing any of them with 'demo-builder' yields undefined \u2014 the `if (!entry) return false` on the next line returns exactly what the guard would have returned, with no write either way. The only value that would diverge is a function, which JSON cannot produce.",
+            "decision": "none \u2014 the typeof half is what makes the cast on the next line honest, and null (typeof 'object') is caught by the other half",
+            "recorded": "2026-09-04",
+            "source": "MUT-06 batch, globalMcpRegistration focus run 2026-09-04"
         }
     ]
 }
