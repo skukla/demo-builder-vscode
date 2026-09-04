@@ -59,7 +59,17 @@ const BUILDER_FORMS = [
 
 function walk(dir: string): string[] {
     const out: string[] = [];
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    let entries: fs.Dirent[];
+    try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+        // The DIRECTORY can vanish too, not only a file inside it: eslint-type-aware
+        // creates and removes `tests/tmp-probe` mid-run, and the listing below saw it
+        // while this read did not. Same guard as mirror-placement's walker; the read
+        // guard in collectBuilders alone failed a full gate run on 2026-09-03.
+        return out;
+    }
+    for (const entry of entries) {
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) {
             if (entry.name === 'node_modules') continue;
