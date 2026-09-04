@@ -110,4 +110,23 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
             ['mesh']
         );
     });
+
+    it('does not ask the registry when there is no selection', async () => {
+        const context = createPrereqHandlerContext();
+
+        await getRequiredNodeVersions(context);
+
+        expect(mockGetRequiredNodeVersions).not.toHaveBeenCalled();
+    });
+
+    it('treats the absent selection as a normal outcome, not a failure it swallows', async () => {
+        const context = createPrereqHandlerContext();
+
+        expect(await getRequiredNodeVersions(context)).toEqual([]);
+        // The catch also returns an empty list, so the value proves nothing. What
+        // separates the two routes is that the early return reports once and the
+        // catch reports not at all. The count is the discriminator; the wording is
+        // deliberately not asserted.
+        expect(context.debugLogger.debug).toHaveBeenCalledTimes(1);
+    });
 });

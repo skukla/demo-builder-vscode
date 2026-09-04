@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/lifecycle/commands/managedStorefrontFiles.ts"
+        "src/features/prerequisites/handlers/shared.ts"
     ],
     "reporters": [
         "clear-text",

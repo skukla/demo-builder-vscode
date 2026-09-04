@@ -68,10 +68,13 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
         await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
 
         // Verify fnm list was called with shell option
-        expect(mockCommandExecutor.execute).toHaveBeenCalledWith('fnm list', expect.objectContaining({
-            shell: expect.any(String), // Expects shell path (e.g., '/bin/bash')
-            timeout: expect.any(Number),
-        }));
+        expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
+            'fnm list',
+            expect.objectContaining({
+                shell: expect.any(String), // Expects shell path (e.g., '/bin/bash')
+                timeout: expect.any(Number),
+            })
+        );
     });
 
     it('should parse fnm list output correctly in shared handler', async () => {
@@ -101,7 +104,10 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             { version: 'Node 20', component: '10.0.0', installed: true, major: '20' },
             { version: 'Node 24', component: '10.0.0', installed: true, major: '24' },
         ]);
-        expect(mockCommandExecutor.execute).toHaveBeenCalledWith('fnm list', expect.objectContaining({ shell: expect.any(String) }));
+        expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
+            'fnm list',
+            expect.objectContaining({ shell: expect.any(String) })
+        );
     });
 
     it('should check all Node versions for per-node prerequisite', async () => {
@@ -203,6 +209,33 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             major: '20',
         });
         expect(result.missingVariantMajors).toContain('20');
+    });
+
+    it('reads whole lines out of fnm list, not the digits inside them', async () => {
+        const prereq: PrerequisiteDefinition = {
+            id: 'adobe-cli',
+            name: 'Adobe I/O CLI',
+            perNodeVersion: true,
+            check: { command: 'aio --version' },
+        } as PrerequisiteDefinition;
+
+        mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+            if (cmd === 'fnm list') {
+                return Promise.resolve(createCommandResult('v18.20.4\nv24.1.0\n'));
+            }
+            return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
+        });
+
+        const context = createPrereqHandlerContext();
+        const result = await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
+
+        // 18 is installed and 20 is not. Asserting the POSITIVE is what matters
+        // here: every way of misreading this output — scanning it character by
+        // character, or taking the minor as a major — leaves 18 looking absent,
+        // and a test that only checks the missing one passes through all of them.
+        expect(result.perNodeVersionStatus[0].installed).toBe(true);
+        expect(result.perNodeVersionStatus[1].installed).toBe(false);
+        expect(result.missingVariantMajors).toEqual(['20']);
     });
 
     it('should parse version from command output', async () => {
@@ -459,6 +492,68 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             });
             expect(result.perNodeVariantMissing).toBe(false);
             expect(result.missingVariantMajors).toEqual([]);
+        });
+    });
+
+    describe('reading fnm list (PL-22)', () => {
+        const prereq: PrerequisiteDefinition = {
+            id: 'adobe-cli',
+            name: 'Adobe I/O CLI',
+            perNodeVersion: true,
+            check: { command: 'aio --version' },
+        } as PrerequisiteDefinition;
+
+        function fnmPrints(listing: string): void {
+            mockCommandExecutor.execute.mockImplementation((cmd: string) =>
+                Promise.resolve(createCommandResult(cmd === 'fnm list' ? listing : 'ok'))
+            );
+        }
+
+        it('reads a major with or without the v prefix, and skips lines with no version', async () => {
+            fnmPrints('* v20.11.0 default\n  24.0.0\n  system\n');
+
+            const result = await checkPerNodeVersionStatus(
+                prereq,
+                ['20', '24', '18'],
+                createPrereqHandlerContext()
+            );
+
+            expect(result.perNodeVersionStatus.map((s) => [s.major, s.installed])).toEqual([
+                ['20', true],
+                ['24', true],
+                ['18', false],
+            ]);
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalledWith(
+                'aio --version',
+                expect.objectContaining({ useNodeVersion: '18' })
+            );
+        });
+
+        it('a listing made of blank and whitespace lines installs nothing', async () => {
+            fnmPrints('\n   \n');
+
+            const result = await checkPerNodeVersionStatus(
+                prereq,
+                ['20'],
+                createPrereqHandlerContext()
+            );
+
+            expect(result.missingVariantMajors).toEqual(['20']);
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(1);
+        });
+
+        it('without a parseVersion pattern the component version is left empty', async () => {
+            fnmPrints('v20.0.0');
+
+            const result = await checkPerNodeVersionStatus(
+                prereq,
+                ['20'],
+                createPrereqHandlerContext()
+            );
+
+            expect(result.perNodeVersionStatus).toEqual([
+                { version: 'Node 20', major: '20', component: '', installed: true },
+            ]);
         });
     });
 });

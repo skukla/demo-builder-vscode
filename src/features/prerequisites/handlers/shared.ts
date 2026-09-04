@@ -68,9 +68,10 @@ export function resolveRequiredMajors(
 ): string[] {
     let requiredForComponents: string[] | undefined = prereq.requiredFor;
     if ((!requiredForComponents || requiredForComponents.length === 0) && prereq.plugins) {
-        const allPluginRequired = prereq.plugins
-            .filter(p => p.requiredFor && p.requiredFor.length > 0)
-            .flatMap(p => p.requiredFor ?? []);
+        // No filter: flatMap's `?? []` already drops a plugin that declares no
+        // requiredFor, and one declaring an empty list contributes nothing either.
+        // A mutation run showed the guard could not change the result.
+        const allPluginRequired = prereq.plugins.flatMap((p) => p.requiredFor ?? []);
         if (allPluginRequired.length > 0) {
             requiredForComponents = [...new Set(allPluginRequired)];
         }
@@ -417,16 +418,8 @@ export function areDependenciesInstalled(
         for (const entry of states.values()) {
             if (entry.prereq.id === depId) {
                 // Special handling: if dependency is Node and required majors missing, treat as not installed
-                if (
-                    depId === 'node' &&
-                    entry.nodeVersionStatus &&
-                    entry.nodeVersionStatus.length > 0
-                ) {
-                    const missing = entry.nodeVersionStatus.some(
-                        (v: { version: string; component: string; installed: boolean }) =>
-                            !v.installed,
-                    );
-                    if (missing) return false;
+                if (depId === 'node' && entry.nodeVersionStatus?.some((v) => !v.installed)) {
+                    return false;
                 }
                 return !!entry.result?.installed;
             }

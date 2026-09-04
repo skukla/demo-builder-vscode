@@ -1,6 +1,9 @@
 import { areDependenciesInstalled } from '@/features/prerequisites/handlers/shared';
 import { createPrereqHandlerContext } from './testHelpers';
-import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
+import type {
+    PrerequisiteDefinition,
+    PrerequisiteStatus,
+} from '@/features/prerequisites/services/PrerequisitesManager';
 
 /**
  * Prerequisites Handlers - Dependencies Validation Test Suite
@@ -28,6 +31,27 @@ describe('Prerequisites Handlers - areDependenciesInstalled', () => {
         const result = areDependenciesInstalled(prereq, context);
 
         expect(result).toBe(true);
+    });
+
+    it('an empty depends list is satisfied before any prerequisite has been checked', () => {
+        const prereq: PrerequisiteDefinition = {
+            id: 'test',
+            name: 'Test',
+            depends: [],
+            check: { command: 'test --version' },
+        } as unknown as PrerequisiteDefinition;
+
+        // No states recorded yet — the run has not started. An empty list must be
+        // satisfied by the list itself, before the code that needs states to answer.
+        const context = createPrereqHandlerContext({
+            sharedState: {
+                isAuthenticating: false,
+                currentComponentSelection: undefined,
+                currentPrerequisiteStates: undefined,
+            },
+        });
+
+        expect(areDependenciesInstalled(prereq, context)).toBe(true);
     });
 
     it('should return true when all dependencies installed', () => {
@@ -206,5 +230,104 @@ describe('Prerequisites Handlers - areDependenciesInstalled', () => {
         const result = areDependenciesInstalled(prereq, context);
 
         expect(result).toBe(false);
+    });
+
+    describe('the decisions (PL-22)', () => {
+        const dependsOnNode = {
+            id: 'adobe-cli',
+            name: 'Adobe I/O CLI',
+            depends: ['node'],
+            check: { command: 'aio --version' },
+        } as PrerequisiteDefinition;
+
+        function contextWith(entries: Array<Record<string, unknown>>) {
+            const states = new Map();
+            entries.forEach((entry, i) => states.set(i, entry));
+            return createPrereqHandlerContext({
+                sharedState: { isAuthenticating: false, currentPrerequisiteStates: states },
+            });
+        }
+
+        it('a prerequisite whose depends is absent (not just empty) needs nothing', () => {
+            const prereq = {
+                id: 'git',
+                name: 'Git',
+                check: { command: 'git --version' },
+            } as PrerequisiteDefinition;
+            const context = createPrereqHandlerContext({
+                sharedState: { isAuthenticating: false, currentPrerequisiteStates: undefined },
+            });
+
+            expect(areDependenciesInstalled(prereq, context)).toBe(true);
+        });
+
+        it('with dependencies but no recorded states, nothing counts as installed', () => {
+            const context = createPrereqHandlerContext({
+                sharedState: { isAuthenticating: false, currentPrerequisiteStates: undefined },
+            });
+
+            expect(areDependenciesInstalled(dependsOnNode, context)).toBe(false);
+        });
+
+        it('an installed entry for a DIFFERENT prerequisite does not satisfy the dependency', () => {
+            const context = contextWith([
+                {
+                    prereq: { id: 'npm', name: 'npm' },
+                    result: { installed: true } as PrerequisiteStatus,
+                },
+            ]);
+
+            expect(areDependenciesInstalled(dependsOnNode, context)).toBe(false);
+        });
+
+        it('Node with every required major installed satisfies the dependency', () => {
+            const context = contextWith([
+                {
+                    prereq: { id: 'node', name: 'Node.js' },
+                    result: { installed: true } as PrerequisiteStatus,
+                    nodeVersionStatus: [
+                        { version: 'Node 20', component: 'mesh', installed: true },
+                        { version: 'Node 24', component: 'headless', installed: true },
+                    ],
+                },
+            ]);
+
+            expect(areDependenciesInstalled(dependsOnNode, context)).toBe(true);
+        });
+
+        it('Node with an empty per-version list is judged by its own result', () => {
+            const context = contextWith([
+                {
+                    prereq: { id: 'node', name: 'Node.js' },
+                    result: { installed: true } as PrerequisiteStatus,
+                    nodeVersionStatus: [],
+                },
+            ]);
+
+            expect(areDependenciesInstalled(dependsOnNode, context)).toBe(true);
+        });
+
+        it('the per-version check applies to Node only; another tool with a missing entry still counts', () => {
+            const dependsOnGit = { ...dependsOnNode, depends: ['git'] };
+            const context = contextWith([
+                {
+                    prereq: { id: 'git', name: 'Git' },
+                    result: { installed: true } as PrerequisiteStatus,
+                    nodeVersionStatus: [
+                        { version: 'Node 20', component: 'mesh', installed: false },
+                    ],
+                },
+            ]);
+
+            expect(areDependenciesInstalled(dependsOnGit, context)).toBe(true);
+        });
+
+        it('an entry that has not been checked yet (no result) is not installed', () => {
+            const context = contextWith([
+                { prereq: { id: 'node', name: 'Node.js' }, result: undefined },
+            ]);
+
+            expect(areDependenciesInstalled(dependsOnNode, context)).toBe(false);
+        });
     });
 });
