@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/state/projectDirectoryScanner.ts"
+        "src/core/state/manifestValidation.ts"
     ],
     "reporters": [
         "clear-text",

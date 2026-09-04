@@ -1228,6 +1228,30 @@
             "decision": "none \u2014 both arms answer undefined for the one input that selects between them",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (apiRowState, MUT-05)"
+        },
+        {
+            "module": "src/core/state/manifestValidation.ts",
+            "anchors": [
+                "if (validate(manifest)) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Stryker empties the early-return block, so a conformant manifest falls through to the error path. Ajv sets `validate.errors` to null whenever `validate` returns true, so the fall-through computes `[]` from `errors ?? []` and returns the same empty list the early return would. Every conformant input answers identically on both paths; the early return states the intent and skips work, it does not decide anything.",
+            "decision": "none \u2014 the shortcut and the fall-through agree on every input Ajv can produce",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (manifestValidation, MUT-06)"
+        },
+        {
+            "module": "src/core/state/manifestValidation.ts",
+            "anchors": [
+                "const errors = validate.errors ?? [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The `[]` fallback is never evaluated: Ajv populates `validate.errors` with a non-empty array on every failed validation, and the fallback exists only because the ValidateFunction type declares `errors` as nullable. Reaching it would require a validator that returns false with `errors` still null, which the real Ajv never does; substituting a fake validator for that one line would be testing the fake.",
+            "decision": "none \u2014 the fallback is required by the type and unreachable through the real collaborator",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (manifestValidation, MUT-06)"
         }
     ]
 }
