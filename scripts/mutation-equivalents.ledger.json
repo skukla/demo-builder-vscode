@@ -4014,6 +4014,42 @@
             "decision": "none \u2014 the warn is the right thing to keep; it is just not observable to a test that does not pin wording",
             "recorded": "2026-09-04",
             "source": "MUT-05 batch, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/services/projectFinalizationService.ts",
+            "anchors": [
+                "const componentInstance = project.componentInstances?.[componentId];"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The loop this line sits in iterates getComponentIds(project.componentInstances), which returns [] when componentInstances is undefined or null (typeGuards.ts). So the loop body cannot run with componentInstances absent, and dropping the `?.` changes nothing reachable. The `?.` is required by the type, which declares componentInstances optional.",
+            "decision": "none \u2014 the guard is demanded by the type and unreachable at runtime",
+            "recorded": "2026-09-04",
+            "source": "MUT-05 batch, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/services/projectFinalizationService.ts",
+            "anchors": [
+                "const detectedVersion = componentInstance?.version || 'unknown';"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "componentInstance was read on the previous line by a key that came from Object.keys of the SAME record, so it is always present here. Producing an entry whose value is undefined would take a cast at the call boundary, which this repo bans precisely because it hides shape errors.",
+            "decision": "none \u2014 the `?.` satisfies the index signature; no real project shape reaches it",
+            "recorded": "2026-09-04",
+            "source": "MUT-05 batch, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/services/projectFinalizationService.ts",
+            "anchors": [
+                "if (detectedVersion !== 'unknown') {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The guarded block contains exactly one statement, a logger.debug. Inverting the comparison, forcing the condition either way, or emptying the block all change only whether one debug line prints; componentVersions[componentId] is assigned above the guard and is identical in every variant. Killing any of these would mean asserting log wording, which the ratchet exists to refuse.",
+            "decision": "none \u2014 the guard suppresses a useless 'version: unknown' log line and says so",
+            "recorded": "2026-09-04",
+            "source": "MUT-05 batch, 2026-09-04"
         }
     ]
 }

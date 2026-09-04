@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "wizardLifecycleHandlers: openExternal accept path covered, openProject flag-write arguments and error surfacing constrained, loadComponents guard pinned; 2 ledger rows",
+    "_note": "projectFinalizationService: sendCompletionAndCleanup covered end to end, env-file skip paths and version-history preservation constrained; 6 ledger mutants",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -9766,27 +9766,22 @@
             "openGaps": 0
         },
         "src/features/project-creation/services/projectFinalizationService.ts": {
-            "score": 57.14,
-            "killed": 32,
+            "score": 80.36,
+            "killed": 45,
             "survived": 11,
-            "noCoverage": 13,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "optionalChain": 4,
-                "branch": 4,
+                "optionalChain": 2,
+                "branch": 3,
                 "string": 1,
                 "block": 1,
-                "logPresentation": 1
+                "logPresentation": 4
             },
-            "uncoveredCategories": {
-                "block": 5,
-                "logPresentation": 3,
-                "branch": 4,
-                "optionalChain": 1
-            },
-            "highValueSurvivors": 5,
-            "equivalent": 0,
-            "openGaps": 19
+            "uncoveredCategories": {},
+            "highValueSurvivors": 4,
+            "equivalent": 6,
+            "openGaps": 0
         },
         "src/features/project-creation/services/sanitization.ts": {
             "score": 97.06,

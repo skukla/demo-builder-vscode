@@ -198,6 +198,59 @@ describe('projectFinalizationService', () => {
             expect(generateComponentConfigFiles).not.toHaveBeenCalled();
         });
 
+        it('skips a definition that has no component instance at all', async () => {
+            // The catalog can name a component the project never installed; that must
+            // be skipped, not dereferenced.
+            const definitions = new Map(mockComponentDefinitions);
+            definitions.set('never-installed', {
+                definition: {
+                    id: 'never-installed',
+                    name: 'Never Installed',
+                    type: 'frontend',
+                    configuration: { requiredEnvVars: [] },
+                },
+                type: 'frontend',
+                installOptions: {},
+            } as ComponentDefinitionEntry);
+
+            const context: FinalizationContext = {
+                setupContext: mockSetupContext,
+                projectPath: '/test/project',
+                componentDefinitions: definitions,
+                progressTracker: mockProgressTracker,
+                saveProject: mockSaveProject,
+                sendMessage: mockSendMessage,
+            };
+
+            await generateEnvironmentFiles(context);
+
+            const ids = (generateComponentConfigFiles as jest.Mock).mock.calls.map((c) => c[1]);
+            expect(ids).toEqual(['eds-storefront']);
+        });
+
+        it('generates nothing when the project has no component instances', async () => {
+            const projectWithNoInstances = { ...mockProject, componentInstances: undefined };
+            const setupContextWithNoInstances = new ProjectSetupContext(
+                mockHandlerContext,
+                mockSetupContext.registry,
+                projectWithNoInstances,
+                { projectName: 'test-project' }
+            );
+
+            const context: FinalizationContext = {
+                setupContext: setupContextWithNoInstances,
+                projectPath: '/test/project',
+                componentDefinitions: mockComponentDefinitions,
+                progressTracker: mockProgressTracker,
+                saveProject: mockSaveProject,
+                sendMessage: mockSendMessage,
+            };
+
+            await generateEnvironmentFiles(context);
+
+            expect(generateComponentConfigFiles).not.toHaveBeenCalled();
+        });
+
         it('should call progressTracker with correct message', async () => {
             const context: FinalizationContext = {
                 setupContext: mockSetupContext,
@@ -395,6 +448,30 @@ describe('projectFinalizationService', () => {
             ).toEqual({
                 version: 'unknown',
                 lastUpdated: expect.any(String),
+            });
+        });
+
+        it('keeps version history the project already recorded', async () => {
+            // componentVersions is the update tracker's memory; re-finalizing a project
+            // must add to it, not reset it.
+            mockProject.componentVersions = {
+                'removed-component': { version: '0.9.0', lastUpdated: '2026-01-01T00:00:00.000Z' },
+            };
+
+            const context: FinalizationContext = {
+                setupContext: mockSetupContext,
+                projectPath: '/test/project',
+                componentDefinitions: mockComponentDefinitions,
+                progressTracker: mockProgressTracker,
+                saveProject: mockSaveProject,
+                sendMessage: mockSendMessage,
+            };
+
+            await finalizeProject(context);
+
+            expect(mockProject.componentVersions!['removed-component']).toEqual({
+                version: '0.9.0',
+                lastUpdated: '2026-01-01T00:00:00.000Z',
             });
         });
 

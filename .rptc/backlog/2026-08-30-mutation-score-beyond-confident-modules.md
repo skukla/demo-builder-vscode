@@ -322,3 +322,5 @@ which point the cadence drops to release cuts.
 - 2026-09-04  test(project-creation): bring areaSubSteps to zero open mutation gaps (`1c822b3d2`)
 - 2026-09-04  chore(overnight): stop batches on evidence, not on a turn count (`944a96ea5`)
 - 2026-09-04  test(project-creation): bring executor to zero open mutation gaps (`de4c12240`)
+- 2026-09-04  test(project-creation): bring wizardLifecycleHandlers to zero open mutation gaps (`d45f2bcb3`)
+- 2026-09-04  chore(backlog): log the MUT-04 commits against PL-22 (`844e4ebd8`)
