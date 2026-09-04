@@ -5093,6 +5093,66 @@
             "decision": "none \u2014 the guard is what makes the non-null pkg below type-correct",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/ProjectSetupContext.ts",
+            "anchors": [
+                "...(this.registry.components.frontends || []),"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The empty fallback for an absent category becomes ['Stryker was here'], so allComponents gains one bare string. The array's only use is allComponents.find(c => c.id === componentId); reading .id off a string yields undefined, which never equals a component id, so the injected element is skipped and the same definition (or undefined) comes back. The fallback is only reached when the category is absent, and an absent category has nothing to find either way.",
+            "decision": "none \u2014 the fallback is what keeps an absent optional category from throwing on the spread",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/ProjectSetupContext.ts",
+            "anchors": [
+                "...(this.registry.components.backends || []),"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The empty fallback for an absent category becomes ['Stryker was here'], so allComponents gains one bare string. The array's only use is allComponents.find(c => c.id === componentId); reading .id off a string yields undefined, which never equals a component id, so the injected element is skipped and the same definition (or undefined) comes back. The fallback is only reached when the category is absent, and an absent category has nothing to find either way.",
+            "decision": "none \u2014 the fallback is what keeps an absent optional category from throwing on the spread",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/ProjectSetupContext.ts",
+            "anchors": [
+                "...(this.registry.components.dependencies || []),"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The empty fallback for an absent category becomes ['Stryker was here'], so allComponents gains one bare string. The array's only use is allComponents.find(c => c.id === componentId); reading .id off a string yields undefined, which never equals a component id, so the injected element is skipped and the same definition (or undefined) comes back. The fallback is only reached when the category is absent, and an absent category has nothing to find either way.",
+            "decision": "none \u2014 the fallback is what keeps an absent optional category from throwing on the spread",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/ProjectSetupContext.ts",
+            "anchors": [
+                "...(this.registry.components.mesh || []),"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The empty fallback for an absent category becomes ['Stryker was here'], so allComponents gains one bare string. The array's only use is allComponents.find(c => c.id === componentId); reading .id off a string yields undefined, which never equals a component id, so the injected element is skipped and the same definition (or undefined) comes back. The fallback is only reached when the category is absent, and an absent category has nothing to find either way.",
+            "decision": "none \u2014 the fallback is what keeps an absent optional category from throwing on the spread",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/ProjectSetupContext.ts",
+            "anchors": [
+                "...(this.registry.components.integrations || []),"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The empty fallback for an absent category becomes ['Stryker was here'], so allComponents gains one bare string. The array's only use is allComponents.find(c => c.id === componentId); reading .id off a string yields undefined, which never equals a component id, so the injected element is skipped and the same definition (or undefined) comes back. The fallback is only reached when the category is absent, and an absent category has nothing to find either way.",
+            "decision": "none \u2014 the fallback is what keeps an absent optional category from throwing on the spread",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
         }
     ]
 }

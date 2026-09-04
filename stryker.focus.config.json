@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/steps/CommerceStep.tsx"
+        "src/features/project-creation/services/ProjectSetupContext.ts"
     ],
     "reporters": [
         "clear-text",

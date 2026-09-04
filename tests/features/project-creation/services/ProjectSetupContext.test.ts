@@ -8,7 +8,7 @@
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import type { HandlerContext } from '@/types/handlers';
-import type { ComponentRegistry } from '@/types/components';
+import type { ComponentRegistry, TransformedComponentDefinition } from '@/types/components';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
@@ -384,6 +384,93 @@ describe('ProjectSetupContext', () => {
             expect(newContext.registry).toBe(mockRegistry);
             expect(newContext.config).toBe(mockConfig);
             expect(newContext.getBackendId()).toBe('adobe-commerce-paas');
+        });
+    });
+
+    describe('getComponentConfigs()', () => {
+        it('should return componentConfigs from config', () => {
+            const configs = { 'adobe-commerce': { ADOBE_COMMERCE_BASE_URL: 'https://x.test' } };
+            const context = new ProjectSetupContext(mockHandlerContext, mockRegistry, mockProject, {
+                ...mockConfig,
+                componentConfigs: configs,
+            });
+
+            expect(context.getComponentConfigs()).toBe(configs);
+        });
+
+        it('should return undefined when componentConfigs is missing', () => {
+            const context = new ProjectSetupContext(
+                mockHandlerContext,
+                mockRegistry,
+                mockProject,
+                mockConfig
+            );
+
+            expect(context.getComponentConfigs()).toBeUndefined();
+        });
+    });
+
+    /**
+     * getComponentDefinition searches FIVE registry categories at once. A category
+     * dropped from that search reads as "no such component", and every caller
+     * treats that as "nothing to install/configure" rather than as an error — so a
+     * whole class of component would silently stop being set up. Each category is
+     * asserted on its own; asserting one proves nothing about the other four.
+     */
+    describe('getComponentDefinition()', () => {
+        const def = (id: string): TransformedComponentDefinition => ({
+            id,
+            name: `Component ${id}`,
+        });
+
+        /** A registry whose five searched categories each hold one component. */
+        function populatedRegistry(): ComponentRegistry {
+            return {
+                ...mockRegistry,
+                components: {
+                    frontends: [def('eds-storefront')],
+                    backends: [def('adobe-commerce-paas')],
+                    dependencies: [def('eds-commerce-mesh')],
+                    mesh: [def('mesh-only-entry')],
+                    integrations: [def('adobe-commerce-aco')],
+                },
+            };
+        }
+
+        function contextWith(registry: ComponentRegistry): ProjectSetupContext {
+            return new ProjectSetupContext(mockHandlerContext, registry, mockProject, mockConfig);
+        }
+
+        it.each([
+            ['frontends', 'eds-storefront'],
+            ['backends', 'adobe-commerce-paas'],
+            ['dependencies', 'eds-commerce-mesh'],
+            ['mesh', 'mesh-only-entry'],
+            ['integrations', 'adobe-commerce-aco'],
+        ])('should find a component registered under %s', (_category, id) => {
+            expect(contextWith(populatedRegistry()).getComponentDefinition(id)).toEqual(def(id));
+        });
+
+        it('should return undefined for an id no category holds', () => {
+            expect(
+                contextWith(populatedRegistry()).getComponentDefinition('not-a-component')
+            ).toBeUndefined();
+        });
+
+        it('should not throw when the optional categories are absent', () => {
+            // mesh, integrations and appBuilder are optional on ComponentRegistry, and
+            // a registry loaded from an older components.json omits them. Spreading an
+            // absent category would throw before any lookup happened.
+            const sparse: ComponentRegistry = {
+                ...mockRegistry,
+                components: {
+                    frontends: undefined as unknown as TransformedComponentDefinition[],
+                    backends: undefined as unknown as TransformedComponentDefinition[],
+                    dependencies: undefined as unknown as TransformedComponentDefinition[],
+                },
+            };
+
+            expect(contextWith(sparse).getComponentDefinition('eds-storefront')).toBeUndefined();
         });
     });
 
