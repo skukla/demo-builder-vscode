@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/wizard/hooks/useWizardState.ts"
+        "src/features/project-creation/ui/steps/ReviewStep.tsx"
     ],
     "reporters": [
         "clear-text",
