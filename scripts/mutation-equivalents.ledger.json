@@ -4796,6 +4796,103 @@
             "decision": "none \u2014 the injected element cannot survive the filter that immediately follows it",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/handlers/checkGitHubAppHandler.ts",
+            "anchors": [
+                "const parts: string[] = [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "describeAdminResponse builds ONE log line and nothing else. Its only caller is the context.logger.info at line 232; no value it returns reaches a return value, a collaborator argument, or any state. Every mutant inside it therefore changes the wording of a log message and nothing observable, which is exactly what the ratchet refuses to reward a test for pinning. The classifier cannot see this because it reads the enclosing statement, and the statement lives in a helper function one level away from the logger call.",
+            "decision": "none \u2014 the helper is a log formatter and is correct as written",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/checkGitHubAppHandler.ts",
+            "anchors": [
+                "if (result.httpStatus !== undefined) parts.push(`HTTP ${result.httpStatus}`);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "describeAdminResponse builds ONE log line and nothing else. Its only caller is the context.logger.info at line 232; no value it returns reaches a return value, a collaborator argument, or any state. Every mutant inside it therefore changes the wording of a log message and nothing observable, which is exactly what the ratchet refuses to reward a test for pinning. The classifier cannot see this because it reads the enclosing statement, and the statement lives in a helper function one level away from the logger call.",
+            "decision": "none \u2014 the helper is a log formatter and is correct as written",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/checkGitHubAppHandler.ts",
+            "anchors": [
+                "if (result.codeStatus !== undefined) parts.push(`code.status ${result.codeStatus}`);"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "describeAdminResponse builds ONE log line and nothing else. Its only caller is the context.logger.info at line 232; no value it returns reaches a return value, a collaborator argument, or any state. Every mutant inside it therefore changes the wording of a log message and nothing observable, which is exactly what the ratchet refuses to reward a test for pinning. The classifier cannot see this because it reads the enclosing statement, and the statement lives in a helper function one level away from the logger call.",
+            "decision": "none \u2014 the helper is a log formatter and is correct as written",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/checkGitHubAppHandler.ts",
+            "anchors": [
+                "if (result.helixError) parts.push(`x-error: ${result.helixError}`);"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "describeAdminResponse builds ONE log line and nothing else. Its only caller is the context.logger.info at line 232; no value it returns reaches a return value, a collaborator argument, or any state. Every mutant inside it therefore changes the wording of a log message and nothing observable, which is exactly what the ratchet refuses to reward a test for pinning. The classifier cannot see this because it reads the enclosing statement, and the statement lives in a helper function one level away from the logger call.",
+            "decision": "none \u2014 the helper is a log formatter and is correct as written",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/checkGitHubAppHandler.ts",
+            "anchors": [
+                "return parts.length > 0 ? parts.join(', ') : 'no response';"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "describeAdminResponse builds ONE log line and nothing else. Its only caller is the context.logger.info at line 232; no value it returns reaches a return value, a collaborator argument, or any state. Every mutant inside it therefore changes the wording of a log message and nothing observable, which is exactly what the ratchet refuses to reward a test for pinning. The classifier cannot see this because it reads the enclosing statement, and the statement lives in a helper function one level away from the logger call.",
+            "decision": "none \u2014 the helper is a log formatter and is correct as written",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/checkGitHubAppHandler.ts",
+            "anchors": [
+                "if (!result.isInstalled && !isHttpNotFound) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The guarded body is a single context.logger.info call. Forcing the condition true logs the summary line on paths that also log it elsewhere; forcing it false logs nothing. Neither changes the response, the service calls, or the code-sync decision \u2014 isHttpNotFound is read again independently on the next line. The only observable difference is which log line prints.",
+            "decision": "none \u2014 the guard keeps the not-installed diagnosis out of the installed path's logs",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/checkGitHubAppHandler.ts",
+            "anchors": [
+                "if (isHttpNotFound && request.skipTrigger) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this if-body removes only a context.logger.info call. The branch itself still runs and still suppresses the else-if that triggers the code sync, so the skipTrigger behaviour is unchanged and is already pinned by the skipTrigger tests. Nothing but the log line differs.",
+            "decision": "none \u2014 the log explains a deliberate no-op to whoever reads a pasted Debug Logs dump",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/checkGitHubAppHandler.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 159,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying triggerCodeSync's catch body drops a logger.warn and the explicit 'return false', so the function returns undefined instead. Its single caller uses the value only as 'if (triggered)', where undefined and false are indistinguishable \u2014 the re-check is skipped either way. No test can separate the two.",
+            "decision": "none \u2014 the explicit false matches the declared Promise<boolean> return type",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
         }
     ]
 }

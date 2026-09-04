@@ -354,6 +354,108 @@ describe('checkGitHubApp handler', () => {
  * Without this assertion the wiring is invisible: the service-level tests pass a
  * provider directly, so the handler could stop supplying one and nothing would fail.
  */
+/**
+ * What the handler ASKS FOR, and what it answers with.
+ *
+ * The tests above drive the handler through its branches and read the verdict.
+ * These pin the two things a mock cannot see on its own: the arguments the
+ * service is called with, and the shape returned when the call throws. A mode
+ * flag that never reaches `isAppInstalled` is invisible to every assertion that
+ * only reads the answer, because the fake answers the same either way.
+ */
+describe('checkGitHubApp handler — the call it makes and the answer it gives', () => {
+    // These queue per-call answers; `jest.clearAllMocks()` clears calls, not the
+    // `mockResolvedValueOnce` queue, so an unconsumed answer would leak forward.
+    beforeEach(() => {
+        mockIsAppInstalled.mockReset();
+    });
+
+    it('asks in strict mode when the request does not say otherwise', async () => {
+        mockIsAppInstalled.mockResolvedValue({ isInstalled: true, codeStatus: 200 });
+
+        await checkGitHubApp(makeContext(), REQUEST, SERVICES);
+
+        expect(mockIsAppInstalled).toHaveBeenCalledWith('acme-demos', 'aircraft-demo', {
+            lenient: false,
+        });
+    });
+
+    it('passes lenient through to the service when the request asks for it', async () => {
+        mockIsAppInstalled.mockResolvedValue({ isInstalled: true, codeStatus: 200 });
+
+        await checkGitHubApp(makeContext(), { ...REQUEST, lenient: true }, SERVICES);
+
+        expect(mockIsAppInstalled).toHaveBeenCalledWith('acme-demos', 'aircraft-demo', {
+            lenient: true,
+        });
+    });
+
+    it('re-asks in the SAME mode after the trigger', async () => {
+        mockIsAppInstalled
+            .mockResolvedValueOnce({ isInstalled: false, httpNotFound: true, httpStatus: 404 })
+            .mockResolvedValueOnce({ isInstalled: true, codeStatus: 200 });
+
+        await checkGitHubApp(makeContext(), { ...REQUEST, lenient: true }, SERVICES);
+
+        // A re-check that silently reverted to strict mode would reject the very
+        // status the lenient caller asked to accept.
+        expect(mockIsAppInstalled).toHaveBeenNthCalledWith(2, 'acme-demos', 'aircraft-demo', {
+            lenient: true,
+        });
+    });
+
+    it('reports that a code sync was triggered', async () => {
+        mockIsAppInstalled.mockResolvedValue({
+            isInstalled: false,
+            httpNotFound: true,
+            httpStatus: 404,
+        });
+
+        const result = await checkGitHubApp(makeContext(), REQUEST, SERVICES);
+
+        // The wizard uses this to say "indexing started" instead of "not installed".
+        expect(result.codeSyncTriggered).toBe(true);
+    });
+
+    it('names the repository in the undetermined reason', async () => {
+        mockIsAppInstalled.mockResolvedValue({
+            isInstalled: false,
+            transient: true,
+            httpStatus: 401,
+        });
+
+        const result = await checkGitHubApp(makeContext(), REQUEST, SERVICES);
+
+        // The reason is user-facing text; without the repo in it the SC cannot tell
+        // which of several storefronts AEM refused.
+        expect(String(result.reason)).toContain('acme-demos/aircraft-demo');
+    });
+
+    it('answers with the failure instead of throwing when the service rejects', async () => {
+        mockIsAppInstalled.mockRejectedValue(new Error('admin.hlx.page unreachable'));
+
+        const result = await checkGitHubApp(makeContext(), REQUEST, SERVICES);
+
+        expect(result).toEqual({
+            success: false,
+            isInstalled: false,
+            error: 'admin.hlx.page unreachable',
+        });
+    });
+
+    it('builds its own service when no seam is handed in', async () => {
+        // The production call passes no `services`. The real GitHubAppService is
+        // reached here and answers from the fake token service the suite installs —
+        // no credential, so no network — which makes the default factory's OUTPUT
+        // observable rather than merely constructed.
+        const result = await checkGitHubApp(makeContext(), REQUEST);
+
+        expect(result.success).toBe(true);
+        expect(result.undetermined).toBe(true);
+        expect(String(result.reason)).toContain("not signed in to GitHub");
+    });
+});
+
 describe('checkGitHubApp handler — DA.live session wiring', () => {
     it('constructs the service WITH the DA.live token provider', async () => {
         const { tryCreateDaLiveTokenProvider } = jest.requireMock(
