@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/prerequisites/handlers/continueHandler.ts"
+        "src/features/prerequisites/services/prerequisitesCacheManager.ts"
     ],
     "reporters": [
         "clear-text",

@@ -4290,6 +4290,30 @@
             "decision": "none \u2014 the id check makes the term readable on its own; the redundancy is with a guard in another function",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/prerequisites/services/prerequisitesCacheManager.ts",
+            "anchors": [
+                "if (oldestKey) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true cannot be reached with oldestKey undefined. The block runs only when the cache is already at MAX_CACHE_SIZE, so the loop above it iterates at least one entry, and every entry's expiry is a finite now + jitteredTTL which is always below the Infinity the loop starts from. Even if it could, Map.delete(undefined) is a no-op that returns false, so the only difference would be the eviction log line.",
+            "decision": "none \u2014 the guard narrows oldestKey from string | undefined, which the delete call requires",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/prerequisites/services/prerequisitesCacheManager.ts",
+            "anchors": [
+                "if (keysToDelete.length > 0) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The whole body of this guard is one logger.debug call. Both the deletions and the invalidations counter happen on the two lines ABOVE it, unconditionally, so nothing a caller can read changes when the condition is forced either way, relaxed to >= 0, inverted to <= 0, or the block emptied. The only observable difference is whether an invalidate that matched nothing writes a line saying it invalidated zero entries.",
+            "decision": "none \u2014 the guard keeps a no-op invalidate quiet in the debug channel",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

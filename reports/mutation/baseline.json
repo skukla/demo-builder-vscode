@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "continueHandler: 16 decision tests (fnm parsing, per-major probe scope, canInstall composition, recorded state) + 8 ledger rows for the equivalent remainder",
+    "_note": "prerequisitesCacheManager: 7 boundary tests (expiry instant, LRU tie-break, invalidation counter, per-version selection + legacy key fallback) + 2 ledger rows for the log-only remainder",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -9132,21 +9132,20 @@
             "openGaps": 0
         },
         "src/features/prerequisites/services/prerequisitesCacheManager.ts": {
-            "score": 83.33,
-            "killed": 90,
-            "survived": 18,
+            "score": 90.74,
+            "killed": 98,
+            "survived": 10,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 10,
-                "other": 2,
-                "string": 5,
-                "block": 1
+                "branch": 5,
+                "block": 1,
+                "logPresentation": 4
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 11,
-            "equivalent": 0,
-            "openGaps": 13
+            "highValueSurvivors": 6,
+            "equivalent": 6,
+            "openGaps": 0
         },
         "src/features/prerequisites/services/versioning/MultiVersionDetector.ts": {
             "score": 84,
