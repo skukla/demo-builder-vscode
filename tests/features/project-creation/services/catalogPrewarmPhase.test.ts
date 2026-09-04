@@ -125,6 +125,27 @@ describe('executeCatalogPrewarmPhase', () => {
         expect(makeHelix).not.toHaveBeenCalled();
     });
 
+    // The outcome summary is guarded on `!result.skipped`: prewarmCatalog reports
+    // `skipped` when there was nothing to warm, and a summary printed anyway would
+    // claim a pre-publish that never happened. Asserted as emission vs silence —
+    // never on the message text, which pins wording rather than the decision.
+    it('reports an outcome once when the catalog was actually warmed', async () => {
+        const context = makeContext();
+
+        await executeCatalogPrewarmPhase(context, PROJECT, jest.fn(), makeHelix);
+
+        expect(context.logger.info).toHaveBeenCalledTimes(1);
+    });
+
+    it('claims no outcome when prewarmCatalog reports it skipped', async () => {
+        mockPrewarmCatalog.mockResolvedValue({ skipped: true, succeeded: 0, attempted: 0 });
+        const context = makeContext();
+
+        await executeCatalogPrewarmPhase(context, PROJECT, jest.fn(), makeHelix);
+
+        expect(context.logger.info).not.toHaveBeenCalled();
+    });
+
     it('is NON-FATAL: a failing pre-warm warns and resolves, never rejects', async () => {
         mockPrewarmCatalog.mockRejectedValue(new Error('helix exploded'));
         const context = makeContext();
