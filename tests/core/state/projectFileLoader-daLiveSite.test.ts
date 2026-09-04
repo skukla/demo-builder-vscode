@@ -65,4 +65,12 @@ describe('stripRedundantDaLiveSite', () => {
         const project = projectWith(undefined);
         expect(() => stripRedundantDaLiveSite(project)).not.toThrow();
     });
+
+    it('is a no-op when the project has no component instances at all', () => {
+        const project = createMockProject({ name: 'demo', path: '/p' });
+        delete project.componentInstances;
+
+        expect(() => stripRedundantDaLiveSite(project)).not.toThrow();
+        expect(project.componentInstances).toBeUndefined();
+    });
 });

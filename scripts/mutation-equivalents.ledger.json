@@ -1124,6 +1124,23 @@
             "decision": "none \u2014 required by the type; the detect-only catch is what makes it unobservable",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (consoleProjectTeardown)"
+        },
+        {
+            "module": "src/core/state/projectFileLoader.ts",
+            "anchors": [
+                "...(selections?.frontend ? [selections.frontend] : []),",
+                "...(selections?.backend ? [selections.backend] : []),",
+                "...(selections?.dependencies ?? []),",
+                "...(selections?.integrations ?? []),",
+                "...(selections?.appBuilder ?? []),",
+                "...(project.selectedAddons ?? []),"
+            ],
+            "mutants": 6,
+            "category": "other",
+            "reason": "Each anchor contributes a selection list to the SET of live component ids, with an empty array as the contribution when that selection is absent. The mutant fills the empty fallback with a literal string, so the set gains one junk id. The set is read exactly once, by `live.has(id)` over the keys of componentConfigs, so the junk id is observable only through a componentConfigs entry keyed by that literal \u2014 and no component id is that string. A test that planted such a key would be asserting a manifest no writer can produce. The absent-selection case itself IS tested (stripOrphanedComponentConfigs with no selections); what cannot be observed is the contents of the empty contribution.",
+            "decision": "none \u2014 the fallback is the empty contribution to a set, and only a config keyed by the injected literal could see it",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (projectFileLoader, MUT-04)"
         }
     ]
 }

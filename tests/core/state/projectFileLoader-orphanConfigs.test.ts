@@ -87,6 +87,24 @@ describe('stripOrphanedComponentConfigs', () => {
         expect(Object.keys(p.componentConfigs ?? {})).toHaveLength(8);
     });
 
+    it('treats every selection as absent when the project has no selections', () => {
+        const p = project({
+            componentSelections: undefined,
+            componentInstances: {
+                'instance-only': { id: 'instance-only', name: 'Instance Only', status: 'ready' },
+            },
+            componentConfigs: {
+                'instance-only': { A: '1' },
+                'eds-storefront': { B: '2' },
+            },
+        });
+
+        const changed = stripOrphanedComponentConfigs(p);
+
+        expect(changed).toBe(true);
+        expect(p.componentConfigs).toEqual({ 'instance-only': { A: '1' } });
+    });
+
     it('is a no-op when componentConfigs is absent', () => {
         const p = project({});
         expect(stripOrphanedComponentConfigs(p)).toBe(false);

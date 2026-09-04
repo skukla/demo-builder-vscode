@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/performanceTracker.ts"
+        "src/core/state/projectFileLoader.ts"
     ],
     "reporters": [
         "clear-text",

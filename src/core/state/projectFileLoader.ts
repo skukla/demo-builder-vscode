@@ -346,8 +346,10 @@ export class ProjectFileLoader {
         // Prefer componentInstance.version (from recent installation) over manifest data
         const mergedComponentVersions = { ...(manifestVersions || {}) };
         for (const componentId of Object.keys(discoveredComponents)) {
-            // Check if the merged componentInstance has version data (from recent installation)
-            const instanceVersion = mergedComponentInstances[componentId]?.version;
+            // Every discovered id was spread into the merged map above, so the
+            // lookup is always defined; the instance version comes from a recent
+            // installation when present.
+            const instanceVersion = mergedComponentInstances[componentId].version;
 
             if (!mergedComponentVersions[componentId]) {
                 // Component exists on disk but has no version tracking in project file
