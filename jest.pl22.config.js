@@ -26,6 +26,10 @@ module.exports = {
     displayName: 'stryker-pl22',
     rootDir: __dirname,
     testMatch: [
+        '**/tests/features/prerequisites/handlers/installHandler-decisions-final.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-decisions-node.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-decisions-plugins.test.ts',
+        '**/tests/features/prerequisites/handlers/installHandler-decisions-target.test.ts',
         '**/tests/core/state/stateManager-initializeLoad.test.ts',
         '**/tests/core/state/stateManager-saveGuards.test.ts',
         '**/tests/features/updates/services/updateManager-plumbing.test.ts',

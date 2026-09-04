@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/prerequisites/ui/steps/hooks/prerequisiteRenderers.tsx"
+        "src/features/prerequisites/handlers/installHandler.ts"
     ],
     "reporters": [
         "clear-text",

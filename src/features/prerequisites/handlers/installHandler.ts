@@ -260,20 +260,15 @@ async function resolvePluginNodeVersions(
         }
     }
 
-    // Also check dependencies
-    const selection = context.sharedState.currentComponentSelection;
-    if (selection?.dependencies) {
-        for (const dep of selection.dependencies) {
-            if (requiredForComponents.includes(dep)) {
-                const depNodeVersion = Object.entries(nodeVersionMapping)
-                    .find(([_, compId]) => compId === dep)?.[0];
-                if (depNodeVersion && !pluginNodeVersions.includes(depNodeVersion)) {
-                    pluginNodeVersions.push(depNodeVersion);
-                    context.debugLogger.debug(`[Prerequisites] Plugin ${plugin.id} needed for dependency ${dep} (Node ${depNodeVersion})`);
-                }
-            }
-        }
-    }
+    // A second pass over `currentComponentSelection.dependencies` used to sit here,
+    // looking up each dependency that appears in `requiredFor` and adding its Node
+    // version. It could never add one: it found its version with
+    // `.find(([_, compId]) => compId === dep)`, so the mapping entry it landed on had
+    // `componentId === dep`, and `dep` was already known to be in `requiredFor` — which
+    // is exactly the condition the loop above tests for every mapping entry. Its
+    // `!pluginNodeVersions.includes(...)` guard was therefore always false. Ten mutants
+    // sat behind it that no test could reach. Removed 2026-09-04; the same finding as
+    // the two blocks the docstrings above record.
 
     if (pluginNodeVersions.length > 0) {
         const fnmVersions = await getInstalledNodeVersions(
