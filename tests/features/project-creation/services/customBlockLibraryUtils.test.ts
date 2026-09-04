@@ -77,6 +77,12 @@ describe('customBlockLibraryUtils', () => {
         it('should handle single-word names', () => {
             expect(deriveBlockLibraryName('isle5')).toBe('Isle5');
         });
+
+        // Repeated and edge separators collapse rather than producing the double
+        // spaces and leading space a raw split would leave in the picker label.
+        it('should collapse repeated and leading separators into single spaces', () => {
+            expect(deriveBlockLibraryName('-buildright--eds_')).toBe('Buildright Eds');
+        });
     });
 
     describe('isDuplicateCustomLibrary', () => {
@@ -97,6 +103,32 @@ describe('customBlockLibraryUtils', () => {
             const source = { owner: 'skukla', repo: 'other-repo', branch: 'main' };
 
             expect(isDuplicateCustomLibrary(source, existing)).toBe(false);
+        });
+
+        // The match is owner AND repo. A different owner's repo of the same name is
+        // a different library, and treating it as a duplicate would refuse to add it.
+        it('should return false when the repo matches but the owner differs', () => {
+            const source = { owner: 'someone-else', repo: 'buildright-eds', branch: 'main' };
+
+            expect(isDuplicateCustomLibrary(source, existing)).toBe(false);
+        });
+
+        // ONE existing entry has to match, not all of them — the list normally holds
+        // several libraries and the new one collides with at most one.
+        it('should return true when only one of several existing entries matches', () => {
+            const several: CustomBlockLibrary[] = [
+                { name: 'Other', source: { owner: 'acme', repo: 'other-lib', branch: 'main' } },
+                ...existing,
+            ];
+            const source = { owner: 'skukla', repo: 'buildright-eds', branch: 'main' };
+
+            expect(isDuplicateCustomLibrary(source, several)).toBe(true);
+        });
+
+        it('should return false against an empty list', () => {
+            const source = { owner: 'skukla', repo: 'buildright-eds', branch: 'main' };
+
+            expect(isDuplicateCustomLibrary(source, [])).toBe(false);
         });
     });
 
@@ -134,13 +166,24 @@ describe('customBlockLibraryUtils', () => {
             expect(result).toEqual([]);
         });
 
-        it('should trim whitespace from URLs', () => {
-            const urls = ['  https://github.com/acme/my-lib  '];
+        // The URL parser tolerates ordinary spaces itself, so plain padding proves
+        // nothing about the trim. A non-breaking space is what a paste out of a doc
+        // or a chat message actually carries, and `new URL` throws on it — without
+        // the trim that settings entry disappears with no diagnostic.
+        it('should trim whitespace from URLs, including a non-breaking space', () => {
+            const urls = [
+                '  https://github.com/acme/my-lib  ',
+                '\u00a0https://github.com/acme/pasted-lib\u00a0',
+            ];
 
             const result = parseCustomBlockLibrarySettings(urls);
 
             expect(result).toEqual([
                 { name: 'My Lib', source: { owner: 'acme', repo: 'my-lib', branch: 'main' } },
+                {
+                    name: 'Pasted Lib',
+                    source: { owner: 'acme', repo: 'pasted-lib', branch: 'main' },
+                },
             ]);
         });
     });
