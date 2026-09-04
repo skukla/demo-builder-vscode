@@ -55,7 +55,16 @@ describe('no test asserts a logger call’s arguments beyond its recorded ceilin
         // This file's own control strings are the pattern; it is not a test of a logger.
         if (f === __filename) continue;
         if (rel.startsWith(EXEMPT_PREFIX)) continue;
-        const n = (readFileSync(f, 'utf8').match(WORDING) ?? []).length;
+        // Same race as the walk above, one step later: a path collected a moment ago
+        // can be gone before it is read. A file that no longer exists has no
+        // assertions in it, so skipping it is correct rather than merely convenient.
+        let body: string;
+        try {
+            body = readFileSync(f, 'utf8');
+        } catch {
+            continue;
+        }
+        const n = (body.match(WORDING) ?? []).length;
         if (n) counts.set(rel, n);
     }
 

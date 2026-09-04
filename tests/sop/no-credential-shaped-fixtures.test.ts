@@ -68,7 +68,17 @@ describe('no credential-shaped string under tests/', () => {
     it('no file carries either shape', () => {
         const offenders: string[] = [];
         for (const f of corpus) {
-            const body = readFileSync(f, 'utf8');
+            // The walk closed one half of the probe-file race; this closes the other.
+            // A path collected a moment ago can be gone by the time it is read, because
+            // other suites create and delete files under tests/ in parallel workers.
+            // A file that no longer exists carries nothing, so skipping it is correct
+            // rather than merely convenient.
+            let body: string;
+            try {
+                body = readFileSync(f, 'utf8');
+            } catch {
+                continue;
+            }
             const lines = body.split('\n');
             lines.forEach((line, i) => {
                 if (USERINFO_URL.test(line) || BASIC_HEADER.test(line)) {
