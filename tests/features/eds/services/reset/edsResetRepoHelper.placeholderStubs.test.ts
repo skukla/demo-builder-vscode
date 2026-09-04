@@ -9,64 +9,21 @@
  * repo's mock-audit rule.
  */
 
-import '../../../../helpers/edsPlaceholderStubMocks';
-
-import type { HandlerContext } from '@/types/handlers';
-import type { EdsResetParams } from '@/features/eds/services/reset/edsResetParams';
-import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
-
-jest.mock('@/features/eds/services/configGenerator', () => ({
-    generateConfigJson: jest.fn().mockReturnValue({ success: true, content: '{}' }),
-    buildConfigGeneratorParams: jest.fn().mockReturnValue({}),
-}));
-
-jest.mock('@/features/eds/services/patches/lkgReader', () => ({
-    readLkgSha: jest.fn().mockResolvedValue(null),
-}));
-
-jest.mock('@/features/eds/services/patches/codePatchPipelineHelpers', () => ({
-    applyCanonicalCodePatches: jest.fn().mockResolvedValue([]),
-}));
-
-import { resetRepoToTemplate } from '@/features/eds/services/reset/edsResetRepoHelper';
+import { buildParams, installDefaults, runReset } from './edsResetRepoHelper.testUtils';
 import {
     PLACEHOLDER_STUB_PATHS,
     buildPlaceholderStubJson,
 } from '@/features/eds/services/placeholderStubs';
-import { createMockLogger } from '../../../../helpers/loggerFake';
-import { createMockHandlerContext } from '../../../../helpers/handlerContextTestHelpers';
-import { createMockProject } from '../../../../helpers/projectFake';
 
-const PARAMS: EdsResetParams = {
-    repoOwner: 'me',
-    repoName: 'shop',
-    daLiveOrg: 'acme',
-    daLiveSite: 'shop',
-    templateOwner: 'tpl-owner',
-    templateRepo: 'tpl-repo',
-    project: createMockProject({ name: 'p', path: '/p', selectedBlockLibraries: [] }),
-};
-
-function makeContext(): HandlerContext {
-    return createMockHandlerContext({
-        logger: createMockLogger(),
-    });
-}
+beforeEach(installDefaults);
 
 describe('resetRepoToTemplate — placeholder stubs ride the bulk override commit', () => {
     it('hands one stub per requested sheet to githubFileOps.resetRepoToTemplate', async () => {
-        const resetMock = jest.fn().mockResolvedValue({ fileCount: 20, commitSha: 'abc1234567' });
-        // The one call the reset makes; the class holds private Octokit state.
-        const githubFileOps = {
-            resetRepoToTemplate: resetMock,
-        } as unknown as GitHubFileOperations;
+        const { overrides } = await runReset(buildParams());
 
-        await resetRepoToTemplate(PARAMS, makeContext(), githubFileOps, jest.fn());
-
-        const overrides = resetMock.mock.calls[0][4] as Map<string, string>;
-        expect(overrides.get('fstab.yaml')).toBe('mock-fstab');
+        expect(overrides?.get('fstab.yaml')).toBe('mock-fstab');
         for (const sheetPath of PLACEHOLDER_STUB_PATHS) {
-            expect(overrides.get(`${sheetPath}.json`)).toBe(buildPlaceholderStubJson());
+            expect(overrides?.get(`${sheetPath}.json`)).toBe(buildPlaceholderStubJson());
         }
     });
 });

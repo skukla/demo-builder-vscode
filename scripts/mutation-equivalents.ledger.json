@@ -1249,6 +1249,58 @@
             "decision": "none \u2014 `false` says what a failed lookup means; the mutant only removes the word",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-07, edsResetUI focus run"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetRepoHelper.ts",
+            "anchors": [
+                "`[EdsReset] Block library '${libraryId}' selected but no source configured`,",
+                "logger.warn(`[EdsReset] Inspector tagging skipped: ${(error as Error).message}`);",
+                "`[EdsReset] Failed to generate demo-config.json: ${configResult.error}`,",
+                "`[EdsReset] LKG unreachable for ${codePatchSource.owner}/${codePatchSource.repo} \u2014 falling back to template main HEAD`,"
+            ],
+            "mutants": 4,
+            "category": "block",
+            "reason": "Four bodies that only log: the else when a selected library has no source (the library is simply not pushed, which the blockLibraries suite pins from the list handed to installBlockCollections), the catch around inspector-entry generation (the suite pins that the install proceeds with an empty entries list), the else when config generation fails (the suite pins that config.json is absent from the override map), and the else when the LKG is unreachable (the suite pins the fallback to main). Emptying any of them changes what is logged and nothing a collaborator receives; asserting the log is what no-logger-wording-assertions forbids.",
+            "decision": "none \u2014 each line is the Debug Logs trace of a degraded step, which debug-log-triage reads",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-07, edsResetRepoHelper focus run"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetRepoHelper.ts",
+            "anchors": [
+                "if (inspectorResult.success) {",
+                "logger.warn(`[EdsReset] Inspector tagging skipped: ${inspectorResult.error}`);"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "installInspectorOnly's result branch chooses between an info line and a warn line and nothing else: the function returns void, the reset does not read the inspector result, and the standalone install's arguments are pinned by the blockLibraries suite regardless of outcome. Forcing the condition true or false, or emptying either body, changes which line is logged and nothing observable. Asserting the log is what no-logger-wording-assertions forbids.",
+            "decision": "none \u2014 the two lines are the Debug Logs record of whether inspector tagging landed",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-07, edsResetRepoHelper focus run"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetRepoHelper.ts",
+            "anchors": [
+                "(l) => `${l.source.owner}/${l.source.repo}`,"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The arrow renders the custom-library list inside the data object of a structured logger.info call three lines up; its result reaches nothing but that log entry. The classifier's statement scan stops at the brace that opens the object argument, so it cannot see the logger call and reads the arrow as behaviour. Asserting the log is what no-logger-wording-assertions forbids.",
+            "decision": "none \u2014 the object is log data; the classifier's bounded scan is the instrument's known limit for object-literal log arguments",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-07, edsResetRepoHelper focus run"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetRepoHelper.ts",
+            "anchors": [
+                "if (blockResult.success) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard true returns blockResult.blockIds on failure instead of []. Both failure returns in installBlockCollections (no blocks found, and the catch-all) carry blockIds: [], so the guard and the fallback agree on every value the producer can emit; the blockLibraries suite pins undefined ids on failure with a fixture shaped like the real one. Killing it would need a failed result that carries ids, which nothing produces \u2014 a fixture that lies about how the code is reached.",
+            "decision": "none \u2014 the guard documents the contract; the warn line it separates is the only difference",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-07, edsResetRepoHelper focus run"
         }
     ]
 }
