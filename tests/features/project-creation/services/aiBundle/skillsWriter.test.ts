@@ -14,6 +14,12 @@ import * as path from 'path';
 import { makeEdsProject, makeHeadlessProject } from './aiBundleFixtures';
 import { enoentError, makeTestWriter, mcpToolsManifest } from './generatedFileWriter.testUtils';
 import {
+    EDS_STOREFRONT_BUNDLE_PATH,
+    makeDirent,
+    mockAdobeSkillBundle,
+    mockMissingAdobeBundle,
+} from './skillsWriter.testUtils';
+import {
     DEMO_BUILDER_SKILLS,
     writeSkillFiles,
 } from '@/features/project-creation/services/aiBundle/skillsWriter';
@@ -66,68 +72,6 @@ function writtenContent(skillName: string): string | undefined {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 // ─── Adobe skill bundle mock helpers ─────────────────────────────────────────
-
-const ADOBE_BUNDLE_RELATIVE =
-    'node_modules/@adobe-commerce/commerce-extensibility-tools/dist/aem-boilerplate-commerce/skills';
-// The bundle lives in the project's isolated MCP tools dir — Adobe ships every
-// starter-kit bundle in one package and we install it there. NOT the storefront
-// checkout: this fixture named that path until 2026-08-26, matching a copy that
-// could never resolve in production, and the mock answered it happily.
-const EDS_STOREFRONT_BUNDLE_PATH = `/projects/test/.demo-builder-mcp/${ADOBE_BUNDLE_RELATIVE}`;
-
-function makeDirent(
-    name: string,
-    isDirectory: boolean
-): { name: string; isDirectory: () => boolean } {
-    return { name, isDirectory: () => isDirectory };
-}
-
-/**
- * Mock the Adobe skill bundle at `EDS_STOREFRONT_BUNDLE_PATH`.
- *
- * `skillFiles[skillName]` lists files inside that skill folder; the test then
- * intercepts readFile to return frontmatter for each `.md` file.
- */
-function mockAdobeSkillBundle(skillFiles: Record<string, string[]>): void {
-    const readdirMock = fsPromises.readdir as jest.Mock;
-    const readFileMock = fsPromises.readFile as jest.Mock;
-
-    readdirMock.mockImplementation(async (dirPath: string) => {
-        if (dirPath === EDS_STOREFRONT_BUNDLE_PATH) {
-            return Object.keys(skillFiles).map((name) => makeDirent(name, true));
-        }
-        // Skill folder contents
-        const skillName = Object.keys(skillFiles).find(
-            (name) => dirPath === path.join(EDS_STOREFRONT_BUNDLE_PATH, name)
-        );
-        if (skillName) {
-            return skillFiles[skillName].map((filename) => makeDirent(filename, false));
-        }
-        throw enoentError();
-    });
-
-    readFileMock.mockImplementation(async (filePath: string) => {
-        if (filePath.endsWith('.demo-builder-mcp/package.json')) {
-            // Installed-tools manifest: playwright present, so the gated
-            // skills stay deliverable and legacy count pins hold.
-            return mcpToolsManifest(['@playwright/mcp']);
-        }
-        const filename = path.basename(filePath);
-        const skillName = path.basename(path.dirname(filePath));
-        if (filename.endsWith('.md')) {
-            return `---\nname: ${skillName}\ndescription: Adobe skill ${skillName}\n---\n\n# ${skillName}\n\nBody for ${skillName}.\n`;
-        }
-        // Non-MD file
-        return `content of ${filename}`;
-    });
-}
-
-function mockMissingAdobeBundle(): void {
-    const readdirMock = fsPromises.readdir as jest.Mock;
-    readdirMock.mockImplementation(async () => {
-        throw enoentError();
-    });
-}
 
 describe('the always-on skill list has ONE home', () => {
     // The inspector that classifies skills for the AI Capabilities modal used to
@@ -454,9 +398,7 @@ describe('skillsWriter', () => {
             const readdirPaths = (fsPromises.readdir as jest.Mock).mock.calls.map(
                 ([dirPath]) => dirPath as string
             );
-            expect(readdirPaths).toContain(
-                `/projects/test/.demo-builder-mcp/${ADOBE_BUNDLE_RELATIVE}`
-            );
+            expect(readdirPaths).toContain(EDS_STOREFRONT_BUNDLE_PATH);
             expect(
                 readdirPaths.filter((dirPath) => dirPath.includes('/components/eds-storefront/'))
             ).toEqual([]);

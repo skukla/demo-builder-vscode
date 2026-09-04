@@ -5215,6 +5215,30 @@
             "decision": "keep \u2014 defensive against a future tier-1 removal, unreachable as a sole cause today",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/skillsWriter.ts",
+            "anchors": [
+                "if (path.basename(name) !== name) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "writeSkill is a closure called from exactly one place: a map over DEMO_BUILDER_SKILLS, whose names come from the DEMO_BUILDER_ALWAYS_ON_SKILLS const tuple in @/types/ai. Every name is a compile-time literal with no path separator, so path.basename(name) always equals name and the throw is unreachable for any input the program can construct. Reaching it means replacing that tuple, which changes what the module IS rather than what it does; the guard stays as defence in depth for a future name.",
+            "decision": "keep \u2014 a traversal guard on a set fixed at compile time",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/skillsWriter.ts",
+            "anchors": [
+                "const match = /^---\\r?\\n([\\s\\S]*?)\\r?\\n---\\r?\\n([\\s\\S]*)$/.exec(content);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker drops the trailing $ anchor. The group before it is [\\s\\S]* \u2014 greedy, matching every remaining character including newlines \u2014 so the anchor is satisfied at the same position whether or not it is written, for every possible input. The regex has no m flag, so $ cannot match anywhere but end of input either. The two patterns accept exactly the same strings and capture exactly the same groups.",
+            "decision": "keep \u2014 $ documents the intent; it constrains nothing a greedy tail has not already",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
