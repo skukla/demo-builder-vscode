@@ -2145,6 +2145,58 @@
             "decision": "Kept: consistent with the other reads of the same optional field.",
             "recorded": "2026-09-04",
             "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/ui/steps/PrerequisitesStep.tsx",
+            "anchors": [
+                "if (scrollContainerRef.current) {"
+            ],
+            "line": 27,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The ref is attached to a div this component always renders, so by the time any handler can call scrollToTop the current value is set. Forcing the guard true cannot reach a null dereference for any input a test can supply, because the only way to null it is to unmount \u2014 after which nothing calls this.",
+            "decision": "Kept: it is the standard null guard a ref's type asks for.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/ui/steps/PrerequisitesStep.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 30,
+            "mutants": 1,
+            "category": "other",
+            "reason": "This is a useCallback dependency list. Replacing an empty array with an array holding one constant string leaves the callback equally stable across renders \u2014 the value never changes, so the memo never invalidates either way, and no render, message or payload differs.",
+            "decision": "Kept: empty is what 'depends on nothing' looks like.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/ui/steps/PrerequisitesStep.tsx",
+            "anchors": [
+                "() => (state.selectedAppBuilderComponents ?? []).filter(isMeshComponentId),"
+            ],
+            "line": 36,
+            "mutants": 1,
+            "category": "other",
+            "reason": "This default applies only when selectedAppBuilderComponents is null or undefined, and whatever it holds is immediately passed through filter(isMeshComponentId). A string no component is ever named after is filtered out, so the result is the same empty array the empty default produces.",
+            "decision": "Kept as the empty default an absent selection deserves.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/ui/steps/PrerequisitesStep.tsx",
+            "anchors": [
+                "const versions = check.nodeVersionStatus"
+            ],
+            "line": 159,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The .filter((v) => v.installed) on the next line runs only inside the block gated on shouldShowPluginDetails, which returns false unless nodeVersionStatus.every(v => v.installed) \u2014 so every entry reaching the filter is already installed and dropping the filter changes nothing. The ARROW inside it is not equivalent and is killed by a test asserting the version list on the row.",
+            "decision": "Kept: it states the intent locally rather than depending on the guard above it.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
         }
     ]
 }

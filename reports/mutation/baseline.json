@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "installHandler: 74 decision tests across target resolution, the Node/per-node version choices, the step runner and the final status; one dead block removed from src; 28 ledgered equivalents; openGaps 86 -> 0",
+    "_note": "PrerequisitesStep: 46 decision tests covering the plugin-detail block no suite had reached, plus row spacing, the two buttons, the progress bar and auto-scroll; 4 ledgered equivalents; openGaps 75 -> 0",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -9186,27 +9186,20 @@
             "openGaps": 6
         },
         "src/features/prerequisites/ui/steps/PrerequisitesStep.tsx": {
-            "score": 22.96,
-            "killed": 31,
-            "survived": 48,
-            "noCoverage": 56,
+            "score": 88.15,
+            "killed": 119,
+            "survived": 16,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 22,
-                "block": 3,
-                "string": 14,
-                "other": 8,
-                "optionalChain": 1
+                "branch": 1,
+                "other": 3,
+                "string": 12
             },
-            "uncoveredCategories": {
-                "branch": 15,
-                "string": 15,
-                "block": 2,
-                "other": 24
-            },
-            "highValueSurvivors": 25,
-            "equivalent": 0,
-            "openGaps": 75
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 4,
+            "openGaps": 0
         },
         "src/features/prerequisites/ui/steps/hooks/prerequisiteRenderers.tsx": {
             "score": 90.96,
