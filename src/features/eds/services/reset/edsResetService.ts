@@ -266,7 +266,7 @@ async function finalizeReset(
     contentCopied: number,
     deps: MeshRedeployDeps,
     /** False when step 7 could not write the site config — see below. */
-    configWritten = true,
+    configWritten: boolean,
 ): Promise<EdsResetResult> {
     const { repoOwner, repoName, project, verifyCdn = false, redeployMesh = false } = params;
 

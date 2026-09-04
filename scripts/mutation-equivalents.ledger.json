@@ -1301,6 +1301,18 @@
             "decision": "none \u2014 the guard documents the contract; the warn line it separates is the only difference",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-07, edsResetRepoHelper focus run"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetService.ts",
+            "anchors": [
+                "context.logger.warn('[EdsReset] No user email available for permissions');"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else taken when DA.live returns no user email holds one warn line and nothing else. The orchestration suite pins the decision itself \u2014 configureDaLivePermissions is not called and the reset still succeeds \u2014 so emptying this body changes what is logged and nothing a collaborator receives. Asserting the log is what no-logger-wording-assertions forbids.",
+            "decision": "none \u2014 the line is the Debug Logs trace of a skipped permission grant, which debug-log-triage reads",
+            "recorded": "2026-09-03",
+            "source": "PL-22 batch MUT-07, edsResetService focus run"
         }
     ]
 }
