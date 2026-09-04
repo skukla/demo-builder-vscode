@@ -30,10 +30,16 @@ module.exports = {
     // Environment: jsdom for BOTH sets — this module has suites in each, and Stryker
     // cannot run two jest projects in one measurement.
     testMatch: [
-        '**/tests/features/project-creation/ui/steps/ProjectCreationStep-predicates.test.ts',
-        '**/tests/features/project-creation/ui/steps/ProjectCreationStep-footer.test.tsx',
-        '**/tests/features/project-creation/ui/steps/ProjectCreationStep-phases.test.tsx',
-        '**/tests/features/project-creation/ui/steps/ProjectCreationStep-preflight.test.tsx',
-        '**/tests/features/project-creation/ui/steps/ProjectCreationStep.test.tsx',
+        '**/tests/features/project-creation/ui/wizard/WizardContainer-helpers.test.ts',
+        '**/tests/features/project-creation/ui/wizard/WizardContainer-errorBoundary.test.tsx',
+        '**/tests/features/project-creation/ui/wizard/WizardContainer-focus.test.tsx',
+        '**/tests/features/project-creation/ui/wizard/WizardContainer-hiddenPackage.test.tsx',
+        '**/tests/features/project-creation/ui/wizard/WizardContainer-import.test.tsx',
+        '**/tests/features/project-creation/ui/wizard/WizardContainer-initialization.test.tsx',
+        '**/tests/features/project-creation/ui/wizard/WizardContainer-layout.test.tsx',
+        '**/tests/features/project-creation/ui/wizard/WizardContainer-navigation.test.tsx',
+        '**/tests/features/project-creation/ui/wizard/WizardContainer-nestedTimeline.test.tsx',
+        '**/tests/features/project-creation/ui/wizard/WizardContainer-stackChange.test.tsx',
+        '**/tests/features/project-creation/ui/wizard/WizardContainer-state.test.tsx',
     ],
 };
