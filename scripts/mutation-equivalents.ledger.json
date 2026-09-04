@@ -4351,6 +4351,82 @@
             "decision": "none \u2014 the warning is the only trace an offline fnm leaves, and it should stay",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/handlers/createHandler.ts",
+            "anchors": [
+                "}): number {",
+                "if (components?.frontend) count++;",
+                "if (components?.backend) count++;",
+                "count += components?.dependencies?.length || 0;"
+            ],
+            "mutants": 11,
+            "category": "branch",
+            "reason": "countSelectedComponents has exactly one caller, and that caller is a template string inside context.logger.debug on the Starting line. The number it returns never reaches a payload, a return value, or a decision \u2014 so emptying the body, flipping either guard, decrementing instead of incrementing, and swapping the dependency fallback all change only how many components the debug line claims were selected. Killing any of them would mean asserting log text.",
+            "decision": "none \u2014 the count is operational triage detail in the debug channel and earns its place there",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/handlers/createHandler.ts",
+            "anchors": [
+                "if (isEditMode) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this block does not remove the branch. Its body is two logger calls, and because it is the if of an if/else-if the else branch is still skipped, so the project directory is preserved either way. What the mutant removes is the explanation of WHY nothing was deleted, which is the only thing an edit-mode failure leaves behind.",
+            "decision": "none \u2014 the messages are how an SC learns their project survived a failed edit",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/handlers/createHandler.ts",
+            "anchors": [
+                "} else if (workspace && context.sharedState.meshExistedBeforeSession) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The entire body of this else-if is one logger.debug call \u2014 no mesh is deleted, no state is touched, nothing is sent. Forcing the condition true, or turning its && into ||, only widens which failures write the preserving-the-mesh line. The delete decision was already made by the if above, which this branch cannot reach.",
+            "decision": "none \u2014 the line records that a pre-existing mesh was deliberately left alone",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/handlers/createHandler.ts",
+            "anchors": [
+                "(appError.cause?.message?.includes('cancelled by user') ?? false);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the second optional chain would throw only for a cause that exists and has no message. Every cause on an AppError is set from `error instanceof Error ? error : undefined`, so a present cause is always a real Error and message is always a string \u2014 possibly empty, which includes() handles. No rejection the executor can produce reaches the state this guard protects against.",
+            "decision": "none \u2014 the chain is required by the optional type and unreachable in its failing state",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/handlers/createHandler.ts",
+            "anchors": [
+                "previousExists: !!context.sharedState.projectCreationAbortController,"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "This is a field of the object literal handed to logger.debug on the line above, and the handler overwrites projectCreationAbortController unconditionally on the next statement whatever the flag said. Dropping or inverting the double negation changes only whether the debug line reports a stale controller as present, which is exactly the wording a test may not pin.",
+            "decision": "none \u2014 the flag is how an overlapping second creation shows up in the logs",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/handlers/createHandler.ts",
+            "anchors": [
+                "hadAbortController: !!context.sharedState.projectCreationAbortController,",
+                "wasAborted: context.sharedState.projectCreationAbortController?.signal.aborted,"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Both fields belong to the object literal logged in the finally block, three lines before the same three sharedState fields are cleared unconditionally. Nothing reads either value. The optional chain additionally cannot throw here: the controller is assigned before the try and cleared only after this log, so it is always present when the line runs.",
+            "decision": "none \u2014 the finally-block log is the record of how a run ended, and the chain is required by the optional type",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

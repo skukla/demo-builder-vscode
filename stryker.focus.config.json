@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/prerequisites/services/versioning/MultiVersionDetector.ts"
+        "src/features/project-creation/handlers/createHandler.ts"
     ],
     "reporters": [
         "clear-text",
