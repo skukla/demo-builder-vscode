@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/wizard/stepFiltering.ts"
+        "src/features/project-creation/ui/steps/commerceSections.ts"
     ],
     "reporters": [
         "clear-text",

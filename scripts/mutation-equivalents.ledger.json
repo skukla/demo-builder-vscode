@@ -4146,6 +4146,30 @@
             "decision": "none \u2014 the key is an opaque change token and the dependency list is genuinely empty",
             "recorded": "2026-09-04",
             "source": "MUT-05 batch, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/commerceSections.ts",
+            "anchors": [
+                "return { stackId: null, candidates, ambiguous: candidates.length > 1 };"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker widens `candidates.length > 1` to `>= 1`. The line is only reached when the length is NOT 1 \u2014 the `if (candidates.length === 1)` above returns first \u2014 so the mutant differs only at length exactly 1, an input that cannot arrive here. At 0 both are false; at 2 or more both are true. No test can distinguish them.",
+            "decision": "none \u2014 `> 1` states the intent (more than one candidate is ambiguous) and the guard above makes the widened form unreachable",
+            "recorded": "2026-09-04",
+            "source": "MUT-06 batch, commerceSections focus run 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/commerceSections.ts",
+            "anchors": [
+                "else if (!connectionDone) businessReason = 'Connect to Commerce first';"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker forces the else-if to true, so businessReason is always set when the step is not sign-in-gated. The reason is only ever READ when the section is locked, and configSection is passed `gated || !connectionDone` as its lock flag: whenever connectionDone is true the section is not locked and configSection drops lockReason entirely. So the mutant's extra assignment reaches no output \u2014 and when connectionDone is false, both forms produce the same 'Connect to Commerce first'.",
+            "decision": "none \u2014 the condition documents which of the two reasons applies and costs nothing",
+            "recorded": "2026-09-04",
+            "source": "MUT-06 batch, commerceSections focus run 2026-09-04"
         }
     ]
 }
