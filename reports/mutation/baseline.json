@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-22 MUT-02: envFileGenerator — three new suites cover configFiles routing, service env-var folding and value resolution/layout (67 tests); the 30 remaining survivors are warn-only branches, absent-category fallbacks and re-deduplicated filters, all in the equivalents ledger",
+    "_note": "PL-22 MUT-02: useWizardState — two new suites cover edit/import EDS seeding, Adobe context restore, step filtering and the org-change reset (41 tests); the 25 remaining survivors are dev-log payload fields and stable-reference equivalents, all ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -10534,30 +10534,25 @@
             "openGaps": 0
         },
         "src/features/project-creation/ui/wizard/hooks/useWizardState.ts": {
-            "score": 18.05,
-            "killed": 50,
-            "survived": 87,
-            "noCoverage": 140,
-            "timeout": 0,
+            "score": 86.64,
+            "killed": 237,
+            "survived": 36,
+            "noCoverage": 1,
+            "timeout": 3,
             "survivorCategories": {
-                "other": 20,
-                "branch": 54,
-                "block": 4,
-                "logPresentation": 4,
-                "string": 3,
+                "logPresentation": 9,
+                "string": 2,
+                "block": 3,
+                "branch": 17,
+                "other": 3,
                 "optionalChain": 2
             },
             "uncoveredCategories": {
-                "block": 8,
-                "branch": 70,
-                "string": 30,
-                "other": 26,
-                "logPresentation": 4,
-                "optionalChain": 2
+                "string": 1
             },
-            "highValueSurvivors": 58,
-            "equivalent": 0,
-            "openGaps": 186
+            "highValueSurvivors": 20,
+            "equivalent": 25,
+            "openGaps": 0
         },
         "src/features/project-creation/ui/wizard/stepFiltering.ts": {
             "score": 67.27,

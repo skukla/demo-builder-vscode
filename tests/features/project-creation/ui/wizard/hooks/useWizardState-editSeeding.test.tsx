@@ -14,8 +14,8 @@
 import { renderHook } from '@testing-library/react';
 import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import { isMeshSelected } from '@/features/project-creation/ui/steps/tileStatus';
-import { useWizardState } from '@/features/project-creation/ui/wizard/hooks/useWizardState';
 import type { EditProjectConfig, ImportedSettings } from '@/types/wizard';
+import { useWizardState } from './useWizardState.testUtils';
 
 jest.mock('@/core/ui/utils/vscode-api', () => ({
     vscode: { postMessage: jest.fn(), request: jest.fn() },

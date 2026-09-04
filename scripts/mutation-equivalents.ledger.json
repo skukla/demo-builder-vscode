@@ -2483,6 +2483,214 @@
             "decision": "Kept: skipping a var the component already declares is the rule this line exists for.",
             "recorded": "2026-09-04",
             "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "hasSelections: !!editSettings.selections,"
+            ],
+            "line": 256,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.selections itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
+            "decision": "Kept: the log says at a glance which halves of a stored project were present.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "hasAdobe: !!editSettings.adobe,"
+            ],
+            "line": 257,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.adobe itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
+            "decision": "Kept: the log says at a glance which halves of a stored project were present.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "hasConfigs: !!editSettings.configs,"
+            ],
+            "line": 258,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.configs itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
+            "decision": "Kept: the log says at a glance which halves of a stored project were present.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "hasEdsConfig: !!editSettings.edsConfig,"
+            ],
+            "line": 259,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "This is a field of the object literal handed to log.info as its second argument, and nothing else reads it. Dropping or adding the negation changes one boolean inside a development-only log line \u2014 the wizard state returned from buildEditModeState is built further down from editSettings.edsConfig itself, never from this flag. Telling the two apart would mean asserting the logger's payload, which pins wording rather than behaviour.",
+            "decision": "Kept: the log says at a glance which halves of a stored project were present.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "if (editSettings.edsConfig) {"
+            ],
+            "line": 262,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both arms of this if are a single log call \u2014 an info listing the stored EDS fields, or a warn that none were found. The state actually built from editSettings.edsConfig is decided much further down, on its own separate check at the end of buildEditModeState, so forcing this condition false or emptying its block moves only what is printed in development.",
+            "decision": "Kept: knowing whether a project carried EDS config, and what was in it, is the first thing to check when an edit opens wrong.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 269,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this else-block removes the warn that fires when a project stored no EDS config. Execution continues to the adobeContext build on the next line either way, and the returned state's edsConfig is computed from its own check lower down. No returned field, no collaborator call and no render differs.",
+            "decision": "Kept: an edit that opens with an empty Storefront area is worth a line in the log.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "if (importedSettings) {"
+            ],
+            "line": 327,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The body of this if is one log.info and nothing more. Every value it reports \u2014 the selections, the Adobe block, the configs, the generated name \u2014 was computed on the four lines above it and is returned from computeInitialState regardless of whether this branch runs. Forcing it false or emptying it changes only development output.",
+            "decision": "Kept: an import that lands with the wrong name or missing configs is diagnosed from this line.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "hasSelections: !!importedSettings.selections,"
+            ],
+            "line": 329,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.selections directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
+            "decision": "Kept: the log says at a glance which halves of the imported project were present.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "hasAdobe: !!importedSettings.adobe,"
+            ],
+            "line": 330,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.adobe directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
+            "decision": "Kept: the log says at a glance which halves of the imported project were present.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "hasConfigs: !!importedSettings.configs,"
+            ],
+            "line": 331,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "A field of the object literal passed to log.info, read by nothing else. The initial state returned below takes importedSettings.configs directly, not this boolean, so dropping or adding the negation moves one value inside a development-only log line and nothing in the wizard. Separating the two would require asserting the log payload.",
+            "decision": "Kept: the log says at a glance which halves of the imported project were present.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "configKeys: importedSettings.configs ? Object.keys(importedSettings.configs) : [],"
+            ],
+            "line": 332,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The empty fallback here is the else arm of a field inside the log.info payload; it is reached only when the import carried no configs, and it is printed rather than used. componentConfigs on the returned state comes from importedSettings?.configs || {} further down, which this expression cannot reach. Any test able to see the difference would be asserting log content.",
+            "decision": "Kept: an empty key list reads better in the log than a missing field.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "existingProjectNames || [],"
+            ],
+            "line": 383,
+            "mutants": 1,
+            "category": "other",
+            "reason": "This fallback fires only when the caller passes no existing-names list, and the array goes straight to initializeProjectName, which uses it for one thing: existingNames.includes(baseName) inside generateUniqueProjectName. A list holding Stryker's placeholder string answers that check identically to an empty list for every project name a wizard can be opened with.",
+            "decision": "Kept: an absent list is an empty list here.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "const originalStep = wizardSteps?.find((ws) => ws.id === step.id);"
+            ],
+            "line": 402,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Removing the optional call would throw only if this map body ran with wizardSteps undefined, and it cannot: enabledSteps is getEnabledWizardSteps(wizardSteps), which returns an empty array for a missing or empty configuration, so the map never executes a single iteration. There is no input that reaches this line with wizardSteps absent.",
+            "decision": "Kept: the prop is optional, and the guard says so where the read happens.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "condition: originalStep?.condition,"
+            ],
+            "line": 407,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "originalStep is the result of finding step.id in wizardSteps, and step came from getEnabledWizardSteps(wizardSteps) \u2014 every id being searched for was taken from that same array, so the find always hits. Removing the optional read can never dereference undefined, whatever step configuration is handed in.",
+            "decision": "Kept: find returns an optional by type, and the guard matches the type.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "if (currentOrgId) {"
+            ],
+            "line": 478,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this true sets hasSeenOrgRef when the org is absent, but the flag can only change an outcome once orgActuallyChanged is evaluated with prevOrgId defined \u2014 and prevOrgId is assigned currentOrgId at the end of a previous run, so a defined prevOrgId means that run had a defined currentOrgId and already set the flag unmutated. The two therefore agree on every sequence of org values.",
+            "decision": "Kept: 'we have now seen an org' is only true when there is an org.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/hooks/useWizardState.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 507,
+            "mutants": 1,
+            "category": "other",
+            "reason": "This is the useCallback dependency list for updateState. Replacing the empty array with one holding a constant string leaves the memo equally stable \u2014 the value never changes between renders, so the callback identity never invalidates either way, and the test asserting updateState keeps the same reference across a state change passes under both.",
+            "decision": "Kept: empty is what 'depends on nothing' looks like.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
         }
     ]
 }
