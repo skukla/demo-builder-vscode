@@ -4314,6 +4314,43 @@
             "decision": "none \u2014 the guard keeps a no-op invalidate quiet in the debug channel",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/prerequisites/services/versioning/MultiVersionDetector.ts",
+            "anchors": [
+                "if (stdout) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true returns null either way. An empty stdout splits to one empty line, matches no family and falls through to the same return; an undefined stdout makes .split throw, and the catch four lines below turns that into the identical null. The only difference between the two paths is whether a warning naming the family is written to the debug channel.",
+            "decision": "none \u2014 the guard keeps a shell that answered nothing out of the warning log",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/prerequisites/services/versioning/MultiVersionDetector.ts",
+            "anchors": [
+                "if (versions.length > 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both mutants admit the empty array, and reading versions[0] off it throws a TypeError that the enclosing catch converts into the same null this guard falls through to. There is no stdout for which the caller sees a different value; only the warning line differs, and it names an error rather than the absence the code actually found.",
+            "decision": "none \u2014 the guard reports 'no version in this family' as null rather than as a caught TypeError",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/prerequisites/services/versioning/MultiVersionDetector.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 124,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch BODY does not remove the catch clause, so a failing fnm list-remote is still swallowed and the function still returns the null on the last line. The body holds one logger.warn and nothing else, so the mutant is observable only as a missing log line, which is exactly what the ratchet refuses to reward a test for pinning.",
+            "decision": "none \u2014 the warning is the only trace an offline fnm leaves, and it should stay",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

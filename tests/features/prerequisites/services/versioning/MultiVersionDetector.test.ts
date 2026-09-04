@@ -147,4 +147,19 @@ describe('getLatestInFamily', () => {
 
         await expect(getLatestInFamily('19', executor, makeLogger())).resolves.toBeNull();
     });
+
+    it('matches and returns a padded remote line as the bare version', async () => {
+        // Both trims in this function are load-bearing on the same input: the
+        // one in the filter decides whether the line matches the family at all,
+        // and the one on the way out decides what the caller is handed.
+        mockExecute.mockResolvedValue({ stdout: ['  v20.19.4', '  v20.19.5'].join('\n') });
+
+        await expect(getLatestInFamily('20', executor, makeLogger())).resolves.toBe('20.19.4');
+    });
+
+    it('answers null when the remote list cannot be fetched', async () => {
+        mockExecute.mockRejectedValue(new Error('offline'));
+
+        await expect(getLatestInFamily('20', executor, makeLogger())).resolves.toBeNull();
+    });
 });
