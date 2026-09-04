@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 
@@ -156,6 +156,145 @@ describe('ApiPickerStage', () => {
 
         await waitFor(() => expect(screen.getByText('Firefly Services')).toBeInTheDocument());
         expect(mockRequest).toHaveBeenCalledTimes(2);
+    });
+
+    it('treats a failed response that still carries data as a failure', async () => {
+        // success is the authority: a payload arriving alongside an error must not
+        // be rendered as though the list had loaded.
+        mockRequest.mockResolvedValue({
+            success: false,
+            error: 'Adobe API catalog unavailable.',
+            data: { apis: [FFS, BASELINE] },
+        });
+        renderStage();
+
+        await waitFor(() =>
+            expect(screen.getByText('Adobe API catalog unavailable.')).toBeInTheDocument()
+        );
+        expect(screen.queryByText('Firefly Services')).not.toBeInTheDocument();
+    });
+
+    it('falls back to a generic message when the failure carries no reason', async () => {
+        mockRequest.mockResolvedValue({ success: false });
+        renderStage();
+
+        await waitFor(() =>
+            expect(screen.getByText('Could not list Adobe APIs.')).toBeInTheDocument()
+        );
+    });
+
+    it('surfaces a REJECTED request, not just a failed response', async () => {
+        mockRequest.mockRejectedValue(new Error('socket closed'));
+        renderStage();
+
+        await waitFor(() => expect(screen.getByText('socket closed')).toBeInTheDocument());
+    });
+
+    it('re-fetches on every Retry, not just the first', async () => {
+        mockRequest.mockResolvedValue({ success: false, error: 'Request timeout' });
+        renderStage();
+
+        const retry = async () => {
+            const button = await screen.findByRole('button', { name: /Retry/i });
+            await act(async () => {
+                fireEvent.click(button);
+            });
+        };
+
+        await retry();
+        expect(mockRequest).toHaveBeenCalledTimes(2);
+        await retry();
+        expect(mockRequest).toHaveBeenCalledTimes(3);
+    });
+
+    // A stage whose componentIds change re-fires the list. The in-flight response
+    // for the PREVIOUS ids must be dropped: it describes a question no longer asked.
+    describe('a superseded request is ignored', () => {
+        const OTHER = { code: 'PhotoshopSDK', name: 'Photoshop API', locked: false };
+
+        function renderWithIds(componentIds: string[]) {
+            return render(
+                <Provider theme={defaultTheme} colorScheme="light">
+                    <ApiPickerStage componentIds={componentIds} selected={[]} onToggle={jest.fn()} />
+                </Provider>
+            );
+        }
+
+        it('drops a stale SUCCESS in favour of the current one', async () => {
+            let resolveStale: (value: unknown) => void = () => {};
+            mockRequest.mockReturnValueOnce(
+                new Promise((resolve) => {
+                    resolveStale = resolve;
+                })
+            );
+            mockRequest.mockResolvedValue({ success: true, data: { apis: [OTHER] } });
+
+            const { rerender } = renderWithIds(['a']);
+            rerender(
+                <Provider theme={defaultTheme} colorScheme="light">
+                    <ApiPickerStage componentIds={['b']} selected={[]} onToggle={jest.fn()} />
+                </Provider>
+            );
+            await waitFor(() => expect(screen.getByText('Photoshop API')).toBeInTheDocument());
+
+            await act(async () => {
+                resolveStale({ success: true, data: { apis: [FFS] } });
+            });
+
+            expect(screen.queryByText('Firefly Services')).not.toBeInTheDocument();
+            expect(screen.getByText('Photoshop API')).toBeInTheDocument();
+        });
+
+        it('drops a stale REJECTION rather than erroring over the list it already showed', async () => {
+            let rejectStale: (reason: unknown) => void = () => {};
+            mockRequest.mockReturnValueOnce(
+                new Promise((_resolve, reject) => {
+                    rejectStale = reject;
+                })
+            );
+            mockRequest.mockResolvedValue({ success: true, data: { apis: [OTHER] } });
+
+            const { rerender } = renderWithIds(['a']);
+            rerender(
+                <Provider theme={defaultTheme} colorScheme="light">
+                    <ApiPickerStage componentIds={['b']} selected={[]} onToggle={jest.fn()} />
+                </Provider>
+            );
+            await waitFor(() => expect(screen.getByText('Photoshop API')).toBeInTheDocument());
+
+            await act(async () => {
+                rejectStale(new Error('stale socket closed'));
+            });
+
+            expect(screen.queryByText('stale socket closed')).not.toBeInTheDocument();
+            expect(screen.getByText('Photoshop API')).toBeInTheDocument();
+        });
+
+        it('drops a stale REJECTION rather than erroring over a pending request', async () => {
+            let rejectStale: (reason: unknown) => void = () => {};
+            mockRequest.mockReturnValueOnce(
+                new Promise((_resolve, reject) => {
+                    rejectStale = reject;
+                })
+            );
+            // The CURRENT request never settles, so the stage stays in its loading
+            // state unless the stale failure wrongly writes to it.
+            mockRequest.mockReturnValue(new Promise(() => {}));
+
+            const { rerender } = renderWithIds(['a']);
+            rerender(
+                <Provider theme={defaultTheme} colorScheme="light">
+                    <ApiPickerStage componentIds={['b']} selected={[]} onToggle={jest.fn()} />
+                </Provider>
+            );
+
+            await act(async () => {
+                rejectStale(new Error('stale socket closed'));
+            });
+
+            expect(screen.queryByText('stale socket closed')).not.toBeInTheDocument();
+            expect(screen.getByText(/Loading Adobe APIs/i)).toBeInTheDocument();
+        });
     });
 
     it('toggles a free (unlocked) pick through onToggle', async () => {

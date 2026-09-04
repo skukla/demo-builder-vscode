@@ -53,9 +53,6 @@ export interface ApiPickerStageProps {
     onSignIn?: () => Promise<unknown>;
 }
 
-/** Stable empty default so an omitted `selected` never churns the picker. */
-const NO_SELECTED: string[] = [];
-
 const HELPER = 'Pick the Adobe APIs this app needs — change them anytime in Manage APIs.';
 
 /**
@@ -66,7 +63,7 @@ const HELPER = 'Pick the Adobe APIs this app needs — change them anytime in Ma
  */
 export function ApiPickerStage({
     componentIds,
-    selected = NO_SELECTED,
+    selected,
     onToggle,
     onSignIn,
 }: ApiPickerStageProps): React.ReactElement {

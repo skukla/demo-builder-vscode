@@ -4098,6 +4098,54 @@
             "decision": "none \u2014 short-circuit makes the second guard unreachable-when-needed; the type still demands it",
             "recorded": "2026-09-04",
             "source": "MUT-05 batch, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/stages/ApiPickerStage.tsx",
+            "anchors": [
+                "const [loading, setLoading] = useState(true);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mount effect calls setLoading(true) unconditionally, so the initial value is superseded before any render a test can observe: React Testing Library's render() flushes effects inside act, and the first commit is never queried. The initial true still matters in a real browser (useEffect runs after paint, so a false initial would flash an empty picker), which is why it is correct as written \u2014 but no assertion can reach that frame.",
+            "decision": "none \u2014 the initial value prevents a first-paint flash the test environment cannot render",
+            "recorded": "2026-09-04",
+            "source": "MUT-05 batch, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/stages/ApiPickerStage.tsx",
+            "anchors": [
+                "const [needsSignIn, setNeedsSignIn] = useState(false);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same shape as the loading initial value: the mount effect calls setNeedsSignIn(false) unconditionally, so the initial value is overwritten before the first observable render. Only the response's AUTH_REQUIRED code ever puts the stage into the signed-out view, and that path is covered.",
+            "decision": "none \u2014 the initial value is the correct default and is immediately re-asserted by the effect",
+            "recorded": "2026-09-04",
+            "source": "MUT-05 batch, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/stages/ApiPickerStage.tsx",
+            "anchors": [
+                "const [apis, setApis] = useState<ApiAccessOption[]>([]);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The picker renders only when loading is false and there is no error or sign-in prompt \u2014 which cannot happen before the request resolves and replaces this value via setApis. Every earlier render shows a feedback view instead, so the initial array is never handed to ApiAccessPicker.",
+            "decision": "none \u2014 an empty initial list is correct and unobservable",
+            "recorded": "2026-09-04",
+            "source": "MUT-05 batch, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/stages/ApiPickerStage.tsx",
+            "anchors": [
+                "const retry = useCallback(() => setReloadKey((key) => key + 1), []);"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "Two mutants on this line have no observable effect. Turning + into - still produces a DIFFERENT key on every press, which is the only property the effect dependency needs \u2014 the value itself is never read or displayed. Filling the useCallback dependency array with a junk string element compares equal to itself on every render, so the callback identity is as stable as with []. (The third mutant on this line, replacing the updater with () => undefined, IS killed \u2014 it makes the second retry a no-op.)",
+            "decision": "none \u2014 the key is an opaque change token and the dependency list is genuinely empty",
+            "recorded": "2026-09-04",
+            "source": "MUT-05 batch, 2026-09-04"
         }
     ]
 }

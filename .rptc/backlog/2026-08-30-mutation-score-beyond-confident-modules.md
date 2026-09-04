@@ -327,3 +327,4 @@ which point the cadence drops to release cuts.
 - 2026-09-04  test(project-creation): bring projectFinalizationService to zero open mutation gaps (`041c324d2`)
 - 2026-09-04  test(project-creation): bring stepFiltering to 100% mutation score (`2a7541d71`)
 - 2026-09-04  test(project-creation): bring stepFiltering to 100% mutation score (`d4512ffba`)
+- 2026-09-04  test(project-creation): bring buildSummary to zero open mutation gaps (`84e031da3`)
