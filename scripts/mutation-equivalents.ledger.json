@@ -1374,6 +1374,42 @@
             "decision": "none \u2014 the chains are required by the type and correct as written",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-08, syncStorefront focus run"
+        },
+        {
+            "module": "src/features/lifecycle/commands/startDemo.ts",
+            "anchors": [
+                "if (result.code !== 0 || !result.stdout.trim()) {"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Dropping the trim lets whitespace-only lsof output past this guard, but the very next guard \u2014 pids.length === 0 after parsing \u2014 returns false for it too, so the command's outcome (no kill, no wait, the same error) is identical either way. The only difference is which debug line is logged. The suite pins the outcome for whitespace-only output and asserts the port was probed exactly once.",
+            "decision": "none \u2014 the trim keeps the two guards honest about what each one refuses",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-08, startDemo focus run"
+        },
+        {
+            "module": "src/features/lifecycle/commands/startDemo.ts",
+            "anchors": [
+                "const debugInfo = JSON.stringify({"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "debugInfo is built for exactly one reader, the logger.error on the line after it, and nothing else. Emptying the object changes only what that line prints; the decision around it \u2014 the error shown to the SC and the early return \u2014 is pinned by the error suite. Asserting the log text is what no-logger-wording-assertions forbids.",
+            "decision": "none \u2014 the object is the Debug Logs trace of a project with no startable frontend",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-08, startDemo focus run"
+        },
+        {
+            "module": "src/features/lifecycle/commands/startDemo.ts",
+            "anchors": [
+                "hasComponentInstances: !!project.componentInstances,"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The field is one key of the debugInfo object above, whose only reader is a logger.error line; flipping the coercion changes a logged JSON string and nothing a collaborator receives. Same argument as the debugInfo row.",
+            "decision": "none \u2014 see the debugInfo row",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-08, startDemo focus run"
         }
     ]
 }

@@ -106,9 +106,12 @@ export class StartDemoCommand extends BaseCommand {
             return false;
         }
 
-        // Parse all PIDs (there may be multiple processes on the same port)
-        const pids = result.stdout.trim().split('\n')
-            .map(line => parseInt(line.trim(), 10))
+        // Parse all PIDs (there may be multiple processes on the same port).
+        // No trimming: parseInt ignores surrounding whitespace and the filter
+        // drops the NaN a blank line parses to — a mutation run showed both
+        // trims here were unobservable.
+        const pids = result.stdout.split('\n')
+            .map(line => parseInt(line, 10))
             .filter(pid => !isNaN(pid) && pid > 0);
 
         if (pids.length === 0) {

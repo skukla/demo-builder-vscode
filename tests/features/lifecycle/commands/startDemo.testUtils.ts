@@ -32,6 +32,13 @@ jest.mock('fs', () => ({
         access: jest.fn().mockRejectedValue(new Error('ENOENT')),
     },
 }));
+import * as fs from 'fs';
+/**
+ * Exported as a handle rather than letting specs `import * as fs`: a spec's own
+ * import of 'fs' resolves BEFORE this module registers its mock, so it would
+ * receive the real module (and `mockRejectedValue` would not be a function).
+ */
+export const accessMock = fs.promises.access as jest.Mock;
 
 // Mock ServiceLocator for CommandExecutor
 const mockCommandExecutor = {
