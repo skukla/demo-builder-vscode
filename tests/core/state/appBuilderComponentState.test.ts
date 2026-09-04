@@ -14,6 +14,8 @@ import {
     setAppBuilderComponent,
     getMeshAppBuilderComponent,
     getProvidedEnvVars,
+    hasMeshDeploymentRecord,
+    getMeshEndpoint,
 } from '@/core/state/appBuilderComponentState';
 import type { Project, AppBuilderComponentState } from '@/types/base';
 
@@ -188,5 +190,67 @@ describe('appBuilderComponentState accessors', () => {
         const project = makeProject({ appBuilderComponents: {} });
 
         expect(getIdentifiedMeshAppBuilderComponent(project)).toBeUndefined();
+    });
+});
+
+describe('hasMeshDeploymentRecord — answered from the deploy record', () => {
+    function withMesh(fields: Partial<AppBuilderComponentState>): Project {
+        return makeProject({
+            appBuilderComponents: {
+                mesh: makeAppBuilderComponent({ status: 'not-deployed', ...fields }),
+            },
+        });
+    }
+
+    it('is false for a project with no mesh', () => {
+        expect(hasMeshDeploymentRecord(makeProject({ appBuilderComponents: {} }))).toBe(false);
+    });
+
+    it('is false for a mesh with no record at all', () => {
+        expect(hasMeshDeploymentRecord(withMesh({}))).toBe(false);
+    });
+
+    it('is true on an endpoint alone', () => {
+        expect(hasMeshDeploymentRecord(withMesh({ endpoint: 'https://mesh/graphql' }))).toBe(true);
+    });
+
+    it('is true on a lastDeployed timestamp alone', () => {
+        expect(hasMeshDeploymentRecord(withMesh({ lastDeployed: '2026-07-15T00:00:00Z' }))).toBe(true);
+    });
+
+    it('is true on a staleness baseline alone (a migrated legacy mesh)', () => {
+        expect(hasMeshDeploymentRecord(withMesh({ envVars: { MESH_KEY: 'x' } }))).toBe(true);
+    });
+
+    it('is false on an EMPTY staleness baseline', () => {
+        expect(hasMeshDeploymentRecord(withMesh({ envVars: {} }))).toBe(false);
+    });
+});
+
+describe('getMeshEndpoint', () => {
+    function withEndpoint(endpoint: unknown): Project {
+        return makeProject({
+            appBuilderComponents: {
+                // The endpoint comes off an untyped manifest, so a wrong-typed
+                // value is a real input; the cast plants exactly that.
+                mesh: makeAppBuilderComponent({ endpoint: endpoint as string }),
+            },
+        });
+    }
+
+    it('returns the deployed endpoint', () => {
+        expect(getMeshEndpoint(withEndpoint('https://mesh/graphql'))).toBe('https://mesh/graphql');
+    });
+
+    it('is undefined for a project with no mesh', () => {
+        expect(getMeshEndpoint(makeProject({ appBuilderComponents: {} }))).toBeUndefined();
+    });
+
+    it.each([
+        ['an empty string', ''],
+        ['whitespace only', '   '],
+        ['a non-string', 42],
+    ])('is undefined for %s, without throwing', (_label, value) => {
+        expect(getMeshEndpoint(withEndpoint(value))).toBeUndefined();
     });
 });
