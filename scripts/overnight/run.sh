@@ -111,11 +111,32 @@ for f in "${FILES[@]}"; do
     fi
 
     # `caffeinate` because machine sleep ends the run; -i idle, -m disk, -s system.
+    #
+    # WALL-CLOCK CAP. A batch that hangs used to stall every batch behind it, with
+    # nothing to stop it: the turn budget in the goal text could not, because the one
+    # real stall on 2026-09-04 happened INSIDE a single turn, waiting 16 minutes on a
+    # string that was never going to appear. Time is the only thing that catches that,
+    # so it is enforced out here rather than asked for in the prompt. Generous on
+    # purpose — the slowest healthy batch so far took 71 minutes, so this only fires on
+    # something genuinely wrong. Killing one batch costs nothing that is not already
+    # committed: every module commits on its own, and the queue rebuilds from the
+    # baseline, so whatever it did not reach comes back in the next run.
+    BATCH_TIMEOUT_MIN="${BATCH_TIMEOUT_MIN:-150}"
     caffeinate -ims claude -p "/goal $(cat "$f")" \
         --permission-mode auto \
         --output-format stream-json --verbose \
-        >> "$log" 2>&1
+        >> "$log" 2>&1 &
+    batch_pid=$!
+    ( sleep $((BATCH_TIMEOUT_MIN * 60)); kill -0 "$batch_pid" 2>/dev/null && {
+        echo "$name EXCEEDED ${BATCH_TIMEOUT_MIN} min — killing it so the queue continues"
+        pkill -P "$batch_pid" 2>/dev/null
+        kill "$batch_pid" 2>/dev/null
+    } ) &
+    watchdog_pid=$!
+    wait "$batch_pid"
     code=$?
+    kill "$watchdog_pid" 2>/dev/null    # the batch finished first; retire the watchdog
+    wait "$watchdog_pid" 2>/dev/null
 
     echo "$name finished at $(date +%H:%M), exit=$code"
     # A non-zero exit ends THIS item only. The queue continues on purpose: an
