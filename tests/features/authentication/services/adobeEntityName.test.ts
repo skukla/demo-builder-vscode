@@ -59,4 +59,17 @@ describe('randomNameSuffix', () => {
     it('defaults to a 4-character suffix', () => {
         expect(randomNameSuffix()).toHaveLength(4);
     });
+
+    it('spans the whole alphabet: the random draw picks the character by position', () => {
+        // The alphabet is a..z A..Z 0..9 (62 characters). A draw just under 1 must land on
+        // the LAST character and a draw of 0 on the first; a suffix that only ever produced
+        // 'a' would look alphanumeric and still collide on every same-titled entity.
+        const random = jest.spyOn(Math, 'random');
+        try {
+            random.mockReturnValueOnce(0.999).mockReturnValueOnce(0).mockReturnValueOnce(0.5);
+            expect(randomNameSuffix(3)).toBe('9aF');
+        } finally {
+            random.mockRestore();
+        }
+    });
 });
