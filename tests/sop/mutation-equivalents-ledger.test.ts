@@ -28,6 +28,8 @@ const LEDGER = join(ROOT, 'scripts', 'mutation-equivalents.ledger.json');
 interface Entry {
     module: string;
     anchors: string[];
+    /** 1-based; only when the anchor text is not unique in the module. */
+    line?: number;
     mutants: number;
     category: string;
     reason: string;
@@ -69,10 +71,20 @@ describe('equivalent-mutant ledger', () => {
         it('every anchor resolves to exactly one line of that module', () => {
             const lines = sourceOf(entry.module);
             for (const anchor of entry.anchors) {
-                const hits = lines.filter((l) => l.trim() === anchor).length;
-                // 0 = the code moved and the equivalence claim was never re-checked.
+                // An entry may carry `line` (1-based) when its anchor text is not unique
+                // in the module; the anchor must then sit at exactly that line. Otherwise
+                // 0 = the code moved and the equivalence claim was never re-checked, and
                 // >1 = the anchor no longer names one mutant site.
-                expect({ anchor, hits }).toEqual({ anchor, hits: 1 });
+                const atLine = (lines[(entry.line ?? 0) - 1] ?? '').trim() === anchor ? 1 : 0;
+                const hits =
+                    entry.line !== undefined
+                        ? atLine
+                        : lines.filter((l) => l.trim() === anchor).length;
+                expect({ anchor, line: entry.line, hits }).toEqual({
+                    anchor,
+                    line: entry.line,
+                    hits: 1,
+                });
             }
         });
 

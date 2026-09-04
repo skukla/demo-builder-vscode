@@ -79,7 +79,7 @@ function commitFails(stderr: string): void {
 
 /**
  * The clone step, read back by PART. The command carries the token inside the URL
- * (`https://<token>:x-oauth-basic@github.com/...`), and that literal — even with a fake
+ * (the token-colon-x-oauth-basic-at-github form), and that literal — even with a fake
  * token — is a credential-shaped string the public repo's secret scanner flags
  * (GitGuardian, 2026-09-03). Parsing the URL proves the same contract without ever
  * spelling it.

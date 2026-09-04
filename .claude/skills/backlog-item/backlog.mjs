@@ -516,7 +516,11 @@ function main() {
                     .filter((x) => x && x.toLowerCase() !== 'none');
                 return { sha, date, subject: body.trim().split('\n')[0], ids };
             });
-            const tagged = commits.filter((c) => c.ids.length);
+            // A commit whose whole job is writing a log line carries the trailer too
+            // (the hook requires one), so the next run logged the log commit, whose log
+            // commit was logged next — nine such lines had to be hand-pruned from one
+            // item on 2026-09-03. The record is for work, not for the record.
+            const tagged = commits.filter((c) => c.ids.length && !/^docs\(backlog\): log /.test(c.subject));
             const byId = new Map(items.map((i) => [i.id, i]));
             const missing = [];
             for (const c of tagged) {

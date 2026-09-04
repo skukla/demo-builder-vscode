@@ -16,7 +16,7 @@
 import { writeFileSync, readFileSync, mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { compare, summarise, writeBaseline } from './mutationBaseline.mjs';
+import { classifyAt, compare, summarise, writeBaseline } from './mutationBaseline.mjs';
 
 const DIR = mkdtempSync(join(tmpdir(), 'mutation-ratchet-selftest-')) + '/';
 const SRC = ['const msg = `hello ${name}`;', 'if (a && b) { run(); }', 'xs.sort((a,b)=>a-b);'].join('\n');
@@ -106,6 +106,33 @@ const clean = report([
     [2, 'EqualityOperator', 'Killed'],
 ]);
 
+/**
+ * G/H: the classifier reads the whole STATEMENT, not the mutated line.
+ *
+ * A `x || 'unnamed'` on the second line of a wrapped `logger.debug(...)` is log
+ * wording. Seen line-by-line it is a LogicalOperator on a line with no `logger` in
+ * it, so it read as a branch, and the only route to zero was a ledger row saying
+ * "the classifier cannot see this". Twenty-two such rows in one evening
+ * (2026-09-03). H is the control in the other direction: the same operator in a
+ * statement that is NOT a log call must still count as behaviour.
+ */
+function checkCategory(label, source, line, mutator, expected) {
+    const lines = source.split('\n');
+    const got = classifyAt(mutator, lines, line - 1);
+    const ok = got === expected;
+    console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}: classified=${got} expected=${expected}`);
+    return ok;
+}
+const wrappedLog = [
+    'const a = 1;',
+    'this.logger.debug(',
+    "    `[X] org=${org || 'unnamed'} ` +",
+    "    `project=${project || 'unknown'}`",
+    ');',
+    'const b = 2;',
+].join('\n');
+const plainBranch = ['const a = 1;', "const name = org || 'unnamed';", 'const b = 2;'].join('\n');
+
 const results = [
     check('A-padding-must-flag', before, padding, true),
     check('B-real-branch-must-pass', before, real, false),
@@ -113,6 +140,8 @@ const results = [
     check('D-newly-covered-must-pass', beforeD, realD, false),
     checkOpenGaps('E-uncovered-counts-as-a-gap', uncovered, 2),
     checkOpenGaps('F-wording-only-reads-finished', clean, 0),
+    checkCategory('G-wrapped-log-is-wording', wrappedLog, 3, 'LogicalOperator', 'logPresentation'),
+    checkCategory('H-plain-branch-stays-behaviour', plainBranch, 2, 'LogicalOperator', 'branch'),
 ];
 console.log(results.every(Boolean) ? '\nALL CONTROLS PASSED' : '\nSELF-TEST FAILED');
 const ok = results.every(Boolean);

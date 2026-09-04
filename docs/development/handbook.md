@@ -780,6 +780,34 @@ breaks the code on purpose and reports what nothing noticed.
 > `scripts/mutationScope.mjs` through jest's own matcher, so the two cannot disagree.
 > Enforced by `tests/sop/no-jest-environment-docblocks.test.ts`.
 
+> **Convention.** A test may not assert a LOGGER call's arguments — no
+> `expect(logger.x).toHaveBeenCalledWith(...)` — beyond its file's recorded ceiling, and
+> the ceilings only fall.
+> *Why:* such an assertion pins log wording, not behaviour. The mutation ratchet exists
+> to refuse a score raised that way, and it cannot see it when the padding is mixed
+> with genuine kills: on 2026-09-03 four log-wording assertions hid behind 53 real
+> kills in one run, and were caught only by a person reading the file. The triage of
+> that same module a day earlier had deliberately not written them — all four HTTP
+> failure branches produce an identical outcome — and asserting the message would have
+> entrenched an open product question. 286 such assertions existed in 123 files when
+> this landed, so the ledger pins each file's count rather than demanding a rewrite;
+> `tests/core/logging/` is exempt by rule, because there the logger is the subject. If
+> the only observable difference is which log line prints, the mutant belongs in the
+> equivalents ledger, not in a test.
+> Enforced by `tests/sop/no-logger-wording-assertions.test.ts`.
+
+> **Convention.** No credential-SHAPED string under `tests/` — not a `user:password@host`
+> URL, not a `Basic <base64>` header — even a fake one. Build the value by parts.
+> *Why:* this repository is public and its secret scanner matches the shape, not the
+> secret. On 2026-09-03 a fixture written minutes earlier — a clone URL whose "token"
+> was the literal word `gh-token` — raised an alert on a pushed commit. Nothing to
+> rotate, but the rule is never-enters, and an alert triaged by hand each time teaches
+> people to dismiss alerts. Two helper tests that assert an injected-URL contract and
+> two validators that must accept a credentialed URL now build the value with
+> `new URL()` and set `.username`/`.password` — the same proof, spelled by no literal.
+> Prose counts too: write "user-colon-password-at-host", not the shape.
+> Enforced by `tests/sop/no-credential-shaped-fixtures.test.ts`.
+
 > **Convention.** A canonical fake covers its subject's WHOLE public surface, and
 > invents nothing.
 > *Why:* both halves have failed here. A fake NARROWER than the need is one nobody
@@ -1118,11 +1146,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 41 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 43 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 83 conventions. 82 of them are enforced; 1 is not.**
+**This handbook states 85 conventions. 84 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

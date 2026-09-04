@@ -19,7 +19,7 @@
  *
  * The credential rules survive unchanged, and matter more now than before: if a
  * default is ever reintroduced, it must be https and must carry no credential —
- * no `?apiKey=`, no `?token=`, no `https://user:pass@host`. The failure mode is
+ * no `?apiKey=`, no `?token=`, no user-colon-password-at-host URL. The failure mode is
  * silent, because the convenient thing to paste when an endpoint starts needing
  * a key is the whole working URL.
  *

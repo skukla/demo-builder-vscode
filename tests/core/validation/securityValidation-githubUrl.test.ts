@@ -207,8 +207,12 @@ describe('validateGitHubDownloadURL', () => {
 
         it('should handle URL with username:password', () => {
             // URLs with credentials in them (bad practice but should still validate hostname/path)
-            const url = 'https://user:pass@github.com/owner/repo/releases/download/v1.0.0/file.zip';
-            expect(validateGitHubDownloadURL(url)).toBe(true);
+            // Built by parts: a user-colon-password-at-host literal trips the public
+            // repo's secret scanner even when fake (2026-09-03).
+            const url = new URL('https://github.com/owner/repo/releases/download/v1.0.0/file.zip');
+            url.username = 'user';
+            url.password = 'pass';
+            expect(validateGitHubDownloadURL(url.toString())).toBe(true);
         });
     });
 

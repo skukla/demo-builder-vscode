@@ -50,10 +50,40 @@ export function suitesFor(modulePath) {
     // as though it tested the same subject.
     const isSplitSuite = (f) =>
         (f.startsWith(`${stem}-`) || f.startsWith(`${stem}.`)) && /\.test\.tsx?$/.test(f);
-    return readdirSync(dir)
-        .filter((f) => f === `${stem}.test.ts` || f === `${stem}.test.tsx` || isSplitSuite(f))
-        .map((f) => join(dir, f))
-        .sort();
+    const isSuiteFor = (f) => f === `${stem}.test.ts` || f === `${stem}.test.tsx` || isSplitSuite(f);
+    const mirrored = readdirSync(dir).filter(isSuiteFor).map((f) => join(dir, f));
+    return [...mirrored, ...strayedSuites(modulePath, stem, dir, isSuiteFor)].sort();
+}
+
+/**
+ * Suites named for the module that live OUTSIDE its mirror directory — but only where
+ * no other module of the same name could own them.
+ *
+ * The strict mirror is right for a same-named neighbour: twelve basenames under src/
+ * name two different modules, and `tests/features/app-builder/services/
+ * appBuilderComponentMigration.test.ts` tests the app-builder one, not core/state's.
+ * It is wrong for a suite that simply lives in the wrong folder: the four
+ * `useSelectionStep-*.test.tsx` under `tests/features/authentication/ui/hooks` test
+ * `core/ui/hooks/useSelectionStep.ts` — there is no authentication module of that
+ * name — and the hook was measured without them (2026-09-03). The rule that separates
+ * the two: a stray suite counts when its own mirror source directory has NO module of
+ * that stem.
+ */
+function strayedSuites(modulePath, stem, mirrorDir, isSuiteFor) {
+    const out = [];
+    const walk = (d) => {
+        for (const name of readdirSync(d, { withFileTypes: true })) {
+            const p = join(d, name.name);
+            if (name.isDirectory()) walk(p);
+            else if (isSuiteFor(name.name) && dirname(p) !== mirrorDir) {
+                const ownSrcDir = join('src', dirname(p).slice('tests/'.length));
+                const ownModule = ['.ts', '.tsx'].some((ext) => existsSync(join(ownSrcDir, stem + ext)));
+                if (!ownModule && dirname(p).startsWith('tests/') && !dirname(p).startsWith('tests/sop')) out.push(p);
+            }
+        }
+    };
+    walk('tests');
+    return out;
 }
 
 function renderJest(modulePath, suites) {

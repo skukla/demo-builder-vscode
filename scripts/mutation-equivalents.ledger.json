@@ -222,19 +222,6 @@
             "source": "reports/mutation/focus.json run of 2026-09-03 (addonUpdateChecker)"
         },
         {
-            "module": "src/features/updates/services/addonUpdateChecker.ts",
-            "anchors": [
-                "`[Updates] Library \"${lib.name}\": ${lib.commitSha.slice(0, 7)} \u2192 ${latestCommit.slice(0, 7)}`,",
-                "`[Updates] Inspector SDK: ${currentCommit.slice(0, 7)} \u2192 ${latestCommit.slice(0, 7)}`,"
-            ],
-            "mutants": 4,
-            "category": "other",
-            "reason": "Four `.slice(0, 7)` calls that shorten SHAs inside two debug messages. They are log presentation \u2014 the same mutants on the one-line debug calls a few lines up are classified as such and not counted \u2014 but here the message wraps onto its own line, and the classifier reads one line, so it does not see the `this.logger.debug(` that opens the statement above. Killing them means asserting the wording of a debug line.",
-            "decision": "OPEN for the instrument, not the module \u2014 classify() in scripts/mutationBaseline.mjs could look at the enclosing statement rather than the single line; then these four rows are not needed",
-            "recorded": "2026-09-03",
-            "source": "reports/mutation/focus.json run of 2026-09-03 (addonUpdateChecker)"
-        },
-        {
             "module": "src/features/updates/services/forkSyncService.ts",
             "anchors": [
                 "const parentFullName = repoData.parent?.full_name;",
@@ -354,21 +341,6 @@
             "category": "block",
             "reason": "The catch body of getWorkspaceCredential is one error log and `return undefined`. Emptied, control falls off the end of the method, which returns undefined too. Every failure path in the method produces the same value with or without the catch body; only whether the failure is logged changes. The anchor is the log line because `} catch (error) {` appears twice in this module.",
             "decision": "none \u2014 the explicit return says what the method means on failure",
-            "recorded": "2026-09-03",
-            "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
-        },
-        {
-            "module": "src/features/authentication/services/adobeWorkspaceCredentials.ts",
-            "anchors": [
-                "`[Entity Fetcher] Using cached credential: ${this.cachedCredential.name || 'unnamed'}`,",
-                "`  - ${c.integration_name || 'unnamed'}: flow_type=${c.flow_type}, integration_type=${c.integration_type}, client_id=${hasClientId}`,",
-                "`[Entity Fetcher] Using OAuth S2S credential: ${oauthS2S.integration_name || 'unnamed'}`,",
-                "`[Entity Fetcher] Using ${anyCred.integration_type || 'unknown'} credential: ${anyCred.integration_name || 'unnamed'}`,"
-            ],
-            "mutants": 15,
-            "category": "branch",
-            "reason": "Five `x || 'unnamed'` / `x || 'unknown'` fallbacks inside four debug messages, three mutants each. They are log presentation \u2014 the same operator on a one-line debug call is classified as such and not counted \u2014 but each message wraps onto its own line, and the classifier reads one line, so it does not see the `this.debugLogger.debug(` that opens the statement above. Killing them means asserting the wording of a debug line, which the ratchet exists to refuse to reward.",
-            "decision": "OPEN for the instrument, not the module \u2014 the same finding as the addonUpdateChecker row: classify() could look at the enclosing statement rather than the single line",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (adobeWorkspaceCredentials)"
         },
@@ -579,18 +551,6 @@
         {
             "module": "src/features/authentication/handlers/authenticationHandlers.ts",
             "anchors": [
-                "`[Auth] Token valid, expires in ${formatMinutes(tokenInspection?.expiresIn || 0)}`,"
-            ],
-            "mutants": 4,
-            "category": "branch",
-            "reason": "`tokenInspection?.expiresIn || 0` is the argument of a debug line that wraps onto its own line, so the one-line classifier does not see the `debug(` above it. The expression feeds nothing else. Killing any of the four means asserting the wording of the debug line.",
-            "decision": "OPEN for the instrument \u2014 enclosing-statement classification, as in the addonUpdateChecker row",
-            "recorded": "2026-09-03",
-            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationHandlers)"
-        },
-        {
-            "module": "src/features/authentication/handlers/authenticationHandlers.ts",
-            "anchors": [
                 "if (!tokenInspection) {"
             ],
             "mutants": 2,
@@ -724,19 +684,6 @@
             "category": "block",
             "reason": "Two else-bodies in login that contain only debug/warn calls, plus the expressions inside them. The no-valid-token else (1 block mutant, and 3 on the continuation line of its debug call: two `?.` and a `.substring`) and the non-zero-exit else (1 block mutant, plus the `??` and the `?.` feeding `exitCode`, which is read only by the debug line). The classifier sees one line at a time, so an argument that wraps onto its own line is not recognised as logging. Both branches then fall through to the same `return false` (or the same retry), which the tests pin; only the log text differs.",
             "decision": "OPEN for the instrument \u2014 enclosing-statement classification, as in the addonUpdateChecker row",
-            "recorded": "2026-09-03",
-            "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
-        },
-        {
-            "module": "src/features/authentication/services/authenticationService.ts",
-            "anchors": [
-                "`[Auth] Login complete; context (${adobeContext.organization ?? '-'}/` +",
-                "`${adobeContext.projectId ?? '-'}/${adobeContext.workspace ?? '-'}) ` +"
-            ],
-            "mutants": 3,
-            "category": "branch",
-            "reason": "Three `??` operators inside one debug message that spans four lines; the classifier does not see the `debug(` on the line above. The context they format is not used for anything else in this method (Phase 4a: nothing is pinned to the global), so the only observable is the message text.",
-            "decision": "OPEN for the instrument \u2014 enclosing-statement classification",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (authenticationService)"
         },

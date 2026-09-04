@@ -102,6 +102,13 @@ single generated files and collide):
 A mutant that reveals a REAL defect or dead code may be fixed in src/ — say so, with the
 reason, in the commit. Any other src/ change is out of scope.
 
+NEVER kill a mutant by asserting a logger call's arguments (\`expect(logger.x)
+.toHaveBeenCalledWith(...)\`). That pins wording, not behaviour; the ratchet cannot see it
+when it is mixed with real kills, and an enforcer now refuses any file whose count rises.
+If the only observable difference is which log line prints, the mutant belongs in the
+ledger. Add ledger rows with \`node scripts/mutationLedger.mjs add ...\` — it writes one
+row in the file's own format and refuses an anchor that does not resolve.
+
 RULES. Stay on the current work branch; never checkout or merge develop. One commit per
 module, \`Backlog: PL-22\` trailer, each gated on \`npm run gate\` exiting 0 with the exit
 code captured in a variable, never read through a pipe. Push after each commit. No

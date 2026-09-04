@@ -35,18 +35,31 @@ const ROOT = join(__dirname, '..', '..');
  * `scripts/focusModule.mjs` generates the focus config from — a suite in another
  * directory with the same basename tests a different module of the same name.
  */
-function siblingSuites(modulePath: string, onDisk: string[]): string[] {
+function siblingSuites(
+    modulePath: string,
+    onDisk: string[],
+    sourceExists: (p: string) => boolean = (p) => existsSync(join(ROOT, p))
+): string[] {
     const stem = basename(modulePath).replace(/\.tsx?$/, '');
     const mirrorDir = join('tests', dirname(modulePath).replace(/^src\//, ''));
+    const isSuiteFor = (file: string) =>
+        file === `${stem}.test.ts` ||
+        file === `${stem}.test.tsx` ||
+        ((file.startsWith(`${stem}-`) || file.startsWith(`${stem}.`)) &&
+            /\.test\.tsx?$/.test(file));
     return onDisk.filter((t) => {
-        if (dirname(t) !== mirrorDir) return false;
-        const file = basename(t);
-        return (
-            file === `${stem}.test.ts` ||
-            file === `${stem}.test.tsx` ||
-            ((file.startsWith(`${stem}-`) || file.startsWith(`${stem}.`)) &&
-                /\.test\.tsx?$/.test(file))
-        );
+        if (!isSuiteFor(basename(t))) return false;
+        if (dirname(t) === mirrorDir) return true;
+        // A STRAYED suite — named for this module, living elsewhere — counts only when
+        // its own mirror source directory has no module of that stem to claim it. That
+        // is what separates the four `useSelectionStep-*` suites under
+        // features/authentication (which test core/ui/hooks/useSelectionStep.ts) from
+        // the app-builder `appBuilderComponentMigration` suite (which tests the
+        // app-builder module of that name, not core/state's). Same rule as
+        // `strayedSuites` in scripts/focusModule.mjs.
+        if (dirname(t).startsWith('tests/sop')) return false;
+        const ownSrcDir = join('src', dirname(t).replace(/^tests\/?/, ''));
+        return !['.ts', '.tsx'].some((ext) => sourceExists(join(ownSrcDir, stem + ext)));
     });
 }
 
@@ -156,6 +169,30 @@ describe('every mutated module has a test selected to cover it', () => {
             for (const a of absent) gaps.push(`${m}  <-  ${a}`);
         }
         expect(gaps).toEqual([]);
+    });
+
+    it('CONTROL: a STRAYED suite counts only when no same-named module could own it', () => {
+        // The four useSelectionStep suites live under features/authentication and test
+        // core/ui/hooks/useSelectionStep.ts; no authentication module has that name, so
+        // they are this module's. The app-builder migration suite is NOT core/state's,
+        // because src/features/app-builder/services has its own module of that name.
+        const onDisk = [
+            'tests/core/ui/hooks/useSelectionStep.test.ts',
+            'tests/features/authentication/ui/hooks/useSelectionStep-basic.test.tsx',
+            'tests/core/state/appBuilderComponentMigration.test.ts',
+            'tests/features/app-builder/services/appBuilderComponentMigration.test.ts',
+        ];
+        const sourceExists = (p: string) =>
+            p === 'src/features/app-builder/services/appBuilderComponentMigration.ts';
+        expect(
+            siblingSuites('src/core/ui/hooks/useSelectionStep.ts', onDisk, sourceExists)
+        ).toEqual([
+            'tests/core/ui/hooks/useSelectionStep.test.ts',
+            'tests/features/authentication/ui/hooks/useSelectionStep-basic.test.tsx',
+        ]);
+        expect(
+            siblingSuites('src/core/state/appBuilderComponentMigration.ts', onDisk, sourceExists)
+        ).toEqual(['tests/core/state/appBuilderComponentMigration.test.ts']);
     });
 
     it('CONTROL: sibling suites are found by MIRROR PATH, not by basename alone', () => {

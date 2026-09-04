@@ -7,7 +7,6 @@
 
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { spawn } from 'child_process';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 // Mock logger
 
@@ -121,15 +120,18 @@ describe('ProcessCleanup - Basic Operations', () => {
             // Given: PID that doesn't exist (process already exited)
             const nonExistentPid = 999999;
 
-            // When: killProcessTree called
-            const startTime = Date.now();
-            await processCleanup.killProcessTree(nonExistentPid);
-            const duration = Date.now() - startTime;
+            // Observe the SIGNALS, not the clock: the last timing bound in this file.
+            // A short-circuit sends exactly one probe (signal 0) and nothing else; a
+            // run that entered the poll loop would send SIGTERM and poll further.
+            const killSpy = jest.spyOn(process, 'kill');
 
-            // Then: it short-circuited instead of entering the poll loop. Ten
-            // poll ticks is the margin; anything that actually polled to the
-            // grace period lands an order of magnitude above this.
-            expect(duration).toBeLessThan(TIMEOUTS.POLL.PROCESS_CHECK * 10);
+            // When: killProcessTree called
+            await processCleanup.killProcessTree(nonExistentPid);
+
+            // Then: one liveness probe, no termination signal, no polling.
+            const calls = killSpy.mock.calls.filter(([pid]) => pid === nonExistentPid);
+            killSpy.mockRestore();
+            expect(calls.map(([, signal]) => signal)).toEqual([0]);
         });
 
         it('should not throw error for non-existent PID', async () => {

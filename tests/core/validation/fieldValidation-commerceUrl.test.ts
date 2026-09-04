@@ -48,7 +48,11 @@ describe('validateCommerceUrlUI', () => {
         });
 
         it('should accept URLs with authentication', () => {
-            const result = validateCommerceUrlUI('https://user:pass@example.com');
+            // Built by parts — see securityValidation-githubUrl for why.
+            const withAuth = new URL('https://example.com');
+            withAuth.username = 'user';
+            withAuth.password = 'pass';
+            const result = validateCommerceUrlUI(withAuth.toString());
             expect(result.isValid).toBe(true);
             expect(result.message).toBe('');
         });

@@ -46,7 +46,13 @@ export function loadEquivalents(ledgerPath = EQUIVALENTS_LEDGER) {
         }
         const lines = readFileSync(e.module, 'utf8').split('\n');
         for (const anchor of e.anchors) {
-            const hits = lines.filter((l) => l.trim() === anchor).length;
+            // An entry may name a `line` (1-based) when its anchor text is not unique
+            // in the module. Then the anchor must sit at exactly that line — a moved
+            // line is a stale entry, same as a vanished one.
+            const hits =
+                e.line !== undefined
+                    ? (lines[e.line - 1] ?? '').trim() === anchor ? 1 : 0
+                    : lines.filter((l) => l.trim() === anchor).length;
             if (hits === 0) {
                 problems.push(
                     `${e.module}: equivalent-mutant anchor no longer in the source — ` +
@@ -73,6 +79,32 @@ export function loadEquivalents(ledgerPath = EQUIVALENTS_LEDGER) {
  * real subject; the rest are recorded so the split stays visible.
  */
 export const HIGH_VALUE = ['branch', 'block'];
+
+/**
+ * The whole STATEMENT a mutated line belongs to, so a log call that wraps onto
+ * several lines is still recognised as one.
+ *
+ * `classify` used to see only the mutated line. A `x || 'unnamed'` on the second
+ * line of a four-line `logger.debug(...)` therefore read as a branch, and the
+ * only honest way to reach zero was a ledger row saying "this is log wording the
+ * classifier cannot see". Twenty-two such rows were written in one evening
+ * (2026-09-03) across three modules. Bounded to eight lines each way, and stops at
+ * a line that ends a statement (`;`) or opens/closes a block (`{`, `}`), so a
+ * neighbouring statement is never pulled in.
+ */
+export function enclosingStatement(lines, index) {
+    const ENDS = /[;{}]\s*$/;
+    let start = index;
+    while (start > 0 && index - start < 8 && !ENDS.test(lines[start - 1] ?? '')) start -= 1;
+    let end = index;
+    while (end < lines.length - 1 && end - index < 8 && !ENDS.test(lines[end] ?? '')) end += 1;
+    return lines.slice(start, end + 1).join('\n');
+}
+
+/** `classify` for a mutant at line `index` of `lines`, reading its whole statement. */
+export function classifyAt(mutatorName, lines, index) {
+    return classify(mutatorName, enclosingStatement(lines, index));
+}
 
 export function classify(mutatorName, sourceLine) {
     if (LOGGY.test(sourceLine)) return 'logPresentation';
@@ -128,8 +160,7 @@ export function summarise(reportPath, equivalents = {}) {
             else if (m.status === 'NoCoverage') counts.noCoverage++;
             else if (m.status === 'Survived') counts.survived++;
             if (bucket) {
-                const line = lines[m.location.start.line - 1] ?? '';
-                const c = classify(m.mutatorName, line);
+                const c = classifyAt(m.mutatorName, lines, m.location.start.line - 1);
                 bucket[c] = (bucket[c] ?? 0) + 1;
             }
         }
