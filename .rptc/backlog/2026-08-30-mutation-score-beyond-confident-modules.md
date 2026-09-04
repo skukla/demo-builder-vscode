@@ -289,3 +289,4 @@ which point the cadence drops to release cuts.
 - 2026-09-04  chore(overnight): runs.sh — run mutation queues back to back until nothing is left (`221c444a8`)
 - 2026-09-04  test(lifecycle): bring syncStorefront to zero open mutation gaps (`6d40bb7f8`)
 - 2026-09-04  test(lifecycle): bring startDemo to zero open mutation gaps (`6b809148f`)
+- 2026-09-04  test(lifecycle): bring stopDemo to zero open mutation gaps (`059639eb5`)
