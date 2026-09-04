@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/services/edsContentSetup.ts"
+        "src/features/project-creation/ui/steps/CommerceStep.tsx"
     ],
     "reporters": [
         "clear-text",

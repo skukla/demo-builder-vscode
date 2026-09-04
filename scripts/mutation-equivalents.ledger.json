@@ -5006,6 +5006,93 @@
             "decision": "none \u2014 the warning is the only signal a library publish was skipped",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/CommerceStep.tsx",
+            "anchors": [
+                "[updateState],"
+            ],
+            "line": 137,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker empties this useCallback's dependency array. The array's ONLY entry is updateState, and updateState is created by useWizardState with useCallback(fn, []) (src/features/project-creation/ui/wizard/hooks/useWizardState.ts:505) \u2014 it is the same function object for the life of the wizard, and CommerceStep receives it unchanged through BaseStepProps. React therefore builds the callback exactly once either way, closing over the same updateState. No sequence of renders can distinguish them. (setActiveStep)",
+            "decision": "none \u2014 the array names the real dependency, which happens to be stable",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/CommerceStep.tsx",
+            "anchors": [
+                "[updateState],"
+            ],
+            "line": 205,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker empties this useCallback's dependency array. The array's ONLY entry is updateState, and updateState is created by useWizardState with useCallback(fn, []) (src/features/project-creation/ui/wizard/hooks/useWizardState.ts:505) \u2014 it is the same function object for the life of the wizard, and CommerceStep receives it unchanged through BaseStepProps. React therefore builds the callback exactly once either way, closing over the same updateState. No sequence of renders can distinguish them. (handleComponentConfigsChange)",
+            "decision": "none \u2014 the array names the real dependency, which happens to be stable",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/CommerceStep.tsx",
+            "anchors": [
+                "[updateState],"
+            ],
+            "line": 212,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker empties this useCallback's dependency array. The array's ONLY entry is updateState, and updateState is created by useWizardState with useCallback(fn, []) (src/features/project-creation/ui/wizard/hooks/useWizardState.ts:505) \u2014 it is the same function object for the life of the wizard, and CommerceStep receives it unchanged through BaseStepProps. React therefore builds the callback exactly once either way, closing over the same updateState. No sequence of renders can distinguish them. (handleStoreLoadingChange)",
+            "decision": "none \u2014 the array names the real dependency, which happens to be stable",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/CommerceStep.tsx",
+            "anchors": [
+                "const EMPTY_PACKAGES: DemoPackage[] = [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The stable empty default becomes ['Stryker was here']. It is used only when a caller omits the packages prop, and the sole read is packages.find(p => p.id === state.selectedPackage). A bare string has no id, so the find misses for every state and pkg is undefined exactly as it is for an empty array. Nothing else reads packages.",
+            "decision": "none \u2014 the module-level constant is what keeps the memo from re-running every render",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/CommerceStep.tsx",
+            "anchors": [
+                "const EMPTY_STACKS: Stack[] = [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same shape as EMPTY_PACKAGES: the injected element can only be reached when the stacks prop is omitted, and every read of stacks (availableBackendsForPackage, resolveStackForBackend, provisionalStackForBackend, useProjectBuilder's stack commit) is gated on a resolved pkg \u2014 which requires the packages prop, whose own default yields no package. So the mutated array is never inspected.",
+            "decision": "none \u2014 the module-level constant is what keeps the memo from re-running every render",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/CommerceStep.tsx",
+            "anchors": [
+                "() => (pkg ? availableBackendsForPackage(stacks, pkg) : []),"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The no-package fallback becomes ['Stryker was here']. Its only consumer is sectionBody, which asks ctx.availableBackends.includes(backend) for each of the two known backend ids. A list holding one unrelated string answers false for both, exactly as the empty list does, so every card renders unavailable either way.",
+            "decision": "none \u2014 an empty list is the honest answer when there is no package to ask about",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/CommerceStep.tsx",
+            "anchors": [
+                "if (!pkg) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Deleting the guard cannot be observed because handleBackendSelect is unreachable without a package. Its only caller is a BackendCard's onSelect, and sectionBody passes available={availableBackends.includes(backend)}; availableBackends is [] whenever pkg is undefined, so every card renders disabled and ChoiceCard sets onClick={disabled ? undefined : onSelect} (ChoiceCard.tsx:75). There is no click to make.",
+            "decision": "none \u2014 the guard is what makes the non-null pkg below type-correct",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
         }
     ]
 }
