@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/prerequisites/handlers/checkHandler.ts"
+        "src/features/prerequisites/services/PrerequisitesManager.ts"
     ],
     "reporters": [
         "clear-text",

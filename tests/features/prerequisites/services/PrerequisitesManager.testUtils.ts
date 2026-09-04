@@ -23,7 +23,7 @@ jest.mock('fs', () => ({
 
 import type { Logger } from '@/types/logger';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
-import type { PrerequisiteDefinition } from '@/features/prerequisites/services/types';
+import type { PrerequisiteDefinition, PrerequisitesConfig } from '@/features/prerequisites/services/types';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
@@ -97,7 +97,7 @@ export function setupMocks(): TestMocks {
 /**
  * Sets up ConfigurationLoader mock
  */
-export function setupConfigLoader(config = mockConfig) {
+export function setupConfigLoader(config: PrerequisitesConfig | typeof mockConfig = mockConfig) {
     const { ConfigurationLoader } = require('@/core/config/ConfigurationLoader');
     ConfigurationLoader.mockImplementation(() => ({
         load: jest.fn().mockResolvedValue(config),

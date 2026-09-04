@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "checkHandler: 55 decision tests (whole-payload + collaborator-argument assertions) and 19 ledgered equivalents; openGaps 143 -> 0",
+    "_note": "PrerequisitesManager: 67 decision tests (collaborator-argument assertions across the cache seam, the shell options each check runs under, and the per-major cache writes) and 23 ledgered equivalents; openGaps 123 -> 0",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -9118,30 +9118,23 @@
             "openGaps": 0
         },
         "src/features/prerequisites/services/PrerequisitesManager.ts": {
-            "score": 33.63,
-            "killed": 76,
-            "survived": 76,
-            "noCoverage": 74,
+            "score": 82.74,
+            "killed": 187,
+            "survived": 39,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 17,
-                "other": 9,
-                "optionalChain": 3,
-                "branch": 43,
-                "block": 3,
-                "logPresentation": 1
+                "optionalChain": 2,
+                "branch": 14,
+                "other": 3,
+                "logPresentation": 13,
+                "block": 4,
+                "string": 3
             },
-            "uncoveredCategories": {
-                "block": 19,
-                "logPresentation": 4,
-                "branch": 32,
-                "string": 5,
-                "other": 9,
-                "optionalChain": 5
-            },
-            "highValueSurvivors": 46,
-            "equivalent": 0,
-            "openGaps": 123
+            "uncoveredCategories": {},
+            "highValueSurvivors": 18,
+            "equivalent": 23,
+            "openGaps": 0
         },
         "src/features/prerequisites/services/prerequisitesCacheManager.ts": {
             "score": 83.33,

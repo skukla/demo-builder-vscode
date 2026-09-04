@@ -1755,6 +1755,162 @@
             "decision": "Kept: consistent with the other reads of the same optional field.",
             "recorded": "2026-09-04",
             "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "const req = config.componentRequirements?.[componentId];"
+            ],
+            "line": 118,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "This closure is defined and called only inside `if (selectedComponents && config.componentRequirements)`, so componentRequirements is known truthy every time it runs. Dropping the optional index cannot throw.",
+            "decision": "Kept for local readability.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "if (selectedComponents.frontend) {"
+            ],
+            "line": 124,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Replacing the guard with true calls checkComponent with a falsy id, which indexes componentRequirements with '' or 'undefined' and finds nothing, so no prerequisite is added. Only a requirements table with a key literally named 'undefined' could tell the two apart.",
+            "decision": "Kept as the readable statement of intent.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "if (installedNodeVersions.length === 0) {"
+            ],
+            "line": 209,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The block logs and then assigns `status.installed = false` \u2014 the value the status object was already constructed with a few lines earlier. Emptying the block leaves every later read (including the `prereq.plugins && status.installed` gate) seeing the same false.",
+            "decision": "Kept: the explicit assignment states the outcome at the point it is decided.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "if (anyInstalled) {"
+            ],
+            "line": 244,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard true runs extractVersionFromPerNodeStatus with nothing installed, where `find(v => v.installed)` is undefined and the function returns undefined \u2014 so `status.version` is assigned undefined instead of being left absent. Jest equality, JSON and every production reader treat those the same.",
+            "decision": "Kept as the guard that makes the intent readable.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "if (selectedComponents.backend) {"
+            ],
+            "line": 127,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Same shape as the frontend guard one line above: replacing it with true calls checkComponent with a falsy id, which indexes componentRequirements with '' or 'undefined', finds no entry, and adds no prerequisite. Nothing an input can vary distinguishes the two.",
+            "decision": "Kept as the readable statement of intent.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "const totalDuration = Date.now() - startTime;"
+            ],
+            "mutants": 3,
+            "category": "other",
+            "reason": "Anchored at line 167 and covering all THREE identical occurrences (167 on the per-node-version path, 179 on the standard path, 328 in the error handler): each feeds only `formatDuration(totalDuration)` inside a debug log, so turning the subtraction into an addition changes the number printed in a log line and nothing any caller can read.",
+            "decision": "Kept; killing it would mean asserting a logger call's arguments.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04",
+            "line": 167
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "if (match) {"
+            ],
+            "line": 279,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true when the regex did not match makes `match[1]` throw a TypeError, which checkPrerequisite's own catch hands to handleCheckError \u2014 which sets installed false and caches the result under the same key, exactly as the unmutated else branch leaves it. The returned status, the cache write and its arguments are all identical; only the debug line differs.",
+            "decision": "Kept; the two paths converge on the same observable outcome.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "mutants": 2,
+            "category": "block",
+            "reason": "Anchored at line 282 and covering BOTH log-only else arms (282, where the version regex did not match; 356, where a failed check was not a missing command). Each holds one statement, a logger call. Emptying either removes a log line and changes nothing a caller of checkPrerequisite can observe: status.installed is already false in both cases and the cache write that follows is identical.",
+            "decision": "Ledgered rather than pinned: asserting it would pin logger wording.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04",
+            "line": 282
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "if (!prereq.plugins) return;"
+            ],
+            "line": 303,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Both call sites of checkPrerequisitePlugins are already guarded by `prereq.plugins && status.installed`, so prereq.plugins is truthy whenever this runs and the early return is unreachable. Removing the guard changes no run.",
+            "decision": "Kept: it is what narrows the type for the for-of below.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "errorObj.code === 'ENOENT' ||"
+            ],
+            "line": 348,
+            "mutants": 7,
+            "category": "branch",
+            "reason": "isCommandNotFound is read exactly once, by the if/else immediately below, and BOTH arms of that if/else call this.logger.info \u2014 one naming the command that was not on PATH, one quoting the error message. Nothing else reads it: status.installed is set false before the branch and the cache write after it is identical either way. So every way of weakening this disjunction changes only which info line prints.",
+            "decision": "Ledgered: killing it would mean asserting a logger call's arguments.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "if (isCommandNotFound) {"
+            ],
+            "line": 354,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Both arms of this if/else do nothing but call this.logger.info. Flipping the condition either way, or emptying the block, changes only which of the two messages is written to the log; the status object and the cache write that follow are byte-identical.",
+            "decision": "Ledgered: killing it would mean asserting a logger call's arguments.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/PrerequisitesManager.ts",
+            "anchors": [
+                "return firstInstalled?.component || undefined;"
+            ],
+            "line": 473,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "extractVersionFromPerNodeStatus is called from exactly one place, under `if (anyInstalled)`, and anyInstalled is `perNodeVersionStatus.some(v => v.installed)` over the same array this searches. So the find always hits and firstInstalled is never undefined when the line runs.",
+            "decision": "Kept: the optional chain states the local contract without depending on the caller's guard.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
         }
     ]
 }
