@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/services/ProjectSetupContext.ts"
+        "src/features/project-creation/services/aiBundle/aiBundleActivationRefresh.ts"
     ],
     "reporters": [
         "clear-text",

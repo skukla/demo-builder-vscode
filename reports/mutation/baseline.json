@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "ProjectSetupContext: getComponentConfigs and getComponentDefinition covered per registry category; five no-op category fallbacks ledgered",
+    "_note": "aiBundleActivationRefresh: 3 movement/failure-path tests (write-landed-with-unchanged-hashes, corrected hash without a write, no-save when nothing landed) + 10 log-only mutants ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -9406,26 +9406,25 @@
             "openGaps": 0
         },
         "src/features/project-creation/services/aiBundle/aiBundleActivationRefresh.ts": {
-            "score": 70.09,
-            "killed": 82,
-            "survived": 32,
+            "score": 76.92,
+            "killed": 90,
+            "survived": 24,
             "noCoverage": 3,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 5,
-                "optionalChain": 1,
-                "branch": 15,
-                "other": 4,
+                "logPresentation": 9,
+                "other": 3,
+                "block": 1,
                 "string": 6,
-                "block": 1
+                "branch": 5
             },
             "uncoveredCategories": {
                 "block": 1,
-                "string": 2
+                "logPresentation": 2
             },
-            "highValueSurvivors": 16,
-            "equivalent": 0,
-            "openGaps": 22
+            "highValueSurvivors": 6,
+            "equivalent": 10,
+            "openGaps": 0
         },
         "src/features/project-creation/services/aiBundle/aiBundleService.ts": {
             "score": 83.33,

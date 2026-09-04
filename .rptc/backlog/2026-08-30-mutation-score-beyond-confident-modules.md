@@ -352,3 +352,5 @@ which point the cadence drops to release cuts.
 - 2026-09-04  test(project-creation): bring claudeSettingsWriter to zero open mutation gaps (`3438dc2df`)
 - 2026-09-04  test(project-creation): bring edsContentSetup to zero open mutation gaps (`42517ed09`)
 - 2026-09-04  test(project-creation): bring CommerceStep to zero open mutation gaps (`f548772d0`)
+- 2026-09-04  test(project-creation): bring ProjectSetupContext to zero open mutation gaps (`249d0b77a`)
+- 2026-09-04  test(project-creation): bring aiBundleActivationRefresh to zero open mutation gaps (`7623ee9a1`)

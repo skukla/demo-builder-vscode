@@ -5153,6 +5153,68 @@
             "decision": "none \u2014 the fallback is what keeps an absent optional category from throwing on the spread",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/aiBundleActivationRefresh.ts",
+            "anchors": [
+                "if (outcome.action === 'repaired') tally.repaired += 1;",
+                "if (outcome.action === 'refreshed') tally.refreshed += 1;",
+                "tally.skippedFiles += outcome.skippedFiles;"
+            ],
+            "mutants": 5,
+            "category": "other",
+            "reason": "The tally is read in exactly one place: the closing logger.info summary line. Skipping an increment, or flipping += to -=, changes three numbers inside that one sentence and nothing else \u2014 no file is written or left unwritten, no manifest saved or skipped, and the function returns void so no caller can read the count. Killing any of these five mutants would mean asserting the wording of the summary log line, which is the padding the ratchet exists to refuse.",
+            "decision": "none \u2014 the tally is presentation state for one summary line",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/aiBundleActivationRefresh.ts",
+            "anchors": [
+                "if (!outcome) continue;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Dropping the guard lets the loop read outcome.action on undefined, which throws a TypeError straight into the per-project catch immediately below. Either way the project contributes nothing to the tally, no file is written, and the sweep moves to the next project. The sole difference is that one extra warn line prints instead of nothing, so no assertion about behaviour can separate the two.",
+            "decision": "none \u2014 the guard is the readable spelling of a path the catch already handles",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/aiBundleActivationRefresh.ts",
+            "anchors": [
+                "if (!project) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Removing the null-manifest guard (or emptying its body) makes the very next line, project.aiFileHashes, throw a TypeError before any writer is constructed. Nothing reaches the disk on either path and the per-project catch in the caller keeps the sweep going in both, so the outcome for every observable collaborator \u2014 writer, configWriter, fs \u2014 is identical. Only the wording of the warn changes.",
+            "decision": "none \u2014 the guard names the case; the catch already contains it",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/aiBundleActivationRefresh.ts",
+            "anchors": [
+                "} catch (saveErr) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch surrounds the best-effort save that runs after a refresh has already failed. Its body is a single logger.warn; emptying it swallows the save error exactly as the original does and then rethrows the ORIGINAL error on the next line either way. No test can see the difference without asserting the warn text, and the case needs a refresh failure, landed hashes, and a rejecting configWriter all at once.",
+            "decision": "none \u2014 a log-only catch body around an already-best-effort save",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/aiBundleActivationRefresh.ts",
+            "anchors": [
+                "report.removed.length > 0 ||"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "A removal can only come from writer.remove, and the only call sites are in skillsWriter, which runs inside refreshContextAndSkills \u2014 the tier-2 step the sweep runs only when stampStale is true. stampStale is itself the next operand of this same || chain, so report.removed.length > 0 can never be the sole reason moved is true, and dropping it changes no run the code can reach. The operand is kept because it stops the rule depending on where removals happen to live.",
+            "decision": "keep \u2014 defensive against a future tier-1 removal, unreachable as a sole cause today",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }

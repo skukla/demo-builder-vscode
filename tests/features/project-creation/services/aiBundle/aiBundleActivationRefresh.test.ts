@@ -156,7 +156,10 @@ function loggedLines(logger: Logger, level: 'debug' | 'info' | 'warn'): string[]
  * written contents (plus the appended .gitignore) as the disk for the next
  * run. Returns the recorded hash map a healthy manifest would carry.
  */
-async function provisionHealthyDisk(): Promise<{ hashes: Record<string, string> }> {
+async function provisionHealthyDisk(): Promise<{
+    hashes: Record<string, string>;
+    disk: Record<string, string>;
+}> {
     mockDisk({});
     const project = makeProject({ aiContextVersion: AI_CONTEXT_VERSION });
     const deps = makeDeps({ [PROJECT_A]: project });
@@ -173,7 +176,7 @@ async function provisionHealthyDisk(): Promise<{ hashes: Record<string, string> 
 
     jest.clearAllMocks();
     mockDisk(disk);
-    return { hashes };
+    return { hashes, disk };
 }
 
 async function runHealthySweep(): Promise<{
@@ -264,6 +267,54 @@ describe('save-only-when-moved', () => {
         const project = makeProject({
             aiContextVersion: AI_CONTEXT_VERSION,
             aiFileHashes: withoutSettings,
+        });
+        const deps = makeDeps({ [PROJECT_A]: project });
+        const saved = captureSaves(deps);
+
+        await refreshAiBundlesOnActivation(EXTENSION_PATH, makeMockLogger(), deps);
+
+        expect(fsPromises.writeFile).not.toHaveBeenCalled();
+        expect(saved).toHaveLength(1);
+        expect(saved[0].aiFileHashes?.['.claude/settings.json']).toBe(
+            hashes['.claude/settings.json']
+        );
+    });
+
+    it('saves when a write landed even though every recorded hash is unchanged', async () => {
+        // A generated file deleted from disk regenerates byte-identically, so
+        // the hash map is untouched — a write DID land and the manifest must
+        // still be saved. This is the ONE case where `report.written` is the
+        // sole reason the sweep counts the run as movement, so dropping that
+        // operand from `moved` silently turns the run into "healthy".
+        const { hashes, disk } = await provisionHealthyDisk();
+        const withoutMcpJson = { ...disk };
+        delete withoutMcpJson[path.join(PROJECT_A, '.mcp.json')];
+        mockDisk(withoutMcpJson);
+        const project = makeProject({
+            aiContextVersion: AI_CONTEXT_VERSION,
+            aiFileHashes: { ...hashes },
+        });
+        const deps = makeDeps({ [PROJECT_A]: project });
+        const saved = captureSaves(deps);
+
+        await refreshAiBundlesOnActivation(EXTENSION_PATH, makeMockLogger(), deps);
+
+        expect(writtenPaths()).toContain(path.join(PROJECT_A, '.mcp.json'));
+        expect(saved).toHaveLength(1);
+        // Every hash identical to what was recorded — the write is the movement.
+        expect(saved[0].aiFileHashes).toEqual(hashes);
+    });
+
+    it('saves when a recorded hash is wrong for a file that needed no write', async () => {
+        // The manifest carries a WRONG hash for settings.json while the file on
+        // disk is already current: the merge corrects the hash without touching
+        // the disk. Nothing is written, nothing removed, the stamp is current —
+        // the changed VALUE in an otherwise identical key set is the only
+        // movement, so `sameHashMap` has to compare values, not just key counts.
+        const { hashes } = await provisionHealthyDisk();
+        const project = makeProject({
+            aiContextVersion: AI_CONTEXT_VERSION,
+            aiFileHashes: { ...hashes, '.claude/settings.json': 'a-hash-we-never-wrote' },
         });
         const deps = makeDeps({ [PROJECT_A]: project });
         const saved = captureSaves(deps);
@@ -643,5 +694,34 @@ describe('partial failure persistence', () => {
 
         // The sweep survives (never-throws contract) AND persisted what landed.
         expect(saved.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('does not save when the failing refresh landed no hash change', async () => {
+        // Tier 1 is a no-op on a healthy disk and tier 2 dies on its first
+        // read, so nothing landed. The best-effort persist must stay silent:
+        // saving here would rewrite the manifest on every activation of a
+        // project whose refresh cannot complete.
+        const { hashes } = await provisionHealthyDisk();
+        const project = makeProject({
+            aiContextVersion: AI_CONTEXT_VERSION - 1,
+            aiFileHashes: { ...hashes },
+        });
+        const deps = makeDeps({ [PROJECT_A]: project });
+        const readFile = fsPromises.readFile as jest.Mock;
+        const healthyRead = readFile.getMockImplementation()!;
+        readFile.mockImplementation(async (target: string) => {
+            if (String(target).endsWith('/AGENTS.md')) {
+                const err = new Error('EACCES: permission denied') as NodeJS.ErrnoException;
+                err.code = 'EACCES';
+                throw err;
+            }
+            return healthyRead(target);
+        });
+
+        await expect(
+            refreshAiBundlesOnActivation(EXTENSION_PATH, makeMockLogger(), deps)
+        ).resolves.toBeUndefined();
+
+        expect(deps.configWriter.saveProjectConfig).not.toHaveBeenCalled();
     });
 });
