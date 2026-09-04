@@ -77,3 +77,40 @@ describe('the starting window does not steal another state', () => {
         expect(within(container).getByRole('button', { name: /back/i })).toBeInTheDocument();
     });
 });
+
+describe('what the footer states actually render', () => {
+    it('constrains the footer width in every state that has one', () => {
+        for (const overrides of [{ isActive: true }, { isCompleted: true }, { showGenericError: true }]) {
+            const { container, unmount } = renderFooter(overrides);
+
+            expect(container.querySelector('.footer-content-container')).not.toBeNull();
+            unmount();
+        }
+    });
+
+    it('offers Cancel while creation runs, not Back', () => {
+        renderFooter({ isActive: true });
+
+        expect(screen.getByRole('button')).toHaveTextContent('Cancel');
+    });
+
+    it('reads Cancelling… and disables the button once the cancel is in flight', () => {
+        renderFooter({ isActive: true, isCancelling: true });
+
+        expect(screen.getByRole('button')).toHaveTextContent('Cancelling...');
+        expect(screen.getByRole('button')).toBeDisabled();
+    });
+
+    it('renders nothing in a state that has no footer of its own', () => {
+        const { container } = renderFooter({});
+
+        expect(hasFooter(container)).toBe(false);
+    });
+
+    it('hides View Projects while the project is being opened', () => {
+        const { container } = renderFooter({ isCompleted: true, isOpeningProject: true });
+
+        expect(container.querySelector('.footer-content-container')).not.toBeNull();
+        expect(hasFooter(container)).toBe(false);
+    });
+});

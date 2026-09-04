@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-03: meshSetupService retry loop, deploy-success bookkeeping and linkExistingMesh covered; 4 equivalents ledgered",
+    "_note": "MUT-03: ProjectCreationStep pre-flight GitHub App check, phase derivation and footer states covered; 14 equivalents ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -10217,29 +10217,23 @@
             "openGaps": 70
         },
         "src/features/project-creation/ui/steps/ProjectCreationStep.tsx": {
-            "score": 40,
-            "killed": 100,
-            "survived": 67,
-            "noCoverage": 83,
+            "score": 92,
+            "killed": 230,
+            "survived": 19,
+            "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 42,
-                "string": 11,
-                "optionalChain": 2,
-                "block": 6,
-                "other": 6
+                "logPresentation": 2,
+                "string": 3,
+                "branch": 9,
+                "other": 5
             },
             "uncoveredCategories": {
-                "block": 17,
-                "branch": 41,
-                "optionalChain": 2,
-                "string": 15,
-                "other": 6,
-                "logPresentation": 2
+                "string": 1
             },
-            "highValueSurvivors": 48,
-            "equivalent": 0,
-            "openGaps": 122
+            "highValueSurvivors": 9,
+            "equivalent": 14,
+            "openGaps": 0
         },
         "src/features/project-creation/ui/steps/ReviewStep.tsx": {
             "score": 92.62,

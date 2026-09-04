@@ -3181,6 +3181,105 @@
             "decision": "none \u2014 the guard on the continue path bounds attempt before the loop condition is read again.",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "anchors": [
+                "if (!edsConfig) return {};"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Relaxing this guard to never fire is unobservable because the only caller already returns before reaching it when the config is absent: checkGitHubApp bails on '!needsGitHubAppCheck || !state.edsConfig'. The helper can therefore never be entered with an undefined config, so the guarded and unguarded forms agree on every input the component can produce.",
+            "decision": "none \u2014 the caller's own guard makes this one unreachable in the false direction.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "anchors": [
+                "if (edsConfig.repoName && authenticatedUser) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both mutants (always-true, and && relaxed to ||) can only differ when exactly one of the repo name and the signed-in user is present, and in that case the branch returns a half-filled pair whose missing half is immediately rejected by the caller's '!owner || !repo' guard. The result is the same skip-the-check outcome as the untaken branch, so no assertion can separate them.",
+            "decision": "none \u2014 every input that changes which branch runs produces the same observable outcome.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "anchors": [
+                "if (phase === 'creating' && !progress) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "This is the last branch of StepContentArea, and the only state that reaches it is the one it already renders: an active phase returns above it, a completed phase returns at the success branch, and cancelled or failed return at the generic-error branch. The one remaining route \u2014 the install phase with no install data \u2014 cannot occur because both are set together. So widening the condition changes nothing that is ever reached.",
+            "decision": "none \u2014 the earlier branches make every other route to this line unreachable.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "anchors": [
+                "}, [state.selectedStack]);",
+                "}, [needsGitHubAppCheck, state.edsConfig]);",
+                "}, [checkGitHubApp, state, importedSettings, packages]);"
+            ],
+            "mutants": 3,
+            "category": "other",
+            "reason": "Emptying these three dependency lists cannot be observed because the memo and the two callbacks they guard are consumed only by the mount effect, which runs once with an empty dependency list of its own. A stale checkGitHubApp or runPreFlightChecks is therefore never called a second time, so recomputing them or not produces the same single run. The one dependency list here that IS observable \u2014 handleGitHubAppInstalled's, which the install dialog calls later \u2014 is killed by a test that renames the project after mount.",
+            "decision": "none \u2014 nothing re-invokes these after mount, so a stale closure is never used.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "anchors": [
+                "}, []); // eslint-disable-line react-hooks/exhaustive-deps"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Both mount effects declare an empty dependency list, so Stryker's replacement is a constant one-element array rather than an emptying. React compares dependencies element by element with Object.is, and that constant is identical on every render, so the effect still runs exactly once \u2014 the same as with no dependencies at all. There is no render sequence in which the two forms differ.",
+            "decision": "none \u2014 a constant dependency never changes, so the effect count is unchanged.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 424,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Both mount effects declare an empty dependency list, so Stryker's replacement is a constant one-element array rather than an emptying. React compares dependencies element by element with Object.is, and that constant is identical on every render, so the effect still runs exactly once \u2014 the same as with no dependencies at all. There is no render sequence in which the two forms differ.",
+            "decision": "none \u2014 a constant dependency never changes, so the effect count is unchanged.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "anchors": [
+                "phase === 'creating' && isProgressActive(progress, isCancelled, isFailed, isCompleted);"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "isActive only decides between two branches that are already selected by something else. Content-side, the install dialog is chosen first and the starting window renders the same view whether isActive is true or false, because that branch also requires progress to exist. Footer-side, isActive sits in an or-list beside isStarting and isGitHubAppInstall, and every state that flips isActive already has one of those true. So both a widened and an always-true isActive render exactly what the original does.",
+            "decision": "none \u2014 every state these mutants change is already decided by a neighbouring flag.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/ProjectCreationStep.tsx",
+            "anchors": [
+                "(progress?.error || isCancelled || isFailed) && phase !== 'github-app-install';"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the second half of this conjunction to true only matters while the phase IS the install phase and progress simultaneously reports an error or a cancellation. That combination cannot be held: the phase effect re-derives the phase from progress whenever either changes, and an error always resolves to 'failed', so the install phase is overwritten on the very next commit.",
+            "decision": "none \u2014 the phase effect makes the excluded combination unrepresentable.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }
