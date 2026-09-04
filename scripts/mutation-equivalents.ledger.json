@@ -1112,6 +1112,18 @@
             "decision": "none \u2014 required by the type; the security gate's catch is what makes it unobservable",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (projectOwnership)"
+        },
+        {
+            "module": "src/features/authentication/services/consoleProjectTeardown.ts",
+            "anchors": [
+                "if (credential?.clientId) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "`credential` is undefined exactly when the workspace has no S2S credential. The original then skips the set; the mutant throws a TypeError that the enclosing catch swallows, and the loop moves to the next workspace either way, because the scan's contract is that an unreadable credential is the same as an absent one. Nothing is called between the read and the catch, so no argument assertion can separate the two, and the map is identical afterwards. The `?.` is required by the return type of getWorkspaceS2SCredential.",
+            "decision": "none \u2014 required by the type; the detect-only catch is what makes it unobservable",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (consoleProjectTeardown)"
         }
     ]
 }

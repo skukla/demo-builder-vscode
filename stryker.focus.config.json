@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/handlers/orgSwitchHandler.ts"
+        "src/features/authentication/services/consoleProjectTeardown.ts"
     ],
     "reporters": [
         "clear-text",

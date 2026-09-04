@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "orgSwitchHandler: project with no adobe block kills the three hint optional chains",
+    "_note": "consoleProjectTeardown: workspace-listing args pinned; redundant sweep guard removed; guarded credential chain ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -4023,22 +4023,20 @@
             "openGaps": 1
         },
         "src/features/authentication/services/consoleProjectTeardown.ts": {
-            "score": 81.4,
-            "killed": 70,
-            "survived": 16,
+            "score": 83.75,
+            "killed": 67,
+            "survived": 13,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 1,
                 "string": 9,
                 "optionalChain": 1,
-                "logPresentation": 4,
-                "block": 1
+                "logPresentation": 3
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 1,
-            "equivalent": 0,
-            "openGaps": 3
+            "highValueSurvivors": 0,
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/features/authentication/services/detectProjectOrgMismatch.ts": {
             "score": 81.82,

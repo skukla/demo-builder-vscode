@@ -320,16 +320,17 @@ async function teardownWorkspace(
 
 /**
  * Step 3: discovery → escalation → per-workspace teardown.
- * Returns false when discovery is impossible (caller must abort).
+ * When discovery is impossible it has already collected a failed item, and the
+ * orchestrator's failed-item gate aborts before the project delete.
  */
 export async function teardownEventEntities(
     ctx: TeardownContext,
     workspaces: ConsoleWorkspace[],
     firstCredential: WorkspaceS2SCredentialIds,
-): Promise<boolean> {
+): Promise<void> {
     const partitions = await discoverProviderPartitions(ctx, firstCredential);
     if (!partitions) {
-        return false;
+        return;
     }
     await escalateCredentialLessWorkspaces(ctx, partitions);
     for (const workspace of workspaces) {
@@ -341,5 +342,4 @@ export async function teardownEventEntities(
     for (const [workspaceId, bindings] of partitions) {
         await teardownWorkspace(ctx, workspaceId, bindings);
     }
-    return true;
 }

@@ -43,6 +43,18 @@ describe('teardownConsoleProject', () => {
             expect(harness.deps.deleteConsoleProject).toHaveBeenCalledWith('org1', 'proj1');
         });
 
+        it('should list workspaces for exactly the target org and project', async () => {
+            const harness = makeHarness({ credentials: {} });
+
+            await teardownConsoleProject(harness.deps, TARGET);
+
+            expect(harness.deps.getWorkspaces).toHaveBeenCalledTimes(1);
+            expect(harness.deps.getWorkspaces).toHaveBeenCalledWith({
+                orgId: 'org1',
+                projectId: 'proj1',
+            });
+        });
+
         it('should treat an empty clientId as no usable credential', async () => {
             const harness = makeHarness({
                 credentials: { ws1: { clientId: '', idIntegration: 'int-ws1' } },
