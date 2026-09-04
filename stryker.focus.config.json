@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/reset/edsResetUI.ts"
+        "src/features/eds/services/reset/edsResetConfigStep.ts"
     ],
     "reporters": [
         "clear-text",

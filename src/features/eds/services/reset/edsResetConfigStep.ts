@@ -80,7 +80,11 @@ export async function publishConfigAndRegisterSite(
     // Reported on the RESULT, not just the progress line. Steps 8-11 overwrite
     // that line within seconds, so a run that skipped this write used to end with
     // '"<project>" reset successfully' — repo rewritten, PDPs dead, user misled.
-    let configWritten = true;
+    //
+    // Deliberately uninitialised: every route below assigns it, so an initial value
+    // could never be observed (a mutation run proved the `true` that used to sit here
+    // was dead).
+    let configWritten: boolean;
 
     // Step 6: Publish config.json to CDN.
     // The tokenProvider IS required. A comment here used to claim the GitHub

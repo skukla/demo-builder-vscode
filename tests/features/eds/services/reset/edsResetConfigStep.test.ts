@@ -29,6 +29,8 @@ const mockBuildSiteConfigParams = jest.fn((..._a: unknown[]) => ({ built: 'param
 const mockLostGrantsMessage = jest.fn((..._a: unknown[]) => 'lost: admin');
 const mockSurfaceOverlayFailure = jest.fn();
 const mockByomFailureMessage = jest.fn((..._a: unknown[]) => 'byom advice');
+const mockConfigurationServiceCtor = jest.fn();
+const mockHelixServiceCtor = jest.fn();
 
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     surfaceOverlayRegistrationFailure: (...a: unknown[]) => mockSurfaceOverlayFailure(...a),
@@ -38,9 +40,26 @@ jest.mock('@/features/eds/services/configService/configAccessRecovery', () => ({
     logConfigAccessState: (...a: unknown[]) => mockLogConfigAccessState(...a),
 }));
 // `buildSiteConfigParams` is a pure function this step's assertions read the
-// output of, so it is mocked. The SERVICE is not: it arrives through the seam.
+// output of, so it is mocked. The SERVICE normally arrives through the seam; the
+// class is mocked only so the DEFAULT seam (production never passes services) can
+// be pinned — what its constructor is handed is the one thing that path decides.
 jest.mock('@/features/eds/services/configService/configurationService', () => ({
     buildSiteConfigParams: (...a: unknown[]) => mockBuildSiteConfigParams(...a),
+    ConfigurationService: class {
+        constructor(...a: unknown[]) {
+            mockConfigurationServiceCtor(...a);
+        }
+    },
+}));
+// Same reason: the default seam constructs the real HelixService, and the property
+// the suite exists to pin is that the DA.live tokenProvider reaches THAT constructor.
+jest.mock('@/features/eds/services/helix/helixService', () => ({
+    HelixService: class {
+        previewCode = mockPreviewCode;
+        constructor(...a: unknown[]) {
+            mockHelixServiceCtor(...a);
+        }
+    },
 }));
 jest.mock('@/features/eds/services/configService/lostGrantsMessage', () => ({
     lostGrantsMessage: (...a: unknown[]) => mockLostGrantsMessage(...a),
@@ -93,15 +112,20 @@ const services: ConfigStepServices = {
     },
 };
 
-function run(overrides: Partial<typeof PARAMS> = {}, report = jest.fn()) {
+function run(overrides: Partial<typeof PARAMS> = {}, report = jest.fn(), logger = makeLogger()) {
     return publishConfigAndRegisterSite(
         { ...PARAMS, ...overrides },
         GITHUB_TOKENS,
         TOKEN_PROVIDER,
-        makeLogger(),
+        logger,
         report,
         services
     );
+}
+
+/** The production call: no seam, so the step constructs both services itself. */
+function runWithoutSeam(logger: Logger) {
+    return publishConfigAndRegisterSite(PARAMS, GITHUB_TOKENS, TOKEN_PROVIDER, logger, jest.fn());
 }
 
 beforeEach(() => {
@@ -138,6 +162,53 @@ describe('publishConfigAndRegisterSite — the happy path', () => {
         );
     });
 
+    it('builds the site params from the owner, repo, DA.live org and overlay it was given', async () => {
+        await run();
+
+        expect(mockBuildSiteConfigParams).toHaveBeenCalledWith(
+            'skukla',
+            'kukla-bodea',
+            'skukla',
+            'https://overlay.example/render'
+        );
+    });
+
+    it('reports the publish and the registration on the progress channel, in step order', async () => {
+        const report = jest.fn();
+
+        await run({}, report);
+
+        expect(report).toHaveBeenCalledWith(6, 'config.json published');
+        expect(report).toHaveBeenCalledWith(7, 'Configuration Service updated');
+        // A success is NOT also a BYOM failure: the overlay advice stays silent.
+        expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
+        expect(mockLostGrantsMessage).not.toHaveBeenCalled();
+    });
+
+    it('relays the registrar’s progress onto step 7 of the progress channel', async () => {
+        const report = jest.fn();
+
+        await run({}, report);
+
+        const { onProgress } = mockRegisterSiteConfig.mock.calls[0][0] as {
+            onProgress: (message: string) => void;
+        };
+        onProgress('Waiting for admin role to propagate...');
+        expect(report).toHaveBeenCalledWith(7, 'Waiting for admin role to propagate...');
+    });
+
+    it('telegraphs config access for THIS repo before the write', async () => {
+        const logger = makeLogger();
+
+        await run({}, jest.fn(), logger);
+
+        expect(mockLogConfigAccessState).toHaveBeenCalledWith(
+            TOKEN_PROVIDER,
+            { owner: 'skukla', repo: 'kukla-bodea' },
+            logger
+        );
+    });
+
     it('surfaces lost grants on the progress channel', async () => {
         mockRegisterSiteConfig.mockResolvedValue({
             registered: true,
@@ -155,9 +226,29 @@ describe('publishConfigAndRegisterSite — the happy path', () => {
 describe('publishConfigAndRegisterSite — the failure nuances', () => {
     it('a config.json publish failure is NON-fatal: step 7 still runs', async () => {
         mockPreviewCode.mockRejectedValue(new Error('helix 500'));
+        const report = jest.fn();
 
-        await expect(run()).resolves.toEqual({ configWritten: true });
+        await expect(run({}, report)).resolves.toEqual({ configWritten: true });
         expect(mockRegisterSiteConfig).toHaveBeenCalled();
+        // The SC is told the publish failed and that the reset carries on.
+        expect(report).toHaveBeenCalledWith(6, 'config.json publish failed, continuing...');
+        expect(report).not.toHaveBeenCalledWith(6, 'config.json published');
+    });
+
+    it('a failed registration WITHOUT an overlay warns and stays silent about BYOM', async () => {
+        mockRegisterSiteConfig.mockResolvedValue({ registered: false, statusCode: 500 });
+        const logger = makeLogger();
+        const report = jest.fn();
+
+        await expect(run({ byomOverlayUrl: undefined }, report, logger)).resolves.toEqual({
+            configWritten: false,
+        });
+
+        expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
+        expect(mockByomFailureMessage).not.toHaveBeenCalled();
+        expect(report).not.toHaveBeenCalledWith(7, 'Configuration Service updated');
+        // The one thing this branch does is warn — once, for the registration.
+        expect(logger.warn).toHaveBeenCalledTimes(1);
     });
 
     it('a FAILED registration reports configWritten FALSE — the "reset successfully" lie', async () => {
@@ -189,9 +280,28 @@ describe('publishConfigAndRegisterSite — the failure nuances', () => {
 
     it('a non-auth throw with an overlay still surfaces the advice and reports false', async () => {
         mockRegisterSiteConfig.mockRejectedValue(new Error('network down'));
+        const report = jest.fn();
 
-        await expect(run()).resolves.toEqual({ configWritten: false });
-        expect(mockSurfaceOverlayFailure).toHaveBeenCalled();
+        await expect(run({}, report)).resolves.toEqual({ configWritten: false });
+        // No status code: the throw carried none, and the advice must not invent one.
+        expect(mockSurfaceOverlayFailure).toHaveBeenCalledWith(expect.anything());
+        expect(mockByomFailureMessage).toHaveBeenCalledWith();
+        expect(report).toHaveBeenCalledWith(7, '⚠️ byom advice');
+    });
+
+    it('a non-auth throw WITHOUT an overlay warns, stays silent about BYOM, and reports false', async () => {
+        mockRegisterSiteConfig.mockRejectedValue(new Error('network down'));
+        const logger = makeLogger();
+        const report = jest.fn();
+
+        await expect(run({ byomOverlayUrl: undefined }, report, logger)).resolves.toEqual({
+            configWritten: false,
+        });
+
+        expect(mockSurfaceOverlayFailure).not.toHaveBeenCalled();
+        expect(mockByomFailureMessage).not.toHaveBeenCalled();
+        expect(report).not.toHaveBeenCalledWith(7, expect.stringContaining('⚠️'));
+        expect(logger.warn).toHaveBeenCalledTimes(1);
     });
 
     it('logs the config access state BEFORE the write that depends on it', async () => {
@@ -199,6 +309,33 @@ describe('publishConfigAndRegisterSite — the failure nuances', () => {
 
         expect(mockLogConfigAccessState.mock.invocationCallOrder[0]).toBeLessThan(
             mockRegisterSiteConfig.mock.invocationCallOrder[0]
+        );
+    });
+});
+
+describe('publishConfigAndRegisterSite — the default seam (what production runs)', () => {
+    it('builds HelixService from the logger, GitHub tokens and the DA.live tokenProvider', async () => {
+        const logger = makeLogger();
+
+        await runWithoutSeam(logger);
+
+        // Without the tokenProvider here the CDN keeps serving a stale config.json.
+        expect(mockHelixServiceCtor).toHaveBeenCalledWith(logger, GITHUB_TOKENS, TOKEN_PROVIDER);
+        expect(mockPreviewCode).toHaveBeenCalledWith('skukla', 'kukla-bodea', '/config.json');
+    });
+
+    it('builds the ConfigurationService from the tokenProvider and logger, and registers through it', async () => {
+        const logger = makeLogger();
+
+        await runWithoutSeam(logger);
+
+        expect(mockConfigurationServiceCtor).toHaveBeenCalledWith(TOKEN_PROVIDER, logger);
+        const { configurationService } = mockRegisterSiteConfig.mock.calls[0][0] as {
+            configurationService: unknown;
+        };
+        expect(configurationService).toBeInstanceOf(
+            jest.requireMock('@/features/eds/services/configService/configurationService')
+                .ConfigurationService
         );
     });
 });

@@ -1313,6 +1313,18 @@
             "decision": "none \u2014 the line is the Debug Logs trace of a skipped permission grant, which debug-log-triage reads",
             "recorded": "2026-09-03",
             "source": "PL-22 batch MUT-07, edsResetService focus run"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetConfigStep.ts",
+            "anchors": [
+                ": (outcome.error ?? `registration failed (${outcome.statusCode ?? 'unknown'})`),"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both `??` fallbacks build the `error` field of configResult, and that field has exactly one reader: the logger.warn on the no-overlay failure branch. Flipping either to `&&` changes only which words that warn prints. The suite pins the DECISION around it \u2014 the no-overlay branch warns once and stays silent about BYOM \u2014 with toHaveBeenCalledTimes, which cannot see the text; the only assertion that could kill these is a logger wording assertion, which no-logger-wording-assertions forbids. The classifier reads them as branch rather than logPresentation because the message is assembled one statement before the log line that prints it.",
+            "decision": "none \u2014 the fallback text is the Debug Logs trace of a failed registration, which debug-log-triage reads",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-08, edsResetConfigStep focus run"
         }
     ]
 }
