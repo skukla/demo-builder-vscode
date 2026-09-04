@@ -180,6 +180,17 @@ describe('handleListOrgConsoleApis', () => {
             expect(apis.find((a) => a.code === 'GraphQLServiceSDK')?.locked).toBe(false);
         });
 
+        it('never consults the catalog when the payload carries no component ids', async () => {
+            const result = await handleListOrgConsoleApis(makeContext(), {});
+
+            expect(result.success).toBe(true);
+            expect(getAppBuilderComponentEntry).not.toHaveBeenCalled();
+            // Baseline only — nothing was selected, so nothing else is locked.
+            const apis = apisOf(result);
+            expect(apis.find((a) => a.code === 'AdobeIOManagementAPISDK')?.locked).toBe(true);
+            expect(apis.filter((a) => a.locked)).toHaveLength(1);
+        });
+
         it('treats custom owner-repo ids as inert (baseline-only locks)', async () => {
             const result = await handleListOrgConsoleApis(makeContext(), {
                 componentIds: ['skukla-my-custom-app'],
@@ -340,6 +351,20 @@ describe('handleListOrgConsoleApis', () => {
         it('fails only when neither the cache nor the token yields an org', async () => {
             mockGetCachedOrganization.mockReturnValue(undefined);
             mockGetOrganizationsSdkOnly.mockResolvedValue([]);
+
+            const result = await handleListOrgConsoleApis(makeContext(), { componentIds: [] });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toMatch(/organization/i);
+            expect(mockGetServicesForOrg).not.toHaveBeenCalled();
+        });
+
+        it('fails gracefully when the token org read yields nothing at all', async () => {
+            // getOrganizationsSdkOnly returns AdobeOrg[] | undefined — an absent list
+            // is a different answer from an empty one, and indexing it directly would
+            // throw out of the handler before the try/catch below could dress it up.
+            mockGetCachedOrganization.mockReturnValue(undefined);
+            mockGetOrganizationsSdkOnly.mockResolvedValue(undefined);
 
             const result = await handleListOrgConsoleApis(makeContext(), { componentIds: [] });
 

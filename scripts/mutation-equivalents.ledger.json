@@ -5483,6 +5483,30 @@
             "decision": "none \u2014 the label names commerce as the default area rather than leaving a bare default: for a reader to work out",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/project-creation/handlers/consoleApiHandlers.ts",
+            "anchors": [
+                "componentId: payload?.componentId ?? '',"
+            ],
+            "mutants": 1,
+            "category": "string",
+            "reason": "The fallback exists because ResolveApiRowsInput.componentId is a required string and the payload's is optional. Its VALUE is unobservable: resolveApiRowStates uses componentId only in two identity comparisons, owner.id === componentId and ownerId === componentId. Owner ids come from resolved catalog entries and pick keys come from the webview draft keyed by integration id, so neither can ever equal the empty string OR any other placeholder. Every non-matching value produces the identical map \u2014 which is exactly the documented add-flow contract that nothing is mine when no integration is named.",
+            "decision": "none \u2014 the empty string is the honest 'no integration' value; any sentinel reads as an id that could one day collide",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/project-creation/handlers/consoleApiHandlers.ts",
+            "anchors": [
+                "baseline: computeRequiredApis([]),"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "computeRequiredApis seeds a Set with the baseline api and then adds each argument entry's requiredApis. Giving it a non-empty argument adds nothing unless an entry declares requiredApis, and the mutated literal holds a bare string with no such field, so the returned baseline is byte-identical. The empty array is not decoration either: the parameter is required, and this call is deliberately the BASELINE-only computation, distinct from the computeRequiredApis(entries) above it.",
+            "decision": "none \u2014 the empty argument is what makes this the baseline rather than the union",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }

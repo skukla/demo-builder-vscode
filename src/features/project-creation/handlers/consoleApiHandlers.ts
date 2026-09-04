@@ -81,10 +81,12 @@ export const handleListOrgConsoleApis: MessageHandler<{
     // Same resolver the dashboard uses. Owners come from the catalog rather than a
     // project, because pre-deploy there is no project — but the shape it produces,
     // and therefore what a row says, is identical on both surfaces.
+    // `requiredApis` stays OPTIONAL here: ApiOwner declares it so, and
+    // resolveApiRowStates already reads it as `owner.requiredApis ?? []`.
     const owners: ApiOwner[] = entries.map((entry) => ({
         id: entry.id,
         name: entry.name,
-        requiredApis: entry.requiredApis ?? [],
+        requiredApis: entry.requiredApis,
     }));
     const states = resolveApiRowStates({
         componentId: payload?.componentId ?? '',

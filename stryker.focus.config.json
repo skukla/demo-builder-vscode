@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/steps/BuildYourProjectStep.tsx"
+        "src/features/project-creation/handlers/consoleApiHandlers.ts"
     ],
     "reporters": [
         "clear-text",
