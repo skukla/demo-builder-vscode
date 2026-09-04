@@ -40,6 +40,15 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
     };
 });
 
+// A pass-through spy, not a stub: every existing test still exercises the REAL
+// resolver, and the catalog list buildSummary hands it becomes assertable.
+jest.mock('@/features/project-creation/ui/components/integration-flow/integrationRows', () => {
+    const actual = jest.requireActual(
+        '@/features/project-creation/ui/components/integration-flow/integrationRows'
+    );
+    return { ...actual, resolveIntegrationRows: jest.fn(actual.resolveIntegrationRows) };
+});
+
 import {
     architectureLabel,
     commerceSummaryGroup,
@@ -47,6 +56,7 @@ import {
     integrationsSummaryGroup,
     buildSummaryGroups,
 } from '@/features/project-creation/ui/steps/buildSummary';
+import { resolveIntegrationRows } from '@/features/project-creation/ui/components/integration-flow/integrationRows';
 import type { DemoPackage } from '@/types/demoPackages';
 import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
@@ -80,6 +90,14 @@ describe('architectureLabel', () => {
     it('returns the full stack name once a stack is committed', () => {
         expect(architectureLabel(state({ selectedStack: 'eds-accs' }), stacks)).toBe(
             'Edge Delivery + ACCS'
+        );
+    });
+
+    it('resolves the stack BY ID, not by position in the catalog', () => {
+        // 'eds-accs' is first in the fixture, so a lookup that ignores the id still
+        // gets it right; the second entry is what tells the two apart.
+        expect(architectureLabel(state({ selectedStack: 'headless-paas' }), stacks)).toBe(
+            'Headless + PaaS'
         );
     });
 
@@ -121,6 +139,45 @@ describe('commerceSummaryGroup', () => {
         const uncommittedBackend = uncommitted.rows.find((r) => r.label === 'Backend');
         expect(uncommittedBackend?.done).toBe(false);
         expect(uncommittedBackend?.value).toBeUndefined();
+    });
+});
+
+describe('commerceSummaryGroup - ACCS', () => {
+    it('adds the Sign-in row for an ACCS backend and recaps the org once signed in', () => {
+        const group = commerceSummaryGroup(
+            state({
+                selectedBackend: 'adobe-commerce-accs',
+                adobeAuth: { isAuthenticated: true, isChecking: false },
+                adobeOrg: { id: 'org-1', name: 'Demo Org', code: 'ORG1@AdobeOrg' },
+                committedCommerceSteps: ['signin'],
+            })
+        );
+
+        expect(group.rows.map((r) => r.label)).toEqual([
+            'Backend',
+            'Sign-in',
+            'Connection',
+            'Business',
+            'Catalog',
+            'Datapacks',
+        ]);
+        const signin = group.rows.find((r) => r.label === 'Sign-in');
+        expect(signin).toEqual({ label: 'Sign-in', value: 'Demo Org', done: true });
+    });
+
+    it('leaves a committed sub-step undone while its own state is not satisfied', () => {
+        // Committing past a step is necessary for the ✓, never sufficient — the
+        // sub-step's own status still has to say done.
+        const group = commerceSummaryGroup(
+            state({
+                selectedBackend: 'adobe-commerce-paas',
+                committedCommerceSteps: ['backend', 'connection'],
+            })
+        );
+
+        const connection = group.rows.find((r) => r.label === 'Connection');
+        expect(connection?.done).toBe(false);
+        expect(connection?.value).toBeUndefined();
     });
 });
 
@@ -180,6 +237,39 @@ describe('storefrontSummaryGroup', () => {
         const codeSync = group.rows.find((r) => r.label === 'Code Sync');
         expect(codeSync?.value).toBe('Verified');
         expect(codeSync?.done).toBe(true);
+    });
+
+    it('needs the persisted repo VALIDITY, not just a repo name', () => {
+        const group = storefrontSummaryGroup(
+            state({ edsConfig: { repoName: 'my-storefront' } })
+        );
+
+        const repository = group.rows.find((r) => r.label === 'Repository');
+        expect(repository?.done).toBe(false);
+        expect(repository?.value).toBeUndefined();
+    });
+
+    it('leaves Code Sync undone on a new repo until it is verified', () => {
+        const group = storefrontSummaryGroup(
+            state({ edsConfig: { repoMode: 'new', repoName: 'my-storefront' } })
+        );
+
+        const codeSync = group.rows.find((r) => r.label === 'Code Sync');
+        expect(codeSync?.done).toBe(false);
+        expect(codeSync?.value).toBeUndefined();
+    });
+
+    it('survives a validated repo whose EDS config has not been written yet', () => {
+        // storefrontRepoValid is a top-level flag; it can be true before edsConfig
+        // exists, and reading the repo name must not throw when it does not.
+        const group = storefrontSummaryGroup(state({ storefrontRepoValid: true }));
+
+        const repository = group.rows.find((r) => r.label === 'Repository');
+        expect(repository).toEqual({
+            label: 'Repository',
+            value: undefined,
+            done: false,
+        });
     });
 
     it('counts selected block libraries (native + custom)', () => {
@@ -312,6 +402,19 @@ describe('integrationsSummaryGroup', () => {
     });
 });
 
+describe('integrationsSummaryGroup - the catalog it hands over', () => {
+    it('passes the integration entries only, never the mesh entry', () => {
+        // The mesh reaches the resolver as its own argument; leaving it in the
+        // catalog list too would offer it twice.
+        (resolveIntegrationRows as jest.Mock).mockClear();
+
+        integrationsSummaryGroup(state({ selectedStack: 'eds-accs' }), packages, stacks);
+
+        const [, , catalog] = (resolveIntegrationRows as jest.Mock).mock.calls[0];
+        expect(catalog.map((e: { id: string }) => e.id)).toEqual(['cat-reco']);
+    });
+});
+
 describe('buildSummaryGroups', () => {
     it('includes Integrations once an integration is configured', () => {
         const groups = buildSummaryGroups(
@@ -336,6 +439,17 @@ describe('buildSummaryGroups', () => {
             stacks
         );
         expect(groups.map((g) => g.heading)).toEqual(['Commerce', 'Storefront']);
+    });
+
+    it('drops an area id it has no provider for', () => {
+        const groups = buildSummaryGroups(
+            state({ selectedBackend: 'adobe-commerce-paas' }),
+            ['commerce', 'not-an-area'],
+            packages,
+            stacks
+        );
+
+        expect(groups.map((g) => g.heading)).toEqual(['Commerce']);
     });
 
     it('omits a hidden area (not in the visible list)', () => {

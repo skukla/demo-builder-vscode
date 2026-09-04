@@ -4050,6 +4050,54 @@
             "decision": "none \u2014 the guard suppresses a useless 'version: unknown' log line and says so",
             "recorded": "2026-09-04",
             "source": "MUT-05 batch, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/buildSummary.ts",
+            "anchors": [
+                "const EMPTY_PACKAGES: DemoPackage[] = [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker fills the default with a junk string element. It is only reachable when a caller omits BOTH catalog arguments, and the two consumers gate each other: meshComponentForStack returns undefined unless it finds a package AND a stack, so a junk packages list is masked by the empty stacks list (and vice versa). No id lookup can match a string element either. The constant exists for reference stability (the inline-[] re-render gotcha), and its CONTENTS are unobservable.",
+            "decision": "none \u2014 the constant is required to be a stable module-level reference; its emptiness is what every caller relies on",
+            "recorded": "2026-09-04",
+            "source": "MUT-05 batch, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/buildSummary.ts",
+            "anchors": [
+                "const EMPTY_STACKS: Stack[] = [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same shape as EMPTY_PACKAGES: reachable only when the caller omits the catalogs, and then masked by the empty packages list, which makes meshComponentForStack return undefined before the stack is read. selectedStackObject's ternary also returns undefined outright when no stack id is selected, so the junk element is never compared.",
+            "decision": "none \u2014 a stable module-level empty array, required by the hook-stability rule",
+            "recorded": "2026-09-04",
+            "source": "MUT-05 batch, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/buildSummary.ts",
+            "anchors": [
+                "const committed = new Set(state.committedCommerceSteps ?? []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant replaces the [] fallback with ['Stryker was here']. committed is only ever consulted as committed.has(s.id), and every s.id is a CommerceSectionId \u2014 a fixed union of six literals, none of which is that string. So a non-empty junk fallback behaves exactly like an empty one.",
+            "decision": "none \u2014 the fallback is correct; no section id can collide with a junk element",
+            "recorded": "2026-09-04",
+            "source": "MUT-05 batch, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/buildSummary.ts",
+            "anchors": [
+                "Boolean(eds?.githubAuth?.isAuthenticated) && Boolean(eds?.daLiveAuth?.isAuthenticated);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The mutant drops the `?.` from the SECOND operand only (eds?.daLiveAuth becomes eds.daLiveAuth). That operand is evaluated only when the first Boolean is true, which requires eds to be defined \u2014 so the guard it removes can never be the one that mattered. The `?.` is still required by the type, which declares edsConfig optional.",
+            "decision": "none \u2014 short-circuit makes the second guard unreachable-when-needed; the type still demands it",
+            "recorded": "2026-09-04",
+            "source": "MUT-05 batch, 2026-09-04"
         }
     ]
 }
