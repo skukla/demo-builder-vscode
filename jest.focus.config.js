@@ -31,6 +31,7 @@ module.exports = {
     // cannot run two jest projects in one measurement.
     testMatch: [
         '**/tests/features/project-creation/ui/steps/ReviewStep-predicates.test.ts',
+        '**/tests/features/project-creation/ui/steps/ReviewStep-layout.test.tsx',
         '**/tests/features/project-creation/ui/steps/ReviewStep-sections.test.tsx',
         '**/tests/features/project-creation/ui/steps/ReviewStep.helpers.test.tsx',
         '**/tests/features/project-creation/ui/steps/ReviewStep.test.tsx',

@@ -173,7 +173,8 @@ export const View: React.FC<any> = ({ children, UNSAFE_className, ...props }) =>
     <div
         data-testid="spectrum-view"
         className={UNSAFE_className}
-        style={getDimensionStyle(props)}
+        // UNSAFE_style wins over the dimension props, as it does in real Spectrum.
+        style={{ ...getDimensionStyle(props), ...(props.UNSAFE_style ?? {}) }}
         {...filterSpectrumProps(props)}
     >
         {children}
@@ -208,6 +209,7 @@ export const Text: React.FC<any> = ({ children, slot, UNSAFE_className, ...props
         data-testid="spectrum-text"
         data-slot={slot}
         className={UNSAFE_className}
+        style={props.UNSAFE_style}
         {...filterSpectrumProps(props)}
     >
         {children}
