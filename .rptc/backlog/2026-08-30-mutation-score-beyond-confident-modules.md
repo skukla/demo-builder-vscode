@@ -252,3 +252,8 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(auth): bring apiAccessCatalog to zero open mutation gaps (`786da3b2f`)
 - 2026-09-03  test(auth): bring adobeEntityFetcher to zero open mutation gaps (`5053f4da3`)
 - 2026-09-03  test(auth): bring projectOwnership to zero open mutation gaps (`d89aad82c`)
+- 2026-09-03  test(auth): bring adobeEntityService to zero open mutation gaps (`f56f07822`)
+- 2026-09-03  test(auth): bring ensureProjectAdobeContext to zero open mutation gaps (`7494e7e38`)
+- 2026-09-03  test(auth): bring detectProjectOrgMismatch to zero open mutation gaps (`3b68d8655`)
+- 2026-09-03  test(auth): bring consoleProjectTeardown to zero open mutation gaps (`50002157b`)
+- 2026-09-03  test(auth): bring orgSwitchHandler to zero open mutation gaps (`3e3d16594`)
