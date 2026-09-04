@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/prerequisites/ui/steps/PrerequisitesStep.tsx"
+        "src/features/prerequisites/services/versioning/VersionSatisfactionChecker.ts"
     ],
     "reporters": [
         "clear-text",

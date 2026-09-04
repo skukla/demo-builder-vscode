@@ -2197,6 +2197,58 @@
             "decision": "Kept: it states the intent locally rather than depending on the guard above it.",
             "recorded": "2026-09-04",
             "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/versioning/VersionSatisfactionChecker.ts",
+            "anchors": [
+                "const duration = Date.now() - startTime;"
+            ],
+            "line": 75,
+            "mutants": 1,
+            "category": "other",
+            "reason": "duration is read at exactly two places, lines 77 and 79, and both are logger.debug template arguments. Flipping the subtraction to addition changes the number formatDuration renders inside a log line and nothing else: the returned object is { satisfied, matchingVersion }, neither of which is derived from duration. Killing it would mean asserting a logger argument, which pins wording rather than behaviour.",
+            "decision": "Kept: elapsed time is the thing the log is meant to report.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/versioning/VersionSatisfactionChecker.ts",
+            "anchors": [
+                "if (satisfied) {"
+            ],
+            "line": 76,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Both arms of this if are a single logger.debug call and nothing else, so forcing the condition true, forcing it false, or emptying the then-block all select which debug line prints. The value the function returns is built on line 82 from satisfied directly, not from this branch, so no caller and no collaborator can observe the difference. The only distinguishing assertion available is on logger wording.",
+            "decision": "Kept: the two messages say different things and both are worth having.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/versioning/VersionSatisfactionChecker.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 78,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the else-block removes the not-satisfied debug line on line 79. Execution then falls straight to the return on line 82, which is unchanged because it reads satisfied and matchingVersion from the some() above, never from this block. No return value, no collaborator call and no thrown error differs; only the log output does.",
+            "decision": "Kept: a failed satisfaction check that logs the installed versions is what makes it diagnosable.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/services/versioning/VersionSatisfactionChecker.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 83,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The duration computed on line 84 inside this catch is read only by the logger.warn template on line 85; flipping its subtraction to addition changes the elapsed figure that warning prints. The handler's observable result is the fixed safe default { satisfied: false } on line 86, which nothing derived from duration can reach, so the only test able to tell the two apart would assert warning text \u2014 wording, not behaviour.",
+            "decision": "Kept: the failure log is more useful with the elapsed time in it.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
         }
     ]
 }
