@@ -4194,6 +4194,102 @@
             "decision": "none \u2014 the typeof half is what makes the cast on the next line honest, and null (typeof 'object') is caught by the other half",
             "recorded": "2026-09-04",
             "source": "MUT-06 batch, globalMcpRegistration focus run 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/continueHandler.ts",
+            "anchors": [
+                "const installedVersions = fnmListResult.stdout.trim().split('\\n').filter(v => v.trim());"
+            ],
+            "mutants": 3,
+            "category": "other",
+            "reason": "Both the trim and the filter only remove entries that the very next step already discards. Each surviving line is fed to /v?(\\d+)/ and only contributes when it contains a digit, so a trailing empty entry (what trim prevents) and a whitespace-only entry (what the filter drops) both add nothing either way. Dropping either call, or weakening the filter predicate to v => v, leaves installedMajors identical for every possible fnm output.",
+            "decision": "none \u2014 the two calls are defensive and say what fnm output is expected; nothing downstream can observe them",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/continueHandler.ts",
+            "anchors": [
+                "if (prereq.check.parseVersion) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard true cannot change the outcome. It is only distinguishable when parseVersion is absent, and then new RegExp(undefined) is the empty pattern /(?:)/, whose exec matches an empty string at position 0 with no capture group, so match[1] is undefined and cliVersion falls back to '' \u2014 exactly what the skipped branch leaves it as. No prerequisite shape produces a different component value.",
+            "decision": "none \u2014 the guard avoids constructing a pointless RegExp per Node major",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/continueHandler.ts",
+            "anchors": [
+                "if (match) cliVersion = match[1] || '';"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true is swallowed by the try/catch it sits inside. With a null match the assignment throws a TypeError, the surrounding catch ignores it, and cliVersion is left at '' \u2014 the same value the untaken branch leaves. The catch exists for malformed parseVersion patterns, and it absorbs this mutant too, so no stdout can make the two paths differ.",
+            "decision": "none \u2014 the guard is the readable form; the catch is there for a different failure",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/continueHandler.ts",
+            "anchors": [
+                "return { perNodeVariantMissing: false, missingVariantMajors: [], perNodeVersionStatus: [] };"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant fills missingVariantMajors on the early-return path, and nothing reads it there. Its only consumer is getPrerequisiteStatusMessage, which is gated on perNodeVariantMissing \u2014 false on this path by construction, since this return is taken exactly when the prerequisite is not per-node-version or no Node versions are required. A test could only observe it by also flipping the flag, which is a second mutation.",
+            "decision": "none \u2014 the empty array keeps the returned shape uniform across both exits",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/continueHandler.ts",
+            "anchors": [
+                "if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 0) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Three mutants on one condition, none observable. Forcing prereq.id === 'node' true changes nothing because nodeVersionStatus is assigned only inside the caller's own id === 'node' guard, so it is undefined for every other prerequisite and the next operand short-circuits anyway. Forcing length > 0 true, or relaxing it to >= 0, only admits the empty array, and [].some(v => !v.installed) is false \u2014 the same nodeMissing the skipped branch leaves initialised.",
+            "decision": "none \u2014 the length check documents that an empty version list is not a missing version",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/continueHandler.ts",
+            "anchors": [
+                "nodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(nodeVersionMapping);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the ?. would throw only when prereqManager is absent, and this line cannot run in that case: the same context is read twenty lines earlier for checkPrerequisite, which then yields undefined and the loop hits its `if (!checkResult) continue` before reaching here. The compiler still requires the ?. because prereqManager is optional on HandlerContext.",
+            "decision": "none \u2014 the ?. is required by the type and unreachable in the only state that would trip it",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/continueHandler.ts",
+            "anchors": [
+                "prereq.perNodeVersion && variantStatus.perNodeVariantMissing,"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "This argument is only read together with missingVariantMajors: getPrerequisiteStatusMessage requires BOTH the flag and a non-empty majors list before it changes its wording. perNodeVariantMissing is true only for per-node-version prerequisites, so the perNodeVersion operand is already implied; forcing the whole expression true, or turning the && into ||, only raises it for prerequisites whose missingVariantMajors is empty, where the message is unchanged.",
+            "decision": "none \u2014 the operand states the precondition at the call site rather than relying on the callee's guard",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/continueHandler.ts",
+            "anchors": [
+                "(prereq.id === 'node' && nodeMissing)"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing prereq.id === 'node' true leaves the term equal to nodeMissing alone, and nodeMissing is only ever set inside computeContinueOverallStatus's own id === 'node' guard \u2014 for every other prerequisite it keeps its initial false. So the two forms agree for every prerequisite the handler can be given, and no canInstall value can differ.",
+            "decision": "none \u2014 the id check makes the term readable on its own; the redundancy is with a guard in another function",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }
