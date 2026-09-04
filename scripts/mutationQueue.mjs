@@ -119,20 +119,14 @@ module, \`Backlog: PL-22\` trailer, each gated on \`npm run gate\` exiting 0 wit
 code captured in a variable, never read through a pipe. Push after each commit. No
 cloud writes. No attribution trailers.
 
-WORK THE BATCH TO THE END. There is no turn budget: a turn count measures nothing, and on
-2026-09-04 it fired in four batches and was right in none of them — each time the session
-wrote a wrap-up, carried on anyway, and finished every module. Two things end a batch
-early, and both are evidence rather than a clock:
+WORK THE BATCH TO THE END — no turn budget. A turn count fired in four batches on
+2026-09-04 and was right in none. Stop early only on evidence: two consecutive gates
+failing the same way (say which), or a module whose openGaps will not move across two
+measure cycles — commit what it gained, titled for what it covers, and go to the NEXT
+module. Its remainder returns in the next queue.
 
-  - two consecutive gates fail for the same reason — say which, and stop;
-  - a module's openGaps does not move across two full measure-and-write cycles — say what
-    you tried, leave the module's progress committed, and go on to the NEXT module.
-
-Neither is a reason to abandon work already done: a module improved but not finished is
-committed with a title saying what it covers, and its remainder returns in the next queue.
-
-FINISH by pasting a table of the batch, ONCE, when the last module is done: module,
-openGaps before, openGaps after, tests added, ledger rows added.
+FINISH by pasting the batch table ONCE, at the end: module, openGaps before, after, tests
+added, ledger rows added.
 `;
 }
 

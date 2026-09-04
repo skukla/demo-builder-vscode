@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-07. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/project-creation/ui/steps/CommerceStep.tsx  (pure, 67.82%, 25 open gaps)
-  - src/features/project-creation/services/ProjectSetupContext.ts  (pure, 34.29%, 23 open gaps)
-  - src/features/project-creation/services/aiBundle/aiBundleActivationRefresh.ts  (orchestration, 70.09%, 22 open gaps)
-  - src/features/project-creation/services/aiBundle/skillsWriter.ts  (orchestration, 78.26%, 21 open gaps)
-  - src/features/project-creation/services/aiBundle/mcpConfigWriter.ts  (orchestration, 55.42%, 20 open gaps)
+  - src/features/project-creation/services/aiBundle/generatedFileWriter.ts  (orchestration, 89.93%, 10 open gaps)
+  - src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx  (pure, 80.22%, 10 open gaps)
+  - src/features/project-creation/ui/helpers/stackHelpers.ts  (pure, 80.77%, 10 open gaps)
+  - src/features/project-creation/ui/steps/reviewPredicates.ts  (pure, 69.23%, 8 open gaps)
+  - src/features/project-creation/ui/components/integration-flow/flowStages.ts  (pure, 93.1%, 7 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts
@@ -47,6 +47,11 @@ module, `Backlog: PL-22` trailer, each gated on `npm run gate` exiting 0 with th
 code captured in a variable, never read through a pipe. Push after each commit. No
 cloud writes. No attribution trailers.
 
-FINISH by pasting a table of the batch: module, openGaps before, openGaps after, tests
-added, ledger rows added. Stop after 60 turns, or earlier if two consecutive gates fail
-for the same reason — say which, and stop.
+WORK THE BATCH TO THE END — no turn budget. A turn count fired in four batches on
+2026-09-04 and was right in none. Stop early only on evidence: two consecutive gates
+failing the same way (say which), or a module whose openGaps will not move across two
+measure cycles — commit what it gained, titled for what it covers, and go to the NEXT
+module. Its remainder returns in the next queue.
+
+FINISH by pasting the batch table ONCE, at the end: module, openGaps before, after, tests
+added, ledger rows added.
