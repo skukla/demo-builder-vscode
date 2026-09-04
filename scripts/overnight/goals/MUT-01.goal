@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-01. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/prerequisites/handlers/checkHandler.ts  (orchestration, 36.18%, 143 open gaps)
-  - src/features/prerequisites/services/PrerequisitesManager.ts  (mixed, 33.63%, 123 open gaps)
-  - src/features/prerequisites/ui/steps/hooks/prerequisiteRenderers.tsx  (pure, 23.4%, 106 open gaps)
   - src/features/prerequisites/handlers/installHandler.ts  (orchestration, 71.16%, 86 open gaps)
   - src/features/prerequisites/ui/steps/PrerequisitesStep.tsx  (pure, 22.96%, 75 open gaps)
+  - src/features/prerequisites/handlers/continueHandler.ts  (orchestration, 61.35%, 65 open gaps)
+  - src/features/prerequisites/services/prerequisitesCacheManager.ts  (pure, 83.33%, 13 open gaps)
+  - src/features/prerequisites/services/versioning/MultiVersionDetector.ts  (mixed, 84%, 6 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts
@@ -19,6 +19,11 @@ THE CYCLE, one module at a time, never two measurements at once (the focus confi
 single generated files and collide):
   1. node scripts/focusModule.mjs <module>
   2. npx stryker run stryker.focus.config.json > /tmp/focus.txt 2>&1
+     Run it in the FOREGROUND and let it block. If you background it and poll instead,
+     wait for the string `Done in` — Stryker's own summary says `Mutation score` with
+     a capital M, and a case-sensitive grep for the lowercase phrase never matches, so
+     the wait never ends. That cost 16 minutes on 2026-09-04 against a run that had
+     already finished.
   3. node scripts/mutationWorklist.mjs         — the decisions nothing constrains, ranked
   4. write the tests (or the ledger entries), run them
   5. re-measure (1–2), then: node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
@@ -43,5 +48,5 @@ code captured in a variable, never read through a pipe. Push after each commit. 
 cloud writes. No attribution trailers.
 
 FINISH by pasting a table of the batch: module, openGaps before, openGaps after, tests
-added, ledger rows added. Stop after 40 turns, or earlier if two consecutive gates fail
+added, ledger rows added. Stop after 60 turns, or earlier if two consecutive gates fail
 for the same reason — say which, and stop.

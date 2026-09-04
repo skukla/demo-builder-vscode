@@ -91,6 +91,11 @@ THE CYCLE, one module at a time, never two measurements at once (the focus confi
 single generated files and collide):
   1. node scripts/focusModule.mjs <module>
   2. npx stryker run stryker.focus.config.json > /tmp/focus.txt 2>&1
+     Run it in the FOREGROUND and let it block. If you background it and poll instead,
+     wait for the string \`Done in\` — Stryker's own summary says \`Mutation score\` with
+     a capital M, and a case-sensitive grep for the lowercase phrase never matches, so
+     the wait never ends. That cost 16 minutes on 2026-09-04 against a run that had
+     already finished.
   3. node scripts/mutationWorklist.mjs         — the decisions nothing constrains, ranked
   4. write the tests (or the ledger entries), run them
   5. re-measure (1–2), then: node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
@@ -115,7 +120,7 @@ code captured in a variable, never read through a pipe. Push after each commit. 
 cloud writes. No attribution trailers.
 
 FINISH by pasting a table of the batch: module, openGaps before, openGaps after, tests
-added, ledger rows added. Stop after 40 turns, or earlier if two consecutive gates fail
+added, ledger rows added. Stop after 60 turns, or earlier if two consecutive gates fail
 for the same reason — say which, and stop.
 `;
 }
