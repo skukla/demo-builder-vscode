@@ -315,3 +315,4 @@ which point the cadence drops to release cuts.
 - 2026-09-04  test(prerequisites): bring prerequisiteRenderers to zero open mutation gaps (`b27edc255`)
 - 2026-09-04  test(prerequisites): bring PrerequisitesManager to zero open mutation gaps (`79f1f7999`)
 - 2026-09-04  test(prerequisites): bring checkHandler to zero open mutation gaps (`1696c67f9`)
+- 2026-09-04  test(project-creation): bring BrandGallery to zero open mutation gaps (`09f1ddfea`)

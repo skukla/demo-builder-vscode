@@ -3625,6 +3625,237 @@
             "decision": "none \u2014 a fast path the following lookup already covers",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "const EMPTY_PACKAGES: DemoPackage[] = [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "This constant exists for REFERENTIAL stability \u2014 an inline [] default would be a new array every render and restart the memos that take it. The mutant is still a module-level constant, so stability is unchanged; only the contents differ, and the contents are read solely by 'packages.find((candidate) => candidate.id === ...)', which misses on a string element exactly as it misses on an empty array.",
+            "decision": "none \u2014 only the identity of this constant is load-bearing",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "const EMPTY_STACKS: Stack[] = [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The same argument as EMPTY_PACKAGES: the constant is here so the default prop keeps one identity across renders, which the mutant preserves. Its contents reach only 'stacks.find((candidate) => candidate.id === state.selectedStack)' and meshComponentForStack's own lookup, both of which fail to match a string element just as they fail to match nothing.",
+            "decision": "none \u2014 only the identity of this constant is load-bearing",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "const EMPTY_PICKS: string[] = [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Three fallbacks use it: the api-edit seed, the selected-integration ids and the selected addons. A junk element in the seed checks no API (no option carries that code); in the reserved-id domain it reserves an id no slug can produce; in the addon list it names no addon. All three consume it by membership, so an unmatched element and an empty list are indistinguishable.",
+            "decision": "none \u2014 only the identity of this constant is load-bearing",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "return a.trim().toLowerCase() === b.trim().toLowerCase();"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The surviving mutant drops the trim from 'b'. The only caller is commitRename, whose 'b' is already 'raw.trim()', and its own caller InlineRenameField trims before that again. No value reaching this parameter has surrounding whitespace, so the second trim cannot change an answer. The 'a' side IS killable and is killed \u2014 a stored name can carry padding.",
+            "decision": "none \u2014 the b-side trim is redundant with the caller, and the helper is right to keep it",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "project={project?.title ?? project?.name}"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "This element is only constructed in the '!needsSetup' branch, and needsSetup comes from the row resolver's destinationCommitted, which is Boolean(state.adobeProject?.id) && Boolean(state.adobeWorkspace?.id). So the branch that reads project is exactly the branch where project is defined, and neither optional chain can short-circuit. The '?.' answers the optional state type.",
+            "decision": "none \u2014 the guarded value is guaranteed by the branch that renders it",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "workspace={workspace?.title ?? workspace?.name}"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Same branch, same guarantee: DestinationContext is rendered only when needsSetup is false, which the resolver defines as both adobeProject.id and adobeWorkspace.id being present. Neither optional chain on workspace can short-circuit there; they answer the optional state type rather than a value that can be missing.",
+            "decision": "none \u2014 the guarded value is guaranteed by the branch that renders it",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "[],"
+            ],
+            "line": 185,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
+            "decision": "none \u2014 equivalent by React's dependency comparison",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 191,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
+            "decision": "none \u2014 equivalent by React's dependency comparison",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 195,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
+            "decision": "none \u2014 equivalent by React's dependency comparison",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "const closeModal = useCallback((): void => setModalOpen(false), []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback whose dependency array is empty is stable for the component's whole life. The mutant replaces it with a one-element array holding the SAME string literal on every render, and React compares dependencies with Object.is per element, so the callback is still created once and never recreated. Nothing observable differs.",
+            "decision": "none \u2014 equivalent by React's dependency comparison",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "? getSelectableAppBuilderComponents("
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The consumer re-filters. IntegrationsStep hands the modal a 'catalog' prop, and AddIntegrationFlowModal immediately narrows it again \u2014 'prebuiltCatalog = catalog.filter(isPrebuiltIntegration)' for the gallery and 'seedCatalog = catalog.filter(isSeedIntegration)' for the Build-custom seeds \u2014 while useIntegrationFlow only ever looks entries up by an id the user picked from those narrowed lists. So a blank or mesh-kind entry that survives this step's filter is dropped by the next one, and a junk entry is dropped by both. The step's own filter is the honest expression of what it means to pass along, but no surface can see it removed.",
+            "decision": "none \u2014 the modal narrows the same list again before rendering it",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                ").filter((entry) => entry.kind === 'integration')"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The consumer re-filters. IntegrationsStep hands the modal a 'catalog' prop, and AddIntegrationFlowModal immediately narrows it again \u2014 'prebuiltCatalog = catalog.filter(isPrebuiltIntegration)' for the gallery and 'seedCatalog = catalog.filter(isSeedIntegration)' for the Build-custom seeds \u2014 while useIntegrationFlow only ever looks entries up by an id the user picked from those narrowed lists. So a blank or mesh-kind entry that survives this step's filter is dropped by the next one, and a junk entry is dropped by both. The step's own filter is the honest expression of what it means to pass along, but no surface can see it removed.",
+            "decision": "none \u2014 the modal narrows the same list again before rendering it",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                ": [],"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The consumer re-filters. IntegrationsStep hands the modal a 'catalog' prop, and AddIntegrationFlowModal immediately narrows it again \u2014 'prebuiltCatalog = catalog.filter(isPrebuiltIntegration)' for the gallery and 'seedCatalog = catalog.filter(isSeedIntegration)' for the Build-custom seeds \u2014 while useIntegrationFlow only ever looks entries up by an id the user picked from those narrowed lists. So a blank or mesh-kind entry that survives this step's filter is dropped by the next one, and a junk entry is dropped by both. The step's own filter is the honest expression of what it means to pass along, but no surface can see it removed.",
+            "decision": "none \u2014 the modal narrows the same list again before rendering it",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "() => integrationEntries.filter((entry) => !entry.blank),"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The consumer re-filters. IntegrationsStep hands the modal a 'catalog' prop, and AddIntegrationFlowModal immediately narrows it again \u2014 'prebuiltCatalog = catalog.filter(isPrebuiltIntegration)' for the gallery and 'seedCatalog = catalog.filter(isSeedIntegration)' for the Build-custom seeds \u2014 while useIntegrationFlow only ever looks entries up by an id the user picked from those narrowed lists. So a blank or mesh-kind entry that survives this step's filter is dropped by the next one, and a junk entry is dropped by both. The step's own filter is the honest expression of what it means to pass along, but no surface can see it removed.",
+            "decision": "none \u2014 the modal narrows the same list again before rendering it",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "...(meshComponent ? [meshComponent.id] : []),"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "buildReservedIds already unions MESH_COMPONENT_IDS into every domain it builds, and meshComponentForStack can only return one of those three ids. So the mesh id this spread contributes is reserved either way, and adding or removing it changes no minted instance id. The spread states the intent locally rather than relying on the constant, which is why it stays.",
+            "decision": "none \u2014 buildReservedIds already reserves every mesh id",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "if (!row) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The cards this switch dispatches for are built FROM the rows \u2014 'cards = toIntegrationCards(rows)' and 'rowsById' is a Map over the same rows \u2014 so every model.id reaching handleCardAction resolves. Removing the guard would only matter for a card whose row does not exist, which this component cannot render. The guard is the honest statement that the lookup can fail in principle.",
+            "decision": "none \u2014 cards and rows are built from the same list",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "if (action === 'manage-apis') {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "CardAction spans nine verbs, but the wizard's card only ever emits two: menuActionsFor gives a pre-deploy card just Remove and Manage APIs, and onOpen calls handleCardAction with 'manage-apis' explicitly. Remove returns before this line, so the only value that reaches it is already 'manage-apis' and the comparison cannot answer false. It stays because the shared CardAction union does carry the other seven.",
+            "decision": "none \u2014 no other action reaches this line from the wizard's card",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "const trimmed = raw.trim();"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "InlineRenameField trims before it calls onRename ('const trimmed = value.trim()' in its own commit) and cancels outright on an empty or unchanged result, so the raw string arriving here never carries surrounding whitespace. The trim is defence at the seam rather than a decision this caller can exercise; the WRITE it feeds is separately pinned by the whitespace test, which is what would catch it going missing from the other side.",
+            "decision": "none \u2014 the only caller has already trimmed",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/IntegrationsStep.tsx",
+            "anchors": [
+                "needsSetup={rows[0]?.needsSetup ?? true}"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "All three mutants \u2014 the false fallback, the '&&' rewrite, and dropping the optional index \u2014 differ from the original only when rows[0] is undefined. This element is inside 'cards.length > 0 &&', and cards is toIntegrationCards(rows), so a rendered DestinationLine always has at least one row. The fallback is unreachable, the optional index cannot short-circuit, and 'x ?? true' and 'x && true' agree on every boolean.",
+            "decision": "none \u2014 the element only renders when rows[0] exists",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
         }
     ]
 }

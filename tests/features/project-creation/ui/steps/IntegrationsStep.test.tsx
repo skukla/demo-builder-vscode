@@ -77,46 +77,22 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
 });
 
 import { IntegrationsStep } from '@/features/project-creation/ui/steps/IntegrationsStep';
-import type { DemoPackage } from '@/types/demoPackages';
-import type { Stack } from '@/types/stacks';
 import type { WizardState } from '@/types/webview';
 
-// ---------------------------------------------------------------------------
-// Fixtures — real stack backend/frontend ids so the real catalog resolves a mesh.
-// ---------------------------------------------------------------------------
-const packages = [{ id: 'citisignal', name: 'Citisignal' }] as unknown as DemoPackage[];
-const meshStack = {
-    id: 'eds-paas',
-    name: 'EDS + PaaS',
-    frontend: 'eds-storefront',
-    backend: 'adobe-commerce-paas',
-} as unknown as Stack;
-const stacks = [meshStack] as Stack[];
-
-/** The stack's mesh catalog entry (real catalog). */
-const MESH_ID = 'eds-commerce-mesh';
-const MESH_NAME = 'EDS Commerce API Mesh';
-
-const SIGNED_IN: Partial<WizardState> = {
-    adobeAuth: { isAuthenticated: true, isChecking: false },
-    adobeOrg: { id: 'org-1', code: 'ORG@AdobeOrg', name: 'Test Org' },
-};
-const COMMITTED_DEST: Partial<WizardState> = {
-    adobeProject: { id: 'proj-1', name: 'proj-one', title: 'Demo Project' },
-    adobeWorkspace: { id: 'ws-1', name: 'Stage' },
-};
-const CUSTOM_ADDED: Partial<WizardState> = {
-    selectedAppBuilderComponents: ['acme-widget'],
-    appBuilderComponentSources: { 'acme-widget': { owner: 'acme', repo: 'widget' } },
-};
-
-function baseState(overrides: Partial<WizardState> = {}): WizardState {
-    return {
-        selectedPackage: 'citisignal',
-        selectedStack: 'eds-paas',
-        ...overrides,
-    } as WizardState;
-}
+import {
+    COMMITTED_DEST,
+    CUSTOM_ADDED,
+    MESH_ID,
+    MESH_NAME,
+    PACKAGES,
+    SIGNED_IN,
+    STACKS,
+    baseState,
+    destinationLine,
+    menuOf,
+    pickMenuItem,
+    row,
+} from './IntegrationsStep.testUtils';
 
 async function renderStep(state: WizardState, updateState = jest.fn()) {
     render(
@@ -125,8 +101,8 @@ async function renderStep(state: WizardState, updateState = jest.fn()) {
                 state={state}
                 updateState={updateState}
                 setCanProceed={jest.fn()}
-                packages={packages}
-                stacks={stacks}
+                packages={PACKAGES}
+                stacks={STACKS}
             />
         </Provider>
     );
@@ -136,35 +112,9 @@ async function renderStep(state: WizardState, updateState = jest.fn()) {
     return { updateState };
 }
 
-/** The shared `.integration-card` root, addressed by its name text. */
-function row(name: string): HTMLElement {
-    return screen.getByText(name).closest('.integration-card') as HTMLElement;
-}
 
-/**
- * The surface's ONE destination line. Deliberately not scoped to a card: that
- * it is not per-card is the point, and `getBy*` throws on a second match, so
- * this helper fails loudly if the per-row repetition ever comes back.
- */
-function destinationLine(): HTMLElement {
-    return document.querySelector('.int-destination') as HTMLElement;
-}
 
-/**
- * A card's kebab menu — scoped to that card.
- *
- * The Spectrum stub renders menus eagerly and inline, so every card contributes
- * its own `role="menu"`. Scoping is mandatory, not tidiness: an unscoped query
- * throws "Found multiple elements" the moment a second card exists.
- */
-function menuOf(cardEl: HTMLElement): HTMLElement {
-    return within(cardEl).getByRole('menu');
-}
 
-/** Press one item in a card's kebab. */
-async function pickMenuItem(cardEl: HTMLElement, label: RegExp): Promise<void> {
-    await press(within(menuOf(cardEl)).getByRole('menuitem', { name: label }));
-}
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -582,8 +532,8 @@ describe('IntegrationsStep — mesh add commits without subscribing', () => {
                     state={state}
                     updateState={updateState}
                     setCanProceed={jest.fn()}
-                    packages={packages}
-                    stacks={stacks}
+                    packages={PACKAGES}
+                    stacks={STACKS}
                 />
             </Provider>
         );
