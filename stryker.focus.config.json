@@ -18,7 +18,7 @@
         "fileName": "reports/mutation/focus.json"
     },
     "coverageAnalysis": "perTest",
-    "concurrency": 4,
+    "concurrency": 2,
     "timeoutMS": 20000,
     "disableTypeChecks": true,
     "tempDirName": ".stryker-tmp-focus",
