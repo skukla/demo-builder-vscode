@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/services/aiBundle/mcpConfigWriter.ts"
+        "src/features/project-creation/ui/components/ConnectStoreStepContent.tsx"
     ],
     "reporters": [
         "clear-text",

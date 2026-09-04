@@ -356,3 +356,4 @@ which point the cadence drops to release cuts.
 - 2026-09-04  test(project-creation): bring aiBundleActivationRefresh to zero open mutation gaps (`7623ee9a1`)
 - 2026-09-04  test(project-creation): bring skillsWriter to zero open mutation gaps (`e8386f8ce`)
 - 2026-09-04  test(project-creation): bring mcpConfigWriter to zero open mutation gaps (`3fee85736`)
+- 2026-09-04  test(project-creation): bring ConnectStoreStepContent to zero open mutation gaps (`99cb0abf5`)
