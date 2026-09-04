@@ -18,7 +18,7 @@
  *
  * `not.toHaveBeenCalled()` on a logger asserts silence, not wording, and is allowed.
  */
-import { readdirSync, readFileSync, statSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { join, relative } from 'path';
 
 const ROOT = join(__dirname, '..', '..');
@@ -30,10 +30,18 @@ const WORDING =
 
 function testFiles(dir: string): string[] {
     const out: string[] = [];
-    for (const name of readdirSync(dir)) {
-        const p = join(dir, name);
-        if (statSync(p).isDirectory()) out.push(...testFiles(p));
-        else if (/\.test\.tsx?$/.test(name)) out.push(p);
+    // See the note in no-credential-shaped-fixtures: one syscall instead of two, so a
+    // probe file another suite deletes mid-walk cannot fail this run (2026-09-04).
+    let entries;
+    try {
+        entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+        return out;
+    }
+    for (const entry of entries) {
+        const p = join(dir, entry.name);
+        if (entry.isDirectory()) out.push(...testFiles(p));
+        else if (/\.test\.tsx?$/.test(entry.name)) out.push(p);
     }
     return out;
 }

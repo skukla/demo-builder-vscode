@@ -16,7 +16,7 @@
  * the same proof, spelled by no literal. Prose in a comment is caught too: write
  * "user-colon-password-at-host", not the shape.
  */
-import { readdirSync, readFileSync, statSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { join, relative } from 'path';
 
 const ROOT = join(__dirname, '..', '..');
@@ -26,10 +26,22 @@ const BASIC_HEADER = /\bBasic\s+[A-Za-z0-9+/]{16,}={0,2}/;
 
 function files(dir: string): string[] {
     const out: string[] = [];
-    for (const name of readdirSync(dir)) {
-        const p = join(dir, name);
-        if (statSync(p).isDirectory()) out.push(...files(p));
-        else if (/\.(ts|tsx|js|mjs|json|md)$/.test(name)) out.push(p);
+    // `withFileTypes` answers directory-or-file from the SAME syscall as the listing.
+    // Asking separately could not: suites run in parallel workers, three of them create
+    // and delete probe files under tests/, and an entry that disappears between the
+    // listing and the second question fails a run for nothing (2026-09-04). A directory
+    // removed before the recursion is that race one level up, so a listing that fails
+    // yields nothing rather than throwing.
+    let entries;
+    try {
+        entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+        return out;
+    }
+    for (const entry of entries) {
+        const p = join(dir, entry.name);
+        if (entry.isDirectory()) out.push(...files(p));
+        else if (/\.(ts|tsx|js|mjs|json|md)$/.test(entry.name)) out.push(p);
     }
     return out;
 }
