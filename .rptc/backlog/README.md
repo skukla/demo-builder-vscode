@@ -274,7 +274,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-36` | fix | [The third Node-version sort in installHandler is untested](2026-09-02-install-handler-target-version-sort.md) | — | med | backlog |
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (37)
+### platform  (38)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -296,6 +296,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-12` | question | [Pattern-conformance audit — one architecture, or one per feature?](2026-08-28-pattern-conformance-audit.md) | — | med | shipped |
 | `PL-17` | question | [The architecture is written for the extension host only; the frontend has rules but no document](2026-08-28-adr015-webview-jurisdiction.md) | — | high | shipped |
 | `PL-18` | feature | [ADR-017 §6 is stated but unenforced — the check that closes it](2026-08-29-adr017-stylesheet-bundle-check.md) | — | high | shipped |
+| `PL-42` | fix | └ [Read the redundancy lists and delete what pins nothing — about half of every suite is a candidate](2026-09-04-redundant-test-read.md) | — | high | open |
 | `PL-25` | chore | [Skill descriptions should trigger, not describe](skill-description-triggers.md) | — | med | dropped |
 | `PL-26` | feature | [A glossary, so the agent describes things back in our words](project-glossary.md) | — | med | active |
 | `PL-28` | question | [Rules stated as law that no handbook, ADR or check backs](unratified-rules-register.md) | — | high | shipped |
@@ -462,7 +463,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 
-*64 item(s) sit outside the A–G chain.*
+*65 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 

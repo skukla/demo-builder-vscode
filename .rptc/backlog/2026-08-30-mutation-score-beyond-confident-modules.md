@@ -280,3 +280,5 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(eds): bring edsResetUI to zero open mutation gaps (`099ba1fc7`)
 - 2026-09-03  test(eds): bring edsResetRepoHelper to zero open mutation gaps (`8477191db`)
 - 2026-09-04  Test REDUNDANCY is now measurable exactly (bail off, per module): scripts/mutationRedundancySweep.mjs + a greedy minimal cover in mutationRedundantTests.mjs. First results: envMerge 7 of 15 tests droppable together without losing a kill; edsResetUI 36 of 76 (the whole sample-data suite). A candidate list for a human read, not a deletion list — a test can pin behaviour no mutant probes. Full sweep over all finished modules queued as the night's last job.
+- 2026-09-03  test(eds): bring edsResetParams to zero open mutation gaps (`d1c223715`)
+- 2026-09-03  feat(mutation): measure test REDUNDANCY exactly — bail off, per module, with a minimal cover (`7b446298f`)
