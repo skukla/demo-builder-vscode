@@ -320,3 +320,5 @@ which point the cadence drops to release cuts.
 - 2026-09-04  test(project-creation): constrain executor's initial-project assembly (`b79528c16`)
 - 2026-09-04  test(project-creation): bring areaSubSteps to zero open mutation gaps (`50925ae6d`)
 - 2026-09-04  test(project-creation): bring areaSubSteps to zero open mutation gaps (`1c822b3d2`)
+- 2026-09-04  chore(overnight): stop batches on evidence, not on a turn count (`944a96ea5`)
+- 2026-09-04  test(project-creation): bring executor to zero open mutation gaps (`de4c12240`)
