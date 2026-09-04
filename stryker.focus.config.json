@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/components/integration-flow/stages/ApiPickerStage.tsx"
+        "src/features/project-creation/ui/wizard/stepFiltering.ts"
     ],
     "reporters": [
         "clear-text",

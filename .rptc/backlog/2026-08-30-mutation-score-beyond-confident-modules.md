@@ -328,3 +328,4 @@ which point the cadence drops to release cuts.
 - 2026-09-04  test(project-creation): bring stepFiltering to 100% mutation score (`2a7541d71`)
 - 2026-09-04  test(project-creation): bring stepFiltering to 100% mutation score (`d4512ffba`)
 - 2026-09-04  test(project-creation): bring buildSummary to zero open mutation gaps (`84e031da3`)
+- 2026-09-04  test(project-creation): bring ApiPickerStage to zero open mutation gaps (`b22e2d011`)
