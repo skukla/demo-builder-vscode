@@ -94,6 +94,23 @@ describe('ensureProjectAdobeContext', () => {
         expect(result).toEqual({ ready: true, currentOrg: 'Expected Org' });
     });
 
+    // `Project.adobe` is optional. A project with no Adobe block is still a valid
+    // pre-flight input: the auth guard gets an empty hint rather than a throw, and
+    // the org guard (which treats "no org" as nothing to check) still runs.
+    it('hands the auth guard an all-undefined hint for a project with no Adobe block', async () => {
+        mockAuth.mockResolvedValue({ authenticated: true });
+        mockOrg.mockResolvedValue({ reachable: true });
+        const bare = createMockProject({ name: 'Bare', path: '/test/bare', adobe: undefined });
+
+        const result = await ensureProjectAdobeContext({ authManager, project: bare, logger });
+
+        expect(mockAuth).toHaveBeenCalledWith(expect.objectContaining({
+            projectContext: { organization: undefined, projectId: undefined, workspace: undefined },
+        }));
+        expect(mockOrg).toHaveBeenCalledWith(expect.objectContaining({ project: bare }));
+        expect(result).toEqual({ ready: true, currentOrg: undefined });
+    });
+
     it('forwards project context + options to the auth guard, and project + prefix to the org guard', async () => {
         mockAuth.mockResolvedValue({ authenticated: true });
         mockOrg.mockResolvedValue({ reachable: true, currentOrg: 'Expected Org' });

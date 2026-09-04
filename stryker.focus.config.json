@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/detectProjectOrgMismatch.ts"
+        "src/features/authentication/services/ensureProjectAdobeContext.ts"
     ],
     "reporters": [
         "clear-text",
