@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/steps/SampleDataStep.tsx"
+        "src/features/project-creation/ui/steps/useProjectBuilder.ts"
     ],
     "reporters": [
         "clear-text",

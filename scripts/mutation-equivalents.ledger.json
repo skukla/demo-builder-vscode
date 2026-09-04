@@ -4784,6 +4784,18 @@
             "decision": "none \u2014 the empty-version fallback guards a group the catalog cannot produce",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/useProjectBuilder.ts",
+            "anchors": [
+                "const defaultAddons = (stackObj?.optionalAddons || [])"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The fallback array is immediately filtered by a.default and then mapped to a.id, so Stryker replacing the empty array with a one-string array yields a member with no default property, which the filter drops. The result is the same empty list of addon ids, and it is only reached when the stack declares no optionalAddons at all. No update payload, addon set or ordering differs.",
+            "decision": "none \u2014 the injected element cannot survive the filter that immediately follows it",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
