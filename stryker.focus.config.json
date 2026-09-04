@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/wizard/wizardHelpers.ts"
+        "src/features/project-creation/ui/steps/StorefrontStep.tsx"
     ],
     "reporters": [
         "clear-text",

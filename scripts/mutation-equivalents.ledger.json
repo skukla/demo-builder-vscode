@@ -3454,6 +3454,30 @@
             "decision": "none \u2014 the mesh filter removes the injected element.",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/StorefrontStep.tsx",
+            "anchors": [
+                "if (daLiveAuth.bookmarkletUrl) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This guard cannot be observed because the same condition already decides whether the handler is reachable at all: the card is given onOpenBookmarkletSetup only when bookmarkletUrl is set, and undefined otherwise. So the handler never runs without a URL, and forcing its internal guard true changes nothing any press can produce.",
+            "decision": "none \u2014 the prop-level guard makes the internal one unreachable in the false direction.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/StorefrontStep.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces this empty dependency list with a constant one-element array rather than emptying it. React compares dependencies with Object.is element by element, so a constant is identical on every render and the callback identity is stable either way. The callback closes over nothing but the imported vscode module, so there is no stale value to observe.",
+            "decision": "none \u2014 a constant dependency never changes, and the callback closes over nothing.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }
