@@ -5362,6 +5362,30 @@
             "decision": "none \u2014 the guard names the precondition the removal matrix states, and the early return is what makes it redundant",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx",
+            "anchors": [
+                "const EMPTY_IDS: string[] = [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "A STATIC mutant Stryker cannot activate, not an unconstrained decision. The report marks it static with coveredBy [], because this module-level constant is evaluated when Jest first imports the module, before any test body runs, so the mutant switch is read while it is still off and the Jest module cache keeps that value for every later test. A test DOES constrain it: 'asks for the org APIs with an empty component list when nothing is selected' fails when the constant is edited to Stryker's marker array in the source (run 2026-09-04, 1 failed 41 passed), because the picker then asks the handler to lock APIs against a component id that does not exist.",
+            "decision": "none \u2014 the constant is correct and a real test covers it; only the measurement cannot see the mutation",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/AddIntegrationFlowModal.tsx",
+            "anchors": [
+                "const DEST_PICKER_STAGES: ReadonlySet<string> = new Set(["
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The same static-mutant limitation as EMPTY_IDS: the report marks it static with coveredBy [], because this Set is built at module load, before any test runs, and Jest's module cache holds the unmutated value for the whole worker. Emptying the Set by hand in the source DOES fail a test \u2014 'hides the destination line on the picker stages, where it would be redundant' (run 2026-09-04, 1 failed 41 passed) \u2014 because the destination line then reappears above the very control that changes it. The sibling mutant on the has() call at the use site is killed by that same test.",
+            "decision": "none \u2014 the stage list is correct and covered; only the static mutation cannot be activated under Jest",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

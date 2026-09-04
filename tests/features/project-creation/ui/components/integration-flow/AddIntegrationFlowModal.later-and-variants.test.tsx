@@ -96,6 +96,33 @@ describe('AddIntegrationFlowModal — later add (destination committed)', () => 
         await click('Change');
         expect(screen.getByTestId('project-field')).toBeInTheDocument();
     });
+
+    it('hides the destination line on the picker stages, where it would be redundant', async () => {
+        renderModal({ initial: COMMITTED_DEST });
+        await click(/API Mesh/);
+        expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
+
+        await click('Change');
+
+        // dest-project IS the destination picker; restating the destination
+        // above the control that changes it says the same thing twice.
+        expect(screen.queryByText('Demo Project · Stage')).not.toBeInTheDocument();
+    });
+
+    it('names a workspace by its NAME when Console gave it no title', async () => {
+        // Console returns a title for most workspaces and not all of them; the
+        // line must still name the workspace rather than trailing off after the
+        // project.
+        renderModal({
+            initial: {
+                ...COMMITTED_DEST,
+                adobeWorkspace: { id: 'ws-1', name: 'Stage' },
+            },
+        });
+        await click(/API Mesh/);
+
+        expect(screen.getByText('Demo Project · Stage')).toBeInTheDocument();
+    });
 });
 
 describe('AddIntegrationFlowModal — catalog first-add walk', () => {
@@ -222,6 +249,45 @@ describe('AddIntegrationFlowModal — org-API prefetch (warm the cache)', () => 
     it('does not warm the cache when signed out', () => {
         renderModal({ initial: SIGNED_OUT });
         expect(mockRequest).not.toHaveBeenCalledWith('list-org-console-apis', expect.anything());
+    });
+
+    it('warms the cache on a LATER open, not only on the first mount', () => {
+        // The modal host stays mounted across opens, so a warm-up tied to mount
+        // alone would fire for a modal nobody opened and never again after.
+        const { setOpen } = renderModal({ isOpen: false });
+        expect(mockRequest).not.toHaveBeenCalledWith('list-org-console-apis', expect.anything());
+
+        setOpen(true);
+
+        expect(
+            mockRequest.mock.calls.filter(([type]) => type === 'list-org-console-apis')
+        ).toHaveLength(1);
+    });
+
+    it('asks for the org APIs with an empty component list when nothing is selected', async () => {
+        // componentIds tells the handler which APIs are already covered. With no
+        // integrations in the project the answer is "none" — a placeholder id
+        // here would have the handler lock APIs against a component that does
+        // not exist.
+        renderModal({ initial: {} });
+        await click(/Import a repo/);
+        await click('Continue');
+        await change(
+            screen.getByPlaceholderText('https://github.com/owner/repo'),
+            'https://github.com/acme/widget'
+        );
+        await click('Continue');
+        await click('pick-project');
+        await click('Continue');
+        await click('pick-ws');
+        await click('Continue');
+        await waitFor(() => expect(screen.getByTestId('api-picker-stage')).toBeInTheDocument());
+
+        const calls = mockRequest.mock.calls.filter(([type]) => type === 'list-org-console-apis');
+        expect(calls.length).toBeGreaterThan(0);
+        for (const [, payload] of calls) {
+            expect(payload).toEqual({ componentIds: [] });
+        }
     });
 });
 

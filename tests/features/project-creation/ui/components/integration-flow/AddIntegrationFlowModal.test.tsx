@@ -45,6 +45,16 @@ const BLANK: AppBuilderComponentCatalogEntry = {
     source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
 };
 
+/** A SEED: scaffolding offered beside "Blank" on the Build-custom stage. */
+const SEED: AppBuilderComponentCatalogEntry = {
+    id: 'commerce-starter-kit',
+    name: 'Commerce Starter Kit',
+    description: 'Scaffolding for a Commerce-integrated custom app',
+    kind: 'integration',
+    seed: true,
+    source: { owner: 'adobe', repo: 'commerce-starter-kit', branch: 'main' },
+};
+
 /** The composed collision domain IntegrationsStep threads in (catalog + selections). */
 const RESERVED_IDS = new Set([
     'app-builder-shell',
@@ -261,6 +271,29 @@ describe('AddIntegrationFlowModal — build custom (optional-name model)', () =>
         );
         expect(onClose).toHaveBeenCalledTimes(1);
     });
+
+    it('offers SEEDS as starting points and keeps pre-built entries out of the row', async () => {
+        // The two rows are drawn from the same catalog by opposite predicates. A
+        // seed belongs here and nowhere else; a finished pre-built integration
+        // belongs in the gallery and must not be offered as a starting point.
+        renderModal({ initial: COMMITTED_DEST, catalog: [ERP, SEED] });
+        await walkToBlankStage();
+
+        expect(screen.getByText(SEED.name)).toBeInTheDocument();
+        expect(screen.queryByText(ERP.name)).not.toBeInTheDocument();
+    });
+
+    it('picks up a seed from a catalog that arrives after the stage is on screen', async () => {
+        // The catalog loads asynchronously, so it can land while the modal is
+        // already open. The derived rows have to follow it.
+        const { setCatalog } = renderModal({ initial: COMMITTED_DEST, catalog: [ERP] });
+        await walkToBlankStage();
+        expect(screen.queryByText(SEED.name)).not.toBeInTheDocument();
+
+        setCatalog([ERP, SEED]);
+
+        expect(screen.getByText(SEED.name)).toBeInTheDocument();
+    });
 });
 
 /**
@@ -297,6 +330,15 @@ describe('AddIntegrationFlowModal — only genuine pre-built entries reach the g
 
     it('counts a genuine authored integration', () => {
         renderModal({ catalog: [MESH_ENTRY, BLANK, ERP] });
+
+        expect(screen.getByRole('button', { name: /Pre-built/ })).not.toBeDisabled();
+    });
+
+    it('enables the Pre-built tile when a real integration arrives in a later catalog', () => {
+        const { setCatalog } = renderModal({ catalog: MIXED });
+        expect(screen.getByRole('button', { name: /Pre-built/ })).toBeDisabled();
+
+        setCatalog([MESH_ENTRY, BLANK, ERP]);
 
         expect(screen.getByRole('button', { name: /Pre-built/ })).not.toBeDisabled();
     });

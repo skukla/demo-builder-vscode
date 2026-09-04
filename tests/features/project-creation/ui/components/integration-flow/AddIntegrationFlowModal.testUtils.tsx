@@ -234,14 +234,19 @@ export function renderFlowModal(options: RenderOptions) {
     };
     const updateSpy = jest.fn();
     const meshComponent = 'meshComponent' in options ? options.meshComponent : MESH;
-    const makeElement = (isOpen: boolean): React.ReactElement => (
+    // The two props a spec can change AFTER mount, held here so a rerender keeps
+    // whichever one it is not changing. The catalog is genuinely late-arriving in
+    // production — it loads asynchronously and can land while the modal is open.
+    let openNow = options.isOpen ?? true;
+    let catalogNow = options.catalog ?? CATALOG;
+    const makeElement = (): React.ReactElement => (
         <Provider theme={defaultTheme} colorScheme="light">
             <Harness
-                isOpen={isOpen}
+                isOpen={openNow}
                 mode={options.mode ?? 'add'}
                 initial={options.initial}
                 meshComponent={meshComponent}
-                catalog={options.catalog ?? CATALOG}
+                catalog={catalogNow}
                 blankComponent={options.blankComponent}
                 reservedIds={options.reservedIds}
                 onClose={onClose}
@@ -250,13 +255,21 @@ export function renderFlowModal(options: RenderOptions) {
             />
         </Provider>
     );
-    const view = render(makeElement(options.isOpen ?? true));
+    const view = render(makeElement());
     return {
         onClose,
         builder,
         updateSpy,
         /** Rerender the tree (setOpen(true) doubles as a plain force-rerender). */
-        setOpen: (open: boolean) => view.rerender(makeElement(open)),
+        setOpen: (open: boolean) => {
+            openNow = open;
+            view.rerender(makeElement());
+        },
+        /** Hand the open modal a different catalog, as a late load would. */
+        setCatalog: (next: AppBuilderComponentCatalogEntry[]) => {
+            catalogNow = next;
+            view.rerender(makeElement());
+        },
     };
 }
 
