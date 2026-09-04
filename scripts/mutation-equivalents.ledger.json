@@ -3133,6 +3133,54 @@
             "decision": "Kept: a defaults file that cannot be read is worth a line, and the wizard deliberately opens anyway.",
             "recorded": "2026-09-04",
             "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/services/meshSetupService.ts",
+            "anchors": [
+                "const hasExistingMesh = Boolean(meshConfig?.meshId && meshConfig?.endpoint);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the optional chain on the SECOND operand (meshConfig?.endpoint -> meshConfig.endpoint) cannot throw: && only evaluates it when meshConfig?.meshId was truthy, which already proves meshConfig is not null or undefined. No caller can reach the second read with an absent config, so no test can distinguish the two forms.",
+            "decision": "none \u2014 the first operand's optional chain is killed by the undefined-config test; the second is unreachable with an absent config.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/services/meshSetupService.ts",
+            "anchors": [
+                "if (meshData) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard to true only changes WHICH statement throws inside the same try block. When extractAndParseJSON returns null the mutant reads meshId off it, the TypeError is caught by the enclosing catch, and the function returns the same empty object it returns when the guard is honoured. Both forms produce an identical result for every input.",
+            "decision": "none \u2014 the catch makes the guarded and unguarded paths observationally identical.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/services/meshSetupService.ts",
+            "anchors": [
+                "} catch (_describeError) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger.warn call, so emptying it changes nothing a caller can observe: the error is swallowed either way and the function still returns the same empty object. Killing this mutant would require asserting the warning's wording, which pins log text rather than behaviour and is banned here.",
+            "decision": "none \u2014 the only difference is whether a warning line prints.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/services/meshSetupService.ts",
+            "anchors": [
+                "while (attempt < MAX_MESH_ATTEMPTS) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The loop never exits through its own condition. Every iteration either returns on success or throws: the retry path continues only while waitForMeshDecision exists AND attempt is below the maximum, so the condition is only ever re-evaluated with attempt at 0, 1 or 2, where < and <= agree. Relaxing it to <= is unreachable.",
+            "decision": "none \u2014 the guard on the continue path bounds attempt before the loop condition is read again.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }

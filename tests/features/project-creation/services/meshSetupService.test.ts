@@ -148,6 +148,12 @@ describe('meshSetupService', () => {
             expect(result).toBe(false);
         });
 
+        it('should return false when the workspace reports a mesh id but no endpoint', () => {
+            // Both halves are required: an id alone does not describe a mesh the
+            // project can be pointed at.
+            expect(shouldConfigureExistingMesh({ meshId: 'test-mesh-id' }, undefined)).toBe(false);
+        });
+
         it('should return false when no existing mesh', () => {
             const result = shouldConfigureExistingMesh(undefined, undefined);
             expect(result).toBe(false);

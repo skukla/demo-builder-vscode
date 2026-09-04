@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-22 MUT-02: createProject — three new suites cover the config files it reads, the messages it wires, and the mode execute() puts it in (78 tests); dead instance counter removed; the 57 remaining survivors are debug-log payloads and outcomes that surface identically, all ledgered",
+    "_note": "MUT-03: meshSetupService retry loop, deploy-success bookkeeping and linkExistingMesh covered; 4 equivalents ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -9758,30 +9758,24 @@
             "openGaps": 0
         },
         "src/features/project-creation/services/meshSetupService.ts": {
-            "score": 25.89,
-            "killed": 57,
-            "survived": 88,
-            "noCoverage": 78,
-            "timeout": 1,
+            "score": 91.07,
+            "killed": 202,
+            "survived": 18,
+            "noCoverage": 2,
+            "timeout": 2,
             "survivorCategories": {
-                "branch": 44,
-                "optionalChain": 5,
-                "string": 12,
-                "other": 13,
-                "block": 4,
-                "logPresentation": 10
+                "block": 1,
+                "logPresentation": 14,
+                "optionalChain": 1,
+                "branch": 2
             },
             "uncoveredCategories": {
-                "block": 12,
-                "optionalChain": 3,
-                "branch": 34,
-                "string": 15,
-                "logPresentation": 6,
-                "other": 8
+                "logPresentation": 1,
+                "string": 1
             },
-            "highValueSurvivors": 48,
-            "equivalent": 0,
-            "openGaps": 123
+            "highValueSurvivors": 3,
+            "equivalent": 4,
+            "openGaps": 0
         },
         "src/features/project-creation/services/projectFinalizationService.ts": {
             "score": 57.14,

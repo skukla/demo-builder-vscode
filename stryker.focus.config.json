@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/commands/createProject.ts"
+        "src/features/project-creation/services/meshSetupService.ts"
     ],
     "reporters": [
         "clear-text",
