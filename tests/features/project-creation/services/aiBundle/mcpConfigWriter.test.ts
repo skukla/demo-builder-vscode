@@ -436,6 +436,28 @@ describe('writeMcpConfigs', () => {
 
         expect(fsPromises.appendFile as jest.Mock).not.toHaveBeenCalled();
     });
+
+    it('recognises an existing entry through CRLF line endings and padding', async () => {
+        // A .gitignore written on Windows, or hand-indented, still contains the
+        // entry. Comparing the raw split line would miss it and append a second
+        // copy of the whole block on every activation sweep.
+        const existingGitignore =
+            '  .mcp.json  \r\n\t.claude/mcp.json\r\n.claude/settings.json \r\n';
+        (fsPromises.readFile as jest.Mock).mockImplementation(async (p: string) => {
+            if (String(p).endsWith('.gitignore')) return existingGitignore;
+            throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+        });
+
+        await writeMcpConfigs(
+            '/projects/test',
+            makeEdsProject(),
+            EXTENSION_DIST,
+            makeTestWriter('/projects/test'),
+            NODE_PATH
+        );
+
+        expect(fsPromises.appendFile as jest.Mock).not.toHaveBeenCalled();
+    });
 });
 
 // ═════════════════════════════════════════════════════════════════════════════

@@ -5239,6 +5239,31 @@
             "decision": "keep \u2014 $ documents the intent; it constrains nothing a greedy tail has not already",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/mcpConfigWriter.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 113,
+            "mutants": 1,
+            "category": "block",
+            "reason": "readOrUndefined's catch body is a single 'return undefined'. Emptying the block makes control fall off the end of the function, which returns undefined as well \u2014 the two versions produce the identical value for the identical inputs, and the function has no other effect. There is no input, and no collaborator, that can tell them apart.",
+            "decision": "keep \u2014 the explicit return states the contract the fall-through would only imply",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/mcpConfigWriter.ts",
+            "anchors": [
+                "} catch (err) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch wraps the .gitignore append, which is documented non-fatal: the function returns normally whether the append succeeded or failed, and nothing downstream reads a result. Its body is one getLogger().warn. Emptying it leaves the same return, the same absent .gitignore entries and the same state on disk \u2014 only the warn stops printing, and asserting log wording is the padding the ratchet refuses.",
+            "decision": "keep \u2014 the warn is the only way an SC learns the entries are missing",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
