@@ -18,7 +18,7 @@
  *                   carried for symmetry with the error taxonomy.
  */
 
-import { getActiveOrgContext, withOrgContext, type OrgContextTarget } from './orgContextEnv';
+import { withOrgContext, type OrgContextTarget } from './orgContextEnv';
 
 /**
  * Minimal org shape: the fields needed to identify a target org and build an
@@ -97,9 +97,11 @@ export async function ensureOrgContext(
             orgCode: target.code,
             orgName: target.name,
         };
-        const probeResult = await withOrgContext(envTarget, () =>
-            probe(getActiveOrgContext() ?? envTarget),
-        );
+        // `envTarget` IS the active context inside this wrapper: withOrgContext
+        // stores the object it is given, so reading it back through
+        // getActiveOrgContext returned this same reference (a fallback for the
+        // absent case could never run and was removed).
+        const probeResult = await withOrgContext(envTarget, () => probe(envTarget));
         if (probeResult.forbidden) {
             return { status: 'access_revoked', targetOrg: target };
         }
