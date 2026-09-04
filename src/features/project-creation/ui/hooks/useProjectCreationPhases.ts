@@ -321,7 +321,9 @@ export function useProjectCreationPhases({
     }, [failedPhase, newToken, runCreate, runWorkspace, runEnable]);
 
     const reset = useCallback((): void => {
-        newToken().cancelled = true;
+        // newToken() cancels the in-flight run's own token; the fresh token it hands back
+        // is never given to anything, so nothing reads it before the next start()/retry().
+        newToken();
         runCtx.current = { name: '' };
         clearOutcome();
         setProjectName('');

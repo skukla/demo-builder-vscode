@@ -3,116 +3,27 @@
  *
  * When the user creates a NEW Adobe project from the mesh card, three phases run
  * in sequence behind ONE centered spinner: create-adobe-project → get-workspaces
- * (auto-pick Stage/single/first) → ensure-mesh-api-subscribed. The hook owns that
- * state machine (idle | creating | workspace | enabling | failed | done), commits
- * the same wizard-state writes the standalone field/picker components make, and
- * exposes the resolved EnsureResult so the flow commits the mesh only on a
- * successful enable, without a duplicate subscribe.
+ * (auto-pick Stage/single/first) → ensure-mesh-api-subscribed. This suite owns the
+ * FORWARD path: the state machine (idle | creating | workspace | enabling | done),
+ * the wizard-state writes each phase commits, and the skipEnabling short circuit.
  *
- * `webviewClient.request` is mocked with per-type deferreds so each phase's
- * message/payload/commit is observable mid-flight.
- *
+ * Retry, reset, cancellation and malformed responses live in the -recovery suite.
+ * Mocks, fixtures and the two flow drivers live in useProjectCreationPhases.testUtils.
  */
 
-import { renderHook, act } from '@testing-library/react';
-import type { WizardState } from '@/types/webview';
+import { act } from '@testing-library/react';
 
-const mockRequest = jest.fn();
-
-jest.mock('@/core/ui/utils/vscode-api', () => ({
-    webviewClient: {
-        request: (...args: unknown[]) => mockRequest(...args),
-    },
-}));
-
-import { useProjectCreationPhases } from '@/features/project-creation/ui/hooks/useProjectCreationPhases';
-
-/** A promise whose resolution we control (for phase-by-phase assertions). */
-function deferred<T = unknown>() {
-    let resolve!: (value: T) => void;
-    let reject!: (error: unknown) => void;
-    const promise = new Promise<T>((res, rej) => {
-        resolve = res;
-        reject = rej;
-    });
-    return { promise, resolve, reject };
-}
-
-type Deferred = ReturnType<typeof deferred>;
-
-/** Routes each request type to a fresh deferred; exposes the latest per type. */
-function routeDeferred() {
-    const byType = new Map<string, Deferred[]>();
-    mockRequest.mockImplementation((type: string) => {
-        const d = deferred();
-        const list = byType.get(type) ?? [];
-        list.push(d);
-        byType.set(type, list);
-        return d.promise;
-    });
-    return {
-        latest(type: string): Deferred {
-            const list = byType.get(type) ?? [];
-            return list[list.length - 1];
-        },
-        count(type: string): number {
-            return (byType.get(type) ?? []).length;
-        },
-    };
-}
-
-const CREATED_PROJECT = {
-    id: 'p-new',
-    name: 'my-demo',
-    title: 'My Demo',
-    description: 'a demo',
-    org_id: 'org-1',
-};
-
-const STAGE_WS = { id: 'w-stage', name: 'Stage', title: 'Stage' };
-const PROD_WS = { id: 'w-prod', name: 'Production', title: 'Production' };
-
-// 'eds-paas' resolves via the real stacks.json (same ids the card tests pin).
-const BASE_STATE = {
-    adobeAuth: { isAuthenticated: true, isChecking: false },
-    adobeOrg: { id: 'org-1', name: 'Acme', code: 'ACME' },
-    selectedStack: 'eds-paas',
-} as unknown as WizardState;
-
-function renderPhases(state: WizardState = BASE_STATE, options: { skipEnabling?: boolean } = {}) {
-    const updateState = jest.fn();
-    const rendered = renderHook(() => useProjectCreationPhases({ state, updateState, ...options }));
-    return { ...rendered, updateState };
-}
-
-/** Drives the flow up to (and including) a successful create resolution. */
-async function startAndCreate(
-    route: ReturnType<typeof routeDeferred>,
-    hook: ReturnType<typeof renderPhases>,
-    name = 'My Demo'
-) {
-    await act(async () => {
-        hook.result.current.start(name);
-    });
-    await act(async () => {
-        route.latest('create-adobe-project').resolve({
-            success: true,
-            data: CREATED_PROJECT,
-            projects: [CREATED_PROJECT],
-        });
-    });
-}
-
-/** Drives the flow through create + workspace pick (Stage among two). */
-async function startThroughWorkspace(
-    route: ReturnType<typeof routeDeferred>,
-    hook: ReturnType<typeof renderPhases>
-) {
-    await startAndCreate(route, hook);
-    await act(async () => {
-        route.latest('get-workspaces').resolve({ success: true, data: [PROD_WS, STAGE_WS] });
-    });
-}
+import {
+    mockRequest,
+    routeDeferred,
+    renderPhases,
+    startAndCreate,
+    startThroughWorkspace,
+    BASE_STATE,
+    CREATED_PROJECT,
+    PROD_WS,
+    STAGE_WS,
+} from './useProjectCreationPhases.testUtils';
 
 describe('useProjectCreationPhases', () => {
     beforeEach(() => {
@@ -124,6 +35,7 @@ describe('useProjectCreationPhases', () => {
 
         expect(result.current.phase).toBe('idle');
         expect(result.current.phaseMessage).toBeUndefined();
+        expect(result.current.phaseSubMessage).toBeUndefined();
         expect(result.current.error).toBeUndefined();
         expect(result.current.failedPhase).toBeUndefined();
         expect(result.current.enableResult).toBeUndefined();
@@ -322,7 +234,8 @@ describe('useProjectCreationPhases', () => {
 
             expect(hook.result.current.phase).toBe('failed');
             expect(hook.result.current.failedPhase).toBe('workspace');
-            expect(hook.result.current.error).toBeTruthy();
+            expect(hook.result.current.error).toBe('No workspaces found in the new project.');
+            expect(hook.updateState).toHaveBeenCalledTimes(1);
             expect(route.count('ensure-mesh-api-subscribed')).toBe(0);
         });
 
@@ -441,181 +354,6 @@ describe('useProjectCreationPhases', () => {
 
             expect(hook.result.current.phase).toBe('enabling');
             expect(route.count('ensure-mesh-api-subscribed')).toBe(1);
-        });
-    });
-
-    describe('retry', () => {
-        it('re-enters ONLY the enabling phase after an enable failure', async () => {
-            const route = routeDeferred();
-            const hook = renderPhases();
-
-            await startThroughWorkspace(route, hook);
-            await act(async () => {
-                route.latest('ensure-mesh-api-subscribed').resolve({
-                    success: false,
-                    error: 'nope',
-                });
-            });
-            expect(hook.result.current.failedPhase).toBe('enabling');
-
-            await act(async () => {
-                hook.result.current.retry();
-            });
-            expect(hook.result.current.phase).toBe('enabling');
-            await act(async () => {
-                route.latest('ensure-mesh-api-subscribed').resolve({ success: true });
-            });
-
-            expect(hook.result.current.phase).toBe('done');
-            expect(route.count('create-adobe-project')).toBe(1);
-            expect(route.count('get-workspaces')).toBe(1);
-            expect(route.count('ensure-mesh-api-subscribed')).toBe(2);
-        });
-
-        it('re-enters at the workspace phase after a workspace failure (no second create)', async () => {
-            const route = routeDeferred();
-            const hook = renderPhases();
-
-            await startAndCreate(route, hook);
-            await act(async () => {
-                route.latest('get-workspaces').resolve({ success: false, error: 'boom' });
-            });
-            expect(hook.result.current.failedPhase).toBe('workspace');
-
-            await act(async () => {
-                hook.result.current.retry();
-            });
-
-            expect(hook.result.current.phase).toBe('workspace');
-            expect(route.count('create-adobe-project')).toBe(1);
-            expect(route.count('get-workspaces')).toBe(2);
-            expect(mockRequest).toHaveBeenLastCalledWith('get-workspaces', {
-                orgId: 'org-1',
-                projectId: 'p-new',
-            });
-        });
-
-        it('re-runs the create with the remembered name after a create failure', async () => {
-            const route = routeDeferred();
-            const hook = renderPhases();
-
-            await act(async () => {
-                hook.result.current.start('My Demo');
-            });
-            await act(async () => {
-                route.latest('create-adobe-project').resolve({ success: false, error: 'oops' });
-            });
-            expect(hook.result.current.failedPhase).toBe('creating');
-
-            await act(async () => {
-                hook.result.current.retry();
-            });
-
-            expect(hook.result.current.phase).toBe('creating');
-            expect(hook.result.current.phaseMessage).toBe('Creating project "My Demo"…');
-            expect(route.count('create-adobe-project')).toBe(2);
-            expect(mockRequest).toHaveBeenLastCalledWith('create-adobe-project', {
-                name: 'My Demo',
-            });
-        });
-
-        it('is a no-op when nothing has failed', async () => {
-            routeDeferred();
-            const hook = renderPhases();
-
-            await act(async () => {
-                hook.result.current.retry();
-            });
-
-            expect(hook.result.current.phase).toBe('idle');
-            expect(mockRequest).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('cancellation + reset', () => {
-        it('ignores a stale create resolve after reset() (no commit, stays idle)', async () => {
-            const route = routeDeferred();
-            const hook = renderPhases();
-
-            await act(async () => {
-                hook.result.current.start('My Demo');
-            });
-            const pendingCreate = route.latest('create-adobe-project');
-            await act(async () => {
-                hook.result.current.reset();
-            });
-            await act(async () => {
-                pendingCreate.resolve({ success: true, data: CREATED_PROJECT });
-            });
-
-            expect(hook.result.current.phase).toBe('idle');
-            expect(hook.updateState).not.toHaveBeenCalled();
-            expect(route.count('get-workspaces')).toBe(0);
-        });
-
-        it('a second start() cancels the first run (stale first resolve is ignored)', async () => {
-            const route = routeDeferred();
-            const hook = renderPhases();
-
-            await act(async () => {
-                hook.result.current.start('First');
-            });
-            const firstCreate = route.latest('create-adobe-project');
-            await act(async () => {
-                hook.result.current.start('Second');
-            });
-
-            await act(async () => {
-                firstCreate.resolve({ success: false, error: 'stale failure' });
-            });
-
-            // The stale failure must not derail the second run.
-            expect(hook.result.current.phase).toBe('creating');
-            expect(hook.result.current.phaseMessage).toBe('Creating project "Second"…');
-            expect(hook.result.current.error).toBeUndefined();
-        });
-
-        it('reset() after done clears phase, error, and enableResult', async () => {
-            const route = routeDeferred();
-            const hook = renderPhases();
-
-            await startThroughWorkspace(route, hook);
-            await act(async () => {
-                route.latest('ensure-mesh-api-subscribed').resolve({ success: true });
-            });
-            expect(hook.result.current.phase).toBe('done');
-
-            await act(async () => {
-                hook.result.current.reset();
-            });
-
-            expect(hook.result.current.phase).toBe('idle');
-            expect(hook.result.current.enableResult).toBeUndefined();
-            expect(hook.result.current.error).toBeUndefined();
-            expect(hook.result.current.failedPhase).toBeUndefined();
-        });
-
-        it("start() clears a previous run's error and enableResult", async () => {
-            const route = routeDeferred();
-            const hook = renderPhases();
-
-            await startThroughWorkspace(route, hook);
-            await act(async () => {
-                route.latest('ensure-mesh-api-subscribed').resolve({
-                    success: false,
-                    error: 'nope',
-                });
-            });
-            expect(hook.result.current.enableResult).toBeDefined();
-
-            await act(async () => {
-                hook.result.current.start('Fresh');
-            });
-
-            expect(hook.result.current.phase).toBe('creating');
-            expect(hook.result.current.error).toBeUndefined();
-            expect(hook.result.current.enableResult).toBeUndefined();
-            expect(hook.result.current.failedPhase).toBeUndefined();
         });
     });
 });

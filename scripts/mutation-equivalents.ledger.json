@@ -4464,6 +4464,112 @@
             "decision": "none \u2014 the warning is the only trace an optional install leaving nothing behind can produce",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 171,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Every callback in this hook closes over refs and over other callbacks whose own dependency lists are empty, so no dependency in the chain ever changes identity. Emptying the list therefore memoises exactly the same function, and the Stryker replacement is a constant literal that is also equal on every render, so useCallback still returns a stable reference either way. Nothing a test can observe \u2014 identity, call count, or payload \u2014 differs.",
+            "decision": "none \u2014 newToken reads only refs, so its dependency list is empty in both the source and the mutant",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 177,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Every callback in this hook closes over refs and over other callbacks whose own dependency lists are empty, so no dependency in the chain ever changes identity. Emptying the list therefore memoises exactly the same function, and the Stryker replacement is a constant literal that is also equal on every render, so useCallback still returns a stable reference either way. Nothing a test can observe \u2014 identity, call count, or payload \u2014 differs.",
+            "decision": "none \u2014 fail calls only state setters, which React guarantees are stable",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 295,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Every callback in this hook closes over refs and over other callbacks whose own dependency lists are empty, so no dependency in the chain ever changes identity. Emptying the list therefore memoises exactly the same function, and the Stryker replacement is a constant literal that is also equal on every render, so useCallback still returns a stable reference either way. Nothing a test can observe \u2014 identity, call count, or payload \u2014 differs.",
+            "decision": "none \u2014 clearOutcome calls only state setters, which React guarantees are stable",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts",
+            "anchors": [
+                "[fail],",
+                "[fail, runEnable],",
+                "[fail, runWorkspace],",
+                "[newToken, clearOutcome, runCreate],",
+                "}, [newToken, clearOutcome]);"
+            ],
+            "mutants": 5,
+            "category": "other",
+            "reason": "Every callback in this hook closes over refs and over other callbacks whose own dependency lists are empty, so no dependency in the chain ever changes identity. Emptying the list therefore memoises exactly the same function, and the Stryker replacement is a constant literal that is also equal on every render, so useCallback still returns a stable reference either way. Nothing a test can observe \u2014 identity, call count, or payload \u2014 differs.",
+            "decision": "none \u2014 retry is the one callback whose list is load-bearing (it reads the failedPhase state), and its mutant is killed",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts",
+            "anchors": [
+                "const inputs = useRef({",
+                "const runCtx = useRef<{ name: string; project?: AdobeProject; workspace?: Workspace }>({"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "Both are useRef INITIAL values, and neither is ever read in the state it is created in. inputs.current is reassigned wholesale on the very next statement of the same render, before any callback can run. runCtx.current is written by start() before runCreate reads it, and retry() cannot run without a failedPhase, which only a started run can set. Emptying either object is invisible because nothing observes it between construction and overwrite.",
+            "decision": "none \u2014 the initial value is required by the useRef signature and the shapes double as the ref types",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts",
+            "anchors": [
+                "const token = { cancelled: false };"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant makes the fresh token {} instead of { cancelled: false }, so token.cancelled reads undefined rather than false. Every read of the flag is a truthiness test \u2014 if (token.cancelled) return; \u2014 in which undefined and false are indistinguishable, and the only write sets it to true. No sequence of start, retry, reset or a stale resolution can tell the two apart.",
+            "decision": "none \u2014 false is the honest literal for a flag the type declares as boolean",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts",
+            "anchors": [
+                "runCtx.current = { name: '' };"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "reset() clears the run context, and the mutant leaves name undefined instead of the empty string. The only reader is runCreate, which is reached from start() \u2014 which reassigns runCtx.current first \u2014 or from retry(), which returns immediately unless a failedPhase is set, and reset() clears that. So the value written here is overwritten before anything can read it.",
+            "decision": "none \u2014 the empty string matches the declared ref type, which does not admit undefined",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts",
+            "anchors": [
+                "projectId: project?.id,",
+                "workspaceId: workspace?.id,",
+                "{ orgId, projectId: runCtx.current.project?.id },"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "These chains guard entities that cannot be missing where they are read. runWorkspace runs only after runCreate committed a project, or from retry with failedPhase workspace, which implies the same. runEnable runs only after runWorkspace committed a workspace, or from retry with failedPhase enabling. reset() clears the context but also clears failedPhase, so retry is a no-op afterwards. Dropping the chain therefore never throws on any reachable state.",
+            "decision": "none \u2014 the fields are optional on the ref type, so the compiler requires the chain",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
