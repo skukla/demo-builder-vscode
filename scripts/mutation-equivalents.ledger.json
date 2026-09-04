@@ -4747,6 +4747,43 @@
             "decision": "none while playwright is the only thirdParty entry \u2014 a second one with a different requires makes this killable",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
+            "anchors": [
+                "}, [load]);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The effect fetches once per mount, and emptying its dependency list keeps that true: load is a useCallback inside useDataInstallerRequest keyed on the execute function useVSCodeRequest memoises, so it never changes identity for a given request type. A test could only tell the two apart by making load change identity, which would mean the hook had started re-fetching on every render \u2014 a defect that hook is what prevents.",
+            "decision": "none \u2014 the dependency is declared because exhaustive-deps requires it, not because it varies",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 79,
+            "mutants": 1,
+            "category": "other",
+            "reason": "openDataInstallerSettings posts a fixed message and closes over nothing at all. The Stryker replacement is a constant literal that compares equal on every render, so useCallback returns the same function either way, and the message it posts is identical. There is no render, click or payload a test could read that differs.",
+            "decision": "none \u2014 the empty list is what \"closes over nothing\" is spelled as",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/SampleDataStep.tsx",
+            "anchors": [
+                "updateState(version ? { datapack: { name: group.name, version } } : { datapack: undefined });"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "This arm runs only when versionShown returned the empty string, which needs pickDefaultVersion to return undefined with no browsed version recorded. pickDefaultVersion reads the first entry of the group version list, and groupDatapacks builds a group only from catalog rows, so every group it can produce carries at least one version. No catalog response reaches this arm, and a fixture that forced it would be asserting against a group shape the grouping function cannot emit.",
+            "decision": "none \u2014 the empty-version fallback guards a group the catalog cannot produce",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }

@@ -7,161 +7,29 @@
  * half-populated instance the wizard has no story for. So it writes the choice
  * to wizard state and the dashboard installs it later.
  *
- * **It shows the panel's own grid.** A pack is a demo — brand art, a version, a
- * count of what it carries — and the Data Installer already presents it that
- * way. A flat list of names asks the user to pick a demo they cannot see, so the
- * step reuses `DatapackCard` rather than growing a second, poorer catalog. What
- * it does not reuse is the flyout: opening detail needs `get-datapack-detail`
- * registered too, and the wizard keeps its handler surface at the one read it
- * needs. Here a card press CHOOSES.
- *
- * **The mock returns the ENVELOPE, and that is load-bearing.** A handler's reply
- * reaches the webview whole — `{success, data, error}` — because the
- * communication manager sends the entire `HandlerResponse` as the payload
- * (`webviewCommunicationManager.ts:383`). An earlier fixture here returned the
- * unwrapped page, so `data.items` read true in tests and `undefined` in the Dev
- * Host: the step rendered "None" and nothing else, every time, while eight green
- * tests said otherwise. Mocking the envelope makes the real unwrapping run.
+ * This suite covers the grid, the failure treatments, filtering, loading and
+ * copy. Choosing a pack and its version lives in the -choosing suite. The mock
+ * preamble, fixtures and helpers are shared through SampleDataStep.testUtils.
  */
 
-import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { screen, fireEvent, waitFor, within } from '@testing-library/react';
 
-const mockExecute = jest.fn();
-let mockState: { loading: boolean; error: Error | null; data: unknown } = {
-    loading: false,
-    error: null,
-    data: null,
-};
-
-jest.mock('@/core/ui/hooks/useVSCodeRequest', () => ({
-    useVSCodeRequest: (type: string) => {
-        mockTypes.push(type);
-        return { execute: mockExecute, reset: jest.fn(), ...mockState };
-    },
-}));
-
-const mockPostMessage = jest.fn();
-jest.mock('@/core/ui/utils/WebviewClient', () => ({
-    webviewClient: { postMessage: (...args: unknown[]) => mockPostMessage(...args) },
-}));
-
-/** A handler reply as it really arrives: the whole envelope, not the payload. */
-function envelope(data: unknown) {
-    return { loading: false, error: null, data: { success: true, data } };
-}
-
-/** In flight: no envelope yet, which is what the first render really sees. */
-function pending() {
-    return { loading: true, error: null, data: null };
-}
-
-/**
- * The very first frame: nothing loading, nothing loaded.
- *
- * `useVSCodeRequest` starts `loading` FALSE and the fetch is kicked off from a
- * useEffect, which React runs after the first paint. So this state is real and
- * every mount passes through it — `pending()` above is the frame AFTER.
- */
-function notYetAsked() {
-    return { loading: false, error: null, data: null };
-}
-
-/**
- * A guard refusal — `success:false` with a reason. It does NOT reject.
- *
- * The `code` is what the shared failure renderer branches on; matching the
- * MESSAGE instead would break the moment the copy is reworded.
- */
-function refusal(message: string, code?: string) {
-    return {
-        loading: false,
-        error: null,
-        data: { success: false, error: message, ...(code !== undefined ? { code } : {}) },
-    };
-}
-
-/** An unset `demoBuilder.dataInstaller.apiBaseUrl` — what every colleague has. */
-function notConfigured() {
-    return {
-        loading: false,
-        error: null,
-        data: {
-            success: false,
-            error: 'No Data Installer API URL is configured. Set demoBuilder.dataInstaller.apiBaseUrl.',
-            code: 'INVALID_OPERATION',
-        },
-    };
-}
-
-const mockTypes: string[] = [];
-
-// Below the mock on purpose — see webview-test-authoring §3.
-import { SampleDataStep } from '@/features/project-creation/ui/steps/SampleDataStep';
+import {
+    mockExecute,
+    mockPostMessage,
+    mockTypes,
+    pending,
+    notYetAsked,
+    refusal,
+    notConfigured,
+    renderStep,
+    cardFor,
+    setMockState,
+    resetDataInstallerMocks,
+} from './SampleDataStep.testUtils';
 import type { WizardState } from '@/types/webview';
 
-/** Two names, three rows — so the grouping is actually exercised. */
-const CATALOG = {
-    // The REAL DatapackSummary shape: identity is a nested `id: {name, version}`,
-    // not flat fields. A flat fixture looks right and crashes groupDatapacks.
-    items: [
-        {
-            id: { name: 'bodea', version: 'main' },
-            displayName: 'Bodea',
-            shared: true,
-            dataTypes: [],
-            art: {},
-        },
-        {
-            id: { name: 'bodea', version: 'hold' },
-            displayName: 'Bodea',
-            shared: true,
-            dataTypes: [],
-            art: {},
-        },
-        {
-            id: { name: 'citisignal_new', version: 'main' },
-            displayName: 'CitiSignal',
-            shared: true,
-            dataTypes: [],
-            art: {},
-        },
-    ],
-    total: 3,
-};
-
-function renderStep(state: Partial<WizardState> = {}) {
-    const updateState = jest.fn();
-    const view = render(
-        <SampleDataStep
-            state={state as WizardState}
-            updateState={updateState}
-            setCanProceed={jest.fn()}
-        />
-    );
-    return { ...view, updateState };
-}
-
-/** The card for one pack, found by the name it displays. */
-function cardFor(displayName: string): HTMLElement {
-    const card = screen
-        .getAllByTestId('datapack-card')
-        .find((candidate) => within(candidate).queryByText(displayName));
-    if (!card) {
-        throw new Error(`no datapack card for ${displayName}`);
-    }
-    return card;
-}
-
-beforeEach(() => {
-    jest.clearAllMocks();
-    // The real hook awaits `execute` and attaches `.catch` — a bare jest.fn()
-    // returns undefined and blows up inside it. The mock has to be shaped like
-    // the thing it stands in for.
-    mockExecute.mockResolvedValue(undefined);
-    mockTypes.length = 0;
-    mockState = envelope(CATALOG);
-});
+beforeEach(resetDataInstallerMocks);
 
 describe('SampleDataStep', () => {
     it('offers each datapack NAME once, not each version', async () => {
@@ -258,7 +126,7 @@ describe('SampleDataStep', () => {
 
     /** A catalog that cannot load must not block creating the project. */
     it('explains a failed catalog without offering a broken list', async () => {
-        mockState = refusal('The Data Installer service is unreachable.');
+        setMockState(refusal('The Data Installer service is unreachable.'));
         renderStep();
 
         await waitFor(() =>
@@ -277,7 +145,7 @@ describe('SampleDataStep', () => {
      */
     describe('when the Data Installer has never been configured', () => {
         it('names the setting that is missing', async () => {
-            mockState = notConfigured();
+            setMockState(notConfigured());
             renderStep();
 
             // findAllBy: the handler's own message names the key and the shared
@@ -288,7 +156,7 @@ describe('SampleDataStep', () => {
         });
 
         it('offers a button that opens the setting', async () => {
-            mockState = notConfigured();
+            setMockState(notConfigured());
             renderStep();
 
             const open = await screen.findByRole('button', { name: /open settings/i });
@@ -305,7 +173,7 @@ describe('SampleDataStep', () => {
          * been removed.
          */
         it('does not promise a dashboard route that this same condition hides', async () => {
-            mockState = notConfigured();
+            setMockState(notConfigured());
             renderStep();
 
             await screen.findAllByText(/demoBuilder\.dataInstaller\.apiBaseUrl/);
@@ -314,7 +182,7 @@ describe('SampleDataStep', () => {
 
         /** A reachability failure is not a settings problem — no false fix. */
         it('offers no settings button for a failure configuration cannot fix', async () => {
-            mockState = refusal('The Data Installer service is unreachable.');
+            setMockState(refusal('The Data Installer service is unreachable.'));
             renderStep();
 
             await waitFor(() => expect(screen.getByText(/unreachable/i)).toBeInTheDocument());
@@ -429,7 +297,7 @@ describe('SampleDataStep — filtering', () => {
  */
 describe('SampleDataStep — loading', () => {
     it('shows a spinner instead of the grid while the catalog loads', () => {
-        mockState = pending();
+        setMockState(pending());
         renderStep();
 
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
@@ -439,7 +307,7 @@ describe('SampleDataStep — loading', () => {
 
     /** The filter cannot act on a list that has not arrived. */
     it('withholds the filter until there is something to filter', () => {
-        mockState = pending();
+        setMockState(pending());
         renderStep();
 
         expect(
@@ -457,7 +325,7 @@ describe('SampleDataStep — loading', () => {
      * asks `!settled` now: has anything actually come back?
      */
     it('shows the spinner on the FIRST frame, before the fetch has even started', () => {
-        mockState = notYetAsked();
+        setMockState(notYetAsked());
         renderStep();
 
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
@@ -473,7 +341,7 @@ describe('SampleDataStep — loading', () => {
 
     /** A failure is not a permanent spinner. */
     it('shows the reason rather than spinning forever when the catalog fails', () => {
-        mockState = refusal('The Data Installer service is unreachable.');
+        setMockState(refusal('The Data Installer service is unreachable.'));
         renderStep();
 
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();

@@ -344,3 +344,5 @@ which point the cadence drops to release cuts.
 - 2026-09-04  test(project-creation): bring useProjectCreationPhases to zero open mutation gaps (`2fd87a894`)
 - 2026-09-04  chore(backlog): log PL-22 commits from batch MUT-01 (`a200c6da5`)
 - 2026-09-04  test(project-creation): bring useIntegrationFlow to zero open mutation gaps (`455f872fb`)
+- 2026-09-04  chore(mutation): halve measurement workers while the machine is in use (`dd572ebc2`)
+- 2026-09-04  test(project-creation): bring aiToolingGate to zero open mutation gaps (`48ecb690d`)
