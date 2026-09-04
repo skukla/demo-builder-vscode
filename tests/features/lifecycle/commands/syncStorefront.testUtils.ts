@@ -83,6 +83,18 @@ jest.mock('@/features/eds/services/github/githubTokenService', () => ({
 
 jest.mock('@/features/eds/services/helix/helixApiClient', () => ({
     previewAndPublishPage: jest.fn(),
+    // Same signature as the real class: `completePushAfterRebase` dispatches on
+    // `instanceof HelixApiError`, and without it in the mock that check THREW
+    // (right-hand side not callable) on the first test to reach it.
+    HelixApiError: class HelixApiError extends Error {
+        constructor(
+            message: string,
+            readonly status: number
+        ) {
+            super(message);
+            this.name = 'HelixApiError';
+        }
+    },
 }));
 
 // The DA.live IMS token comes from DaLiveAuthService (globalState-backed, with
@@ -102,13 +114,14 @@ import {
     PushRejectedError,
     syncAndPublish,
 } from '@/features/eds/services/storefront/storefrontSyncService';
+import { HelixApiError } from '@/features/eds/services/helix/helixApiClient';
 import { SyncStorefrontCommand } from '@/features/lifecycle/commands/syncStorefront';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 
 // Re-exported so specs never import the SUT directly (see the header note).
-export { PushRejectedError, SyncStorefrontCommand };
+export { HelixApiError, PushRejectedError, SyncStorefrontCommand };
 
 export const syncAndPublishMock = syncAndPublish as jest.Mock;
 export const execFileMock = childProcess.execFile as unknown as jest.Mock;
@@ -170,9 +183,19 @@ export function makeSyncTargetProject(): Project {
     });
 }
 
+/**
+ * One stable instance answering from a variable, because `getGitHubServices`
+ * CACHES the token service it builds: a fresh instance per call would only be
+ * seen by the first test to construct one, and every later `undefined` would
+ * silently keep answering the first test's token.
+ */
+let githubTokenAnswer: string | undefined;
+const githubTokenServiceInstance = {
+    getToken: jest.fn(async () => (githubTokenAnswer ? { token: githubTokenAnswer } : undefined)),
+};
 export function setGitHubTokenServiceReturns(token: string | undefined): void {
-    const instance = { getToken: jest.fn().mockResolvedValue(token ? { token } : undefined) };
-    (GitHubTokenService as unknown as jest.Mock).mockImplementation(() => instance);
+    githubTokenAnswer = token;
+    (GitHubTokenService as unknown as jest.Mock).mockImplementation(() => githubTokenServiceInstance);
 }
 
 /**
@@ -181,6 +204,10 @@ export function setGitHubTokenServiceReturns(token: string | undefined): void {
  */
 export function resetSyncStorefrontMocks(): void {
     jest.clearAllMocks();
+    // `clearAllMocks` leaves `mockResolvedValueOnce` queues in place, so a test
+    // whose flow stopped before consuming its second answer handed that answer
+    // to the NEXT test's first call — which then saw no push rejection at all.
+    syncAndPublishMock.mockReset();
     // The command takes its token service from `getGitHubServices` now, and that
     // builder assembles the repo operations too — which need a CommandExecutor.
     // Seeded here rather than mocked away: the builder genuinely needs one, and
@@ -198,3 +225,65 @@ export function resetSyncStorefrontMocks(): void {
     );
     setGitHubTokenServiceReturns('gh-token-from-service');
 }
+
+/** What one `execFile` call answers: a result, or an error carrying git's output. */
+export type GitAnswer =
+    | { stdout?: string; stderr?: string }
+    | { error: Error & { stdout?: string; stderr?: string } };
+
+/**
+ * Drive `execFile` from a table of git subcommands. Each key is a substring
+ * every argument list is searched for (`'pull --rebase'` matches the args
+ * joined by spaces); the first match answers. Anything unmatched succeeds with
+ * empty output. Returns the recorded argument lists so specs can assert the
+ * exact git invocations.
+ */
+export function answerGit(table: Record<string, GitAnswer | ((args: string[]) => GitAnswer)>): string[][] {
+    const seen: string[][] = [];
+    execFileMock.mockImplementation(
+        (
+            _cmd: string,
+            args: string[],
+            cb: (err: Error | null, result?: { stdout: string; stderr: string }) => void
+        ) => {
+            seen.push(args);
+            const joined = args.join(' ');
+            const key = Object.keys(table).find((k) => joined.includes(k));
+            const answer = key === undefined ? {} : table[key];
+            const resolved = typeof answer === 'function' ? answer(args) : answer;
+            if ('error' in resolved) {
+                cb(resolved.error);
+                return;
+            }
+            cb(null, { stdout: resolved.stdout ?? '', stderr: resolved.stderr ?? '' });
+        }
+    );
+    return seen;
+}
+
+/** A failed git call whose output git wrote to stderr and/or stdout. */
+export function gitFailure(output: { stderr?: string; stdout?: string }): GitAnswer {
+    const error = new Error('Command failed') as Error & { stdout?: string; stderr?: string };
+    if (output.stderr !== undefined) error.stderr = output.stderr;
+    if (output.stdout !== undefined) error.stdout = output.stdout;
+    return { error };
+}
+
+/** The non-fast-forward rejection that opens the rebase flow. */
+export function rejectPushOnce(): void {
+    syncAndPublishMock.mockRejectedValueOnce(
+        new PushRejectedError('push rejected', 'non-fast-forward')
+    );
+}
+
+/** The condition the conflict poll was handed, so a spec can drive it directly. */
+export function capturedPollCondition(): () => Promise<boolean> {
+    const { PollingService } = jest.requireMock('@/core/shell/pollingService') as {
+        PollingService: jest.Mock;
+    };
+    const instance = PollingService.mock.results[0]?.value as {
+        pollUntilCondition: jest.Mock;
+    };
+    return instance.pollUntilCondition.mock.calls[0][0] as () => Promise<boolean>;
+}
+

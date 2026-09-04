@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/lifecycle/services/projectResetService.ts"
+        "src/features/lifecycle/commands/syncStorefront.ts"
     ],
     "reporters": [
         "clear-text",

@@ -435,7 +435,8 @@ export class SyncStorefrontCommand extends BaseCommand {
 
         await vscode.commands.executeCommand('workbench.view.scm');
 
-        let conflicted: string[] = [];
+        // Assigned on both routes, so no initial value — one here was dead code.
+        let conflicted: string[];
         try {
             conflicted = await this.listConflictedFiles(storefrontPath);
         } catch {
@@ -482,7 +483,8 @@ export class SyncStorefrontCommand extends BaseCommand {
     }
 
     private async areAllConflictsResolved(storefrontPath: string): Promise<boolean> {
-        // When no files carry unresolved conflicts, the rebase can continue.
+        // When no files carry unresolved conflicts, the rebase can continue —
+        // an empty list falls straight through the loop to `true`.
         // Belt-and-braces: also scan the listed files for marker text in case
         // `git status` lags behind on-disk edits.
         let files: string[];
@@ -491,7 +493,6 @@ export class SyncStorefrontCommand extends BaseCommand {
         } catch {
             return false;
         }
-        if (files.length === 0) return true;
 
         for (const abs of files) {
             try {
@@ -514,10 +515,19 @@ export class SyncStorefrontCommand extends BaseCommand {
         }
     }
 
+    /**
+     * The storefront instance's metadata. `execute` has already returned when the
+     * instance or its path is missing, so the chains here never meet undefined in
+     * practice; the type of `Project` still requires them.
+     */
+    private storefrontMetadata(project: Project): Record<string, unknown> | undefined {
+        return project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
+    }
+
     private resolveGithubRepo(
         project: Project,
     ): { owner: string; site: string; branch?: string } | undefined {
-        const meta = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
+        const meta = this.storefrontMetadata(project);
         const githubRepo = typeof meta?.githubRepo === 'string' ? meta.githubRepo : undefined;
         if (!githubRepo || !githubRepo.includes('/')) return undefined;
         const [owner, site] = githubRepo.split('/');
@@ -564,7 +574,7 @@ export class SyncStorefrontCommand extends BaseCommand {
     }
 
     private deriveLiveUrl(project: Project): string | undefined {
-        const meta = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;
+        const meta = this.storefrontMetadata(project);
         return typeof meta?.liveUrl === 'string' ? meta.liveUrl : undefined;
     }
 }

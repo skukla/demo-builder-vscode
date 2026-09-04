@@ -1325,6 +1325,55 @@
             "decision": "none \u2014 the fallback text is the Debug Logs trace of a failed registration, which debug-log-triage reads",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-08, edsResetConfigStep focus run"
+        },
+        {
+            "module": "src/features/lifecycle/commands/syncStorefront.ts",
+            "anchors": [
+                "const conflictedRel = await this.listConflictedFilesRel(storefrontPath).catch(() => []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker fills the fallback array with a placeholder string. A non-empty fallback fails the every(isManagedStorefrontFile) test on the next line exactly as an empty one does, so both reach the manual prompt, and the prompt then re-lists the conflicts itself (revealStorefrontConflicts) rather than reading this value. The only fallback that would behave differently is one naming a MANAGED file, which the mutator cannot produce. The suite does pin the decision the line makes \u2014 a git failure while listing conflicts falls back to the prompt instead of throwing \u2014 which kills the sibling arrow-function mutant.",
+            "decision": "none \u2014 an empty fallback is the honest value when git cannot answer",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-08, syncStorefront focus run"
+        },
+        {
+            "module": "src/features/lifecycle/commands/syncStorefront.ts",
+            "anchors": [
+                "const branch = typeof meta?.edsBranch === 'string' ? meta.edsBranch : undefined;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "meta cannot be undefined on this line: the line before returns when githubRepo is not a string containing a slash, and githubRepo is read from meta, so reaching the branch read proves meta is an object. The suite pins every reachable branch outcome (string kept, non-string dropped, missing dropped).",
+            "decision": "none \u2014 the chain is required by the type and correct as written",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-08, syncStorefront focus run"
+        },
+        {
+            "module": "src/features/lifecycle/commands/syncStorefront.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 548,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch in readDaLiveToken holds only `return undefined;`, and a function that falls off the end of an empty catch also returns undefined, so the mutant is behaviourally identical. The explicit return cannot be deleted: tsconfig sets noImplicitReturns, which rejects a path that returns nothing when another path returns a value. The suite pins the outcome \u2014 a throwing auth service yields no DA.live token and the sync still runs.",
+            "decision": "none \u2014 the statement exists to satisfy noImplicitReturns",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-08, syncStorefront focus run"
+        },
+        {
+            "module": "src/features/lifecycle/commands/syncStorefront.ts",
+            "anchors": [
+                "return project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT]?.metadata;"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "storefrontMetadata is reached only from resolveGithubRepo and deriveLiveUrl, and both run after execute has returned on a project whose instances record, storefront instance or path is missing \u2014 so neither chain can meet undefined. The type of Project still requires them because the method takes a bare Project. Killing them would mean calling a private method with a project the public path can never hand it. The chain on metadata itself (in the callers) IS reachable and is killed by the no-metadata test.",
+            "decision": "none \u2014 the chains are required by the type and correct as written",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-08, syncStorefront focus run"
         }
     ]
 }
