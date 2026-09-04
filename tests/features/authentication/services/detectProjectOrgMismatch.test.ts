@@ -109,6 +109,26 @@ describe('detectProjectOrgMismatch', () => {
         expect(authManager.getCurrentOrganization).not.toHaveBeenCalled();
     });
 
+    // A token that reaches NO org is a mismatch the caller must see, not a check
+    // that could not run: the result is defined, not reachable, and names no
+    // current org rather than throwing on the empty list.
+    it('reports NOT reachable with no current org when the token reaches no org at all', async () => {
+        const authManager = { getOrganizations: jest.fn().mockResolvedValue([]) };
+
+        const result = await detectProjectOrgMismatch(
+            authManager,
+            makeProject('org-A'),
+            mockLogger()
+        );
+
+        expect(result).toEqual({
+            reachable: false,
+            expectedOrg: 'org-A',
+            currentOrgId: undefined,
+            currentOrg: undefined,
+        });
+    });
+
     it('returns undefined (non-fatal) when the org lookup throws', async () => {
         const logger = mockLogger();
         const authManager = {
