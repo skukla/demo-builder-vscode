@@ -22,10 +22,11 @@ const APP_ID_FALLBACK = 'app';
 
 /**
  * A legacy field is usable only when it is a plain object (manifests are
- * arbitrary user-editable JSON — a corrupt string/number/array must be
- * skipped, never turned into a fabricated entry; D3 Step 09).
+ * arbitrary user-editable JSON — a corrupt string/number/array/null must be
+ * skipped, never turned into a fabricated entry; D3 Step 09). The ONE gate:
+ * callers do not pre-check truthiness, so this predicate owns the null case.
  */
-function isUsableLegacyState(value: unknown): boolean {
+function isUsableLegacyState<T>(value: T): value is NonNullable<T> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
@@ -78,11 +79,11 @@ export function migrateLegacyToAppBuilderComponents(
 
     const appBuilderComponents: Record<string, AppBuilderComponentState> = {};
 
-    if (manifest.meshState && isUsableLegacyState(manifest.meshState)) {
+    if (isUsableLegacyState(manifest.meshState)) {
         appBuilderComponents[MESH_ID] = meshToAppBuilderComponent(manifest.meshState);
     }
 
-    if (manifest.appState && isUsableLegacyState(manifest.appState)) {
+    if (isUsableLegacyState(manifest.appState)) {
         const appId = manifest.appState.appId ?? APP_ID_FALLBACK;
         appBuilderComponents[appId] = appToAppBuilderComponent(manifest.appState);
     }

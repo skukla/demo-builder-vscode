@@ -26,6 +26,9 @@ describe('migrateLegacyToAppBuilderComponents', () => {
         expect(Object.keys(appBuilderComponents)).toEqual(['mesh']);
         expect(appBuilderComponents.mesh.kind).toBe('mesh');
         expect(appBuilderComponents.mesh.status).toBe('deployed');
+        // Legacy state never recorded where the mesh came from: an EMPTY
+        // source, not an absent one, so readers see a known "unknown".
+        expect(appBuilderComponents.mesh.source).toEqual({ owner: '', repo: '' });
         expect(appBuilderComponents.mesh.endpoint).toBe('https://mesh/graphql');
         expect(appBuilderComponents.mesh.sourceHash).toBe('abc123');
         expect(appBuilderComponents.mesh.lastDeployed).toBe('2026-06-20T00:00:00.000Z');
@@ -47,6 +50,7 @@ describe('migrateLegacyToAppBuilderComponents', () => {
 
         expect(Object.keys(appBuilderComponents)).toEqual(['erp']);
         expect(appBuilderComponents.erp.kind).toBe('integration');
+        expect(appBuilderComponents.erp.source).toEqual({ owner: '', repo: '' });
         expect(appBuilderComponents.erp.url).toBe('https://erp/api');
         expect(appBuilderComponents.erp.deployedUrls).toEqual({ ping: 'https://erp/ping' });
         expect(appBuilderComponents.erp.sourceHash).toBe('def456');
@@ -136,8 +140,10 @@ describe('migrateLegacyToAppBuilderComponents', () => {
 
         const appBuilderComponents = migrateLegacyToAppBuilderComponents(manifest);
 
-        expect(Object.keys(appBuilderComponents)).toHaveLength(1);
-        expect(Object.values(appBuilderComponents)[0].kind).toBe('integration');
+        // 'app' is the id every load of this manifest will produce — a stable
+        // key, so nothing keyed on it (state, picks) moves between loads.
+        expect(Object.keys(appBuilderComponents)).toEqual(['app']);
+        expect(appBuilderComponents.app.kind).toBe('integration');
     });
 
     // ADR-011 D3 Steps 07+09: once Step 07 stops persisting meshState, the
@@ -231,6 +237,14 @@ describe('migrateLegacyToAppBuilderComponents', () => {
 
             expect(Object.keys(appBuilderComponents)).toEqual(['mesh']);
             expect(appBuilderComponents.mesh.endpoint).toBe('https://mesh/graphql');
+        });
+
+        it('skips a JSON null in either legacy field — the shape a hand-edited manifest carries', () => {
+            // Parsed, not typed: `null` is what an SC clearing a field by hand
+            // leaves behind, and the types say it cannot happen.
+            const manifest: ProjectManifest = JSON.parse('{"meshState": null, "appState": null}');
+
+            expect(migrateLegacyToAppBuilderComponents(manifest)).toEqual({});
         });
 
         it('returns an empty map without throwing when BOTH legacy fields are malformed', () => {

@@ -29,6 +29,28 @@ import { basename, dirname, join } from 'path';
 const ROOT = join(__dirname, '..', '..');
 
 /**
+ * Every suite on disk that tests `modulePath`: the mirror directory under tests/,
+ * the same stem, and either separator this repo uses for a split family
+ * (`stateManager-projects`, `stateManager.disposal`). The SAME rule
+ * `scripts/focusModule.mjs` generates the focus config from — a suite in another
+ * directory with the same basename tests a different module of the same name.
+ */
+function siblingSuites(modulePath: string, onDisk: string[]): string[] {
+    const stem = basename(modulePath).replace(/\.tsx?$/, '');
+    const mirrorDir = join('tests', dirname(modulePath).replace(/^src\//, ''));
+    return onDisk.filter((t) => {
+        if (dirname(t) !== mirrorDir) return false;
+        const file = basename(t);
+        return (
+            file === `${stem}.test.ts` ||
+            file === `${stem}.test.tsx` ||
+            ((file.startsWith(`${stem}-`) || file.startsWith(`${stem}.`)) &&
+                /\.test\.tsx?$/.test(file))
+        );
+    });
+}
+
+/**
  * Every Stryker config in the repo, paired with the jest config it names.
  *
  * DISCOVERED, not listed. This was a hand-written array of two until 2026-09-02, and
@@ -128,16 +150,38 @@ describe('every mutated module has a test selected to cover it', () => {
 
         const gaps: string[] = [];
         for (const m of p.mutate) {
-            const subject = basename(m).replace(/\.tsx?$/, '');
-            // A suite belongs to a module when its filename before `.test.` matches the
-            // module, allowing the `-slice` split this repo uses for large families.
-            const siblings = onDisk.filter(
-                (t) => basename(t).split('.test.')[0].split('-')[0] === subject
+            const absent = siblingSuites(m, onDisk).filter(
+                (t) => !p.testFiles.some((sel) => sel.endsWith(t))
             );
-            const absent = siblings.filter((t) => !p.testFiles.some((sel) => sel.endsWith(t)));
             for (const a of absent) gaps.push(`${m}  <-  ${a}`);
         }
         expect(gaps).toEqual([]);
+    });
+
+    it('CONTROL: sibling suites are found by MIRROR PATH, not by basename alone', () => {
+        // Twelve basenames under src/ name two different modules
+        // (`appBuilderComponentMigration.ts` lives in core/state AND in
+        // features/app-builder/services). Matching on the name alone told the
+        // 2026-09-03 focus run that the feature module's suite belonged to the
+        // core one, and the only way to satisfy it would have been to wire a
+        // suite that never touches the mutated file.
+        const onDisk = [
+            'tests/core/state/appBuilderComponentMigration.test.ts',
+            'tests/features/app-builder/services/appBuilderComponentMigration.test.ts',
+            'tests/core/state/stateManager.test.ts',
+            'tests/core/state/stateManager-projects.test.ts',
+            'tests/core/state/stateManager.disposal.test.ts',
+            'tests/core/state/stateManagerFake.test.ts',
+        ];
+        expect(siblingSuites('src/core/state/appBuilderComponentMigration.ts', onDisk)).toEqual([
+            'tests/core/state/appBuilderComponentMigration.test.ts',
+        ]);
+        // Positive control: both split separators are siblings; a longer stem is not.
+        expect(siblingSuites('src/core/state/stateManager.ts', onDisk)).toEqual([
+            'tests/core/state/stateManager.test.ts',
+            'tests/core/state/stateManager-projects.test.ts',
+            'tests/core/state/stateManager.disposal.test.ts',
+        ]);
     });
 
     it('CONTROL: the every-suite check can actually fail', () => {

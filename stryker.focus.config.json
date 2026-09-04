@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/state/componentApiPicks.ts"
+        "src/core/state/appBuilderComponentMigration.ts"
     ],
     "reporters": [
         "clear-text",
