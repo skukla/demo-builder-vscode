@@ -43,7 +43,7 @@ const MESH_INSTANCE = {
         path: '/p/components/eds-accs-mesh',
         status: 'deployed',
     },
-} as unknown as Project['componentInstances'];
+} as unknown as NonNullable<Project['componentInstances']>;
 
 describe('reconcileComponentSelections — an installed mesh is a selected mesh', () => {
     it('adds an installed mesh missing from dependencies', () => {
@@ -72,6 +72,36 @@ describe('reconcileComponentSelections — an installed mesh is a selected mesh'
         reconcileComponentSelections(p);
 
         expect(p.componentSelections?.dependencies).toEqual(['some-other-dep', 'eds-accs-mesh']);
+    });
+
+    it('recognises a mesh by its subType even when the id is not a catalog mesh id', () => {
+        const p = project({
+            componentInstances: {
+                'custom-mesh': { ...MESH_INSTANCE['eds-accs-mesh'], id: 'custom-mesh' },
+            },
+        });
+
+        expect(reconcileComponentSelections(p)).toBe(true);
+        expect(p.componentSelections?.dependencies).toEqual(['custom-mesh']);
+    });
+
+    it('recognises a catalog mesh id on an older instance that carries no subType', () => {
+        const { subType: _omitted, ...withoutSubType } = MESH_INSTANCE['eds-accs-mesh'];
+        const p = project({ componentInstances: { 'eds-accs-mesh': withoutSubType } });
+
+        expect(reconcileComponentSelections(p)).toBe(true);
+        expect(p.componentSelections?.dependencies).toEqual(['eds-accs-mesh']);
+    });
+
+    it('keeps an existing appBuilder selection when only the mesh list changes', () => {
+        const p = project({
+            componentInstances: MESH_INSTANCE,
+            componentSelections: { appBuilder: ['order-sync'] },
+        });
+
+        expect(reconcileComponentSelections(p)).toBe(true);
+        expect(p.componentSelections?.appBuilder).toEqual(['order-sync']);
+        expect(p.componentSelections?.dependencies).toEqual(['eds-accs-mesh']);
     });
 
     it('does NOT remove a mesh selected but not yet installed', () => {
@@ -163,5 +193,19 @@ describe('reconcileComponentSelections — the live demo-builder-test shape', ()
         const p = project();
 
         expect(reconcileComponentSelections(p)).toBe(false);
+    });
+
+    it('tolerates null entries in both keyed maps, as a hand-edited manifest can carry', () => {
+        // Parsed from JSON, as the loader would: the types say these values are
+        // never null, and on-disk data does not read the types.
+        const p = project({
+            componentInstances: JSON.parse('{"eds-accs-mesh": null}'),
+            appBuilderComponents: JSON.parse('{"order-sync": null}'),
+        });
+
+        expect(reconcileComponentSelections(p)).toBe(true);
+        // The mesh is still known by its id; the null integration is not listed.
+        expect(p.componentSelections?.dependencies).toEqual(['eds-accs-mesh']);
+        expect(p.componentSelections?.appBuilder).toEqual([]);
     });
 });

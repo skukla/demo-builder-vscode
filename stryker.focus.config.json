@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/state/manifestValidation.ts"
+        "src/core/state/componentSelectionReconcile.ts"
     ],
     "reporters": [
         "clear-text",
