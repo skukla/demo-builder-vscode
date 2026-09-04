@@ -1204,6 +1204,18 @@
             "decision": "none \u2014 diagnostic wording; the only observer is the trace channel",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (stateManager, MUT-05)"
+        },
+        {
+            "module": "src/core/state/manifestFormatSweep.ts",
+            "anchors": [
+                "if (stamped !== null && stamped >= MANIFEST_FORMAT_VERSION) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker forces the null check true, so an unstamped manifest (stamped === null) reaches the comparison as `null >= MANIFEST_FORMAT_VERSION`. JavaScript coerces null to 0 there, and the format version is 2 and can only rise, so the comparison is false and the manifest migrates exactly as the guarded path migrates it. The check exists because strictNullChecks refuses a relational comparison on `number | null`; it is required by the type and has no outcome of its own while the version is above zero. The unstamped case IS tested (a legacy manifest is loaded and saved); what no test can see is which of the two conjuncts rejected it.",
+            "decision": "none \u2014 required by the type; the only version at which it would matter is 0, which the stamp never carries",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (manifestFormatSweep, MUT-05)"
         }
     ]
 }

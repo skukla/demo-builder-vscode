@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/state/appBuilderComponentState.ts"
+        "src/core/state/manifestFormatSweep.ts"
     ],
     "reporters": [
         "clear-text",

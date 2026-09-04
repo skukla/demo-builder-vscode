@@ -209,6 +209,106 @@ describe('sweepManifestFormat', () => {
     });
 });
 
+describe('sweepManifestFormat — the stamp read and the summary line', () => {
+    let tmpDir: string;
+
+    beforeEach(async () => {
+        tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'manifest-sweep-'));
+    });
+
+    afterEach(async () => {
+        await fs.rm(tmpDir, { recursive: true, force: true });
+    });
+
+    /** Deps whose loader and writer are spies, for manifests the real loader need not see. */
+    function spyDeps(projectPaths: string[]) {
+        const logLines: string[] = [];
+        const loadProject = jest.fn(async (): Promise<Project | null> => ({
+            name: 'stubbed',
+            path: projectPaths[0],
+            created: new Date(),
+            lastModified: new Date(),
+            status: 'stopped',
+        }));
+        const saveProject = jest.fn(async () => undefined);
+        return { projectPaths, loadProject, saveProject, log: (l: string) => logLines.push(l), logLines };
+    }
+
+    const summaryLines = (lines: string[]) =>
+        lines.filter((l) => l.startsWith('manifest format sweep:'));
+
+    it('says nothing when every manifest is already current', async () => {
+        const stamped = { ...legacyManifest('current'), formatVersion: MANIFEST_FORMAT_VERSION };
+        const deps = spyDeps([await writeProject(tmpDir, 'current', stamped)]);
+
+        await sweepManifestFormat(deps);
+
+        expect(summaryLines(deps.logLines)).toEqual([]);
+    });
+
+    it('summarises a run that migrated something, with the counts', async () => {
+        const deps = spyDeps([await writeProject(tmpDir, 'legacy', legacyManifest('legacy'))]);
+
+        await sweepManifestFormat(deps);
+
+        expect(summaryLines(deps.logLines)).toEqual([
+            `manifest format sweep: 1 migrated, 0 current, 0 failed of 1`,
+        ]);
+    });
+
+    it('summarises a run that only failed, with the counts', async () => {
+        const deps = spyDeps([await writeProject(tmpDir, 'legacy', legacyManifest('legacy'))]);
+        deps.loadProject.mockResolvedValue(null);
+
+        await sweepManifestFormat(deps);
+
+        expect(summaryLines(deps.logLines)).toEqual([
+            `manifest format sweep: 0 migrated, 0 current, 1 failed of 1`,
+        ]);
+    });
+
+    it.each([
+        ['JSON null', 'null'],
+        ['a JSON string', '"just a string"'],
+        ['a JSON number', '42'],
+    ])('counts a manifest that is %s as failed without asking the loader', async (_label, raw) => {
+        const projectPath = await writeProject(tmpDir, 'odd', {});
+        await fs.writeFile(path.join(projectPath, '.demo-builder.json'), raw);
+        const deps = spyDeps([projectPath]);
+
+        const result = await sweepManifestFormat(deps);
+
+        expect(result).toEqual({ scanned: 1, migrated: 0, alreadyCurrent: 0, failed: 1 });
+        expect(deps.loadProject).not.toHaveBeenCalled();
+        expect(deps.logLines).toContain(
+            `manifest format sweep failed for ${projectPath}: manifest is not an object`,
+        );
+    });
+
+    it('treats a formatVersion that is not a number as unstamped', async () => {
+        // A hand-edited "2" must not read as current: the string compares as a
+        // number and would skip the migration the stamp is there to force.
+        const stamped = { ...legacyManifest('stringy'), formatVersion: String(MANIFEST_FORMAT_VERSION) };
+        const deps = spyDeps([await writeProject(tmpDir, 'stringy', stamped)]);
+
+        const result = await sweepManifestFormat(deps);
+
+        expect(deps.loadProject).toHaveBeenCalledTimes(1);
+        expect(result.migrated).toBe(1);
+    });
+
+    it('migrates a manifest stamped BELOW the current version', async () => {
+        const old = { ...legacyManifest('old'), formatVersion: MANIFEST_FORMAT_VERSION - 1 };
+        const deps = spyDeps([await writeProject(tmpDir, 'old', old)]);
+
+        const result = await sweepManifestFormat(deps);
+
+        expect(deps.loadProject).toHaveBeenCalledTimes(1);
+        expect(deps.saveProject).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({ scanned: 1, migrated: 1, alreadyCurrent: 0, failed: 0 });
+    });
+});
+
 describe('activation chain sequencing (source pin)', () => {
     it('the sweep runs INSIDE the sequenced upkeep chain, after the other manifest-writers', () => {
         // The chain is sequential because every sweep saves whole manifests; a
