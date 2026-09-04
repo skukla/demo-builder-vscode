@@ -48,6 +48,13 @@ describe('withTiming', () => {
         expect(mockDebug).not.toHaveBeenCalled();
     });
 
+    it('does not log when the duration equals the benchmark exactly (slow means over, not at)', async () => {
+        await withTiming('isAuthenticated', async () => {
+            jest.advanceTimersByTime(3000); // Exactly the 3000ms benchmark
+        });
+        expect(mockDebug).not.toHaveBeenCalled();
+    });
+
     it('should log warning when operation exceeds threshold', async () => {
         await withTiming('isAuthenticated', async () => {
             jest.advanceTimersByTime(3500); // Exceeds 3000ms threshold
