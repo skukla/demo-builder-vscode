@@ -1911,6 +1911,32 @@
             "decision": "Kept: the optional chain states the local contract without depending on the caller's guard.",
             "recorded": "2026-09-04",
             "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/ui/steps/hooks/prerequisiteRenderers.tsx",
+            "anchors": [
+                "const match = versionInfo.trim().match(/^([\\d.]+)\\s*(?:\\((.+)\\))?$/);"
+            ],
+            "line": 79,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Making the trailing group required rather than optional changes which inputs match, but not what is rendered: an entry with no component in parentheses either matches with group 2 undefined (component becomes '') or fails to match and falls back to versionInfo.trim() \u2014 and for an entry with no parentheses those two are the same string, because line 79 and line 80 both trim. No input renders differently.",
+            "decision": "Kept: the group is optional because a component is optional.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/ui/steps/hooks/prerequisiteRenderers.tsx",
+            "anchors": [
+                "if (unifiedProgress.command?.type === 'determinate' && unifiedProgress.command?.percent != null) {"
+            ],
+            "line": 68,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The SECOND optional chain on this line is unreachable as an optional: it is evaluated only when the first one has already produced 'determinate', which means command was not null or undefined. Dropping it cannot throw for any input.",
+            "decision": "Kept: writing one operand with the chain and one without would read as a distinction that is not there.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
         }
     ]
 }

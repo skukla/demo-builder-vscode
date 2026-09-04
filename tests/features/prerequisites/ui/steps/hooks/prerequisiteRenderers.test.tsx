@@ -4,7 +4,7 @@ import {
     renderPrerequisiteMessage,
     shouldShowPluginDetails,
 } from '@/features/prerequisites/ui/steps/hooks/prerequisiteRenderers';
-import type { PrerequisiteCheck } from '@/types/webview';
+import { makeCheck } from './prerequisiteRenderers.testUtils';
 
 /**
  * Prerequisites UI - Renderer Tests
@@ -12,16 +12,6 @@ import type { PrerequisiteCheck } from '@/types/webview';
  * Regression tests for prerequisite message rendering,
  * especially edge cases around empty nodeVersionStatus arrays.
  */
-
-// Minimal check factory for testing
-function makeCheck(overrides: Partial<PrerequisiteCheck> = {}): PrerequisiteCheck {
-    return {
-        name: 'Adobe I/O CLI',
-        description: 'CLI for Adobe services',
-        status: 'success',
-        ...overrides,
-    };
-}
 
 describe('renderPrerequisiteMessage', () => {
     it('should render version items when nodeVersionStatus has entries', () => {
