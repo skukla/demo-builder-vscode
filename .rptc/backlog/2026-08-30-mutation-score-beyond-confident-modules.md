@@ -278,3 +278,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  docs(backlog): log the MUT-05 batch commits against PL-22 (`716adea80`)
 - 2026-09-03  feat(mutation): the instrument stops manufacturing ledger rows, and two more things can no longer enter tests (`4fe3b38ab`)
 - 2026-09-03  test(eds): bring edsResetUI to zero open mutation gaps (`099ba1fc7`)
+- 2026-09-03  test(eds): bring edsResetRepoHelper to zero open mutation gaps (`8477191db`)

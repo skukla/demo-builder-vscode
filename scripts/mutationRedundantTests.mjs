@@ -7,61 +7,106 @@
  * THE QUESTION. Mutation testing answers "would a test catch this defect". It does
  * not, by itself, answer the owner's follow-up (2026-09-03): "how do we know the
  * tests we have are NEEDED?" This reads the same report for the other direction —
- * per TEST, which mutants it killed — and reports the tests that killed nothing.
+ * per TEST, which mutants it killed and whether any other test killed them too.
  *
- * WHAT IT CAN AND CANNOT SAY, and why the distinction is in the output. Stryker
- * records `killedBy` per mutant. With the focused config's `perTest` coverage it
- * stops at the FIRST test that kills a mutant, so `killedBy` usually names one test
- * even when several would have caught it. That makes two very different claims:
- *
- *   killed nothing  — EXACT. No mutant in this run died in this test. Either it
- *                     asserts nothing the mutants can reach, or everything it
- *                     checks is also checked earlier by another test. Both are worth
- *                     a look; neither is proof of redundancy on its own.
- *   unique kills    — a LOWER BOUND on how much a test is worth, not a measure of
- *                     redundancy, for the bail reason above. Run Stryker with
- *                     `disableBail: true` for a report where every killing test is
- *                     recorded; then "kills nothing that another test does not also
- *                     kill" becomes an exact statement.
+ * WHAT IT CAN AND CANNOT SAY, and why the distinction is in the output. With the
+ * focused config's bail ON, Stryker stops at the FIRST test that kills a mutant, so
+ * `killedBy` names one test even when several would have caught it, and "killed
+ * nothing" mostly means "ran after the test that got the credit" — measured on
+ * edsResetUI: eight tests with real argument assertions all read as 0. With
+ * `disableBail: true` every killing test is recorded and "kills nothing that another
+ * test does not also kill" is exact. `scripts/mutationRedundancySweep.mjs` runs it
+ * that way over every finished module.
  */
-import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { existsSync, readFileSync, realpathSync } from 'fs';
 
-const REPORT = process.argv[2] ?? 'reports/mutation/focus.json';
-const report = JSON.parse(readFileSync(REPORT, 'utf8'));
-
-// Stryker names tests at the top level, keyed by id, grouped under the file that
-// declares them.
-const testName = new Map();
-for (const [file, entry] of Object.entries(report.testFiles ?? {})) {
-    for (const t of entry.tests ?? []) testName.set(t.id, `${file.split('/').slice(-2).join('/')} › ${t.name}`);
-}
-
-const kills = new Map([...testName.keys()].map((id) => [id, 0]));
-const covers = new Map([...testName.keys()].map((id) => [id, 0]));
-let mutants = 0;
-let bailed = 0;
-for (const file of Object.values(report.files)) {
-    for (const m of file.mutants) {
-        mutants += 1;
-        for (const id of m.coveredBy ?? []) covers.set(id, (covers.get(id) ?? 0) + 1);
-        for (const id of m.killedBy ?? []) kills.set(id, (kills.get(id) ?? 0) + 1);
-        if (m.status === 'Killed' && (m.killedBy?.length ?? 0) === 1 && (m.coveredBy?.length ?? 0) > 1) bailed += 1;
+/** Per-test kill accounting for one Stryker JSON report. */
+export function analyse(reportPath) {
+    const report = JSON.parse(readFileSync(reportPath, 'utf8'));
+    const testName = new Map();
+    for (const [file, entry] of Object.entries(report.testFiles ?? {})) {
+        for (const t of entry.tests ?? []) testName.set(t.id, `${file.split('/').slice(-2).join('/')} › ${t.name}`);
     }
+    const kills = new Map();
+    const covers = new Map();
+    const unique = new Map();
+    let mutants = 0;
+    let bailed = 0;
+    for (const file of Object.values(report.files)) {
+        for (const m of file.mutants) {
+            mutants += 1;
+            for (const id of m.coveredBy ?? []) covers.set(id, (covers.get(id) ?? 0) + 1);
+            for (const id of m.killedBy ?? []) kills.set(id, (kills.get(id) ?? 0) + 1);
+            if ((m.killedBy?.length ?? 0) === 1) unique.set(m.killedBy[0], (unique.get(m.killedBy[0]) ?? 0) + 1);
+            if (m.status === 'Killed' && (m.killedBy?.length ?? 0) === 1 && (m.coveredBy?.length ?? 0) > 1) bailed += 1;
+        }
+    }
+    const rows = [...testName.keys()].map((id) => ({
+        id,
+        name: testName.get(id),
+        kills: kills.get(id) ?? 0,
+        unique: unique.get(id) ?? 0,
+        covers: covers.get(id) ?? 0,
+    }));
+    // A MINIMAL COVER: the smallest set of tests (greedy) that still kills every mutant
+    // any test killed. Tests outside it are droppable TOGETHER — which "no unique
+    // kills" alone cannot say, because two tests can cover each other and removing
+    // both loses the kill. Greedy is not guaranteed optimal; it is honest about that.
+    const killedByTest = new Map([...testName.keys()].map((id) => [id, new Set()]));
+    for (const file of Object.values(report.files)) {
+        for (const m of file.mutants) for (const id of m.killedBy ?? []) killedByTest.get(id)?.add(m.id);
+    }
+    const uncovered = new Set([...killedByTest.values()].flatMap((s) => [...s]));
+    const cover = new Set();
+    while (uncovered.size) {
+        let best = null;
+        let bestGain = 0;
+        for (const [id, set] of killedByTest) {
+            if (cover.has(id)) continue;
+            const gain = [...set].filter((m) => uncovered.has(m)).length;
+            if (gain > bestGain) { best = id; bestGain = gain; }
+        }
+        if (!best) break;
+        cover.add(best);
+        for (const m of killedByTest.get(best)) uncovered.delete(m);
+    }
+    const droppable = [...testName.keys()].filter((id) => !cover.has(id) && (kills.get(id) ?? 0) > 0);
+
+    return {
+        mutants,
+        tests: rows.length,
+        cover: cover.size,
+        droppable: droppable.map((id) => testName.get(id)),
+        // Heuristic: with bail on, a killed mutant covered by several tests is credited
+        // to exactly one. With bail off that pattern still occurs for genuinely unique
+        // kills, so "bailOff" is only a strong hint; the sweep sets it explicitly.
+        bailed,
+        rows,
+        killedNothing: rows.filter((r) => r.kills === 0).sort((a, b) => b.covers - a.covers),
+        redundant: rows.filter((r) => r.kills > 0 && r.unique === 0).sort((a, b) => b.kills - a.kills),
+        pulling: rows.filter((r) => r.unique > 0).length,
+    };
 }
 
-const rows = [...testName.keys()].map((id) => ({ id, name: testName.get(id), kills: kills.get(id) ?? 0, covers: covers.get(id) ?? 0 }));
-const killedNothing = rows.filter((r) => r.kills === 0).sort((a, b) => b.covers - a.covers);
+function main() {
+    const reportPath = process.argv[2] ?? 'reports/mutation/focus.json';
+    const a = analyse(reportPath);
+    const bailOff = process.argv.includes('--bail-off');
+    console.log(`${reportPath}: ${a.mutants} mutants, ${a.tests} tests  (${bailOff ? 'bail OFF — redundancy is exact' : 'bail ON assumed — unique kills are a lower bound; pass --bail-off for a disableBail report'})\n`);
+    console.log(`Tests that killed NOTHING: ${a.killedNothing.length} of ${a.tests}`);
+    for (const r of a.killedNothing) console.log(`  covers ${String(r.covers).padStart(3)}, kills   0             ${r.name}`);
+    console.log();
+    console.log(`Tests whose every kill is ALSO made by another test${bailOff ? '' : ' (lower bound)'}: ${a.redundant.length} of ${a.tests}`);
+    for (const r of a.redundant) console.log(`  covers ${String(r.covers).padStart(3)}, kills ${String(r.kills).padStart(3)}, unique 0   ${r.name}`);
+    console.log();
+    console.log(`${a.pulling} of ${a.tests} tests make at least one kill nobody else makes.`);
+    console.log(`Minimal cover (greedy): ${a.cover} tests keep every kill. Droppable TOGETHER without losing a kill: ${a.droppable.length}`);
+    for (const n of a.droppable) console.log(`  - ${n}`);
+}
 
-console.log(`${REPORT}: ${mutants} mutants, ${rows.length} tests\n`);
-console.log(`Tests that killed NOTHING in this run: ${killedNothing.length} of ${rows.length}`);
-for (const r of killedNothing) {
-    console.log(`  covers ${String(r.covers).padStart(3)} mutants, kills 0   ${r.name}`);
-}
-console.log();
-if (bailed) {
-    console.log(
-        `${bailed} killed mutants were covered by several tests but credited to one (bail). ` +
-            `"Killed nothing" above is exact; redundancy is not measurable from this report — ` +
-            `re-run with \`disableBail: true\` for that.`
-    );
-}
+const isEntryPoint =
+    !!process.argv[1] &&
+    existsSync(process.argv[1]) &&
+    realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (isEntryPoint) main();
