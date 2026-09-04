@@ -5471,6 +5471,18 @@
             "decision": "none \u2014 spelling out both halves keeps ProjectView readable on its own, without depending on the caller's guard order",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/BuildYourProjectStep.tsx",
+            "anchors": [
+                "case 'commerce':"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The commerce case label sits immediately above default: with no statement between them, so both labels reach the same return. Renaming the label to anything else \u2014 the empty string included \u2014 changes only WHICH label matches; an area id of commerce then falls to default and is answered with the identical CommerceStep element, and the mutated label matches nothing that reaches this switch. No input can distinguish the two, because the case body it guards is the default body.",
+            "decision": "none \u2014 the label names commerce as the default area rather than leaving a bare default: for a reader to work out",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }

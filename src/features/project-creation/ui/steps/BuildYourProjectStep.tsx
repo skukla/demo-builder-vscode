@@ -91,6 +91,8 @@ export function BuildYourProjectStep({
     );
 
     // Active area: the persisted one if it's still visible, else the first visible.
+    // Never undefined: the commerce descriptor carries no visibility condition, so
+    // filterStepsForStack always keeps it and `areas` always has a first entry.
     const activeArea = areas.find((a) => a.id === state.activeBuildArea) ?? areas[0];
 
     // Continue gate over the CURRENT step. Areas — and, within a sub-stepped area,
@@ -101,11 +103,11 @@ export function BuildYourProjectStep({
     // completion (`status === 'completed'`, i.e. isIntegrationsComplete: optional
     // when nothing deployable is selected, blocked when a deployable lacks its
     // committed destination). Primitive boolean only (re-render-loop guard).
-    const activeAreaId = activeArea?.id;
+    const activeAreaId = activeArea.id;
     const driver = areaSubSteps(activeAreaId);
     const canLeaveArea = driver
         ? driver.isComplete(state, driver.active(state))
-        : activeArea?.status === 'completed';
+        : activeArea.status === 'completed';
     useCanProceedAll([canLeaveArea], setCanProceed);
 
     // Body props shared by every area. The active body gets a NO-OP setCanProceed
@@ -127,7 +129,7 @@ export function BuildYourProjectStep({
             maxWidth="none"
             leftPadding="0px"
             className="build-two-col"
-            leftContent={renderActiveArea(activeArea?.id, {
+            leftContent={renderActiveArea(activeArea.id, {
                 bodyProps,
                 packages,
                 stacks,

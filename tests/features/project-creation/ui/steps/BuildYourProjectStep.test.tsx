@@ -34,22 +34,39 @@ import type { WizardState } from '@/types/webview';
 
 const capturedSetCanProceed: Record<string, (v: boolean) => void> = {};
 
+/** Body props the shell FORWARDS; surfaced so the catalog defaults are observable. */
+interface StubBodyProps {
+    setCanProceed: (v: boolean) => void;
+    packages?: { id: string }[];
+    stacks?: { id: string }[];
+}
+
 jest.mock('@/features/project-creation/ui/steps/CommerceStep', () => ({
-    CommerceStep: (props: { setCanProceed: (v: boolean) => void }) => {
+    CommerceStep: (props: StubBodyProps) => {
         capturedSetCanProceed.commerce = props.setCanProceed;
-        return <div data-testid="commerce-body">Commerce body</div>;
+        return (
+            <div
+                data-testid="commerce-body"
+                data-packages={(props.packages ?? []).map((p) => p.id).join(',')}
+                data-stacks={(props.stacks ?? []).map((s) => s.id).join(',')}
+                data-package-count={String((props.packages ?? []).length)}
+                data-stack-count={String((props.stacks ?? []).length)}
+            >
+                Commerce body
+            </div>
+        );
     },
 }));
 
 jest.mock('@/features/project-creation/ui/steps/StorefrontStep', () => ({
-    StorefrontStep: (props: { setCanProceed: (v: boolean) => void }) => {
+    StorefrontStep: (props: StubBodyProps) => {
         capturedSetCanProceed.storefront = props.setCanProceed;
         return <div data-testid="storefront-body">Storefront body</div>;
     },
 }));
 
 jest.mock('@/features/project-creation/ui/steps/IntegrationsStep', () => ({
-    IntegrationsStep: (props: { setCanProceed: (v: boolean) => void }) => {
+    IntegrationsStep: (props: StubBodyProps) => {
         capturedSetCanProceed.integrations = props.setCanProceed;
         return <div data-testid="integrations-body">Integrations body</div>;
     },
@@ -148,6 +165,78 @@ describe('BuildYourProjectStep — active-area routing', () => {
         setup({ selectedStack: 'headless-paas', activeBuildArea: 'storefront' });
         expect(screen.getByTestId('commerce-body')).toBeInTheDocument();
         expect(screen.queryByTestId('storefront-body')).not.toBeInTheDocument();
+    });
+});
+
+describe('BuildYourProjectStep — catalog data reaching the body and the summary', () => {
+    // packages/stacks are optional props. Their defaults have to be EMPTY and stable:
+    // anything with entries in it resolves against undefined state fields (a catalog
+    // find on `p.id === state.selectedPackage` matches an id-less entry when nothing
+    // is selected), which invents a package and a stack the project does not have.
+    it('forwards empty catalogs to the body when neither prop is supplied', () => {
+        render(
+            <Provider theme={defaultTheme}>
+                <BuildYourProjectStep
+                    state={baseState()}
+                    updateState={jest.fn()}
+                    setCanProceed={jest.fn()}
+                />
+            </Provider>
+        );
+        const body = screen.getByTestId('commerce-body');
+        // COUNT, not ids: an entry with no `id` joins to the same empty string an
+        // empty array does, so only the length tells a real default from a stray one.
+        expect(body).toHaveAttribute('data-package-count', '0');
+        expect(body).toHaveAttribute('data-stack-count', '0');
+    });
+
+    it('forwards the supplied catalogs to the body unchanged', () => {
+        setup({ selectedStack: 'eds-paas' });
+        const body = screen.getByTestId('commerce-body');
+        expect(body).toHaveAttribute('data-packages', 'citisignal');
+        expect(body).toHaveAttribute('data-stacks', 'eds-paas,headless-paas');
+        expect(body).toHaveAttribute('data-package-count', '1');
+        expect(body).toHaveAttribute('data-stack-count', '2');
+    });
+
+    // The summary column carries one group per VISIBLE area, which is what makes it
+    // persist across area switches — it is keyed off the area ids, not off which body
+    // happens to be rendered.
+    it('renders a summary group for each visible area (EDS: commerce + storefront)', () => {
+        setup({ selectedStack: 'eds-paas' });
+        const summary = document.querySelector('.commerce-summary-content');
+        expect(summary?.textContent).toContain('Commerce');
+        expect(summary?.textContent).toContain('Storefront');
+    });
+
+    it('drops the storefront group on a non-EDS stack, where the area is hidden', () => {
+        setup({ selectedStack: 'headless-paas' });
+        const summary = document.querySelector('.commerce-summary-content');
+        expect(summary?.textContent).toContain('Commerce');
+        expect(summary?.textContent).not.toContain('Storefront');
+    });
+
+    // The visible areas are memoised on (state, stacks, packages). A stack change
+    // makes the storefront area appear, and the shell has to notice: the persisted
+    // activeBuildArea only resolves against the CURRENT area list.
+    it('recomputes the visible areas when the stack changes', () => {
+        const view = (selectedStack: string) => (
+            <Provider theme={defaultTheme}>
+                <BuildYourProjectStep
+                    state={baseState({ selectedStack, activeBuildArea: 'storefront' })}
+                    updateState={jest.fn()}
+                    setCanProceed={jest.fn()}
+                    stacks={STACKS}
+                    packages={PACKAGES}
+                />
+            </Provider>
+        );
+        const { rerender } = render(view('headless-paas'));
+        expect(screen.getByTestId('commerce-body')).toBeInTheDocument();
+
+        rerender(view('eds-paas'));
+        expect(screen.getByTestId('storefront-body')).toBeInTheDocument();
+        expect(screen.queryByTestId('commerce-body')).not.toBeInTheDocument();
     });
 });
 
