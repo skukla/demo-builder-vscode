@@ -5507,6 +5507,18 @@
             "decision": "none \u2014 the empty argument is what makes this the baseline rather than the union",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/aiBundleService.ts",
+            "anchors": [
+                "let skills: string[] = [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The initializer is unobservable. The skills step assigns skills unconditionally when it completes (skills = summary?.written ?? []), so the only run that leaves the initializer in place is one where writeSkillFiles threw \u2014 and that error is collected and rethrown, so generateAIContextFiles never returns a value for any caller to read. TypeScript requires the initializer because the assignment happens inside a closure, so the declaration cannot be narrowed to a definite assignment either.",
+            "decision": "none \u2014 required by the compiler, and no return path can observe it",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }

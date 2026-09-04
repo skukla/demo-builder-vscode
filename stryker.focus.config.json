@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/handlers/consoleApiHandlers.ts"
+        "src/features/project-creation/services/aiBundle/aiBundleService.ts"
     ],
     "reporters": [
         "clear-text",
