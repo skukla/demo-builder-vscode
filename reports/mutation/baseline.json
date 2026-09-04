@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "reviewPredicates: isolate each Adobe I/O guard; drop dead ?? [] fallback; absorb duplicate ReviewStep-predicates suite",
+    "_note": "flowStages: isolate the collapse guard's signed-in/committed halves, clamp to first and last canonical stage, pin cross-module constants; 4 equivalent mutants ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -9845,20 +9845,19 @@
             "openGaps": 0
         },
         "src/features/project-creation/ui/components/integration-flow/flowStages.ts": {
-            "score": 93.1,
-            "killed": 161,
-            "survived": 12,
+            "score": 97.7,
+            "killed": 169,
+            "survived": 4,
             "noCoverage": 0,
             "timeout": 1,
             "survivorCategories": {
-                "branch": 6,
-                "block": 1,
-                "string": 5
+                "branch": 3,
+                "block": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 7,
-            "equivalent": 0,
-            "openGaps": 7
+            "highValueSurvivors": 4,
+            "equivalent": 4,
+            "openGaps": 0
         },
         "src/features/project-creation/ui/components/integration-flow/instanceId.ts": {
             "score": 97.5,

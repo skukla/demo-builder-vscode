@@ -15,10 +15,13 @@ import {
     prevStage,
     canContinue,
     continueLabel,
+    BLANK_DEFAULT_LABEL,
+    RESERVED_EXISTING_KEY,
     type FlowDraft,
     type FlowStateSlice,
     type FlowMode,
     type FlowStageId,
+    type IntegrationKind,
 } from '@/features/project-creation/ui/components/integration-flow/flowStages';
 
 function draft(overrides: Partial<FlowDraft> = {}): FlowDraft {
@@ -223,6 +226,45 @@ describe('deriveStageOrder — add mode', () => {
             )
         ).toEqual(['kind', 'source-catalog', 'dest-signin', 'dest-project', 'dest-workspace']);
     });
+
+    // The two cases below isolate the destinationCommitted and isSignedIn halves of the
+    // collapse guard from the hasIntegrations half. The signed-out case above passes with
+    // NO integrations selected, so hasIntegrations is false there and it cannot tell
+    // "signed out blocks the collapse" apart from "nothing references the destination".
+    it('signed out, destination committed AND referenced → still walks sign-in first', () => {
+        expect(
+            deriveStageOrder(
+                draft({ kind: 'custom' }),
+                slice({
+                    isSignedIn: false,
+                    destinationCommitted: true,
+                    selectedIds: ['existing-integration'],
+                }),
+                ADD
+            )
+        ).toEqual([
+            'kind',
+            'source-custom',
+            'dest-signin',
+            'dest-project',
+            'dest-workspace',
+            'api-access',
+        ]);
+    });
+
+    it('signed in and referenced but destination NOT committed → walks the picker', () => {
+        expect(
+            deriveStageOrder(
+                draft({ kind: 'custom' }),
+                slice({
+                    isSignedIn: true,
+                    destinationCommitted: false,
+                    selectedIds: ['existing-integration'],
+                }),
+                ADD
+            )
+        ).toEqual(['kind', 'source-custom', 'dest-project', 'dest-workspace', 'api-access']);
+    });
 });
 
 describe('deriveStageOrder — api-edit mode', () => {
@@ -419,6 +461,22 @@ describe('prevStage', () => {
     it('vanished stage with no surviving predecessor → null (destination mode)', () => {
         expect(prevStage('dest-signin', draft(), slice(), DEST)).toBeNull();
     });
+
+    // The clamp has to reach the FIRST canonical stage, not stop one short of it: with
+    // the kind cleared mid-flow every source stage vanishes, so 'kind' itself is the
+    // nearest survivor and the walk back must find it.
+    it('vanished source stage with the kind cleared → clamps all the way back to kind', () => {
+        expect(prevStage('source-catalog', draft(), slice(), ADD)).toBe('kind');
+    });
+
+    // ...and it must not overshoot past the LAST canonical stage before the vanished one.
+    // Switching to a deterministic kind drops api-access; the survivor is dest-workspace,
+    // the stage immediately before it, not dest-project.
+    it('vanished api-access (kind switched to catalog) → clamps to dest-workspace', () => {
+        expect(prevStage('api-access', draft({ kind: 'catalog' }), slice(), ADD)).toBe(
+            'dest-workspace'
+        );
+    });
 });
 
 describe('canContinue', () => {
@@ -541,6 +599,90 @@ describe('continueLabel', () => {
         expect(continueLabel('kind', catalogOrder, ADD)).toBe('Continue');
         expect(continueLabel('dest-project', catalogOrder, ADD)).toBe('Continue');
         expect(continueLabel('dest-project', destOrder, DEST)).toBe('Continue');
+    });
+});
+
+describe('cross-module constants', () => {
+    // Both values leave this module. RESERVED_EXISTING_KEY is written into persisted
+    // `selectedConsoleApis` in edit mode and read back by the row resolver and the
+    // instance-id collision domain, so its exact text is the serialization contract —
+    // an empty key would collide with an unnamed instance id rather than fail loudly.
+    it('RESERVED_EXISTING_KEY is the persisted key edit-mode seeding writes', () => {
+        expect(RESERVED_EXISTING_KEY).toBe('__existing__');
+    });
+
+    // BLANK_DEFAULT_LABEL is what an unnamed Blank integration is displayed as; empty
+    // would render a nameless row rather than fall back to anything.
+    it('BLANK_DEFAULT_LABEL is the label an unnamed blank integration mints', () => {
+        expect(BLANK_DEFAULT_LABEL).toBe('Custom Integration');
+    });
+});
+
+// The clamp semantics in nextStage/prevStage rest on ONE property: a derived order is
+// always a subsequence of the canonical order, never a reshuffle of it. That is what
+// makes "the nearest surviving canonical predecessor" the same stage as "the previous
+// entry in this order", and it is the reason the fast paths in both walkers cannot be
+// told apart from their fallbacks (recorded in the mutation-equivalents ledger). If a
+// future deriver emits stages out of canonical sequence, this fails and those ledger
+// rows stop being true.
+describe('derived orders never leave canonical sequence', () => {
+    const CANONICAL: FlowStageId[] = [
+        'kind',
+        'source-catalog',
+        'source-blank',
+        'source-custom',
+        'dest-signin',
+        'dest-project',
+        'dest-workspace',
+        'api-access',
+    ];
+    const KINDS: (IntegrationKind | undefined)[] = [
+        undefined,
+        'mesh',
+        'catalog',
+        'blank',
+        'custom',
+    ];
+
+    it('every reachable draft/slice/mode yields a strictly ascending, non-empty order', () => {
+        const offenders: string[] = [];
+        let combinations = 0;
+
+        for (const kind of KINDS) {
+            for (const changingDestination of [true, false]) {
+                for (const isSignedIn of [true, false]) {
+                    for (const destinationCommitted of [true, false]) {
+                        for (const meshSelected of [true, false]) {
+                            for (const selectedIds of [[], ['existing-integration']]) {
+                                for (const mode of [ADD, DEST, API_EDIT]) {
+                                    combinations++;
+                                    const order = deriveStageOrder(
+                                        draft({ kind, changingDestination }),
+                                        slice({
+                                            isSignedIn,
+                                            destinationCommitted,
+                                            meshSelected,
+                                            selectedIds,
+                                        }),
+                                        mode
+                                    );
+                                    const ranks = order.map((s) => CANONICAL.indexOf(s));
+                                    const ascending = ranks.every(
+                                        (r, i) => r >= 0 && (i === 0 || r > ranks[i - 1])
+                                    );
+                                    if (!order.length || !ascending) {
+                                        offenders.push(`${mode}/${kind}: ${order.join(',')}`);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        expect(combinations).toBe(480);
+        expect(offenders).toEqual([]);
     });
 });
 

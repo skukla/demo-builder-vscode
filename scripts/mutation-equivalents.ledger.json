@@ -5434,6 +5434,31 @@
             "decision": "none \u2014 the differ check marks this as the positional MIGRATION, distinct from the retain path above it",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/flowStages.ts",
+            "anchors": [
+                "if (predecessor === null) return order[0];"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Neutralising this guard makes nextStage fall through with predecessor = null. order.indexOf(null) is -1, so after becomes 0, and 0 < order.length returns order[0] \u2014 the exact value the guard returns. The two agree for every input where order is non-empty, and deriveStageOrder never returns an empty order: api-edit yields ['api-access'], destination yields two or three destination stages, and add always begins with 'kind'. Enumerated all 3840 reachable (current, kind, changingDestination, isSignedIn, destinationCommitted, meshSelected, selectedIds, mode) combinations against a copy of nextStage with the guard removed \u2014 zero disagreements.",
+            "decision": "none \u2014 the guard is the readable form of a fallthrough that already computes the same answer",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/flowStages.ts",
+            "anchors": [
+                "if (index >= 0) {"
+            ],
+            "line": 200,
+            "mutants": 3,
+            "category": "block",
+            "reason": "Three mutants sit on prevStage's in-order fast path \u2014 tighten the guard to index > 0, force it false, or empty its block \u2014 and none of them is observable, because the fast path is an O(1) restatement of the fallback below it. Falling through runs survivingPredecessor(current, order), which for a current at index k > 0 returns the nearest canonical stage present in order; that IS order[k-1], because a derived order is always a subsequence of the canonical order and never a reshuffle of it. For k === 0 it finds nothing canonically earlier and returns null, which is what the ternary returns too. Enumerated all 3840 reachable (current, kind, changingDestination, isSignedIn, destinationCommitted, meshSelected, selectedIds, mode) combinations against copies of prevStage carrying each mutation: zero disagreements. The subsequence property the argument rests on is pinned by 'derived orders never leave canonical sequence' in flowStages.test.ts, so if a future deriver breaks it this row stops being true and that test says so.",
+            "decision": "none \u2014 the index path is kept because it names the common case; the clamp is its general form",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }
