@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/state/apiRowState.ts"
+        "src/core/state/projectDirectoryScanner.ts"
     ],
     "reporters": [
         "clear-text",
