@@ -7,18 +7,7 @@
 
 import { areaSubSteps } from '@/features/project-creation/ui/steps/areaSubSteps';
 import type { WizardState } from '@/types/webview';
-
-const state = (partial: Partial<WizardState>): WizardState => partial as WizardState;
-
-const CONFIGURED_STOREFRONT = {
-    storefrontRepoValid: true,
-    storefrontCodeSyncValid: true,
-    edsConfig: {
-        repoName: 'my-repo',
-        githubAuth: { isAuthenticated: true },
-        daLiveAuth: { isAuthenticated: true },
-    },
-} as unknown as WizardState;
+import { CONFIGURED_STOREFRONT, state } from './areaSubSteps.testUtils';
 
 describe('areaSubSteps registry', () => {
     it('returns a driver for commerce and storefront, null otherwise', () => {

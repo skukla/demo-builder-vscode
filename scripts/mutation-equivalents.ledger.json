@@ -3856,6 +3856,68 @@
             "decision": "none \u2014 the element only renders when rows[0] exists",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/areaSubSteps.ts",
+            "anchors": [
+                "const current = steps.find((s) => s.status === 'current');"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "A sub-step marked 'current' is by definition neither 'done' nor 'locked', so it is always ALSO openable \u2014 the two lookups can only disagree when an openable sub-step sits BEFORE the current one. Neither real driver can produce that list: Commerce marks 'current' only on 'backend' (first in the list, so nothing precedes it) or on 'signin', where 'backend' is already 'done' and therefore not openable; Storefront's chain is done -> current -> locked, so everything before a 'current' is done. The 'current' lookup states the intent \u2014 open the step the SC is on \u2014 and the openable lookup is the fallback for when there is none.",
+            "decision": "none \u2014 no reachable sub-step list puts an openable step before the current one",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/areaSubSteps.ts",
+            "anchors": [
+                "if (current) return current.id;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "A sub-step marked 'current' is by definition neither 'done' nor 'locked', so it is always ALSO openable \u2014 the two lookups can only disagree when an openable sub-step sits BEFORE the current one. Neither real driver can produce that list: Commerce marks 'current' only on 'backend' (first in the list, so nothing precedes it) or on 'signin', where 'backend' is already 'done' and therefore not openable; Storefront's chain is done -> current -> locked, so everything before a 'current' is done. The 'current' lookup states the intent \u2014 open the step the SC is on \u2014 and the openable lookup is the fallback for when there is none.",
+            "decision": "none \u2014 no reachable sub-step list puts an openable step before the current one",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/areaSubSteps.ts",
+            "anchors": [
+                "const openable = steps.find((s) => s.status !== 'done' && s.status !== 'locked');"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The surviving mutant forces the 'locked' half of the predicate true, so the search returns the first NOT-DONE sub-step even when it is locked. That differs only for a list where a locked sub-step precedes the first workable one AND nothing is 'current'. Neither driver builds one: Commerce locks business-structure and catalog only while connection is not done, and connection is then 'upcoming' \u2014 workable, and earlier in the list; when the ACCS gate locks them, 'signin' is 'current' and this lookup is never reached. Storefront's statuses run done -> current -> locked in order.",
+            "decision": "none \u2014 no reachable list has a locked sub-step before the first workable one",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/areaSubSteps.ts",
+            "anchors": [
+                "const id = atEnd ? steps[steps.length - 1]?.id : firstOpen(steps);"
+            ],
+            "line": 119,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the optional index would throw only for an EMPTY sub-step list. This driver's list is built by its section function, which always pushes a fixed set \u2014 Commerce pushes five sections unconditionally (six for ACCS) and Storefront four \u2014 so the list is never empty and the last element always exists. The '?.' is defence at an index expression the compiler cannot prove non-empty, not a case this driver can reach.",
+            "decision": "none \u2014 the section list is never empty",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/areaSubSteps.ts",
+            "anchors": [
+                "const id = atEnd ? steps[steps.length - 1]?.id : firstOpen(steps);"
+            ],
+            "line": 172,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the optional index would throw only for an EMPTY sub-step list. This driver's list is built by its section function, which always pushes a fixed set \u2014 Commerce pushes five sections unconditionally (six for ACCS) and Storefront four \u2014 so the list is never empty and the last element always exists. The '?.' is defence at an index expression the compiler cannot prove non-empty, not a case this driver can reach.",
+            "decision": "none \u2014 the section list is never empty",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
         }
     ]
 }
