@@ -80,3 +80,15 @@ reset, lifecycle, prerequisites, project creation, then everything else — and 
 an area by open gaps, then writes batches of five as goal files. Re-run it after a
 night and it produces the next night's queue from what actually stuck. The order is a
 rule in the script, not a list; the plan's step 6 is why.
+
+## Running queues back to back (`runs.sh`)
+
+`run.sh` works one queue. `runs.sh` regenerates the mutation queue from
+`reports/mutation/baseline.json` (`mutationQueue.mjs --limit 40`), runs it, and
+repeats until no module has open gaps — or until you `touch
+.rptc/handoff/STOP-RUNS`, which lets the current run finish and then stops. It
+also stops on a run that produced no commits (an exhausted balance would otherwise
+regenerate the same queue forever) and on a queue size it could not read. It logs
+every boundary to `.rptc/handoff/runs.log`, and runs the redundancy sweep once, at
+the end. Started 2026-09-04 at the owner's request: "move straight into run three
+and so on until I stop you or you run out of runs".
