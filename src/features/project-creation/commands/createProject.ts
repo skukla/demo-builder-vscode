@@ -54,10 +54,6 @@ function formatComponentDefaults(defaults: ComponentSelection | null): string {
 }
 
 export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitialData> {
-    // Debug: Instance tracking for diagnosing retry/state issues
-    private static instanceCounter = 0;
-    private readonly _instanceId: number;
-
     // The prerequisites, auth, error-logging and progress managers are NOT held
     // here: createPanelHandlerContext builds them, and the session's shared
     // instances are the point — a second PrerequisitesManager starts with an
@@ -86,9 +82,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand<WizardInitia
         logger: import('@/types/logger').Logger,
     ) {
         super(context, stateManager, logger);
-
-        // Track instance for debugging
-        this._instanceId = ++CreateProjectWebviewCommand.instanceCounter;
 
         // Store templates path for lazy initialization
         this.templatesPath = path.join(

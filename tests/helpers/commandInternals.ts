@@ -51,6 +51,14 @@ export interface CommandInternals {
 
     // Per-command state and helpers these suites drive
     editProject: unknown;
+    importedSettings: unknown;
+    sharedState: Record<string, unknown>;
+    disposables: { add(disposable: unknown): void };
+    initializeMessageHandlers(comm: unknown): void;
+    ensureStepLogger(): Promise<unknown>;
+    shouldReopenWelcomeOnDispose(): boolean;
+    _getEndpoint(meshId: string, cachedEndpoint?: string): Promise<string>;
+    _formatGroupName(group: string): string;
     refreshProjectsList: jest.Mock;
     refreshConfig: jest.Mock;
     registerProgrammaticWrites: jest.Mock;

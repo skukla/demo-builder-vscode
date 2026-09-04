@@ -2782,6 +2782,357 @@
             "decision": "Kept: the caller decides whether the card belongs on the grid, which is a layout question the component cannot answer.",
             "recorded": "2026-09-04",
             "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "if (typeof value !== 'object' || value === null) return false;"
+            ],
+            "line": 36,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Relaxing this first guard does not let a bad step through \u2014 it makes the next line run 'id' in value against a string, a number or null, which throws a TypeError. readWizardStepsFile catches that and returns 'unreadable', and getInitialData answers 'unreadable' with the same null wizardSteps it answers 'invalid-shape' with. Every mutant here therefore lands on the identical response; only which error line is logged differs.",
+            "decision": "Kept: the guard is what makes the rejection a clean false rather than a thrown error the caller has to interpret.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "function formatComponentDefaults(defaults: ComponentSelection | null): string {"
+            ],
+            "line": 48,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This whole function exists to build one string, and it has exactly one call site: a template literal inside this.logger.debug in getInitialData. Emptying its body changes what that debug line prints and nothing else \u2014 componentDefaults reaches the webview from the parsed file, never from this formatter. Killing it would mean asserting a log string.",
+            "decision": "Kept: the summary line is what makes a defaults-loading problem readable in the log.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "if (!defaults) return 'no defaults loaded';"
+            ],
+            "line": 49,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the not-loaded case changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
+            "decision": "Kept: the log line is only useful if it says which parts were present.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "const frontend = defaults.frontend || 'none';"
+            ],
+            "line": 50,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the frontend fallback changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
+            "decision": "Kept: the log line is only useful if it says which parts were present.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "const backend = defaults.backend || 'none';"
+            ],
+            "line": 51,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the backend fallback changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
+            "decision": "Kept: the log line is only useful if it says which parts were present.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "const depCount = defaults.dependencies?.length || 0;"
+            ],
+            "line": 52,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Part of formatComponentDefaults, whose only consumer is a template literal inside this.logger.debug. Every mutant on the dependency count changes a substring of that one debug line; the componentDefaults value the webview actually receives is read from defaults.json and passed through untouched, so no returned field, message payload or collaborator call differs.",
+            "decision": "Kept: the log line is only useful if it says which parts were present.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 126,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The constructor's api-services catch body is a single this.logger.debug. Emptying it still swallows the failure, still leaves sharedState.apiServicesConfig undefined, and still lets the wizard open \u2014 a test asserting exactly that already passes with and without the log. The only difference is whether the reason appears in the debug channel.",
+            "decision": "Kept: a missing api-services.json is invisible otherwise, and the wizard deliberately continues without it.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "return { outcome: 'absent' };"
+            ],
+            "line": 155,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying this result object leaves outcome undefined. Both callers discriminate on it: getInitialData matches 'ok', 'invalid-shape' and 'unreadable', and ensureStepLogger matches 'ok' and 'unreadable'. An undefined outcome matches none of them, which is exactly what 'absent' already does \u2014 no steps, no error logged. The two are indistinguishable from outside.",
+            "decision": "Kept: the union names every way the read can end, and a nameless one would be a hole in it.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "if (!stepsConfig || !Array.isArray(stepsConfig.steps)) {"
+            ],
+            "line": 158,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Relaxing this guard does not admit a malformed file \u2014 it makes the next line call .every on null or on a string, which throws, so the read returns 'unreadable' instead of 'unparseable'. getInitialData answers both with wizardSteps null, and ensureStepLogger passes undefined steps for both. Only the logged wording separates them.",
+            "decision": "Kept: 'this file does not have a steps array' is a different fact from 'this file could not be read', and the union says so.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "return { outcome: 'unparseable' };"
+            ],
+            "line": 159,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same as the absent result above: an empty object leaves outcome undefined, which matches none of the branches either caller tests, producing the identical no-steps-and-no-error response that 'unparseable' already produces.",
+            "decision": "Kept: the union names every way the read can end.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "return { outcome: 'unreadable', error: error as Error };"
+            ],
+            "line": 166,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying this leaves outcome undefined, so getInitialData skips its error log and ensureStepLogger skips its debug \u2014 but wizardSteps is null either way and StepLogger still gets undefined steps. The error field it drops is only ever passed to a logger call, so nothing observable moves.",
+            "decision": "Kept: the caller that shouts about a broken config needs the underlying error to shout with.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "if (read.outcome === 'ok') {"
+            ],
+            "line": 190,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this true assigns read.steps unconditionally \u2014 and on every non-ok outcome that property does not exist, so wizardSteps becomes undefined, which is precisely the value the untaken branch leaves it at. StepLogger.create therefore receives undefined for a failed read either way, which the suite already asserts.",
+            "decision": "Kept: reading steps off a result that has none is what the discriminated union exists to prevent.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "} else if (read.outcome === 'unreadable') {"
+            ],
+            "line": 192,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The body of this branch is one this.logger.debug and nothing else; the step logger is built below it with whatever wizardSteps holds, which this branch never assigns. Forcing the condition either way, inverting the equality or emptying the block all change only whether a line prints.",
+            "decision": "Kept: a step logger silently falling back to default names is worth one debug line.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "if (defaults) {"
+            ],
+            "line": 265,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this true reads .componentSelection off the null that parseJSON returns for an unreadable file, which throws inside the surrounding try and lands in the catch \u2014 leaving componentDefaults at its initial null, which is exactly what the untaken branch leaves it at. The suite's malformed-defaults test passes under both.",
+            "decision": "Kept: reading a field off a parse result before checking it succeeded is the bug this guard prevents.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "const stepPreview = wizardSteps"
+            ],
+            "line": 286,
+            "mutants": 1,
+            "category": "other",
+            "reason": "stepPreview is built solely to be interpolated into the this.logger.debug two lines below; wizardSteps itself is already assigned and is what reaches the webview. Dropping the slice changes how many ids appear in that one log line and nothing a caller can observe.",
+            "decision": "Kept: the preview is capped so a long step list does not fill the log.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                ".map((s) => s.id)"
+            ],
+            "line": 288,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Part of the same preview string: the mapped ids are joined and interpolated into one this.logger.debug call. Replacing the mapper changes the text of that line, while the steps sent to the webview come from the parsed file above, untouched by this expression.",
+            "decision": "Kept: ids are what identify a step in a log line.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "const remainingCount = stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';"
+            ],
+            "line": 290,
+            "mutants": 5,
+            "category": "branch",
+            "reason": "remainingCount is appended to the preview inside the same this.logger.debug. Forcing the comparison either way, widening it, or flipping the subtraction changes only the suffix of that debug line \u2014 the wizardSteps array the webview receives was assigned before this expression and is not derived from it.",
+            "decision": "Kept: without the count the truncated preview would read as the whole list.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "} else if (stepsRead.outcome === 'invalid-shape') {"
+            ],
+            "line": 292,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The body is a single this.logger.error. wizardSteps was left null by the branch above and stays null whichever way this condition goes, so the response the webview receives is identical; only whether the validation message is logged changes.",
+            "decision": "Kept: a config that silently dropped every wizard step is the bug this message exists to name.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "} else if (stepsRead.outcome === 'unreadable') {"
+            ],
+            "line": 298,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Same shape as the invalid-shape branch above: the body is one this.logger.error, and wizardSteps is null on entry and on exit regardless. Forcing the condition either way, inverting the equality or emptying the block moves only a log line.",
+            "decision": "Kept: the two failure kinds deserve different messages, and the underlying error belongs in the second.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "const customBlockLibraryDefaults = parseCustomBlockLibrarySettings("
+            ],
+            "line": 314,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The empty default on the setting read below is only used when the setting has never been set, and whatever it yields goes straight into parseCustomBlockLibrarySettings, which keeps an entry only when parseCustomBlockLibraryUrl resolves it to an owner and repo. Stryker's placeholder string is not a repository URL, so it is dropped and the result is the same empty array.",
+            "decision": "Kept: an unset setting is an empty list.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "const updated = parseCustomBlockLibrarySettings("
+            ],
+            "line": 455,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same as the getInitialData read: the fallback fires only for an unset setting, and the value is parsed by parseCustomBlockLibrarySettings before it is pushed to the webview. A placeholder string resolves to no owner and repo, so it is filtered out and the pushed payload holds the same empty array \u2014 which the settings-listener suite asserts directly.",
+            "decision": "Kept: an unset setting is an empty list.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "if (this.editProject?.settings?.edsConfig) {"
+            ],
+            "line": 319,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Both arms of this if are a this.logger.debug, and the editProject sent to the webview is the field itself, assigned in execute and returned untouched below. Forcing the condition false or emptying the block changes only which debug line prints. The optional read on settings is defensive against a value the EditProjectConfig type forbids \u2014 settings is required there, so no caller can produce the shape that would make removing it throw.",
+            "decision": "Kept: this is the log that tells you whether an edit opened with its stored EDS config, and the optional read costs nothing.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "} else if (this.editProject) {"
+            ],
+            "line": 328,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The body is one this.logger.debug noting that an edit carried no EDS config. Nothing in the returned initial data is computed here \u2014 editProject is passed through as the field execute assigned \u2014 so forcing the condition either way or emptying the block moves only the debug channel.",
+            "decision": "Kept: an edit that opens with an empty Storefront area is diagnosed from this line.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "if (panel) {"
+            ],
+            "line": 477,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this true calls dispose on undefined when no wizard panel is open \u2014 and that call sits inside the try whose catch is deliberately empty, so the TypeError is swallowed and disposeActivePanel still returns having done nothing. The no-panel test passes under both, because the guard and the catch cover the same case.",
+            "decision": "Kept: the catch is there for an already-disposed panel, not for a missing one.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "if (this.importedSettings) {"
+            ],
+            "line": 494,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The body is a single this.logger.debug naming the import source. importedSettings is assigned on the line above and read by getInitialData from the field, never from this branch, so forcing the condition either way or emptying the block leaves the wizard's initial data identical.",
+            "decision": "Kept: knowing which file an import came from is the first question when an import lands wrong.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "if (this.editProject.settings?.selections) {"
+            ],
+            "line": 509,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Removing this optional read would throw only for an edit project whose settings is undefined, and EditProjectConfig declares settings as required \u2014 no caller can construct that value without deliberately defeating the type. The guard is defensive against a shape the compiler already refuses.",
+            "decision": "Kept: it costs nothing and the surrounding code reads a saved manifest whose shape has changed before.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/commands/createProject.ts",
+            "anchors": [
+                "let componentDefaults: ComponentSelection | null = null;"
+            ],
+            "line": 250,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch that closes this try block holds one this.logger.debug. Emptying it still swallows the failure and still leaves componentDefaults at the null declared here, which is what the webview receives \u2014 the suite asserts exactly that for both a malformed defaults.json and a throwing read. Only the debug channel differs.",
+            "decision": "Kept: a defaults file that cannot be read is worth a line, and the wizard deliberately opens anyway.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
         }
     ]
 }
