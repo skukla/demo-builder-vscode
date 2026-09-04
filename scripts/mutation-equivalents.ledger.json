@@ -3478,6 +3478,104 @@
             "decision": "none \u2014 a constant dependency never changes, and the callback closes over nothing.",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
+            "anchors": [
+                "existingProjectNames = [],"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant makes the default project list ['Stryker was here']. That value can only change an answer through getProjectNameError's uniqueness check, which is reached only after the pattern check has accepted the name \u2014 and 'Stryker was here' has spaces and capitals, so it can never be the trimmed name being compared. No project name exists that the two defaults answer differently.",
+            "decision": "none \u2014 the empty default is correct",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
+            "anchors": [
+                "}, []); // Only run on mount"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant replaces the mount effect's empty dependency array with a constant one-element array. React compares dependencies with Object.is per element, and that element is the same string literal on every render, so the effect still runs exactly once. Nothing observable differs.",
+            "decision": "none \u2014 equivalent by React's dependency comparison",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
+            "anchors": [
+                "const pkg = packages?.find((p) => p.id === packageId);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the '?.' would throw only when 'packages' is undefined. This handler is passed to BrandGallery and nothing else, and BrandGallery is rendered only inside 'if (hasPackages && hasStacks)' \u2014 so 'packages' is a non-empty array on every path that can call it. The '?.' is required because the prop is optional, not because the value can be missing here.",
+            "decision": "none \u2014 the '?.' is required by the optional prop type",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
+            "anchors": [
+                "const previousPkg = packages?.find((p) => p.id === state.selectedPackage);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Same reachability as the lookup above it: the handler runs only from BrandGallery, which renders only when 'packages' is a non-empty array. The '?.' answers the optional prop type, not a value that can be absent at this point.",
+            "decision": "none \u2014 the '?.' is required by the optional prop type",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
+            "anchors": [
+                "...Object.keys(pkg?.configDefaults ?? {}),"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the '?.' would throw only when 'pkg' is undefined, i.e. when the clicked package id is absent from the catalog. The id arrives from BrandGallery's onCardClick, which passes the id of a package it rendered from that same array, so the lookup cannot miss.",
+            "decision": "none \u2014 the '?.' guards a lookup that cannot miss from this caller",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
+            "anchors": [
+                "packageConfigDefaults: pkg?.configDefaults,"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Same lookup, same reachability: 'pkg' came from finding the id BrandGallery just rendered, so it is always found and the '?.' can never short-circuit.",
+            "decision": "none \u2014 the '?.' guards a lookup that cannot miss from this caller",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
+            "anchors": [
+                "if (!state.selectedPackage || !packages || packages.length === 0) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The surviving mutant is 'packages.length === 0' -> false, which removes the empty-catalog fast path from the packageConfigDefaults effect. It then falls through to packages.find on an empty array, gets undefined, and returns at the very next guard ('if (!pkg?.configDefaults) return'). The early return saves a lookup and says what it means; no catalog reaches a different outcome through it.",
+            "decision": "none \u2014 a fast path the following lookup already covers",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add",
+            "line": 162
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/WelcomeStep.tsx",
+            "anchors": [
+                "if (!state.selectedPackage || !packages || packages.length === 0) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The same mutant on the edsConfig effect, which opens with a textually identical guard: dropping the empty-catalog fast path leaves packages.find on an empty array returning undefined, so 'const storefront = pkg?.storefronts?.[state.selectedStack]' is undefined and the next guard ('if (!storefront) return') returns. Nothing observable differs.",
+            "decision": "none \u2014 a fast path the following lookup already covers",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add",
+            "line": 186
         }
     ]
 }

@@ -102,7 +102,13 @@ describe('equivalent-mutant ledger', () => {
     });
 
     it('does not double-count one anchor under two entries', () => {
-        const seen = ledger.entries.flatMap((e) => e.anchors.map((a) => `${e.module}::${a}`));
+        // `line` is part of the identity, not decoration: a module may repeat one line of
+        // source (two effects opening with the same guard), and the anchor check above
+        // already relies on `line` to tell those sites apart. Keying on the text alone
+        // called two distinct mutant sites one entry and refused the second.
+        const seen = ledger.entries.flatMap((e) =>
+            e.anchors.map((a) => `${e.module}::${e.line ?? '*'}::${a}`),
+        );
         expect(seen).toHaveLength(new Set(seen).size);
     });
 });

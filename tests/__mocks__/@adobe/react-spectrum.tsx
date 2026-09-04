@@ -360,6 +360,7 @@ export const TextField: React.FC<any> = ({
     description,
     errorMessage,
     placeholder,
+    validationState,
     ...props
 }) => (
     <label data-testid="spectrum-textfield">
@@ -371,6 +372,10 @@ export const TextField: React.FC<any> = ({
             disabled={isDisabled}
             required={isRequired}
             placeholder={placeholder}
+            // Real Spectrum turns `validationState` into visible field styling; the
+            // stub surfaces it as a data attribute so a test can assert the argument
+            // the component actually handed the field.
+            data-validation-state={validationState}
             {...filterSpectrumProps(props)}
         />
         {description && <span data-testid="spectrum-textfield-description">{description}</span>}

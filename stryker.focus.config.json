@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/steps/StorefrontStep.tsx"
+        "src/features/project-creation/ui/steps/WelcomeStep.tsx"
     ],
     "reporters": [
         "clear-text",
