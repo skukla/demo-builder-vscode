@@ -5,6 +5,7 @@
  */
 
 import { setupMocks, type TestMocks } from './adobeEntityService.testUtils';
+import { createEntityServices } from '@/features/authentication/services/adobeEntityService';
 
 // Mock external dependencies only
 jest.mock('@/core/validation/SensitiveDataRedactor');
@@ -46,6 +47,34 @@ describe('AdobeEntityService - Organizations - Error Handling', () => {
             mockCommandExecutor.execute.mockRejectedValue(new Error('Network error'));
 
             await expect(service.getOrganizations()).rejects.toThrow('Network error');
+        });
+
+        // The factory forwards the optional token check into the fetcher, which
+        // consults it before calling a CLI 401 an expired session. Nothing else
+        // builds the services WITH a checker, so this is the only place the
+        // forwarding is observed: the checker must be the one that was handed in.
+        it('forwards isTokenValid to the fetcher, which consults it on a CLI 401', async () => {
+            const { mockCommandExecutor, mockSDKClient, mockCacheManager, mockLogger, mockStepLogger } =
+                testMocks;
+            const isTokenValid = jest.fn().mockResolvedValue(false);
+            const { fetcher } = createEntityServices(
+                mockCommandExecutor,
+                mockSDKClient,
+                mockCacheManager,
+                mockLogger,
+                mockStepLogger,
+                isTokenValid,
+            );
+            mockSDKClient.isInitialized.mockReturnValue(false);
+            mockCommandExecutor.execute.mockResolvedValue({
+                code: 2,
+                stdout: '',
+                stderr: ' ›   Error: [CoreConsoleAPISDK] 401 - Unauthorized',
+                duration: 0,
+            });
+
+            await expect(fetcher.getOrganizations()).rejects.toThrow(/AUTH_EXPIRED/);
+            expect(isTokenValid).toHaveBeenCalledTimes(1);
         });
     });
 });

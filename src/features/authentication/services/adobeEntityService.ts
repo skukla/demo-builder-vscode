@@ -32,10 +32,9 @@ export interface EntityServices {
 /**
  * Create and wire the entity sub-services.
  *
- * Handles the Fetcher↔Selector cross-dependency: Fetcher needs a callback
- * to Selector.clearConsoleContext() (when no orgs are accessible), while
- * Selector depends on Fetcher (to populate cache after selection). A mutable
- * reference resolves this initialization-order constraint.
+ * The Fetcher needs a callback to Selector.clearConsoleContext() (when no
+ * orgs are accessible), so the Selector is built first. The Selector takes
+ * only the executor and the cache, so there is no cycle to break.
  */
 export function createEntityServices(
     commandManager: CommandExecutor,
@@ -50,8 +49,10 @@ export function createEntityServices(
      */
     isTokenValid?: () => Promise<boolean>,
 ): EntityServices {
-    // Mutable reference for the Fetcher → Selector callback
-    const selectorContainer: { ref?: AdobeEntitySelector } = {};
+    const selector = new AdobeEntitySelector(
+        commandManager,
+        cacheManager,
+    );
 
     const fetcher = new AdobeEntityFetcher(
         commandManager,
@@ -60,11 +61,7 @@ export function createEntityServices(
         logger,
         stepLogger,
         {
-            onNoOrgsAccessible: async () => {
-                if (selectorContainer.ref) {
-                    await selectorContainer.ref.clearConsoleContext();
-                }
-            },
+            onNoOrgsAccessible: () => selector.clearConsoleContext(),
             ...(isTokenValid ? { isTokenValid } : {}),
         },
     );
@@ -74,13 +71,6 @@ export function createEntityServices(
         cacheManager,
         fetcher,
     );
-
-    const selector = new AdobeEntitySelector(
-        commandManager,
-        cacheManager,
-    );
-
-    selectorContainer.ref = selector;
 
     return { fetcher, resolver, selector };
 }
