@@ -3918,6 +3918,78 @@
             "decision": "none \u2014 the section list is never empty",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/executor.ts",
+            "anchors": [
+                "const dependencies = typedConfig.components?.dependencies ?? [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The list is consumed once, by membership: ids.filter((id) => !dependencies.includes(id) && ...). A junk element excludes no real component id, so a one-element array holding a string no catalog uses and an empty array remove exactly the same ids from the selection. Nothing downstream reads the list itself.",
+            "decision": "none \u2014 the fallback is consumed only by an includes() the junk value never matches",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/executor.ts",
+            "anchors": [
+                "isEditMode && typedConfig.editProjectPath"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "isEditMode is Boolean(typedConfig.editProjectPath) on the line above, so the two operands always share their truthiness. With a path set both && and || are truthy and the ternary takes the edit branch; with none set both are falsy and it takes the home-directory branch. The && is there because TypeScript needs the second operand narrowed to a string, not because the two can disagree.",
+            "decision": "none \u2014 the two operands are the same condition, one of them narrowed for the compiler",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/executor.ts",
+            "anchors": [
+                "if (isEditMode && tempComponentsDir) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "tempComponentsDir is isEditMode ? await prepareEditModeTempDir(...) : undefined, and prepareEditModeTempDir returns Promise<string> from path.join(projectPath, components.tmp) \u2014 never an empty string. So the two operands share their truthiness exactly, and && and || select the same branch on every run. The && narrows the value for the compiler; it is not a second decision.",
+            "decision": "none \u2014 the two operands are the same condition, one of them narrowed for the compiler",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/executor.ts",
+            "anchors": [
+                "context.context?.secrets,"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the optional chain would throw only if context.context were absent. It is required on HandlerContext, every call site builds it, and this same function reads context.context.extensionPath UNGUARDED further down \u2014 so a context without it would already have crashed the run before any assertion could distinguish the two forms.",
+            "decision": "none \u2014 the field is required and read unguarded elsewhere in the same function",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/executor.ts",
+            "anchors": [
+                "(line) => context.logger.info(`[Project Creation] ${line}`),"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "This callback is the progress channel handed to migrateDeclaredSecrets, and its whole body is one logger.info call. Emptying it changes only which log lines print \u2014 the migration return value, which is what the executor then acts on, is untouched. Killing it would mean asserting a logger call arguments, which pins wording rather than behaviour.",
+            "decision": "none \u2014 the callback only effect is a log line",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/handlers/executor.ts",
+            "anchors": [
+                "if (secretMigration.retained.length > 0) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The guarded body is a single context.logger.warn and nothing else: the sanitized configs are assigned on the line above, unconditionally, and no later code reads retained. Every mutant here \u2014 inverting the comparison, forcing the condition either way, or emptying the block \u2014 changes only whether one warning prints. Killing any of them would mean asserting a logger call arguments.",
+            "decision": "none \u2014 the guard entire body is one log line",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
         }
     ]
 }

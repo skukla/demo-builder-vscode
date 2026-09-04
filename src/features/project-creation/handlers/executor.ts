@@ -53,11 +53,6 @@ import type { ProjectCreationConfig } from '@/types/webviewRequests';
 // Helper Functions
 // ============================================================================
 
-/** Keys of a project's component instances (empty when none set). */
-function getComponentInstanceKeys(project: import('@/types/base').Project): string[] {
-    return Object.keys(project.componentInstances || {});
-}
-
 // ProjectCreationConfig and FrontendSource live in @/types/webviewRequests —
 // ONE declaration shared with the wizard's buildProjectConfig and the MCP
 // create_project tool (this file used to carry the only copy, and the wire
@@ -324,17 +319,6 @@ export async function executeProjectCreation(
         // In edit mode, install to temp directory for atomic swap
         componentsDir: tempComponentsDir,
     };
-
-    // EDIT MODE: Clear old component instances before cloning new ones
-    // When switching stacks (e.g., EDS→Headless), old component entries must be removed
-    // Otherwise getMeshComponentInstance may return stale entries with invalid paths
-    if (isEditMode) {
-        const oldComponents = getComponentInstanceKeys(project);
-        context.logger.debug(
-            `[Project Edit] Clearing old component instances: [${oldComponents.join(', ')}]`,
-        );
-        project.componentInstances = {};
-    }
 
     await cloneAllComponents(installationContext);
     await installAllComponents(installationContext);
