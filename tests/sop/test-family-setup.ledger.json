@@ -24,7 +24,6 @@
         "tests/features/eds/services/storefront/storefrontStalenessDetector": "Two suites with zero mocked modules between them; the generator-coupling half is a pure comparison and the base half drives the detector directly.",
         "tests/features/project-creation/handlers/addIntegrationFlowHandlers": "Two suites sharing no mocked module: the auth-guard half stubs the guard chain, the base half drives the flow with collaborators handed in.",
         "tests/features/project-creation/services/aiBundle/aiBundleActivationRefresh": "Two suites split for size, one covering the isolation rule and the other the refresh itself, with no mocked module in common.",
-        "tests/features/project-creation/ui/components/BrandGallery": "Two render suites split for size with one mocked module between them. The Spectrum stubs differ because each renders a different part of the gallery.",
         "tests/types/webview": "Two suites over pure type guards with zero mocked modules; the error-codes half is a table-driven check over a constant.",
         "tests/features/authentication/handlers/workspaceHandlers": "Two suites mocking the same single module. That is a pair, not a family: the Rule of Three applies, and the measurement puts the whole saving at three lines.",
         "tests/features/ai/mcpDriftDetector": "Two suites split by scope, global versus project, with two mocked modules between them and none in common, because each scope reads a different config.",

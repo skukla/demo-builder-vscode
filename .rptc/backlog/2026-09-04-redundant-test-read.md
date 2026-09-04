@@ -84,6 +84,7 @@ raised here so the next queue is generated with the answer.
 ## Shipped so far
 
 - 2026-09-03  docs(backlog): PL-42 — read the redundancy lists and delete what pins nothing (`591c4c293`)
+- 2026-09-04  docs(backlog): the redundancy sweep result, and a queue regenerated after shared.ts (`b8f21f66f`)
 
 ## The sweep finished — 2026-09-04 02:20, all 143 modules, no failures
 

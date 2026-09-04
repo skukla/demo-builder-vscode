@@ -3576,6 +3576,55 @@
             "recorded": "2026-09-04",
             "source": "mutationLedger add",
             "line": 186
+        },
+        {
+            "module": "src/features/project-creation/ui/components/BrandGallery.tsx",
+            "anchors": [
+                "selectedBlockLibraries = [],"
+            ],
+            "line": 56,
+            "mutants": 1,
+            "category": "other",
+            "reason": "PackageCard's default only applies when the prop is omitted, and BrandGallery passes 'isSelected ? selectedBlockLibraries : undefined'. For the selected card that is always an array (BrandGallery defaults it to [] itself), so the default is never used there. For an unselected card the default DOES apply, but 'isComplete' is false for that card, so the block-library summary the count feeds is not rendered at all. No render shows the difference.",
+            "decision": "none \u2014 the default is correct and only reachable where its value cannot be seen",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/BrandGallery.tsx",
+            "anchors": [
+                "{isComplete && selectedStack && ("
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Swapping the && for an || cannot change what renders, because the one caller makes the two operands equivalent: PackageCard is module-private and BrandGallery computes 'isComplete={isSelected && !!selectedStackObj}' alongside 'selectedStack={isSelected ? selectedStackObj : undefined}'. Either both are truthy or both are falsy, so 'a && b' and 'a || b' agree on every input the component can receive.",
+            "decision": "none \u2014 the two operands are equivalent under the single caller",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/BrandGallery.tsx",
+            "anchors": [
+                "{customBlockLibraries?.map((lib) => ("
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the '?.' would throw only if 'customBlockLibraries' were undefined here. BrandGallery defaults the prop to [] and passes 'isSelected ? customBlockLibraries : undefined'; this JSX renders only inside the isComplete branch, which requires isSelected, so the value is always an array at this point. The '?.' answers the optional prop type on PackageCard, not a value that can be missing.",
+            "decision": "none \u2014 the '?.' is required by the optional prop type",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/BrandGallery.tsx",
+            "anchors": [
+                "if (!selectedStack) return undefined;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Removing the early return leaves 'stacks.find((s) => s.id === selectedStack)' running with selectedStack undefined, which returns undefined for any real catalog \u2014 no stack carries an undefined id. The memo therefore produces the same value either way; the guard is a fast path, not a decision.",
+            "decision": "none \u2014 a fast path the following lookup already covers",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
         }
     ]
 }

@@ -10,61 +10,22 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { BrandGallery } from '@/features/project-creation/ui/components/BrandGallery';
-import { DemoPackage, GitSource } from '@/types/demoPackages';
-import { Stack } from '@/types/stacks';
+import {
+    ACTIVE_PACKAGE,
+    COMING_SOON_PACKAGE,
+    OTHER_PACKAGE,
+    STACKS,
+} from './BrandGallery.testUtils';
 
 // Mock vscode API to prevent errors from postMessage calls
 jest.mock('@/core/ui/utils/vscode-api', () => ({
     vscode: { postMessage: jest.fn(), request: jest.fn(), onMessage: jest.fn(() => jest.fn()) },
 }));
 
-const mockGitSource: GitSource = {
-    type: 'git',
-    url: 'https://github.com/test/repo',
-    branch: 'main',
-    gitOptions: { shallow: true },
-};
-
-const mockStacks: Stack[] = [
-    {
-        id: 'eds-paas',
-        name: 'EDS + PaaS',
-        description: 'Edge Delivery with PaaS backend',
-        icon: 'eds',
-        frontend: 'eds',
-        backend: 'paas',
-        dependencies: [],
-        features: [],
-    },
-];
-
-const activePackage: DemoPackage = {
-    id: 'active-brand',
-    name: 'Active Brand',
-    description: 'An active brand',
-    configDefaults: {},
-    storefronts: {
-        'eds-paas': {
-            name: 'Active EDS + PaaS',
-            description: 'Active storefront',
-            source: mockGitSource,
-        },
-    },
-};
-
-const comingSoonPackage: DemoPackage = {
-    id: 'soon-brand',
-    name: 'Soon Brand',
-    description: 'A coming soon brand',
-    status: 'coming-soon',
-    configDefaults: {},
-    storefronts: {},
-};
-
 describe('BrandGallery', () => {
     const defaultProps = {
-        packages: [activePackage, comingSoonPackage],
-        stacks: mockStacks,
+        packages: [ACTIVE_PACKAGE, COMING_SOON_PACKAGE],
+        stacks: STACKS,
         onPackageSelect: jest.fn(),
         onStackSelect: jest.fn(),
         onAddonsChange: jest.fn(),
@@ -94,23 +55,10 @@ describe('BrandGallery', () => {
         it('narrows the rendered cards when the search filter matches a subset', () => {
             // searchThreshold=2 inside BrandGallery — need >2 packages for the
             // search field to render.
-            const extraPackage: DemoPackage = {
-                id: 'other-brand',
-                name: 'Other Brand',
-                description: 'Another active brand',
-                configDefaults: {},
-                storefronts: {
-                    'eds-paas': {
-                        name: 'Other EDS + PaaS',
-                        description: 'Other storefront',
-                        source: mockGitSource,
-                    },
-                },
-            };
             render(
                 <BrandGallery
                     {...defaultProps}
-                    packages={[activePackage, extraPackage, comingSoonPackage]}
+                    packages={[ACTIVE_PACKAGE, OTHER_PACKAGE, COMING_SOON_PACKAGE]}
                 />,
             );
 

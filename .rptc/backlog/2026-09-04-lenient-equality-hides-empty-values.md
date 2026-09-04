@@ -69,3 +69,7 @@ move had no such assertion, which is also an answer.
 Worth considering afterwards: an enforcer that refuses a NEW `toEqual([])`, shrink-only
 against a recorded ceiling, in the shape `no-logger-wording-assertions` already uses.
 That is what stops the count climbing back.
+
+## Shipped so far
+
+- 2026-09-04  docs(backlog): PL-43 — 651 emptiness assertions use a comparison that accepts an empty value (`b4d69ab3e`)

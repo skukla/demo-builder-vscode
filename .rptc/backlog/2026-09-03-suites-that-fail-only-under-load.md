@@ -68,3 +68,5 @@ caught at either number.
 - 2026-09-04  Root cause measured 2026-09-03 on an idle 16-core/48GB machine: full suite at maxWorkers 75% = 26s, 50% = 29s, 25% = 53s, zero failures at every setting. The worker ratio was never the cause. The flakes appeared only when a goal session's own runs overlapped (Stryker or a second gate alongside the pre-push gate) AND a test carried a wall-clock bound; the three bounds are now signal/deadline assertions (96234cfe2, ddac09f7d, 4fe3b38ab) and no gate has flaked since. maxWorkers left at 75%: changing it on one idle measurement would be a guess. Remaining exposure: any NEW timing assertion — no enforcer bans those yet.
 - 2026-09-03  fix(tests): give the MCP server suite the same 30s ceiling as its socket sibling (`b7dae90b6`)
 - 2026-09-03  fix(tests): give the MCP server suite the same 30s ceiling as its socket sibling (`61b4a51bf`)
+- 2026-09-04  fix(sop): close the other half of the probe-file race (`469503bb6`)
+- 2026-09-04  fix(sop): stop two enforcers racing the probe files other suites create (`c8da09d18`)

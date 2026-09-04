@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/steps/WelcomeStep.tsx"
+        "src/features/project-creation/ui/components/BrandGallery.tsx"
     ],
     "reporters": [
         "clear-text",
