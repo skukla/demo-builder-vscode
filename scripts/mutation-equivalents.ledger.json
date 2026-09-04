@@ -3280,6 +3280,81 @@
             "decision": "none \u2014 the phase effect makes the excluded combination unrepresentable.",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/WizardContainer.tsx",
+            "anchors": [
+                "const [packages, setPackages] = useState<DemoPackage[]>([]);",
+                "const [stacks, setStacks] = useState<Stack[]>([]);"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "Seeding these two lists with a junk element instead of empty is unobservable because both are wholly REPLACED by the mount effect before anything can assert on them: getSelectablePackages and loadStacks each call their setter with the loaded array, and the hidden-package effect is additionally gated on packagesLoaded, which is false until that has happened. The junk element exists only for the first paint, which no test \u2014 and no user \u2014 can catch.",
+            "decision": "none \u2014 the mount effect replaces both lists outright.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/WizardContainer.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 94,
+            "mutants": 2,
+            "category": "other",
+            "reason": "This file has TWO effects with an empty dependency list \u2014 the block-library settings listeners at line 94 and the packages/stacks load at line 110 \u2014 and this row covers the mutant on each, because their closing lines are textually identical and cannot be anchored apart. Stryker replaces an empty list with a constant one-element array rather than emptying it, and React compares dependencies with Object.is element by element, so that constant is identical on every render and both effects still run exactly once. No render sequence distinguishes the two forms.",
+            "decision": "none \u2014 a constant dependency never changes, so neither effect re-runs.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/WizardContainer.tsx",
+            "anchors": [
+                "setPackages((prev) => (prev.some((p) => p.id === own.id) ? prev : [...prev, own]));"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "Two of this line's mutants can only differ when the resolved package is ALREADY in the list, and that state is unreachable: the effect returns before the lookup whenever the list contains the id, and the list is only ever appended to by this very callback. Emptying the predicate, or forcing the ternary to always append, therefore produces the same single append on every path a test can drive. The third mutant here \u2014 the one that flips some to every \u2014 IS reachable with an empty list and is killed.",
+            "decision": "none \u2014 the duplicate case the dedupe guards against cannot be produced.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/WizardContainer.tsx",
+            "anchors": [
+                "const wizardContainerRef = useFocusTrap<HTMLDivElement>({"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Replacing this options object with an empty one changes nothing, because every value it passes is already the hook's own default: useFocusTrap destructures enabled = true, autoFocus = false and containFocus = true. The object states the wizard's intent explicitly, which is worth keeping, but it cannot be distinguished from omitting it. The three BOOLEANS inside are a different matter and are each killed by a focus test.",
+            "decision": "none \u2014 the options passed are identical to the hook's declared defaults.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/WizardContainer.tsx",
+            "anchors": [
+                "const oldStack = stacks?.find((s) => s.id === oldStackId);",
+                "const newStack = stacks?.find((s) => s.id === newStackId);"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Dropping the optional chain cannot throw, because stacks is a useState<Stack[]> initialised to an empty array and only ever reassigned from loadStacks with another array. It is never null or undefined at any point in the component's life, so the guarded and unguarded reads are identical for every input. The find PREDICATES on these same lines are reachable and are killed by a catalog whose first entry is a decoy.",
+            "decision": "none \u2014 stacks is an array from first render onwards.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/project-creation/ui/wizard/WizardContainer.tsx",
+            "anchors": [
+                "setCompletedSteps(['welcome']);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying this reset list instead of leaving 'welcome' in it is unobservable: the only consumer is the timeline's completed-step marking, and the architecture control that triggers the reset lives on the welcome step itself, which the timeline therefore renders as CURRENT rather than completed in both variants. Any later navigation re-adds welcome through the normal completion path, so the two lists converge before anything else can read them.",
+            "decision": "none \u2014 the one element that differs belongs to the step the user is standing on.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }

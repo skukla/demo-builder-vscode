@@ -304,7 +304,6 @@ export function WizardContainer({
     const timelineSteps: TimelineStep[] = WIZARD_STEPS.map((s) => ({ id: s.id, name: s.name }));
     const completedStepIndices = getCompletedStepIndices(completedSteps, WIZARD_STEPS);
     const confirmedStepIndices = getCompletedStepIndices(confirmedSteps, WIZARD_STEPS);
-    const isEditMode = (state.wizardMode ?? 'create') !== 'create';
 
     // Build-Your-Project linear driver (Continue/Back over sub-steps -> areas ->
     // wizard steps) + rail children. Extracted to buildAreaWalk (pure derivation).
@@ -351,7 +350,6 @@ export function WizardContainer({
                         compact={true}
                         showHeader={true}
                         headerText="Setup Progress"
-                        isEditMode={isEditMode}
                         // Build-step areas as children under the (current) Build step.
                         childSteps={buildChildSteps}
                         childStatusById={buildChildStatusById}

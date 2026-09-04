@@ -39,8 +39,6 @@ export interface TimelineNavProps {
     headerText?: string;
     /** Whether to use compact mode (smaller padding, for sidebar) */
     compact?: boolean;
-    /** Whether we're in edit mode (reviewing existing project) */
-    isEditMode?: boolean;
     /**
      * Optional sub-steps rendered as a single indented level beneath the
      * current (active) parent step only. One level — no recursion.
@@ -66,7 +64,6 @@ export function TimelineNav({
     showHeader = true,
     headerText = 'Setup Progress',
     compact = false,
-    isEditMode: _isEditMode = false,
     childSteps,
     childStatusById,
     activeChildId,
