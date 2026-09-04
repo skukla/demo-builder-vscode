@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/lifecycle/commands/startDemo.ts"
+        "src/features/lifecycle/commands/stopDemo.ts"
     ],
     "reporters": [
         "clear-text",

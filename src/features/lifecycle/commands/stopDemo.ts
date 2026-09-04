@@ -70,12 +70,15 @@ export class StopDemoCommand extends BaseCommand {
                 shell: DEFAULT_SHELL,
             });
 
-            if (result.code === 0 && result.stdout.trim()) {
-                // May return multiple PIDs (parent + children), use first (parent)
+            if (result.code === 0) {
+                // May return multiple PIDs (parent + children), use first (parent).
+                // Empty output parses to NaN and fails the `> 0` test below, so no
+                // separate emptiness or NaN check — a mutation run showed both were
+                // unobservable.
                 const firstPid = result.stdout.trim().split('\n')[0];
                 const pid = parseInt(firstPid, 10);
 
-                if (!isNaN(pid) && pid > 0) {
+                if (pid > 0) {
                     return pid;
                 }
             }

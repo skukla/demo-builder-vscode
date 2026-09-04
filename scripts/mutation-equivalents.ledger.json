@@ -1410,6 +1410,30 @@
             "decision": "none \u2014 see the debugInfo row",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-08, startDemo focus run"
+        },
+        {
+            "module": "src/features/lifecycle/commands/stopDemo.ts",
+            "anchors": [
+                "if (pid > 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "findProcessByPort has one caller, and it tests the result with `if (pid)`. Loosening this guard to `>= 0` or `true` lets 0 or NaN be RETURNED instead of null, and the caller treats all three the same way \u2014 nothing is killed, the terminal is disposed, the project lands on ready. The suite pins that outcome for PID 0, whitespace and non-numeric output. Killing these would mean calling the private method directly, which is not how the code is reached.",
+            "decision": "none \u2014 the guard states the contract (a real PID or null) even though the caller would tolerate less",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-08, stopDemo focus run"
+        },
+        {
+            "module": "src/features/lifecycle/commands/stopDemo.ts",
+            "anchors": [
+                "payload: { runningProjectPath: undefined } satisfies DemoStateChangedPayload,"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "webview.postMessage serialises its argument to JSON, and JSON drops a property whose value is undefined \u2014 so `{}` and `{ runningProjectPath: undefined }` reach the Projects Dashboard as the same message. The suite pins the type and the payload the panel receives; `satisfies` keeps the literal honest against DemoStateChangedPayload at compile time, which is the only place the difference exists.",
+            "decision": "none \u2014 the explicit key documents the field the dashboard clears",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-08, stopDemo focus run"
         }
     ]
 }
