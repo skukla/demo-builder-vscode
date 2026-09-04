@@ -1264,6 +1264,44 @@
             "decision": "none \u2014 the fallback value is intersected away before it can be observed",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (componentApiPicks, MUT-06)"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetUI.ts",
+            "anchors": [
+                "organization: project.adobe?.organization,",
+                "projectId: project.adobe?.projectId,",
+                "workspace: project.adobe?.workspace,"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "Stryker drops each `?.`, which would throw only if `project.adobe` were undefined. checkAdobeAuth is called from exactly one site, inside `if (project.adobe?.organization)`, so by these lines `project.adobe` is always an object; the `?.` exist because the Project type declares `adobe` optional and the narrowing does not cross the function boundary. A test cannot hand the function a project without `adobe` except by calling it directly, and it is module-private.",
+            "decision": "none \u2014 the guard is what the type requires at a call the compiler cannot narrow",
+            "recorded": "2026-09-03",
+            "source": "PL-22 batch MUT-07, edsResetUI focus run"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetUI.ts",
+            "anchors": [
+                "context.logger.info(`${logPrefix} resetEds: User cancelled at app check`);"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The final `else` of the App prompt holds one info line and nothing else; the cancelled result, the untouched status and the un-run reset are all decided after the if/else and are pinned by the dismiss test in edsResetUI-appCheck. Emptying the block changes what is logged and nothing observable. The worklist's own filter skips log-only bodies; the ratchet counts the block because it classifies the `} else {` line.",
+            "decision": "none \u2014 the line is the Debug Logs trace of a user cancel, which debug-log-triage reads",
+            "recorded": "2026-09-03",
+            "source": "PL-22 batch MUT-07, edsResetUI focus run"
+        },
+        {
+            "module": "src/features/eds/services/reset/edsResetUI.ts",
+            "anchors": [
+                "})().catch(() => false);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The catch handler's value reaches one consumer, confirmSampleDataRemoval, which tests it with `!(await canRemove)`; `false` and `undefined` take the same branch and no prompt appears either way. The sampleData suite's CONTROL (a lookup that throws asks nothing) holds against both. Making the difference observable would mean giving the promise a third state the caller does not need.",
+            "decision": "none \u2014 `false` says what a failed lookup means; the mutant only removes the word",
+            "recorded": "2026-09-03",
+            "source": "PL-22 batch MUT-07, edsResetUI focus run"
         }
     ]
 }

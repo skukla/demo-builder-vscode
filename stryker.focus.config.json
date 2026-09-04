@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/state/appBuilderComponentMigration.ts"
+        "src/features/eds/services/reset/edsResetUI.ts"
     ],
     "reporters": [
         "clear-text",

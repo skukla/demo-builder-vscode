@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "appBuilderComponentMigration: predicate is the single null gate, empty source on migrated entries, stable 'app' fallback id",
+    "_note": "MUT-07: edsResetUI to zero open gaps — three suites for the App check, result notifications and removal reporting; redundant canRemove guard merged; 5 equivalents recorded",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -8206,30 +8206,22 @@
             "openGaps": 64
         },
         "src/features/eds/services/reset/edsResetUI.ts": {
-            "score": 30.11,
-            "killed": 81,
-            "survived": 88,
-            "noCoverage": 100,
+            "score": 91.29,
+            "killed": 241,
+            "survived": 23,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 25,
-                "branch": 33,
                 "optionalChain": 3,
-                "other": 17,
-                "block": 7,
-                "logPresentation": 3
+                "string": 12,
+                "logPresentation": 6,
+                "block": 1,
+                "other": 1
             },
-            "uncoveredCategories": {
-                "branch": 37,
-                "string": 34,
-                "block": 17,
-                "logPresentation": 5,
-                "other": 4,
-                "optionalChain": 3
-            },
-            "highValueSurvivors": 40,
-            "equivalent": 0,
-            "openGaps": 121
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 5,
+            "openGaps": 0
         },
         "src/features/eds/services/resourceCleanupHelpers.ts": {
             "score": 77.78,

@@ -604,11 +604,11 @@ async function confirmSampleDataRemoval(
     vscode: typeof import('vscode'),
     canRemove: Promise<boolean> | undefined,
 ): Promise<boolean> {
+    // One condition, not a guard and then an await: `canRemove` is undefined
+    // exactly when `datapack` is (the check above gates on the same field), so a
+    // separate `!canRemove` test could never be the deciding one.
     const { datapack } = project;
-    if (!datapack || !canRemove) {
-        return false;
-    }
-    if (!(await canRemove)) {
+    if (!datapack || !(await canRemove)) {
         return false;
     }
 
