@@ -4,153 +4,29 @@
  * The stage-machine hook behind the Add Integration modal: walks the derived
  * stage order (flowStages), keeps a modal-local FlowDraft, commits the shared
  * Adobe I/O destination on the dest-stage Continues, and on the LAST stage
- * finishes through the UNCHANGED useProjectBuilder handlers (mesh/catalog
- * toggle, custom add). API access is deterministic and the modal provisions
- * NOTHING — every kind commits + closes immediately on Add; the APIs subscribe
- * later, at the rebuild/deploy. Cancel is the modal closing without onContinue —
- * draft mutations never write wizard state.
+ * finishes through the UNCHANGED useProjectBuilder handlers. Cancel is the modal
+ * closing without onContinue — draft mutations never write wizard state.
  *
+ * This suite owns the STAGE ORDER and the destination commits. What each kind
+ * commits at the finish lives in the -finish suite; api-edit in the -apiEdit one.
+ * The harness and fixtures are shared through useIntegrationFlow.testUtils.
  */
 
-import { renderHook, act } from '@testing-library/react';
-import type { RenderHookResult } from '@testing-library/react';
-import { useIntegrationFlow } from '@/features/project-creation/ui/components/integration-flow/useIntegrationFlow';
-import type {
-    UseIntegrationFlowArgs,
-    UseIntegrationFlowReturn,
-} from '@/features/project-creation/ui/components/integration-flow/useIntegrationFlow';
-import type { FlowMode } from '@/features/project-creation/ui/components/integration-flow/flowStages';
-import type { SelectableAppBuilderComponent } from '@/features/project-creation/services/appBuilderComponentSelection';
-import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
-import type { AdobeProject, WizardState, Workspace } from '@/types/webview';
-import { makeFlowHarness } from './useIntegrationFlow.testUtils';
+import { act } from '@testing-library/react';
+import type { WizardState } from '@/types/webview';
+import {
+    setupAddFlow as setup,
+    pickKindAndContinue,
+    ADD_SIGNED_IN as SIGNED_IN,
+    ADD_SIGNED_OUT as SIGNED_OUT,
+    LATER_ADD,
+    MESH_ID,
+    PROJECT,
+    OTHER_PROJECT,
+    WORKSPACE,
+    type AddFlowSetup as Setup,
+} from './useIntegrationFlow.testUtils';
 
-/**
- * The webview client is mocked so a test can assert the modal NEVER subscribes
- * (no `ensure-mesh-api-subscribed` request) — all provisioning moved to the rebuild.
- */
-const mockRequest = jest.fn();
-
-beforeEach(() => {
-    mockRequest.mockReset();
-    mockRequest.mockResolvedValue({ success: true, data: { apis: [] } });
-});
-
-/** Stable empty catalog (module-level — avoids new-reference hook churn). */
-const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];
-
-/** The blank starter app the "Build custom" kind commits. */
-const BLANK_COMPONENT: AppBuilderComponentCatalogEntry = {
-    id: 'app-builder-shell',
-    name: 'App Builder App',
-    description: 'A blank App Builder app to build out with AI',
-    kind: 'integration',
-    blank: true,
-    source: { owner: 'skukla', repo: 'app-builder-shell', branch: 'main' },
-};
-
-const MESH_ID = 'headless-commerce-mesh';
-const MESH_COMPONENT = {
-    id: MESH_ID,
-    name: 'API Mesh',
-    description: 'API Mesh for the headless stack',
-    kind: 'mesh',
-    source: { type: 'git', url: 'https://github.com/adobe/mesh', branch: 'main' },
-    requirement: 'optional',
-} as unknown as SelectableAppBuilderComponent;
-
-const PROJECT: AdobeProject = { id: 'proj-1', name: 'proj-one', title: 'Project One' };
-const OTHER_PROJECT: AdobeProject = { id: 'proj-2', name: 'proj-two', title: 'Project Two' };
-const WORKSPACE: Workspace = { id: 'ws-1', name: 'Stage', title: 'Stage' };
-/**
- * A committed shared destination WITH an existing integration referencing it — the
- * realistic "later add" state. A committed destination alone (no integration) is a
- * clean slate that re-walks the picker, so later-add tests must include one.
- */
-const LATER_ADD: Partial<WizardState> = {
-    adobeProject: PROJECT,
-    adobeWorkspace: WORKSPACE,
-    selectedAppBuilderComponents: ['existing-integration'],
-};
-
-const SIGNED_IN: Partial<WizardState> = {
-    adobeAuth: { isAuthenticated: true, isChecking: false },
-    adobeOrg: { id: 'org-1', code: 'ORG@AdobeOrg', name: 'Test Org' },
-};
-
-const SIGNED_OUT: Partial<WizardState> = {
-    adobeAuth: { isAuthenticated: false, isChecking: false },
-    adobeOrg: undefined,
-};
-
-interface SetupOptions {
-    mode?: FlowMode;
-    initial?: Partial<WizardState>;
-    meshComponent?: SelectableAppBuilderComponent;
-    /** Catalog entries the flow can seed a custom build from (default empty). */
-    catalog?: AppBuilderComponentCatalogEntry[];
-    /** The minting collision domain (default: the blank shell's id, as buildReservedIds would). */
-    reservedIds?: Set<string>;
-}
-
-interface Setup {
-    result: RenderHookResult<UseIntegrationFlowReturn, { state: WizardState }>['result'];
-    /** Re-render the hook with the state accumulated by prior updateState calls. */
-    sync: () => void;
-    updateState: jest.Mock;
-    builder: {
-        onAppBuilderComponentToggle: jest.Mock;
-        onAddCustomAppBuilderComponent: jest.Mock;
-    };
-    onClose: jest.Mock;
-    stateRef: { current: WizardState };
-}
-
-/**
- * Render the hook over a controlled WizardState. updateState applies partials
- * to a mutable ref; `sync()` re-renders the hook with the accumulated state
- * (mirrors the wizard's reducer + re-render cycle).
- */
-function setup(options: SetupOptions = {}): Setup {
-    const {
-        mode = 'add',
-        initial = {},
-        meshComponent = MESH_COMPONENT,
-        catalog = EMPTY_CATALOG,
-        reservedIds = new Set(['app-builder-shell']),
-    } = options;
-    const { stateRef, updateState, builder, onClose } = makeFlowHarness({
-        ...SIGNED_IN,
-        ...initial,
-    });
-
-    const { result, rerender } = renderHook(
-        ({ state }: { state: WizardState }) =>
-            useIntegrationFlow({
-                state,
-                updateState,
-                mode,
-                meshComponent,
-                catalog,
-                reservedIds,
-                blankComponent: BLANK_COMPONENT,
-                builder,
-                onClose,
-            } as UseIntegrationFlowArgs),
-        { initialProps: { state: stateRef.current } }
-    );
-
-    const sync = (): void => rerender({ state: stateRef.current });
-    return { result, sync, updateState, builder, onClose, stateRef };
-}
-
-/** Pick a kind on the kind stage and Continue past it. */
-function pickKindAndContinue(s: Setup, kind: 'mesh' | 'catalog' | 'blank' | 'custom'): void {
-    act(() => s.result.current.pickKind(kind));
-    act(() => s.result.current.onContinue());
-}
-
-/** Walk a signed-in catalog add to the dest-project stage. */
 describe('useIntegrationFlow — initial stage and kind walk (add mode)', () => {
     it('starts at the kind stage in add mode', () => {
         const s = setup();
@@ -375,11 +251,9 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         expect(s.updateState).toHaveBeenCalledWith({ adobeWorkspace: WORKSPACE });
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(MESH_ID, true);
         expect(s.onClose).toHaveBeenCalledTimes(1);
-        // The modal provisions nothing — all APIs subscribe at the rebuild.
-        expect(mockRequest).not.toHaveBeenCalledWith(
-            'ensure-mesh-api-subscribed',
-            expect.anything()
-        );
+        // The modal provisions nothing — all APIs subscribe at the rebuild. Nothing
+        // asserts that here: this hook has no webviewClient dependency at all, so a
+        // "never requested" expectation would only be checking an unwired spy.
     });
 
     it('finishes a later-add mesh from the KIND stage in one Add press', () => {
@@ -391,210 +265,6 @@ describe('useIntegrationFlow — dest-workspace Continue and mesh finish', () =>
         act(() => s.result.current.onContinue()); // Add → commit + close
         expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(MESH_ID, true);
         expect(s.onClose).toHaveBeenCalledTimes(1);
-        expect(mockRequest).not.toHaveBeenCalledWith(
-            'ensure-mesh-api-subscribed',
-            expect.anything()
-        );
-    });
-});
-
-describe('useIntegrationFlow — catalog/custom finish (deterministic, no API picks)', () => {
-    /**
-     * Walk a signed-in later-add catalog to its terminal stage — which is now
-     * source-catalog: a committed destination is a context line, not a step.
-     */
-    function walkCatalogToTerminal(s: Setup, catalogId = 'erp-sync'): void {
-        pickKindAndContinue(s, 'catalog');
-        act(() => s.result.current.pickCatalog(catalogId));
-        expect(s.result.current.stage).toBe('source-catalog');
-    }
-
-    it('finishes a catalog add from the SOURCE stage: adds it and writes NO selectedConsoleApis', () => {
-        const s = setup({ initial: LATER_ADD });
-        walkCatalogToTerminal(s);
-        // source-catalog is terminal for the deterministic catalog — a single Add
-        // press commits the component and closes (no dest step, no api-access).
-        act(() => s.result.current.onContinue());
-        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith('erp-sync', true);
-        // API access is deterministic — the add flow never merges per-integration APIs.
-        expect(s.updateState).not.toHaveBeenCalled();
-        expect(s.onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('a RENAMED catalog pick commits a named INSTANCE of the entry source (2026-08-27)', () => {
-        // The option to name a pre-built: an edited name routes through the
-        // same custom-add machinery the blank/seed path uses, carrying the
-        // entry's repo — capabilities then survive via source recognition.
-        const KIT_ENTRY: AppBuilderComponentCatalogEntry = {
-            id: 'commerce-integration-starter-kit',
-            name: 'Commerce Integration Starter Kit',
-            description: 'The kit',
-            kind: 'integration',
-            source: { owner: 'adobe', repo: 'commerce-integration-starter-kit', branch: 'main' },
-        };
-        const s = setup({ initial: LATER_ADD, catalog: [KIT_ENTRY] });
-        pickKindAndContinue(s, 'catalog');
-        act(() => s.result.current.pickCatalog(KIT_ENTRY.id));
-        act(() => s.result.current.setLabel('Order Sync'));
-        act(() => s.result.current.onContinue());
-
-        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(KIT_ENTRY.source, {
-            id: 'order-sync',
-            name: 'Order Sync',
-        });
-        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
-        expect(s.onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('control: a KEPT default name (slug = entry id) still commits the catalog identity', () => {
-        const KIT_ENTRY: AppBuilderComponentCatalogEntry = {
-            id: 'commerce-integration-starter-kit',
-            name: 'Commerce Integration Starter Kit',
-            description: 'The kit',
-            kind: 'integration',
-            source: { owner: 'adobe', repo: 'commerce-integration-starter-kit', branch: 'main' },
-        };
-        const s = setup({ initial: LATER_ADD, catalog: [KIT_ENTRY] });
-        pickKindAndContinue(s, 'catalog');
-        act(() => s.result.current.pickCatalog(KIT_ENTRY.id));
-        // No label typed: the default (the entry's own name) mints the entry's
-        // own id — its id is excluded from its own collision domain.
-        act(() => s.result.current.onContinue());
-
-        expect(s.builder.onAppBuilderComponentToggle).toHaveBeenCalledWith(KIT_ENTRY.id, true);
-        expect(s.builder.onAddCustomAppBuilderComponent).not.toHaveBeenCalled();
-    });
-
-    it('source-blank is answerable immediately — Blank is the default, the name optional', () => {
-        const s = setup({ initial: LATER_ADD });
-        pickKindAndContinue(s, 'blank');
-        expect(s.result.current.stage).toBe('source-blank');
-        expect(s.result.current.canContinue).toBe(true);
-    });
-
-    it('a SEEDED blank finish commits the seed source (not the shell) with the instance identity', () => {
-        // The seed model: "Build custom" starting from the starter kit clones the
-        // KIT's repo under the user's name; the blank shell is only the default.
-        const KIT_SEED: AppBuilderComponentCatalogEntry = {
-            id: 'commerce-integration-starter-kit',
-            name: 'Commerce Integration Starter Kit',
-            description: 'The kit',
-            kind: 'integration',
-            layout: 'extension',
-            source: { owner: 'adobe', repo: 'commerce-integration-starter-kit', branch: 'main' },
-        };
-        const s = setup({ initial: LATER_ADD, catalog: [KIT_SEED] });
-        pickKindAndContinue(s, 'blank');
-        act(() => s.result.current.setSeed('commerce-integration-starter-kit'));
-        act(() => s.result.current.setLabel('Order Sync'));
-        act(() => s.result.current.onContinue()); // → api-access
-        act(() => s.result.current.onContinue()); // Add → commit + close
-
-        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(KIT_SEED.source, {
-            id: 'order-sync',
-            name: 'Order Sync',
-        });
-        expect(s.onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('clearing the seed returns the commit to the blank shell', () => {
-        const KIT_SEED: AppBuilderComponentCatalogEntry = {
-            id: 'commerce-integration-starter-kit',
-            name: 'Commerce Integration Starter Kit',
-            description: 'The kit',
-            kind: 'integration',
-            source: { owner: 'adobe', repo: 'commerce-integration-starter-kit', branch: 'main' },
-        };
-        const s = setup({ initial: LATER_ADD, catalog: [KIT_SEED] });
-        pickKindAndContinue(s, 'blank');
-        act(() => s.result.current.setSeed('commerce-integration-starter-kit'));
-        act(() => s.result.current.setSeed(undefined));
-        act(() => s.result.current.setLabel('My App'));
-        act(() => s.result.current.onContinue());
-        act(() => s.result.current.onContinue());
-
-        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
-            BLANK_COMPONENT.source,
-            { id: 'my-app', name: 'My App' }
-        );
-    });
-
-    it('a blank finish commits the INSTANCE id (not app-builder-shell) with picks keyed under it', () => {
-        const s = setup({ initial: LATER_ADD });
-        pickKindAndContinue(s, 'blank');
-        act(() => s.result.current.setLabel('Firefly Image Gen'));
-        act(() => s.result.current.onContinue()); // → api-access (no dest step)
-        act(() => s.result.current.toggleApi('FireflyServicesSDK'));
-        act(() => s.result.current.onContinue()); // Add → commit + close
-        // The shell repo is a TEMPLATE: the commit routes through the custom add with
-        // the instance identity — never the fixed-id toggle (which capped at one).
-        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
-            BLANK_COMPONENT.source,
-            { id: 'firefly-image-gen', name: 'Firefly Image Gen' }
-        );
-        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
-        expect(s.updateState).toHaveBeenCalledWith({
-            selectedConsoleApis: { 'firefly-image-gen': ['FireflyServicesSDK'] },
-        });
-        expect(s.onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('a blank finish with no picks writes no selectedConsoleApis', () => {
-        const s = setup({ initial: LATER_ADD });
-        pickKindAndContinue(s, 'blank');
-        act(() => s.result.current.setLabel('Order Sync'));
-        act(() => s.result.current.onContinue()); // → api-access (no dest step)
-        act(() => s.result.current.onContinue()); // Add → commit + close
-        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
-            BLANK_COMPONENT.source,
-            { id: 'order-sync', name: 'Order Sync' }
-        );
-        expect(s.updateState).not.toHaveBeenCalled();
-        expect(s.onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('a custom (import) finish mints the repo-named instance; picks key under it', () => {
-        // Optional-name model: the import defaults to the REPO's name (the
-        // label field's placeholder), and picks key under the minted id.
-        const s = setup({ initial: LATER_ADD });
-        pickKindAndContinue(s, 'custom');
-        act(() => s.result.current.setCustomSource({ owner: 'acme', repo: 'widget' }));
-        act(() => s.result.current.onContinue()); // → api-access (no dest step)
-        act(() => s.result.current.toggleApi('FireflyServicesSDK'));
-        act(() => s.result.current.onContinue()); // Add → commit + close
-        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
-            { owner: 'acme', repo: 'widget' },
-            { id: 'widget', name: 'widget' }
-        );
-        expect(s.updateState).toHaveBeenCalledWith({
-            selectedConsoleApis: { widget: ['FireflyServicesSDK'] },
-        });
-        expect(s.onClose).toHaveBeenCalledTimes(1);
-    });
-
-    it('a custom (import) finish honors a typed name', () => {
-        const s = setup({ initial: LATER_ADD });
-        pickKindAndContinue(s, 'custom');
-        act(() => s.result.current.setCustomSource({ owner: 'acme', repo: 'widget' }));
-        act(() => s.result.current.setLabel('Order Sync'));
-        act(() => s.result.current.onContinue());
-        act(() => s.result.current.onContinue());
-        expect(s.builder.onAddCustomAppBuilderComponent).toHaveBeenCalledWith(
-            { owner: 'acme', repo: 'widget' },
-            { id: 'order-sync', name: 'Order Sync' }
-        );
-    });
-
-    it('clears the draft source when setCustomSource receives undefined (cleared/invalid URL)', () => {
-        const s = setup({ initial: LATER_ADD });
-        pickKindAndContinue(s, 'custom');
-        act(() => s.result.current.setCustomSource({ owner: 'acme', repo: 'widget' }));
-        expect(s.result.current.canContinue).toBe(true);
-
-        act(() => s.result.current.setCustomSource(undefined));
-
-        expect(s.result.current.draft.customSource).toBeUndefined();
-        expect(s.result.current.canContinue).toBe(false);
     });
 });
 
@@ -660,5 +330,78 @@ describe('useIntegrationFlow — cancel path (draft-only, no commits)', () => {
         expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
         expect(s.builder.onAddCustomAppBuilderComponent).not.toHaveBeenCalled();
         expect(s.onClose).not.toHaveBeenCalled();
+    });
+});
+
+// The slice booleans decide whether the destination stages appear at all. Each of
+// them is a separate wizard-state fact, and reading two of them as one is exactly
+// how a half-committed destination would be skipped.
+describe('useIntegrationFlow — what makes the destination collapse', () => {
+    it('starts with changingDestination false (the dest stages are not re-expanded)', () => {
+        const s = setup();
+        expect(s.result.current.draft.changingDestination).toBe(false);
+    });
+
+    it('walks the destination when the project is committed but the workspace is not', () => {
+        const s = setup({
+            initial: {
+                adobeProject: PROJECT,
+                selectedAppBuilderComponents: ['existing-integration'],
+            },
+        });
+        pickKindAndContinue(s, 'mesh');
+
+        expect(s.result.current.stage).toBe('dest-project');
+        expect(s.onClose).not.toHaveBeenCalled();
+        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
+    });
+
+    it('walks the destination when nothing references it — a mesh the stack lacks is not a reference', () => {
+        const s = setup({
+            meshComponent: null,
+            initial: { adobeProject: PROJECT, adobeWorkspace: WORKSPACE },
+        });
+        pickKindAndContinue(s, 'catalog');
+        act(() => s.result.current.pickCatalog('erp-sync'));
+        act(() => s.result.current.onContinue());
+
+        expect(s.result.current.stage).toBe('dest-project');
+        expect(s.onClose).not.toHaveBeenCalled();
+    });
+
+    it('Change re-enters at the sign-in step when the session lapsed after the modal opened', () => {
+        const s = setup({ initial: LATER_ADD });
+        expect(s.result.current.stage).toBe('kind');
+
+        s.stateRef.current = { ...s.stateRef.current, ...SIGNED_OUT } as WizardState;
+        s.sync();
+        act(() => s.result.current.changeDestination());
+
+        expect(s.result.current.stage).toBe('dest-signin');
+    });
+});
+
+describe('useIntegrationFlow — draft edits that must not reach wizard state early', () => {
+    it('commits neither destination field from a stage that is not its own', () => {
+        const s = setup();
+        act(() => s.result.current.setPendingProject(OTHER_PROJECT));
+        act(() => s.result.current.setPendingWorkspace(WORKSPACE));
+        act(() => s.result.current.pickKind('mesh'));
+        act(() => s.result.current.onContinue()); // leaves the KIND stage
+
+        expect(s.result.current.stage).toBe('dest-project');
+        expect(s.updateState).not.toHaveBeenCalled();
+    });
+
+    it('toggleApi removes only the code toggled off', () => {
+        const s = setup({ initial: LATER_ADD });
+        pickKindAndContinue(s, 'blank');
+        act(() => s.result.current.onContinue()); // → api-access
+
+        act(() => s.result.current.toggleApi('FireflyServicesSDK'));
+        act(() => s.result.current.toggleApi('PhotoshopSDK'));
+        act(() => s.result.current.toggleApi('FireflyServicesSDK'));
+
+        expect(s.result.current.draft.selectedApis).toEqual(['PhotoshopSDK']);
     });
 });

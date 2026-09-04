@@ -46,7 +46,7 @@ interface Setup {
     stateRef: { current: WizardState };
 }
 
-function setup(editTarget: ApiEditTarget, initial: Partial<WizardState> = {}): Setup {
+function setup(editTarget?: ApiEditTarget, initial: Partial<WizardState> = {}): Setup {
     const { stateRef, updateState, builder, onClose } = makeFlowHarness({
         ...SIGNED_IN,
         ...initial,
@@ -115,5 +115,23 @@ describe('useIntegrationFlow — api-edit mode', () => {
         expect(s.updateState).toHaveBeenCalledWith({
             selectedConsoleApis: { 'acme-widget': ['FireflyServicesSDK'], 'erp-sync': ['ErpSDK'] },
         });
+    });
+
+    // Re-opening the picker edits an existing integration's APIs; it is not a
+    // destination change, so the flag the dest stages re-expand on stays down.
+    it('seeds the picker without flagging a destination change', () => {
+        const s = setup(TARGET);
+        expect(s.result.current.draft.changingDestination).toBe(false);
+    });
+
+    // The row that opens api-edit supplies the target; a modal opened without one
+    // has nothing to write, and must close rather than throw on the missing key.
+    it('Save with no edit target writes nothing and still closes', () => {
+        const s = setup(undefined, { selectedConsoleApis: { 'acme-widget': ['FireflyServicesSDK'] } });
+        act(() => s.result.current.onContinue()); // Save
+
+        expect(s.updateState).not.toHaveBeenCalled();
+        expect(s.builder.onAppBuilderComponentToggle).not.toHaveBeenCalled();
+        expect(s.onClose).toHaveBeenCalledTimes(1);
     });
 });

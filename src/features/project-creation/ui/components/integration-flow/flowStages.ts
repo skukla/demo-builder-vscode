@@ -93,7 +93,6 @@ export interface FlowStateSlice {
     phaseRunning: boolean;
     /** Selected integration ids, for the custom-source duplicate guard. */
     selectedIds: string[];
-    meshAvailable: boolean;
     meshSelected: boolean;
 }
 

@@ -147,22 +147,8 @@ function computeSlice(
         workspaceCommitted,
         phaseRunning,
         selectedIds: state.selectedAppBuilderComponents ?? EMPTY_STRING_ARRAY,
-        meshAvailable: meshComponent !== undefined,
         meshSelected: meshComponent ? isMeshSelected(state, meshComponent.id) : false,
     };
-}
-
-/** The first stage of the derived order at mount (mode-aware). */
-function initialStageFor(
-    state: AdobeAuthSessionState,
-    meshComponent: AppBuilderComponentCatalogEntry | undefined,
-    mode: FlowMode,
-): FlowStageId {
-    return deriveStageOrder(
-        createInitialDraft(),
-        computeSlice(state, meshComponent, false),
-        mode,
-    )[0];
 }
 
 /**
@@ -181,9 +167,11 @@ export function useIntegrationFlow(args: UseIntegrationFlowArgs): UseIntegration
     // The stored stage id is the only walked state; the DISPLAYED stage is
     // derived — when the stored stage vanishes from the order (e.g. dest-signin
     // after a mid-flow sign-in), the flowStages clamp resolves the survivor.
-    const [storedStage, setStoredStage] = useState<FlowStageId>(() =>
-        initialStageFor(state, meshComponent, mode),
-    );
+    // Seeded with the canonical first stage. Every mode that does not start there
+    // (destination, api-edit) reaches its own first stage through the same clamp a
+    // vanished stage does, so a mount-time computation of the order would only
+    // reproduce what the clamp already resolves.
+    const [storedStage, setStoredStage] = useState<FlowStageId>('kind');
 
     const slice = useMemo(
         () => computeSlice(state, meshComponent, phaseRunning),

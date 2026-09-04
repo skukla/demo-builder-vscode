@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/hooks/useProjectCreationPhases.ts"
+        "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts"
     ],
     "reporters": [
         "clear-text",

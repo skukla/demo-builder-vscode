@@ -4570,6 +4570,158 @@
             "decision": "none \u2014 the fields are optional on the ref type, so the compiler requires the chain",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 337,
+            "mutants": 1,
+            "category": "other",
+            "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 341,
+            "mutants": 1,
+            "category": "other",
+            "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "[],"
+            ],
+            "line": 347,
+            "mutants": 1,
+            "category": "other",
+            "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 352,
+            "mutants": 1,
+            "category": "other",
+            "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 357,
+            "mutants": 1,
+            "category": "other",
+            "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 366,
+            "mutants": 1,
+            "category": "other",
+            "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 370,
+            "mutants": 1,
+            "category": "other",
+            "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 374,
+            "mutants": 1,
+            "category": "other",
+            "reason": "These eight callbacks take no dependencies because each one updates the draft through the functional form of setDraft, so nothing they close over can change. The Stryker replacement is a constant literal that compares equal on every render, so useCallback still returns the same function; neither the identity, the call count, nor the resulting draft differs in any way a test can observe.",
+            "decision": "none \u2014 the empty list is what \"this callback closes over nothing\" is spelled as",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "if (excludeId) domain.delete(excludeId);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Only the TRUE-forcing mutant survives here; the false one is killed by the kept-default catalog test. Forcing the guard true calls Set.delete(undefined) on the paths that pass no exclusion, and a Set built from reserved component ids never contains undefined, so the delete removes nothing and the minted identity is byte-identical. The guard is a readability guard, not a correctness one.",
+            "decision": "none \u2014 Set.delete of a value the set cannot hold is a no-op by construction",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "if (draft.kind === 'custom' && draft.customSource) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Only the mutant forcing the KIND test true survives; the one turning the AND into an OR is killed by the cleared-URL test. Reaching this line at all means the draft kind is neither mesh, nor catalog-with-an-id, nor blank, and the only remaining kinds are custom and undefined. Undefined kind occurs solely in destination mode, where no source stage exists to set customSource, so the second operand is always undefined there and the branch is skipped either way.",
+            "decision": "none \u2014 no reachable draft has a non-custom kind together with a custom source",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "if (next) setStoredStage(next);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "nextStage returns null only for the LAST stage of the derived order, and the statement above this one has already returned in exactly that case (it compares the stage against the order last element and finishes the flow). The displayed stage is always a member of the order, so by the time control reaches this line the next stage exists. Forcing the guard true calls setStoredStage with the same value the guarded call passes.",
+            "decision": "none \u2014 the guard narrows a nullable return the caller has already excluded",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/useIntegrationFlow.ts",
+            "anchors": [
+                "if (previous) setStoredStage(previous);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "prevStage returns null exactly on the first stage of the order, and forcing the guard true then stores null. That is unobservable: the stored id is never displayed directly \u2014 a stored stage absent from the derived order is resolved through the same clamp a vanished stage uses, and for null the clamp finds no canonical predecessor and falls through to the first stage of the order, which is where Back was already refusing to move from.",
+            "decision": "none \u2014 the clamp makes an out-of-order stored stage indistinguishable from the first one",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }

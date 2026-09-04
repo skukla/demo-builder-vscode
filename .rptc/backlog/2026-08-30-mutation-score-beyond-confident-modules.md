@@ -341,3 +341,5 @@ which point the cadence drops to release cuts.
 - 2026-09-04  test(aiBundle): bring aiDefaultsInstaller to zero open mutation gaps (`5a21e0156`)
 - 2026-09-04  test(project-creation): bring commerceSections to zero open mutation gaps (`2a493af0c`)
 - 2026-09-04  chore(mutation): log MUT-05 against PL-22 and leave the focus config on stepFiltering (`8b5f3e6cc`)
+- 2026-09-04  test(project-creation): bring useProjectCreationPhases to zero open mutation gaps (`2fd87a894`)
+- 2026-09-04  chore(backlog): log PL-22 commits from batch MUT-01 (`a200c6da5`)

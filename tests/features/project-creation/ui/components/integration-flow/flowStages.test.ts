@@ -36,7 +36,6 @@ function slice(overrides: Partial<FlowStateSlice> = {}): FlowStateSlice {
         workspaceCommitted: false,
         phaseRunning: false,
         selectedIds: [],
-        meshAvailable: true,
         meshSelected: false,
         ...overrides,
     };
