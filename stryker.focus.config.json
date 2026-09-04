@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/state/componentSelectionReconcile.ts"
+        "src/core/state/componentApiPicks.ts"
     ],
     "reporters": [
         "clear-text",

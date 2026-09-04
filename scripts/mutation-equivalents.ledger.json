@@ -1252,6 +1252,18 @@
             "decision": "none \u2014 the fallback is required by the type and unreachable through the real collaborator",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (manifestValidation, MUT-06)"
+        },
+        {
+            "module": "src/core/state/componentApiPicks.ts",
+            "anchors": [
+                "[UNATTRIBUTED_PICKS_KEY]: [...new Set(project.additionalConsoleApis ?? [])],"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the `[]` that stands in for an absent legacy list with a non-empty list. That list is only ever intersected with `desired` (`kept = codes.filter(wanted.has)`), and any code the user did not ask for is filtered out before it can reach the result, so an absent legacy list and a list of codes nobody wants reconcile to the same map. The one input that separates them is a desired list containing Stryker's own sentinel string, which is not a test of the code.",
+            "decision": "none \u2014 the fallback value is intersected away before it can be observed",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (componentApiPicks, MUT-06)"
         }
     ]
 }

@@ -13,6 +13,7 @@
  */
 
 import { UNATTRIBUTED_PICKS_KEY, applyDesiredApis, migrateApiPicks, resolveDesiredApis } from '@/core/state/componentApiPicks';
+import { RESERVED_EXISTING_KEY } from '@/features/project-creation/ui/components/integration-flow/flowStages';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../helpers/projectFake';
 
@@ -67,6 +68,12 @@ describe('resolveDesiredApis', () => {
 });
 
 describe('migrateApiPicks', () => {
+    it('files unattributed picks under the SAME key the wizard reserves for them', () => {
+        // Two modules model "we already lost the owner once"; a project written
+        // by one and read by the other must agree on the spelling.
+        expect(UNATTRIBUTED_PICKS_KEY).toBe(RESERVED_EXISTING_KEY);
+    });
+
     it('moves the flat array under the unattributed key', () => {
         // The picks predate attribution and CANNOT be assigned an owner —
         // no owner is guessed. `__existing__` is the shape the wizard already
@@ -193,5 +200,17 @@ describe('applyDesiredApis — editing the union without losing attribution', ()
         ]);
 
         expect(next[UNATTRIBUTED_PICKS_KEY]).toEqual(['LegacySDK', 'NewSDK']);
+    });
+
+    it('keeps surviving legacy picks in their recorded order, ahead of additions', () => {
+        // The legacy list is migrated (deduped, order kept) BEFORE the edit is
+        // applied, so a surviving pick keeps its place and an addition appends —
+        // even when the user's desired list names the addition first.
+        const next = applyDesiredApis(
+            { additionalConsoleApis: ['SharedSDK', 'LegacySDK', 'LegacySDK'] },
+            ['NewSDK', 'LegacySDK', 'SharedSDK'],
+        );
+
+        expect(next).toEqual({ [UNATTRIBUTED_PICKS_KEY]: ['SharedSDK', 'LegacySDK', 'NewSDK'] });
     });
 });
