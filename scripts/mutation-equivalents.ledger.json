@@ -5264,6 +5264,18 @@
             "decision": "keep \u2014 the warn is the only way an SC learns the entries are missing",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/stages/BlankStage.tsx",
+            "anchors": [
+                "selectedIds = [],"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty-array default with an array holding its own marker string. The value is used once, as selectedIds.includes(seed.id), so the two defaults differ only for a seed whose CATALOG ID is that exact marker string. Writing a test around a Stryker-inserted literal would assert on the mutation tool rather than on the component, and no real catalog entry can carry that id.",
+            "decision": "keep \u2014 the empty default is correct; the difference is unreachable for real catalog ids",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
