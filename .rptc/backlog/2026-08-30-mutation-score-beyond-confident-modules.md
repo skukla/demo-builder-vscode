@@ -268,3 +268,4 @@ which point the cadence drops to release cuts.
 - 2026-09-03  docs(backlog): log the MUT-04 batch commits against PL-22 (`441ea5381`)
 - 2026-09-03  test(state): bring stateManager to zero open mutation gaps (`586a35f7a`)
 - 2026-09-03  test(state): bring appBuilderComponentState to zero open mutation gaps (`afd8e0d62`)
+- 2026-09-03  test(state): bring manifestFormatSweep to zero open mutation gaps (`d0384136c`)

@@ -1216,6 +1216,18 @@
             "decision": "none \u2014 required by the type; the only version at which it would matter is 0, which the stamp never carries",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (manifestFormatSweep, MUT-05)"
+        },
+        {
+            "module": "src/core/state/apiRowState.ts",
+            "anchors": [
+                "const owner = ownerId === UNATTRIBUTED_PICKS_KEY ? undefined : nameOf.get(ownerId);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker forces the ternary to its lookup arm, so the unattributed key is looked up in the owner-name map. No owner carries that key as its id \u2014 it is a reserved sentinel for picks whose owner was never recorded \u2014 so the lookup yields undefined, which is what the explicit arm yields. The unattributed case IS tested (the row locks with an empty requiredBy); the only input that would separate the arms is an integration whose catalog id is the sentinel, which no catalog can produce. The explicit arm stays because it states the rule rather than relying on the map happening to miss.",
+            "decision": "none \u2014 both arms answer undefined for the one input that selects between them",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (apiRowState, MUT-05)"
         }
     ]
 }
