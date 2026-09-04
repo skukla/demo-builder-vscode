@@ -29,6 +29,12 @@ import {
 import type { McpToolServer } from '@/features/ai/server/mcpToolServer';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
+// Real unix sockets under worker contention, like the sibling
+// inExtensionMcpServer.socketOwnership.test.ts: same 30s ceiling, same reason
+// (headroom, not slowness). A build-label test overran the 10s default on
+// 2026-09-03 in a full run and passed alone.
+jest.setTimeout(30_000);
+
 /**
  * Resolves once nothing answers on `socketPath` — the previous listener is gone.
  *
