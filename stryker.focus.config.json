@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/handlers/checkGitHubAppHandler.ts"
+        "src/features/project-creation/services/aiBundle/claudeSettingsWriter.ts"
     ],
     "reporters": [
         "clear-text",

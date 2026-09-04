@@ -4893,6 +4893,56 @@
             "decision": "none \u2014 the explicit false matches the declared Promise<boolean> return type",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/claudeSettingsWriter.ts",
+            "anchors": [
+                "const hooks = Array.isArray(entry?.hooks) ? entry.hooks : [];"
+            ],
+            "line": 85,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty fallback array with ['Stryker was here']. The array is only reached when the entry's hooks field is not an array, and the very next call is .some(h => typeof h?.command === 'string' && h.command.includes(SIGNATURE)). A bare string element has no .command, so the predicate is false for the injected element exactly as it is vacuously false for the empty array. Both produce false, so no input can separate them. (isAioGuardHook)",
+            "decision": "none \u2014 the empty fallback is the correct shape guard for a user-authored file",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/claudeSettingsWriter.ts",
+            "anchors": [
+                "const hooks = Array.isArray(entry?.hooks) ? entry.hooks : [];"
+            ],
+            "line": 140,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty fallback array with ['Stryker was here']. The array is only reached when the entry's hooks field is not an array, and the very next call is .some(h => typeof h?.command === 'string' && h.command.includes(SIGNATURE)). A bare string element has no .command, so the predicate is false for the injected element exactly as it is vacuously false for the empty array. Both produce false, so no input can separate them. (isGitSyncHook)",
+            "decision": "none \u2014 the empty fallback is the correct shape guard for a user-authored file",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/claudeSettingsWriter.ts",
+            "anchors": [
+                "const ourDesired = (desiredList ?? []).filter(isOurs);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant makes the nullish fallback ['Stryker was here'] instead of []. It is only reached when desiredList is undefined, and the result is immediately .filter(isOurs)ed; isOurs reads entry?.hooks off the string, gets undefined, and returns false. The injected element is filtered straight back out, so both branches yield an empty array.",
+            "decision": "none \u2014 the fallback is what lets a caller omit a list entirely",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/aiBundle/claudeSettingsWriter.ts",
+            "anchors": [
+                "if (content === undefined) return {};"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard false does not change the answer: JSON.parse(undefined) stringifies its argument to 'undefined', which is not valid JSON, so it throws and the catch returns the same {} the guard would have returned. Only the route differs. Forcing it TRUE is killed (the valid-JSON test); only the false direction is unkillable.",
+            "decision": "none \u2014 the explicit guard says what it means and avoids a throw on the normal no-file path",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
         }
     ]
 }

@@ -348,3 +348,4 @@ which point the cadence drops to release cuts.
 - 2026-09-04  test(project-creation): bring aiToolingGate to zero open mutation gaps (`48ecb690d`)
 - 2026-09-04  test(project-creation): bring SampleDataStep to zero open mutation gaps (`428f44260`)
 - 2026-09-04  test(project-creation): bring useProjectBuilder to zero open mutation gaps (`9d2ac1654`)
+- 2026-09-04  test(project-creation): bring checkGitHubAppHandler to zero open mutation gaps (`66397673c`)
