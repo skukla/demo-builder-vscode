@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/prerequisites/handlers/shared.ts"
+        "src/features/prerequisites/handlers/checkHandler.ts"
     ],
     "reporters": [
         "clear-text",

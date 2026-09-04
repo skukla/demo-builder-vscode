@@ -1599,6 +1599,162 @@
             "decision": "Ledger. Killing it would require asserting the wording of a notification, which is what the ratchet refuses.",
             "recorded": "2026-09-04",
             "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/checkHandler.ts",
+            "anchors": [
+                "(prereq.id === 'node' && nodeMissing)"
+            ],
+            "line": 209,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "nodeMissing can only ever be true for the 'node' prerequisite: it is assigned solely inside the `prereq.id === 'node'` guard on line 198 and initialised false otherwise. So mutating this operand \u2014 to true, to false, or to !== \u2014 cannot change the value of the disjunction for any input.",
+            "decision": "Left as a defensive read-as-written clause; the redundancy is with the guard above it, not a defect.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/checkHandler.ts",
+            "anchors": [
+                "if (!prereq) continue;"
+            ],
+            "line": 317,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "`if (false)` removes a guard that the loop bound already makes unreachable: i is strictly less than prerequisites.length, so prerequisites?.[i] is never undefined for a dense array. The guard exists to satisfy the optional-index type, not to handle a reachable state.",
+            "decision": "Kept \u2014 it is what makes the indexed access typecheck.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/checkHandler.ts",
+            "anchors": [
+                "if (checkResult.installed) {"
+            ],
+            "line": 363,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Both arms of this if/else do nothing but call context.stepLogger.log \u2014 one with a tick and a version suffix, one with a cross. Flipping the condition, emptying either block, changes only WHICH step-log line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour.",
+            "decision": "Ledgered rather than pinned; the step log is presentation.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/checkHandler.ts",
+            "anchors": [
+                "for (let i = 0; i < (prerequisites?.length ?? 0); i++) {"
+            ],
+            "line": 315,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "`<` to `<=` runs one extra iteration at i === length, where `prerequisites?.[i]` is undefined and the very next line (`if (!prereq) continue;`) skips it. No collaborator is called and no message is sent on that iteration, so no test can observe it.",
+            "decision": "Kept as written.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/checkHandler.ts",
+            "anchors": [
+                "return { perNodeVersionStatus, missingVariantMajors: [...requiredMajors] };"
+            ],
+            "line": 63,
+            "mutants": 1,
+            "category": "other",
+            "reason": "`missingVariantMajors` from this branch is only ever read by getPrerequisiteDisplayMessage, and only on its 'missing in Node X' arm \u2014 which is unreachable here, because this branch also returns a NON-EMPTY perNodeVersionStatus (one entry per required major), and that takes the earlier 'Installed for versions:' arm. Emptying the array changes no output.",
+            "decision": "Kept: it is the honest value even though nothing downstream reads it on this path.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/checkHandler.ts",
+            "anchors": [
+                "return { perNodeVariantMissing: false, missingVariantMajors: [], perNodeVersionStatus: [] };"
+            ],
+            "line": 157,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The `missingVariantMajors: []` literal is unobservable on this early-return path: it is read only by getPrerequisiteDisplayMessage's 'missing in Node X' arm, which is gated on perNodeVariantMissing \u2014 returned false here. Filling the array changes no message.",
+            "decision": "Kept as the empty-by-construction value.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/checkHandler.ts",
+            "anchors": [
+                "if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 0) {"
+            ],
+            "line": 198,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Each surviving mutant weakens one operand into a condition the OTHER operands already enforce. `prereq.id === 'node'` to true: nodeVersionStatus is assigned only inside the id === 'node' arm of the check loop, so it is undefined for every other prerequisite and the conjunction still short-circuits. `length > 0` to true or to >= 0: the only case they admit is an empty array, where the body's `some(v => !v.installed)` is false anyway, so nodeMissing does not move.",
+            "decision": "Kept as written \u2014 the guard is a readable statement of when the body applies.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/checkHandler.ts",
+            "anchors": [
+                "const userOptionalDeps = payload?.selectedOptionalDependencies ?? [];"
+            ],
+            "line": 240,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "This line sits inside `if (payload?.selectedStack)`, so payload is known truthy by the time it runs. Dropping the optional chain cannot throw.",
+            "decision": "Kept for local readability.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/checkHandler.ts",
+            "anchors": [
+                "const prereq = prerequisites?.[i];"
+            ],
+            "line": 316,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The loop bound is `i < (prerequisites?.length ?? 0)`, so the body runs only when prerequisites is truthy. Dropping the optional chain cannot throw.",
+            "decision": "Kept for local readability.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/checkHandler.ts",
+            "anchors": [
+                "const nodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(nodeVersionMapping);"
+            ],
+            "line": 107,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Reaching this line requires the check loop to be running over a non-empty prerequisite list, and that list comes from `context.prereqManager?.resolveDependencies(...)` earlier in the SAME invocation. A context whose prereqManager is undefined therefore never gets here \u2014 the loop has nothing to iterate. So no input can distinguish the optional chain from a plain member access.",
+            "decision": "Kept: consistent with the other reads of the same optional field.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/checkHandler.ts",
+            "anchors": [
+                "const cachedResults = context.prereqManager?.getCacheManager().getPerVersionResults(prereq.id);"
+            ],
+            "line": 168,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Reaching this line requires the check loop to be running over a non-empty prerequisite list, and that list comes from `context.prereqManager?.resolveDependencies(...)` earlier in the SAME invocation. A context whose prereqManager is undefined therefore never gets here \u2014 the loop has nothing to iterate. So no input can distinguish the optional chain from a plain member access.",
+            "decision": "Kept: consistent with the other reads of the same optional field.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
+        },
+        {
+            "module": "src/features/prerequisites/handlers/checkHandler.ts",
+            "anchors": [
+                "checkResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;"
+            ],
+            "line": 340,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Reaching this line requires the check loop to be running over a non-empty prerequisite list, and that list comes from `context.prereqManager?.resolveDependencies(...)` earlier in the SAME invocation. A context whose prereqManager is undefined therefore never gets here \u2014 the loop has nothing to iterate. So no input can distinguish the optional chain from a plain member access.",
+            "decision": "Kept: consistent with the other reads of the same optional field.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-01, 2026-09-04"
         }
     ]
 }
