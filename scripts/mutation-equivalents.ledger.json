@@ -2249,6 +2249,240 @@
             "decision": "Kept: the failure log is more useful with the elapsed time in it.",
             "recorded": "2026-09-04",
             "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "const requiredKeys = componentDef.configuration?.requiredEnvVars || [];"
+            ],
+            "line": 45,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Replacing this empty fallback with a one-element array only matters when the component declares no requiredEnvVars, and the injected name is a string no registry envVars dictionary and no service definition contains. It is dropped by the 'if (envVar)' lookup before any line is written, so the generated .env and the generated json are byte-identical either way.",
+            "decision": "Kept: an absent list is an empty list here.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "const optionalKeys = componentDef.configuration?.optionalEnvVars || [];"
+            ],
+            "line": 46,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same shape as the requiredEnvVars fallback above: the injected key is not in the registry envVars dictionary, so the definition lookup skips it and no output line exists to differ. Only a component that declared an env var literally named after Stryker's placeholder could tell the two apart.",
+            "decision": "Kept: an absent list is an empty list here.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "const explicitKeys = new Set([...requiredKeys, ...optionalKeys]);"
+            ],
+            "line": 47,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying this set removes the dedupe that stops a service re-contributing a key the component already declares, but both consumers of the resulting list deduplicate again downstream \u2014 the .env writer through varsByKey, and the json writer by assigning the same output field twice. The duplicate key therefore never reaches a file, so no written byte differs.",
+            "decision": "Kept: it states the intent at the point the decision is made, rather than relying on two downstream dedupes.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "groups.get(group)?.push(envVar);"
+            ],
+            "line": 117,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The two lines above guarantee the entry exists: if the map does not have the group, it is set to an empty array immediately before this read. Removing the optional call therefore never dereferences undefined, and there is no input to groupEnvVarsBySection that reaches this line with the key absent.",
+            "decision": "Kept: the Map type says the get can miss, and the guard costs nothing.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "if (!varsByKey.has(key)) {"
+            ],
+            "line": 243,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true lets a repeated key overwrite its own entry. The value written is built entirely from the key, the shared dictionary entry and the componentId \u2014 all identical on the second pass \u2014 and a Map keeps the insertion position of an overwritten key, so neither the contents nor the order of varsByKey changes. Only the wasted work differs.",
+            "decision": "Kept: 'first one wins' is the documented rule, and stating it is cheaper than proving the rewrite is harmless.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "usedBy: [componentId],"
+            ],
+            "line": 249,
+            "mutants": 1,
+            "category": "other",
+            "reason": "usedBy is attached to the in-memory EnvVarDefinition and never read again on this path: the writers consume key, group, description and default only, and nothing serialises usedBy into the .env or the json. Emptying the array changes a field no output and no collaborator observes.",
+            "decision": "Kept: the definitions this builds are the shared EnvVarDefinition shape, and dropping the field here would make them lie.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "if (envVar.derivedFrom && envVar.derivedFrom.length > 0) {"
+            ],
+            "line": 259,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both survivors relax the length test on the right of the &&: forcing it true, and widening it to >= 0. The left operand still short-circuits for a var with no derivedFrom, so the only input that could reach the loop differently is a var declaring derivedFrom as an empty array \u2014 and iterating an empty array sets no derived value and logs nothing. Every derivedFrom in the registry names at least one source.",
+            "decision": "Kept: the length test says the loop needs a source to try, without depending on the empty case being harmless.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "if (relevantVars.length > 0) {"
+            ],
+            "line": 277,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Forcing this guard true, or widening it to >= 0, only lets an empty relevantVars through. groupEnvVarsBySection then returns an empty Map, the for-of over its entries runs zero times, and the lines array reaches the write exactly as it was \u2014 the header-only file the guard already produces. The false arm is a real decision and a test kills it.",
+            "decision": "Kept: it names the empty case at the point it is decided.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "...(registry.components.frontends || []),"
+            ],
+            "line": 395,
+            "mutants": 1,
+            "category": "other",
+            "reason": "This fallback only fires when the category is absent, and the injected value is a plain string. findRegistryDefinition immediately runs find(def => def.id === componentId) over the flattened list, and a string has no id property, so the string never matches and never becomes the returned definition. The || itself is a real decision \u2014 a test with the category absent kills that one.",
+            "decision": "Kept: an absent category is an empty category.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "...(registry.components.backends || []),"
+            ],
+            "line": 396,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same as the frontends fallback above: it fires only when the backends category is absent, and the string it injects is flattened into a list that findRegistryDefinition searches by def.id. A string has no id, so it can never be returned as a component definition and no caller sees a difference. The || is separately killed by a registry whose backends key is missing.",
+            "decision": "Kept: an absent category is an empty category.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "...(registry.components.dependencies || []),"
+            ],
+            "line": 397,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same as the frontends fallback above: it fires only when the dependencies category is absent, and the string it injects is flattened into a list that findRegistryDefinition searches by def.id. A string has no id, so it can never be returned as a component definition and no caller sees a difference. The || is separately killed by a registry whose dependencies key is missing.",
+            "decision": "Kept: an absent category is an empty category.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "...(registry.components.mesh || []),"
+            ],
+            "line": 398,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same as the frontends fallback above: it fires only when the mesh category is absent, and the string it injects is flattened into a list that findRegistryDefinition searches by def.id. A string has no id, so it can never be returned as a component definition and no caller sees a difference. The || is separately killed by a registry whose mesh key is missing.",
+            "decision": "Kept: an absent category is an empty category.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "...(registry.components.integrations || []),"
+            ],
+            "line": 399,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same as the frontends fallback above: it fires only when the integrations category is absent, and the string it injects is flattened into a list that findRegistryDefinition searches by def.id. A string has no id, so it can never be returned as a component definition and no caller sees a difference. The || is separately killed by a registry whose integrations key is missing.",
+            "decision": "Kept: an absent category is an empty category.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "if (configFileDef.additionalFields) {"
+            ],
+            "line": 592,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true runs Object.assign(outputConfig, undefined) when the declaration carries no additionalFields, and Object.assign ignores a null or undefined source entirely \u2014 outputConfig is returned unchanged and the same bytes are written. The false arm is a real decision and a test with additionalFields present kills it.",
+            "decision": "Kept: it says the merge is conditional rather than relying on Object.assign's tolerance of undefined.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "if (!githubOwner || !repoName) {"
+            ],
+            "line": 671,
+            "mutants": 6,
+            "category": "branch",
+            "reason": "This whole if is a logger.warn and nothing else. The params object was already built above it and is passed to generateConfigJson unchanged whichever way the condition goes, so forcing it true, forcing it false, flipping the || to &&, dropping either negation or emptying the block all change only whether a warning prints. Distinguishing them would mean asserting warning text, which pins wording rather than behaviour.",
+            "decision": "Kept: an incomplete config.json is worth warning about even though the generation continues.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "if (!daLiveOrg || !daLiveSite) {"
+            ],
+            "line": 676,
+            "mutants": 6,
+            "category": "branch",
+            "reason": "The same shape as the GitHub warning above: the body is one logger.warn, the daLiveOrg and daLiveSite values already sit in the params object built earlier, and generateConfigJson receives them identically whichever way this condition evaluates. Every mutant here \u2014 condition forced either way, || to &&, either negation dropped, block emptied \u2014 moves only a log line.",
+            "decision": "Kept: an incomplete config.json is worth warning about even though the generation continues.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "const newVars = backendSpecificVars.filter((v) => !explicitKeys.has(v));"
+            ],
+            "line": 58,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Dropping the filter pushes a key the component already declares onto the list a second time. Both consumers deduplicate again: the .env writer keys varsByKey by name and skips a repeat, and the json writer assigns the same output field twice with the same value. The duplicate is therefore invisible in every written file \u2014 the ARROW inside the filter is a separate mutant and a test kills it.",
+            "decision": "Kept: skipping a var the component already declares is the rule this line exists for, and relying on two downstream dedupes to enforce it would be accidental.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
+        },
+        {
+            "module": "src/features/project-creation/helpers/envFileGenerator.ts",
+            "anchors": [
+                "const newVars = serviceDef.requiredEnvVars.filter((v) => !explicitKeys.has(v));"
+            ],
+            "line": 62,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Identical to the backend-specific filter above: without it a service re-contributes a key the component declared, and both writers collapse the repeat \u2014 varsByKey by key for the .env, and a repeated field assignment for the json. No file content differs, so no assertion on output can separate the two.",
+            "decision": "Kept: skipping a var the component already declares is the rule this line exists for.",
+            "recorded": "2026-09-04",
+            "source": "PL-22 MUT-02, 2026-09-04"
         }
     ]
 }

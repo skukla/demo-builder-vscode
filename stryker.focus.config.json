@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/prerequisites/services/versioning/VersionSatisfactionChecker.ts"
+        "src/features/project-creation/helpers/envFileGenerator.ts"
     ],
     "reporters": [
         "clear-text",
