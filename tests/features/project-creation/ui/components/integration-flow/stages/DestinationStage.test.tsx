@@ -32,6 +32,41 @@ jest.mock('@/features/project-creation/ui/hooks/useProjectCreationPhases', () =>
 jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
     AdobeAuthStep: () => <div data-testid="adobe-auth-step">Adobe Auth Step</div>,
 }));
+
+// StatusDisplay is a sentinel, not the real component: the shared Spectrum mock
+// FILTERS `variant` out before it reaches the DOM (SPECTRUM_PROPS), so a Retry
+// button rendered as accent and one rendered as the secondary fallback are the
+// same markup. Reading the action objects is the only way to see which one this
+// stage asked for. The sentinel still renders a real button wired to onPress, so
+// the click-through assertions below are unchanged.
+jest.mock('@/core/ui/components/feedback/StatusDisplay', () => ({
+    StatusDisplay: ({
+        title,
+        message,
+        height,
+        actions,
+    }: {
+        title?: string;
+        message?: string;
+        height?: string;
+        actions?: { label: string; variant?: string; onPress?: () => void }[];
+    }) => (
+        <div data-testid="status-display" data-height={height ?? ''}>
+            <span>{title}</span>
+            <span>{message}</span>
+            {actions?.map((action) => (
+                <button
+                    key={action.label}
+                    type="button"
+                    data-variant={action.variant ?? ''}
+                    onClick={action.onPress}
+                >
+                    {action.label}
+                </button>
+            ))}
+        </div>
+    ),
+}));
 jest.mock('@/features/authentication/ui/components/AdobeEntityFields', () => ({
     AdobeProjectField: ({
         onCreateFlow,
@@ -290,6 +325,115 @@ describe('DestinationStage', () => {
             const { onPhaseRunningChange } = renderStage('project');
             expect(onPhaseRunningChange).toHaveBeenLastCalledWith(false);
         });
+
+        // The report has to FOLLOW the phase, not fire once on mount: the modal
+        // footer's gate stays closed forever if a phase starting is never reported.
+        it('re-reports when the phase starts and again when it finishes', () => {
+            const onPhaseRunningChange = jest.fn();
+            // A FRESH element each time: re-rendering the identical element object
+            // lets React bail out before the effect ever re-runs.
+            const stage = () => (
+                <Provider theme={defaultTheme} colorScheme="light">
+                    <DestinationStage
+                        state={{} as WizardState}
+                        updateState={jest.fn()}
+                        view="project"
+                        onPendingProject={jest.fn()}
+                        onPendingWorkspace={jest.fn()}
+                        onPhaseRunningChange={onPhaseRunningChange}
+                    />
+                </Provider>
+            );
+            const { rerender } = render(stage());
+            expect(onPhaseRunningChange).toHaveBeenLastCalledWith(false);
+
+            setPhases({ phase: 'creating', phaseMessage: 'Creating project…' });
+            rerender(stage());
+            expect(onPhaseRunningChange).toHaveBeenLastCalledWith(true);
+
+            setPhases({ phase: 'done', projectName: 'my-demo' });
+            rerender(stage());
+            expect(onPhaseRunningChange).toHaveBeenLastCalledWith(false);
+        });
+
+        // The callback is optional (DestinationStageProps marks it so) and the
+        // stage is rendered without it wherever no footer gate is listening.
+        it('renders without the callback at all', () => {
+            setPhases({ phase: 'creating', phaseMessage: 'Creating project…' });
+            render(
+                <Provider theme={defaultTheme} colorScheme="light">
+                    <DestinationStage
+                        state={{} as WizardState}
+                        updateState={jest.fn()}
+                        view="project"
+                        onPendingProject={jest.fn()}
+                        onPendingWorkspace={jest.fn()}
+                    />
+                </Provider>
+            );
+            expect(screen.getByText('Creating project…')).toBeInTheDocument();
+        });
     });
 
+    describe('phase views', () => {
+        // isPhaseRunning covers every phase the hook's type can report, including
+        // 'enabling'. This stage passes skipEnabling: true so it does not reach that
+        // phase today — but the spinner gate is what decides, and it must not depend
+        // on a flag set a hundred lines away in the caller.
+        it('the enabling phase shows the spinner, not the picker', () => {
+            setPhases({ phase: 'enabling', phaseMessage: 'Enabling API access…' });
+            renderStage('project');
+            expect(screen.getByText('Enabling API access…')).toBeInTheDocument();
+            expect(screen.queryByTestId('project-field')).not.toBeInTheDocument();
+        });
+
+        // The phase views RESERVE their height so the modal does not jolt when a
+        // picker is replaced by a spinner and back.
+        it('the spinner reserves the shared phase-view height', () => {
+            setPhases({ phase: 'creating', phaseMessage: 'Creating project…' });
+            renderStage('project');
+            const reserved = screen.getByTestId('destination-stage').firstElementChild;
+            expect(reserved).toHaveStyle({ minHeight: '220px' });
+        });
+
+        it('the failure view reserves the same height', () => {
+            setPhases({ phase: 'failed', failedPhase: 'workspace', error: 'boom' });
+            renderStage('project');
+            expect(screen.getByTestId('status-display')).toHaveAttribute('data-height', '220px');
+        });
+
+        // Retry is the one action on the failure view, so it carries the accent
+        // emphasis; StatusDisplay silently falls back to 'secondary' otherwise.
+        it('Retry is the accent action on the failure view', () => {
+            setPhases({ phase: 'failed', failedPhase: 'workspace', error: 'boom' });
+            renderStage('project');
+            expect(screen.getByRole('button', { name: 'Retry' })).toHaveAttribute(
+                'data-variant',
+                'accent'
+            );
+        });
+
+        // A phase with no message shows the spinner with an EMPTY title, not a
+        // placeholder: the fallback exists to satisfy LoadingDisplay's required
+        // prop, and anything it substituted would be read aloud as the status.
+        it('a running phase with no message renders an empty spinner title', () => {
+            setPhases({ phase: 'creating', phaseMessage: undefined });
+            renderStage('project');
+            const main = screen.getByRole('status').querySelector('.text-lg');
+            expect(main).not.toBeNull();
+            expect(main?.textContent).toBe('');
+        });
+
+        // After a create failure the user retries and succeeds: the hook parks at
+        // 'done' but never clears failedPhase, so the form must key off the CURRENT
+        // phase. Keying off failedPhase alone would reopen the create form with the
+        // old name prefilled on a project that was created successfully.
+        it('a stale failedPhase on a finished run does NOT reopen the create form', () => {
+            setPhases({ phase: 'done', failedPhase: 'creating', projectName: 'my-demo' });
+            renderStage('project');
+            const field = screen.getByTestId('project-field');
+            expect(field).toHaveAttribute('data-create-error', '');
+            expect(field).toHaveAttribute('data-initial-name', '');
+        });
+    });
 });

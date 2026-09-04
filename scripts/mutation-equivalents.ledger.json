@@ -5459,6 +5459,18 @@
             "decision": "none \u2014 the index path is kept because it names the common case; the clamp is its general form",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/stages/DestinationStage.tsx",
+            "anchors": [
+                "const createFailure = phases.phase === 'failed' && phases.failedPhase === 'creating';"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the failedPhase half true leaves createFailure as phases.phase === 'failed', which admits one extra state: failed with a failedPhase that is NOT creating. ProjectView can never be rendered in that state. DestinationBody checks it two lines earlier \u2014 the guard 'phases.phase === failed && phases.failedPhase !== creating' returns the PhaseFailed view \u2014 so by the time control reaches ProjectView, phase === failed implies failedPhase === creating and the two expressions agree on every reachable input. The stale-failedPhase case that DOES reach ProjectView (phase done, failedPhase creating, after a retry succeeded) is covered by a test, and it constrains the OTHER half of the same conjunction.",
+            "decision": "none \u2014 spelling out both halves keeps ProjectView readable on its own, without depending on the caller's guard order",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }
