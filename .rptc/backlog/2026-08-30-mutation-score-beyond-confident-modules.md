@@ -264,3 +264,5 @@ which point the cadence drops to release cuts.
 - 2026-09-03  test(auth): bring authenticationErrorFormatter to zero open mutation gaps (`1da3773c7`)
 - 2026-09-03  test(auth): bring adobeEntityName to zero open mutation gaps (`5b8c721e6`)
 - 2026-09-03  docs(backlog): log the MUT-02 batch commits against PL-22 and the flake fix against PL-41 (`29bb8d3eb`)
+- 2026-09-03  test(state): bring projectConfigWriter to zero open mutation gaps (`6a53f2206`)
+- 2026-09-03  docs(backlog): log the MUT-04 batch commits against PL-22 (`441ea5381`)

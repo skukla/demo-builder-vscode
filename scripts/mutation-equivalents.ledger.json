@@ -1156,6 +1156,54 @@
             "decision": "none \u2014 the guard keeps the in-memory object clean and states intent; removing it would change nothing on disk and make the field list read inconsistently with its list-valued neighbours",
             "recorded": "2026-09-03",
             "source": "reports/mutation/focus.json run of 2026-09-03 (projectConfigWriter, MUT-05)"
+        },
+        {
+            "module": "src/core/state/stateManager.ts",
+            "anchors": [
+                "return parsed?.currentProjectPath ?? parsed?.currentProject?.path;"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "Stryker drops each `?.` in turn. Without it, a missing `parsed` (unparseable file) or a missing `currentProject` (the non-legacy shape) throws a TypeError on the property read \u2014 inside the try whose catch returns undefined, which is exactly what the chain returns for those inputs. Both cases ARE tested (an unreadable state file and a legacy-free pointer file both fall back to the in-memory pointer); the detect-only catch is what makes the two paths indistinguishable.",
+            "decision": "none \u2014 each `?.` is required by the type, and the catch that swallows the alternative is the function's contract (\"no pointer\" for any failure)",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (stateManager, MUT-05)"
+        },
+        {
+            "module": "src/core/state/stateManager.ts",
+            "anchors": [
+                "return undefined;"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch in readPointerPathFromDisk holds only `return undefined`. Emptied, control falls off the end of an async function whose declared result includes undefined, which resolves to undefined. `noImplicitReturns` is what requires the explicit statement; the compiler is switched off under mutation, so the emptied block compiles and behaves identically.",
+            "decision": "none \u2014 the return is required by tsconfig's noImplicitReturns and is the value the function yields either way",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (stateManager, MUT-05)"
+        },
+        {
+            "module": "src/core/state/stateManager.ts",
+            "anchors": [
+                "return false;"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch in checkPathExists holds only `return false`. Emptied, the function resolves undefined, and its one reader is `!projectPathExists`, which treats undefined and false alike. The missing-directory case IS tested from both sides (skipped with no current project, recreated for the current one); what no test can see is false versus undefined behind a negation.",
+            "decision": "none \u2014 the return is required by noImplicitReturns; the reader negates it",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (stateManager, MUT-05)"
+        },
+        {
+            "module": "src/core/state/stateManager.ts",
+            "anchors": [
+                "const stack = new Error().stack?.split('\\n').slice(2, 5).join(' <- ') || 'unknown';"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The caller-stack string feeds one trace-level log line and nothing else \u2014 the next statement is the logger call and the variable is not read again. Every decision on the line (the `?.`, the `||` fallback, the slice window) changes only which frames the message names. The classifier reads the line itself, which carries no logger call, so these count as behavioural; killing them would mean asserting the wording of a trace message, which is the padding the ratchet exists to refuse.",
+            "decision": "none \u2014 diagnostic wording; the only observer is the trace channel",
+            "recorded": "2026-09-03",
+            "source": "reports/mutation/focus.json run of 2026-09-03 (stateManager, MUT-05)"
         }
     ]
 }

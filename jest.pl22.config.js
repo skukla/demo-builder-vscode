@@ -26,6 +26,8 @@ module.exports = {
     displayName: 'stryker-pl22',
     rootDir: __dirname,
     testMatch: [
+        '**/tests/core/state/stateManager-initializeLoad.test.ts',
+        '**/tests/core/state/stateManager-saveGuards.test.ts',
         '**/tests/features/updates/services/updateManager-plumbing.test.ts',
         '**/tests/features/updates/services/componentUpdater-plumbing.test.ts',
         '**/tests/features/ai/server/siteTools-contract.test.ts',

@@ -245,14 +245,14 @@ export class StateManager implements StateManagerInterface {
                     () => vscode.window.terminals,
                     { persistAfterLoad: false },
                 );
-
-                if (freshProject === null) {
-                    return this.state.currentProject;
+                if (freshProject !== null) {
+                    return freshProject;
                 }
-
-                return freshProject;
             } catch {
-                return this.state.currentProject;
+                // A reload that throws is answered exactly as a null load is:
+                // with what this window already holds. The loader itself never
+                // throws (it returns null for every failure), so this is the
+                // defensive path for a collaborator that does.
             }
         }
         return this.state.currentProject;
