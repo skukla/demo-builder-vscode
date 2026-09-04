@@ -7,31 +7,10 @@
 
 import { filterStepsForStack } from '@/features/project-creation/ui/wizard/stepFiltering';
 import type { Stack } from '@/types/stacks';
+import { edgeDeliveryStack, headlessStack } from './stepFiltering.testUtils';
 
 // Import the type from the implementation (will be created)
 import type { WizardStepWithCondition } from '@/features/project-creation/ui/wizard/stepFiltering';
-
-// Test fixtures for stacks
-const headlessStack: Stack = {
-    id: 'headless',
-    name: 'Headless',
-    description: 'NextJS storefront with API Mesh and Commerce PaaS',
-    frontend: 'headless',
-    backend: 'adobe-commerce-paas',
-    dependencies: ['commerce-mesh'],
-    // Note: NO requiresGitHub or requiresDaLive
-};
-
-const edgeDeliveryStack: Stack = {
-    id: 'edge-delivery',
-    name: 'Edge Delivery',
-    description: 'EDS storefront with Commerce Drop-ins and ACCS',
-    frontend: 'eds-storefront',
-    backend: 'adobe-commerce-accs',
-    dependencies: [],
-    requiresGitHub: true,
-    requiresDaLive: true,
-};
 
 // Test fixtures for wizard steps
 const allSteps: WizardStepWithCondition[] = [
