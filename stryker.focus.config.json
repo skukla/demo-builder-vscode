@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/services/aiBundle/claudeSettingsWriter.ts"
+        "src/features/project-creation/services/edsContentSetup.ts"
     ],
     "reporters": [
         "clear-text",

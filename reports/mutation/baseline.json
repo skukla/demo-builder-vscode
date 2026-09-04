@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "claudeSettingsWriter: parseExistingSettings + malformed user-hook shapes covered in a split suite; four no-op array/guard fallbacks ledgered",
+    "_note": "edsContentSetup: probe/copy/progress/overlay/block-library call arguments asserted; nine log-only and unreachable-shape mutants ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -9671,28 +9671,24 @@
             "openGaps": 4
         },
         "src/features/project-creation/services/edsContentSetup.ts": {
-            "score": 48.21,
-            "killed": 54,
-            "survived": 29,
-            "noCoverage": 29,
+            "score": 68.75,
+            "killed": 77,
+            "survived": 30,
+            "noCoverage": 5,
             "timeout": 0,
             "survivorCategories": {
-                "string": 5,
-                "logPresentation": 8,
-                "other": 4,
-                "branch": 10,
-                "block": 2
+                "logPresentation": 11,
+                "block": 4,
+                "string": 10,
+                "branch": 5
             },
             "uncoveredCategories": {
-                "block": 4,
-                "logPresentation": 4,
-                "string": 16,
-                "branch": 3,
-                "optionalChain": 2
+                "string": 4,
+                "logPresentation": 1
             },
-            "highValueSurvivors": 12,
-            "equivalent": 0,
-            "openGaps": 25
+            "highValueSurvivors": 9,
+            "equivalent": 9,
+            "openGaps": 0
         },
         "src/features/project-creation/services/envVarClassifier.ts": {
             "score": 100,

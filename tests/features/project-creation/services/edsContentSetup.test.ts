@@ -15,11 +15,13 @@ import { createMockExtensionContext } from '../../../helpers/extensionContextFak
 
 const mockCopyContentFromSource = jest.fn();
 const mockCreateBlockLibraryFromTemplate = jest.fn();
+const mockOverlayAccountChrome = jest.fn();
 
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn().mockImplementation(() => ({
         copyContentFromSource: mockCopyContentFromSource,
         createBlockLibraryFromTemplate: mockCreateBlockLibraryFromTemplate,
+        overlayAccountChrome: mockOverlayAccountChrome,
     })),
     createDaLiveServiceTokenProvider: jest
         .fn()
@@ -141,6 +143,7 @@ function setupDefaultMocks() {
     mockPublishAllSiteContent.mockResolvedValue(undefined);
     mockPublishLibraryPaths.mockResolvedValue(undefined);
     mockGetAccessToken.mockResolvedValue('da-live-token');
+    mockOverlayAccountChrome.mockResolvedValue({ success: true, totalFiles: 4, failedFiles: [] });
 }
 
 describe('ensureEdsContent', () => {
@@ -328,5 +331,242 @@ describe('ensureEdsContent', () => {
             expect.stringContaining('No user email available')
         );
         expect(mockConfigureDaLivePermissions).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * WHAT THE COLLABORATORS ARE HANDED.
+ *
+ * The tests above drive the flow and read its return value, which a mock answers
+ * identically however it is called. These assert the ARGUMENTS instead: the
+ * DA.live probe, the index URL the content copy is pointed at, the progress
+ * messages that reach the wizard, the overlay source, and the file-reader closure
+ * the block-library builder is given. Each is a decision this function makes and
+ * nothing downstream can correct.
+ */
+describe('ensureEdsContent — the calls it makes', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        setupDefaultMocks();
+    });
+
+    describe('the DA.live existence probe', () => {
+        it('asks DA.live source for index.html with a HEAD request', async () => {
+            await ensureEdsContent(makeConfig(), makeDeps());
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                'https://admin.da.live/source/test-org/test-site/index.html',
+                expect.objectContaining({ method: 'HEAD' })
+            );
+        });
+
+        it('carries the DA.live session as a Bearer token', async () => {
+            // Without it the probe reads a private site as absent and re-copies
+            // content over the top of content that is already there.
+            await ensureEdsContent(makeConfig(), makeDeps());
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    headers: { Authorization: 'Bearer da-live-token' },
+                })
+            );
+        });
+
+        it('sends no Authorization header when there is no DA.live session', async () => {
+            mockGetAccessToken.mockResolvedValue(undefined);
+
+            await ensureEdsContent(makeConfig(), makeDeps());
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({ headers: {} })
+            );
+        });
+
+        it('copies content anyway when the probe itself fails', async () => {
+            // A network error is not evidence the content is there.
+            mockFetch.mockRejectedValue(new Error('ECONNRESET'));
+
+            const result = await ensureEdsContent(makeConfig(), makeDeps());
+
+            expect(result).toBe(true);
+            expect(mockCopyContentFromSource).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('the content source it copies from', () => {
+        it('defaults the index to /full-index.json', async () => {
+            await ensureEdsContent(makeConfig(), makeDeps());
+
+            expect(mockCopyContentFromSource.mock.calls[0][0]).toEqual({
+                org: 'source-org',
+                site: 'source-site',
+                indexUrl: 'https://main--source-site--source-org.aem.live/full-index.json',
+            });
+        });
+
+        it("uses the source's own indexPath when it declares one", async () => {
+            const config = makeConfig({
+                contentSource: { org: 'src-o', site: 'src-s', indexPath: '/query-index.json' },
+            });
+
+            await ensureEdsContent(config, makeDeps());
+
+            expect(mockCopyContentFromSource.mock.calls[0][0]).toEqual({
+                org: 'src-o',
+                site: 'src-s',
+                indexUrl: 'https://main--src-s--src-o.aem.live/query-index.json',
+            });
+        });
+
+        it('copies into the project DA.live org and site', async () => {
+            await ensureEdsContent(makeConfig(), makeDeps());
+
+            const [, destOrg, destSite] = mockCopyContentFromSource.mock.calls[0];
+            expect(destOrg).toBe('test-org');
+            expect(destSite).toBe('test-site');
+        });
+    });
+
+    describe('the progress the copy reports', () => {
+        /** Fire the progress callback the subject handed to copyContentFromSource. */
+        const reportProgress = (progress: {
+            message?: string;
+            processed?: number;
+            total?: number;
+        }) => {
+            const cb = mockCopyContentFromSource.mock.calls[0][3] as (p: unknown) => void;
+            cb(progress);
+        };
+
+        it("forwards the copy's own message when it has one", async () => {
+            const onProgress = jest.fn();
+            await ensureEdsContent(makeConfig(), makeDeps(), onProgress);
+            onProgress.mockClear();
+
+            reportProgress({ message: 'Copying /products/index', processed: 3, total: 9 });
+
+            expect(onProgress).toHaveBeenCalledWith(
+                'Setting up storefront content...',
+                'Copying /products/index'
+            );
+        });
+
+        it('counts pages when the copy reports no message', async () => {
+            const onProgress = jest.fn();
+            await ensureEdsContent(makeConfig(), makeDeps(), onProgress);
+            onProgress.mockClear();
+
+            reportProgress({ processed: 3, total: 9 });
+
+            expect(onProgress).toHaveBeenCalledWith(
+                'Setting up storefront content...',
+                'Copying content (3/9)'
+            );
+        });
+
+        it('runs to completion when the caller supplies no progress callback', async () => {
+            // Every onProgress call site is optional-chained. One that is not
+            // throws mid-copy on the import path, which has no callback to give.
+            mockCopyContentFromSource.mockImplementation(
+                async (_src, _o, _s, progress: (p: unknown) => void) => {
+                    progress({ processed: 1, total: 2 });
+                    return { success: true, totalFiles: 2, failedFiles: [] };
+                }
+            );
+            const config = makeConfig({
+                accountContentSource: { org: 'b2b-org', site: 'b2b-site' },
+            });
+
+            const result = await ensureEdsContent(config, makeDeps());
+
+            expect(result).toBe(true);
+            expect(mockOverlayAccountChrome).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('the B2B account-chrome overlay', () => {
+        it('overlays the account source on top of the brand content', async () => {
+            const config = makeConfig({
+                accountContentSource: { org: 'b2b-org', site: 'b2b-site' },
+            });
+
+            await ensureEdsContent(config, makeDeps());
+
+            expect(mockOverlayAccountChrome).toHaveBeenCalledWith(
+                { org: 'b2b-org', site: 'b2b-site' },
+                'test-org',
+                'test-site',
+                expect.objectContaining({ results: expect.any(Array) })
+            );
+        });
+
+        it('does not overlay when the package declares no account source', async () => {
+            await ensureEdsContent(makeConfig(), makeDeps());
+
+            expect(mockOverlayAccountChrome).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('the block library from the template', () => {
+        it('needs BOTH the template owner and the template repo', async () => {
+            // Either alone cannot address a repository; running with half of one
+            // asks GitHub for `undefined/tmpl-repo`.
+            await ensureEdsContent(makeConfig({ templateOwner: 'tmpl-owner' }), makeDeps());
+            await ensureEdsContent(makeConfig({ templateRepo: 'tmpl-repo' }), makeDeps());
+
+            expect(mockCreateBlockLibraryFromTemplate).not.toHaveBeenCalled();
+        });
+
+        it('addresses the template repo it was given', async () => {
+            const config = makeConfig({ templateOwner: 'tmpl-owner', templateRepo: 'tmpl-repo' });
+
+            await ensureEdsContent(config, makeDeps());
+
+            const [org, site, owner, repo] = mockCreateBlockLibraryFromTemplate.mock.calls[0];
+            expect([org, site, owner, repo]).toEqual([
+                'test-org',
+                'test-site',
+                'tmpl-owner',
+                'tmpl-repo',
+            ]);
+        });
+
+        it('hands the builder a reader that fetches from GitHub', async () => {
+            const config = makeConfig({ templateOwner: 'tmpl-owner', templateRepo: 'tmpl-repo' });
+            await ensureEdsContent(config, makeDeps());
+
+            const readFile = mockCreateBlockLibraryFromTemplate.mock.calls[0][4] as (
+                owner: string,
+                repo: string,
+                path: string
+            ) => Promise<unknown>;
+            await readFile('tmpl-owner', 'tmpl-repo', 'component-definition.json');
+
+            // A closure that resolves to undefined leaves the builder reporting
+            // "no component-definition.json" for every template that has one.
+            expect(mockGetFileContent).toHaveBeenCalledWith(
+                'tmpl-owner',
+                'tmpl-repo',
+                'component-definition.json'
+            );
+        });
+    });
+
+    it('publishes to the CDN even when the content copy reported failures', async () => {
+        // A partial copy still has to reach the CDN — otherwise the pages that DID
+        // copy are invisible and the SC sees an empty storefront rather than a
+        // partial one.
+        mockCopyContentFromSource.mockResolvedValue({
+            success: false,
+            totalFiles: 4,
+            failedFiles: ['/products/a', '/products/b'],
+        });
+
+        const result = await ensureEdsContent(makeConfig(), makeDeps());
+
+        expect(result).toBe(true);
+        expect(mockPublishAllSiteContent).toHaveBeenCalledTimes(1);
     });
 });

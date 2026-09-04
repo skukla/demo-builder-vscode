@@ -4943,6 +4943,69 @@
             "decision": "none \u2014 the explicit guard says what it means and avoids a throw on the normal no-file path",
             "recorded": "2026-09-04",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/edsContentSetup.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 142,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is one logger.debug call. Emptying it still swallows the probe failure and still falls through to the copy \u2014 pinned by 'copies content anyway when the probe itself fails'. Only the debug line differs.",
+            "decision": "none \u2014 the debug line is what tells a pasted log why the copy ran",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/edsContentSetup.ts",
+            "anchors": [
+                "if (!contentResult.success) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "This if/else has no body but a logger.warn and a logger.info. Flipping the condition, negating it, or emptying the warn branch changes which of the two lines prints and nothing else: contentResult is never read again, and the pipeline continues to the overlay, the permissions, the purge and the publish either way (pinned by 'publishes to the CDN even when the content copy reported failures'). The classifier reads the enclosing statement, which for a line ending in '{' is the condition alone, so it cannot see that the body is logging.",
+            "decision": "none \u2014 the two log lines carry the copy outcome into a pasted Debug Logs dump",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/edsContentSetup.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 177,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else body is one logger.info reporting the copied file count. Emptying it removes that line and changes nothing else \u2014 same reasoning as the condition above.",
+            "decision": "none \u2014 the count is the only record of how much content was copied",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/edsContentSetup.ts",
+            "anchors": [
+                "if (libResult.blocksCount > 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Forcing the guard true (or widening it to >= 0) can only matter for a result with blocksCount 0 and a non-empty paths array, which daLiveBlockLibraryOperations cannot produce: all four of its zero-count returns are literal { blocksCount: 0, paths: [] }, and the one non-zero return pushes at least '/.da/library/blocks.json' before setting blocksCount to verifiedBlocks.length. With paths empty, the mutant assigns libraryPaths = [] and the later 'libraryPaths.length > 0' guard skips the publish exactly as before. Killing it would mean feeding back a shape the real collaborator never returns.",
+            "decision": "none \u2014 the count is the honest thing to branch on and matches the log line beneath it",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/services/edsContentSetup.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 277,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is one logger.warn. The block-library publish is declared non-fatal, so emptying the catch still swallows the error and still reaches the final publish log and the return true. Only the warning line differs.",
+            "decision": "none \u2014 the warning is the only signal a library publish was skipped",
+            "recorded": "2026-09-04",
+            "source": "mutationLedger add"
         }
     ]
 }
