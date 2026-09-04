@@ -5314,6 +5314,30 @@
             "decision": "none \u2014 a missing projects root is genuinely not worth reporting, and the guard is the only way to say that",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/tileStatus.ts",
+            "anchors": [
+                "return (state.selectedAppBuilderComponents ?? []).includes(meshComponentId);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty-array default with its marker array [\"Stryker was here\"]. Both defaults answer the same question the same way for every id this predicate is ever asked about: a mesh catalog id is never the marker string, so includes() returns false either way when the selection is absent. The only input that would tell them apart is a mesh component whose catalog id is literally 'Stryker was here', which the catalog cannot produce and a test asserting it would be asserting the mutation testing tool rather than the wizard.",
+            "decision": "none \u2014 the ?? [] default is the correct guard for an absent selection list",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/tileStatus.ts",
+            "anchors": [
+                "Boolean(eds?.daLiveAuth?.isAuthenticated) &&"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping this optional chain to eds.daLiveAuth can only throw when edsConfig is undefined, and this clause is never evaluated in that case: the preceding clause reads Boolean(eds?.githubAuth?.isAuthenticated), which is false for an undefined edsConfig and short-circuits the &&. So by the time control reaches here eds is always an object. The FIRST clause's chain is the killable one and is killed by a test on a state with no edsConfig at all.",
+            "decision": "none \u2014 the ?. is required by the optional type and unreachable-with-undefined by short-circuit",
+            "recorded": "2026-09-04",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

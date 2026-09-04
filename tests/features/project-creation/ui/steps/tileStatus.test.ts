@@ -44,6 +44,20 @@ describe('isCommerceConfigured', () => {
             isCommerceConfigured(state({ selectedStack: 'eds-paas', commerceConnectValid: true }))
         ).toBe(true);
     });
+
+    // The catalog verdict is a VETO, not a requirement: undefined (never
+    // reported) leaves the tile configured, an explicit false does not.
+    it('is false when the catalog step reported itself invalid', () => {
+        expect(
+            isCommerceConfigured(
+                state({
+                    selectedStack: 'eds-paas',
+                    commerceConnectValid: true,
+                    commerceCatalogValid: false,
+                })
+            )
+        ).toBe(false);
+    });
 });
 
 describe('isStorefrontConfigured', () => {
@@ -102,6 +116,27 @@ describe('isStorefrontConfigured', () => {
         ).toBe(false);
     });
 
+    it('is false when the EDS config has not been started at all', () => {
+        // Nothing is signed in yet, so every read below the first one is
+        // unreachable — the predicate must answer, not throw, on a bare state.
+        expect(isStorefrontConfigured(state({}))).toBe(false);
+    });
+
+    it('is false on GitHub alone when everything else is valid', () => {
+        // The narrower "GitHub not authenticated" case above leaves code-sync
+        // unreported too, so it would still read false with the GitHub clause
+        // gone. Here GitHub is the ONLY thing missing.
+        expect(
+            isStorefrontConfigured(
+                state({
+                    edsConfig: { daLiveAuth: { isAuthenticated: true } },
+                    storefrontRepoValid: true,
+                    storefrontCodeSyncValid: true,
+                })
+            )
+        ).toBe(false);
+    });
+
     it('is true when GitHub + DA.live authed AND repo + code-sync are valid', () => {
         expect(
             isStorefrontConfigured(
@@ -151,6 +186,15 @@ describe('meshComponentForStack', () => {
 
     it('resolves nothing when no stack is committed', () => {
         const s = state({ selectedPackage: 'citisignal' });
+        expect(meshComponentForStack(s, packages, stacks)).toBeUndefined();
+    });
+
+    it('resolves nothing when the selected package is not in the catalog', () => {
+        // The lookup must match the id, not simply take the first row: a
+        // package the catalog does not carry has no mesh, and answering with
+        // some other package's mesh would put a deployable in the plan that
+        // the SC never chose.
+        const s = state({ selectedPackage: 'not-in-catalog', selectedStack: 'eds-paas' });
         expect(meshComponentForStack(s, packages, stacks)).toBeUndefined();
     });
 });
@@ -304,6 +348,48 @@ describe('isIntegrationsComplete', () => {
     it('is true when nothing is selected on a no-mesh stack', () => {
         const s = state({ selectedPackage: 'citisignal', selectedStack: 'eds-none' });
         expect(isIntegrationsComplete(s, packages, stacks)).toBe(true);
+    });
+
+    // All three destination clauses are REQUIRED together. Each case below
+    // removes exactly one of sign-in / project / workspace from an otherwise
+    // complete destination, so no single clause can be dropped unnoticed.
+    describe('destination clauses, one missing at a time', () => {
+        const signedIn = {
+            adobeAuth: { isAuthenticated: true, isChecking: false },
+            adobeOrg: { id: 'org-1', name: 'Acme', code: 'ACME' } as WizardState['adobeOrg'],
+        };
+        const withMesh = {
+            selectedPackage: 'citisignal',
+            selectedStack: 'eds-paas',
+            selectedAppBuilderComponents: ['eds-commerce-mesh'],
+        };
+
+        it('is false with a project and a workspace but no Adobe sign-in', () => {
+            const s = state({
+                ...withMesh,
+                adobeProject: { id: 'p1', name: 'proj' },
+                adobeWorkspace: { id: 'w1', name: 'ws' },
+            });
+            expect(isIntegrationsComplete(s, packages, stacks)).toBe(false);
+        });
+
+        it('is false when signed in with a workspace but no project chosen yet', () => {
+            const s = state({
+                ...withMesh,
+                ...signedIn,
+                adobeWorkspace: { id: 'w1', name: 'ws' },
+            });
+            expect(isIntegrationsComplete(s, packages, stacks)).toBe(false);
+        });
+
+        it('is false when signed in with a project but no workspace chosen yet', () => {
+            const s = state({
+                ...withMesh,
+                ...signedIn,
+                adobeProject: { id: 'p1', name: 'proj' },
+            });
+            expect(isIntegrationsComplete(s, packages, stacks)).toBe(false);
+        });
     });
 });
 
