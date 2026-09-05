@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-06. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/ai/server/eventProviderTools.ts  (orchestration, 30.17%, 77 open gaps)
-  - src/types/typeGuards.ts  (pure, 67.21%, 73 open gaps)
   - src/features/components/services/componentInstallation.ts  (orchestration, 45.18%, 70 open gaps)
   - src/features/data-installer/ui/components/importResult.ts  (pure, 5.6%, 70 open gaps)
   - src/features/mesh/services/stalenessDetector.ts  (mixed, 69.46%, 68 open gaps)
+  - src/features/data-installer/ui/components/ImportDatapackModal.tsx  (pure, 70.3%, 64 open gaps)
+  - src/features/projects-dashboard/utils/projectStatusUtils.ts  (pure, 58.06%, 61 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the

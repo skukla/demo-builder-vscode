@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-04. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/dashboard/handlers/appBuilderComponentHandlers.ts  (orchestration, 66.75%, 95 open gaps)
   - src/features/sidebar/providers/sidebarProvider.ts  (orchestration, 32.64%, 93 open gaps)
   - src/features/mesh/handlers/checkHandler.ts  (orchestration, 29.26%, 90 open gaps)
   - src/core/ui/components/TimelineNav.tsx  (pure, 22.09%, 87 open gaps)
   - src/core/ui/utils/WebviewClient.ts  (mixed, 24.24%, 87 open gaps)
+  - src/features/mesh/utils/errorFormatter.ts  (pure, 28.08%, 86 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the

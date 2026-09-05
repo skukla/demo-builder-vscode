@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-07. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/data-installer/ui/components/ImportDatapackModal.tsx  (pure, 70.3%, 64 open gaps)
-  - src/features/projects-dashboard/utils/projectStatusUtils.ts  (pure, 58.06%, 61 open gaps)
   - src/core/communication/webviewCommunicationManager.ts  (mixed, 60.89%, 59 open gaps)
   - src/core/shell/processCleanup.ts  (pure, 50%, 59 open gaps)
   - src/utils/autoUpdater.ts  (orchestration, 23.62%, 59 open gaps)
+  - src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx  (mixed, 45.22%, 58 open gaps)
+  - src/core/shell/environmentSetup.ts  (mixed, 65.7%, 56 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the
