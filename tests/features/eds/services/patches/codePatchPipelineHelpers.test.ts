@@ -22,31 +22,14 @@ import {
     applyCanonicalCodePatches,
     applyBlockCodePatches,
 } from '@/features/eds/services/patches/codePatchPipelineHelpers';
-import { _clearCodePatchCacheForTests } from '@/features/eds/services/patches/codePatchRegistry';
 import type { GitHubFileOperations } from '@/features/eds/services/github/githubFileOperations';
-import type { Logger } from '@/types/logger';
-import type { CodePatchSource } from '@/types/demoPackages';
-import { createMockLogger } from '../../../../helpers/loggerFake';
+import {
+    SOURCE,
+    mockLogger,
+    installCodePatchFetchLifecycle,
+} from './codePatchPipelineHelpers.testUtils';
 
-const mockLogger: Logger = createMockLogger();
-
-const SOURCE: CodePatchSource = {
-    owner: 'skukla',
-    repo: 'eds-demo-patches',
-    path: 'citisignal',
-};
-
-const originalFetch = global.fetch;
-
-beforeEach(() => {
-    jest.clearAllMocks();
-    _clearCodePatchCacheForTests();
-    global.fetch = jest.fn();
-});
-
-afterEach(() => {
-    global.fetch = originalFetch;
-});
+installCodePatchFetchLifecycle();
 
 // `mockLedger` helper removed — tests inline their fetch mocks (each test
 // sets up the ledger + per-target fetch behavior it needs, keeping the

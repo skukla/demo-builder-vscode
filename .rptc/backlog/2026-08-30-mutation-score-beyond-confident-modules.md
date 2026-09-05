@@ -441,3 +441,5 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): bring byomOverlay to zero open mutation gaps (`43b768973`)
 - 2026-09-05  test(eds): bring daLiveAuthPrompt to zero open mutation gaps (`9fbcd4f78`)
 - 2026-09-05  test(eds): bring daLiveApiClient to zero open mutation gaps (`08edf0a59`)
+- 2026-09-05  test(eds): bring githubAppService to zero open mutation gaps (`2eddc2f6e`)
+- 2026-09-05  chore(backlog): log the daLiveApiClient commit against PL-22 (`b58810fc9`)

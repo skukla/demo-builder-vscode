@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/github/githubAppService.ts"
+        "src/features/eds/services/patches/codePatchPipelineHelpers.ts"
     ],
     "reporters": [
         "clear-text",

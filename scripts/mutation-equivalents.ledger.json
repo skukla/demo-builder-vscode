@@ -8402,6 +8402,119 @@
             "decision": "none \u2014 log-line selection, and the arm is the only remaining status by construction",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/patches/codePatchPipelineHelpers.ts",
+            "anchors": [
+                "if (!patchIds || patchIds.length === 0) return [];"
+            ],
+            "line": 70,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "This is a fast path, not a decision. With the guard gone an empty id list flows into getCodePatches, which has the identical guard and returns [] without fetching, then into applyCodePatches, which also returns [] for an empty list \u2014 so the wrapper still returns [] and still makes no network call. The || to && form differs only when patchIds is null or undefined, which the signature forbids and which all three call sites (edsPipeline, lkgPinHelper, edsResetRepoHelper) already guard against before calling.",
+            "decision": "none \u2014 the guard states the contract and every downstream already short-circuits on an empty list",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/patches/codePatchPipelineHelpers.ts",
+            "anchors": [
+                "if (!patchIds || patchIds.length === 0) return [];"
+            ],
+            "line": 130,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The block-phase copy of the same fast path. Removing it lets an empty id list reach getCodePatches, which returns [] without fetching, so blockPatches is empty, uniqueTargets is empty, no repo read or write happens and applyCodePatches returns [] for the empty list \u2014 the same [] the guard returns. The || to && variant needs a null patchIds, which the signature forbids and which every call site guards before calling.",
+            "decision": "none \u2014 same fast-path guard as the canonical wrapper, same downstream short-circuits",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/patches/codePatchPipelineHelpers.ts",
+            "anchors": [
+                "if (canonicalPatches.length === 0) return [];"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this test false skips the early return, and the code below then loops over an empty canonicalPatches array (no fetch) and calls applyCodePatches with an empty id list, which returns [] by its own first guard. The wrapper returns the same empty array by the longer route, so no caller-visible value, network call or map mutation differs.",
+            "decision": "none \u2014 the early return is a shortcut through code that already produces the same result",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/patches/codePatchPipelineHelpers.ts",
+            "anchors": [
+                "if (blockPatches.length === 0) return [];"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this test false skips the early return, after which uniqueTargets is empty so getFileContent is never called, applyCodePatches returns [] for the empty id list, and the write-back loop has nothing to iterate. The function returns the same empty array with no call to either GitHubFileOperations method.",
+            "decision": "none \u2014 the early return is a shortcut through code that already produces the same result",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/patches/codePatchPipelineHelpers.ts",
+            "anchors": [
+                "if (file?.content !== undefined) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "GitHubFileContent declares content as a required string, so the guard is false only when getFileContent returned null for a missing file. Both mutants \u2014 forcing the test true, and dropping the ?. \u2014 then dereference null inside the surrounding try, and the catch one line below swallows it. Either way the target never enters the working set, the engine reports it not-in-set, and no write is attempted: identical results, identical calls to both GitHubFileOperations methods.",
+            "decision": "none \u2014 the null case reaches the same outcome through the catch that already covers this loop body",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/patches/codePatchPipelineHelpers.ts",
+            "anchors": [
+                "if (before === undefined || after === undefined || before === after) continue;"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The first two clauses can never disagree with each other or with the third. beforeContent is a copy of workingSet taken before the engine runs, and the engine only rewrites values for keys the caller already put there \u2014 it never adds a key and never deletes one. So before is undefined exactly when after is undefined, and in that case before === after is true and the third clause skips the write anyway. Forcing either clause false, or joining them with &&, leaves the outcome decided by the third clause for every input the engine can produce.",
+            "decision": "none \u2014 the clauses are deliberate guards against a working set the engine cannot produce; the third already covers every reachable case",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/patches/codePatchPipelineHelpers.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 93,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger.warn. Emptying it does not stop the catch from swallowing the template-fetch error, so control still continues to the next patch target, the target still never enters fileOverrides, and the engine still reports the patch not-applied. The rejecting-fetch test now covers this path and asserts those outcomes; the only thing the mutant removes is the warning text.",
+            "decision": "none \u2014 proceed-and-warn behaviour is asserted; the mutant removes only the warn wording",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/patches/codePatchPipelineHelpers.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 148,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger.warn. Emptying it still swallows the getFileContent failure, so the loop still moves to the next target, the unreadable target still stays out of the working set, and the engine still reports it not-applied while the other targets are patched and written. The failing-read test covers exactly that and asserts the surviving target is still written; only the warn text goes.",
+            "decision": "none \u2014 the keep-going behaviour is asserted; the mutant removes only the warn wording",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/patches/codePatchPipelineHelpers.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 182,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger.warn. Emptying it still absorbs a failing createOrUpdateFile, so the write loop continues to the remaining targets and the engine results are still returned to the caller rather than thrown at the pipeline. The failing-write test covers this path and asserts the results come back intact; the mutant changes only the warn text.",
+            "decision": "none \u2014 the non-fatal write failure is asserted; the mutant removes only the warn wording",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
