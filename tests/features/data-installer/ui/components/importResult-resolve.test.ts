@@ -10,58 +10,18 @@
  * in.
  */
 
-import type { DataTypeStatus, ImportJobRecord } from '@/features/data-installer/types';
 import {
     resolveResult,
     type LastAction,
 } from '@/features/data-installer/ui/components/importResult';
-import type { DataInstallerRequest } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
-
-const ACTIVATION = 'act-123';
-
-function idle<T>(): DataInstallerRequest<T> {
-    return { settled: false, load: jest.fn(), loading: false, value: null, failure: null };
-}
-
-function failed<T>(message: string, data?: unknown): DataInstallerRequest<T> {
-    return { settled: true, load: jest.fn(), loading: false, value: null, failure: { message, data } };
-}
-
-function succeeded<T>(value: T): DataInstallerRequest<T> {
-    return { settled: true, load: jest.fn(), loading: false, value, failure: null };
-}
-
-type Sources = Parameters<typeof resolveResult>[1];
-
-/**
- * Every request holding a STALE success, so a case that reads the wrong one
- * announces itself instead of quietly agreeing.
- */
-function sources(overrides: Partial<Sources> = {}): Sources {
-    return {
-        dryRun: succeeded({ valid: true }),
-        start: succeeded({ activationId: 'stale-act' }),
-        reset: succeeded({ activationId: 'stale-act' }),
-        provision: { ...idle<never>(), settled: true },
-        record: null,
-        startedActivation: undefined,
-        ...overrides,
-    };
-}
-
-function jobRecord(overrides: Partial<ImportJobRecord> = {}): ImportJobRecord {
-    return {
-        activationId: ACTIVATION,
-        datapackName: 'bodea-full',
-        version: '1.0.0',
-        commerceInstance: 'https://commerce.example.com',
-        dataTypes: ['categories', 'products'],
-        startedAt: '2026-09-01T00:00:00.000Z',
-        outcome: 'success',
-        perType: { categories: 'success' as DataTypeStatus },
-        ...overrides,
-    };
-}
+import {
+    ACTIVATION,
+    failed,
+    idle,
+    jobRecord,
+    sources,
+    succeeded,
+} from './importResult.testUtils';
 
 describe('resolveResult — no action yet', () => {
     it.each([

@@ -15,36 +15,11 @@
 
 import type { DataTypeStatus, ImportJobRecord } from '@/features/data-installer/types';
 import { resolveResult } from '@/features/data-installer/ui/components/importResult';
-import type { DataInstallerRequest } from '@/features/data-installer/ui/hooks/useDataInstallerRequest';
-
-const ACTIVATION = 'act-123';
-
-/** A request that has never run — every case here is driven by the RECORD. */
-function noRequest<T>(): DataInstallerRequest<T> {
-    return { settled: false, load: jest.fn(), loading: false, value: null, failure: null };
-}
+import { jobRecord, recordOnlySources } from './importResult.testUtils';
 
 /** The outcome the result view produces for a finished job of this shape. */
 function outcomeOf(overrides: Partial<ImportJobRecord>) {
-    const record: ImportJobRecord = {
-        activationId: ACTIVATION,
-        datapackName: 'bodea-full',
-        version: '1.0.0',
-        commerceInstance: 'https://commerce.example.com',
-        dataTypes: ['categories', 'products'],
-        startedAt: '2026-09-01T00:00:00.000Z',
-        outcome: 'success',
-        perType: { categories: 'success' as DataTypeStatus },
-        ...overrides,
-    };
-    return resolveResult('start', {
-        dryRun: noRequest<{ valid: boolean; reason?: string }>(),
-        start: noRequest<{ activationId: string }>(),
-        reset: noRequest<{ activationId: string }>(),
-        provision: noRequest<never>(),
-        record,
-        startedActivation: ACTIVATION,
-    });
+    return resolveResult('start', recordOnlySources(jobRecord(overrides)));
 }
 
 describe('a finished job that succeeded', () => {
