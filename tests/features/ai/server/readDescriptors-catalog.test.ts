@@ -14,6 +14,8 @@
  * read tool fails here until it is listed, which is the point.
  */
 
+import { descriptorFor } from './readDescriptors.testUtils';
+
 import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
 import { aiHandlers } from '@/features/dashboard/handlers/aiHandlers';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
@@ -134,7 +136,7 @@ describe('READ_DESCRIPTORS catalog', () => {
     });
 
     describe.each(CATALOG.map((r) => [r.tool, r] as const))('%s', (tool, row) => {
-        const descriptor = () => READ_DESCRIPTORS.find((d) => d.tool === tool)!;
+        const descriptor = () => descriptorFor(tool);
 
         it('dispatches to the declared handler map and type', () => {
             expect(descriptor().map).toBe(row.map);

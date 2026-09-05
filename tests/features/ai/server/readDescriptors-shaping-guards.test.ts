@@ -16,13 +16,9 @@
  * get projected and the envelope reads as a result.
  */
 
-import { READ_DESCRIPTORS } from '@/features/ai/server/readDescriptors';
-import type { HandlerResponse } from '@/types/handlers';
+import { shapeOf, schemaOf, shaped as parsed } from './readDescriptors.testUtils';
 
-const shapeOf = (tool: string) => READ_DESCRIPTORS.find((d) => d.tool === tool)!.shape!;
-const schemaOf = (tool: string) => READ_DESCRIPTORS.find((d) => d.tool === tool)!.inputSchema!;
-const parsed = (tool: string, res: HandlerResponse, args: Record<string, unknown> = {}) =>
-    JSON.parse(shapeOf(tool)(res, args));
+import type { HandlerResponse } from '@/types/handlers';
 
 describe('a failure is never projected into a success envelope', () => {
     // Both rows carry the dashboard-only fields the projector would strip. If
