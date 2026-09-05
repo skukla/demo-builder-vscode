@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/patches/codePatchPipelineHelpers.ts"
+        "src/features/eds/services/daLive/daLiveContentOperations.ts"
     ],
     "reporters": [
         "clear-text",

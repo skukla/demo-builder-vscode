@@ -7,6 +7,7 @@
 
 import {
     createDaLiveServiceTokenProvider,
+    createDaLiveTokenProvider,
     type TokenProvider,
 } from '@/features/eds/services/daLive/daLiveContentOperations';
 
@@ -78,5 +79,66 @@ describe('createDaLiveServiceTokenProvider', () => {
         // Then: Should be assignable to TokenProvider
         const tokenProvider: TokenProvider = provider;
         expect(tokenProvider.getAccessToken).toBeDefined();
+    });
+});
+
+/**
+ * The auth-manager flavour of the same factory.
+ *
+ * Its callers hand it an optional AuthenticationService, so both halves are
+ * live: signed-out startup passes nothing, and the signed-in path has to turn
+ * an `inspectToken()` answer with no `token` field into the `null` the
+ * TokenProvider contract requires — DA.live callers branch on `null`, and an
+ * `undefined` leaking through would be sent as the literal string
+ * "undefined" in an Authorization header.
+ */
+describe('createDaLiveTokenProvider', () => {
+    const managerYielding = (inspection: { valid: boolean; expiresIn: number; token?: string }) => ({
+        getTokenManager: jest.fn().mockReturnValue({
+            inspectToken: jest.fn().mockResolvedValue(inspection),
+        }),
+    });
+
+    it('yields a provider that answers null when there is no auth manager', async () => {
+        const provider = createDaLiveTokenProvider(undefined);
+
+        await expect(provider.getAccessToken()).resolves.toBeNull();
+    });
+
+    it('treats an explicitly null auth manager the same way', async () => {
+        const provider = createDaLiveTokenProvider(null);
+
+        await expect(provider.getAccessToken()).resolves.toBeNull();
+    });
+
+    it('returns the token the manager is currently holding', async () => {
+        const manager = managerYielding({ valid: true, expiresIn: 3600, token: 'ims-abc123' });
+
+        const token = await createDaLiveTokenProvider(manager).getAccessToken();
+
+        expect(token).toBe('ims-abc123');
+        expect(manager.getTokenManager).toHaveBeenCalledTimes(1);
+    });
+
+    it('converts a missing token to null rather than passing undefined on', async () => {
+        const manager = managerYielding({ valid: false, expiresIn: 0 });
+
+        const token = await createDaLiveTokenProvider(manager).getAccessToken();
+
+        expect(token).toBeNull();
+    });
+
+    it('asks the manager again on every call rather than caching the first answer', async () => {
+        // Tokens expire mid-run; a provider that captured one at construction
+        // would keep sending a dead Bearer for the rest of the session.
+        const inspectToken = jest
+            .fn()
+            .mockResolvedValueOnce({ valid: true, expiresIn: 10, token: 'first' })
+            .mockResolvedValueOnce({ valid: true, expiresIn: 3600, token: 'second' });
+        const manager = { getTokenManager: jest.fn().mockReturnValue({ inspectToken }) };
+        const provider = createDaLiveTokenProvider(manager);
+
+        await expect(provider.getAccessToken()).resolves.toBe('first');
+        await expect(provider.getAccessToken()).resolves.toBe('second');
     });
 });
