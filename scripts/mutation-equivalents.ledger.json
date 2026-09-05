@@ -10423,6 +10423,70 @@
             "decision": "equivalent",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/mesh/handlers/checkHandler.ts",
+            "anchors": [
+                "if (!config?.project) return [];"
+            ],
+            "line": 48,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the optional hop on config makes getWorkspaceServices throw when config is null, but its only caller has already returned on that case: two lines earlier the handler does 'if (!config) { throw new Error(...) }' after parseJSON, so a null config never reaches this function. The parameter type admits null; the single call site does not produce it.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/mesh/handlers/checkHandler.ts",
+            "anchors": [
+                "if (!config?.project) return [];",
+                "if (!config.project.workspace) return [];",
+                "if (!config.project.workspace.details) return [];",
+                "return config.project.workspace.details.services ?? [];"
+            ],
+            "mutants": 4,
+            "category": "other",
+            "reason": "Each mutant swaps the empty services list for a one-element array of the string 'Stryker was here'. The list has exactly two consumers: checkApiMeshEnabled, which reads .name/.code/.code_name off each entry and finds all three undefined on a string, so it answers enabled:false for both lists; and a debugLogger payload. An absent services list and a list of unrecognisable entries are the same fact to this handler - the API Mesh service is not present - so no assertion on its result can separate them.",
+            "decision": "equivalent at the handler surface",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/mesh/handlers/checkHandler.ts",
+            "anchors": [
+                "if (!effectiveProjectId) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The guarded block contains one statement, context.logger.warn, and nothing else - no return, no state change, no altered targeting. Forcing the condition either way, negating the operand, or emptying the block changes only whether a warning line prints; the org target built two statements later is identical in every case. Killing these would mean asserting a logger call's wording, which this repo forbids.",
+            "decision": "log-only - no behavioural difference",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/mesh/handlers/checkHandler.ts",
+            "anchors": [
+                "if (meshCheck.error) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The guarded block calls context.debugLogger.trace with the truncated error detail and nothing else; the returned result carries a fixed recovery message that does not include meshCheck.error. Forcing the condition true is already killed (undefined.substring throws); forcing it false, or emptying the block, only suppresses a trace line and leaves the returned MeshCheckResult byte-identical.",
+            "decision": "log-only - no behavioural difference",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/mesh/handlers/checkHandler.ts",
+            "anchors": [
+                "(s) => s.name || s.code,"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "This arrow builds the serviceNames array inside a context.debugLogger.debug payload on the API-absent path. Swapping || for &&, forcing either operand, or replacing the arrow with () => undefined changes only which names appear in that debug line; the handler returns { success: true, apiEnabled: false, meshExists: false } either way, and the array is never read again. Killing these would require asserting the arguments of a logger call.",
+            "decision": "log-only - no behavioural difference",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }

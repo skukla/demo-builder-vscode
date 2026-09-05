@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "dataInstallerWriteClient: correcting a stale row, not adding assertions. The 87.45% written earlier came from a re-measure that reused reports/mutation/focus-incremental.json after the suites were edited; a cold run of the SAME committed suites gives 90.48% with an identical survivor list, so the number was under-reported. No assertion changed — the only edit since was moving the shared fetch fakes into a testUtils for the split-family enforcer.",
+    "_note": "checkHandler: layer/status branches, temp-dir handling and workspace resolution covered by two new suites; 15 log-only and equivalent mutants ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -8360,29 +8360,23 @@
             "openGaps": 25
         },
         "src/features/mesh/handlers/checkHandler.ts": {
-            "score": 29.26,
-            "killed": 55,
-            "survived": 61,
-            "noCoverage": 72,
+            "score": 75.53,
+            "killed": 142,
+            "survived": 46,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 26,
-                "optionalChain": 7,
-                "string": 6,
-                "logPresentation": 16,
-                "other": 4,
+                "optionalChain": 1,
+                "other": 5,
+                "logPresentation": 28,
+                "string": 3,
+                "branch": 7,
                 "block": 2
             },
-            "uncoveredCategories": {
-                "other": 12,
-                "block": 6,
-                "string": 15,
-                "branch": 33,
-                "logPresentation": 6
-            },
-            "highValueSurvivors": 28,
-            "equivalent": 0,
-            "openGaps": 90
+            "uncoveredCategories": {},
+            "highValueSurvivors": 9,
+            "equivalent": 15,
+            "openGaps": 0
         },
         "src/features/mesh/handlers/deleteHandler.ts": {
             "score": 43.18,
