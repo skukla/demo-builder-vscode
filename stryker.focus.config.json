@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/github/githubHelpers.ts"
+        "src/features/eds/services/storefront/repoStorefrontReadiness.ts"
     ],
     "reporters": [
         "clear-text",
