@@ -446,6 +446,17 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): bring codePatchPipelineHelpers to zero open mutation gaps (`4b3d03964`)
 - 2026-09-05  test(eds): bring daLiveContentOperations to zero open mutation gaps (`c235d7129`)
 - 2026-09-05  test(eds): bring storefrontProbe to zero open mutation gaps (`f7ade1299`)
+- 2026-09-05  test(eds): bring ewSettingChangeListener to zero open mutation gaps (`174ac71ce`)
+- 2026-09-05  chore(overnight): let a session read while the measurement runs (`a11b0a2fc`)
+- 2026-09-05  test(ai): bring actionDescriptors to zero open mutation gaps (`730f12729`)
+- 2026-09-05  test(ai): bring actionDescriptors to zero open mutation gaps (`138d83367`)
+- 2026-09-05  docs(backlog): record why two lanes do not work here (`1e0dbf044`)
+- 2026-09-05  test(eds): close accsDiscoveryConfig's mutation gaps (`e56fd25cb`)
+- 2026-09-05  test(eds): close codePatchRegistry's mutation gaps (`657489cae`)
+- 2026-09-05  test(eds): close b2bReadinessDetection's mutation gaps (`19ef1fbd3`)
+- 2026-09-05  test(eds): close storefrontSetupPhaseHelpers' mutation gaps (`ef5706350`)
+- 2026-09-05  fix(sop): ban token-shaped literals, and build the one that fired (`ca89b3bc8`)
+- 2026-09-05  test(eds): close publishKeyRegistrar's mutation gaps (`979326bb0`)
 
 ## Two lanes were tried and reverted — the gate is what blocks it (2026-09-05)
 
