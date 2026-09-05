@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/toolManager.ts"
+        "src/features/eds/services/configService/configurationService.ts"
     ],
     "reporters": [
         "clear-text",

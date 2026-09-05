@@ -122,6 +122,37 @@ describe('ConfigurationService', () => {
             expect(result.statusCode).toBe(409);
         });
 
+        // A 404 is only "already gone, treat as success" for a DELETE. On a PUT it is
+        // a real failure, and the guard that says so is one `&&` away from turning
+        // every failed registration into a silent success.
+        it('reports a 404 on the PUT as a failure, not as an already-deleted config', async () => {
+            fetchSpy.mockResolvedValueOnce(new Response('Not Found', { status: 404 }));
+
+            const result = await service.registerSite(params);
+
+            expect(result).toEqual({
+                success: false,
+                statusCode: 404,
+                error: 'Configuration Service error (404): Not Found',
+            });
+        });
+
+        it('carries the response body out for a status it has no specific message for', async () => {
+            fetchSpy.mockResolvedValueOnce(new Response('upstream exploded', { status: 500 }));
+
+            const result = await service.registerSite(params);
+
+            expect(result.error).toBe('Configuration Service error (500): upstream exploded');
+        });
+
+        it('says "Unknown error" when such a response carries no body', async () => {
+            fetchSpy.mockResolvedValueOnce(new Response('', { status: 500 }));
+
+            const result = await service.registerSite(params);
+
+            expect(result.error).toBe('Configuration Service error (500): Unknown error');
+        });
+
         it('should handle network errors', async () => {
             fetchSpy.mockRejectedValueOnce(new Error('Network timeout'));
 

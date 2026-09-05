@@ -7214,6 +7214,104 @@
             "decision": "none \u2014 equivalent; killing it would require exporting the probe or giving a caller a non-boolean use, both of which are changes to src made only to move a number.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configurationService.ts",
+            "anchors": [
+                "function stripUrlQueryAndFragment(url: string): string {"
+            ],
+            "mutants": 3,
+            "category": "block",
+            "reason": "stripUrlQueryAndFragment has exactly one caller, and its result is interpolated into a logger.debug template and nowhere else. All three mutants here (emptying the function, emptying its try, emptying its catch) change only what that one debug line says: the returned string never reaches the request body, the result, or any decision. Killing them would mean asserting a log message's wording.",
+            "decision": "none - equivalent for every observable behaviour; the redaction they cover is only visible in the Debug channel.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configurationService.ts",
+            "anchors": [
+                "if (contentOverlayUrl) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The body of this guard is a single logger.debug call. Whether the overlay block reaches the registration payload is decided independently at the content ternary further down, which the registerSite tests already pin in both directions. Forcing this condition either way, or emptying its block, changes only whether one debug line prints.",
+            "decision": "none - equivalent; the payload decision this guard appears to make is made elsewhere and is already constrained.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configurationService.ts",
+            "anchors": [
+                "if (!deleteResult.success && deleteResult.statusCode !== 404) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The right operand cannot be false when the left is true. deleteSiteConfig goes through makeRequest, which returns success true for a DELETE that answers 404, so a result with success false never carries statusCode 404 - the only other failure route is the catch, which sets no statusCode at all. No input reaches the state the mutant changes.",
+            "decision": "none - unreachable state; the guard is defence in depth against deleteSiteConfig's contract changing, and no test can drive it.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configurationService.ts",
+            "anchors": [
+                "if (deleteResult.statusCode === 404) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The block is one logger.warn. The re-register on the next line runs unconditionally either way, so forcing this condition true or false, flipping its operator, or emptying the block leaves every observable outcome of updateSiteConfig identical - the tests for a 404 delete already assert that it proceeds and succeeds.",
+            "decision": "none - equivalent; only the presence of one warn line differs.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configurationService.ts",
+            "anchors": [
+                "if (response.status === 401 || response.status === 403) {",
+                "const safeBody = errorBody.replace(/[\\r\\n]/g, ' ').substring(0, 200);"
+            ],
+            "mutants": 10,
+            "category": "branch",
+            "reason": "safeBody is read by the logger.debug on the following line and by nothing else. Every mutant on the guard and on the line that builds safeBody therefore changes only whether that debug line prints, or what it contains. The result the caller receives - success, error and statusCode - is built afterwards from response.status and formatError, and is already pinned for 401 and 403.",
+            "decision": "none - equivalent; the whole block is diagnostic output.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configurationService.ts",
+            "anchors": [
+                "const xError = response.headers?.get?.('x-error') ?? undefined;",
+                "const invocationId = response.headers?.get?.('x-invocation-id') ?? undefined;"
+            ],
+            "mutants": 4,
+            "category": "optionalChain",
+            "reason": "Both optional-chain guards defend against a response with no headers object or a headers object with no get method. Every value that reaches handleErrorResponse is a real fetch Response, which always has both, so removing either guard cannot throw. The values are then used only to build the detail suffix of one log line.",
+            "decision": "none - equivalent; a Response without headers.get does not exist on any path into this function.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configurationService.ts",
+            "anchors": [
+                "const detail = ["
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "detail is appended to one log message and read nowhere else. Dropping the filter step turns an absent header into an empty segment in that message; nothing in the returned result, and no caller, can see it.",
+            "decision": "none - equivalent; the difference is confined to log wording.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configurationService.ts",
+            "anchors": [
+                "const logLevel = response.status === 409 ? 'info' : 'error';"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "logLevel selects which logger method prints an otherwise identical message. Nothing else reads it, and the returned result is the same object for a 409 as for any other failure. Killing these would mean asserting which logger channel a line went to, which is the log-wording assertion the ratchet exists to refuse.",
+            "decision": "none - equivalent for behaviour; only the Debug channel level differs.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }
