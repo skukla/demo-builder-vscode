@@ -10279,6 +10279,30 @@
             "decision": "none - log-only catch body; the reveal-anyway behaviour it guards is asserted.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/data-installer/services/dataInstallerWriteClient.ts",
+            "anchors": [
+                "const items = (row.items ?? [])"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty fallback array with [\"Stryker was here\"], but the very next step filters on item?.id !== undefined and a string has no id, so the row is dropped again. items is [] either way and totalCount falls back to items.length in both, so no observable difference exists.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/data-installer/services/dataInstallerWriteClient.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The mutant empties the catch block. safeParse's catch does nothing but return undefined, and a function that falls off the end of an emptied catch also returns undefined, so the caller cannot tell the two apart.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }

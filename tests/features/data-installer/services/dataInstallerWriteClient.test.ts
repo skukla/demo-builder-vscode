@@ -37,6 +37,15 @@ function ok(body: unknown, status = 200) {
     });
 }
 
+/** A response whose body is whatever text the service actually sent. */
+function raw(text: string, status = 200) {
+    return jest.fn().mockResolvedValue({
+        ok: status >= 200 && status < 300,
+        status,
+        text: async () => text,
+    });
+}
+
 const logLines: string[] = [];
 
 function makeClient(fetchImpl: jest.Mock) {
@@ -382,6 +391,78 @@ describe('DataInstallerWriteClient', () => {
             expect(body.datapack_name).toBeUndefined();
             expect(body.operation_mode).toBeUndefined();
         });
+
+        it('sends the IMS bearer and asks for JSON', async () => {
+            const fetchImpl = ok({ success: true });
+
+            await makeClient(fetchImpl).checkCredentials(REQUEST);
+
+            const { headers } = fetchImpl.mock.calls[0][1];
+            expect(headers.Authorization).toBe('Bearer ims-token');
+            expect(headers['Content-Type']).toBe('application/json');
+        });
+
+        /**
+         * A 200 is not the verdict — the action answers `success: false` with a
+         * 200 when the pair does not reach the instance. Reading the status alone
+         * would report unusable credentials as usable, which is the one mistake
+         * this check exists to prevent.
+         */
+        it('reports unusable when a 200 carries success false', async () => {
+            const fetchImpl = ok({ success: false });
+
+            const result = await makeClient(fetchImpl).checkCredentials(REQUEST);
+
+            expect(result).toEqual({ usable: false });
+        });
+
+        it('reports unusable for a success true that did not come with a 200', async () => {
+            const fetchImpl = ok({ success: true }, 202);
+
+            const result = await makeClient(fetchImpl).checkCredentials(REQUEST);
+
+            expect(result.usable).toBe(false);
+        });
+
+        it('reports unusable when the body is not JSON at all', async () => {
+            const fetchImpl = raw('<html>Gateway</html>');
+
+            const result = await makeClient(fetchImpl).checkCredentials(REQUEST);
+
+            expect(result).toEqual({ usable: false });
+        });
+
+        it('reports unusable when the body is a bare JSON null', async () => {
+            const fetchImpl = raw('null', 500);
+
+            const result = await makeClient(fetchImpl).checkCredentials(REQUEST);
+
+            expect(result).toEqual({ usable: false });
+        });
+
+        it('gives no reason when the refusal carried no error text', async () => {
+            const fetchImpl = ok({ success: false, error: '' }, 401);
+
+            const result = await makeClient(fetchImpl).checkCredentials(REQUEST);
+
+            expect(result).not.toHaveProperty('reason');
+        });
+
+        it('works with no logger supplied, on both the usable and refused paths', async () => {
+            const client = (fetchImpl: jest.Mock) =>
+                new DataInstallerWriteClient({
+                    baseUrl: BASE,
+                    getToken: async () => 'tok',
+                    fetchImpl: fetchImpl as unknown as typeof fetch,
+                });
+
+            await expect(client(ok({ success: true })).checkCredentials(REQUEST)).resolves.toEqual({
+                usable: true,
+            });
+            await expect(
+                client(ok({ success: false, error: 'nope' }, 401)).checkCredentials(REQUEST),
+            ).resolves.toEqual({ usable: false, reason: 'nope' });
+        });
     });
 
     describe('credentials', () => {
@@ -433,6 +514,48 @@ describe('DataInstallerWriteClient', () => {
                     credentials: { kind: 'accs', clientId: 'cid', clientSecret: 'super-secret-value' },
                 }),
             ).rejects.toThrow(expect.not.stringMatching(/super-secret-value/) as unknown as string);
+        });
+    });
+
+    /**
+     * How a refusal becomes a message. The service's own wording is preferred
+     * because it names the cause; the client's own sentence is the fallback, and
+     * an `error` field that is empty or is not text is NOT wording — falling
+     * through to it would show the user a blank message.
+     */
+    describe('error mapping', () => {
+        it('shows the service wording when the service sent some', async () => {
+            const fetchImpl = ok({ success: false, error: 'Datapack not found' }, 500);
+
+            await expect(makeClient(fetchImpl).startImport(REQUEST)).rejects.toMatchObject({
+                message: 'Datapack not found',
+                status: 500,
+                action: 'process-datapack-async',
+            });
+        });
+
+        it('falls back to its own wording for an EMPTY error string', async () => {
+            const fetchImpl = ok({ success: false, error: '' }, 500);
+
+            await expect(makeClient(fetchImpl).startImport(REQUEST)).rejects.toThrow(
+                'The Data Installer rejected the request (HTTP 500).',
+            );
+        });
+
+        it('falls back to its own wording when error is not text', async () => {
+            const fetchImpl = ok({ success: false, error: ['boom'] }, 503);
+
+            await expect(makeClient(fetchImpl).startImport(REQUEST)).rejects.toThrow(
+                'The Data Installer rejected the request (HTTP 503).',
+            );
+        });
+
+        it('falls back to its own wording when the body is not JSON', async () => {
+            const fetchImpl = raw('<html>Bad Gateway</html>', 502);
+
+            await expect(makeClient(fetchImpl).startImport(REQUEST)).rejects.toThrow(
+                'The Data Installer rejected the request (HTTP 502).',
+            );
         });
     });
 });

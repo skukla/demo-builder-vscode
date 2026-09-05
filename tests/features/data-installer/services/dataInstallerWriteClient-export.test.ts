@@ -51,6 +51,15 @@ function ok(body: unknown, status = 200) {
     });
 }
 
+/** A response whose body is whatever text the service actually sent. */
+function raw(text: string, status = 200) {
+    return jest.fn().mockResolvedValue({
+        ok: status >= 200 && status < 300,
+        status,
+        text: async () => text,
+    });
+}
+
 function makeClient(fetchImpl: jest.Mock) {
     return new DataInstallerWriteClient({
         baseUrl: BASE,
@@ -102,7 +111,12 @@ describe('listExportItems', () => {
         const { headers } = fetchImpl.mock.calls[0][1];
         expect(headers['x-client-id']).toBe('cid-1');
         expect(headers['x-client-secret']).toBe('fake-test-secret-not-a-secret');
-        expect(headers['x-client-scope']).toContain('commerce.accs');
+        // The exact list, in order: the action fails pre-flight without the
+        // ACCS scope, and a partial list is the same failure with a longer header.
+        expect(headers['x-client-scope']).toBe(
+            'openid,AdobeID,email,profile,additional_info.projectedProductContext,' +
+                'additional_info.roles,commerce.accs',
+        );
     });
 
     it('returns the items, the total and what the service excluded', async () => {
@@ -132,6 +146,41 @@ describe('listExportItems', () => {
         expect(headers['x-admin-username']).toBe('admin');
         expect(headers['x-admin-password']).toBe('fake-test-pw-not-a-secret');
         expect(headers['x-client-id']).toBeUndefined();
+    });
+
+    it('surfaces the service reason when the list call is refused', async () => {
+        const fetchImpl = ok({ success: false, error: 'Instance unreachable' }, 500);
+
+        await expect(
+            makeClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets'),
+        ).rejects.toMatchObject({
+            message: 'Instance unreachable',
+            status: 500,
+            action: 'get-export-items',
+        });
+    });
+
+    it('names the data type when the refusal carried no reason at all', async () => {
+        const fetchImpl = raw('<html>gateway</html>', 502);
+
+        await expect(
+            makeClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets'),
+        ).rejects.toThrow('Could not list attribute_sets to export (HTTP 502).');
+    });
+
+    /**
+     * An item with no id cannot be selected — sending it back would export
+     * nothing under a name. The row is dropped rather than passed through as
+     * `{id: undefined}`, and a null row does not take the whole page down.
+     */
+    it('drops rows with no id and counts what is left when the service sent no pagination', async () => {
+        const fetchImpl = ok({ items: [null, { display_name: 'no id' }, { id: 7 }] });
+
+        const page = await makeClient(fetchImpl).listExportItems(ACCS_EXPORT, 'attribute_sets');
+
+        expect(page.items).toEqual([{ id: 7, displayName: '7' }]);
+        expect(page.totalCount).toBe(1);
+        expect(page.excludedCount).toBe(0);
     });
 });
 
@@ -240,5 +289,78 @@ describe('startExport', () => {
 
         expect(outcome.success).toBe(false);
         expect(outcome.perType[0].reason).toContain('MongoDB connection URI required');
+    });
+
+    it('sends the IMS bearer for the service itself', async () => {
+        const fetchImpl = ok(RESULT);
+
+        await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+
+        expect(fetchImpl.mock.calls[0][1].headers.Authorization).toBe('Bearer ims-token');
+        expect(fetchImpl.mock.calls[0][1].headers['Content-Type']).toBe('application/json');
+    });
+
+    it('surfaces the service reason when the export is refused outright', async () => {
+        const fetchImpl = ok({ success: false, error: 'Datapack name already taken' }, 502);
+
+        await expect(makeClient(fetchImpl).startExport(ACCS_EXPORT)).rejects.toMatchObject({
+            message: 'Datapack name already taken',
+            status: 502,
+            action: 'process-datapack',
+        });
+    });
+
+    it('falls back to its own wording when the refusal carried no reason', async () => {
+        const fetchImpl = raw('gateway timeout', 504);
+
+        await expect(makeClient(fetchImpl).startExport(ACCS_EXPORT)).rejects.toThrow(
+            'The export could not be started (HTTP 504).',
+        );
+    });
+
+    it('reports no per-type rows when the service returned no results at all', async () => {
+        const fetchImpl = ok({ success: true });
+
+        const outcome = await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+
+        // An invented row would read as a type that ran and exported nothing,
+        // which is a different claim from "the service said nothing about it".
+        expect(outcome.perType).toEqual([]);
+    });
+
+    it('reads a bare result row as a failure that exported nothing', async () => {
+        const fetchImpl = ok({ success: false, results: [{ data_type: 'orders', success: false }] });
+
+        const outcome = await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+
+        expect(outcome.perType).toEqual([
+            { dataType: 'orders', success: false, exported: 0, excluded: 0 },
+        ]);
+    });
+
+    /**
+     * The reason hides under an endpoint key nobody can predict, so the search
+     * walks them. A null entry and a non-string `error` are both skipped —
+     * neither is text a user could read.
+     */
+    it('takes the first per-endpoint error that is actually text', async () => {
+        const fetchImpl = ok({
+            success: false,
+            results: [
+                {
+                    data_type: 'products',
+                    success: false,
+                    responses: {
+                        products_probe: null,
+                        products_count: { error: 123 },
+                        products_export: { error: 'the reason a user can read' },
+                    },
+                },
+            ],
+        });
+
+        const outcome = await makeClient(fetchImpl).startExport(ACCS_EXPORT);
+
+        expect(outcome.perType[0].reason).toBe('the reason a user can read');
     });
 });
