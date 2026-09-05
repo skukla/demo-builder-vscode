@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase3.ts"
+        "src/features/eds/services/patches/patchReportHelper.ts"
     ],
     "reporters": [
         "clear-text",

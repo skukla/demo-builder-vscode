@@ -36,7 +36,9 @@ import {
     formatUnappliedToast,
     logUnapplied,
     reportUnapplied,
+    isDeferredReference,
 } from '@/features/eds/services/patches/patchReportHelper';
+import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -304,5 +306,132 @@ describe('reportUnapplied', () => {
         const msg = showWarning.mock.calls[0][0] as string;
         expect(msg).toContain('c-bad');
         expect(msg).toContain('k-bad');
+    });
+});
+
+// ==========================================================================
+// Deferred-reference prefixes
+// ==========================================================================
+
+describe('isDeferredReference', () => {
+    it('defers nothing when there is no report at all', () => {
+        expect(isDeferredReference(undefined, '/customer/nav')).toBe(false);
+    });
+
+    it('defers nothing when the report carries no prefix list (default stays loud)', () => {
+        expect(isDeferredReference(createPatchReport(), '/customer/nav')).toBe(false);
+    });
+
+    it('defers a target that sits UNDER a configured prefix', () => {
+        const report: PatchReport = { results: [], deferredReferencePrefixes: ['/customer/'] };
+        expect(isDeferredReference(report, '/customer/nav')).toBe(true);
+    });
+
+    it('matches on the START of the target, not the end', () => {
+        const report: PatchReport = { results: [], deferredReferencePrefixes: ['/customer/nav'] };
+        // Same text, wrong position: a prefix must anchor at the head or a
+        // brand page merely MENTIONING the path would be silently skipped.
+        expect(isDeferredReference(report, '/brand/customer/nav')).toBe(false);
+    });
+
+    it('does not defer a target outside every configured prefix', () => {
+        const report: PatchReport = { results: [], deferredReferencePrefixes: ['/customer/'] };
+        expect(isDeferredReference(report, '/nav')).toBe(false);
+    });
+
+    it('defers when ANY prefix matches, not only the first', () => {
+        const report: PatchReport = {
+            results: [],
+            deferredReferencePrefixes: ['/account/', '/customer/'],
+        };
+        expect(isDeferredReference(report, '/customer/nav')).toBe(true);
+    });
+});
+
+// ==========================================================================
+// Toast wording — exact strings, so every clause decision is constrained
+// ==========================================================================
+
+const TAIL =
+    ' during create/reset. The demo continues with these omitted. If this repeats on ' +
+    'every create/reset, the patch is likely obsolete — please report it.';
+
+describe('formatUnappliedToast clause selection', () => {
+    it('names one patch in the singular and adds no reference clause', () => {
+        const r = createPatchReport();
+        addCodeResult(r, { patchId: 'p1', target: 'a.js', applied: false, reason: 'X' });
+        expect(formatUnappliedToast(getUnapplied(r))).toBe(
+            `Demo Builder: 1 patch didn't apply (p1)${TAIL}`
+        );
+    });
+
+    it('names several patches in the plural', () => {
+        const r = createPatchReport();
+        addCodeResult(r, { patchId: 'p1', target: 'a.js', applied: false, reason: 'X' });
+        addContentResult(r, { patchId: 'c1', pagePath: '/y', applied: false, reason: 'Y' });
+        expect(formatUnappliedToast(getUnapplied(r))).toBe(
+            `Demo Builder: 2 patches didn't apply (p1, c1)${TAIL}`
+        );
+    });
+
+    it('names several missing documents in the plural and adds no patch clause', () => {
+        const r = createPatchReport();
+        addReferenceResult(r, '/customer/nav', 'missing');
+        addReferenceResult(r, '/customer/footer', 'missing');
+        expect(formatUnappliedToast(getUnapplied(r))).toBe(
+            `Demo Builder: 2 referenced documents couldn't be copied (/customer/nav, /customer/footer)${TAIL}`
+        );
+    });
+
+    it('keeps patches and references in SEPARATE clauses, each counted on its own', () => {
+        const r = createPatchReport();
+        addCodeResult(r, { patchId: 'p1', target: 'a.js', applied: false, reason: 'X' });
+        addReferenceResult(r, '/customer/nav', 'missing');
+        expect(formatUnappliedToast(getUnapplied(r))).toBe(
+            `Demo Builder: 1 patch didn't apply (p1); ` +
+                `1 referenced document couldn't be copied (/customer/nav)${TAIL}`
+        );
+    });
+
+    it('lists a patch by id but a missing document by target', () => {
+        const r = createPatchReport();
+        // A reference entry sets patchId === target, so this pins WHICH field
+        // each clause reads: the patch clause maps patchId, the reference
+        // clause maps target.
+        addContentResult(r, { patchId: 'c1', pagePath: '/y', applied: false, reason: 'Y' });
+        expect(formatUnappliedToast(getUnapplied(r))).toBe(
+            `Demo Builder: 1 patch didn't apply (c1)${TAIL}`
+        );
+    });
+
+    it('adds no obsolescence clause for a patch under the miss threshold', () => {
+        const r = createPatchReport();
+        addCodeResult(r, { patchId: 'p1', target: 'a.js', applied: false, reason: 'X' });
+        expect(formatUnappliedToast(getUnapplied(r), { p1: 2 })).toBe(
+            `Demo Builder: 1 patch didn't apply (p1)${TAIL}`
+        );
+    });
+
+    it('escalates only the ids AT or over the threshold, appended as a third clause', () => {
+        const r = createPatchReport();
+        addCodeResult(r, { patchId: 'p1', target: 'a.js', applied: false, reason: 'X' });
+        expect(formatUnappliedToast(getUnapplied(r), { p1: 3, quiet: 2 })).toBe(
+            `Demo Builder: 1 patch didn't apply (p1); ` +
+                `p1 has not applied in 3 consecutive runs — likely obsolete, retire it from the ledger${TAIL}`
+        );
+    });
+});
+
+describe('reportUnapplied obsolescence escalation', () => {
+    it('stays silent about a patch under the threshold — one warn line, not two', async () => {
+        mockTrackPatchMisses.mockResolvedValueOnce({ p: 2 });
+        const r = createPatchReport();
+        addCodeResult(r, { patchId: 'p', target: 'a.js', applied: false, reason: 'X' });
+
+        await reportUnapplied(r, mockLogger, jest.fn());
+
+        // The per-patch line only. An escalation line here would make the
+        // durable drift signal fire before the patch is actually stale.
+        expect(mockLogger.warn).toHaveBeenCalledTimes(1);
     });
 });

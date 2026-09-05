@@ -8192,6 +8192,18 @@
             "decision": "none \u2014 naming the kind states which measurement earns a halt, and is the reason the 404 here cannot be confused with the outer one",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/patches/patchReportHelper.ts",
+            "anchors": [
+                "return (report?.deferredReferencePrefixes ?? []).some(prefix => target.startsWith(prefix));"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "ArrayDeclaration replaces the [] fallback with ['Stryker was here']. The fallback only runs when the report carries no deferredReferencePrefixes, and the mutated array changes the answer for exactly one target: a path that literally begins 'Stryker was here'. Site-relative document paths in this codebase begin '/', so no value in the function's domain distinguishes the two arrays. The fallback's real contract \u2014 an absent prefix list defers nothing \u2014 is pinned by 'defers nothing when the report carries no prefix list (default stays loud)' and by 'defers nothing when there is no report at all'; the .some/.every, optional-chain, ??-to-&&, arrow-body and startsWith/endsWith mutants on this same line are all killed by that describe block.",
+            "decision": "none \u2014 the empty default is the correct 'defer nothing' value; only a placeholder-shaped target could tell it apart, and asserting one would test Stryker rather than the helper",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
         }
     ]
 }
