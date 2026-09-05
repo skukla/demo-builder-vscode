@@ -21,6 +21,18 @@ describe('useStepValidation', () => {
         ...overrides,
     } as WizardState);
 
+    /**
+     * The wizard state crosses the message channel as JSON, so a host that has
+     * not populated a field yet hands over a state where it is simply absent —
+     * a shape the WizardState type cannot express. The `?.` guards in the step
+     * validators exist for exactly that case; these builders reproduce it.
+     */
+    const stateMissing = (field: keyof WizardState): WizardState => {
+        const state = createMockState({ projectName: 'My Demo' });
+        delete (state as Partial<WizardState>)[field];
+        return state;
+    };
+
     describe('adobe-auth Step Validation', () => {
         it('should return valid when isAuthenticated is true', () => {
             const state = createMockState({
@@ -44,6 +56,17 @@ describe('useStepValidation', () => {
 
             const { result } = renderHook(() =>
                 useStepValidation('adobe-auth', state)
+            );
+
+            expect(result.current).toEqual({
+                isValid: false,
+                canProceed: false,
+            });
+        });
+
+        it('should return invalid rather than throw when adobeAuth is absent', () => {
+            const { result } = renderHook(() =>
+                useStepValidation('adobe-auth', stateMissing('adobeAuth'))
             );
 
             expect(result.current).toEqual({
@@ -85,6 +108,17 @@ describe('useStepValidation', () => {
 
             const { result } = renderHook(() =>
                 useStepValidation('project-name', state)
+            );
+
+            expect(result.current).toEqual({
+                isValid: false,
+                canProceed: false,
+            });
+        });
+
+        it('should return invalid rather than throw when projectName is absent', () => {
+            const { result } = renderHook(() =>
+                useStepValidation('project-name', stateMissing('projectName'))
             );
 
             expect(result.current).toEqual({
