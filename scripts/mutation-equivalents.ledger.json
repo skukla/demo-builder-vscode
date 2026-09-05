@@ -11014,6 +11014,18 @@
             "decision": "none \u2014 the guard that gates this branch already establishes what the chain checks",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/commands/diagnostics.ts",
+            "anchors": [
+                "if (!owner || !repo) return undefined;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "owner and repo come from splitting getEdsGithubRepo's return, which is either undefined or a string whose BOTH halves are non-empty \u2014 it returns 'owner && repo ? githubRepo : undefined' itself. So the two operands are always falsy together and never one-of-two, and replacing || with && cannot change which calls reach probeConfigService. Killing it would need getEdsGithubRepo mocked to yield 'owner/', a value the real guard cannot produce.",
+            "decision": "none \u2014 the guard is correct defensive code against a contract change upstream; deleting half of it to satisfy the mutator would remove the protection the day getEdsGithubRepo relaxes.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }
