@@ -29,8 +29,6 @@ export interface TimelineNavProps {
     currentStepIndex: number;
     /** Array of completed step indices */
     completedStepIndices: number[];
-    /** Array of confirmed step indices (in edit mode, user clicked Continue on these) */
-    confirmedStepIndices?: number[];
     /** Callback when step is clicked (receives step index) */
     onStepClick?: (stepIndex: number) => void;
     /** Whether to show the header (default: true) */
@@ -59,7 +57,6 @@ export function TimelineNav({
     steps,
     currentStepIndex,
     completedStepIndices,
-    confirmedStepIndices: _confirmedStepIndices = [],
     onStepClick,
     showHeader = true,
     headerText = 'Setup Progress',

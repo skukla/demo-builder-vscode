@@ -303,7 +303,6 @@ export function WizardContainer({
     // Timeline state — derived from local wizard state, no sidebar messaging.
     const timelineSteps: TimelineStep[] = WIZARD_STEPS.map((s) => ({ id: s.id, name: s.name }));
     const completedStepIndices = getCompletedStepIndices(completedSteps, WIZARD_STEPS);
-    const confirmedStepIndices = getCompletedStepIndices(confirmedSteps, WIZARD_STEPS);
 
     // Build-Your-Project linear driver (Continue/Back over sub-steps -> areas ->
     // wizard steps) + rail children. Extracted to buildAreaWalk (pure derivation).
@@ -345,7 +344,6 @@ export function WizardContainer({
                         steps={timelineSteps}
                         currentStepIndex={currentStepIndex}
                         completedStepIndices={completedStepIndices}
-                        confirmedStepIndices={confirmedStepIndices}
                         onStepClick={handleTimelineStepClick}
                         compact={true}
                         showHeader={true}

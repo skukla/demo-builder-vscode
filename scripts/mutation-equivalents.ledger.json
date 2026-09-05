@@ -10487,6 +10487,18 @@
             "decision": "log-only - no behavioural difference",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/core/ui/components/TimelineNav.tsx",
+            "anchors": [
+                "const actualIndex = step.isExiting ? -1 : steps.findIndex((s) => s.id === step.id);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The -1 is the index of a step that is leaving, and every consumer of actualIndex guards on step.isExiting first and short-circuits before reading it: status, isCurrentWithChildren, isClickable, the aria-current test, the click handler and the keydown handler all begin with !step.isExiting or its equivalent. Flipping the sentinel to +1 therefore changes a value nothing on the exiting path ever evaluates.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
