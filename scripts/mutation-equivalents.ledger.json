@@ -6927,6 +6927,19 @@
             "decision": "Equivalent: the sole caller has already proved githubRepo present; the guard survives only as compiler narrowing.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/handlers/daLive/edsDaLiveAuthHandlers.ts",
+            "anchors": [
+                "if (validation.error?.includes('expired')) {",
+                "} else if (validation.error?.includes('not from DA.live')) {"
+            ],
+            "mutants": 8,
+            "category": "branch",
+            "reason": "Both arms of this if/else-if contain exactly one statement, a context.logger.warn, and every path out of the block runs the same sendMessage and the same return regardless of which arm was taken. Forcing either condition true or false, or emptying either block, changes only which warning line prints - so the only test that could tell them apart is one asserting a logger call's arguments, which pins wording rather than behaviour and is banned here. The two OptionalChaining siblings are equivalent for a second reason: validateDaLiveToken returns an error string on every one of its four valid:false paths and validateDaLiveTokenStrict forwards it or supplies its own, so validation.error is never undefined where these run and the ?. never short-circuits.",
+            "decision": "Equivalent: log-only branches, plus a defensive ?. on a field the validator always populates.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }
