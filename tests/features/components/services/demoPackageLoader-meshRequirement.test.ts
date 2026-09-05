@@ -5,28 +5,16 @@
  * package-level fallback, and the three-state requiresMesh values.
  */
 
+import { packageFixture, storefrontFixture } from './demoPackageLoader.testUtils';
+
 import { getResolvedMeshRequirement } from '@/features/components/services/demoPackageLoader';
 import type { DemoPackage } from '@/types/demoPackages';
 
 describe('getResolvedMeshRequirement', () => {
-    const basePkg = {
-        id: 'test-pkg',
-        name: 'Test',
-        description: 'Test package',
-        storefronts: {
-            'eds-accs': {
-                name: 'EDS ACCS',
-                description: 'Test',
-                source: { owner: 'test', repo: 'test', branch: 'main' },
-            },
-            'headless-paas': {
-                name: 'Headless PaaS',
-                description: 'Test',
-                source: { owner: 'test', repo: 'test', branch: 'main' },
-                requiresMesh: true,
-            },
-        },
-    } as unknown as DemoPackage;
+    const basePkg = packageFixture('test-pkg', {
+        'eds-accs': storefrontFixture('EDS ACCS'),
+        'headless-paas': storefrontFixture('Headless PaaS', { requiresMesh: true }),
+    });
 
     it('should return package-level requiresMesh when storefront has no override', () => {
         const pkg = { ...basePkg, requiresMesh: false as const };
@@ -71,6 +59,15 @@ describe('getResolvedMeshRequirement', () => {
         const pkg = { ...basePkg };
         delete pkg.requiresMesh;
         expect(getResolvedMeshRequirement(pkg, 'eds-accs')).toBeUndefined();
+    });
+
+    // demo-packages.json is read through a cast, so `storefronts` being required
+    // on the type is a claim about the file, not a guarantee. A package whose
+    // entry omits it must still resolve its package-level requirement rather
+    // than throwing inside the wizard's mesh decision.
+    it('falls back to the package level when the package declares no storefronts', () => {
+        const pkg = { id: 'no-storefronts', requiresMesh: true } as unknown as DemoPackage;
+        expect(getResolvedMeshRequirement(pkg, 'eds-accs')).toBe(true);
     });
 
     it('should prefer storefront false over package true', () => {

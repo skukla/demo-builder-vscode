@@ -141,7 +141,7 @@ separated block.
 
 Reference seams: `src/features/components/services/demoPackageLoader.ts` and
 `src/features/eds/services/reset/edsResetParams.ts`. Worked split:
-`tests/features/project-creation/ui/helpers/demoPackageLoader.test.ts`.
+`tests/features/components/services/demoPackageLoader-logic.test.ts`.
 
 Reach for `jest.mock` when there is no reasonable seam — a network or service
 collaborator, not a static config leaf.

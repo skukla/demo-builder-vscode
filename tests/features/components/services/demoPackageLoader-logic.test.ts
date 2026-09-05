@@ -1,6 +1,14 @@
 /**
  * Demo Package Loader Tests
  *
+ * WHERE THIS LIVES, and why it moved. It used to sit under
+ * `tests/features/project-creation/ui/helpers/` and import the loader through the
+ * re-export barrel there. Everything it asserts is about the canonical module in
+ * `features/components/services/`, but the mutation run selects a module's suites
+ * by the mirror path — so every kill in this file counted for nothing and the
+ * loader measured as almost entirely untested (14%). Same tests, same subject,
+ * pointed at the module that owns the behaviour.
+ *
  * Two concerns, kept separate:
  *  1. Loader LOGIC — tested against an injected fixture (the seam), so these
  *     stay stable when demo-packages.json changes. See tests/README.md
@@ -16,53 +24,36 @@ import {
     getPackageById,
     getAvailableStacksForPackage,
     getAllStorefronts,
-    getAddonSource,
-} from '@/features/project-creation/ui/helpers/demoPackageLoader';
-import type { DemoPackage, DemoPackagesConfig, GitSource } from '@/types/demoPackages';
+} from '@/features/components/services/demoPackageLoader';
+import { gitSource, packageFixture, storefrontFixture } from './demoPackageLoader.testUtils';
+import type { DemoPackage, DemoPackagesConfig } from '@/types/demoPackages';
 
 // --- Fixture: a small, controlled package set injected into the loader -------
-const gitSource = (url: string): GitSource => ({
-    type: 'git',
-    url,
-    branch: 'main',
-    gitOptions: { shallow: true },
-});
-
 function makeTestPackages(): DemoPackage[] {
     return [
-        {
-            id: 'alpha',
-            name: 'Alpha',
-            description: 'Alpha test package',
-            configDefaults: {},
-            storefronts: {
-                'headless-paas': {
-                    name: 'Alpha Headless',
-                    description: 'Headless variant',
+        packageFixture(
+            'alpha',
+            {
+                'headless-paas': storefrontFixture('Alpha Headless', {
                     source: gitSource('https://example.com/alpha-headless'),
-                },
-                'eds-paas': {
-                    name: 'Alpha EDS',
-                    description: 'EDS variant',
+                }),
+                'eds-paas': storefrontFixture('Alpha EDS', {
                     source: gitSource('https://example.com/alpha-eds'),
                     contentSource: { org: 'alpha-org', site: 'alpha-site' },
-                },
+                }),
             },
-        },
-        {
-            id: 'beta',
-            name: 'Beta',
-            description: 'Beta test package',
-            configDefaults: {},
-            storefronts: {
-                'eds-accs': {
-                    name: 'Beta EDS ACCS',
-                    description: 'EDS ACCS variant',
+            { name: 'Alpha' },
+        ),
+        packageFixture(
+            'beta',
+            {
+                'eds-accs': storefrontFixture('Beta EDS ACCS', {
                     source: gitSource('https://example.com/beta-eds-accs'),
                     contentSource: { org: 'beta-org', site: 'beta-site' },
-                },
+                }),
             },
-        },
+            { name: 'Beta' },
+        ),
     ];
 }
 
@@ -275,23 +266,5 @@ describe('shipped demo-packages.json (config integrity)', () => {
                 }
             });
         });
-    });
-});
-
-describe('getAddonSource (global, from stacks.json)', () => {
-    it('returns undefined for a removed addon (demo-inspector)', () => {
-        expect(getAddonSource('demo-inspector')).toBeUndefined();
-    });
-
-    it('returns undefined for a nonexistent addon', () => {
-        expect(getAddonSource('nonexistent-addon')).toBeUndefined();
-    });
-
-    it('is synchronous (does not return a Promise)', () => {
-        expect(getAddonSource('nonexistent-addon')).not.toBeInstanceOf(Promise);
-    });
-
-    it('takes at most one argument (no packageId)', () => {
-        expect(getAddonSource.length).toBeLessThanOrEqual(1);
     });
 });

@@ -10838,6 +10838,18 @@
             "decision": "equivalent",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/components/services/demoPackageLoader.ts",
+            "anchors": [
+                "if (!packageId) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "This is a fast path, not a decision. With the guard removed an empty packageId falls through to all.find(pkg => pkg.id === packageId), and no package - shipped or injected - carries an empty id, so find answers undefined exactly as the guard does. Killing it would mean asserting behaviour on a fixture package whose id is the empty string, which demo-packages.json cannot contain and its schema forbids. Covers both the ConditionalExpression and the emptied block.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }
