@@ -49,7 +49,7 @@ export async function handleCheckCredentialService(
     context: HandlerContext,
     payload: CheckCredentialServicePayload = {},
 ): Promise<HandlerResponse> {
-    const orgId = payload.orgId ?? (await context.stateManager?.getCurrentProject())?.adobe?.organization;
+    const orgId = payload.orgId ?? (await context.stateManager.getCurrentProject())?.adobe?.organization;
 
     const result = await probeCredentialService({
         ...(context.authManager ? { auth: context.authManager } : {}),
@@ -60,7 +60,7 @@ export async function handleCheckCredentialService(
     // state — unconfigured, 403, outage — leaves the manual fields as the way through.
     const served = result.endpoint?.httpStatus === 200;
 
-    context.logger?.info(
+    context.logger.info(
         `[Credential Service] configured=${result.configured} served=${served}` +
             (result.endpoint?.httpStatus ? ` status=${result.endpoint.httpStatus}` : ''),
     );
