@@ -10266,6 +10266,19 @@
             "decision": "none - runtime-redundant with Number.isFinite, but load-bearing for the return type.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/commands/commandManager.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 560,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This is the inner fallback in openComponent: the README open already failed, the package.json open has now failed too, and the body is a single logger.debug. Emptying it leaves the catch in place, so the folder is still revealed and the command still reports success - which the flows suite asserts by driving both file probes to reject. The only difference is whether one debug line prints.",
+            "decision": "none - log-only catch body; the reveal-anyway behaviour it guards is asserted.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }

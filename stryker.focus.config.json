@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/data-installer/services/dataInstallerParsers.ts"
+        "src/commands/commandManager.ts"
     ],
     "reporters": [
         "clear-text",

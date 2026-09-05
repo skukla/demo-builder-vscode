@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "dataInstallerParsers: PL-22 MUT-02 — a shapes suite covering absent/wrong-typed wire fields, the two untested parsers, and the drop-a-bad-row filters; 1 equivalent mutant ledgered",
+    "_note": "commandManager: PL-22 MUT-02 — delegation and flows suites invoking every registered handler; 1 equivalent mutant ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -324,30 +324,20 @@
             "openGaps": 0
         },
         "src/commands/commandManager.ts": {
-            "score": 32.19,
-            "killed": 75,
-            "survived": 41,
-            "noCoverage": 117,
+            "score": 89.7,
+            "killed": 209,
+            "survived": 24,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 15,
-                "optionalChain": 1,
-                "string": 14,
-                "branch": 7,
-                "logPresentation": 2,
-                "block": 2
+                "string": 13,
+                "logPresentation": 10,
+                "block": 1
             },
-            "uncoveredCategories": {
-                "block": 37,
-                "string": 34,
-                "branch": 33,
-                "logPresentation": 7,
-                "other": 4,
-                "optionalChain": 2
-            },
-            "highValueSurvivors": 9,
-            "equivalent": 0,
-            "openGaps": 101
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/commands/diagnostics.ts": {
             "score": 17.98,
