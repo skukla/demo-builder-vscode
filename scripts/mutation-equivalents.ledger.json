@@ -6352,6 +6352,58 @@
             "decision": "none - a throw here lands in the unpublish step's own swallow",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/ui/hooks/useDaLiveAuth.ts",
+            "anchors": [
+                "}, []); // Empty deps - runs once on mount"
+            ],
+            "line": 352,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mount effect's dependency array. Adding a constant string keeps it a one-element array whose element is identical on every render, so the effect still runs once and its cleanup still runs once \u2014 the subscribe-once and unsubscribe-on-unmount behaviour both tests assert is unchanged. Only a dependency that VARIES could make this effect re-run.",
+            "decision": "none - a constant dependency never changes between renders",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/ui/hooks/useDaLiveAuth.ts",
+            "anchors": [
+                "webviewClient.postMessage('check-dalive-auth');"
+            ],
+            "line": 237,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant adds a constant string to this useCallback's empty dependency array (the line above closes it). React compares dependency arrays element by element, and a literal that is identical on every render can never differ, so the callback is memoised exactly as before. The body also closes over nothing that changes \u2014 it reads the client module directly \u2014 so even a re-created callback would behave identically.",
+            "decision": "none - a constant dependency never changes between renders",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/ui/hooks/useDaLiveAuth.ts",
+            "anchors": [
+                "webviewClient.postMessage('open-dalive-login');"
+            ],
+            "line": 246,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same shape as the check-status callback: a constant string added to an empty dependency array, compared element-wise against an identical one on every render. The body reaches the current updateState through a ref that is refreshed each render, so the callback's identity is not observable either.",
+            "decision": "none - a constant dependency never changes between renders",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/ui/hooks/useDaLiveAuth.ts",
+            "anchors": [
+                "webviewClient.postMessage('store-dalive-token-with-org', { token, orgName });"
+            ],
+            "line": 255,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same shape again, on the store-token callback. Its dependencies are genuinely empty because the current updateState is reached through a ref, so neither the real array nor the mutated one can produce a stale closure.",
+            "decision": "none - a constant dependency never changes between renders",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }

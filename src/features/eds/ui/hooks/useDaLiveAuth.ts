@@ -16,7 +16,12 @@ import { edsConfigStringDefaults } from '../helpers/edsConfigDefaults';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { WizardState, EDSConfig } from '@/types/webview';
-import type { DaLiveAuthStatusPayload, DaLiveLoginOpenedPayload, DaLiveTokenStoredPayload, DaLiveTokenWithOrgResultPayload } from '@/types/webviewPayloads';
+import type {
+    DaLiveAuthStatusPayload,
+    DaLiveLoginOpenedPayload,
+    DaLiveTokenStoredPayload,
+    DaLiveTokenWithOrgResultPayload,
+} from '@/types/webviewPayloads';
 
 const log = webviewLogger('useDaLiveAuth');
 
@@ -67,13 +72,19 @@ interface UseDaLiveAuthReturn {
 
 type EdsConfigRef = MutableRefObject<EDSConfig | undefined>;
 type UpdateStateRef = MutableRefObject<(updates: Partial<WizardState>) => void>;
-type UpdateDaLiveAuthRef = MutableRefObject<(updates: Partial<NonNullable<EDSConfig['daLiveAuth']>>) => void>;
+type UpdateDaLiveAuthRef = MutableRefObject<
+    (updates: Partial<NonNullable<EDSConfig['daLiveAuth']>>) => void
+>;
 
 /** Build an edsConfig update object with org and auth state. */
 function buildEdsConfigWithOrg(
     edsConfigRef: EdsConfigRef,
     orgName: string,
-    authUpdates: Partial<NonNullable<EDSConfig['daLiveAuth']>>,
+    // `isAuthenticated` is required, not optional: every call site states it, and
+    // the spread below puts it last, so a fallback read off the current config
+    // could never survive into the result.
+    authUpdates: Partial<NonNullable<EDSConfig['daLiveAuth']>> &
+        Pick<NonNullable<EDSConfig['daLiveAuth']>, 'isAuthenticated'>,
 ): Partial<WizardState> {
     return {
         edsConfig: {
@@ -86,7 +97,6 @@ function buildEdsConfigWithOrg(
             daLiveSite: edsConfigRef.current?.daLiveSite || '',
             daLiveAuth: {
                 ...edsConfigRef.current?.daLiveAuth,
-                isAuthenticated: edsConfigRef.current?.daLiveAuth?.isAuthenticated || false,
                 ...authUpdates,
             },
         },
@@ -101,13 +111,21 @@ function handleAuthStatusUpdate(
     updateDaLiveAuthRef: UpdateDaLiveAuthRef,
 ): void {
     if (authData.isAuthenticated && authData.orgName) {
-        updateStateRef.current(buildEdsConfigWithOrg(edsConfigRef, authData.orgName, {
-            isAuthenticated: true, isAuthenticating: false, error: undefined,
-        }));
+        updateStateRef.current(
+            buildEdsConfigWithOrg(edsConfigRef, authData.orgName, {
+                isAuthenticated: true,
+                isAuthenticating: false,
+                error: undefined,
+            }),
+        );
     } else if (!authData.isAuthenticated && authData.orgName) {
-        updateStateRef.current(buildEdsConfigWithOrg(edsConfigRef, authData.orgName, {
-            isAuthenticated: false, isAuthenticating: false, error: authData.error,
-        }));
+        updateStateRef.current(
+            buildEdsConfigWithOrg(edsConfigRef, authData.orgName, {
+                isAuthenticated: false,
+                isAuthenticating: false,
+                error: authData.error,
+            }),
+        );
     } else {
         updateDaLiveAuthRef.current({
             isAuthenticated: authData.isAuthenticated,
@@ -123,10 +141,15 @@ function handleTokenStored(
     updateDaLiveAuthRef: UpdateDaLiveAuthRef,
 ): void {
     if (storedData.success) {
-        updateDaLiveAuthRef.current({ isAuthenticated: true, isAuthenticating: false, error: undefined });
+        updateDaLiveAuthRef.current({
+            isAuthenticated: true,
+            isAuthenticating: false,
+            error: undefined,
+        });
     } else {
         updateDaLiveAuthRef.current({
-            isAuthenticated: false, isAuthenticating: false,
+            isAuthenticated: false,
+            isAuthenticating: false,
             error: storedData.error || 'Failed to store token',
         });
     }
@@ -140,12 +163,17 @@ function handleTokenWithOrgResult(
     updateDaLiveAuthRef: UpdateDaLiveAuthRef,
 ): void {
     if (resultData.success && resultData.orgName) {
-        updateStateRef.current(buildEdsConfigWithOrg(edsConfigRef, resultData.orgName, {
-            isAuthenticated: true, isAuthenticating: false, error: undefined,
-        }));
+        updateStateRef.current(
+            buildEdsConfigWithOrg(edsConfigRef, resultData.orgName, {
+                isAuthenticated: true,
+                isAuthenticating: false,
+                error: undefined,
+            }),
+        );
     } else {
         updateDaLiveAuthRef.current({
-            isAuthenticated: false, isAuthenticating: false,
+            isAuthenticated: false,
+            isAuthenticating: false,
             error: resultData.error || 'Failed to verify organization',
         });
     }
@@ -158,10 +186,7 @@ function handleTokenWithOrgResult(
 /**
  * Hook for managing DA.live authentication state
  */
-export function useDaLiveAuth({
-    state,
-    updateState,
-}: UseDaLiveAuthProps): UseDaLiveAuthReturn {
+export function useDaLiveAuth({ state, updateState }: UseDaLiveAuthProps): UseDaLiveAuthReturn {
     // Track whether initial auth check is in progress
     const [isChecking, setIsChecking] = useState(true);
 
@@ -177,19 +202,22 @@ export function useDaLiveAuth({
     /**
      * Update EDS config with new DA.live auth state
      */
-    const updateDaLiveAuth = useCallback((updates: Partial<NonNullable<EDSConfig['daLiveAuth']>>) => {
-        updateState({
-            edsConfig: {
-                ...edsConfig,
-                ...edsConfigStringDefaults(edsConfig),
-                daLiveAuth: {
-                    ...daLiveAuth,
-                    isAuthenticated: daLiveAuth?.isAuthenticated || false,
-                    ...updates,
+    const updateDaLiveAuth = useCallback(
+        (updates: Partial<NonNullable<EDSConfig['daLiveAuth']>>) => {
+            updateState({
+                edsConfig: {
+                    ...edsConfig,
+                    ...edsConfigStringDefaults(edsConfig),
+                    daLiveAuth: {
+                        ...daLiveAuth,
+                        isAuthenticated: daLiveAuth?.isAuthenticated || false,
+                        ...updates,
+                    },
                 },
-            },
-        });
-    }, [edsConfig, daLiveAuth, updateState]);
+            });
+        },
+        [edsConfig, daLiveAuth, updateState],
+    );
 
     // Use refs to access latest functions/state without triggering effect re-runs
     const updateDaLiveAuthRef = useRef(updateDaLiveAuth);
@@ -301,11 +329,19 @@ export function useDaLiveAuth({
         // `error` field), so it could never fire — found by the 2026-08-21
         // channel inventory.
         // Listen for combined token + org result
-        const unsubscribeTokenWithOrg = webviewClient.onMessage('dalive-token-with-org-result', (data) => {
-            const resultData = data as DaLiveTokenWithOrgResultPayload;
-            log.debug('DA.live token with org result:', resultData);
-            handleTokenWithOrgResult(resultData, edsConfigRef, updateStateRef, updateDaLiveAuthRef);
-        });
+        const unsubscribeTokenWithOrg = webviewClient.onMessage(
+            'dalive-token-with-org-result',
+            (data) => {
+                const resultData = data as DaLiveTokenWithOrgResultPayload;
+                log.debug('DA.live token with org result:', resultData);
+                handleTokenWithOrgResult(
+                    resultData,
+                    edsConfigRef,
+                    updateStateRef,
+                    updateDaLiveAuthRef,
+                );
+            },
+        );
 
         return () => {
             unsubscribeStatus();

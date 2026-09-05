@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/edsPipeline.ts"
+        "src/features/eds/ui/hooks/useDaLiveAuth.ts"
     ],
     "reporters": [
         "clear-text",
