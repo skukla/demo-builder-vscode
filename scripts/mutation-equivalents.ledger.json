@@ -11390,6 +11390,164 @@
             "decision": "Recorded as equivalent. Log-only branch; the exit code itself is asserted through the returned result instead.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/services/ComponentRegistryManager.ts",
+            "anchors": [
+                "(groupIds || []).forEach((id: string) => {"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The empty array is only reached when a selection group is absent, and replacing it with a one-element array of a made-up id changes nothing: the callback looks that id up in componentsMap, finds nothing, and enhanceComponent returns null, which the guard on the next line drops. The mutant iterates once instead of zero times and pushes exactly as many components as the original - none.",
+            "decision": "Recorded as equivalent. The missing-component guard inside the loop absorbs any id the fallback could invent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/services/ComponentRegistryManager.ts",
+            "anchors": [
+                "if (enhanced) components.mesh.push(enhanced);",
+                "if (enhanced) components.appBuilder.push(enhanced);"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "These two loops iterate Object.keys of the very section whose entries were spread into componentsMap a few lines above, so enhanceComponent can never return null here - the id it is handed is by construction a key of the map it reads. Forcing the guard true therefore pushes the same defined object it already pushed. The identical guard inside addComponents IS killed, because there the ids come from selectionGroups, which is edited separately from the sections and can name a component that was renamed away.",
+            "decision": "Recorded as equivalent. Kept for symmetry with the addComponents path, where the same guard is load-bearing.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/services/ComponentRegistryManager.ts",
+            "anchors": [
+                "return registry.components.integrations || [];",
+                "return registry.components.mesh || [];",
+                "return registry.components.appBuilder || [];",
+                "...(registry.components.mesh || []),",
+                "...(registry.components.appBuilder || []),",
+                "...(registry.components.integrations || []),"
+            ],
+            "mutants": 6,
+            "category": "other",
+            "reason": "Every one of these fallbacks is unreachable, and Stryker reports the mutant as uncovered rather than surviving for exactly that reason: transformToGroupedStructure builds the components object with all six arrays initialised to [] and only ever pushes into them, so none of the three can be falsy by the time an accessor reads it. Replacing the fallback array's contents changes a value no execution path evaluates. The surrounding || operators ARE killed, because those do get evaluated.",
+            "decision": "Recorded as equivalent. The fallbacks guard against a shape the transform cannot produce; deleting them would mean asserting that invariant somewhere the type system already states it.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/services/ComponentRegistryManager.ts",
+            "anchors": [
+                "return registry.services?.[id];"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "registry.services is set unconditionally by transformToGroupedStructure, which writes 'raw.services || {}' into it, so it is an object on every registry this method can be handed - including one whose file had no services section at all, which is covered. Dropping the optional chain therefore indexes an object that is always there, and no input reaches the undefined case the chain exists for.",
+            "decision": "Recorded as equivalent. The chain guards against a registry shape the transform in front of it cannot emit.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/services/ComponentRegistryManager.ts",
+            "anchors": [
+                "if (frontendId) {"
+            ],
+            "line": 344,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true is unobservable: the body then calls getComponentById(undefined), which searches the flattened component list for an entry whose id equals undefined. No component has one, so the lookup returns undefined and the optional chain on the next line skips exactly as the guard would have - the guard saves a scan of the list, not a wrong answer. Forcing it FALSE is killed, by the test that this selection reaches the map.",
+            "decision": "Recorded as equivalent. The lookup's own miss is what makes the guard redundant.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/services/ComponentRegistryManager.ts",
+            "anchors": [
+                "if (frontendId) {"
+            ],
+            "line": 517,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true is unobservable: the body then calls getComponentById(undefined), which searches the flattened component list for an entry whose id equals undefined. No component has one, so the lookup returns undefined and the optional chain on the next line skips exactly as the guard would have - the guard saves a scan of the list, not a wrong answer. Forcing it FALSE is killed, by the test that this selection reaches the map.",
+            "decision": "Recorded as equivalent. The lookup's own miss is what makes the guard redundant.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/services/ComponentRegistryManager.ts",
+            "anchors": [
+                "if (frontendId) {"
+            ],
+            "line": 422,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true is unobservable: the body then calls getComponentById(undefined), which searches the flattened component list for an entry whose id equals undefined. No component has one, so the lookup returns undefined and the optional chain on the next line skips exactly as the guard would have - the guard saves a scan of the list, not a wrong answer. Forcing it FALSE is killed, by the test that this selection reaches the map.",
+            "decision": "Recorded as equivalent. The lookup's own miss is what makes the guard redundant.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/services/ComponentRegistryManager.ts",
+            "anchors": [
+                "if (backendId) {"
+            ],
+            "line": 356,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true is unobservable: the body then calls getComponentById(undefined), which searches the flattened component list for an entry whose id equals undefined. No component has one, so the lookup returns undefined and the optional chain on the next line skips exactly as the guard would have - the guard saves a scan of the list, not a wrong answer. Forcing it FALSE is killed, by the test that this selection reaches the map.",
+            "decision": "Recorded as equivalent. The lookup's own miss is what makes the guard redundant.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/services/ComponentRegistryManager.ts",
+            "anchors": [
+                "if (backendId) {"
+            ],
+            "line": 434,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true is unobservable: the body then calls getComponentById(undefined), which searches the flattened component list for an entry whose id equals undefined. No component has one, so the lookup returns undefined and the optional chain on the next line skips exactly as the guard would have - the guard saves a scan of the list, not a wrong answer. Forcing it FALSE is killed, by the test that this selection reaches the map.",
+            "decision": "Recorded as equivalent. The lookup's own miss is what makes the guard redundant.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/services/ComponentRegistryManager.ts",
+            "anchors": [
+                "if (backendId) {"
+            ],
+            "line": 525,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true is unobservable: the body then calls getComponentById(undefined), which searches the flattened component list for an entry whose id equals undefined. No component has one, so the lookup returns undefined and the optional chain on the next line skips exactly as the guard would have - the guard saves a scan of the list, not a wrong answer. Forcing it FALSE is killed, by the test that this selection reaches the map.",
+            "decision": "Recorded as equivalent. The lookup's own miss is what makes the guard redundant.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/services/ComponentRegistryManager.ts",
+            "anchors": [
+                "if (registry.infrastructure) {"
+            ],
+            "line": 408,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "transformToGroupedStructure always assigns infrastructure an array - it builds a local [] and pushes into it only when raw.infrastructure exists - so this guard tests a value that is never falsy, and forcing it true iterates an empty array instead of skipping it. A registry with no infrastructure section reaches this line with [] rather than undefined, which is covered. The narrowing mutant is killed by the infrastructure-version tests.",
+            "decision": "Recorded as equivalent. The transform in front of it cannot emit the shape the guard tests for.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/services/ComponentRegistryManager.ts",
+            "anchors": [
+                "if (registry.infrastructure) {"
+            ],
+            "line": 508,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "transformToGroupedStructure always assigns infrastructure an array - it builds a local [] and pushes into it only when raw.infrastructure exists - so this guard tests a value that is never falsy, and forcing it true iterates an empty array instead of skipping it. A registry with no infrastructure section reaches this line with [] rather than undefined, which is covered. The narrowing mutant is killed by the infrastructure-version tests.",
+            "decision": "Recorded as equivalent. The transform in front of it cannot emit the shape the guard tests for.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }
