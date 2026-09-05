@@ -4,15 +4,17 @@
  * covered generically in toolDescriptors.test.ts; here we pin the catalog.
  */
 
-import { ACTION_DESCRIPTORS } from '@/features/ai/server/actionDescriptors';
 import { dashboardHandlers } from '@/features/dashboard/handlers/dashboardHandlers';
 import { meshHandlers } from '@/features/mesh/handlers/meshHandlers';
 import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
 import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { projectsListHandlers } from '@/features/projects-dashboard/handlers/projectsListHandlers';
+import type { ToolDescriptor } from '@/features/ai/server/toolDescriptors';
 
-function row(tool: string) {
-    return ACTION_DESCRIPTORS.find((d) => d.tool === tool);
+import { actionRows } from './actionDescriptors.testUtils';
+
+function row(tool: string): ToolDescriptor | undefined {
+    return actionRows().find((d) => d.tool === tool);
 }
 
 describe('ACTION_DESCRIPTORS', () => {
@@ -64,7 +66,7 @@ describe('ACTION_DESCRIPTORS', () => {
     });
 
     it('gates every destructive row (delete_*) on confirm', () => {
-        for (const d of ACTION_DESCRIPTORS.filter((r) => r.tool.startsWith('delete_'))) {
+        for (const d of actionRows().filter((r) => r.tool.startsWith('delete_'))) {
             expect(d.confirm).toBe(true);
         }
     });
@@ -74,7 +76,7 @@ describe('ACTION_DESCRIPTORS', () => {
     // which published to a live site ungated. Pinning the exact set means adding
     // a destructive tool forces a deliberate edit here rather than sliding in.
     it('pins the exact confirm-gated set', () => {
-        const gated = ACTION_DESCRIPTORS.filter((d) => d.confirm).map((d) => d.tool);
+        const gated = actionRows().filter((d) => d.confirm).map((d) => d.tool);
         expect(gated.sort()).toEqual([
             'delete_ai_prompt',
             'delete_mesh',
@@ -135,7 +137,7 @@ describe('ACTION_DESCRIPTORS', () => {
         // already registered") and, before that, would have read as the same
         // capability to an agent choosing between them.
         it('does not collide with the Adobe Console select_project', () => {
-            expect(ACTION_DESCRIPTORS.map((d) => d.tool)).not.toContain('select_project');
+            expect(actionRows().map((d) => d.tool)).not.toContain('select_project');
         });
     });
 
@@ -243,7 +245,7 @@ describe('ACTION_DESCRIPTORS', () => {
     /**
      * The preflight against the REAL catalog.
      *
-     * Its handoff content is asserted in addIntegrationPreflight.test.ts, which
+     * Its handoff content is asserted in actionDescriptors-preflight.test.ts, which
      * mocks the loader — because MEASURED 2026-08-17, no entry in the shipped
      * catalog declares a user-supplied env var: 5 ids across all 4 stacks
      * (`headless-commerce-mesh`, `eds-commerce-mesh`, `eds-accs-mesh`,

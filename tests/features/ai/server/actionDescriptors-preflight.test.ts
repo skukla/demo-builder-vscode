@@ -18,6 +18,8 @@
 
 import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
 
+import { actionRow } from './actionDescriptors.testUtils';
+
 /** The bucket-3 entry the shipped catalog does not (yet) contain. */
 const ERP_ENTRY: AppBuilderComponentCatalogEntry = {
     id: 'erp-sync',
@@ -47,16 +49,12 @@ jest.mock('@/features/components/services/appBuilderComponentCatalogLoader', () 
     getAppBuilderComponentEntry: (...a: unknown[]) => mockGetEntry(...a),
 }));
 
-// `require`, not a static import: the descriptor module reads the catalog loader
-// through the handler at module load, so it must be pulled in AFTER the mock above.
-const { ACTION_DESCRIPTORS } = require('@/features/ai/server/actionDescriptors');
-
 type Handoff = { needsUser: Record<string, unknown> };
 
+// `jest.mock` above is hoisted over this file's imports, so the descriptor
+// module `actionRow` holds was built against the mocked catalog loader.
 const preflight = (args: Record<string, unknown>): Handoff | undefined =>
-    ACTION_DESCRIPTORS.find(
-        (d: { tool: string }) => d.tool === 'add_integration',
-    )!.preflight!(args) as Handoff | undefined;
+    actionRow('add_integration').preflight!(args) as Handoff | undefined;
 
 beforeEach(() => {
     jest.clearAllMocks();
