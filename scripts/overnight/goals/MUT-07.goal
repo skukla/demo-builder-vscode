@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-07. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/project-creation/services/aiBundle/aiBundleService.ts  (orchestration, 83.33%, 4 open gaps)
-  - src/features/project-creation/services/catalogPrewarmPhase.ts  (orchestration, 66.67%, 4 open gaps)
-  - src/features/project-creation/services/customBlockLibraryUtils.ts  (pure, 88.89%, 4 open gaps)
-  - src/features/project-creation/ui/components/BlockLibrariesStepContent.tsx  (pure, 85.19%, 4 open gaps)
-  - src/features/project-creation/ui/components/BuildYourProjectSummary.tsx  (pure, 76.47%, 4 open gaps)
+  - src/features/eds/services/toolManager.ts  (orchestration, 55.2%, 55 open gaps)
+  - src/features/eds/services/configService/configurationService.ts  (orchestration, 55.93%, 53 open gaps)
+  - src/features/eds/services/daLive/daLiveAuthService.ts  (orchestration, 65.97%, 53 open gaps)
+  - src/features/eds/ui/components/DaLiveServiceCard.tsx  (pure, 30.23%, 51 open gaps)
+  - src/features/eds/services/configService/configServiceAccess.ts  (orchestration, 70.45%, 47 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts

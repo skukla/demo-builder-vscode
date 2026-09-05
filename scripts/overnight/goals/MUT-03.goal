@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-03. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/project-creation/handlers/checkGitHubAppHandler.ts  (mixed, 47.31%, 27 open gaps)
-  - src/features/project-creation/services/aiBundle/claudeSettingsWriter.ts  (pure, 78.85%, 25 open gaps)
-  - src/features/project-creation/services/edsContentSetup.ts  (orchestration, 48.21%, 25 open gaps)
-  - src/features/project-creation/ui/steps/CommerceStep.tsx  (pure, 67.82%, 25 open gaps)
-  - src/features/project-creation/services/ProjectSetupContext.ts  (pure, 34.29%, 23 open gaps)
+  - src/features/eds/services/github/githubRepoOperations.ts  (orchestration, 24.91%, 136 open gaps)
+  - src/features/eds/ui/steps/StorefrontSetupStep.tsx  (pure, 28.69%, 123 open gaps)
+  - src/features/eds/handlers/edsHandlers.ts  (orchestration, 0.63%, 116 open gaps)
+  - src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts  (orchestration, 9.47%, 110 open gaps)
+  - src/features/eds/services/github/githubFileOperations.ts  (orchestration, 37.96%, 109 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts
