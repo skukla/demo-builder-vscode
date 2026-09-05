@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/storefront/storefrontProbe.ts"
+        "src/features/eds/services/ewSettingChangeListener.ts"
     ],
     "reporters": [
         "clear-text",
