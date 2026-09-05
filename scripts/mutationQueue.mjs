@@ -91,10 +91,9 @@ THE CYCLE, one module at a time — never two measurements at once (the focus co
 single generated files and collide):
   1. node scripts/focusModule.mjs <module>
   2. npx stryker run stryker.focus.config.json > /tmp/focus.txt 2>&1
-     Start it in the BACKGROUND and read the module while it runs — a measurement is a
-     fifth of a session and nothing blocks on it. Wait on \`Done in\`, never on
-     \`mutation score\`: Stryker capitalises it, so a case-sensitive match never fires
-     (16 minutes lost that way, 2026-09-04).
+     Start it in the BACKGROUND and read the module while it runs — nothing blocks on
+     it. Wait on \`Done in\`, never \`mutation score\`: Stryker capitalises it, so a
+     case-sensitive match never fires (16 minutes lost, 2026-09-04).
   3. node scripts/mutationWorklist.mjs         — the decisions nothing constrains, ranked
   4. write the tests (or the ledger entries), run them
   5. re-measure (1–2), then \`node scripts/checkMutationBaseline.mjs --report
@@ -115,8 +114,9 @@ the mutant belongs in the ledger. Add rows with \`node scripts/mutationLedger.mj
 RULES. Stay on the current work branch; never checkout or merge develop. One commit per
 module, \`Backlog: PL-22\` trailer. No cloud writes. No attribution trailers.
 
-CHECK PER MODULE, SCOPED: this module's suites, both typecheckers, eslint on the files
-you changed. Capture each exit code in a variable, never through a pipe. Commit on green.
+CHECK PER MODULE, SCOPED: this module's suites, both typecheckers, eslint on changed
+files, and \`npm run validate:test-file-sizes\` — 750 lines blocks CI, and a suite hit
+779 on 2026-09-05. Exit codes in variables, never a pipe. Commit only on green.
 
 PUSH ONCE, WHEN THE BATCH IS DONE — the pre-push hook then runs the full gate against
 committed state, which a scoped run cannot replace. If it refuses, fix and push again;
