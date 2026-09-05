@@ -52,7 +52,10 @@ export function resolveByomOverlayUrl(fromConfig?: string): string | undefined {
         // fall through to fromConfig
     }
 
-    return fromConfig && fromConfig.length > 0 ? fromConfig : undefined;
+    // An empty fallback is no fallback. The `.length > 0` half of this test used
+    // to be spelled out beside the truthiness one, which for a string can never
+    // disagree with it.
+    return fromConfig || undefined;
 }
 
 /**

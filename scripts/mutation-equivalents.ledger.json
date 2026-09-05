@@ -8240,6 +8240,68 @@
             "decision": "none \u2014 the quiet case is the one an SC asks about ('why no republish prompt?'), so the line earns its place",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/byomOverlay.ts",
+            "anchors": [
+                "function describeRejectedUrl(value: string): string {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "describeRejectedUrl is module-private and has exactly one caller: the template inside getLogger().warn in resolveByomOverlayUrl. Its return value never reaches a return, a collaborator argument or state \u2014 emptying the body changes the warning text from a fingerprint to 'undefined' and nothing else. The resolver's own verdict on a rejected URL (fall through to fromConfig) is asserted by 'rejects http:// URLs that are not localhost', 'rejects URLs longer than the safety cap', 'rejects unparseable URLs' and 'rejects a loopback host on a scheme that is neither http nor https'. The security property this function exists for \u2014 never echoing the rejected URL \u2014 is asserted by 'does not echo the rejected URL into the log', which reads the warning without pinning its wording.",
+            "decision": "none \u2014 a fingerprint the SC can act on is the whole point of the line",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/byomOverlay.ts",
+            "anchors": [
+                "if (value.length > BYOM_MAX_URL_LENGTH) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "Which of the two fingerprint shapes a rejected URL gets \u2014 'length=N chars, exceeds 2048' or 'scheme=..., host=...' \u2014 is visible only in the warning text. Both arms return a string that goes straight into the same logger.warn template, so forcing this branch either way, emptying its body, or moving the boundary by one changes no return value, no collaborator call and no state anywhere in the module. Killing any of the five would mean asserting the message's wording. See the describeRejectedUrl entry above for what IS asserted.",
+            "decision": "none \u2014 the length case has to be named separately, since a 3000-character value has no useful scheme/host to report",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/byomOverlay.ts",
+            "anchors": [
+                "try {"
+            ],
+            "line": 307,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this try removes the URL parse and the scheme/host fingerprint, leaving the function to fall off the end and the warning to read 'undefined'. Same argument as the enclosing describeRejectedUrl entry: the value is log text and nothing else reads it. That an unparseable URL is REJECTED, which is what the try/catch is really deciding for the caller, is asserted by 'rejects unparseable URLs'.",
+            "decision": "none \u2014 parsing is how the fingerprint stays informative without echoing the value",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/byomOverlay.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 310,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch arm returns the not-URL-shaped fingerprint. Emptying it makes the warning say 'undefined' for a value new URL() could not parse, and changes nothing else \u2014 the caller has already decided to fall through to fromConfig by the time this runs. Same argument as the try entry above.",
+            "decision": "none \u2014 'not URL-shaped' is the one fingerprint that tells an SC they pasted something that is not a URL at all",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/byomOverlay.ts",
+            "anchors": [
+                "return `scheme=\"${parsed.protocol.replace(/:$/, '')}\", host=\"${parsed.hostname}\"`;"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The regex mutant rewrites /:$/ as /:/ inside protocol.replace. URL.protocol is always a scheme name followed by exactly one trailing colon \u2014 'https:', 'http:', 'ftp:' \u2014 and a scheme name may contain only letters, digits, '+', '-' and '.' per RFC 3986, so no protocol string has a colon anywhere but the end. Anchored and unanchored therefore strip the same character for every value URL can produce. The result is log text in any case.",
+            "decision": "none \u2014 the anchor states the intent (drop the trailing colon, not every colon) even though no URL can tell the two apart",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
         }
     ]
 }

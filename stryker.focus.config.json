@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/storefront/storefrontStalenessDetector.ts"
+        "src/features/eds/handlers/byomOverlay.ts"
     ],
     "reporters": [
         "clear-text",

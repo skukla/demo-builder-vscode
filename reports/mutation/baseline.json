@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-22 MUT-03: storefrontStalenessDetector — guards and env-var collection covered; redundant `in` check removed, merge loop deduplicated",
+    "_note": "PL-22 MUT-03: byomOverlay — caveat helpers covered, scheme/loopback and cap boundaries pinned, log-fingerprint builder ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -6545,26 +6545,21 @@
             "openGaps": 17
         },
         "src/features/eds/handlers/byomOverlay.ts": {
-            "score": 62.99,
-            "killed": 97,
-            "survived": 41,
-            "noCoverage": 16,
+            "score": 77.48,
+            "killed": 117,
+            "survived": 34,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 24,
-                "branch": 12,
+                "string": 25,
                 "block": 4,
+                "branch": 4,
                 "other": 1
             },
-            "uncoveredCategories": {
-                "block": 3,
-                "string": 7,
-                "branch": 4,
-                "other": 2
-            },
-            "highValueSurvivors": 16,
-            "equivalent": 0,
-            "openGaps": 26
+            "uncoveredCategories": {},
+            "highValueSurvivors": 8,
+            "equivalent": 9,
+            "openGaps": 0
         },
         "src/features/eds/handlers/checkRepoReadinessHandler.ts": {
             "score": 85,
