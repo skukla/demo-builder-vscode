@@ -197,6 +197,27 @@ describe('list-datapack-import-scopes', () => {
         expect(mockedDiscover).not.toHaveBeenCalled();
     });
 
+    it('does not attempt discovery when the project names no Commerce URL', async () => {
+        // Credentials are fine; there is simply nowhere to send the discovery.
+        // buildScopeDiscoveryParams returns undefined, and the picker gets an
+        // empty list rather than an error it cannot act on.
+        mockedCredentials.mockResolvedValue({
+            ok: true,
+            credentials: { kind: 'paas', username: 'admin', password: 'fake-test-pw-not-a-secret' },
+        });
+        const context = makeImportHarness({
+            name: 'demo-paas',
+            componentSelections: { backend: 'adobe-commerce-paas' },
+            componentConfigs: { 'adobe-commerce-paas': {} },
+        });
+
+        const result = await importHandlers['list-datapack-import-scopes'](context);
+
+        expect(result.success).toBe(true);
+        expect(websitesOf(result)).toEqual([]);
+        expect(mockedDiscover).not.toHaveBeenCalled();
+    });
+
     it('does not attempt discovery when the project has no usable credentials', async () => {
         mockedCredentials.mockResolvedValue({ ok: false, reason: 'missing-paas-admin' });
         const context = makeImportHarness();

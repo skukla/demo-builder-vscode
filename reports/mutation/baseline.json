@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "useComponentConfig: 181 open gaps -> 0. Three new suites cover field read/write, service-group assembly and the validation effect; one real defect fixed (a falsy stored value read as blank, so a default overwrote a stored false or 0); the remainder is ledgered, with the sort, the two early returns and the validation logical operators each verified equivalent by planting the mutation.",
+    "_note": "importHandlers: 151 open gaps -> 0. Four suites that test this module were named for their scenario rather than the file, so nothing counted their kills; the rename alone took 151 to 62. Two new suites cover the payload guards, the access refusal, the write-client construction and the datapack bookkeeping. Score is 0.92 below the row written minutes earlier because two log-WORDING assertions were replaced with wiring assertions after the logger-argument enforcer refused them — three logPresentation mutants went back to surviving, which is the outcome that rule exists to produce. openGaps and behavioural survivors are unchanged.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -5572,30 +5572,27 @@
             "openGaps": 43
         },
         "src/features/data-installer/handlers/importHandlers.ts": {
-            "score": 41.1,
-            "killed": 134,
-            "survived": 59,
-            "noCoverage": 133,
+            "score": 89.57,
+            "killed": 292,
+            "survived": 31,
+            "noCoverage": 3,
             "timeout": 0,
             "survivorCategories": {
-                "string": 23,
-                "branch": 19,
+                "string": 8,
+                "logPresentation": 15,
                 "block": 2,
-                "optionalChain": 7,
-                "other": 7,
-                "logPresentation": 1
+                "branch": 1,
+                "optionalChain": 4,
+                "other": 1
             },
             "uncoveredCategories": {
-                "string": 12,
-                "block": 20,
-                "other": 37,
-                "branch": 53,
-                "optionalChain": 6,
-                "logPresentation": 5
+                "logPresentation": 1,
+                "string": 1,
+                "other": 1
             },
-            "highValueSurvivors": 21,
-            "equivalent": 0,
-            "openGaps": 151
+            "highValueSurvivors": 3,
+            "equivalent": 9,
+            "openGaps": 0
         },
         "src/features/data-installer/services/accsCredentialProvisioner.ts": {
             "score": 65.45,

@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/components/ui/hooks/useComponentConfig.ts"
+        "src/features/data-installer/handlers/importHandlers.ts"
     ],
     "reporters": [
         "clear-text",

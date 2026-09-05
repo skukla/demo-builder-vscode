@@ -15,12 +15,12 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { mockRequest } from './useComponentConfig.testUtils';
 
 jest.mock('@/core/ui/utils/webviewLogger', () => ({
-    webviewLogger: () => ({
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    }),
+    // The canonical builder, read lazily: this factory is hoisted above any
+    // module-scope const, so an eager require would run before the import graph
+    // is ready.
+    webviewLogger: () => {
+        return require('../../../../helpers/loggerFake').createMockLogger();
+    },
 }));
 
 const mockCollect = jest.fn();

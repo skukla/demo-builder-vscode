@@ -221,7 +221,15 @@ describe('get-datapack-import-target', () => {
     // name is the only human-recognisable handle on the same target, so it rides
     // along and the modal leads with it.
     describe('the human-readable handle', () => {
-        it('returns the project name beside the instance', async () => {
+        it('reports the read as successful when it has an instance to offer', async () => {
+        const result = await importHandlers['get-datapack-import-target'](
+            makeImportHarness(ACCS_PROJECT)
+        );
+
+        expect(result.success).toBe(true);
+    });
+
+    it('returns the project name beside the instance', async () => {
             expect(await target(ACCS_PROJECT)).toMatchObject({
                 instance: TENANT,
                 projectName: 'demo-accs',
@@ -238,6 +246,31 @@ describe('get-datapack-import-target', () => {
             const bare = { name: 'empty', stack: { backend: 'none' }, componentConfigs: {} };
 
             expect((await target(bare)).instance).toBeUndefined();
+        });
+
+        it('still reports the datapack and scope when the instance is not derivable', async () => {
+            // The two halves are independent: an unrecognisable endpoint costs the
+            // instance prefill, not the scope the project already recorded.
+            const scoped = {
+                name: 'demo-paas',
+                componentSelections: { backend: 'adobe-commerce-paas' },
+                datapack: { name: 'bodea', version: 'main' },
+                componentConfigs: {
+                    'adobe-commerce-paas': {
+                        ADOBE_COMMERCE_WEBSITE_CODE: 'project_site',
+                        ADOBE_COMMERCE_STORE_VIEW_CODE: 'project_view',
+                    },
+                },
+            };
+
+            const data = await target(scoped);
+
+            expect(data.instance).toBeUndefined();
+            expect(data.datapack).toEqual({ name: 'bodea', version: 'main' });
+            expect(data.scope).toEqual({ websiteCode: 'project_site', storeCode: 'project_view' });
+            // The project name exists to LEAD the modal beside an instance nobody
+            // can read. With no instance there is nothing for it to caption.
+            expect('projectName' in data).toBe(false);
         });
 
         it('succeeds with no instance when no project is open', async () => {

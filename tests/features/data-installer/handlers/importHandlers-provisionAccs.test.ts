@@ -167,6 +167,58 @@ describe('provision-accs-credentials', () => {
         expect(mockedProvision).not.toHaveBeenCalled();
     });
 
+    it('refuses a project that records no backend selection at all', async () => {
+        const project = accsProject();
+        delete project.componentSelections;
+
+        const { context } = makeImportHarness(project);
+
+        const result = await importHandlers['provision-accs-credentials'](context);
+
+        expect(mockedProvision).not.toHaveBeenCalled();
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('ACCS backends only');
+    });
+
+    it('refuses when there is no auth service to reach Console with', async () => {
+        const project = accsProject();
+        const { context: ctx } = makeImportHarness(project);
+        // A headless caller has no authManager; provisioning cannot run without one.
+        (ctx as { authManager?: unknown }).authManager = undefined;
+
+        const result = await importHandlers['provision-accs-credentials'](ctx);
+
+        expect(mockedProvision).not.toHaveBeenCalled();
+        expect(result).toMatchObject({ success: false, error: 'Adobe sign-in is required.' });
+    });
+
+    it('hands the provisioner an auth surface, a downloader and a log sink', async () => {
+        const project = accsProject();
+        mockedProvision.mockResolvedValue({ ok: true, clientId: 'cid', clientSecret: 'sec' });
+        const { context: ctx } = makeImportHarness(project);
+
+        await importHandlers['provision-accs-credentials'](ctx);
+
+        const deps = mockedProvision.mock.calls[0][0];
+        expect(deps.auth).toBe(ctx.authManager);
+        expect(typeof deps.downloadWorkspaceJson).toBe('function');
+        // The WIRING is the claim, not the wording.
+        deps.log?.('a provisioning line');
+        expect(ctx.debugLogger.debug).toHaveBeenCalled();
+    });
+
+    it('creates the configs map for a project that has none', async () => {
+        const project = accsProject();
+        delete project.componentConfigs;
+        mockedProvision.mockResolvedValue({ ok: true, clientId: 'cid', clientSecret: 'sec' });
+        const { context: ctx } = makeImportHarness(project);
+
+        const result = await importHandlers['provision-accs-credentials'](ctx);
+
+        expect(result.success).toBe(true);
+        expect(ctx.stateManager.saveProject).toHaveBeenCalled();
+    });
+
     it('refuses a non-ACCS backend — PaaS uses the admin pair, not OAuth', async () => {
         const { context } = makeImportHarness({
             ...accsProject(),
@@ -281,6 +333,27 @@ describe('the offer appears only where provisioning could actually run', () => {
     });
 
     /** The full binding is exactly what the provisioning guard demands. */
+    it('withholds the offer for a PaaS gap, even on a fully-bound project', async () => {
+        // A complete Adobe binding is only HALF the condition. The other half is
+        // that the gap is one provisioning can close — a PaaS project missing its
+        // admin username and password is not, and a button offering to create an
+        // OAuth pair would fix nothing.
+        const paasWithBinding = {
+            name: 'demo-paas',
+            componentSelections: { backend: 'adobe-commerce-paas' },
+            componentConfigs: { 'adobe-commerce-paas': {} },
+            adobe: {
+                organization: 'org-1',
+                projectId: 'proj-1',
+                workspace: 'ws-1',
+            },
+        };
+
+        const result = await refusalFor(paasWithBinding);
+
+        expect(result.data).toMatchObject({ needsAccsCredentials: false });
+    });
+
     it('offers when the binding is complete', async () => {
         const result = await refusalFor(accsProject());
 

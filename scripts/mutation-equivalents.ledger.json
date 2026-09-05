@@ -9664,6 +9664,92 @@
             "decision": "none \u2014 equivalent.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/handlers/importHandlers.ts",
+            "anchors": [
+                "const commerceInstance = payload?.commerceInstance;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "readInput refuses an undefined payload on its FIRST two reads \u2014 'if (!datapackName || !version)' \u2014 and those two chains ARE killed by a call with no payload at all. Every read below them therefore runs only on a payload that exists, so dropping the '?' cannot throw. readTarget is reached from the same place, after the same guards.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/handlers/importHandlers.ts",
+            "anchors": [
+                "const dataTypes = payload?.dataTypes ?? [];"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "readInput refuses an undefined payload on its FIRST two reads \u2014 'if (!datapackName || !version)' \u2014 and those two chains ARE killed by a call with no payload at all. Every read below them therefore runs only on a payload that exists, so dropping the '?' cannot throw. readTarget is reached from the same place, after the same guards. The '?? []' arm is equally unreachable: the empty-array default and an absent payload both land on the 'select at least one data type' refusal, which IS tested.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/handlers/importHandlers.ts",
+            "anchors": [
+                "const websiteCode = payload?.websiteCode;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "readInput refuses an undefined payload on its FIRST two reads \u2014 'if (!datapackName || !version)' \u2014 and those two chains ARE killed by a call with no payload at all. Every read below them therefore runs only on a payload that exists, so dropping the '?' cannot throw. readTarget is reached from the same place, after the same guards.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/handlers/importHandlers.ts",
+            "anchors": [
+                "const storeCode = payload?.storeCode;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "readInput refuses an undefined payload on its FIRST two reads \u2014 'if (!datapackName || !version)' \u2014 and those two chains ARE killed by a call with no payload at all. Every read below them therefore runs only on a payload that exists, so dropping the '?' cannot throw. readTarget is reached from the same place, after the same guards.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/handlers/importHandlers.ts",
+            "anchors": [
+                "return { target: undefined };"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying this object leaves 'target' absent rather than explicitly undefined, and its only reader takes 'target.target' \u2014 which is undefined either way. The caller then writes 'target: input.target ?? resolveInstallTarget(project)', so both spellings fall through to the project scope identically.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/handlers/importHandlers.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 647,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is one debugLogger.debug. That the catch EXISTS is tested \u2014 a project write that throws must still report the import as started, because the service has already accepted it \u2014 and emptying the body changes only which line reaches Debug Logs.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/handlers/importHandlers.ts",
+            "anchors": [
+                "if (!project) {"
+            ],
+            "line": 638,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both mutants are absorbed by the catch two lines below. Removing the guard lets 'project.datapack = ...' throw on a null project; the catch swallows it, logs, and the handler still reports the import as started \u2014 which is exactly what the guard produces. The only difference is a debug line.",
+            "decision": "none \u2014 equivalent. The guard is the intentional path and the catch is the backstop; a test cannot tell which one ran.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }
