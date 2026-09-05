@@ -16,6 +16,11 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
+// Imported statically, not re-`await import`ed inside each test. The dynamic
+// form loaded the module during the FIRST test only, so everything defined at
+// module level — the GitHubIcon mark among it — was attributed to that one test
+// and no later assertion could reach it.
+import { GitHubServiceCard } from '@/features/eds/ui/components/GitHubServiceCard';
 
 // Test wrapper with Spectrum provider
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -35,12 +40,7 @@ describe('GitHubServiceCard', () => {
     });
 
     describe('Checking State', () => {
-        it('should show progress indicator when checking', async () => {
-            // Given: isChecking is true
-            const { GitHubServiceCard } = await import(
-                '@/features/eds/ui/components/GitHubServiceCard'
-            );
-
+        it('should show progress indicator when checking', () => {
             // When: Component renders
             render(
                 <TestWrapper>
@@ -58,12 +58,7 @@ describe('GitHubServiceCard', () => {
             expect(screen.getByText(/checking/i)).toBeInTheDocument();
         });
 
-        it('should show connecting text when authenticating', async () => {
-            // Given: isAuthenticating is true
-            const { GitHubServiceCard } = await import(
-                '@/features/eds/ui/components/GitHubServiceCard'
-            );
-
+        it('should show connecting text when authenticating', () => {
             // When: Component renders
             render(
                 <TestWrapper>
@@ -82,12 +77,7 @@ describe('GitHubServiceCard', () => {
     });
 
     describe('Authenticated State', () => {
-        it('should show user login when authenticated', async () => {
-            // Given: User is authenticated
-            const { GitHubServiceCard } = await import(
-                '@/features/eds/ui/components/GitHubServiceCard'
-            );
-
+        it('should show user login when authenticated', () => {
             // When: Component renders with authenticated user
             render(
                 <TestWrapper>
@@ -106,12 +96,7 @@ describe('GitHubServiceCard', () => {
             expect(screen.getByText('testuser')).toBeInTheDocument();
         });
 
-        it('should show change account button when authenticated', async () => {
-            // Given: User is authenticated
-            const { GitHubServiceCard } = await import(
-                '@/features/eds/ui/components/GitHubServiceCard'
-            );
-
+        it('should show change account button when authenticated', () => {
             // When: Component renders
             render(
                 <TestWrapper>
@@ -131,12 +116,7 @@ describe('GitHubServiceCard', () => {
             expect(changeButton).toBeInTheDocument();
         });
 
-        it('should call onChangeAccount when change button clicked', async () => {
-            // Given: User is authenticated
-            const { GitHubServiceCard } = await import(
-                '@/features/eds/ui/components/GitHubServiceCard'
-            );
-
+        it('should call onChangeAccount when change button clicked', () => {
             render(
                 <TestWrapper>
                     <GitHubServiceCard
@@ -159,12 +139,7 @@ describe('GitHubServiceCard', () => {
     });
 
     describe('Connect Button', () => {
-        it('should show connect button when not authenticated', async () => {
-            // Given: User is not authenticated
-            const { GitHubServiceCard } = await import(
-                '@/features/eds/ui/components/GitHubServiceCard'
-            );
-
+        it('should show connect button when not authenticated', () => {
             // When: Component renders
             render(
                 <TestWrapper>
@@ -182,12 +157,7 @@ describe('GitHubServiceCard', () => {
             expect(connectButton).toBeInTheDocument();
         });
 
-        it('should call onConnect when connect button clicked', async () => {
-            // Given: User is not authenticated
-            const { GitHubServiceCard } = await import(
-                '@/features/eds/ui/components/GitHubServiceCard'
-            );
-
+        it('should call onConnect when connect button clicked', () => {
             render(
                 <TestWrapper>
                     <GitHubServiceCard
@@ -208,12 +178,7 @@ describe('GitHubServiceCard', () => {
     });
 
     describe('Error State', () => {
-        it('should show error message when error provided', async () => {
-            // Given: Error state
-            const { GitHubServiceCard } = await import(
-                '@/features/eds/ui/components/GitHubServiceCard'
-            );
-
+        it('should show error message when error provided', () => {
             // When: Component renders with error
             render(
                 <TestWrapper>
@@ -233,13 +198,30 @@ describe('GitHubServiceCard', () => {
         });
     });
 
-    describe('Card Display', () => {
-        it('should render card with GitHub icon and title', async () => {
-            // Given: Service card component
-            const { GitHubServiceCard } = await import(
-                '@/features/eds/ui/components/GitHubServiceCard'
+    describe('Authenticated Without User', () => {
+        it('should still offer Connect when the user payload has not arrived', () => {
+            // The flag and the payload arrive in separate messages, so
+            // authenticated-with-no-user is a real intermediate state. Treating
+            // it as connected renders a checkmark beside an EMPTY account name
+            render(
+                <TestWrapper>
+                    <GitHubServiceCard
+                        isChecking={false}
+                        isAuthenticating={false}
+                        isAuthenticated={true}
+                        onConnect={mockOnConnect}
+                        onChangeAccount={mockOnChangeAccount}
+                    />
+                </TestWrapper>
             );
 
+            expect(screen.getByRole('button', { name: /connect github/i })).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /change/i })).not.toBeInTheDocument();
+        });
+    });
+
+    describe('Card Display', () => {
+        it('should render card with GitHub icon and title', () => {
             // When: Component renders
             const { container } = render(
                 <TestWrapper>
@@ -255,6 +237,23 @@ describe('GitHubServiceCard', () => {
             // Then: Should have card class and GitHub title
             expect(container.querySelector('.service-card')).toBeInTheDocument();
             expect(screen.getByText('GitHub')).toBeInTheDocument();
+        });
+
+        it('should render the GitHub mark inside the icon well', () => {
+            // The icon is the only thing distinguishing this card from the
+            const { container } = render(
+                <TestWrapper>
+                    <GitHubServiceCard
+                        isChecking={false}
+                        isAuthenticating={false}
+                        isAuthenticated={false}
+                        onConnect={mockOnConnect}
+                    />
+                </TestWrapper>
+            );
+
+            const mark = container.querySelector('.service-icon.github-icon svg path');
+            expect(mark).toBeInTheDocument();
         });
     });
 });

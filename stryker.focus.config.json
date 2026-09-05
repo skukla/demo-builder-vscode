@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/storefront/storefrontNameMigrationForProject.ts"
+        "src/features/eds/ui/components/GitHubServiceCard.tsx"
     ],
     "reporters": [
         "clear-text",
