@@ -141,6 +141,23 @@ describe('getSelectableAppBuilderComponents (real seed catalog)', () => {
             expect(mesh?.requirement).toBe('required');
         });
 
+        it("leaves NON-mesh entries 'optional' when the package requires mesh", () => {
+            // The mesh requirement is scoped to mesh-kind entries: a package that
+            // must ship a mesh does not thereby lock every integration in the
+            // catalog. Without this, requiresMesh:true would mark the starter kit
+            // and the blank shell as required and remove the user's choice.
+            const result = getSelectableAppBuilderComponents(
+                makePackage({ requiresMesh: true }),
+                EDS_PAAS.backend,
+                EDS_PAAS.frontend,
+                'eds-paas'
+            );
+            const nonMesh = result.filter((d) => d.kind !== 'mesh');
+
+            expect(nonMesh.map((d) => d.id)).toContain('app-builder-shell');
+            expect(nonMesh.map((d) => d.requirement)).toEqual(nonMesh.map(() => 'optional'));
+        });
+
         it("defaults the mesh entry to 'optional' when requiresMesh is undefined", () => {
             const result = getSelectableAppBuilderComponents(
                 makePackage(),
