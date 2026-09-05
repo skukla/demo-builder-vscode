@@ -140,7 +140,7 @@ describe('phases reach the chat', () => {
     // authored phrase and narrates nothing regardless of the rule. What it
     // still proves is that a read emits no PHASE lines — which remains true.
     // Opening-line behaviour for reads is covered in
-    // toolProgressNotifications.test.ts against a real tool name.
+    // inExtensionMcpServer-progressNotifications.test.ts against a real tool name.
     it('emits no PHASE lines for read tools', async () => {
         await start(false);
 

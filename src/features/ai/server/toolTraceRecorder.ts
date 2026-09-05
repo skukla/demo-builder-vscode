@@ -49,7 +49,7 @@ export type TraceOutcome = 'ok' | 'error';
 export interface TraceEntry {
     /** MCP tool name. */
     tool: string;
-    /** What the tool declared about itself — see `toolAnnotations.test.ts`. */
+    /** What the tool declared about itself — see `inExtensionMcpServer-toolAnnotations.test.ts`. */
     readOnly: boolean;
     /** Argument names only. NEVER values. */
     argumentKeys: string[];

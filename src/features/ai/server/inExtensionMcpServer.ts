@@ -73,7 +73,7 @@ const SERVER_VERSION = '1.0.0';
  *
  * FAILS CLOSED: no declaration means "assume it writes". A tool that forgets is
  * over-blocked under the dry run, which is recoverable; the other direction is a
- * real mutation during a mode that promises none. `toolAnnotations.test.ts`
+ * real mutation during a mode that promises none. `inExtensionMcpServer-toolAnnotations.test.ts`
  * asserts every registered tool declares, so the fallback never runs in
  * production.
  */
@@ -87,7 +87,7 @@ function declaredReadOnly(schema: unknown): boolean {
  * Name-shape guess at read-vs-write. NOT used to gate anything any more — see
  * {@link declaredReadOnly}, which reads the tool's own declaration.
  *
- * Kept as the cross-check `toolAnnotations.test.ts` runs: a declaration that
+ * Kept as the cross-check `inExtensionMcpServer-toolAnnotations.test.ts` runs: a declaration that
  * disagrees with the name is either a bug or a deliberate exception, and the
  * test makes the difference explicit rather than silent. Both `check_github_app`
  * and the `select_*` trio are real, recorded disagreements.

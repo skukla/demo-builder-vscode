@@ -416,6 +416,12 @@ describe('agent-operation visibility (the notifier seam)', () => {
         for (const name of ['sync_storefront', 'republish', 'delete_page', 'brand_new_tool']) {
             expect(isReadOnlyToolName(name)).toBe(false);
         }
+        // The prefix has to be the START of the name. A write tool that merely
+        // CONTAINS a read word is a write — this is the direction that matters,
+        // because getting it wrong makes a mutation invisible.
+        for (const name of ['deploy_get_thing', 'reset_list_cache', 'undo_check_run']) {
+            expect(isReadOnlyToolName(name)).toBe(false);
+        }
     });
 
     // The consent leg (backlog: mcp-destructive-ops-native-consent). The gate
@@ -443,6 +449,12 @@ describe('agent-operation visibility (the notifier seam)', () => {
         expect(callRequestsConsent('delete_project', { confirm: 'true' })).toBe(false);
         expect(callRequestsConsent('delete_project', {})).toBe(false);
         expect(callRequestsConsent('delete_project', undefined)).toBe(false);
+
+        // `null` is the one JSON value that is `typeof 'object'` and still has
+        // no properties to read. The guard exists to make `.confirm` safe, so
+        // it has to hold here rather than throw inside the tool wrapper.
+        expect(callRequestsConsent('delete_project', null)).toBe(false);
+        expect(callRequestsConsent('delete_project', [])).toBe(false);
     });
 
     it('every tool that interrupts has authored copy — no dialog without words', () => {

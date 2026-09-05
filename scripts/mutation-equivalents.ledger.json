@@ -10598,6 +10598,162 @@
             "decision": "equivalent",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "anchors": [
+                "!!args && typeof args === 'object' && (args as { confirm?: unknown }).confirm === true;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the typeof test true only changes the answer for a value that is truthy, is NOT an object, and still carries confirm === true. Arguments arrive as parsed JSON, so they are an object, an array (also typeof object), a string, a number, a boolean or null - and for every one of those the mutated and original expressions agree. The remaining case needs a function with a confirm property, which no MCP call can deliver.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "anchors": [
+                "const input = shaped?.inputSchema;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Removing the optional hop makes this throw when the tool definition is undefined, but the wrapper is only reached from registerTool, whose second parameter the SDK requires to be a config object - a schemaless registration still passes one. There is no registration path in this repo, and none the SDK accepts, that reaches strictifyWriteSchema with no definition at all.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "anchors": [
+                "if (input && typeof input === 'object') {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both mutants change the answer only for an inputSchema that is null, or truthy and not an object. A tool declares either nothing (undefined, where the original and the mutated || agree because typeof undefined is not object), a raw zod shape, or a built ZodObject - all objects. The null case would need a registration literally writing inputSchema: null, which no tool does and which the strictifier could not usefully act on anyway.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "anchors": [
+                "const progressToken = extra?._meta?.progressToken;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "sendProgress is called only from announceToolStart and announcePhase, both inside the SDK's tool callback, where the SDK always supplies the per-call extra as the second argument. Dropping the hop can only matter when extra is undefined, and the one shape that produces that - a tool registered with no inputSchema, which shifts the callback's arguments - is not a shape any shipped tool uses.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "anchors": [
+                "if (progressToken === undefined || typeof extra?.sendNotification !== 'function') return;"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The optional hop cannot matter because extra is always supplied by the SDK. Forcing the guard false does not send anything either: the notification would then carry progressToken undefined, which the SDK's own schema rejects, and the throw lands in this function's catch - which exists precisely because losing a status line must never cost the user the call. Both paths end with no notification sent and the call unaffected.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "anchors": [
+                "args && typeof args === 'object' ? Object.keys(args).join(', ') : '';"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "argKeys has exactly one consumer, the logger.debug line that prints it; nothing branches on it and it is not recorded. Forcing either operand, swapping the && for ||, or negating the typeof test therefore changes only which characters appear in a debug log line. Killing them would mean asserting a logger call's arguments, which this repo forbids - and the same decision IS pinned behaviourally on the trace recorder's argumentKeys a few lines below.",
+            "decision": "log-only - no behavioural difference",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "anchors": [
+                "if (!trace) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard false removes the early return taken when no recorder is wired. What follows is a try block whose first act is to read .record off trace, so with trace undefined it throws immediately and the catch swallows it - the catch that exists so a recorder fault can never fail a tool call. Nothing is recorded and nothing else runs either way; a suite drives both the wired and unwired cases and cannot separate them.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "anchors": [
+                "args && typeof args === 'object' ? Object.keys(args) : [],"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "These four are the arms this ternary never takes. Arguments reach the wrapper as the SDK's parsed tools/call payload, which is always an object - so the guard is always true, the else-branch array is dead, and forcing the condition or its typeof test true changes nothing. The arms that ARE reachable, the key list itself and the false branch, are killed by tests asserting argumentKeys on recorded entries.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "anchors": [
+                "if (consentNotRequired?.()) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Emptying this block removes its only statement, a logger.info recording that the owner's standing grant applied. The branch is still taken, the chat is still not asked, the modal is still not consulted and the call still runs - all of which a test pins from the other side. The single observable difference is one line in the user log.",
+            "decision": "log-only - no behavioural difference",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "anchors": [
+                "const caps = server.server?.getClientCapabilities?.();"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both hops guard against an McpServer that has no inner server or no getClientCapabilities method. This line runs inside a tool callback, which the SDK only invokes on a server it has constructed and connected, so both are always present - a client that declares no capabilities returns an empty object here, not a missing method. Removing either hop cannot throw on any server this code can be running inside.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "anchors": [
+                "const description = ("
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The hop guards against a tool definition being undefined, but this line is inside registerTool's own closure over the schema the caller passed, and the SDK requires that argument. Every registration in this repo passes an object literal with at least a description. There is no path that reaches the consent gate with no definition to read.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "anchors": [
+                ".catch((err: unknown) => {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "This callback runs only if McpServer.connect rejects. connect attaches the transport to an already-accepted socket and starts it; every failure mode that remains after the accept - a peer that hangs up, a write error - surfaces later as a socket error event, handled by the listener two lines below, not as a rejection here. I could not construct a connection over the real transport that makes connect reject, so nothing distinguishes the block from an empty one.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/inExtensionMcpServer.ts",
+            "anchors": [
+                "const ms = Date.now() - startedAt;"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "ms is computed on the socket close handler and used in exactly one place, the debug line reporting how long the connection lasted. Turning the subtraction into an addition changes a number printed in a log and nothing else - no state, no response, no decision reads it. Killing it would mean asserting the arguments of a logger call.",
+            "decision": "log-only - no behavioural difference",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }

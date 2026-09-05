@@ -42,6 +42,22 @@ export class SocketRpc {
     /** Rejects every in-flight request once the peer goes away. */
     private failure: Error | undefined;
 
+    /**
+     * How to answer a request the SERVER sends US.
+     *
+     * MCP is bidirectional: the consent gate asks the chat by sending the client
+     * an `elicitation/create` request and waiting for its result. Without a
+     * reply the server waits out its two-minute timeout and reports the ask as
+     * unavailable, so a test that means to exercise "the user said yes" would
+     * silently exercise "nobody was there" instead.
+     */
+    private answers = new Map<string, (params: any) => unknown>();
+
+    /** Answer every server-sent request of `method` with `reply(params)`. */
+    answerRequest(method: string, reply: (params: any) => unknown): void {
+        this.answers.set(method, reply);
+    }
+
     constructor(private readonly socket: net.Socket) {
         socket.setEncoding('utf8');
 
@@ -80,6 +96,24 @@ export class SocketRpc {
                 const msg = JSON.parse(line);
                 if (msg.id == null) {
                     this.notifications.push(msg);
+                    continue;
+                }
+                // A message with an id AND a method is the server asking US.
+                // Only answered when a test registered a reply: suites that
+                // attach their own `data` listener answer these themselves, and
+                // replying here as well would race them (it did — consentViaChat
+                // saw a cancel it never sent).
+                if (typeof msg.method === 'string') {
+                    const reply = this.answers.get(msg.method);
+                    if (reply) {
+                        this.socket.write(
+                            JSON.stringify({
+                                jsonrpc: '2.0',
+                                id: msg.id,
+                                result: reply(msg.params),
+                            }) + '\n'
+                        );
+                    }
                     continue;
                 }
                 const entry = this.pending.get(msg.id);
@@ -123,7 +157,8 @@ export class SocketRpc {
 }
 
 export async function connectAndInit(
-    socketPath: string
+    socketPath: string,
+    capabilities: Record<string, unknown> = {}
 ): Promise<{ socket: net.Socket; rpc: SocketRpc }> {
     const socket = net.connect(socketPath);
     await new Promise<void>((resolve, reject) => {
@@ -133,7 +168,7 @@ export async function connectAndInit(
     const rpc = new SocketRpc(socket);
     await rpc.request(1, 'initialize', {
         protocolVersion: '2024-11-05',
-        capabilities: {},
+        capabilities,
         clientInfo: { name: 'test', version: '0.0.0' },
     });
     rpc.notify('notifications/initialized');

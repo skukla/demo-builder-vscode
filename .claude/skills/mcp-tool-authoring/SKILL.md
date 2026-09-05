@@ -35,7 +35,7 @@ Gates the Evaluation Mode dry run, the chat's opening line and the phase sinks.
 - **Descriptor row**: `readOnly: true | false`. Required by `ToolDescriptor`, so a
   missing one is a compile error.
 - **Direct registration**: `annotations: { readOnlyHint: <bool>, destructiveHint: <bool> }`
-  in the config object. Enforced by a SOURCE scan in `toolAnnotations.test.ts`, because
+  in the config object. Enforced by a SOURCE scan in `inExtensionMcpServer-toolAnnotations.test.ts`, because
   most registrars cannot be booted in a unit test.
 
 Missing means "assume it writes" — over-blocked under a dry run, which is the safe
@@ -247,7 +247,7 @@ esbuild renames identifiers, so `grep registerContentAuthoringTools dist/extensi
   ("serves the N project tools over the socket") — add yours and update the count word.
 - Descriptor suites: `readDescriptors`/`actionDescriptors`/`toolDescriptors` tests.
 - **The three declarations** (see above), each with a test that fails without it:
-  `toolAnnotations.test.ts` (read/write, both registration paths),
+  `inExtensionMcpServer-toolAnnotations.test.ts` (read/write, both registration paths),
   `toolNarration.test.ts` (a phrase, and no orphan phrase left behind), and
   `agentAlertTargets.test.ts` (only if the tool raises a dialog).
 - `docs/systems/mcp-server.md` — the descriptor-driven tool list (§ "Descriptor-driven
