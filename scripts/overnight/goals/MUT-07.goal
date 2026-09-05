@@ -40,7 +40,9 @@ the mutant belongs in the ledger. Add rows with `node scripts/mutationLedger.mjs
 — it writes the file's own format and refuses an anchor that does not resolve.
 
 RULES. Stay on the current work branch; never checkout or merge develop. One commit per
-module, `Backlog: PL-22` trailer. No cloud writes. No attribution trailers.
+module, `Backlog: PL-22` trailer, staging ONLY your own paths — never `-a`/`add -A`,
+which swept a concurrent edit into a module commit on 2026-09-05. No cloud writes. No
+attribution trailers.
 
 CHECK PER MODULE, SCOPED: this module's suites, both typecheckers, eslint on changed
 files, and `npm run validate:test-file-sizes` — 750 lines blocks CI, and a suite hit
@@ -53,8 +55,7 @@ cost 95 minutes of one run on 2026-09-05: the same suite twice per module.
 
 WORK THE BATCH TO THE END — no turn budget; a turn count fired in four batches on
 2026-09-04 and was right in none. Stop early only on evidence: two consecutive checks
-failing the same way (say which), or a module whose openGaps will not move across two
-measure cycles — commit what it gained and go to the NEXT module.
+failing the same way (say which), or openGaps not moving across two measure cycles —
+commit what it gained and go to the NEXT module.
 
-FINISH by pasting the batch table ONCE, at the end: module, openGaps before, after, tests
-added, ledger rows added.
+FINISH with the batch table ONCE: module, openGaps before/after, tests, ledger rows.

@@ -55,6 +55,7 @@ const BASELINE = 'reports/mutation/baseline.json';
 const QUEUE = 'scripts/overnight/queue';
 const GOALS = 'scripts/overnight/goals';
 const BATCH = 5;
+const CAP = 4000; // the hard limit on a goal condition
 
 /**
  * The areas whose breakage costs an SC existing work. A module here is worked before any
@@ -139,7 +140,9 @@ the mutant belongs in the ledger. Add rows with \`node scripts/mutationLedger.mj
 — it writes the file's own format and refuses an anchor that does not resolve.
 
 RULES. Stay on the current work branch; never checkout or merge develop. One commit per
-module, \`Backlog: PL-22\` trailer. No cloud writes. No attribution trailers.
+module, \`Backlog: PL-22\` trailer, staging ONLY your own paths — never \`-a\`/\`add -A\`,
+which swept a concurrent edit into a module commit on 2026-09-05. No cloud writes. No
+attribution trailers.
 
 CHECK PER MODULE, SCOPED: this module's suites, both typecheckers, eslint on changed
 files, and \`npm run validate:test-file-sizes\` — 750 lines blocks CI, and a suite hit
@@ -152,19 +155,52 @@ cost 95 minutes of one run on 2026-09-05: the same suite twice per module.
 
 WORK THE BATCH TO THE END — no turn budget; a turn count fired in four batches on
 2026-09-04 and was right in none. Stop early only on evidence: two consecutive checks
-failing the same way (say which), or a module whose openGaps will not move across two
-measure cycles — commit what it gained and go to the NEXT module.
+failing the same way (say which), or openGaps not moving across two measure cycles —
+commit what it gained and go to the NEXT module.
 
-FINISH by pasting the batch table ONCE, at the end: module, openGaps before, after, tests
-added, ledger rows added.
+FINISH with the batch table ONCE: module, openGaps before/after, tests, ledger rows.
 `;
+}
+
+/**
+ * Up to BATCH modules per batch, and FEWER when their paths would push the goal over the
+ * cap.
+ *
+ * The cap is on the rendered text, but the only part that varies is the module list — five
+ * long paths cost more than five short ones. A fixed five therefore made the generator's
+ * headroom depend on which modules happened to sort together, and it fell to 13 characters
+ * on 2026-09-05. Refusing is safe (nothing is written), but the overnight driver
+ * regenerates the queue at the start of every run, so a refusal does not degrade — it
+ * stops the loop until someone shortens a paragraph.
+ *
+ * Dropping the last module into the next batch costs nothing: the queue is regenerated
+ * from the baseline each run, so a batch of four just means the fifth is worked next.
+ */
+function packBatches(chosen) {
+    const batches = [];
+    let current = [];
+    for (const m of chosen) {
+        const candidate = [...current, m];
+        // `MUT-01` is only a placeholder for measuring — every name is the same length.
+        if (current.length && goalText('MUT-01', candidate).length > CAP) {
+            batches.push(current);
+            current = [m];
+        } else {
+            current = candidate;
+        }
+        if (current.length === BATCH) {
+            batches.push(current);
+            current = [];
+        }
+    }
+    if (current.length) batches.push(current);
+    return batches;
 }
 
 function main() {
     const ranked = rankedModules();
     const chosen = ranked.slice(0, LIMIT);
-    const batches = [];
-    for (let i = 0; i < chosen.length; i += BATCH) batches.push(chosen.slice(i, i + BATCH));
+    const batches = packBatches(chosen);
 
     console.log(`modules with open gaps: ${ranked.length}   queued: ${chosen.length} in ${batches.length} batch(es)\n`);
     batches.forEach((b, i) => {
@@ -183,10 +219,12 @@ function main() {
         const name = `MUT-${String(i + 1).padStart(2, '0')}`;
         return { name, text: goalText(name, b) };
     });
-    const tooLong = goals.filter((g) => g.text.length > 4000);
+    // `packBatches` already keeps every batch under the cap; this is the backstop for a
+    // single module whose own line cannot fit, which packing cannot solve by splitting.
+    const tooLong = goals.filter((g) => g.text.length > CAP);
     if (tooLong.length) {
         throw new Error(
-            `the 4,000-character cap is exceeded by ${tooLong.length} batch(es), nothing written: ` +
+            `the ${CAP}-character cap is exceeded by ${tooLong.length} batch(es), nothing written: ` +
                 tooLong.map((g) => `${g.name} at ${g.text.length}`).join(', ')
         );
     }
