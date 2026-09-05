@@ -9,6 +9,7 @@
 import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '../../../../helpers/react-test-utils';
 import { FieldHelpButton } from '@/core/ui/components/forms/FieldHelpButton';
+import { openHelp } from './FieldHelpButton.testUtils';
 
 const THREE_STEPS = {
     title: 'Three Steps',
@@ -21,13 +22,6 @@ function counter(): string {
 
 function button(name: RegExp): HTMLButtonElement {
     return screen.getByRole('button', { name }) as HTMLButtonElement;
-}
-
-async function openHelp(settled: string) {
-    fireEvent.click(screen.getByRole('button', { name: /Help for Test Field/i }));
-    await waitFor(() => {
-        expect(screen.getByText(settled)).toBeInTheDocument();
-    });
 }
 
 async function press(name: RegExp, settled: string) {

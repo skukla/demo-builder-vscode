@@ -27,9 +27,8 @@
  * Strict TDD: written BEFORE the methods exist.
  */
 
-import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
+import { BASE, bodyOf, makeClient, ok, raw } from './dataInstallerWriteClient.testUtils';
 
-const BASE = 'https://example.test/api/v1/web/data-installer-api';
 
 const ACCS_EXPORT = {
     id: { name: 'captured-pack', version: 'v1' },
@@ -42,35 +41,6 @@ const ACCS_EXPORT = {
         clientSecret: 'fake-test-secret-not-a-secret',
     },
 };
-
-function ok(body: unknown, status = 200) {
-    return jest.fn().mockResolvedValue({
-        ok: status >= 200 && status < 300,
-        status,
-        text: async () => JSON.stringify(body),
-    });
-}
-
-/** A response whose body is whatever text the service actually sent. */
-function raw(text: string, status = 200) {
-    return jest.fn().mockResolvedValue({
-        ok: status >= 200 && status < 300,
-        status,
-        text: async () => text,
-    });
-}
-
-function makeClient(fetchImpl: jest.Mock) {
-    return new DataInstallerWriteClient({
-        baseUrl: BASE,
-        getToken: async () => 'ims-token',
-        fetchImpl: fetchImpl as unknown as typeof fetch,
-    });
-}
-
-function bodyOf(fetchImpl: jest.Mock, call = 0): Record<string, unknown> {
-    return JSON.parse(fetchImpl.mock.calls[call][1].body);
-}
 
 describe('listExportItems', () => {
     const PAGE = {

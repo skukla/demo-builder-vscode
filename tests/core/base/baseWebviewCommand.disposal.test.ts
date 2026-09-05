@@ -14,173 +14,43 @@
  * CRITICAL: All tests fully mocked (no real webviews) - safe for IDE execution
  */
 
+import {
+    makeCommand,
+    mintedPanels,
+    resetMintedPanels,
+    createCommFake,
+    useCommFake,
+} from './baseWebviewCommand.testUtils';
+
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
-import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
 import { DisposableStore } from '@/core/utils/disposableStore';
-import { createMockLogger } from '../../helpers/loggerFake';
-import { createMockExtensionContext } from '../../helpers/extensionContextFake';
+import { WebviewPanelManager } from '@/core/base/webviewPanelManager';
 
 import { internals } from '../../helpers/commandInternals';
-// Mock panel state for disposal testing
-let mockPanel: any;
-let mockDisposeCallback: (() => void) | undefined;
 
-// Mock logger
-
-// Mock VS Code API with comprehensive webview support
-jest.mock('vscode', () => ({
-    window: {
-        createWebviewPanel: jest.fn(() => {
-            mockPanel = {
-                webview: {
-                    html: '',
-                    postMessage: jest.fn().mockResolvedValue(true),
-                    onDidReceiveMessage: jest.fn(() => ({ dispose: jest.fn() })),
-                    asWebviewUri: jest.fn((uri: any) => uri),
-                },
-                onDidDispose: jest.fn((cb) => {
-                    mockDisposeCallback = cb;
-                    return { dispose: jest.fn() };
-                }),
-                dispose: jest.fn(() => {
-                    if (mockDisposeCallback) {
-                        mockDisposeCallback();
-                    }
-                }),
-                reveal: jest.fn(),
-                visible: true,
-            };
-            return mockPanel;
-        }),
-        onDidChangeActiveColorTheme: jest.fn(() => ({
-            dispose: jest.fn(),
-        })),
-        setStatusBarMessage: jest.fn(),
-        withProgress: jest.fn((options, task) => task({ report: jest.fn() })),
-    },
-    ViewColumn: {
-        One: 1,
-    },
-    Uri: {
-        file: (path: string) => ({ fsPath: path }),
-    },
-    ColorThemeKind: {
-        Dark: 1,
-        Light: 2,
-    },
-}));
-
-// Mock WebviewCommunicationManager
-jest.mock('@/core/communication/webviewCommunicationManager', () => ({
-    createWebviewCommunication: jest.fn().mockResolvedValue({
-        on: jest.fn(),
-        sendMessage: jest.fn().mockResolvedValue(undefined),
-        request: jest.fn().mockResolvedValue({}),
-        dispose: jest.fn(),
-        incrementStateVersion: jest.fn(),
-        getStateVersion: jest.fn().mockReturnValue(1),
-    }),
-}));
-
-// Mock loading HTML utility
-jest.mock('@/core/utils/loadingHTML', () => ({
-    setLoadingState: jest.fn().mockResolvedValue(undefined),
-}));
-
-// Concrete test command (BaseWebviewCommand is abstract)
-class TestWebviewCommand extends BaseWebviewCommand {
-    public async execute(): Promise<void> {
-        // Test implementation
-        await this.testCreatePanel();
-        await this.testInitComm();
-    }
-
-    protected getWebviewId(): string {
-        return 'test-webview';
-    }
-
-    protected getWebviewTitle(): string {
-        return 'Test Webview';
-    }
-
-    protected async getWebviewContent(): Promise<string> {
-        return '<html><body>Test</body></html>';
-    }
-
-    protected initializeMessageHandlers(): void {
-        // Test implementation
-    }
-
-    protected async getInitialData(): Promise<unknown> {
-        return { test: true };
-    }
-
-    protected getLoadingMessage(): string {
-        return 'Loading...';
-    }
-
-    // Expose protected members for testing
-    public getDisposables(): DisposableStore {
-        return this.disposables;
-    }
-
-    public async testCreatePanel(): Promise<vscode.WebviewPanel> {
-        return await this.createOrRevealPanel();
-    }
-
-    public async testInitComm(): Promise<WebviewCommunicationManager> {
-        return await this.initializeCommunication();
-    }
-
-    public testGetPanel(): vscode.WebviewPanel | undefined {
-        return this.panel;
-    }
-
-    public testGetCommManager(): WebviewCommunicationManager | undefined {
-        return this.communicationManager;
-    }
-}
+const ID = 'test-webview';
 
 describe('BaseWebviewCommand Disposal', () => {
-    let mockContext: vscode.ExtensionContext;
-    let mockStateManager: any;
-    let mockLogger: any;
-
     beforeEach(() => {
         jest.clearAllMocks();
-        mockDisposeCallback = undefined;
-
-        mockContext = createMockExtensionContext({ extensionPath: '/test' });
-
-        mockStateManager = {
-            getCurrentProject: jest.fn().mockResolvedValue({ name: 'test' }),
-            saveProject: jest.fn().mockResolvedValue(undefined),
-        };
-
-        mockLogger = createMockLogger();
+        resetMintedPanels();
+        WebviewPanelManager.unregisterPanel(ID);
+        WebviewPanelManager.unregisterCommunicationManager(ID);
+        useCommFake(createCommFake());
     });
 
     describe('Inherited DisposableStore', () => {
         it('should use inherited disposables property from BaseCommand', () => {
-            const command = new TestWebviewCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger,
-            );
+            const { command } = makeCommand();
 
-            const disposables = command.getDisposables();
+            const disposables = command.getDisposablesForTest();
 
             expect(disposables).toBeDefined();
             expect(disposables).toBeInstanceOf(DisposableStore);
         });
 
         it('should NOT have separate webviewDisposables array', () => {
-            const command = new TestWebviewCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger,
-            );
+            const { command } = makeCommand();
 
             // Should not have webviewDisposables property
             expect(internals(command).webviewDisposables).toBeUndefined();
@@ -189,16 +59,12 @@ describe('BaseWebviewCommand Disposal', () => {
 
     describe('Panel Disposal Listener', () => {
         it('should add panel disposal listener to disposables', async () => {
-            const command = new TestWebviewCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger,
-            );
+            const { command } = makeCommand();
 
-            const disposables = command.getDisposables();
+            const disposables = command.getDisposablesForTest();
             const addSpy = jest.spyOn(disposables, 'add');
 
-            await command.testCreatePanel();
+            await command.openPanel();
 
             // Panel disposal listener should be added
             expect(addSpy).toHaveBeenCalled();
@@ -206,16 +72,12 @@ describe('BaseWebviewCommand Disposal', () => {
         });
 
         it('should dispose listener when command disposed', async () => {
-            const command = new TestWebviewCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger,
-            );
+            const { command } = makeCommand();
 
-            await command.testCreatePanel();
+            await command.openPanel();
 
             const mockDisposable = { dispose: jest.fn() };
-            command.getDisposables().add(mockDisposable);
+            command.getDisposablesForTest().add(mockDisposable);
 
             command.dispose();
 
@@ -225,17 +87,13 @@ describe('BaseWebviewCommand Disposal', () => {
 
     describe('Theme Listener', () => {
         it('should add theme listener to disposables', async () => {
-            const command = new TestWebviewCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger,
-            );
+            const { command } = makeCommand();
 
-            const disposables = command.getDisposables();
+            const disposables = command.getDisposablesForTest();
             const countBefore = disposables.count;
 
-            await command.testCreatePanel();
-            await command.testInitComm();
+            await command.openPanel();
+            await command.startCommunication();
 
             // Should have added theme listener
             expect(disposables.count).toBeGreaterThan(countBefore);
@@ -244,13 +102,9 @@ describe('BaseWebviewCommand Disposal', () => {
 
     describe('dispose() Coordination', () => {
         it('should call super.dispose()', () => {
-            const command = new TestWebviewCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger,
-            );
+            const { command } = makeCommand();
 
-            const disposables = command.getDisposables();
+            const disposables = command.getDisposablesForTest();
             const disposeSpy = jest.spyOn(disposables, 'dispose');
 
             command.dispose();
@@ -260,45 +114,37 @@ describe('BaseWebviewCommand Disposal', () => {
         });
 
         it('should dispose communicationManager', async () => {
-            const command = new TestWebviewCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger,
-            );
+            const { command } = makeCommand();
 
-            await command.testCreatePanel();
-            await command.testInitComm();
+            await command.openPanel();
+            await command.startCommunication();
 
-            const commManager = command.testGetCommManager();
+            const commManager = command.currentComm();
             expect(commManager).toBeDefined();
 
             command.dispose();
 
             expect(commManager!.dispose).toHaveBeenCalled();
-            expect(command.testGetCommManager()).toBeUndefined();
+            expect(command.currentComm()).toBeUndefined();
         });
     });
 
     describe('Complete Disposal Flow', () => {
         it('should clear all resources on panel disposal', async () => {
-            const command = new TestWebviewCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger,
-            );
+            const { command } = makeCommand();
 
-            await command.testCreatePanel();
-            await command.testInitComm();
+            await command.openPanel();
+            await command.startCommunication();
 
             // Add mock disposable
             const mockDisposable = { dispose: jest.fn() };
-            command.getDisposables().add(mockDisposable);
+            command.getDisposablesForTest().add(mockDisposable);
 
-            const commManager = command.testGetCommManager();
+            const commManager = command.currentComm();
             expect(commManager).toBeDefined();
 
             // Trigger panel disposal
-            mockPanel.dispose();
+            mintedPanels()[0].dispose();
 
             // Should dispose communicationManager
             expect(commManager!.dispose).toHaveBeenCalled();
@@ -307,17 +153,13 @@ describe('BaseWebviewCommand Disposal', () => {
             expect(mockDisposable.dispose).toHaveBeenCalled();
 
             // Should clear panel reference
-            expect(command.testGetPanel()).toBeUndefined();
+            expect(command.currentPanel()).toBeUndefined();
         });
     });
 
     describe('LIFO Disposal Ordering', () => {
         it('should dispose resources in reverse order', () => {
-            const command = new TestWebviewCommand(
-                mockContext,
-                mockStateManager,
-                mockLogger,
-            );
+            const { command } = makeCommand();
 
             const disposalOrder: number[] = [];
 
@@ -325,9 +167,9 @@ describe('BaseWebviewCommand Disposal', () => {
             const disposable2 = { dispose: () => disposalOrder.push(2) };
             const disposable3 = { dispose: () => disposalOrder.push(3) };
 
-            command.getDisposables().add(disposable1);
-            command.getDisposables().add(disposable2);
-            command.getDisposables().add(disposable3);
+            command.getDisposablesForTest().add(disposable1);
+            command.getDisposablesForTest().add(disposable2);
+            command.getDisposablesForTest().add(disposable3);
 
             command.dispose();
 

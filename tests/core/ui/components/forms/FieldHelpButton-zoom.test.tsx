@@ -12,9 +12,10 @@
  * and the second half is the part that regressed.
  */
 import React from 'react';
-import { renderWithProviders, screen, fireEvent, waitFor } from '../../../../helpers/react-test-utils';
+import { renderWithProviders, fireEvent, waitFor } from '../../../../helpers/react-test-utils';
 import { FieldHelpButton } from '@/core/ui/components/forms/FieldHelpButton';
 import type { FieldHelp } from '@/types/webview';
+import { openHelp } from './FieldHelpButton.testUtils';
 
 const HELP: FieldHelp = {
     title: 'With Screenshots',
@@ -49,10 +50,7 @@ async function openZoom(help = HELP) {
     const { baseElement } = renderWithProviders(
         <FieldHelpButton help={help} fieldLabel="Test Field" baseUri="vscode-webview://test" />,
     );
-    fireEvent.click(screen.getByRole('button', { name: /Help for Test Field/i }));
-    await waitFor(() => {
-        expect(screen.getByText('the only step')).toBeInTheDocument();
-    });
+    await openHelp('the only step');
 
     const thumbnail = baseElement.querySelector('img.screenshot-thumbnail') as HTMLElement;
     fireEvent.click(thumbnail);
@@ -194,10 +192,7 @@ describe('FieldHelpButton screenshot zoom', () => {
             const { baseElement } = renderWithProviders(
                 <FieldHelpButton help={HELP_NO_ALT} fieldLabel="Test Field" baseUri="vscode-webview://test" />,
             );
-            fireEvent.click(screen.getByRole('button', { name: /Help for Test Field/i }));
-            await waitFor(() => {
-                expect(screen.getByText('the only step')).toBeInTheDocument();
-            });
+            await openHelp('the only step');
 
             fireEvent.keyDown(baseElement.querySelector('img.screenshot-thumbnail') as HTMLElement, {
                 key,
@@ -212,10 +207,7 @@ describe('FieldHelpButton screenshot zoom', () => {
             const { baseElement } = renderWithProviders(
                 <FieldHelpButton help={HELP} fieldLabel="Test Field" baseUri="vscode-webview://test" />,
             );
-            fireEvent.click(screen.getByRole('button', { name: /Help for Test Field/i }));
-            await waitFor(() => {
-                expect(screen.getByText('the only step')).toBeInTheDocument();
-            });
+            await openHelp('the only step');
 
             fireEvent.keyDown(baseElement.querySelector('img.screenshot-thumbnail') as HTMLElement, {
                 key: 'a',

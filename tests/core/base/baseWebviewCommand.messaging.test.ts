@@ -24,6 +24,7 @@ import { WebviewPanelManager } from '@/core/base/webviewPanelManager';
 import { createWebviewCommunication } from '@/core/communication/webviewCommunicationManager';
 import { setLoadingState } from '@/core/utils/loadingHTML';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { createMockProject } from '../../helpers/projectFake';
 
 const ID = 'test-webview';
 
@@ -159,6 +160,7 @@ describe('BaseWebviewCommand communication', () => {
             currentCommand = made.command;
             currentLogger = made.logger;
             currentState = made.stateManager;
+            currentProject = made.project;
             await currentCommand.openPanel();
             await currentCommand.startCommunication();
         });
@@ -166,6 +168,7 @@ describe('BaseWebviewCommand communication', () => {
         let currentCommand: ReturnType<typeof makeCommand>['command'];
         let currentLogger: ReturnType<typeof makeCommand>['logger'];
         let currentState: ReturnType<typeof makeCommand>['stateManager'];
+        let currentProject: ReturnType<typeof makeCommand>['project'];
 
         // Routing only — which level the webview asked for decides which channel
         // it lands on. What the line SAYS is not this class's business.
@@ -187,7 +190,7 @@ describe('BaseWebviewCommand communication', () => {
         it('answers get-state with the current project', async () => {
             const state = await (comm.handlers['get-state'] as () => Promise<unknown>)();
 
-            expect(state).toEqual({ name: 'test-project' });
+            expect(state).toBe(currentProject);
         });
 
         it('merges an update onto the current project and saves the whole thing', async () => {
@@ -195,8 +198,9 @@ describe('BaseWebviewCommand communication', () => {
                 comm.handlers['update-state'] as (u: Record<string, unknown>) => Promise<unknown>
             )({ port: 3000 });
 
+            // The WHOLE project, with the update merged on — not the update.
             expect(currentState.saveProject).toHaveBeenCalledWith({
-                name: 'test-project',
+                ...currentProject,
                 port: 3000,
             });
         });
@@ -329,7 +333,7 @@ describe('BaseWebviewCommand communication', () => {
         it('calls back with the webview id for a webview that asked', async () => {
             const callback = jest.fn();
             BaseWebviewCommand.setDisposalCallback(callback);
-            const { command } = makeCommand({ name: 'p' }, ReopeningWebviewCommand);
+            const { command } = makeCommand(createMockProject(), ReopeningWebviewCommand);
             await command.openPanel();
 
             command.dispose();

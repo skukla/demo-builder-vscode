@@ -7,16 +7,10 @@
  * resolves to, and whether a step gets a number.
  */
 import React from 'react';
-import { renderWithProviders, screen, fireEvent, waitFor } from '../../../../helpers/react-test-utils';
+import { renderWithProviders, screen } from '../../../../helpers/react-test-utils';
 import { FieldHelpButton } from '@/core/ui/components/forms/FieldHelpButton';
+import { openHelp } from './FieldHelpButton.testUtils';
 
-/** Open the help and wait for its content to arrive. */
-async function open(label = 'Test Field', settled = 'settled') {
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(`Help for ${label}`, 'i') }));
-    await waitFor(() => {
-        expect(screen.getByText(settled)).toBeInTheDocument();
-    });
-}
 
 describe('FieldHelpButton content', () => {
     afterEach(() => {
@@ -60,7 +54,7 @@ describe('FieldHelpButton content', () => {
                 />,
             );
 
-            await open('Test Field', 'the short hint');
+            await openHelp('the short hint');
 
             expect(screen.getByText('first')).toBeInTheDocument();
             expect(screen.getByText('second')).toBeInTheDocument();
@@ -85,7 +79,7 @@ describe('FieldHelpButton content', () => {
                 />,
             );
 
-            await open('Test Field', 'the short hint');
+            await openHelp('the short hint');
 
             expect(baseElement.querySelector('.instruction-card')).not.toBeInTheDocument();
         });
@@ -101,7 +95,7 @@ describe('FieldHelpButton content', () => {
                 />,
             );
 
-            await open('Test Field', 'the short hint');
+            await openHelp('the short hint');
 
             expect(screen.getByText('the short hint').tagName).toBe('SPAN');
         });
@@ -113,7 +107,7 @@ describe('FieldHelpButton content', () => {
                 <FieldHelpButton help={{ text: 'the explanation' }} fieldLabel="Test Field" />,
             );
 
-            await open('Test Field', 'the explanation');
+            await openHelp('the explanation');
 
             expect(screen.getByText('the explanation').tagName).toBe('SPAN');
         });
@@ -126,7 +120,7 @@ describe('FieldHelpButton content', () => {
                 />,
             );
 
-            await open('Test Field', 'the explanation');
+            await openHelp('the explanation');
 
             expect(baseElement.querySelector('.instruction-card')).not.toBeInTheDocument();
         });
@@ -136,7 +130,7 @@ describe('FieldHelpButton content', () => {
                 <FieldHelpButton help={{ text: 'the explanation' }} fieldLabel="Test Field" />,
             );
 
-            await open('Test Field', 'the explanation');
+            await openHelp('the explanation');
 
             expect(screen.getByText('Help: Test Field')).toBeInTheDocument();
         });
@@ -155,7 +149,7 @@ describe('FieldHelpButton content', () => {
                 <FieldHelpButton help={oneShot} fieldLabel="Test Field" baseUri="vscode-webview://prop" />,
             );
 
-            await open('Test Field', 'do this');
+            await openHelp('do this');
 
             expect(baseElement.querySelector('img.screenshot-thumbnail')).toHaveAttribute(
                 'src',
@@ -170,7 +164,7 @@ describe('FieldHelpButton content', () => {
                 <FieldHelpButton help={oneShot} fieldLabel="Test Field" />,
             );
 
-            await open('Test Field', 'do this');
+            await openHelp('do this');
 
             expect(baseElement.querySelector('img.screenshot-thumbnail')).toHaveAttribute(
                 'src',
@@ -183,7 +177,7 @@ describe('FieldHelpButton content', () => {
                 <FieldHelpButton help={oneShot} fieldLabel="Test Field" />,
             );
 
-            await open('Test Field', 'do this');
+            await openHelp('do this');
 
             expect(baseElement.querySelector('img.screenshot-thumbnail')).toHaveAttribute(
                 'src',
@@ -200,7 +194,7 @@ describe('FieldHelpButton content', () => {
                 />,
             );
 
-            await open('Test Field', 'do this');
+            await openHelp('do this');
 
             expect(baseElement.querySelector('img.screenshot-thumbnail')).not.toBeInTheDocument();
         });
@@ -210,7 +204,7 @@ describe('FieldHelpButton content', () => {
                 <FieldHelpButton help={oneShot} fieldLabel="Test Field" baseUri="vscode-webview://prop" />,
             );
 
-            await open('Test Field', 'do this');
+            await openHelp('do this');
 
             expect(baseElement.querySelector('img.screenshot-thumbnail')).toHaveAttribute(
                 'alt',
@@ -232,7 +226,7 @@ describe('FieldHelpButton content', () => {
                 />,
             );
 
-            await open('Test Field', 'first');
+            await openHelp('first');
 
             expect(baseElement.querySelector('.number-badge')).toHaveTextContent('1');
         });
@@ -242,7 +236,7 @@ describe('FieldHelpButton content', () => {
                 <FieldHelpButton help={{ steps: [{ text: 'the only step' }] }} fieldLabel="Test Field" />,
             );
 
-            await open('Test Field', 'the only step');
+            await openHelp('the only step');
 
             expect(baseElement.querySelector('.number-badge')).not.toBeInTheDocument();
         });

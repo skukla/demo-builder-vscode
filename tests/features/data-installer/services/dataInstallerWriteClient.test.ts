@@ -26,35 +26,13 @@
 
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import { DataInstallerApiError, DataInstallerInputError } from '@/features/data-installer/services/dataInstallerErrors';
-
-const BASE = 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api';
-
-function ok(body: unknown, status = 200) {
-    return jest.fn().mockResolvedValue({
-        ok: status >= 200 && status < 300,
-        status,
-        text: async () => JSON.stringify(body),
-    });
-}
-
-/** A response whose body is whatever text the service actually sent. */
-function raw(text: string, status = 200) {
-    return jest.fn().mockResolvedValue({
-        ok: status >= 200 && status < 300,
-        status,
-        text: async () => text,
-    });
-}
+import { BASE, makeClient, ok, raw } from './dataInstallerWriteClient.testUtils';
 
 const logLines: string[] = [];
 
-function makeClient(fetchImpl: jest.Mock) {
-    return new DataInstallerWriteClient({
-        baseUrl: BASE,
-        getToken: async () => 'ims-token',
-        fetchImpl: fetchImpl as unknown as typeof fetch,
-        log: (line: string) => logLines.push(line),
-    });
+/** The shared client, with this suite's log sink attached. */
+function makeLoggingClient(fetchImpl: jest.Mock) {
+    return makeClient(fetchImpl, (line: string) => logLines.push(line));
 }
 
 /** The smallest well-formed request. */
@@ -87,7 +65,7 @@ describe('DataInstallerWriteClient', () => {
                 }),
             );
 
-            await makeClient(fetchImpl).checkCredentials(REQUEST);
+            await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             const line = logLines.find((l) => l.includes('get-websites-and-stores'));
             expect(line).toBeDefined();
@@ -97,7 +75,7 @@ describe('DataInstallerWriteClient', () => {
         it('logs a successful validate with its status', async () => {
             const fetchImpl = ok({ success: true });
 
-            await makeClient(fetchImpl).validateImport(REQUEST);
+            await makeLoggingClient(fetchImpl).validateImport(REQUEST);
 
             const line = logLines.find((l) => l.includes('process-datapack'));
             expect(line).toBeDefined();
@@ -107,8 +85,8 @@ describe('DataInstallerWriteClient', () => {
         it('never logs a credential value', async () => {
             const fetchImpl = ok({ success: true });
 
-            await makeClient(fetchImpl).validateImport(REQUEST);
-            await makeClient(fetchImpl).checkCredentials(REQUEST);
+            await makeLoggingClient(fetchImpl).validateImport(REQUEST);
+            await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             const joined = logLines.join('\n');
             expect(joined).not.toContain(REQUEST.credentials.kind === 'paas' ? REQUEST.credentials.password : '');
@@ -134,7 +112,7 @@ describe('DataInstallerWriteClient', () => {
                 202,
             );
 
-            const result = await makeClient(fetchImpl).startImport(REQUEST);
+            const result = await makeLoggingClient(fetchImpl).startImport(REQUEST);
 
             expect(result.activationId).toBe('a'.repeat(32));
         });
@@ -142,7 +120,7 @@ describe('DataInstallerWriteClient', () => {
         it('posts to the async action, which must be the LAST path segment', async () => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
-            await makeClient(fetchImpl).startImport(REQUEST);
+            await makeLoggingClient(fetchImpl).startImport(REQUEST);
 
             const [url, init] = fetchImpl.mock.calls[0];
             // Runtime routes on the last segment; a wrong one is a bare 404.
@@ -153,7 +131,7 @@ describe('DataInstallerWriteClient', () => {
         it('sends the identity, the instance and the requested types', async () => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
-            await makeClient(fetchImpl).startImport(REQUEST);
+            await makeLoggingClient(fetchImpl).startImport(REQUEST);
 
             const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
             expect(body).toMatchObject({
@@ -175,7 +153,7 @@ describe('DataInstallerWriteClient', () => {
         it('sends website_code and store_code when the user picked a target', async () => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
-            await makeClient(fetchImpl).startImport({
+            await makeLoggingClient(fetchImpl).startImport({
                 ...REQUEST,
                 target: { websiteCode: 'bodea', storeCode: 'bodea_store_view' },
             });
@@ -196,7 +174,7 @@ describe('DataInstallerWriteClient', () => {
         it('omits both keys entirely when no target was picked', async () => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
-            await makeClient(fetchImpl).startImport(REQUEST);
+            await makeLoggingClient(fetchImpl).startImport(REQUEST);
 
             const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
             expect(body).not.toHaveProperty('website_code');
@@ -206,7 +184,7 @@ describe('DataInstallerWriteClient', () => {
         it('carries the target onto a delete, so a reset matches its import', async () => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
-            await makeClient(fetchImpl).startDelete({
+            await makeLoggingClient(fetchImpl).startDelete({
                 ...REQUEST,
                 target: { websiteCode: 'bodea', storeCode: 'bodea_store_view' },
             });
@@ -225,7 +203,7 @@ describe('DataInstallerWriteClient', () => {
         it('passes the instance string through untouched', async () => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
-            await makeClient(fetchImpl).startImport({
+            await makeLoggingClient(fetchImpl).startImport({
                 ...REQUEST,
                 commerceInstance: '  https://Not-An-Id.example/  ',
             });
@@ -238,7 +216,7 @@ describe('DataInstallerWriteClient', () => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
             await expect(
-                makeClient(fetchImpl).startImport({ ...REQUEST, dataTypes: [] }),
+                makeLoggingClient(fetchImpl).startImport({ ...REQUEST, dataTypes: [] }),
             ).rejects.toBeInstanceOf(DataInstallerInputError);
             expect(fetchImpl).not.toHaveBeenCalled();
         });
@@ -248,7 +226,7 @@ describe('DataInstallerWriteClient', () => {
         it('fails when a 202 carries no activation id', async () => {
             const fetchImpl = ok({ success: true, status: 'pending' }, 202);
 
-            await expect(makeClient(fetchImpl).startImport(REQUEST)).rejects.toBeInstanceOf(
+            await expect(makeLoggingClient(fetchImpl).startImport(REQUEST)).rejects.toBeInstanceOf(
                 DataInstallerApiError,
             );
         });
@@ -256,7 +234,7 @@ describe('DataInstallerWriteClient', () => {
         it('surfaces a rejected start as an API error', async () => {
             const fetchImpl = ok({ success: false, error: 'Invalid input.' }, 400);
 
-            await expect(makeClient(fetchImpl).startImport(REQUEST)).rejects.toBeInstanceOf(
+            await expect(makeLoggingClient(fetchImpl).startImport(REQUEST)).rejects.toBeInstanceOf(
                 DataInstallerApiError,
             );
         });
@@ -268,7 +246,7 @@ describe('DataInstallerWriteClient', () => {
         it('sends operation_mode delete to the same async action', async () => {
             const fetchImpl = ok({ activation_id: 'a'.repeat(32) }, 202);
 
-            const result = await makeClient(fetchImpl).startDelete(REQUEST);
+            const result = await makeLoggingClient(fetchImpl).startDelete(REQUEST);
 
             const [url, init] = fetchImpl.mock.calls[0];
             expect(String(url)).toBe(`${BASE}/process-datapack-async`);
@@ -279,7 +257,7 @@ describe('DataInstallerWriteClient', () => {
         it('carries the same identity, instance and types an import would', async () => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
-            await makeClient(fetchImpl).startDelete(REQUEST);
+            await makeLoggingClient(fetchImpl).startDelete(REQUEST);
 
             expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toMatchObject({
                 datapack_name: 'bodea',
@@ -293,7 +271,7 @@ describe('DataInstallerWriteClient', () => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
             await expect(
-                makeClient(fetchImpl).startDelete({ ...REQUEST, dataTypes: [] }),
+                makeLoggingClient(fetchImpl).startDelete({ ...REQUEST, dataTypes: [] }),
             ).rejects.toBeInstanceOf(DataInstallerInputError);
             expect(fetchImpl).not.toHaveBeenCalled();
         });
@@ -301,7 +279,7 @@ describe('DataInstallerWriteClient', () => {
         it('fails when a 202 carries no activation id', async () => {
             const fetchImpl = ok({ success: true }, 202);
 
-            await expect(makeClient(fetchImpl).startDelete(REQUEST)).rejects.toBeInstanceOf(
+            await expect(makeLoggingClient(fetchImpl).startDelete(REQUEST)).rejects.toBeInstanceOf(
                 DataInstallerApiError,
             );
         });
@@ -311,7 +289,7 @@ describe('DataInstallerWriteClient', () => {
         it('uses the SYNCHRONOUS action with operation_mode validate', async () => {
             const fetchImpl = ok({ success: true });
 
-            await makeClient(fetchImpl).validateImport(REQUEST);
+            await makeLoggingClient(fetchImpl).validateImport(REQUEST);
 
             const [url, init] = fetchImpl.mock.calls[0];
             expect(String(url)).toBe(`${BASE}/process-datapack`);
@@ -319,7 +297,7 @@ describe('DataInstallerWriteClient', () => {
         });
 
         it('reports valid for a 200', async () => {
-            const result = await makeClient(ok({ success: true })).validateImport(REQUEST);
+            const result = await makeLoggingClient(ok({ success: true })).validateImport(REQUEST);
 
             expect(result).toEqual({ valid: true });
         });
@@ -335,7 +313,7 @@ describe('DataInstallerWriteClient', () => {
                 400,
             );
 
-            const result = await makeClient(fetchImpl).validateImport(REQUEST);
+            const result = await makeLoggingClient(fetchImpl).validateImport(REQUEST);
 
             expect(result.valid).toBe(false);
             expect(result.reason).toMatch(/Must provide one of/);
@@ -344,7 +322,7 @@ describe('DataInstallerWriteClient', () => {
         it('still throws for a server failure, which is not a validation verdict', async () => {
             const fetchImpl = ok({ error: 'boom' }, 500);
 
-            await expect(makeClient(fetchImpl).validateImport(REQUEST)).rejects.toBeInstanceOf(
+            await expect(makeLoggingClient(fetchImpl).validateImport(REQUEST)).rejects.toBeInstanceOf(
                 DataInstallerApiError,
             );
         });
@@ -357,13 +335,13 @@ describe('DataInstallerWriteClient', () => {
         it('asks the store endpoint, not process-datapack', async () => {
             const fetchImpl = ok({ success: true, websites: [] });
 
-            await makeClient(fetchImpl).checkCredentials(REQUEST);
+            await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             expect(String(fetchImpl.mock.calls[0][0])).toBe(`${BASE}/get-websites-and-stores`);
         });
 
         it('reports usable credentials', async () => {
-            const result = await makeClient(ok({ success: true, websites: [] })).checkCredentials(REQUEST);
+            const result = await makeLoggingClient(ok({ success: true, websites: [] })).checkCredentials(REQUEST);
 
             expect(result).toEqual({ usable: true });
         });
@@ -371,7 +349,7 @@ describe('DataInstallerWriteClient', () => {
         it('reports the service reason when the pair is refused', async () => {
             const fetchImpl = ok({ success: false, error: 'Authentication failed' }, 401);
 
-            const result = await makeClient(fetchImpl).checkCredentials(REQUEST);
+            const result = await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             expect(result.usable).toBe(false);
             expect(result.reason).toMatch(/Authentication failed/);
@@ -380,7 +358,7 @@ describe('DataInstallerWriteClient', () => {
         it('carries the instance and credentials, not the datapack', async () => {
             const fetchImpl = ok({ success: true });
 
-            await makeClient(fetchImpl).checkCredentials(REQUEST);
+            await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
             expect(body).toMatchObject({
@@ -395,7 +373,7 @@ describe('DataInstallerWriteClient', () => {
         it('sends the IMS bearer and asks for JSON', async () => {
             const fetchImpl = ok({ success: true });
 
-            await makeClient(fetchImpl).checkCredentials(REQUEST);
+            await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             const { headers } = fetchImpl.mock.calls[0][1];
             expect(headers.Authorization).toBe('Bearer ims-token');
@@ -411,7 +389,7 @@ describe('DataInstallerWriteClient', () => {
         it('reports unusable when a 200 carries success false', async () => {
             const fetchImpl = ok({ success: false });
 
-            const result = await makeClient(fetchImpl).checkCredentials(REQUEST);
+            const result = await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             expect(result).toEqual({ usable: false });
         });
@@ -419,7 +397,7 @@ describe('DataInstallerWriteClient', () => {
         it('reports unusable for a success true that did not come with a 200', async () => {
             const fetchImpl = ok({ success: true }, 202);
 
-            const result = await makeClient(fetchImpl).checkCredentials(REQUEST);
+            const result = await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             expect(result.usable).toBe(false);
         });
@@ -427,7 +405,7 @@ describe('DataInstallerWriteClient', () => {
         it('reports unusable when the body is not JSON at all', async () => {
             const fetchImpl = raw('<html>Gateway</html>');
 
-            const result = await makeClient(fetchImpl).checkCredentials(REQUEST);
+            const result = await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             expect(result).toEqual({ usable: false });
         });
@@ -435,7 +413,7 @@ describe('DataInstallerWriteClient', () => {
         it('reports unusable when the body is a bare JSON null', async () => {
             const fetchImpl = raw('null', 500);
 
-            const result = await makeClient(fetchImpl).checkCredentials(REQUEST);
+            const result = await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             expect(result).toEqual({ usable: false });
         });
@@ -443,7 +421,7 @@ describe('DataInstallerWriteClient', () => {
         it('gives no reason when the refusal carried no error text', async () => {
             const fetchImpl = ok({ success: false, error: '' }, 401);
 
-            const result = await makeClient(fetchImpl).checkCredentials(REQUEST);
+            const result = await makeLoggingClient(fetchImpl).checkCredentials(REQUEST);
 
             expect(result).not.toHaveProperty('reason');
         });
@@ -469,7 +447,7 @@ describe('DataInstallerWriteClient', () => {
         it('sends the IMS bearer for the service itself', async () => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
-            await makeClient(fetchImpl).startImport(REQUEST);
+            await makeLoggingClient(fetchImpl).startImport(REQUEST);
 
             expect(fetchImpl.mock.calls[0][1].headers.Authorization).toBe('Bearer ims-token');
         });
@@ -477,7 +455,7 @@ describe('DataInstallerWriteClient', () => {
         it('carries PaaS admin credentials in the body', async () => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
-            await makeClient(fetchImpl).startImport(REQUEST);
+            await makeLoggingClient(fetchImpl).startImport(REQUEST);
 
             const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
             // The names the service's own docs use. An earlier version of this
@@ -493,7 +471,7 @@ describe('DataInstallerWriteClient', () => {
         it('carries ACCS OAuth credentials in the body', async () => {
             const fetchImpl = ok({ activation_id: 'x' }, 202);
 
-            await makeClient(fetchImpl).startImport({
+            await makeLoggingClient(fetchImpl).startImport({
                 ...REQUEST,
                 credentials: { kind: 'accs', clientId: 'cid', clientSecret: 'fake-test-pw-not-a-secret' },
             });
@@ -509,7 +487,7 @@ describe('DataInstallerWriteClient', () => {
             const fetchImpl = ok({ success: false, error: 'nope' }, 400);
 
             await expect(
-                makeClient(fetchImpl).startImport({
+                makeLoggingClient(fetchImpl).startImport({
                     ...REQUEST,
                     credentials: { kind: 'accs', clientId: 'cid', clientSecret: 'super-secret-value' },
                 }),
@@ -527,7 +505,7 @@ describe('DataInstallerWriteClient', () => {
         it('shows the service wording when the service sent some', async () => {
             const fetchImpl = ok({ success: false, error: 'Datapack not found' }, 500);
 
-            await expect(makeClient(fetchImpl).startImport(REQUEST)).rejects.toMatchObject({
+            await expect(makeLoggingClient(fetchImpl).startImport(REQUEST)).rejects.toMatchObject({
                 message: 'Datapack not found',
                 status: 500,
                 action: 'process-datapack-async',
@@ -537,7 +515,7 @@ describe('DataInstallerWriteClient', () => {
         it('falls back to its own wording for an EMPTY error string', async () => {
             const fetchImpl = ok({ success: false, error: '' }, 500);
 
-            await expect(makeClient(fetchImpl).startImport(REQUEST)).rejects.toThrow(
+            await expect(makeLoggingClient(fetchImpl).startImport(REQUEST)).rejects.toThrow(
                 'The Data Installer rejected the request (HTTP 500).',
             );
         });
@@ -545,7 +523,7 @@ describe('DataInstallerWriteClient', () => {
         it('falls back to its own wording when error is not text', async () => {
             const fetchImpl = ok({ success: false, error: ['boom'] }, 503);
 
-            await expect(makeClient(fetchImpl).startImport(REQUEST)).rejects.toThrow(
+            await expect(makeLoggingClient(fetchImpl).startImport(REQUEST)).rejects.toThrow(
                 'The Data Installer rejected the request (HTTP 503).',
             );
         });
@@ -553,7 +531,7 @@ describe('DataInstallerWriteClient', () => {
         it('falls back to its own wording when the body is not JSON', async () => {
             const fetchImpl = raw('<html>Bad Gateway</html>', 502);
 
-            await expect(makeClient(fetchImpl).startImport(REQUEST)).rejects.toThrow(
+            await expect(makeLoggingClient(fetchImpl).startImport(REQUEST)).rejects.toThrow(
                 'The Data Installer rejected the request (HTTP 502).',
             );
         });

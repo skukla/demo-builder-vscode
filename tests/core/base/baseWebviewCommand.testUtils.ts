@@ -60,8 +60,13 @@ import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { createWebviewCommunication } from '@/core/communication/webviewCommunicationManager';
 import type { WebviewCommunicationManager } from '@/core/communication/webviewCommunicationManager';
+import type { Logger } from '@/types/logger';
+import type { Project } from '@/types/base';
+import type { StateManager } from '@/types/state';
 import { createMockExtensionContext } from '../../helpers/extensionContextFake';
 import { createMockLogger } from '../../helpers/loggerFake';
+import { createMockProject } from '../../helpers/projectFake';
+import { createMockStateManager } from '../../helpers/stateManagerFake';
 
 /** The panel shape the mocked `createWebviewPanel` mints. */
 export interface MintedPanel {
@@ -130,12 +135,20 @@ export function useCommFake(fake: CommFake): void {
     (createWebviewCommunication as jest.Mock).mockResolvedValue(fake);
 }
 
-/** A state manager with just the two members the standard handlers touch. */
-export function createStateManagerFake(project: unknown = { name: 'test-project' }) {
-    return {
+/**
+ * The house StateManager fake, pointed at one project.
+ *
+ * The full interface, not the two members the standard handlers touch: a
+ * partial one would have to be cast in at the constructor, and a cast at that
+ * boundary is the compiler being told to stop checking the one thing it is
+ * best at.
+ */
+export function createStateManagerFake(
+    project: Project | null = createMockProject({ name: 'test-project' }),
+): jest.Mocked<StateManager> {
+    return createMockStateManager({
         getCurrentProject: jest.fn().mockResolvedValue(project),
-        saveProject: jest.fn().mockResolvedValue(undefined),
-    };
+    });
 }
 
 /**
@@ -242,19 +255,19 @@ export class ReopeningWebviewCommand extends TestWebviewCommand {
 
 /** A command wired to fakes, plus the fakes themselves. */
 export function makeCommand(
-    project: unknown = { name: 'test-project' },
+    project: Project | null = createMockProject({ name: 'test-project' }),
     Command: new (
         context: vscode.ExtensionContext,
-        stateManager: never,
-        logger: never,
+        stateManager: StateManager,
+        logger: Logger,
     ) => TestWebviewCommand = TestWebviewCommand,
 ) {
     const stateManager = createStateManagerFake(project);
     const logger = createMockLogger();
     const command = new Command(
         createMockExtensionContext({ extensionPath: '/test' }),
-        stateManager as never,
-        logger as never,
+        stateManager,
+        logger,
     );
-    return { command, stateManager, logger };
+    return { command, stateManager, logger, project };
 }

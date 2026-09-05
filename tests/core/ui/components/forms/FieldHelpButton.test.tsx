@@ -7,6 +7,7 @@
 import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '../../../../helpers/react-test-utils';
 import { FieldHelpButton } from '@/core/ui/components/forms/FieldHelpButton';
+import { HELP_WITH_STEPS, openHelp } from './FieldHelpButton.testUtils';
 
 describe('FieldHelpButton', () => {
     // Simple text-only help content
@@ -21,25 +22,7 @@ describe('FieldHelpButton', () => {
         text: 'Help text with a screenshot.',
     };
 
-    // Help with steps and screenshots
-    const helpWithSteps = {
-        title: 'Step-by-Step Help',
-        steps: [
-            {
-                text: 'Step 1: Do this first',
-                screenshot: 'step1.png',
-                screenshotAlt: 'Screenshot of step 1',
-            },
-            {
-                text: 'Step 2: Then do this',
-                screenshot: 'step2.png',
-                screenshotAlt: 'Screenshot of step 2',
-            },
-            {
-                text: 'Step 3: Finally do this',
-            },
-        ],
-    };
+    const helpWithSteps = HELP_WITH_STEPS;
 
     describe('Screenshot Thumbnail CSS Classes', () => {
         it('applies screenshot-thumbnail class to step screenshot image', async () => {
@@ -51,14 +34,7 @@ describe('FieldHelpButton', () => {
                 />
             );
 
-            // Open the modal by clicking the help button
-            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
-            fireEvent.click(helpButton);
-
-            // Wait for modal content to render
-            await waitFor(() => {
-                expect(screen.getByText('Step-by-Step Help')).toBeInTheDocument();
-            });
+            await openHelp('Step-by-Step Help');
 
             // Find the screenshot image - modal content is portaled to body
             const screenshotImg = baseElement.querySelector('img[alt="Screenshot of step 1"]');
@@ -77,13 +53,7 @@ describe('FieldHelpButton', () => {
                 />
             );
 
-            // Open the modal
-            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
-            fireEvent.click(helpButton);
-
-            await waitFor(() => {
-                expect(screen.getByText('Step-by-Step Help')).toBeInTheDocument();
-            });
+            await openHelp('Step-by-Step Help');
 
             // Click the screenshot to zoom - modal content is portaled to body
             const screenshotImg = baseElement.querySelector('img[alt="Screenshot of step 1"]');
@@ -108,13 +78,7 @@ describe('FieldHelpButton', () => {
                 />
             );
 
-            // Open the modal
-            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
-            fireEvent.click(helpButton);
-
-            await waitFor(() => {
-                expect(screen.getByText('Step-by-Step Help')).toBeInTheDocument();
-            });
+            await openHelp('Step-by-Step Help');
 
             // Click the screenshot to zoom - modal content is portaled to body
             const screenshotImg = baseElement.querySelector('img[alt="Screenshot of step 1"]');
@@ -138,13 +102,7 @@ describe('FieldHelpButton', () => {
                 />
             );
 
-            // Open the modal
-            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
-            fireEvent.click(helpButton);
-
-            await waitFor(() => {
-                expect(screen.getByText('Step-by-Step Help')).toBeInTheDocument();
-            });
+            await openHelp('Step-by-Step Help');
 
             // Click the screenshot to zoom - modal content is portaled to body
             const screenshotImg = baseElement.querySelector('img[alt="Screenshot of step 1"]');
@@ -170,13 +128,7 @@ describe('FieldHelpButton', () => {
                 />
             );
 
-            // Open the modal
-            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
-            fireEvent.click(helpButton);
-
-            await waitFor(() => {
-                expect(screen.getByText('Step-by-Step Help')).toBeInTheDocument();
-            });
+            await openHelp('Step-by-Step Help');
 
             // Look for min-height wrapper - modal content is portaled to body
             const wrapper = baseElement.querySelector('.min-h-48');
@@ -192,13 +144,7 @@ describe('FieldHelpButton', () => {
                 />
             );
 
-            // Open the modal
-            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
-            fireEvent.click(helpButton);
-
-            await waitFor(() => {
-                expect(screen.getByText('Step-by-Step Help')).toBeInTheDocument();
-            });
+            await openHelp('Step-by-Step Help');
 
             // Look for flex spacer in footer - modal content is portaled to body
             const flexSpacer = baseElement.querySelector('.flex-1');
@@ -214,13 +160,7 @@ describe('FieldHelpButton', () => {
                 />
             );
 
-            // Open the modal
-            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
-            fireEvent.click(helpButton);
-
-            await waitFor(() => {
-                expect(screen.getByText('Step-by-Step Help')).toBeInTheDocument();
-            });
+            await openHelp('Step-by-Step Help');
 
             // Look for right-aligned container in footer - modal content is portaled to body
             const flexEndContainer = baseElement.querySelector('.flex-end-container');
@@ -238,13 +178,7 @@ describe('FieldHelpButton', () => {
                 />
             );
 
-            // Open the modal
-            const helpButton = screen.getByRole('button', { name: /Help for Test Field/i });
-            fireEvent.click(helpButton);
-
-            await waitFor(() => {
-                expect(screen.getByText('Step-by-Step Help')).toBeInTheDocument();
-            });
+            await openHelp('Step-by-Step Help');
 
             // Look for step counter with proper class - modal content is portaled to body
             const stepCounter = baseElement.querySelector('.step-counter');

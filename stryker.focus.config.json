@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/sidebar/providers/sidebarProvider.ts"
+        "src/features/data-installer/services/dataInstallerWriteClient.ts"
     ],
     "reporters": [
         "clear-text",
