@@ -80,50 +80,53 @@ these modules to ZERO open gaps, in this order:
 ${list}
 
 WHAT DONE MEANS, per module: its \`openGaps\` row in reports/mutation/baseline.json reads 0.
-Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts
-the decision (assert the ARGUMENTS a collaborator receives, not the mock's answer — a
-mock cannot see a malformed call) or RECORDED in scripts/mutation-equivalents.ledger.json
-with the argument for why no test can kill it. The score is not the target; a module can
-be done at 60% and neglected at 90%. Never add a ledger row to reach zero faster — the
-ledger is for what CANNOT be killed, not what you did not get to.
+Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the
+decision (assert the ARGUMENTS a collaborator receives, not the mock's answer — a mock
+cannot see a malformed call) or RECORDED in scripts/mutation-equivalents.ledger.json with
+why no test can kill it. The score is not the target: a module can be done at 60% and
+neglected at 90%. Never ledger a mutant to reach zero faster — the ledger is for what
+CANNOT be killed, not what you did not get to.
 
-THE CYCLE, one module at a time, never two measurements at once (the focus configs are
+THE CYCLE, one module at a time — never two measurements at once (the focus configs are
 single generated files and collide):
   1. node scripts/focusModule.mjs <module>
   2. npx stryker run stryker.focus.config.json > /tmp/focus.txt 2>&1
-     START IT IN THE BACKGROUND and READ THE MODULE while it runs — its source, and the
-     suites that already cover it. A measurement is about a fifth of a session's time and
-     you have nothing else blocking on it. Wait on the string \`Done in\`. Do NOT wait on
-     \`mutation score\`: Stryker capitalises it, a case-sensitive match never fires, and
-     that cost 16 minutes on 2026-09-04 against a run which had already finished.
+     Start it in the BACKGROUND and read the module while it runs — a measurement is a
+     fifth of a session and nothing blocks on it. Wait on \`Done in\`, never on
+     \`mutation score\`: Stryker capitalises it, so a case-sensitive match never fires
+     (16 minutes lost that way, 2026-09-04).
   3. node scripts/mutationWorklist.mjs         — the decisions nothing constrains, ranked
   4. write the tests (or the ledger entries), run them
-  5. re-measure (1–2), then: node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
-     — the ratchet must hold; if it reports padding, your test asserted a log string
-  6. node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json --write "<what changed>"
-  7. PASTE the module's new row: score, survived, noCoverage, equivalent, openGaps.
-     The evaluator reads only what you surface; an unpasted number does not exist.
+  5. re-measure (1–2), then \`node scripts/checkMutationBaseline.mjs --report
+     reports/mutation/focus.json\` — the ratchet must hold; padding means a log-string test
+  6. the same command with \`--write "<what changed>"\` once it holds
+  7. PASTE the module's new row: score, survived, noCoverage, equivalent, openGaps —
+     the evaluator reads only what you surface.
 
-A mutant that reveals a REAL defect or dead code may be fixed in src/ — say so, with the
+A mutant revealing a REAL defect or dead code may be fixed in src/ — say so, with the
 reason, in the commit. Any other src/ change is out of scope.
 
 NEVER kill a mutant by asserting a logger call's arguments (\`expect(logger.x)
-.toHaveBeenCalledWith(...)\`). That pins wording, not behaviour; the ratchet cannot see it
-when it is mixed with real kills, and an enforcer now refuses any file whose count rises.
-If the only observable difference is which log line prints, the mutant belongs in the
-ledger. Add ledger rows with \`node scripts/mutationLedger.mjs add ...\` — it writes one
-row in the file's own format and refuses an anchor that does not resolve.
+.toHaveBeenCalledWith(...)\`). That pins wording, not behaviour, and an enforcer refuses
+any file whose count rises. If the only observable difference is which log line prints,
+the mutant belongs in the ledger. Add rows with \`node scripts/mutationLedger.mjs add ...\`
+— it writes the file's own format and refuses an anchor that does not resolve.
 
 RULES. Stay on the current work branch; never checkout or merge develop. One commit per
-module, \`Backlog: PL-22\` trailer, each gated on \`npm run gate\` exiting 0 with the exit
-code captured in a variable, never read through a pipe. Push after each commit. No
-cloud writes. No attribution trailers.
+module, \`Backlog: PL-22\` trailer. No cloud writes. No attribution trailers.
 
-WORK THE BATCH TO THE END — no turn budget. A turn count fired in four batches on
-2026-09-04 and was right in none. Stop early only on evidence: two consecutive gates
+CHECK PER MODULE, SCOPED: this module's suites, both typecheckers, eslint on the files
+you changed. Capture each exit code in a variable, never through a pipe. Commit on green.
+
+PUSH ONCE, WHEN THE BATCH IS DONE — the pre-push hook then runs the full gate against
+committed state, which a scoped run cannot replace. If it refuses, fix and push again;
+nothing has left the machine. NEVER \`--no-verify\`. Gating every module the heavy way
+cost 95 minutes of one run on 2026-09-05: the same suite twice per module.
+
+WORK THE BATCH TO THE END — no turn budget; a turn count fired in four batches on
+2026-09-04 and was right in none. Stop early only on evidence: two consecutive checks
 failing the same way (say which), or a module whose openGaps will not move across two
-measure cycles — commit what it gained, titled for what it covers, and go to the NEXT
-module. Its remainder returns in the next queue.
+measure cycles — commit what it gained and go to the NEXT module.
 
 FINISH by pasting the batch table ONCE, at the end: module, openGaps before, after, tests
 added, ledger rows added.
@@ -144,14 +147,24 @@ function main() {
     if (DRY) return;
 
     if (!existsSync(GOALS)) mkdirSync(GOALS, { recursive: true });
-    const names = [];
-    batches.forEach((b, i) => {
+
+    // Render and CHECK every batch before writing any of them. Writing as we went left
+    // four goals on the new template and four on the old when batch five ran five
+    // characters over (2026-09-05) — a half-updated queue is worse than a refusal,
+    // because the runner reads it happily and the sessions disagree about the rules.
+    const goals = batches.map((b, i) => {
         const name = `MUT-${String(i + 1).padStart(2, '0')}`;
-        const text = goalText(name, b);
-        if (text.length > 4000) throw new Error(`${name} condition is ${text.length} chars; the cap is 4,000`);
-        writeFileSync(`${GOALS}/${name}.goal`, text);
-        names.push(name);
+        return { name, text: goalText(name, b) };
     });
+    const tooLong = goals.filter((g) => g.text.length > 4000);
+    if (tooLong.length) {
+        throw new Error(
+            `the 4,000-character cap is exceeded by ${tooLong.length} batch(es), nothing written: ` +
+                tooLong.map((g) => `${g.name} at ${g.text.length}`).join(', ')
+        );
+    }
+    for (const g of goals) writeFileSync(`${GOALS}/${g.name}.goal`, g.text);
+    const names = goals.map((g) => g.name);
     writeFileSync(
         QUEUE,
         `# GENERATED by scripts/mutationQueue.mjs — re-run it, do not edit. Order is by\n` +
