@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-08. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/eds/services/configService/siteAccessManagerHeadless.ts  (orchestration, 62.57%, 46 open gaps)
-  - src/features/eds/services/github/githubTokenService.ts  (orchestration, 37.84%, 42 open gaps)
-  - src/features/eds/services/configGenerator.ts  (pure, 69.5%, 37 open gaps)
-  - src/features/eds/ui/hooks/useGitHubAuth.ts  (pure, 35.71%, 35 open gaps)
-  - src/features/eds/services/configService/configAccessRecovery.ts  (orchestration, 48.6%, 32 open gaps)
+  - src/features/eds/services/storefront/servedStorefrontConfig.ts  (mixed, 75%, 11 open gaps)
+  - src/features/eds/services/helix/helixApiClient.ts  (orchestration, 78.65%, 10 open gaps)
+  - src/features/eds/services/refreshBlockLibraryHeadless.ts  (mixed, 67.19%, 10 open gaps)
+  - src/features/eds/handlers/storeStructureHandler.ts  (orchestration, 76.27%, 9 open gaps)
+  - src/features/eds/services/patches/externalPatchFetcher.ts  (orchestration, 61.54%, 9 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts

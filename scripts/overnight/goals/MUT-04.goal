@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-04. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts  (orchestration, 31.98%, 107 open gaps)
-  - src/features/eds/handlers/storefrontSetup/storefrontSetupPhases.ts  (mixed, 31.02%, 95 open gaps)
-  - src/features/eds/services/edsPipeline.ts  (mixed, 52.33%, 91 open gaps)
-  - src/features/eds/ui/hooks/useDaLiveAuth.ts  (pure, 40.94%, 81 open gaps)
-  - src/features/eds/services/daLive/daLiveConfigOperations.ts  (orchestration, 36.94%, 71 open gaps)
+  - src/features/eds/services/github/githubAppService.ts  (mixed, 64.49%, 22 open gaps)
+  - src/features/eds/services/patches/codePatchPipelineHelpers.ts  (orchestration, 63.16%, 22 open gaps)
+  - src/features/eds/services/daLive/daLiveContentOperations.ts  (mixed, 36.36%, 21 open gaps)
+  - src/features/eds/services/storefront/storefrontProbe.ts  (orchestration, 76.51%, 21 open gaps)
+  - src/features/eds/services/ewSettingChangeListener.ts  (mixed, 77.45%, 20 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts
