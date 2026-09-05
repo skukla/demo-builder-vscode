@@ -8528,6 +8528,70 @@
             "decision": "none \u2014 the null body reaches the same { unknown: true } through the catch that already wraps this block",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/ewSettingChangeListener.ts",
+            "anchors": [
+                "if (debounceTimer) {"
+            ],
+            "line": 81,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the test true makes the body run with debounceTimer undefined, and clearTimeout(undefined) is a documented no-op in Node and under jest fake timers alike. The very next statement then overwrites debounceTimer with a fresh handle either way, so the coalescing behaviour the debounce test pins is unchanged and no observable differs \u2014 the guard only avoids a pointless call.",
+            "decision": "none \u2014 clearTimeout(undefined) is a no-op, so the guard is an optimisation rather than a decision",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/ewSettingChangeListener.ts",
+            "anchors": [
+                "if (debounceTimer) {"
+            ],
+            "line": 98,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The dispose copy of the same guard. With the test forced true and no timer pending, clearTimeout(undefined) does nothing and debounceTimer is reassigned undefined when it is already undefined, after which subscription.dispose() runs exactly as before. The cancelling behaviour that matters \u2014 disposing before the debounce fires must stop the handler \u2014 is pinned by its own test and is unaffected by the guard.",
+            "decision": "none \u2014 same no-op call; the guard avoids work, it does not decide anything",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/ewSettingChangeListener.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 143,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The per-project catch body extracts a message and logs a warning; it does not rethrow, does not touch successCount and does not alter the loop. Emptying it still swallows the failure, so the remaining projects are still republished and the completion toast still reports the partial count \u2014 which the failing-flip test now asserts. The only thing the mutant removes is the warning text.",
+            "decision": "none \u2014 the keep-going behaviour is asserted; the mutant removes only the warn wording",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/ewSettingChangeListener.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 150,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The outer catch body extracts a message and logs an error. Emptying it still absorbs the failure, so handleEwSettingChange still resolves, no prompt appears and no flip runs \u2014 which the enumeration-failure test asserts. Since the handler is invoked as void and returns nothing, there is no value or side effect left for a test to see beyond the log line.",
+            "decision": "none \u2014 the silent-failure behaviour is asserted; the mutant removes only the error wording",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/ewSettingChangeListener.ts",
+            "anchors": [
+                "const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "hasAuthoringOverride is reached only from isProjectAffected, which findAffectedProjects calls only for projects that already passed isEdsProject \u2014 and isEdsProject returns true only when componentInstances carries the EDS storefront entry. So componentInstances is guaranteed present at this line and the ?. can never short-circuit. It is still required by the compiler, since Project declares componentInstances optional.",
+            "decision": "none \u2014 the ?. is required by the type and unreachable behind the isEdsProject filter",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
