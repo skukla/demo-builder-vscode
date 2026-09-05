@@ -105,7 +105,9 @@ describe('probeGitHubCredential', () => {
             const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
 
             expect(result.repo?.canPush).toBe(true);
+            expect(result.repo?.fullName).toBe(REPO);
             expect(result.adminApi?.httpStatus).toBe(401);
+            expect(result.adminApi?.xError).toBe('[admin] not authenticated');
             expect(result.verdict).toMatch(/expected/i);
             expect(result.verdict).toMatch(/site-access admins|admin-locked/i);
             // Must NOT assert the credential is at fault.
@@ -180,8 +182,11 @@ describe('probeGitHubCredential', () => {
 
             const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
 
+            expect(result.github.reachable).toBe(true);
             expect(result.adminApi?.codeStatus).toBe(200);
             expect(result.verdict).toMatch(/healthy/i);
+            // The verdict quotes the status AEM reported, never a placeholder.
+            expect(result.verdict).toContain('code.status 200');
         });
     });
 
@@ -227,10 +232,13 @@ describe('probeGitHubCredential', () => {
                 makeLogger()
             );
 
+            expect(result.github.reachable).toBe(true);
             expect(result.github.login).toBe('acme-demos');
             expect(result.repo).toBeUndefined();
             expect(result.adminApi).toBeUndefined();
             expect(result.verdict).toMatch(/no .*project|repo/i);
+            // Names who is signed in — the whole point of still answering here.
+            expect(result.verdict).toContain('acme-demos');
         });
 
         it('records a failing leg without sinking the others', async () => {
@@ -245,6 +253,256 @@ describe('probeGitHubCredential', () => {
             expect(result.github.login).toBe('acme-demos');
             expect(result.repo?.error).toContain('socket hang up');
             expect(result.adminApi?.httpStatus).toBe(200);
+        });
+    });
+
+    describe('the granted-scope header', () => {
+        it('drops empty segments rather than reporting them as scopes', async () => {
+            routeFetch({
+                user: okUser('acme-demos', 'repo, , workflow'),
+                repo: okRepo(true),
+                admin: adminResponse(200, undefined, 200),
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.github.grantedScopes).toEqual(['repo', 'workflow']);
+        });
+
+        it('reports no granted scopes when the header carries only separators', async () => {
+            routeFetch({
+                user: okUser('acme-demos', ' , '),
+                repo: okRepo(true),
+                admin: adminResponse(200, undefined, 200),
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.github.grantedScopes).toBeUndefined();
+        });
+
+        it('reports no granted scopes when the response carries no headers at all', async () => {
+            // A response without headers must read as "GitHub did not say", not
+            // as an unreachable GitHub — the identity leg still answered.
+            routeFetch({
+                user: { ok: true, status: 200, json: jest.fn().mockResolvedValue({ login: 'a' }) },
+                repo: okRepo(true),
+                admin: adminResponse(200, undefined, 200),
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.github.reachable).toBe(true);
+            expect(result.github.error).toBeUndefined();
+            expect(result.github.grantedScopes).toBeUndefined();
+        });
+
+        it('reports no granted scopes when the headers object cannot be read', async () => {
+            routeFetch({
+                user: {
+                    ok: true,
+                    status: 200,
+                    json: jest.fn().mockResolvedValue({ login: 'a' }),
+                    headers: {},
+                },
+                repo: okRepo(true),
+                admin: adminResponse(200, undefined, 200),
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.github.reachable).toBe(true);
+            expect(result.github.error).toBeUndefined();
+            expect(result.github.grantedScopes).toBeUndefined();
+        });
+
+        it('stays reachable when GitHub answers with no identity body', async () => {
+            routeFetch({
+                user: {
+                    ok: true,
+                    status: 200,
+                    json: jest.fn().mockResolvedValue(null),
+                    headers: { get: () => null },
+                },
+                repo: okRepo(true),
+                admin: adminResponse(200, undefined, 200),
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.github.reachable).toBe(true);
+            expect(result.github.error).toBeUndefined();
+            expect(result.github.login).toBeUndefined();
+        });
+    });
+
+    describe('each leg answers on its own', () => {
+        it('returns only the GitHub leg when the identity request throws', async () => {
+            routeFetch({ user: new Error('socket hang up') });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.github.reachable).toBe(false);
+            expect(result.github.error).toBe('socket hang up');
+            expect(result.repo).toBeUndefined();
+            expect(result.adminApi).toBeUndefined();
+            expect(result.verdict).toMatch(/reach GitHub/i);
+        });
+
+        it('records the repo HTTP status without inventing push access', async () => {
+            routeFetch({
+                user: okUser(),
+                repo: {
+                    ok: false,
+                    status: 403,
+                    json: jest.fn().mockResolvedValue({ permissions: { push: true } }),
+                    headers: { get: () => null },
+                },
+                admin: adminResponse(200, undefined, 200),
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.repo?.fullName).toBe(REPO);
+            expect(result.repo?.error).toBe('HTTP 403');
+            expect(result.repo?.canPush).toBeUndefined();
+        });
+
+        it('leaves push access unknown when the repo body omits permissions', async () => {
+            routeFetch({
+                user: okUser(),
+                repo: {
+                    ok: true,
+                    status: 200,
+                    json: jest.fn().mockResolvedValue({}),
+                    headers: { get: () => null },
+                },
+                admin: adminResponse(200, undefined, 200),
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.repo?.canPush).toBeUndefined();
+            expect(result.repo?.error).toBeUndefined();
+        });
+
+        it('leaves push access unknown when the repo body is empty', async () => {
+            routeFetch({
+                user: okUser(),
+                repo: {
+                    ok: true,
+                    status: 200,
+                    json: jest.fn().mockResolvedValue(null),
+                    headers: { get: () => null },
+                },
+                admin: adminResponse(200, undefined, 200),
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.repo?.canPush).toBeUndefined();
+            expect(result.repo?.error).toBeUndefined();
+        });
+
+        it('says AEM is unreachable when its request throws, keeping the other two legs', async () => {
+            routeFetch({
+                user: okUser(),
+                repo: okRepo(true),
+                admin: new Error('ETIMEDOUT'),
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.github.login).toBe('acme-demos');
+            expect(result.repo?.canPush).toBe(true);
+            expect(result.adminApi?.error).toBe('ETIMEDOUT');
+            expect(result.verdict).toMatch(/reach AEM/i);
+        });
+    });
+
+    describe('what it sends to AEM', () => {
+        function adminCall() {
+            return mockFetch.mock.calls.find((c) => String(c[0]).includes('admin.hlx.page'));
+        }
+
+        it('hands the credential over as x-auth-token on an abortable GET', async () => {
+            routeFetch({
+                user: okUser(),
+                repo: okRepo(true),
+                admin: adminResponse(200, undefined, 200),
+            });
+
+            await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(adminCall()?.[1]).toEqual(
+                expect.objectContaining({ method: 'GET', signal: expect.anything() })
+            );
+            expect(adminCall()?.[1]?.headers).toEqual({ 'x-auth-token': TOKEN });
+        });
+    });
+
+    describe('what AEM answered', () => {
+        it('does not read a code status out of a rejected AEM response', async () => {
+            // A 403 body can still carry a code block; reading it would report a
+            // healthy code sync from a response AEM refused.
+            routeFetch({
+                user: okUser(),
+                repo: okRepo(true),
+                admin: adminResponse(403, '[admin] forbidden', 200),
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.adminApi?.httpStatus).toBe(403);
+            expect(result.adminApi?.codeStatus).toBeUndefined();
+        });
+
+        it('leaves the code status unknown when AEM returns no code block', async () => {
+            routeFetch({
+                user: okUser(),
+                repo: okRepo(true),
+                admin: adminResponse(200),
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.adminApi?.codeStatus).toBeUndefined();
+            expect(result.adminApi?.error).toBeUndefined();
+            expect(result.verdict).toMatch(/healthy/i);
+        });
+
+        it('leaves the code status unknown when the AEM body is empty', async () => {
+            routeFetch({
+                user: okUser(),
+                repo: okRepo(true),
+                admin: {
+                    ok: true,
+                    status: 200,
+                    json: jest.fn().mockResolvedValue(null),
+                    headers: { get: () => null },
+                },
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.adminApi?.codeStatus).toBeUndefined();
+            expect(result.adminApi?.error).toBeUndefined();
+        });
+
+        it('does not read a 401 as the admin lock when write access was never confirmed', async () => {
+            // The admin-lock reading is only safe when GitHub POSITIVELY confirmed
+            // write access. With the repo leg down, a 401 is just a rejection.
+            routeFetch({
+                user: okUser(),
+                repo: new Error('socket hang up'),
+                admin: adminResponse(401, '[admin] not authenticated'),
+            });
+
+            const result = await probeGitHubCredential(tokenService(TOKEN), REPO, makeLogger());
+
+            expect(result.repo?.canPush).toBeUndefined();
+            expect(result.verdict).toMatch(/did not confirm/i);
+            expect(result.verdict).not.toMatch(/EXPECTED/);
         });
     });
 

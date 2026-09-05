@@ -8054,6 +8054,18 @@
             "decision": "none \u2014 a per-attempt failure line is the only trace a transient CDN error leaves, and the loop behaviour around it is asserted",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/github/githubCredentialProbe.ts",
+            "anchors": [
+                "if (adminApi.httpStatus !== undefined && adminApi.httpStatus !== 200) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Widening the first half of this guard to true only changes the verdict when adminApi.httpStatus is undefined at this point, and no run can arrive here in that state. httpStatus is assigned unconditionally from response.status the moment the AEM fetch resolves, and a fetch that does NOT resolve sets adminApi.error instead, which the guard three blocks above returns on. So reaching line 226 at all means the AEM request came back, which means httpStatus holds a number. Producing the difference would take a fetch mock that resolves with no status - a response shape the platform does not emit.",
+            "decision": "none \u2014 the undefined check states the precondition the earlier error guard already enforces, and is correct to keep as a local statement of it",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
         }
     ]
 }
