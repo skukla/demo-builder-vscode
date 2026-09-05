@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/daLive/daLiveContentCopy.ts"
+        "src/features/eds/ui/steps/RepoSelectionInline.tsx"
     ],
     "reporters": [
         "clear-text",
@@ -18,7 +18,7 @@
         "fileName": "reports/mutation/focus.json"
     },
     "coverageAnalysis": "perTest",
-    "concurrency": 2,
+    "concurrency": 4,
     "timeoutMS": 20000,
     "disableTypeChecks": true,
     "tempDirName": ".stryker-tmp-focus",
