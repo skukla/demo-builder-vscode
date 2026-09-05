@@ -401,3 +401,8 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): bring storefrontSetupPhases to zero open mutation gaps (`12534bc56`)
 - 2026-09-04  test(eds): bring storefrontSetupHandlers to zero open mutation gaps (`e0c78ae92`)
 - 2026-09-04  test(eds): bring githubRepoOperations to zero open mutation gaps (`6168f48a8`)
+- 2026-09-05  test(eds): bring storefrontSetupPhase1 to zero open mutation gaps (`f8386bc91`)
+- 2026-09-05  test(eds): bring blockCollectionHelpers to zero open mutation gaps (`49e2c968a`)
+- 2026-09-05  test(eds): bring daLiveConfigService to zero open mutation gaps (`ab0aa8632`)
+- 2026-09-05  test(eds): bring errorFormatters to zero open mutation gaps (`6f33b5fe1`)
+- 2026-09-05  test(eds): bring helixService to zero open mutation gaps (`51fe04496`)
