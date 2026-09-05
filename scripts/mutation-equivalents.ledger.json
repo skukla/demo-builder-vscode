@@ -9750,6 +9750,230 @@
             "decision": "none \u2014 equivalent. The guard is the intentional path and the catch is the backstop; a test cannot tell which one ran.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (err) {"
+            ],
+            "line": 154,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is the agent-trace file sink, and the test that makes it throw asserts activation degrades to channel-only rather than failing.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (err) {"
+            ],
+            "line": 258,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is seeding the built-in AI prompts.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "})().catch((error) => {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the whole detached upkeep chain, and the test makes the publish-key sweep reject and asserts activation reports no failure.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 492,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
+            "decision": "none \u2014 the remaining difference is message wording.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 528,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is the global ~/.claude.json repair, and a test makes it reject and asserts activation still registers its commands.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (err) {"
+            ],
+            "line": 751,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 796,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the commerce-secret sweep, whose arguments are asserted and whose failure a test drives.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 818,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the publish-key renewal sweep.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 842,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger call. That the catch EXISTS is tested \u2014 activation must survive this step failing, and a test drives the failure and asserts activation still completes \u2014 so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "return !!ws && ws !== projectsRoot && ws.startsWith(projectsRoot + path.sep);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The middle operand is implied by the third: a path that startsWith 'projectsRoot + sep' is necessarily longer than projectsRoot and so cannot equal it. Forcing it true therefore changes nothing any input can show. The other two operands and the whole predicate ARE killed, by the five direct tests on this function plus the activation re-home tests.",
+            "decision": "none \u2014 equivalent. The operand reads as the statement of intent (never the root itself) and is worth keeping.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "const version = context.extension.packageJSON.version || '1.0.0';"
+            ],
+            "mutants": 3,
+            "category": "other",
+            "reason": "The resolved version reaches exactly one place: a logger.debug line naming the build. Nothing branches on it and nothing else reads it, so every mutant on this line \u2014 the fallback, the operator, both forced conditions \u2014 differs only in what that one log line says.",
+            "decision": "none \u2014 the only observable difference is log text.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "if (webviewId !== 'demoBuilder.projectDashboard') return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard FALSE lets any webview's disposal fall through to shouldAutoReopenProjectsList, which then decides on the workspace alone \u2014 and the disposal tests that pass a different webview id run with workspace states where that predicate is false anyway. Making it distinguishable would need a test whose only claim is that a non-dashboard webview in a PROJECT workspace does not reopen the list, which is the same assertion as the dashboard case with the id changed. The forced-TRUE half is killed.",
+            "decision": "none \u2014 equivalent under every workspace state the callback can be in.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                ".catch(() => false);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Returning undefined instead of false is indistinguishable: the value is read once, by 'if (flagExists)', and both are falsy. The path IS tested \u2014 a suite drives both a present and an absent replay flag.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "if (await refreshGlobalMcpIfPresent(path.join(context.extensionPath, 'dist'))) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The block's body is one logger.info reporting that the entry was refreshed. The CALL and its argument are asserted by a test, and the repair's own decision lives in refreshGlobalMcpIfPresent; what remains here is whether the success is narrated.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "agentTrace = new ToolTraceRecorder(undefined, (entry) => {"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "This is the agent-activity NARRATION: a tick or a cross, a friendly name falling back to the tool id, and an optional tag suffix, all concatenated into one appendLine on an output channel. Every mutant on these lines changes the TEXT of that line and nothing else \u2014 no caller reads the channel, and the in-memory record and the file sink carry the structured entry independently. Asserting the string would pin wording, which is what the ratchet exists to refuse to reward. The block and the file-sink chain are recorded together because the recorder is constructed at MODULE LOAD, before any test-file const exists \u2014 a jest factory reaching for a spy here dies in the temporal dead zone, so the callback cannot be captured from a suite at all.",
+            "decision": "none \u2014 presentation, and uncapturable besides. If the channel line ever gains a consumer, this row is stale.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "const mark = entry.outcome === 'ok' ? '\u2713' : '\u2717';"
+            ],
+            "mutants": 3,
+            "category": "other",
+            "reason": "This is the agent-activity NARRATION: a tick or a cross, a friendly name falling back to the tool id, and an optional tag suffix, all concatenated into one appendLine on an output channel. Every mutant on these lines changes the TEXT of that line and nothing else \u2014 no caller reads the channel, and the in-memory record and the file sink carry the structured entry independently. Asserting the string would pin wording, which is what the ratchet exists to refuse to reward.",
+            "decision": "none \u2014 presentation.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "const what = narrationFor(entry.tool) ?? entry.tool;"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "This is the agent-activity NARRATION: a tick or a cross, a friendly name falling back to the tool id, and an optional tag suffix, all concatenated into one appendLine on an output channel. Every mutant on these lines changes the TEXT of that line and nothing else \u2014 no caller reads the channel, and the in-memory record and the file sink carry the structured entry independently. Asserting the string would pin wording, which is what the ratchet exists to refuse to reward.",
+            "decision": "none \u2014 presentation.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/extension.ts",
+            "anchors": [
+                "(entry.tag !== undefined ? ` \u00b7 #${entry.tag}` : ''),"
+            ],
+            "mutants": 3,
+            "category": "other",
+            "reason": "This is the agent-activity NARRATION: a tick or a cross, a friendly name falling back to the tool id, and an optional tag suffix, all concatenated into one appendLine on an output channel. Every mutant on these lines changes the TEXT of that line and nothing else \u2014 no caller reads the channel, and the in-memory record and the file sink carry the structured entry independently. Asserting the string would pin wording, which is what the ratchet exists to refuse to reward.",
+            "decision": "none \u2014 presentation.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "importHandlers: 151 open gaps -> 0. Four suites that test this module were named for their scenario rather than the file, so nothing counted their kills; the rename alone took 151 to 62. Two new suites cover the payload guards, the access refusal, the write-client construction and the datapack bookkeeping. Score is 0.92 below the row written minutes earlier because two log-WORDING assertions were replaced with wiring assertions after the logger-argument enforcer refused them — three logPresentation mutants went back to surviving, which is the outcome that rule exists to produce. openGaps and behavioural survivors are unchanged.",
+    "_note": "extension.ts: 141 open gaps -> 0; 8.77% to 68.56%. The composition root's suites never set workspace.isTrusted, so activate() returned at the trust gate and two thirds of it never ran. Four more mock gaps of the same shape (onDidChangeWorkspaceFolders, the ServiceLocator readers, fs.rm, StateManager.getAllProjects) each threw inside activation's own try/catch and were logged and swallowed. Five new suites now drive activation end to end and the callbacks it registers; two real defects fixed; the remainder is ledgered as catch-body logging, narration text, or unreachable.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -2377,30 +2377,28 @@
             "openGaps": 12
         },
         "src/extension.ts": {
-            "score": 8.77,
-            "killed": 20,
-            "survived": 56,
-            "noCoverage": 152,
+            "score": 68.56,
+            "killed": 157,
+            "survived": 46,
+            "noCoverage": 26,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 13,
-                "block": 20,
-                "string": 7,
-                "logPresentation": 8,
-                "other": 5,
-                "optionalChain": 3
+                "branch": 5,
+                "block": 7,
+                "logPresentation": 22,
+                "string": 11,
+                "other": 1
             },
             "uncoveredCategories": {
-                "block": 30,
-                "optionalChain": 9,
-                "branch": 35,
-                "string": 39,
-                "logPresentation": 13,
-                "other": 26
+                "block": 4,
+                "optionalChain": 1,
+                "branch": 7,
+                "string": 9,
+                "logPresentation": 5
             },
-            "highValueSurvivors": 33,
-            "equivalent": 0,
-            "openGaps": 141
+            "highValueSurvivors": 12,
+            "equivalent": 25,
+            "openGaps": 0
         },
         "src/features/ai/aiSetupVerifier.ts": {
             "score": 67.63,

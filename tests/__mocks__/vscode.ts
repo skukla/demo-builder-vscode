@@ -15,6 +15,11 @@ export const workspace = {
         get: jest.fn().mockReturnValue(3000),
     }),
     onDidChangeConfiguration: jest.fn(() => ({ dispose: jest.fn() })),
+    // Real API, absent here until 2026-09-05. `activate()` subscribes to it, so
+    // its absence threw INSIDE activation's own try/catch — the error was logged
+    // and swallowed, and every line after the subscription simply never ran while
+    // the suites passed. That is what held extension.ts at 8.77%.
+    onDidChangeWorkspaceFolders: jest.fn(() => ({ dispose: jest.fn() })),
     workspaceFolders: [],
 };
 

@@ -587,7 +587,12 @@ async function cleanupStaleFlagFiles(): Promise<void> {
 }
 
 export function deactivate() {
-    logger.info('Adobe Demo Builder extension is deactivating...');
+    // `logger?` for the same reason every disposal below is optional-chained:
+    // this runs on shutdown whatever happened at startup, and `logger` is only
+    // assigned once activation has got past its first few statements. Unguarded,
+    // this line threw before any of the guarded ones could run — so the whole
+    // defensive shape below it was unreachable in exactly the case it exists for.
+    logger?.info('Adobe Demo Builder extension is deactivating...');
 
     // Clean up resources
     autoUpdater?.dispose();
@@ -600,7 +605,7 @@ export function deactivate() {
     // Reset service locator
     ServiceLocator.reset();
 
-    logger.info('Adobe Demo Builder extension deactivated.');
+    logger?.info('Adobe Demo Builder extension deactivated.');
 }
 
 /**
