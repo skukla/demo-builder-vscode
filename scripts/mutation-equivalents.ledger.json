@@ -9039,6 +9039,410 @@
             "decision": "none. The '?.' is in fact dead \u2014 the only such call in src against 147 direct ones \u2014 but deleting it makes a pre-existing push visible to the Pattern B ceiling in tests/sop/architecture-rules.test.ts, which counts /\\bsendMessage\\(/ and does not match the optional form. That is a decision about the push ratchet, not about coverage.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (cleanupResults.length > 0) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The block is one logger.info of the formatted cleanup summary. Both outcomes return the same response and perform no further work; only the log transcript differs.",
+            "decision": "none \u2014 a test could only assert log wording, which the logger-argument rule forbids.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "} else if (!unpublishResult.success) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The arm's body is a single logger.warn. The unpublish result is not read again and no result row is pushed on this arm \u2014 the KILLED half of the pair (whether a helix row is recorded) is tested; this half is the log.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (!keyDeleteResult.success) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Body is one logger.debug. The Admin API key delete is asserted by its arguments; whether its failure is narrated is not behaviour.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "} catch (unpublishError) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is one logger.warn. That the catch EXISTS is tested (a thrown unpublish must not stop the deletion); emptying its body changes only which line prints.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (!permResult.success) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Body is one logger.warn. The removeSitePermissions CALL is asserted by its arguments; whether its failure is narrated is not behaviour.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (!configDeleteResult.success) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The body is one logger.debug. The deleteSiteConfig CALL and its org/site arguments are asserted by a test; whether the service narrates a failed config delete is not behaviour anything downstream reads.",
+            "decision": "none \u2014 log-only, same reason as its sibling permission check above.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "progress.report({ message: 'Unpublishing CDN content\u2026' });"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording, which is what the ratchet exists to refuse to reward.",
+            "decision": "none \u2014 presentation.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "progress.report({ message: 'Deleting DA.live site\u2026' });"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording.",
+            "decision": "none \u2014 presentation.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "progress.report({ message: 'Deleting DA.live site content\u2026' });"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording.",
+            "decision": "none \u2014 presentation.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "progress.report({ message: 'Deleting GitHub repository\u2026' });"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording.",
+            "decision": "none \u2014 presentation.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "progress.report({ message: `Deleting \"${project.name}\"...` });"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording.",
+            "decision": "none \u2014 presentation.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "progress.report({ message: `\"${project.name}\" deleted` });"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the report payload changes the notification text and nothing else. progress.report has no return value and no caller reads the message; asserting it would pin UI wording.",
+            "decision": "none \u2014 presentation.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "deleteGitHubRepo: !!edsMetadata?.githubRepo,"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "edsMetadata cannot be null on this path. deleteProject computes it as `isEds ? extractEdsMetadata(project) : null` and only enters the EDS branch under `if (isEds && edsMetadata)`, so every function below is reached with a non-null one. Dropping the '?' therefore cannot throw for any input the module accepts.",
+            "decision": "none \u2014 equivalent; no call can distinguish it.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (edsMetadata?.githubRepo) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "edsMetadata cannot be null on this path. deleteProject computes it as `isEds ? extractEdsMetadata(project) : null` and only enters the EDS branch under `if (isEds && edsMetadata)`, so every function below is reached with a non-null one. Dropping the '?' therefore cannot throw for any input the module accepts.",
+            "decision": "none \u2014 equivalent; no call can distinguish it.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (edsMetadata?.daLiveOrg && edsMetadata?.daLiveSite) {"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "edsMetadata cannot be null on this path. deleteProject computes it as `isEds ? extractEdsMetadata(project) : null` and only enters the EDS branch under `if (isEds && edsMetadata)`, so every function below is reached with a non-null one. Dropping the '?' therefore cannot throw for any input the module accepts.",
+            "decision": "none \u2014 equivalent; no call can distinguish either chain.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (!edsMetadata?.githubRepo) return;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "edsMetadata cannot be null on this path. deleteProject computes it as `isEds ? extractEdsMetadata(project) : null` and only enters the EDS branch under `if (isEds && edsMetadata)`, so every function below is reached with a non-null one. Dropping the '?' therefore cannot throw for any input the module accepts.",
+            "decision": "none \u2014 equivalent; the CONDITION is tested (a project with no repo skips the CDN step), only the chain is unkillable.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (!options.deleteDaLiveSite || !edsMetadata?.daLiveOrg || !edsMetadata?.daLiveSite) return;"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "edsMetadata cannot be null on this path. deleteProject computes it as `isEds ? extractEdsMetadata(project) : null` and only enters the EDS branch under `if (isEds && edsMetadata)`, so every function below is reached with a non-null one. Dropping the '?' therefore cannot throw for any input the module accepts.",
+            "decision": "none \u2014 equivalent; both chains are on the same already-proven value.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (options.deleteGitHubRepo && edsMetadata?.githubRepo) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "edsMetadata cannot be null on this path. deleteProject computes it as `isEds ? extractEdsMetadata(project) : null` and only enters the EDS branch under `if (isEds && edsMetadata)`, so every function below is reached with a non-null one. Dropping the '?' therefore cannot throw for any input the module accepts.",
+            "decision": "none \u2014 equivalent; the CONDITION is tested (an unticked repo row is spared), only the chain is unkillable.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (resolved) return;"
+            ],
+            "line": 363,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
+            "decision": "none \u2014 equivalent. The guard is worth keeping (it also stops a second quickPick.hide()), but no test can observe its absence.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "resolved = true;"
+            ],
+            "line": 364,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (resolved) return;"
+            ],
+            "line": 371,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "resolved = true;"
+            ],
+            "line": 372,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (resolved) return;"
+            ],
+            "line": 383,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
+            "decision": "none \u2014 equivalent. The acceptThenHide test proves the ORDER is survived; it cannot prove the flag is what survives it.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "resolved = true;"
+            ],
+            "line": 384,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "A Promise executor's resolve is idempotent: the second call is a no-op, so a handler that runs after the promise has already settled cannot change the answer. The guard's FORCED-TRUE half IS killed (a gesture that returns early never settles, and the test hangs); the forced-false and 'resolved = false' halves leave behaviour identical because the extra resolve is discarded.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (isEds && edsMetadata) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Swapping && for || is unobservable because the second operand is DERIVED from the first: edsMetadata is 'isEds ? extractEdsMetadata(project) : null'. isEds false therefore forces edsMetadata null, and the pair can never disagree in the direction the mutant needs. The remaining case (isEds true, extract returns null) still lands on the same modal with the same arguments, because showCleanupConfirmation with null metadata builds no rows and falls through to that modal itself.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (isEds && edsMetadata && cleanupOptions) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Both LogicalOperator swaps are unobservable for the same reason as line 121: the three operands are derived in sequence, so a plain project has all three falsy and an EDS confirm has all three truthy. No input makes && and || disagree. The CONDITIONAL half of this line is killed \u2014 forcing it true on a plain project hands performEdsCleanup a null options object and the delete throws. ALSO: The mutant replaces only the SUB-expression 'isEds && edsMetadata' with true, leaving 'if (true && cleanupOptions)'. cleanupOptions is assigned only inside the EDS branch, so it is null for exactly the projects the removed operands would have excluded and the guard still holds. Verified by planting it: 73 tests still pass.",
+            "decision": "none \u2014 equivalent. none \u2014 equivalent. The whole-condition mutants on this line ARE killed.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "deleteDaLiveSite: !!edsMetadata?.daLiveOrg && !!edsMetadata?.daLiveSite,"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Turning this true when the pair is incomplete is absorbed downstream: performDaLiveCleanup opens with '!edsMetadata?.daLiveOrg || !edsMetadata?.daLiveSite' and returns before touching anything. So a wrongly-true flag produces the same calls and the same cleanupResults as a correctly-false one. The half that CAN be observed \u2014 refusing to delete a site the user did not pick \u2014 is tested. ALSO: edsMetadata cannot be null here: deleteProject computes it as 'isEds ? extractEdsMetadata(project) : null' and calls showCleanupConfirmation only under 'if (isEds && edsMetadata)'. Dropping either '?' cannot throw for any input the module accepts.",
+            "decision": "none \u2014 equivalent; the downstream guard is what makes it so. none \u2014 equivalent; the two chains sit on an already-proven value.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "return { deleteGitHubRepo: false, deleteDaLiveSite: false };"
+            ],
+            "line": 292,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the returned object leaves both flags undefined, which is falsy exactly where false was: performEdsCleanup skips the repo on a falsy deleteGitHubRepo and performDaLiveCleanup returns on a falsy deleteDaLiveSite. The same is true of flipping either literal to true on this path, because the project reaching it has neither a repo nor a complete DA.live pair to act on. The suite asserts the CALLS made, which do not move.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "return { deleteGitHubRepo: false, deleteDaLiveSite: false };"
+            ],
+            "line": 339,
+            "mutants": 3,
+            "category": "other",
+            "reason": "Emptying the returned object leaves both flags undefined, which is falsy exactly where false was: performEdsCleanup skips the repo on a falsy deleteGitHubRepo and performDaLiveCleanup returns on a falsy deleteDaLiveSite. The same is true of flipping either literal to true on this path, because the project reaching it has neither a repo nor a complete DA.live pair to act on. The suite asserts the CALLS made, which do not move.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "quickPick.selectedItems = items.filter(i => i.picked);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Replacing the predicate body with a constant yields the same empty selection, because every item is built with 'picked: false' \u2014 nothing is ever pre-ticked, which is itself the tested behaviour (a pre-ticked row would make Enter destructive). The METHOD-level mutant on the same line IS killed by that assertion; only the arrow body is unobservable.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "if (selection === 'Open Settings') {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this true cannot be observed because there is exactly ONE action on the tip, and showOneTimeTip already filters a dismissal ('if (selection && options.onAction)'). So the only selection that reaches this line is the one it tests for. The forced-FALSE half is killed by the test that the action opens the cleanupBehavior setting.",
+            "decision": "none \u2014 equivalent unless a second action is added, at which point this row is stale and the mutant becomes killable.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The loop CONDITION never fires: the body always returns on success or throws on failure, and the throw arrives at attempt MAX_RETRIES-1 because 'isRetryable && attempt < MAX_RETRIES - 1' is false there. Widening the bound to <= therefore adds an iteration the code can never reach. Verified by planting the exact mutation: 73 tests still pass.",
+            "decision": "none \u2014 equivalent. The bound is redundant with the inner throw, but it is the readable statement of the ceiling and deleting it would leave an unbounded-looking loop.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectDeletionService.ts",
+            "anchors": [
+                "const isRetryable = code !== undefined && RETRYABLE_CODES.includes(code);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Only the LEFT operand is mutated, to 'true'. RETRYABLE_CODES.includes(undefined) is already false, so the undefined guard decides nothing the array lookup does not decide again. Verified by planting 'true && RETRYABLE_CODES.includes(code)': 73 tests still pass, including the one that proves an error with no code is not retried.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

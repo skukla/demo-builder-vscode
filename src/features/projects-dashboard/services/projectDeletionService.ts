@@ -295,7 +295,6 @@ async function showCleanupConfirmation(
     // Build QuickPick items matching plan: "Delete Repository", "Delete DA.live Site"
     interface CleanupQuickPickItem extends vscode.QuickPickItem {
         id: 'github' | 'daLive';
-        enabled: boolean;
     }
 
     const items: CleanupQuickPickItem[] = [];
@@ -308,7 +307,6 @@ async function showCleanupConfirmation(
             description: edsMetadata.githubRepo,
             detail: '$(key) Sign-in required',
             picked: false,
-            enabled: true,
         });
     }
 
@@ -320,7 +318,6 @@ async function showCleanupConfirmation(
             description: `${edsMetadata.daLiveOrg}/${edsMetadata.daLiveSite}`,
             detail: '$(key) Sign-in required',
             picked: false,
-            enabled: true,
         });
     }
 

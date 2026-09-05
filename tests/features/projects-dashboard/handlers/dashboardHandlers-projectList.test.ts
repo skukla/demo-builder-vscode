@@ -7,11 +7,13 @@
  * project it reports as running.
  */
 
+// The mock wall first: it registers the mesh/staleness mocks this suite depends on,
+// and an import of anything under @/ above it would bind before they exist.
+import { handleGetProjects } from './dashboardHandlers.testUtils';
 import * as os from 'os';
 import * as path from 'path';
 import type { Project } from '@/types/base';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { handleGetProjects } from './dashboardHandlers.testUtils';
 import { createProjectsDashboardContext, createProjectsDashboardProject } from '../testUtils';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';

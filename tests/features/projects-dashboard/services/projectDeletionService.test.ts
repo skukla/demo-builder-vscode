@@ -23,184 +23,30 @@
  * silently proceeds would look exactly like a successful delete.
  */
 
-const mockShowWarningMessage = jest.fn();
-const mockExecuteCommand = jest.fn();
-const mockRm = jest.fn();
-const mockGetConfiguration = jest.fn();
-const mockCreateQuickPick = jest.fn();
-
-jest.mock('vscode', () => ({
-    workspace: { getConfiguration: (...a: unknown[]) => mockGetConfiguration(...a) },
-    window: {
-        showWarningMessage: (...a: unknown[]) => mockShowWarningMessage(...a),
-        createQuickPick: () => mockCreateQuickPick(),
-        showInformationMessage: jest.fn(),
-        withProgress: (_opts: unknown, task: (p: { report: () => void }) => Promise<unknown>) =>
-            task({ report: () => {} }),
-    },
-    commands: { executeCommand: (...a: unknown[]) => mockExecuteCommand(...a) },
-    ThemeIcon: class {
-        constructor(public readonly id: string) {}
-    },
-    ProgressLocation: { Notification: 15 },
-}));
-
-jest.mock('fs/promises', () => ({ rm: (...a: unknown[]) => mockRm(...a) }));
-
-// The two ground-truth primitives for destroying a remote resource. Everything
-// in the cleanup path exists to decide whether these get called.
-const mockDeleteRepository = jest.fn();
-const mockDeleteDaLiveSite = jest.fn();
-const mockGetToken = jest.fn();
-const mockEnsureDaLiveAuth = jest.fn();
-
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: () => ({
-        tokenService: { getToken: (...a: unknown[]) => mockGetToken(...a) },
-        repoOperations: { deleteRepository: (...a: unknown[]) => mockDeleteRepository(...a) },
-    }),
-    // `{ authenticated }` — read from edsHelpers, not guessed. The first draft
-    // wrote `{ success, authService }` and the DA.live cleanup silently skipped.
-    ensureDaLiveAuth: (...a: unknown[]) => mockEnsureDaLiveAuth(...a),
-    getDaLiveAuthService: jest.fn().mockReturnValue({}),
-}));
-
-// requireActual keeps `isEdsProject`/`extractEdsMetadata` REAL — they decide
-// which confirmation path runs, and a stub of them would hide the fixture bug
-// the CONTROL test exists to catch.
-jest.mock('@/features/eds/services/resourceCleanupHelpers', () => ({
-    ...jest.requireActual('@/features/eds/services/resourceCleanupHelpers'),
-    deleteDaLiveSite: (...a: unknown[]) => mockDeleteDaLiveSite(...a),
-    formatCleanupResults: () => '',
-}));
-
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    createDaLiveServiceTokenProvider: () => async () => 'token',
-    DaLiveContentOperations: class {},
-}));
-
-// Real timers would make the exponential backoff take seconds of wall clock.
-jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
-
 import {
     deleteProject,
     deleteProjectFiles,
-} from '@/features/projects-dashboard/services/projectDeletionService';
-import type { DeletionServices } from '@/features/projects-dashboard/services/projectDeletionService';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockProject } from '../../../helpers/projectFake';
-import type { HandlerContext } from '@/types/handlers';
-import type { Project } from '@/types/base';
-
-/** A plain, non-EDS project — takes the simple warning-modal path. */
-function plainProject(over: Partial<Project> = {}): Project {
-    return createMockProject({ name: 'demo-project', path: '/projects/demo', ...over });
-}
-
-/**
- * An EDS project — takes the cleanup-options dialog path instead.
- *
- * `isEdsProject` keys off `componentInstances`, NOT `componentSelections`
- * (resourceCleanupHelpers.ts:90). Getting that wrong is silent: the project
- * simply takes the plain path and every assertion still passes, which is
- * exactly what the first draft of this file did.
- *
- * The metadata fields are the ones `extractEdsMetadata` reads; without them
- * it returns a null-ish shape and `deleteProject` skips the EDS branch again.
- */
-function edsProject(over: Partial<Project> = {}): Project {
-    return createMockProject({
-        name: 'demo-project',
-        path: '/projects/demo',
-        componentInstances: {
-            'eds-storefront': {
-                id: 'eds-storefront',
-                name: 'EDS Storefront',
-                type: 'frontend',
-                status: 'ready',
-                metadata: {
-                    githubRepo: 'skukla/demo-storefront',
-                    daLiveOrg: 'skukla',
-                    daLiveSite: 'demo-storefront',
-                },
-            },
-        },
-        ...over,
-    });
-}
-
-function context(): HandlerContext {
-    return createMockHandlerContext();
-}
-
-/**
- * The CDN-unpublish services, handed in through the seam.
- *
- * There used to be a `jest.mock` here instead, supplying an `unpublishAllContent`
- * the source had stopped calling and NO `initKeyStore` static. The key-store init is
- * the first statement inside the step's try block, so it threw a TypeError, the catch
- * logged it as a warning, and every Helix call below was unreachable — with 23 tests
- * green. Measured 2026-08-31 by planting a throw inside that try: the suite did not
- * notice.
- */
-const mockInitKeyStore = jest.fn();
-const mockListAllPages = jest.fn();
-const mockUnpublishPages = jest.fn();
-const mockDeleteAdminApiKey = jest.fn();
-const SERVICES: DeletionServices = {
-    initKeyStore: mockInitKeyStore,
-    makeHelix: () => ({
-        listAllPages: mockListAllPages,
-        unpublishPages: mockUnpublishPages,
-        deleteAdminApiKey: mockDeleteAdminApiKey,
-    }),
-};
-
-/** The three ways a user leaves the cleanup dialog. Two of them are cancels. */
-type Gesture = 'escape' | 'cancelButton' | 'accept';
-
-/**
- * A fake `QuickPick` that performs one gesture when the code calls `show()`.
- *
- * The dialog is event-driven — `showCleanupConfirmation` returns a promise that
- * only settles inside `onDidHide` / `onDidTriggerButton` / `onDidAccept` — so a
- * stub that merely records the call would hang the test forever.
- */
-function armQuickPick(
-    gesture: Gesture,
-    /** Which resource rows the user leaves ticked when they press Enter. */
-    keep: Array<'github' | 'daLive'> = ['github', 'daLive']
-): { selected: () => unknown[] } {
-    const handlers: Record<string, () => void> = {};
-    const pick = {
-        title: '',
-        placeholder: '',
-        canSelectMany: false,
-        ignoreFocusOut: false,
-        items: [] as Array<{ id: string; picked?: boolean }>,
-        selectedItems: [] as Array<{ id: string }>,
-        buttons: [] as unknown[],
-        onDidTriggerButton: (h: () => void) => (handlers.button = h),
-        onDidAccept: (h: () => void) => (handlers.accept = h),
-        onDidHide: (h: () => void) => (handlers.hide = h),
-        hide: () => {},
-        dispose: () => {},
-        show: () => {
-            if (gesture === 'escape') handlers.hide?.();
-            if (gesture === 'cancelButton') handlers.button?.();
-            if (gesture === 'accept') {
-                // Untick whatever `keep` leaves out — the production code reads
-                // `selectedItems`, so this IS the user's choice.
-                pick.selectedItems = pick.items.filter((i) =>
-                    keep.includes(i.id as 'github' | 'daLive')
-                );
-                handlers.accept?.();
-            }
-        },
-    };
-    mockCreateQuickPick.mockReturnValue(pick);
-    return { selected: () => pick.selectedItems };
-}
+    mockCreateQuickPick,
+    mockDeleteDaLiveSite,
+    mockDeleteRepository,
+    mockEnsureDaLiveAuth,
+    mockExecuteCommand,
+    mockGetConfiguration,
+    mockGetToken,
+    mockRm,
+    mockShowWarningMessage,
+} from './projectDeletionService.testUtils';
+import {
+    SERVICES,
+    armQuickPick,
+    context,
+    edsProject,
+    mockDeleteAdminApiKey,
+    mockInitKeyStore,
+    mockListAllPages,
+    mockUnpublishPages,
+    plainProject,
+} from './projectDeletionService.fixtures';
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -263,6 +109,9 @@ describe('CRITERION 1 — cancelling deletes nothing', () => {
         const result = await deleteProject(context(), edsProject(), SERVICES);
 
         expect(mockRm).not.toHaveBeenCalled();
+        // Same envelope/payload split as the plain path: the call worked, the
+        // delete did not happen.
+        expect(result.success).toBe(true);
         expect(result.data).toMatchObject({ success: false, error: 'cancelled' });
     });
 

@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/projects-dashboard/handlers/dashboardHandlers.ts"
+        "src/features/projects-dashboard/services/projectDeletionService.ts"
     ],
     "reporters": [
         "clear-text",

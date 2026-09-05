@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "dashboardHandlers: 205 open gaps -> 0. Score is 0.20 below the row written minutes earlier because that row was measured with a one-character src edit (dropping a dead '?.' on context.sendMessage) that has since been reverted — it collided with the Pattern B push-message ceiling, which counts sendMessage( textually and does not see the optional form. The mutant is ledgered as equivalent instead; every other number is equal or better.",
+    "_note": "projectDeletionService: 183 open gaps -> 0. A second suite covers the cleanup paths (Helix unpublish, DA.live site + org-config, GitHub auth and delete, the one-time tip, the retry policy); the mock wall and fixtures the two suites share are extracted; dead 'enabled' field removed; the remainder is ledgered as log-only, presentation, or verified-equivalent.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -10120,29 +10120,27 @@
             "openGaps": 0
         },
         "src/features/projects-dashboard/services/projectDeletionService.ts": {
-            "score": 36.56,
-            "killed": 150,
-            "survived": 199,
-            "noCoverage": 70,
+            "score": 74.41,
+            "killed": 309,
+            "survived": 100,
+            "noCoverage": 8,
             "timeout": 5,
             "survivorCategories": {
-                "branch": 89,
-                "string": 48,
-                "other": 27,
+                "branch": 33,
+                "string": 32,
+                "other": 9,
+                "block": 3,
                 "logPresentation": 13,
-                "block": 10,
-                "optionalChain": 12
+                "optionalChain": 10
             },
             "uncoveredCategories": {
-                "block": 11,
-                "branch": 23,
-                "string": 21,
-                "other": 11,
-                "logPresentation": 4
+                "string": 2,
+                "block": 3,
+                "logPresentation": 3
             },
-            "highValueSurvivors": 99,
-            "equivalent": 0,
-            "openGaps": 183
+            "highValueSurvivors": 36,
+            "equivalent": 58,
+            "openGaps": 0
         },
         "src/features/projects-dashboard/services/projectRenameService.ts": {
             "score": 63.57,
