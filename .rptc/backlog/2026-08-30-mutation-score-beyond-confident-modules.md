@@ -406,3 +406,8 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): bring daLiveConfigService to zero open mutation gaps (`ab0aa8632`)
 - 2026-09-05  test(eds): bring errorFormatters to zero open mutation gaps (`6f33b5fe1`)
 - 2026-09-05  test(eds): bring helixService to zero open mutation gaps (`51fe04496`)
+- 2026-09-05  test(eds): bring catalogPrewarmService to zero open mutation gaps (`a951db84f`)
+- 2026-09-05  test(eds): bring daLiveSourceOperations to zero open mutation gaps (`bca671a75`)
+- 2026-09-05  test(eds): bring configServiceProbe to zero open mutation gaps (`67bff2814`)
+- 2026-09-05  test(eds): bring edsDaLiveAuthHandlers to zero open mutation gaps (`94652dc0f`)
+- 2026-09-05  test(eds): bring cleanupService to zero open mutation gaps (`e490b0f88`)
