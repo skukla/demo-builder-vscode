@@ -11,6 +11,7 @@
 
 import { createHash } from 'crypto';
 import * as fsPromises from 'fs/promises';
+import * as path from 'path';
 
 jest.mock('fs/promises', () => ({
     realpath: jest.fn(async (p: string) => p),
@@ -96,6 +97,25 @@ describe('verifyAiSetup', () => {
             setupAllOk();
             (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
                 if (filePath.endsWith('AGENTS.md')) return Promise.resolve('');
+                if (filePath.endsWith('mcp.json'))
+                    return Promise.resolve(JSON.stringify({ mcpServers: {} }));
+                return Promise.reject(new Error('unexpected'));
+            });
+
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+
+            const check = findCheck(result.checks, 'AGENTS.md');
+            expect(check?.status).toBe('warning');
+        });
+    });
+
+    describe('AGENTS.md content', () => {
+        it('returns warning when AGENTS.md holds only whitespace', async () => {
+            // Not the same case as an empty file: without the trim, a file of
+            // blank lines is truthy and reports 'ok' on a bundle with no content.
+            setupAllOk();
+            (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {
+                if (filePath.endsWith('AGENTS.md')) return Promise.resolve('   \n\t\n  ');
                 if (filePath.endsWith('mcp.json'))
                     return Promise.resolve(JSON.stringify({ mcpServers: {} }));
                 return Promise.reject(new Error('unexpected'));
@@ -249,6 +269,34 @@ describe('verifyAiSetup', () => {
 
             const check = findCheck(result.checks, 'skill-files');
             expect(check?.status).toBe('warning');
+        });
+    });
+
+    describe('skill-files listing contract', () => {
+        it('asks readdir for Dirents, since the check reads isFile/isDirectory', async () => {
+            setupAllOk();
+
+            await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+
+            expect(fsPromises.readdir).toHaveBeenCalledWith(
+                path.join(PROJECT_PATH, '.claude', 'skills'),
+                { withFileTypes: true },
+            );
+        });
+
+        it('counts neither a non-.md file nor a file probed as a directory', async () => {
+            // Two decisions in one listing: a flat entry only counts when it is a
+            // file AND ends in .md, and only DIRECTORY entries are probed for a
+            // SKILL.md. `access` resolves for everything here, so an entry that
+            // reached the directory probe by mistake would report 'ok'.
+            setupAllOk();
+            (fsPromises.readdir as jest.Mock).mockResolvedValue([
+                { name: 'notes.txt', isFile: () => true, isDirectory: () => false },
+            ]);
+
+            const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
+
+            expect(findCheck(result.checks, 'skill-files')?.status).toBe('warning');
         });
     });
 
@@ -435,6 +483,18 @@ describe('verifyAiSetup', () => {
             expect(inventory.sessionMcpsError).toBe('session broke');
         });
 
+        it('surfaces mcpsError AND an empty list when the MCP inspector rejects', async () => {
+            // The other two inspectors had this pinned and this one did not, so
+            // a rejected MCP inspection could have handed the screen `undefined`
+            // where it renders a list.
+            (inspectAllServers as jest.Mock).mockRejectedValueOnce(new Error('mcps broke'));
+
+            const inventory = await gatherInventory(PROJECT_PATH);
+
+            expect(inventory.mcps).toEqual([]);
+            expect(inventory.mcpsError).toBe('mcps broke');
+        });
+
         it('omits *Error fields when every inspector succeeds', async () => {
             const inventory = await gatherInventory(PROJECT_PATH);
 
@@ -461,7 +521,7 @@ describe('verifyAiSetup', () => {
         it('is empty when no hashes are recorded (pre-ADR project: zero false "edited" flags)', async () => {
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
-            expect(result.inventory.editedFiles).toEqual([]);
+            expect(result.inventory.editedFiles).toStrictEqual([]);
         });
 
         it('does not flag a file whose disk content still matches its recorded hash', async () => {
@@ -469,7 +529,7 @@ describe('verifyAiSetup', () => {
                 'AGENTS.md': sha(AGENTS_CONTENT),
             });
 
-            expect(result.inventory.editedFiles).toEqual([]);
+            expect(result.inventory.editedFiles).toStrictEqual([]);
         });
 
         it('flags a file whose disk content differs from its recorded hash', async () => {
@@ -487,7 +547,7 @@ describe('verifyAiSetup', () => {
                 '.claude/skills/gone.md': sha('never mind'),
             });
 
-            expect(result.inventory.editedFiles).toEqual([]);
+            expect(result.inventory.editedFiles).toStrictEqual([]);
         });
 
         it('never flags .claude/settings.json — the merge path incorporates user edits by design', async () => {
@@ -507,7 +567,7 @@ describe('verifyAiSetup', () => {
                 '.claude/settings.json': sha('what the last merge recorded'),
             });
 
-            expect(result.inventory.editedFiles).toEqual([]);
+            expect(result.inventory.editedFiles).toStrictEqual([]);
         });
 
         it('lists every edited file (sorted), mixing edited, absent, and untouched entries', async () => {
@@ -540,9 +600,23 @@ describe('editedFiles — manifest-key containment', () => {
             '../../outside/secrets.txt': sha('guess'),
         });
 
-        expect(result.inventory.editedFiles).toEqual([]);
+        expect(result.inventory.editedFiles).toStrictEqual([]);
         const readPaths = (fsPromises.readFile as jest.Mock).mock.calls.map((c) => String(c[0]));
         expect(readPaths.some((p) => p.includes('outside'))).toBe(false);
+    });
+
+    it('ignores a traversal key even when it resolves back INSIDE the project', async () => {
+        // The realpath check alone passes this one: `.claude/../AGENTS.md`
+        // resolves to a real file in the project. Only the lexical '..'
+        // rejection stops it, and stopping it is the point — the modal must not
+        // echo a crafted manifest key back as an edited file.
+        const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH, {
+            '.claude/../AGENTS.md': sha('edited since generation'),
+        });
+
+        expect(result.inventory.editedFiles).toStrictEqual([]);
+        const readPaths = (fsPromises.readFile as jest.Mock).mock.calls.map((c) => String(c[0]));
+        expect(readPaths.some((p) => p.includes('..'))).toBe(false);
     });
 
     it('ignores absolute-path keys without reading them', async () => {
@@ -550,7 +624,7 @@ describe('editedFiles — manifest-key containment', () => {
             '/etc/passwd': sha('guess'),
         });
 
-        expect(result.inventory.editedFiles).toEqual([]);
+        expect(result.inventory.editedFiles).toStrictEqual([]);
         const readPaths = (fsPromises.readFile as jest.Mock).mock.calls.map((c) => String(c[0]));
         expect(readPaths.some((p) => p.startsWith('/etc'))).toBe(false);
     });
@@ -569,6 +643,6 @@ describe('editedFiles — manifest-key containment', () => {
             'linked.md': sha('other content'),
         });
 
-        expect(result.inventory.editedFiles).toEqual([]);
+        expect(result.inventory.editedFiles).toStrictEqual([]);
     });
 });

@@ -11114,6 +11114,42 @@
             "decision": "Recorded as equivalent. The non-JSON 200 body IS now covered by a test - the block executes - but its two possible returns are indistinguishable downstream.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/ai/aiSetupVerifier.ts",
+            "anchors": [
+                "async function fsExists(p: string): Promise<boolean> {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying fsExists's catch returns undefined instead of false. Both of its call sites read the result in boolean position - 'if (!playwrightInstalled)' and 'if (await fsExists(p))' - so undefined and false take the same branch. The other mutant on the same catch, 'return false' becoming 'return true', IS killed: the applicability test proves an absent @playwright/mcp keeps the check out of the list.",
+            "decision": "Recorded as equivalent. A test could only tell the two apart by reading fsExists directly, and it is module-private.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/ai/aiSetupVerifier.ts",
+            "anchors": [
+                "const dirHasSkillMd = async (dirName: string): Promise<boolean> => {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Same shape as fsExists: emptying this catch returns undefined rather than false, and the only reader is 'dirChecks.some(Boolean)', which treats both as not-a-skill-directory.",
+            "decision": "Recorded as equivalent. The helper is a local const inside checkSkillFiles, so there is no surface on which the two answers differ.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/ai/aiSetupVerifier.ts",
+            "anchors": [
+                "if (realFile !== realRoot && !realFile.startsWith(realRoot + path.sep)) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Replacing 'realFile !== realRoot' with true only changes what happens when a recorded key resolves to the project root ITSELF. realpath equality means the same inode, so that key is the project directory - reachable only as '' or '.', or via a symlink to it - and the very next statement is readFile, which rejects with EISDIR for a directory on every platform. Both the mutant and the original therefore yield null. The other seven mutants on this line are killed by the symlink-escape test.",
+            "decision": "Recorded as equivalent. Killing it would need readFile to succeed on a directory, which no test may assert because no filesystem does it.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }
