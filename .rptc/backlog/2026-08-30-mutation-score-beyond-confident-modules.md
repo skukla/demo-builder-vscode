@@ -445,3 +445,27 @@ which point the cadence drops to release cuts.
 - 2026-09-05  chore(backlog): log the daLiveApiClient commit against PL-22 (`b58810fc9`)
 - 2026-09-05  test(eds): bring codePatchPipelineHelpers to zero open mutation gaps (`4b3d03964`)
 - 2026-09-05  test(eds): bring daLiveContentOperations to zero open mutation gaps (`c235d7129`)
+- 2026-09-05  test(eds): bring storefrontProbe to zero open mutation gaps (`f7ade1299`)
+
+## Two lanes were tried and reverted — the gate is what blocks it (2026-09-05)
+
+The obvious speed-up is a second lane on a second checkout. The data problem is solved:
+`scripts/mergeMutationLanes.mjs` merges two lanes' baseline and ledger row by row and
+REFUSES rather than guesses when both sides touched one row. Its self-test passes,
+controls included.
+
+That is not what breaks it. **`npm run gate` is repository-wide**, so every lane runs the
+whole suite before it can commit and therefore sees violations anywhere — including ones
+the other lane introduced seconds earlier and is already fixing. In the 2026-09-05 trial,
+lane 2 spent its run repairing a split test family in lane 1's module that lane 1 had
+ALREADY fixed in a commit made after lane 2's branch point. Two lanes, same repair,
+different shapes, guaranteed conflict.
+
+Both fixes cost more than the speed is worth: rebasing lane 2 onto lane 1 continuously
+destroys the isolation that made the split safe, and narrowing the gate to one module
+removes the repo-wide check that caught a stale mock, a suite family without shared setup,
+and a probe-file race in the same 24 hours.
+
+**Verdict: one lane.** Measured rate on 2026-09-05 was 5.5 modules/hour, steady across
+seven hours, which puts the remaining work near 60 hours of running. The trial cost one
+module's uncommitted work and did not disturb the running lane.
