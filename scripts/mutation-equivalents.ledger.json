@@ -6404,6 +6404,84 @@
             "decision": "none - a constant dependency never changes between renders",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigOperations.ts",
+            "anchors": [
+                "if (result.success) {"
+            ],
+            "line": 138,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The body of this guard is a single logger.debug; the result is returned unchanged on the next line whichever way the guard goes. Forcing it either way, or emptying it, changes only whether one debug line prints. Both outcomes of the write ARE tested \u2014 a refused POST comes back as { success: false } with the status and body in the error.",
+            "decision": "none - the guard wraps one debug line",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigOperations.ts",
+            "anchors": [
+                "if (result.success) {"
+            ],
+            "line": 272,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The merged-data twin of the guard above, and the same shape: its body is a single logger.info naming the keys applied, and the return on the next line is built from result regardless. The removed-key reporting that DOES depend on success is a separate expression and is tested on both sides.",
+            "decision": "none - the guard wraps one info line",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigOperations.ts",
+            "anchors": [
+                "removeKeys: string[] = [],"
+            ],
+            "line": 174,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant replaces the empty default with a one-element array holding a junk string. A caller that omits removeKeys therefore asks to remove a key no config has ever held: the filter that computes 'removed' finds nothing, so removedAnything stays false, the map delete is a no-op, and both the POSTed document and the returned result are identical. Only a config containing a key of that exact literal name could tell them apart.",
+            "decision": "none - removing a key no config holds is a no-op",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigOperations.ts",
+            "anchors": [
+                "removeKeys: string[] = [],"
+            ],
+            "line": 207,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The private twin of the default above, reached only when applySiteConfig itself omits the argument, and unkillable for the same reason: a removal request for a key no config holds changes neither the document written nor the removed list reported.",
+            "decision": "none - removing a key no config holds is a no-op",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigOperations.ts",
+            "anchors": [
+                "const existingRows = dataSheet?.data || [];"
+            ],
+            "line": 219,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant seeds the fallback with a junk STRING rather than an empty list, for the case where the site config has no data sheet. The loop that follows reads row.key off each entry and skips anything falsy, and a string has no key property \u2014 so the junk entry contributes nothing to the map and the written sheet is identical. The fallback's real job (not iterating undefined) is unchanged.",
+            "decision": "none - a non-row entry is skipped by the key guard",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigOperations.ts",
+            "anchors": [
+                "const errorText = await response.text().catch(() => '');"
+            ],
+            "line": 381,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant makes the catch answer undefined instead of an empty string. The only reader is the ternary on the next line, which appends the body to the error message when it is TRUTHY \u2014 and both an empty string and undefined are falsy, so the message is byte-identical either way. A response whose text() rejects and one that returns an empty body already produce the same message, which is tested.",
+            "decision": "none - both fallbacks are falsy at the only place the value is read",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }

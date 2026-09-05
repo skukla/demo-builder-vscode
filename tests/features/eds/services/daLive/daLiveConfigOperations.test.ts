@@ -1,41 +1,19 @@
-import { DaLiveConfigOperations } from '@/features/eds/services/daLive/daLiveConfigOperations';
-import type { DaLiveApiClient } from '@/features/eds/services/daLive/daLiveApiClient';
+import {
+    DaLiveConfigOperations,
+    makeApiClient,
+    mockHasWriteAccess,
+    resetConfigOpsMocks,
+} from './daLiveConfigOperations.testUtils';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const makeLogger = () => createMockLogger();
-
-/** The three client calls these operations make; the class holds a private token provider. */
-const makeApiClient = (): DaLiveApiClient =>
-    ({
-        getImsToken: jest.fn().mockResolvedValue('tok-123'),
-        // Faithful fake: delegate to global fetch (which the suite mocks) and
-        // resolve the per-attempt request factory the real client supports —
-        // so the existing fetchMock sequences and body assertions keep pinning
-        // the actual wire calls.
-        fetchWithRetry: jest.fn((url: string, options: unknown) =>
-            global.fetch(
-                url,
-                typeof options === 'function'
-                    ? (options as () => RequestInit)()
-                    : (options as RequestInit)
-            )
-        ),
-        createErrorFromResponse: jest.fn(),
-    }) as unknown as DaLiveApiClient;
-
-// updateSiteConfig shares the 401 ownership-probe path with applySiteConfig:
-// org ownership governs site writes, so the probe is called with the ORG.
-const mockHasWriteAccess = jest.fn();
-jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
-    hasWriteAccess: (...args: unknown[]) => mockHasWriteAccess(...args),
-}));
 
 describe('DaLiveConfigOperations.updateSiteConfig', () => {
     let fetchMock: jest.SpyInstance;
 
     beforeEach(() => {
         fetchMock = jest.spyOn(global, 'fetch');
-        mockHasWriteAccess.mockReset();
+        resetConfigOpsMocks();
     });
     afterEach(() => jest.restoreAllMocks());
 
