@@ -7904,6 +7904,54 @@
             "decision": "none \u2014 a log-only else",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/github/githubFileOperations.ts",
+            "anchors": [
+                "const message = (error as Error | undefined)?.message ?? '';"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "isStaleRefRejection is called from exactly one place: commitTreeToBranch's catch around updateBranchRef. A catch binding is whatever was thrown, and every throw on that path comes from Octokit or from updateBranchRef's own 'new Error(blocked)' \u2014 both real Error objects. Reaching the mutated 'error.message' would need a literal 'throw undefined' inside the GitHub client, which no version of it does. The '?.' is required by the declared 'unknown' parameter and is correct as written.",
+            "decision": "none \u2014 a required chain over a value the only caller cannot leave undefined",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/github/githubFileOperations.ts",
+            "anchors": [
+                "if (isRulesetRejection(message)) return false;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This early return can never fire on the path that reaches it. Its only caller is commitTreeToBranch, which inspects errors thrown by updateBranchRef \u2014 and updateBranchRef applies the SAME predicate first, through describePushProtectionBlock, replacing any ruleset rejection with its own 'GitHub blocked writing \u2026' message before rethrowing. So by the time isStaleRefRejection sees the error, isRulesetRejection(message) is already false, and the message it carries matches neither the ruleset patterns nor the fast-forward ones. Removing the guard would not change a single outcome; keeping it means the helper stays correct if it is ever called on a raw error.",
+            "decision": "none \u2014 the distinction is made one layer down; this states it where the helper is defined",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/github/githubFileOperations.ts",
+            "anchors": [
+                "`Last rejection: ${lastError?.message ?? 'not a fast forward'}`,"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "lastError is assigned on every iteration that does not return, and this throw is reachable only after all three iterations failed that way \u2014 so it is always an Error here. The '?.' and the 'not a fast forward' default exist because lastError is declared 'Error | undefined' for the loop's first pass, which the compiler requires; neither can be observed. Reaching them would mean the for loop completed without executing its body, which it cannot with a fixed attempt count of three.",
+            "decision": "none \u2014 a compiler-required chain on a value the throw site cannot see undefined",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/github/githubFileOperations.ts",
+            "anchors": [
+                "if (batches.length > 1) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The whole block is one logger.debug naming the batch index, the batch size and the resulting tree SHA. The condition only decides whether that per-batch line prints at all \u2014 a single-batch reset already logs its total on the line after the loop. Forcing the condition either way, widening the comparison, or emptying the block changes no tree request, no commit, no ref update and no return value, so the only test that could separate them is one asserting log wording.",
+            "decision": "none \u2014 a log line that only makes sense when there is more than one batch",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
         }
     ]
 }

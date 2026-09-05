@@ -12,12 +12,23 @@
 /** Every Octokit request the operations make. Reset it in each `beforeEach`. */
 export const mockRequest = jest.fn();
 
+/**
+ * One call per Octokit instance actually constructed. The operations cache the
+ * client on the service and drop it on `invalidateOctokit`, and a cache that
+ * silently rebuilds every call looks identical through `mockRequest` — this is
+ * the only handle that can tell them apart.
+ */
+export const mockOctokitConstructed = jest.fn();
+
 jest.mock('@octokit/core', () => ({
     Octokit: {
         plugin: jest.fn(() =>
-            jest.fn().mockImplementation(() => ({
-                request: (...args: unknown[]) => mockRequest(...args),
-            }))
+            jest.fn().mockImplementation((...args: unknown[]) => {
+                mockOctokitConstructed(...args);
+                return {
+                    request: (...requestArgs: unknown[]) => mockRequest(...requestArgs),
+                };
+            })
         ),
     },
 }));

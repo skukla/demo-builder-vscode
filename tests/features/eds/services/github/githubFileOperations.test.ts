@@ -66,6 +66,20 @@ describe('buildArchiveUrl', () => {
         const { isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', 'g'.repeat(40));
         expect(isSha).toBe(false);
     });
+
+    // The SHA test is anchored at BOTH ends. A branch whose name merely contains
+    // forty hex characters is still a branch, and sending it down the SHA URL
+    // shape produces a 404 from GitHub's archive endpoint rather than an error
+    // anyone can read.
+    it('treats a ref that only STARTS with 40 hex characters as a branch', () => {
+        const { isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', `${'a'.repeat(40)}-wip`);
+        expect(isSha).toBe(false);
+    });
+
+    it('treats a ref that only ENDS with 40 hex characters as a branch', () => {
+        const { isSha } = buildArchiveUrl('skukla', 'citisignal-b2b', `release/${'a'.repeat(40)}`);
+        expect(isSha).toBe(false);
+    });
 });
 
 describe('isStaleShaFailure', () => {

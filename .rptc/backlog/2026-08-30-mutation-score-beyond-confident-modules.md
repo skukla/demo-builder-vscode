@@ -425,3 +425,4 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): bring StorefrontSetupStep to zero open mutation gaps (`dee41ca0a`)
 - 2026-09-05  chore(overnight): run 3 queue — 40 modules, regenerated from the baseline (`24221e11d`)
 - 2026-09-05  test(eds): bring edsHandlers to zero open mutation gaps (`1ec0ae48e`)
+- 2026-09-05  test(eds): bring storefrontSetupPhase2 to zero open mutation gaps (`731afa776`)
