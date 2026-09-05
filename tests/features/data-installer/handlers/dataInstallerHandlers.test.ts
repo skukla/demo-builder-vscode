@@ -180,6 +180,46 @@ describe('dataInstallerHandlers', () => {
             expect(logged).toContain('host.example.invalid');
         });
 
+        /**
+         * The two config refusals are the same CODE and a different remedy, so
+         * the sentence is the only thing that tells them apart. "Set it" and
+         * "the one you set is wrong" send the user to different places.
+         */
+        it('tells an UNSET base URL apart from an unusable one, in what the user reads', async () => {
+            setupSettings({ apiBaseUrl: '' });
+            const unset = await resolveDataInstallerAccess(makeImportHarness());
+            setupSettings({ apiBaseUrl: 'not a url' });
+            const unusable = await resolveDataInstallerAccess(makeImportHarness());
+
+            expect(unset.ok === false && unset.response.error).toContain('No Data Installer API URL');
+            expect(unusable.ok === false && unusable.response.error).toContain('not usable');
+        });
+
+        it('refuses without an auth manager, before prompting anybody', async () => {
+            const access = await resolveDataInstallerAccess(
+                makeImportHarness({ authManager: undefined }),
+            );
+
+            expect(access.ok).toBe(false);
+            expect(access.ok === false && access.response.code).toBe(ErrorCode.AUTH_REQUIRED);
+            expect(mockedEnsureAuth).not.toHaveBeenCalled();
+        });
+
+        it('hands the sign-in guard THIS context’s auth manager and logger', async () => {
+            // Not a global one: the guard prompts for, and logs against, whatever
+            // it is handed, so passing the wrong object prompts the wrong session.
+            const context = makeImportHarness();
+
+            await resolveDataInstallerAccess(context);
+
+            expect(mockedEnsureAuth).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    authManager: context.authManager,
+                    logger: context.logger,
+                }),
+            );
+        });
+
         it('reports AUTH_REQUIRED when sign-in fails', async () => {
             mockedEnsureAuth.mockResolvedValue({ authenticated: false });
             const access = await resolveDataInstallerAccess(makeImportHarness());
@@ -198,8 +238,12 @@ describe('dataInstallerHandlers', () => {
         describe('the headless branch', () => {
             it('NEVER calls ensureAdobeIOAuth when there is no panel', async () => {
                 // It would pop a modal on the user's window from an agent tool.
-                await resolveDataInstallerAccess(makeHeadlessContext());
+                const access = await resolveDataInstallerAccess(makeHeadlessContext());
                 expect(mockedEnsureAuth).not.toHaveBeenCalled();
+                // An already-signed-in agent still gets a client: the headless
+                // branch REPORTS, and reporting a refusal to someone who is
+                // signed in would be a refusal nobody can act on.
+                expect(access.ok).toBe(true);
             });
 
             it('still calls it when a panel IS present', async () => {
@@ -294,7 +338,25 @@ describe('dataInstallerHandlers', () => {
             });
 
             expect(batch).not.toHaveBeenCalled();
-            expect(res.success).toBe(true);
+            // The whole payload, strictly: an inventory that is MISSING and one
+            // that is empty look the same to a caller reading `presentCount`,
+            // and only one of them is true.
+            expect(res.data).toStrictEqual({
+                detail: {
+                    id: { name: 'empty', version: 'main' },
+                    displayName: 'Empty',
+                    shared: false,
+                    dataTypes: [],
+                    art: {},
+                },
+                inventory: {
+                    present: [],
+                    missing: [],
+                    presentCount: 0,
+                    missingCount: 0,
+                    requestedCount: 0,
+                },
+            });
         });
 
         it('list-datapack-data-types requires an operation mode', async () => {
@@ -359,6 +421,144 @@ describe('dataInstallerHandlers', () => {
             expect(logged).toContain('boom');
         });
 
+        it('sends the curated filter and NOTHING else when called with no payload', async () => {
+            // The MCP surface calls these with no arguments at all; an optional
+            // chain read as a plain access throws before the client is reached.
+            const findDatapacks = jest.fn().mockResolvedValue({ items: [], count: 0, total: 0 });
+            MockedClient.prototype.findDatapacks = findDatapacks;
+
+            await dataInstallerHandlers['find-datapacks'](makeImportHarness());
+
+            expect(findDatapacks.mock.calls[0][0]).toStrictEqual({ shared: true });
+        });
+
+        it('forwards limit and skip, and omits the KEYS when they are absent', async () => {
+            // Strictly: `{ limit: undefined }` and `{}` are different requests to
+            // a service that reads its own defaults from the absent key.
+            const findDatapacks = jest.fn().mockResolvedValue({ items: [], count: 0, total: 0 });
+            MockedClient.prototype.findDatapacks = findDatapacks;
+
+            await dataInstallerHandlers['find-datapacks'](makeImportHarness(), {
+                limit: 5,
+                skip: 10,
+            });
+            await dataInstallerHandlers['find-datapacks'](makeImportHarness(), {
+                includeCommunity: true,
+            });
+
+            expect(findDatapacks.mock.calls[0][0]).toStrictEqual({
+                shared: true,
+                limit: 5,
+                skip: 10,
+            });
+            expect(findDatapacks.mock.calls[1][0]).toStrictEqual({});
+        });
+
+        it('get-datapack-detail refuses when EITHER half of the identity is missing', async () => {
+            // A half-identity addresses nothing, and asking the service with one
+            // returns a 404 that reads like "this datapack was deleted".
+            const detail = jest.fn();
+            MockedClient.prototype.getDatapackDetail = detail;
+
+            const results = [
+                await dataInstallerHandlers['get-datapack-detail'](makeImportHarness(), {
+                    datapackName: 'citisignal_new',
+                }),
+                await dataInstallerHandlers['get-datapack-detail'](makeImportHarness(), {
+                    version: 'main',
+                }),
+                await dataInstallerHandlers['get-datapack-detail'](makeImportHarness()),
+            ];
+
+            for (const res of results) {
+                expect(res.success).toBe(false);
+                expect(res.error).toContain('name and version');
+            }
+            expect(detail).not.toHaveBeenCalled();
+        });
+
+        it('list-datapack-data-types refuses with no payload at all', async () => {
+            const res = await dataInstallerHandlers['list-datapack-data-types'](
+                makeImportHarness(),
+            );
+
+            expect(res.success).toBe(false);
+            expect(res.error).toContain('operation mode');
+        });
+
+        it('asks for the export catalog ONLY in export mode', async () => {
+            // The catalog call is export-only; making it for an import would ask
+            // the service a question it answers with a different type set.
+            MockedClient.prototype.getProcessorOrder = jest.fn().mockResolvedValue(['giftcards']);
+            const exportTypes = jest.fn().mockResolvedValue(['products']);
+            MockedClient.prototype.getExportDataTypes = exportTypes;
+
+            const imported = await dataInstallerHandlers['list-datapack-data-types'](
+                makeImportHarness(),
+                { operationMode: 'import' },
+            );
+            expect(exportTypes).not.toHaveBeenCalled();
+            expect(imported.data).toStrictEqual({
+                mode: 'import',
+                dataTypes: ['giftcards'],
+                catalog: undefined,
+            });
+
+            const exported = await dataInstallerHandlers['list-datapack-data-types'](
+                makeImportHarness(),
+                { operationMode: 'export' },
+            );
+            expect(exportTypes).toHaveBeenCalledTimes(1);
+            expect(exported.data).toStrictEqual({
+                mode: 'export',
+                dataTypes: ['giftcards'],
+                catalog: ['products'],
+            });
+        });
+
+        it('list-installed-datapacks forwards its filters and returns the listing', async () => {
+            const installed = jest.fn().mockResolvedValue({ items: [{ datapackName: 'cs' }] });
+            MockedClient.prototype.getInstalledDatapacks = installed;
+
+            const res = await dataInstallerHandlers['list-installed-datapacks'](
+                makeImportHarness(),
+                { commerceInstance: 'instance-1', limit: 5 },
+            );
+
+            expect(installed).toHaveBeenCalledWith({ commerceInstance: 'instance-1', limit: 5 });
+            expect(res).toStrictEqual({ success: true, data: { items: [{ datapackName: 'cs' }] } });
+        });
+
+        it('get-datapack-activity forwards its filters and returns the log', async () => {
+            const activity = jest.fn().mockResolvedValue({ items: [{ operationMode: 'import' }] });
+            MockedClient.prototype.getActivityLog = activity;
+
+            const res = await dataInstallerHandlers['get-datapack-activity'](makeImportHarness(), {
+                datapackName: 'citisignal_new',
+                operationMode: 'import',
+            });
+
+            expect(activity).toHaveBeenCalledWith({
+                datapackName: 'citisignal_new',
+                operationMode: 'import',
+            });
+            expect(res).toStrictEqual({
+                success: true,
+                data: { items: [{ operationMode: 'import' }] },
+            });
+        });
+
+        it('falls back to a named reason when what was thrown is not an Error', async () => {
+            // A rejected non-Error has no `.message`; reading one anyway hands the
+            // UI `undefined` where the fallback sentence belongs.
+            MockedClient.prototype.findDatapacks = jest.fn().mockRejectedValue('a bare string');
+
+            const res = await dataInstallerHandlers['find-datapacks'](makeImportHarness(), {});
+
+            expect(res.error).toBe('Could not list datapacks.');
+            expect(res.code).toBe(ErrorCode.UNKNOWN);
+        });
+
         it('returns the guard failure unchanged rather than calling the client', async () => {
             setupSettings({ enabled: false });
             const findDatapacks = jest.fn();
@@ -366,6 +566,10 @@ describe('dataInstallerHandlers', () => {
             const res = await dataInstallerHandlers['find-datapacks'](makeImportHarness(), {});
             expect(res.success).toBe(false);
             expect(findDatapacks).not.toHaveBeenCalled();
+            // The guard's OWN code, not the UNKNOWN a failed call produces:
+            // returning the client's failure shape for a refusal would offer a
+            // Retry where only a settings change can help.
+            expect(res.code).toBe(ErrorCode.INVALID_OPERATION);
         });
     });
 

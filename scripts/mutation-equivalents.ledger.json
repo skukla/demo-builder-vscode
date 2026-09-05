@@ -11026,6 +11026,18 @@
             "decision": "none \u2014 the guard is correct defensive code against a contract change upstream; deleting half of it to satisfy the mutator would remove the protection the day getEdsGithubRepo relaxes.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/data-installer/handlers/dataInstallerHandlers.ts",
+            "anchors": [
+                "if (error instanceof DataInstallerApiError) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "This branch and the fallback below it produce byte-identical responses for every value that can reach them. DataInstallerApiError extends Error, so the fallback's 'error instanceof Error ? error.message : fallback' yields the same message, and both arms return ErrorCode.UNKNOWN; the 401/403 case never gets here because isDataInstallerAuthError returns first. Deleting the branch or forcing it false therefore changes no output, so neither the removed body nor the false condition is observable from any input.",
+            "decision": "none \u2014 kept as the explicit statement that a service-returned failure maps to UNKNOWN (a Retry affordance) rather than arriving there by falling through; the redundancy is deliberate documentation, and it is recorded here so a future reader does not mistake the survivors for a missing test.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }

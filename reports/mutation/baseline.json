@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "diagnostics.ts: the DiagnosticsCommand collection path now has a suite (20 tests) — probe arguments, MCP mapping, no-EDS guards and the PII redaction; the one remaining survivor is ledgered as equivalent",
+    "_note": "dataInstallerHandlers.ts: payload forwarding, both identity guards, the export-only catalog call and the two unexercised handlers now asserted; the two remaining survivors are a provably redundant error branch, ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -5448,27 +5448,24 @@
             "openGaps": 26
         },
         "src/features/data-installer/handlers/dataInstallerHandlers.ts": {
-            "score": 56.29,
-            "killed": 94,
-            "survived": 55,
-            "noCoverage": 18,
+            "score": 87.43,
+            "killed": 146,
+            "survived": 19,
+            "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
-                "string": 19,
-                "branch": 21,
-                "other": 7,
-                "block": 2,
-                "optionalChain": 6
+                "string": 12,
+                "logPresentation": 5,
+                "branch": 1,
+                "block": 1
             },
             "uncoveredCategories": {
-                "string": 6,
-                "block": 2,
-                "other": 7,
-                "branch": 3
+                "logPresentation": 1,
+                "string": 1
             },
-            "highValueSurvivors": 23,
-            "equivalent": 0,
-            "openGaps": 48
+            "highValueSurvivors": 2,
+            "equivalent": 2,
+            "openGaps": 0
         },
         "src/features/data-installer/handlers/exportHandlers.ts": {
             "score": 50,
