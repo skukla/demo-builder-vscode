@@ -8875,6 +8875,80 @@
             "decision": "none \u2014 the chain matches the optional payload type",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useDashboardStatus.ts",
+            "anchors": [
+                "mesh: shouldPreserveMeshStatus ? prev?.mesh : projectData.mesh,"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "prev?.mesh is only evaluated when shouldPreserveMeshStatus is true, and that flag required isMeshDeploying(prev?.mesh?.status) to be true \u2014 so prev is non-null on every path that reads it. Dropping the chain cannot throw.",
+            "decision": "none \u2014 the chain matches the nullable prev the setState callback declares",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useDashboardStatus.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 234,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mount effect's empty dependency list. Stryker replaces it with a one-element array of its own constant string, which React compares equal to itself on every render \u2014 so the effect still runs exactly once, subscribes once and cleans up once.",
+            "decision": "none \u2014 the empty list is what makes this a mount effect",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useDashboardStatus.ts",
+            "anchors": [
+                "if (!hasAdobeContext) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard false starts the minimum-display timer for a project with no Adobe org. Nothing observes it: deriveOrgCheckState answers 'none' on the same condition before it ever reads orgCheckMinElapsed, so the badge is null either way. The true variant IS killed \u2014 it would freeze every Adobe project on 'Checking\u2026'.",
+            "decision": "none \u2014 the guard skips a timer whose result that project never reads",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useDashboardStatus.ts",
+            "anchors": [
+                "return () => clearTimeout(timer);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the cleanup leaves a pending timer that sets orgCheckMinElapsed to true \u2014 the value it already holds after a re-run, and a no-op after unmount under React 18. No render output differs on any path.",
+            "decision": "none \u2014 clearing the timer is correct hygiene with no observable difference here",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useDashboardStatus.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 262,
+            "mutants": 1,
+            "category": "other",
+            "reason": "runVerify's empty useCallback dependency list, with the same Stryker filler-array substitution: a constant string array is equal to itself across renders, so the callback keeps its identity and every memo built on it is unchanged.",
+            "decision": "none \u2014 runVerify closes over nothing",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useDashboardStatus.ts",
+            "anchors": [
+                "}, [runVerify]);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying regenerateAiFiles' dependency list cannot stale its closure: runVerify is itself memoised on an empty list, so its identity never changes and the two lists select the same callback on every render.",
+            "decision": "none \u2014 [runVerify] states the real dependency, which happens to be constant",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
         }
     ]
 }
