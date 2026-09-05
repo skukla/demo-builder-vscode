@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/handlers/refreshBlockLibraryHandler.ts"
+        "src/features/dashboard/commands/configure.ts"
     ],
     "reporters": [
         "clear-text",

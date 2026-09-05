@@ -8641,6 +8641,55 @@
             "decision": "Equivalent \u2014 the explicit return and the implicit fall-through produce an identical value. The explicit return stays because a bare `catch {}` reads as forgotten rather than deliberately swallowed.",
             "recorded": "2026-09-05",
             "source": "src/features/eds/services/storefront/storefrontNameMigrationForProject.ts resolveOverlayForNewName (lines 113-127)"
+        },
+        {
+            "module": "src/features/dashboard/commands/configure.ts",
+            "anchors": [
+                "if (migration.retained.length > 0) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The guarded body is a single logger.warn. Flipping the condition either way, or deleting the body, changes nothing a caller can observe: the save proceeds identically with the value left exactly where it was, and the next save retries. Killing it would mean asserting the warning's text, which is what the ratchet exists to refuse to reward.",
+            "decision": "none \u2014 the guard suppresses a warning nobody needs when nothing was retained",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/commands/configure.ts",
+            "anchors": [
+                "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.configureProject');"
+            ],
+            "line": 93,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker forces the following 'if (panel)' true. With no panel open the body then calls panel.dispose() on undefined, and the TypeError lands in the try/catch that already exists for the already-disposed case \u2014 so the mutant takes the same path to the same no-op. The false variant IS killed (a test asserts the open panel is disposed); only the always-true one is unobservable.",
+            "decision": "none \u2014 the guard reads as intent and the catch already absorbs the difference",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/commands/configure.ts",
+            "anchors": [
+                "`[Configure] Failed to push authoring-experience update to dashboard: ${(error as Error).message}`,"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body around the dashboard authoring-experience push is one logger.warn. Emptying it leaves the save resolving success with identical state \u2014 the push is already declared non-fatal and nothing downstream reads its outcome.",
+            "decision": "none \u2014 a non-fatal push whose failure is only worth a log line",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/commands/configure.ts",
+            "anchors": [
+                "this.logger.error('[Configure] Failed to restart demo:', error as Error);"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body in handleRestartNotification is one logger.error. Emptying it leaves the method returning true with no other effect: the restart already failed at stopDemo, and the prompt still counts as shown either way (asserted separately).",
+            "decision": "none \u2014 the failed restart is reported to the log and nowhere else",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
         }
     ]
 }

@@ -457,6 +457,7 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): close storefrontSetupPhaseHelpers' mutation gaps (`ef5706350`)
 - 2026-09-05  fix(sop): ban token-shaped literals, and build the one that fired (`ca89b3bc8`)
 - 2026-09-05  test(eds): close publishKeyRegistrar's mutation gaps (`979326bb0`)
+- 2026-09-05  perf(mutation): gate each module scoped, run the full gate once per batch (`12bfab3e5`)
 
 ## Two lanes were tried and reverted — the gate is what blocks it (2026-09-05)
 
