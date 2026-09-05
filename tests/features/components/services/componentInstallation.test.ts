@@ -16,78 +16,37 @@
  *  3. the tag-resolution rule (a fetched latest release WINS over the
  *     configured fallback; the fetch happens only when a tag is configured)
  *  4. a non-zero clone exit throws rather than reporting success
+ *
+ * Version detection and the GitHub release lookup have their own suites.
  */
 
-const mockExecute = jest.fn();
-/**
- * CONVERTED 2026-08-28 (ADR-015): the executor is a constructor dependency now,
- * so this suite mocks the service registry NOT AT ALL. Assertions unchanged —
- * including the ones that pin the exact clone command and its options.
- */
-const executor = createMockCommandExecutor({ execute: mockExecute });
-jest.mock('fs/promises', () => ({
-    mkdir: jest.fn().mockResolvedValue(undefined),
-    access: jest.fn().mockRejectedValue(new Error('ENOENT')),
-    rm: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    readFile: jest.fn().mockRejectedValue(new Error('ENOENT')),
-}));
-
-import { ComponentInstallation } from '@/features/components/services/componentInstallation';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
-import type { ComponentInstance } from '@/types/base';
+import {
+    COMPONENT_PATH,
+    DEFAULT_SHELL,
+    TIMEOUTS,
+    cloneCall,
+    install,
+    makeDef,
+    mockExecute,
+    mockFs,
+    resetDoubles,
+} from './componentInstallation.testUtils';
 import type { TransformedComponentDefinition } from '@/types/components';
-import type { Logger } from '@/types/logger';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
-const PROJECT = '/projects/demo';
-
-function makeLogger(): Logger {
-    return createMockLogger() as unknown as Logger;
-}
-
-function makeDef(overrides: Record<string, unknown> = {}): TransformedComponentDefinition {
-    return {
-        id: 'eds-storefront',
-        name: 'EDS Storefront',
-        source: {
-            url: 'https://github.com/skukla/kukla-bodea',
-            branch: 'main',
-            ...((overrides.source as Record<string, unknown>) ?? {}),
-        },
-        ...overrides,
-    } as unknown as TransformedComponentDefinition;
-}
-
-const instance = (): ComponentInstance => ({ id: 'eds-storefront' }) as ComponentInstance;
-
-function install(def = makeDef(), options = {}) {
-    return new ComponentInstallation(makeLogger(), executor).installGitComponent(
-        PROJECT,
-        def,
-        instance(),
-        options
-    );
-}
-
-/** The clone call is the FIRST execute; later ones are version detection. */
-function cloneCall(): [string, Record<string, unknown>] {
-    return mockExecute.mock.calls[0] as [string, Record<string, unknown>];
-}
-
-beforeEach(() => {
-    jest.clearAllMocks();
-    // Clone succeeds; version detection finds nothing (its own paths are
-    // covered where they belong — this suite is about install + guards).
-    mockExecute.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
-    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 404 });
-});
+beforeEach(resetDoubles);
 
 describe('installGitComponent — the shell-injection guards', () => {
     it('REJECTS a URL outside the safe charset before it reaches the shell', async () => {
         const def = makeDef({ source: { url: 'https://github.com/a/b;$(curl evil)' } });
+
+        await expect(install(def)).rejects.toThrow(/Invalid git URL/);
+        expect(mockExecute).not.toHaveBeenCalled();
+    });
+
+    it('REJECTS a URL whose unsafe characters come FIRST', async () => {
+        // The charset is anchored at BOTH ends. Without the leading anchor a
+        // command prefix would pass, because the tail still matches.
+        const def = makeDef({ source: { url: '$(curl evil)https://github.com/a/b' } });
 
         await expect(install(def)).rejects.toThrow(/Invalid git URL/);
         expect(mockExecute).not.toHaveBeenCalled();
@@ -124,6 +83,45 @@ describe('installGitComponent — the shell-injection guards', () => {
             /Git source URL not provided/
         );
     });
+
+    it('throws, rather than failing on the read, when the definition has no source block', async () => {
+        const sourceless = { id: 'eds-storefront', name: 'EDS Storefront' };
+
+        await expect(install(sourceless as TransformedComponentDefinition)).rejects.toThrow(
+            /Git source URL not provided/
+        );
+    });
+});
+
+describe('installGitComponent — preparing the component directory', () => {
+    it('creates the components directory, parents included', async () => {
+        await install();
+
+        expect(mockFs.mkdir).toHaveBeenCalledWith('/projects/demo/components', {
+            recursive: true,
+        });
+    });
+
+    it('honours a custom componentsDir (edit mode) over the project default', async () => {
+        await install(makeDef(), { componentsDir: '/elsewhere/components' });
+
+        expect(mockFs.mkdir).toHaveBeenCalledWith('/elsewhere/components', { recursive: true });
+        expect(cloneCall()[0]).toContain('"/elsewhere/components/eds-storefront"');
+    });
+
+    it('REMOVES a leftover component directory from a previous failed attempt', async () => {
+        mockFs.access.mockResolvedValue(undefined);
+
+        await install();
+
+        expect(mockFs.rm).toHaveBeenCalledWith(COMPONENT_PATH, { recursive: true, force: true });
+    });
+
+    it('removes nothing when there is no leftover directory', async () => {
+        await install();
+
+        expect(mockFs.rm).not.toHaveBeenCalled();
+    });
 });
 
 describe('installGitComponent — the clone seam', () => {
@@ -151,6 +149,21 @@ describe('installGitComponent — the clone seam', () => {
         expect(cloneCall()[1].timeout).toBe(1234);
     });
 
+    it('an explicit branch option wins over the one in the definition', async () => {
+        await install(makeDef(), { branch: 'release-2' });
+
+        expect(cloneCall()[0]).toContain('-b "release-2"');
+    });
+
+    it('falls back to main when neither the option nor the definition names a branch', async () => {
+        const def = makeDef({ source: { url: 'https://github.com/a/b' } });
+
+        const result = await install(def);
+
+        expect(cloneCall()[0]).toContain('-b "main"');
+        expect(result.component?.branch).toBe('main');
+    });
+
     it('adds --depth=1 only when the component asks for a shallow clone', async () => {
         const def = makeDef({
             source: {
@@ -165,6 +178,12 @@ describe('installGitComponent — the clone seam', () => {
         expect(cloneCall()[0]).toContain('--depth=1');
     });
 
+    it('omits --depth=1 when it is not asked for', async () => {
+        await install();
+
+        expect(cloneCall()[0]).not.toContain('--depth=1');
+    });
+
     it('a NON-ZERO clone exit throws — never a success result', async () => {
         mockExecute.mockResolvedValue({ code: 128, stdout: '', stderr: 'repository not found' });
 
@@ -175,8 +194,9 @@ describe('installGitComponent — the clone seam', () => {
         const result = await install();
 
         expect(result.success).toBe(true);
+        expect(result.component?.status).toBe('cloning');
         expect(result.component?.repoUrl).toBe('https://github.com/skukla/kukla-bodea');
-        expect(result.component?.path).toBe('/projects/demo/components/eds-storefront');
+        expect(result.component?.path).toBe(COMPONENT_PATH);
     });
 });
 
@@ -194,6 +214,21 @@ describe('installGitComponent — tag resolution', () => {
         await install(def);
 
         expect(cloneCall()[0]).toContain('--branch "v9.9.9"');
+    });
+
+    it('a resolved tag replaces the branch flag entirely', async () => {
+        const def = makeDef({
+            source: {
+                url: 'https://github.com/skukla/kukla-bodea',
+                branch: 'main',
+                gitOptions: { tag: 'v1.0.0' },
+            },
+        });
+
+        await install(def);
+
+        expect(cloneCall()[0]).toContain('--branch "v1.0.0"');
+        expect(cloneCall()[0]).not.toContain('-b "main"');
     });
 
     it('falls back to the configured tag when the release lookup fails', async () => {

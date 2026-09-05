@@ -11827,6 +11827,104 @@
             "decision": "none \u2014 && states the requirement the caller actually has: a pair, or nothing",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/components/services/componentInstallation.ts",
+            "anchors": [
+                "} else if (componentInstance.branch) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The condition cannot be false. componentInstance.branch is assigned four lines earlier as options.branch || componentDef.source.branch || 'main', so it is always a non-empty string by the time this else-if is reached. No definition or option shape makes it falsy.",
+            "decision": "none \u2014 the guard reads as the pair of the cloneTag branch above it and costs nothing",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/components/services/componentInstallation.ts",
+            "anchors": [
+                "`git clone ${cloneFlags.join(' ')} \"${componentDef.source.url}\" \"${componentPath}\"`.trim();"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The .trim() is a no-op for every string this template can produce: it starts with the literal 'git clone' and ends with a closing quote, so there is never leading or trailing whitespace to remove \u2014 an empty cloneFlags leaves a double space in the MIDDLE, which trim does not touch. Nothing observable changes when it is dropped.",
+            "decision": "none \u2014 harmless defensive trim; removing it would be a cosmetic src edit outside this work",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/components/services/componentInstallation.ts",
+            "anchors": [
+                "const cloneDuration = Date.now() - cloneStart;"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "cloneDuration is read on three lines and all three are logger calls (the failure debug line and the completion debug line). Flipping the subtraction changes only the number printed in a log message, and asserting log text is what the ratchet exists to refuse to reward.",
+            "decision": "none \u2014 the duration is diagnostic output and is computed correctly",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/components/services/componentInstallation.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 169,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else body is a single logger.warn. Emptying it changes which log line prints and nothing else: componentInstance.version is already left unset on this path, and the install result is identical either way.",
+            "decision": "none \u2014 the warn is the only signal an SC gets that a version could not be detected",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/components/services/componentInstallation.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 238,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger.debug. Emptying it leaves detectedVersion untouched and falls through to the commit-hash strategy exactly as before; only the log line differs.",
+            "decision": "none \u2014 the debug line explains a fallback that is otherwise silent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/components/services/componentInstallation.ts",
+            "anchors": [
+                "const releases = Array.isArray(data) ? data : [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Both arms end at the same answer. The non-array fallback exists so the next line can index safely; whatever placeholder replaces the empty array, releases[0].tag_name is undefined for it and '|| null' returns null, which is what the empty array reaches through the length check. A non-array response therefore falls back to the configured tag either way \u2014 pinned by 'a beta response that is not a list at all falls back'.",
+            "decision": "none \u2014 the empty-array default is the honest neutral value",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/components/services/componentInstallation.ts",
+            "anchors": [
+                "if (releases.length === 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Deleting this guard, or making it never fire, reaches the same answer by a worse route: releases[0] is undefined, reading .tag_name off it throws a TypeError, and the enclosing try/catch turns that into the same 'return null' the guard performs. The caller falls back to the configured tag in both cases. Only a debug log line differs.",
+            "decision": "none \u2014 the explicit empty check keeps a normal response off the exception path",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/components/services/componentInstallation.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch makes fetchLatestReleaseTag resolve undefined instead of null. Its single caller tests the result with 'if (latestTag)', so both values take the same branch and the configured fallback tag is used either way. No caller can tell them apart.",
+            "decision": "none \u2014 returning null states the contract the signature declares",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
         }
     ]
 }

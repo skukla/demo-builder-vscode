@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/types/typeGuards.ts"
+        "src/features/components/services/componentInstallation.ts"
     ],
     "reporters": [
         "clear-text",
