@@ -8204,6 +8204,42 @@
             "decision": "none \u2014 the empty default is the correct 'defer nothing' value; only a placeholder-shaped target could tell it apart, and asserting one would test Stryker rather than the helper",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/storefront/storefrontStalenessDetector.ts",
+            "anchors": [
+                "if (config && typeof config === 'object') {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The three mutants here (whole condition to true, the truthiness half to true, && to ||) all widen the guard so more component-config values reach Object.assign, and Object.assign cannot tell the difference for any value this loop can see. It ignores null, undefined, numbers and booleans outright, so a falsy or scalar config contributes nothing whether the guard admits it or not; the || form additionally sends null through typeof null === 'object', which lands on the same no-op. The one input that would differ is a non-empty STRING config, whose own enumerable keys are the numeric indices '0','1',... \u2014 and the caller reads only the fourteen named keys in STOREFRONT_CONFIG_ENV_VARS, none of which is a number. So no value of newComponentConfigs distinguishes the mutants from the original at the function's output, which is pinned by 'collects only the watched keys, ignoring everything else in the config' and the ACCS/PaaS diff tests.",
+            "decision": "none \u2014 the guard states that a component with no config contributes nothing, which is worth reading even though Object.assign would enforce it anyway",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/storefront/storefrontStalenessDetector.ts",
+            "anchors": [
+                "if (hasChanges) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Both arms of this if/else contain exactly one logger.debug and nothing else; the return value on the next line is built from changedEnvVars regardless. Forcing the condition either way, or emptying the then-arm, changes only which summary line is written to the debug channel. Killing any of the three would mean asserting a log message's wording, which the ratchet exists to refuse. That the VERDICT is right \u2014 hasChanges true exactly when changedEnvVars is non-empty \u2014 is asserted by every test in this suite.",
+            "decision": "none \u2014 the summary line is what makes a debug log readable when a republish prompt is unexpected",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/storefront/storefrontStalenessDetector.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else arm holds one logger.debug saying no storefront-relevant env var changed. Emptying it leaves the function returning the identical StorefrontChanges object; the only difference is a missing debug line. Same argument as the 'if (hasChanges) {' entry above, which covers the other three mutants on this statement.",
+            "decision": "none \u2014 the quiet case is the one an SC asks about ('why no republish prompt?'), so the line earns its place",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
         }
     ]
 }

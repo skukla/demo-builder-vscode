@@ -12,6 +12,8 @@
 
 import {
     detectStorefrontChanges,
+    getCurrentStorefrontState,
+    getStorefrontEnvVars,
     updateStorefrontState,
 } from '@/features/eds/services/storefront/storefrontStalenessDetector';
 import {
@@ -181,5 +183,114 @@ describe('updateStorefrontState records the published values, not current ones',
         updateStorefrontState(project, PUBLISHED);
 
         expect(detectStorefrontChanges(project, PUBLISHED).hasChanges).toBe(false);
+    });
+});
+
+// ==========================================================================
+// getStorefrontEnvVars — which values reach the published snapshot
+// ==========================================================================
+
+describe('getStorefrontEnvVars', () => {
+    it('collects only the watched keys, ignoring everything else in the config', () => {
+        expect(
+            getStorefrontEnvVars({
+                [ACCS_WEBSITE_CODE]: 'citisignal',
+                UNWATCHED_KEY: 'ignored',
+            }),
+        ).toEqual({ [ACCS_WEBSITE_CODE]: 'citisignal' });
+    });
+
+    it('omits a watched key the config does not carry at all', () => {
+        // Every other watched key is absent here. Recording them as the string
+        // "undefined" would make the very next detect() run report a change
+        // against values that were never published.
+        expect(getStorefrontEnvVars({ [ACCS_STORE_CODE]: 'citisignal_store' })).toEqual({
+            [ACCS_STORE_CODE]: 'citisignal_store',
+        });
+    });
+
+    it('omits a key whose value is explicitly undefined', () => {
+        expect(
+            getStorefrontEnvVars({
+                [ACCS_WEBSITE_CODE]: undefined,
+                [ACCS_STORE_CODE]: 'kept',
+            }),
+        ).toEqual({ [ACCS_STORE_CODE]: 'kept' });
+    });
+
+    it('omits a key whose value is explicitly null', () => {
+        expect(
+            getStorefrontEnvVars({
+                [ACCS_WEBSITE_CODE]: null,
+                [ACCS_STORE_CODE]: 'kept',
+            }),
+        ).toEqual({ [ACCS_STORE_CODE]: 'kept' });
+    });
+
+    it('keeps a falsy-but-real value, stringified', () => {
+        // '' and false are real published settings; only undefined/null mean
+        // "not set". AEM_ASSETS_ENABLED is the boolean one in the list.
+        expect(
+            getStorefrontEnvVars({ AEM_ASSETS_ENABLED: false, [ACCS_STORE_CODE]: '' }),
+        ).toEqual({ AEM_ASSETS_ENABLED: 'false', [ACCS_STORE_CODE]: '' });
+    });
+});
+
+// ==========================================================================
+// getCurrentStorefrontState — the baseline detect() compares against
+// ==========================================================================
+
+describe('getCurrentStorefrontState', () => {
+    it('returns null for a project that has never published', () => {
+        const project = createMockProject({ name: 'p', path: '/p', selectedStack: 'eds-accs' });
+        expect(getCurrentStorefrontState(project)).toBeNull();
+    });
+
+    it('parses the recorded publish time into a Date', () => {
+        const project = makeAccsProject(CITISIGNAL);
+        const state = getCurrentStorefrontState(project);
+        expect(state?.envVars).toEqual(CITISIGNAL);
+        expect(state?.lastPublished).toEqual(new Date('2026-01-01'));
+    });
+
+    it('reports an empty publish timestamp as unpublished, not as an invalid Date', () => {
+        // `new Date('')` is an Invalid Date that formats as "Invalid Date" and
+        // compares false against everything — null is the honest answer.
+        const project = createMockProject({
+            name: 'p',
+            path: '/p',
+            selectedStack: 'eds-accs',
+            edsStorefrontState: { envVars: CITISIGNAL, lastPublished: '' },
+        });
+        expect(getCurrentStorefrontState(project)?.lastPublished).toBeNull();
+    });
+});
+
+// ==========================================================================
+// detectStorefrontChanges — the two "never report stale" guards
+// ==========================================================================
+
+describe('detectStorefrontChanges guards', () => {
+    it('reports no change for a non-EDS project even when the watched values differ', () => {
+        // The published state and the new configs disagree on every ACCS code.
+        // A non-EDS project has no config.json to republish, so the answer must
+        // still be "nothing to do" — and the guard, not an empty diff, is what
+        // makes it so.
+        const project = makeAccsProject(CITISIGNAL);
+        project.selectedStack = 'headless';
+
+        expect(
+            detectStorefrontChanges(project, { accs: { [ACCS_WEBSITE_CODE]: 'bodea' } }),
+        ).toEqual({ hasChanges: false, changedEnvVars: [] });
+    });
+
+    it('reports no change for an EDS project that has never published', () => {
+        // No baseline exists, so there is nothing to be stale against. Without
+        // the guard this would compare against undefined and read as changed.
+        const project = createMockProject({ name: 'p', path: '/p', selectedStack: 'eds-accs' });
+
+        expect(
+            detectStorefrontChanges(project, { accs: { [ACCS_WEBSITE_CODE]: 'bodea' } }),
+        ).toEqual({ hasChanges: false, changedEnvVars: [] });
     });
 });

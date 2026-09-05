@@ -91,6 +91,27 @@ const STOREFRONT_CONFIG_ENV_VARS = [
 // ==========================================================
 
 /**
+ * Flatten every component's config into one lookup.
+ *
+ * Storefront env vars cross component boundaries — a value written under the
+ * backend component is read when generating the storefront's config.json — so
+ * both the comparison and the recording read the merged view, never one
+ * component's slice. Non-object entries are skipped: a component whose config
+ * is missing or scalar contributes nothing.
+ */
+function mergeComponentConfigs(
+    componentConfigs: Record<string, unknown>,
+): Record<string, unknown> {
+    const merged: Record<string, unknown> = {};
+    for (const config of Object.values(componentConfigs)) {
+        if (config && typeof config === 'object') {
+            Object.assign(merged, config as Record<string, unknown>);
+        }
+    }
+    return merged;
+}
+
+/**
  * Get storefront-related environment variables from component config
  */
 export function getStorefrontEnvVars(
@@ -98,12 +119,13 @@ export function getStorefrontEnvVars(
 ): Record<string, string> {
     const result: Record<string, string> = {};
 
+    // No `key in componentConfig` pre-check: an absent key reads as undefined,
+    // which the null/undefined test below already rejects. The two guards could
+    // never disagree, so the outer one decided nothing.
     for (const key of STOREFRONT_CONFIG_ENV_VARS) {
-        if (key in componentConfig) {
-            const value = componentConfig[key];
-            if (value !== undefined && value !== null) {
-                result[key] = String(value);
-            }
+        const value = componentConfig[key];
+        if (value !== undefined && value !== null) {
+            result[key] = String(value);
         }
     }
 
@@ -151,13 +173,7 @@ export function detectStorefrontChanges(
     }
 
     // Merge ALL new componentConfigs for cross-boundary values
-    const allNewConfigs: Record<string, unknown> = {};
-    for (const config of Object.values(newComponentConfigs)) {
-        if (config && typeof config === 'object') {
-            Object.assign(allNewConfigs, config as Record<string, unknown>);
-        }
-    }
-    const newEnvVars = getStorefrontEnvVars(allNewConfigs);
+    const newEnvVars = getStorefrontEnvVars(mergeComponentConfigs(newComponentConfigs));
 
     // Compare each storefront env var
     const changedEnvVars: string[] = [];
@@ -214,16 +230,8 @@ export function updateStorefrontState(
     project: Project,
     publishedComponentConfigs: Record<string, unknown>,
 ): void {
-    const componentConfigs = publishedComponentConfigs;
     // Merge all configs for cross-boundary values
-    const allConfigs: Record<string, unknown> = {};
-    for (const config of Object.values(componentConfigs)) {
-        if (config && typeof config === 'object') {
-            Object.assign(allConfigs, config as Record<string, unknown>);
-        }
-    }
-
-    const envVars = getStorefrontEnvVars(allConfigs);
+    const envVars = getStorefrontEnvVars(mergeComponentConfigs(publishedComponentConfigs));
 
     project.edsStorefrontState = {
         envVars,

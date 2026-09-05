@@ -434,3 +434,5 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): bring githubCredentialProbe to zero open mutation gaps (`ffb3df517`)
 - 2026-09-05  test(eds): bring configSyncService to zero open mutation gaps (`b2e164b6e`)
 - 2026-09-05  test(eds): bring helixBulkJobs to zero open mutation gaps (`170f95cf3`)
+- 2026-09-05  test(eds): bring patchReportHelper to zero open mutation gaps (`79ee7ec8a`)
+- 2026-09-05  chore(backlog): log the MUT-02 commits against PL-22 (`100d3b650`)
