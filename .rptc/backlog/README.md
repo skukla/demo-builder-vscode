@@ -298,7 +298,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-18` | feature | [ADR-017 §6 is stated but unenforced — the check that closes it](2026-08-29-adr017-stylesheet-bundle-check.md) | — | high | shipped |
 | `PL-42` | fix | └ [Read the redundancy lists and delete what pins nothing — about half of every suite is a candidate](2026-09-04-redundant-test-read.md) | — | high | open |
 | `PL-43` | fix | └ [651 assertions claim something is empty using a comparison that accepts an empty value instead](2026-09-04-lenient-equality-hides-empty-values.md) | — | high | backlog |
-| `PL-45` | fix | └ [Tests named so the mirror convention misses them](2026-09-05-tests-named-so-the-mirror-convention-misses-them.md) | — | med | backlog |
+| `PL-45` | fix | └ [Tests named so the mirror convention misses them](2026-09-05-tests-named-so-the-mirror-convention-misses-them.md) | — | high | backlog |
 | `PL-25` | chore | [Skill descriptions should trigger, not describe](skill-description-triggers.md) | — | med | dropped |
 | `PL-26` | feature | [A glossary, so the agent describes things back in our words](project-glossary.md) | — | med | active |
 | `PL-28` | question | [Rules stated as law that no handbook, ADR or check backs](unratified-rules-register.md) | — | high | shipped |

@@ -3,7 +3,7 @@ id: PL-45
 kind: fix
 area: platform
 needs: []
-value: med
+value: high
 status: backlog
 parent: PL-22
 ---
@@ -16,6 +16,38 @@ Filed 2026-09-05, from the PL-22 burn-down.
 FILENAME does not start with that module's stem.** 17 of those sit on modules that still
 have open gaps, together holding 472 of them. The tests run and pass on every CI build;
 they simply count towards nothing.
+
+## MEASURED FOUR TIMES THE SAME DAY — raised to high on this evidence
+
+Filed as a modest cleanup. Four modules met it within hours, and in each the rename ALONE
+moved the number before a single test was written:
+
+| Module | Open gaps before | After the rename alone | Recovered |
+|---|---|---|---|
+| `importHandlers.ts` | 151 | 62 | 59% |
+| `dataInstallerWriteClient.ts` | 106 uncovered | 17 | 84% |
+| `inExtensionMcpServer.ts` | 83 | 49 | 41% |
+| `demoPackageLoader.ts` | 55 | — (closed to 97% with the moved suite) | — |
+
+Between 41% and 84% of a module's apparent gap was tests that already existed, already ran
+and already caught those mutants. **Some unknown share of the burn-down's remaining total
+is not work, it is misfiling** — which makes this the cheapest item in the queue: seconds
+per rename against roughly nine minutes per hundred gaps closed by writing tests.
+
+**The survey below is a FLOOR, not a total.** `demoPackageLoader.ts` was found by a session,
+not by the detector: its 297-line suite sat under `project-creation/ui/helpers/` and reached
+the module through a re-export barrel. Rule 1 requires the mirror directory, so that whole
+shape — right tests, wrong directory — is invisible to the numbers here.
+
+**The per-module half is already shipped.** Every goal session now checks its own module
+before measuring (`scripts/mutationQueue.mjs`, from a7fd3e73d). That is what found all four.
+What remains is the sweep of modules the burn-down will not reach soon, and the modules
+already at zero whose suites still count towards nothing.
+
+**One caution learned the same day:** a session correctly DECLINED to rename three suites
+around `readDescriptors.ts` because they are cross-cutting across four descriptor families,
+not that module's own. Attributing them would have inflated one file and hidden three. The
+check has to reject as well as accept.
 
 ## How it surfaced
 
