@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/services/customBlockLibraryUtils.ts"
+        "src/features/project-creation/ui/components/BlockLibrariesStepContent.tsx"
     ],
     "reporters": [
         "clear-text",
