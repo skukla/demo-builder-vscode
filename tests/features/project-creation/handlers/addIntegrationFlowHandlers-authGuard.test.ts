@@ -20,6 +20,7 @@
  */
 
 import { addIntegrationFlowHandlers } from '@/features/project-creation/handlers/addIntegrationFlowHandlers';
+import { dispatchHandler } from '@/core/handlers/dispatchHandler';
 import { ErrorCode } from '@/types/errorCodes';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
@@ -131,13 +132,57 @@ describe('Adobe entity handlers refuse before fetching when sign-in is declined'
     // A guard that only RETURNS leaves the picker spinning forever: it resolves
     // on the inbound message, not on the handler's return value. Silence is the
     // failure mode this whole handler map exists to prevent.
-    it('sends the refusal on the wire so the picker stops loading', async () => {
+    // Every handler, not just get-projects: each names its OWN wire message when
+    // it is wrapped, and a refusal announced on the wrong one is the same silence
+    // as no refusal at all — the stage waiting on that message spins forever.
+    it.each(ENTITY_HANDLERS)('%s sends the refusal on ITS wire message', async (type) => {
         const context = createContext();
-        await addIntegrationFlowHandlers['get-projects'](context, {});
+        await addIntegrationFlowHandlers[type](context, {
+            orgId: 'org',
+            projectId: 'project',
+            workspaceId: 'workspace',
+            name: 'name',
+        });
 
-        const sent = context.sendMessage.mock.calls.find((c) => c[0] === 'get-projects');
+        const sent = context.sendMessage.mock.calls.find((c) => c[0] === type);
         expect(sent).toBeDefined();
         expect(sent?.[1]).toMatchObject({ code: ErrorCode.AUTH_REQUIRED });
+    });
+});
+
+describe('what the guard hands the sign-in prompt', () => {
+    // The guard builds ensureAdobeIOAuth's argument itself; nothing downstream
+    // type-checks it, and an empty object would silently prompt against no auth
+    // service and log nowhere. Assert the two collaborators it must carry.
+    it('passes the located auth service and the context logger', async () => {
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: true });
+        const context = createContext();
+
+        await addIntegrationFlowHandlers['get-projects'](context, {});
+
+        expect(mockEnsureAdobeIOAuth).toHaveBeenCalledWith(
+            expect.objectContaining({ authManager: mockAuthService, logger: context.logger })
+        );
+    });
+});
+
+describe('the guard is total over its payload', () => {
+    // `guarded` declares `payload: unknown` and the hosts reach it through
+    // dispatchHandler, which forwards whatever the caller passed. A payload-less
+    // call must refuse like any other, not throw before the guard ever runs.
+    it('refuses a payload-less call instead of throwing', async () => {
+        mockEnsureAdobeIOAuth.mockResolvedValue({ authenticated: false, cancelled: true });
+        const context = createContext();
+
+        const result = await dispatchHandler(
+            addIntegrationFlowHandlers,
+            context,
+            'get-projects',
+            undefined
+        );
+
+        expect(result).toMatchObject({ success: false, code: ErrorCode.AUTH_REQUIRED });
+        expect(context.authManager?.getProjects).not.toHaveBeenCalled();
     });
 });
 

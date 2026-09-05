@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/components/integration-flow/stages/KindStage.tsx"
+        "src/features/project-creation/handlers/addIntegrationFlowHandlers.ts"
     ],
     "reporters": [
         "clear-text",
