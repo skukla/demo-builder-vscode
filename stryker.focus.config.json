@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/components/forms/FieldHelpButton.tsx"
+        "src/core/base/baseWebviewCommand.ts"
     ],
     "reporters": [
         "clear-text",

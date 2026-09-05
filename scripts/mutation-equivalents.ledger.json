@@ -10351,6 +10351,66 @@
             "decision": "equivalent",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/base/baseWebviewCommand.ts",
+            "anchors": [
+                "if (panel) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard true makes disposePanel call dispose() on undefined \u2014 inside the try that already exists to absorb an already-disposed panel. The TypeError is swallowed exactly as the real error would be, so no caller can tell the guarded and unguarded forms apart.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/base/baseWebviewCommand.ts",
+            "anchors": [
+                "protected shouldReopenWelcomeOnDispose(): boolean {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the body returns undefined instead of false. The only reader is the guard in handlePanelDisposal, where undefined and false are both falsy and skip the callback identically.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/base/baseWebviewCommand.ts",
+            "anchors": [
+                "(this.panel !== undefined && this.panel.visible)"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the left operand true makes the expression read this.panel.visible when this.panel is undefined. That throws inside the try whose catch returns false \u2014 the same answer the unmutated code gives when there is no panel. Every other input short-circuits on the first operand of the outer or.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/base/baseWebviewCommand.ts",
+            "anchors": [
+                "if (existingPanel) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard true makes the first open call reveal() on undefined; the throw lands in the catch, which unregisters and then creates the panel the unguarded path would have created anyway. The catch's extra unregisterCommunicationManager could only matter in a state no code path produces \u2014 a registered manager with no registered panel \u2014 because every unregisterPanel call site unregisters both.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/base/baseWebviewCommand.ts",
+            "anchors": [
+                "if (!this.communicationManager) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard false removes an early return that never fires: setupStandardHandlers is private and called from exactly one place, the line after this.communicationManager is assigned. It is a defensive guard with no reachable input.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }
