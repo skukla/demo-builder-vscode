@@ -364,6 +364,13 @@ describe('SidebarProvider', () => {
             executeCommandMock = vscode.commands.executeCommand as jest.Mock;
             executeCommandMock.mockClear();
             executeCommandMock.mockResolvedValue(undefined);
+
+            // `clearAllMocks` clears calls but keeps return values, so the
+            // disabled-setting spec below would otherwise leak into whatever
+            // runs after it.
+            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+                get: jest.fn().mockReturnValue(true),
+            });
         });
 
         afterEach(() => {
@@ -445,6 +452,73 @@ describe('SidebarProvider', () => {
             expect(wasCheckCommandInvoked()).toBe(false);
         });
 
+        /**
+         * The check is per SESSION, not per resolve. VS Code re-resolves the
+         * view whenever the sidebar is closed and reopened, and a check on each
+         * of those is the spam the throttle exists to prevent.
+         */
+        it('runs the check once however often the view is re-resolved', () => {
+            provider.resolveWebviewView(
+                mockWebviewView as unknown as vscode.WebviewView,
+                {} as vscode.WebviewViewResolveContext,
+                { isCancellationRequested: false } as vscode.CancellationToken
+            );
+            // Drop the timestamp the first check wrote, so the throttle cannot
+            // be what stops the second one — the once-per-session flag has to.
+            globalStateStore.delete('lastUpdateCheck');
+            provider.resolveWebviewView(
+                createMockWebviewView() as unknown as vscode.WebviewView,
+                {} as vscode.WebviewViewResolveContext,
+                { isCancellationRequested: false } as vscode.CancellationToken
+            );
+
+            const checks = executeCommandMock.mock.calls.filter(
+                (call) => call[0] === 'demoBuilder.checkForUpdates'
+            );
+            expect(checks).toHaveLength(1);
+        });
+
+        // Nobody has ever opened the setting, which is the common case.
+        it('treats an unset autoUpdate setting as enabled', () => {
+            const getConfig = vscode.workspace.getConfiguration as jest.Mock;
+            getConfig.mockReturnValue({
+                get: jest.fn((_key: string, fallback: unknown) => fallback),
+            });
+
+            provider.resolveWebviewView(
+                mockWebviewView as unknown as vscode.WebviewView,
+                {} as vscode.WebviewViewResolveContext,
+                { isCancellationRequested: false } as vscode.CancellationToken
+            );
+
+            expect(wasCheckCommandInvoked()).toBe(true);
+        });
+
+        /**
+         * A failed FIRST check has no prior timestamp to restore. Rolling back
+         * to 0 rather than to nothing would still read as "checked at the
+         * epoch", which is the same answer — but the value is a lie, and the
+         * next writer of this code would read it as a real check.
+         */
+        it('clears the timestamp entirely when the first-ever check fails', async () => {
+            executeCommandMock.mockImplementation((cmd: string) =>
+                cmd === 'demoBuilder.checkForUpdates'
+                    ? Promise.reject(new Error('network unreachable'))
+                    : Promise.resolve(undefined)
+            );
+
+            provider.resolveWebviewView(
+                mockWebviewView as unknown as vscode.WebviewView,
+                {} as vscode.WebviewViewResolveContext,
+                { isCancellationRequested: false } as vscode.CancellationToken
+            );
+            await Promise.resolve();
+            await Promise.resolve();
+            await Promise.resolve();
+
+            expect(globalStateStore.get('lastUpdateCheck')).toBeUndefined();
+        });
+
         it('rolls the timestamp back when the network call rejects (no throttle on retry)', async () => {
             const previous = NOW - 2 * ONE_HOUR_MS;
             globalStateStore.set('lastUpdateCheck', previous);
@@ -462,6 +536,7 @@ describe('SidebarProvider', () => {
             );
 
             // Flush the rejection so the rollback runs.
+            await Promise.resolve();
             await Promise.resolve();
             await Promise.resolve();
 

@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/base/baseWebviewCommand.ts"
+        "src/features/sidebar/providers/sidebarProvider.ts"
     ],
     "reporters": [
         "clear-text",

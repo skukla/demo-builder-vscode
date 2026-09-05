@@ -10411,6 +10411,18 @@
             "decision": "equivalent",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/sidebar/providers/sidebarProvider.ts",
+            "anchors": [
+                "if (last > 0 && now - last <= UPDATE_CHECK_THROTTLE_MS) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both mutants weaken the same redundant guard: last > 0 to last >= 0, and the operand to a constant true. last is Date.now() or 0 when no check has been recorded, and for last = 0 the second operand asks whether now itself is under an hour \u2014 false for any clock later than 01:00 UTC on 1 January 1970. The guard changes the answer only for a system clock no machine running this extension can have.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }

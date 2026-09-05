@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "baseWebviewCommand: two new suites over the panel lifecycle (singleton reveal, stale-registration recovery, isVisible's two references) and the communication half (standard handlers invoked through a comm fake that hands them back, send/request failure paths, the Welcome reopen callback)",
+    "_note": "sidebarProvider: a new messages suite over the sixteen-row routing table, the failure absorption around each row, the context it reports, view disposal and the auto-open rules; plus once-per-session and rollback cases on the update check. handleBack's unreachable try/catch removed.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -10276,29 +10276,20 @@
             "openGaps": 61
         },
         "src/features/sidebar/providers/sidebarProvider.ts": {
-            "score": 32.64,
-            "killed": 79,
-            "survived": 47,
-            "noCoverage": 116,
+            "score": 81.59,
+            "killed": 195,
+            "survived": 44,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 4,
-                "string": 15,
-                "branch": 18,
-                "block": 6,
-                "optionalChain": 1,
-                "logPresentation": 3
+                "logPresentation": 38,
+                "string": 4,
+                "branch": 2
             },
-            "uncoveredCategories": {
-                "block": 46,
-                "branch": 16,
-                "logPresentation": 17,
-                "string": 35,
-                "other": 2
-            },
-            "highValueSurvivors": 24,
-            "equivalent": 0,
-            "openGaps": 93
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 2,
+            "openGaps": 0
         },
         "src/features/sidebar/ui/Sidebar.tsx": {
             "score": 71.43,

@@ -364,16 +364,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     private async handleBack(): Promise<void> {
         this.logger.info('Sidebar back navigation');
 
-        try {
-            // No-op for now — back navigation in surfaces that need it lives
-            // in the webview's own header, not the sidebar.
-            this.logger.debug('Back navigation: no-op');
-        } catch (error) {
-            this.logger.error(
-                'Back navigation failed',
-                error instanceof Error ? error : undefined,
-            );
-        }
+        // No-op for now — back navigation in surfaces that need it lives
+        // in the webview's own header, not the sidebar.
+        this.logger.debug('Back navigation: no-op');
     }
 
     /**
