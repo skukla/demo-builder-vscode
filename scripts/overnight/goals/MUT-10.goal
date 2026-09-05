@@ -1,10 +1,7 @@
-Work backlog item PL-22 — the mutation burn-down, batch MUT-03. Bring each of
+Work backlog item PL-22 — the mutation burn-down, batch MUT-10. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/data-installer/services/dataInstallerWriteClient.ts  (98 open gaps)
-  - src/core/ui/components/forms/FieldHelpButton.tsx  (97 open gaps)
-  - src/core/base/baseWebviewCommand.ts  (96 open gaps)
-  - src/features/sidebar/providers/sidebarProvider.ts  (93 open gaps)
+  - src/features/components/handlers/componentHandlers.ts  (54 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the

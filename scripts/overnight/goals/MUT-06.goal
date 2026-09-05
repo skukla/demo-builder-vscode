@@ -1,11 +1,10 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-06. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/components/services/componentInstallation.ts  (orchestration, 45.18%, 70 open gaps)
-  - src/features/data-installer/ui/components/importResult.ts  (pure, 5.6%, 70 open gaps)
-  - src/features/mesh/services/stalenessDetector.ts  (mixed, 69.46%, 68 open gaps)
-  - src/features/data-installer/ui/components/ImportDatapackModal.tsx  (pure, 70.3%, 64 open gaps)
-  - src/features/projects-dashboard/utils/projectStatusUtils.ts  (pure, 58.06%, 61 open gaps)
+  - src/features/components/services/componentInstallation.ts  (70 open gaps)
+  - src/features/data-installer/ui/components/importResult.ts  (70 open gaps)
+  - src/features/mesh/services/stalenessDetector.ts  (68 open gaps)
+  - src/features/data-installer/ui/components/ImportDatapackModal.tsx  (64 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the
@@ -14,6 +13,10 @@ cannot see a malformed call) or RECORDED in scripts/mutation-equivalents.ledger.
 why no test can kill it. The score is not the target: a module can be done at 60% and
 neglected at 90%. Never ledger a mutant to reach zero faster — the ledger is for what
 CANNOT be killed, not what you did not get to.
+
+FIRST, PER MODULE: sibling suites named for a FUNCTION rather than the file are invisible
+to `suitesFor`, so their kills count for nothing. Check imports, rename to
+`<module>-<topic>.test.ts`. That alone took importHandlers.ts 151 gaps to 62. See PL-45.
 
 THE CYCLE, one module at a time — never two measurements at once (the focus configs are
 single generated files and collide):
@@ -33,11 +36,10 @@ single generated files and collide):
 A mutant revealing a REAL defect or dead code may be fixed in src/ — say so, with the
 reason, in the commit. Any other src/ change is out of scope.
 
-NEVER kill a mutant by asserting a logger call's arguments (`expect(logger.x)
-.toHaveBeenCalledWith(...)`). That pins wording, not behaviour, and an enforcer refuses
-any file whose count rises. If the only observable difference is which log line prints,
-the mutant belongs in the ledger. Add rows with `node scripts/mutationLedger.mjs add ...`
-— it writes the file's own format and refuses an anchor that does not resolve.
+NEVER kill a mutant by asserting a logger call's arguments — that pins wording, not
+behaviour, and an enforcer refuses any file whose count rises. If the only observable
+difference is which log line prints, it belongs in the ledger. Add rows with
+`node scripts/mutationLedger.mjs add ...`; it refuses an anchor that does not resolve.
 
 RULES. Stay on the current work branch; never checkout or merge develop. One commit per
 module, `Backlog: PL-22` trailer, staging ONLY your own paths — never `-a`/`add -A`,
