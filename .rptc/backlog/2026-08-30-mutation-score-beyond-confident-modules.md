@@ -373,3 +373,8 @@ which point the cadence drops to release cuts.
 - 2026-09-04  test(integration-flow): bring DestinationStage to zero open mutation gaps (`f1f27028f`)
 - 2026-09-04  test(integration-flow): bring flowStages to zero open mutation gaps (`d5e22b4ed`)
 - 2026-09-04  test(project-creation): bring reviewPredicates to zero open mutation gaps (`bb4847c0f`)
+- 2026-09-04  test(project-creation): bring BuildYourProjectSummary to zero open mutation gaps (`07cd27386`)
+- 2026-09-04  test(project-creation): bring BlockLibrariesStepContent to zero open mutation gaps (`4bacc6d21`)
+- 2026-09-04  test(project-creation): bring customBlockLibraryUtils to zero open mutation gaps (`552fd174b`)
+- 2026-09-04  test(project-creation): bring catalogPrewarmPhase to zero open mutation gaps (`56d39f045`)
+- 2026-09-04  test(project-creation): bring aiBundleService to zero open mutation gaps (`2dd5bc22a`)
