@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/configService/configAccessRecovery.ts"
+        "src/features/eds/ui/steps/StorefrontSetupStep.tsx"
     ],
     "reporters": [
         "clear-text",

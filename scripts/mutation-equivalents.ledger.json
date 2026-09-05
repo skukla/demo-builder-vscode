@@ -7727,6 +7727,84 @@
             "decision": "none \u2014 a failed pin is worth a diagnostic and nothing more",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/ui/steps/StorefrontSetupStep.tsx",
+            "anchors": [
+                "case 'code-sync':"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker empties the case body, so 'code-sync' falls through to the next arm, case 'site-config', which returns the SAME string: 'This may take up to a minute'. The two phases deliberately share one expectation, so the mutated switch produces byte-identical output for every phase the component can be in. Killing it would mean giving code-sync wording that differs from site-config, which is a copy decision about what the SC is told, not a test.",
+            "decision": "none \u2014 two adjacent phases share one expectation on purpose",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/ui/steps/StorefrontSetupStep.tsx",
+            "anchors": [
+                "default:"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Emptying the switch's default arm leaves getHelperText falling off the end and returning undefined, which is exactly what the arm it deleted returns. The arm is written out so the 'no expectation' case is stated rather than implied; no phase, present or future, can observe the difference while the arm returns undefined.",
+            "decision": "none \u2014 an explicit arm that returns the implicit value",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/ui/steps/StorefrontSetupStep.tsx",
+            "anchors": [
+                "const newPartialState = { ...prev.partialState, phase: data.phase };",
+                "error: data.error,",
+                "githubAppData: data,",
+                "githubAppData: undefined,",
+                "}, []); // Empty deps - cleanup only runs on unmount, reads from refs",
+                "selectedStack: initialConfigRef.current.selectedStack,"
+            ],
+            "mutants": 6,
+            "category": "other",
+            "reason": "Six empty hook dependency lists, each rewritten to ['Stryker was here']. React compares dependencies element-wise with Object.is and a string literal equals itself on every render, so each useCallback is created once and each useEffect runs once either way. Four of the six are useCallback bodies (handleProgress, handleError, handleGitHubAppRequired, handleInstallDetected), one is the unmount-cancel effect and one is the start-once effect; '}, []);' appears five times in this module, so the anchors name a unique line inside each body instead.",
+            "decision": "none \u2014 empty is what 'depends on nothing' looks like",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/ui/steps/StorefrontSetupStep.tsx",
+            "anchors": [
+                "message: data.message || 'Storefront published successfully!',"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The message this writes is never rendered. setupState.message reaches the screen in exactly two places: the LoadingDisplay, which renders only while isActivePhase(phase) holds, and the failure screen's fallback. handleComplete moves the phase to 'completed', which is neither active nor an error phase, and every route onward overwrites message first (handleProgress sets it from the push, handleError sets its own) or supplies an error that wins the fallback (handleInstallDetected). So the default, the operand order and the operator are all unobservable through any sequence of pushes.",
+            "decision": "OPEN \u2014 either the completed screen should show the pipeline's own message instead of the fixed 'Storefront Published', or this assignment should go; both are product calls",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/ui/steps/StorefrontSetupStep.tsx",
+            "anchors": [
+                "...new Set([",
+                "const initialConfigRef = useRef({"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "Both sites read '(state.selectedAppBuilderComponents || []).filter(isMeshComponentId)'. Stryker rewrites the empty fallback to ['Stryker was here'], and the very next call filters it out: isMeshComponentId tests membership of MESH_COMPONENT_IDS, which holds three fixed ids, so any invented string is dropped before the value leaves the expression. The dependency list is identical either way, at mount and on retry.",
+            "decision": "none \u2014 the fallback's contents cannot survive the filter that follows it",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/ui/steps/StorefrontSetupStep.tsx",
+            "anchors": [
+                "const isSetupRunningRef = useRef(false);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The initial value is overwritten before anything can read it. isSetupRunningRef.current is assigned isActivePhase(setupState.phase) by an effect that runs after every render, including the first, and its only reader is the unmount cleanup of a later effect. React always flushes effects before unmounting, so the ref holds the computed value by the time the cleanup runs; the seed value is unreachable whichever boolean it is.",
+            "decision": "none \u2014 false is the honest seed for 'not running yet'",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
         }
     ]
 }
