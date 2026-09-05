@@ -31,6 +31,33 @@ function seedServices(services: unknown[]): void {
     });
 }
 
+/**
+ * The setting is ABSENT — the state of every install that has never configured
+ * one, which is most of them. This `get` hands back the default the caller
+ * supplied instead of a canned value, so the default itself is under test
+ * rather than mocked away.
+ */
+function seedUnsetSetting(): void {
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+        get: jest.fn((_key: string, fallback: unknown) => fallback),
+    });
+}
+
+/**
+ * The cap `deriveCredentialServiceUrl` refuses past, mirrored here so the
+ * boundary can be tested from both sides. If the module's own constant moves,
+ * these fail — which is the point: the cap is a stated protection, not an
+ * implementation detail.
+ */
+const MAX_SERVICE_URL_LENGTH = 2048;
+
+/** A well-formed discover-stores URL of exactly `total` characters. */
+function discoverUrlOfLength(total: number): string {
+    const prefix = 'https://example.adobeioruntime.net/api/v1/web/';
+    const suffix = '/discover-stores';
+    return `${prefix}${'a'.repeat(total - prefix.length - suffix.length)}${suffix}`;
+}
+
 beforeEach(() => {
     jest.clearAllMocks();
 });
@@ -57,6 +84,30 @@ describe('deriveCredentialServiceUrl', () => {
         ['empty', ''],
     ])('returns undefined when the URL is %s', (_label, url) => {
         expect(deriveCredentialServiceUrl(url)).toBeUndefined();
+    });
+
+    /**
+     * The length cap, from both sides.
+     *
+     * Everything past this point is parsed by `new URL` and pattern-matched, so
+     * the cap is what stops a pathological setting value from being handed to
+     * the parser at all. Testing only the over-cap side leaves the comparison
+     * free to slide by one; testing only the under-cap side leaves the whole
+     * guard deletable, because a long-but-valid URL derives perfectly well
+     * without it.
+     */
+    it(`refuses a URL longer than ${MAX_SERVICE_URL_LENGTH} characters`, () => {
+        const tooLong = discoverUrlOfLength(MAX_SERVICE_URL_LENGTH + 1);
+
+        expect(tooLong).toHaveLength(MAX_SERVICE_URL_LENGTH + 1);
+        expect(deriveCredentialServiceUrl(tooLong)).toBeUndefined();
+    });
+
+    it(`still derives from a URL of exactly ${MAX_SERVICE_URL_LENGTH} characters`, () => {
+        const atCap = discoverUrlOfLength(MAX_SERVICE_URL_LENGTH);
+
+        expect(atCap).toHaveLength(MAX_SERVICE_URL_LENGTH);
+        expect(deriveCredentialServiceUrl(atCap)).toContain('/get-commerce-credentials');
     });
 
     // CONTROL: the happy path still works, so the row above is not passing
@@ -100,6 +151,38 @@ describe('selectDiscoveryService', () => {
         seedServices([]);
 
         expect(selectDiscoveryService()).toEqual({ ok: false, reason: 'none-configured' });
+    });
+
+    /**
+     * An install that has never configured a service must report exactly that.
+     * The default the module asks VS Code for is what makes it true — a
+     * non-empty default would take this path into URL validation and report a
+     * broken configuration instead of an absent one, which sends the user at
+     * the wrong fix.
+     */
+    it('reports none-configured when the setting has never been set', () => {
+        seedUnsetSetting();
+
+        expect(selectDiscoveryService()).toEqual({ ok: false, reason: 'none-configured' });
+    });
+
+    /**
+     * WHICH setting it reads. A wrong section or key returns the default from
+     * every install that HAS configured a service, and the symptom is
+     * "none-configured" on a machine the user can see the setting on — the one
+     * failure the reason string actively argues against. Cheap to pin, and this
+     * repo has shipped a wrong setting identifier before.
+     */
+    it('reads demoBuilder.accsDiscovery.services and nothing else', () => {
+        seedUnsetSetting();
+
+        selectDiscoveryService();
+
+        expect(vscode.workspace.getConfiguration).toHaveBeenCalledWith(
+            'demoBuilder.accsDiscovery'
+        );
+        const config = (vscode.workspace.getConfiguration as jest.Mock).mock.results[0].value;
+        expect(config.get).toHaveBeenCalledWith('services', []);
     });
 
     it('reports invalid-url for a non-https entry', () => {
