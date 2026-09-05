@@ -8727,6 +8727,68 @@
             "decision": "none \u2014 the guard reads as intent and the catch absorbs the difference",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/hooks/useConfigureFieldValues.ts",
+            "anchors": [
+                "if (!field.componentIds.includes(componentId)) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this true lets the foreign sweep re-read the field's OWN components. It cannot change the answer: the sweep only runs after findFieldValue returned undefined, which means every declaring component held undefined or empty string, and the inner non-empty guard rejects exactly those two. Any declaring component with a value would have short-circuited before the loop.",
+            "decision": "none \u2014 the skip avoids re-reading components already known to be empty",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/hooks/useConfigureFieldValues.ts",
+            "anchors": [
+                "const value = getValueFromConfigs(field);"
+            ],
+            "line": 124,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker forces the following guard's second half ('value !== \"\"') true. getValueFromConfigs can never return an empty string: it returns findFieldValue's result, which skips empty values, or a foreign value guarded by the same non-empty test, or undefined. The half that CAN be false is the undefined check, and that one is killed.",
+            "decision": "none \u2014 the empty check pairs with the undefined check and costs nothing",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/hooks/useConfigureFieldValues.ts",
+            "anchors": [
+                "if (field.default !== undefined && field.default !== '') {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the empty-default half true sends a field whose default IS the empty string into the body, where the ternary returns that same empty string \u2014 the identical value the fall-through returns. The undefined half is killed by the no-default case.",
+            "decision": "none \u2014 the empty check states that a blank default is not a default",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/hooks/useConfigureFieldValues.ts",
+            "anchors": [
+                "return value !== undefined && value !== '';"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the undefined half true cannot change the result: getFieldValue has no path that returns undefined \u2014 every branch ends in a stored value, a default, or an empty string. The empty-string half does the work and is killed.",
+            "decision": "none \u2014 the undefined check matches the declared return type, which is wider than the code produces",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/hooks/useConfigureFieldValues.ts",
+            "anchors": [
+                "[],"
+            ],
+            "line": 181,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The empty useCallback dependency list of stageAppBuilderComponentValue. Stryker replaces it with a one-element array of its own constant string; React compares dependencies element-wise and that string equals itself on every render, so the callback stays memoised with the same identity \u2014 which is the only thing a dependency list decides.",
+            "decision": "none \u2014 the empty list says this callback closes over nothing",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
         }
     ]
 }

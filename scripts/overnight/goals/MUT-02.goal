@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-02. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/eds/services/credentialServiceProbe.ts  (mixed, 56.92%, 17 open gaps)
-  - src/features/eds/services/daAuthHelperToken.ts  (pure, 71.11%, 17 open gaps)
-  - src/features/eds/handlers/daLive/daLiveSiteConfig.ts  (mixed, 57.14%, 16 open gaps)
-  - src/features/eds/services/configService/repairSiteConfigHeadless.ts  (orchestration, 68.57%, 16 open gaps)
-  - src/features/eds/services/configService/siteConfigRegistrar.ts  (orchestration, 69.89%, 16 open gaps)
+  - src/commands/diagnosticsChecks.ts  (orchestration, 25.11%, 136 open gaps)
+  - src/core/shell/commandExecutor.ts  (mixed, 52.15%, 130 open gaps)
+  - src/features/components/services/ComponentRegistryManager.ts  (orchestration, 56.03%, 111 open gaps)
+  - src/features/app-builder/services/appBuilderComponentRunner.ts  (orchestration, 67.9%, 110 open gaps)
+  - src/features/ai/server/contentAuthoringTools.ts  (orchestration, 69.49%, 107 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the

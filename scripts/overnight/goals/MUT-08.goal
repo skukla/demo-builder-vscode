@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-08. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/dashboard/ui/ProjectDashboardScreen.tsx  (pure, 41.18%, 38 open gaps)
-  - src/features/dashboard/handlers/destinationHandlers.ts  (orchestration, 54.92%, 36 open gaps)
-  - src/features/dashboard/handlers/consoleApiHandlers.ts  (orchestration, 75.39%, 30 open gaps)
-  - src/features/dashboard/handlers/appManagementInstallHandlers.ts  (orchestration, 70.99%, 29 open gaps)
-  - src/features/dashboard/ui/components/ManageApisModal.tsx  (mixed, 71.43%, 29 open gaps)
+  - src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx  (mixed, 45.22%, 58 open gaps)
+  - src/core/shell/environmentSetup.ts  (mixed, 65.7%, 56 open gaps)
+  - src/features/ai/server/readDescriptors.ts  (pure, 47.89%, 56 open gaps)
+  - src/core/ui/hooks/useFocusTrap.ts  (pure, 45.97%, 56 open gaps)
+  - src/core/logging/debugLogger.ts  (mixed, 56.22%, 55 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the

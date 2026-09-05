@@ -2,7 +2,7 @@
 /**
  * Turn the mutation baseline into a QUEUE OF GOALS for the overnight runner.
  *
- *   node scripts/mutationQueue.mjs --limit 30        # the 30 highest-consequence modules
+ *   node scripts/mutationQueue.mjs --limit 30        # the next 30 modules, in queue order
  *   node scripts/mutationQueue.mjs --limit 30 --dry  # print the order, write nothing
  *
  * WHY GENERATED. The plan's step 6: work the queue by CONSEQUENCE, not by score — what
@@ -11,17 +11,43 @@
  * baseline, ranks by the rule, and writes `scripts/overnight/queue` plus one goal file
  * per batch, so re-running it after a night's work produces the next night's queue.
  *
- * THE ORDER. Areas first, in the sequence the plan names — updates and rollback, auth,
- * project state, then the operation this repo calls non-negotiable (reset), the
- * lifecycle commands, prerequisites, project creation — then every other area. Within
- * an area, most open gaps first. A module already at zero is never queued.
+ * THE ORDER. Anything left in a HIGH-CONSEQUENCE area first — updates and rollback, auth,
+ * project state, reset, the lifecycle commands, prerequisites, project creation — then
+ * everything else. Within each group, most open gaps first. A module at zero is never
+ * queued.
+ *
+ * It used to rank all fifteen areas, and that rule finished its job on 2026-09-05: every
+ * one of the seven above reached zero. What the full ranking did after that was hold back
+ * throughput and mis-sort the remainder, because a module in NO listed area sorted last —
+ * and that bucket held 103 modules, 2,452 gaps, and `extension.ts` (the entry point, 858
+ * lines, 9% covered) queued behind everything.
+ *
+ * Size ordering is what the measurements argue for. Per-module cost is dominated by a
+ * fixed toll — one focused measurement, a re-measure, the scoped check, a commit — that
+ * a 2-gap module pays in full. Over 61 modules on 2026-09-05: modules with 1-5 gaps closed
+ * 1.0 gaps/minute, those with 100+ closed 13.7, while the median time only moved from 2.5
+ * to 10.6 minutes. Biggest-first therefore front-loads roughly five times the progress per
+ * hour; it does not change the total, since every module is worked either way.
+ *
+ * The high-consequence group is KEPT, not deleted, and it is not a dead rule: it matches
+ * nothing today only because those areas are finished. New gaps landing in auth or project
+ * state jump the queue again, which is the protection the plan asked for.
  *
  * BATCHES OF FIVE. One `claude -p "/goal …"` session per batch: enough that a session
  * has real work, few enough that a context overflow — which CLEARS a goal outright —
  * loses one batch, not the night. The 4,000-character cap on a goal condition is the
  * other bound on batch size.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import {
+    existsSync,
+    mkdirSync,
+    readdirSync,
+    readFileSync,
+    realpathSync,
+    rmSync,
+    writeFileSync,
+} from 'fs';
+import { fileURLToPath } from 'url';
 
 import { profile, tierOf } from './mutationScope.mjs';
 
@@ -30,8 +56,12 @@ const QUEUE = 'scripts/overnight/queue';
 const GOALS = 'scripts/overnight/goals';
 const BATCH = 5;
 
-/** Consequence order — what breaks an SC's existing work, then everything else. */
-const AREA_ORDER = [
+/**
+ * The areas whose breakage costs an SC existing work. A module here is worked before any
+ * other, whatever its size — the plan's consequence rule, kept at the width where it earns
+ * its cost. Everything outside this list is ordered by size alone.
+ */
+const HIGH_CONSEQUENCE = [
     'features/updates',
     'features/authentication',
     'core/state',
@@ -39,14 +69,6 @@ const AREA_ORDER = [
     'features/lifecycle',
     'features/prerequisites',
     'features/project-creation',
-    'features/eds',
-    'features/dashboard',
-    'features/projects-dashboard',
-    'features/data-installer',
-    'features/components',
-    'features/mesh',
-    'features/app-builder',
-    'features/ai',
 ];
 
 const arg = (name, fallback) => {
@@ -56,16 +78,21 @@ const arg = (name, fallback) => {
 const LIMIT = Number(arg('--limit', '30'));
 const DRY = process.argv.includes('--dry');
 
-function areaRank(path) {
+/** 0 for a module whose breakage costs existing work, 1 for everything else. */
+export function consequenceRank(path) {
     const p = path.replace(/^src\//, '');
-    const i = AREA_ORDER.findIndex((a) => p.startsWith(a + '/'));
-    return i === -1 ? AREA_ORDER.length : i;
+    return HIGH_CONSEQUENCE.some((a) => p.startsWith(a + '/')) ? 0 : 1;
 }
 
 function rankedModules() {
     const rows = JSON.parse(readFileSync(BASELINE, 'utf8')).modules;
     return Object.entries(rows)
-        .map(([path, r]) => ({ path, ...r, tier: tierOf(profile(path)), area: areaRank(path) }))
+        .map(([path, r]) => ({
+            path,
+            ...r,
+            tier: tierOf(profile(path)),
+            area: consequenceRank(path),
+        }))
         .filter((r) => r.openGaps > 0)
         .sort((a, b) => a.area - b.area || b.openGaps - a.openGaps);
 }
@@ -165,6 +192,16 @@ function main() {
     }
     for (const g of goals) writeFileSync(`${GOALS}/${g.name}.goal`, g.text);
     const names = goals.map((g) => g.name);
+
+    // Drop goals this run no longer produces. A smaller --limit used to leave the tail of
+    // a previous, larger run on disk, so the directory held a mix of two orderings with
+    // nothing saying which was which (2026-09-05). The queue file lists only `names`, so a
+    // stale goal is unreachable rather than wrong — but it reads as current to anyone
+    // looking, and that is how a half-updated queue gets trusted.
+    for (const f of readdirSync(GOALS)) {
+        const m = /^(MUT-\d+)\.goal$/.exec(f);
+        if (m && !names.includes(m[1])) rmSync(`${GOALS}/${f}`);
+    }
     writeFileSync(
         QUEUE,
         `# GENERATED by scripts/mutationQueue.mjs — re-run it, do not edit. Order is by\n` +
@@ -176,4 +213,12 @@ function main() {
     console.log(`\nwrote ${QUEUE} and ${names.length} goal file(s) under ${GOALS}/`);
 }
 
-main();
+// Only when RUN, never when imported. `consequenceRank` is exported so it can be tested,
+// and a bare `main()` meant importing it regenerated the live queue as a side effect —
+// which is exactly what happened the first time it was imported (2026-09-05), rewriting
+// the running queue at the wrong --limit.
+const RUN_DIRECTLY =
+    !!process.argv[1] &&
+    existsSync(process.argv[1]) &&
+    realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+if (RUN_DIRECTLY) main();

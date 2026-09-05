@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-01. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/eds/services/brandAssetPublisher.ts  (orchestration, 82.25%, 19 open gaps)
-  - src/features/eds/services/github/githubOAuthService.ts  (mixed, 40.54%, 19 open gaps)
-  - src/features/eds/services/pdp/pdp404HandlerPublisher.ts  (orchestration, 67.41%, 19 open gaps)
-  - src/features/eds/services/runtimeSurfaceResolver.ts  (mixed, 41.86%, 19 open gaps)
-  - src/features/eds/handlers/blockLibraryPublish.ts  (orchestration, 55.41%, 17 open gaps)
+  - src/features/projects-dashboard/handlers/dashboardHandlers.ts  (orchestration, 36.38%, 205 open gaps)
+  - src/features/projects-dashboard/services/projectDeletionService.ts  (orchestration, 36.56%, 183 open gaps)
+  - src/features/components/ui/hooks/useComponentConfig.ts  (mixed, 31.54%, 181 open gaps)
+  - src/features/data-installer/handlers/importHandlers.ts  (orchestration, 41.1%, 151 open gaps)
+  - src/extension.ts  (orchestration, 8.77%, 141 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the
