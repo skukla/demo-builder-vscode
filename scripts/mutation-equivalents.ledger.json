@@ -6019,6 +6019,54 @@
             "decision": "none - the probe that follows it writes the same flag before anything renders.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/github/githubRepoOperations.ts",
+            "anchors": [
+                "const filteredOut = repos.length - mappedRepos.length;"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "filteredOut is computed for one purpose only: interpolating a count into the debug line on the next line. It is never returned, never compared against anything the caller can see, and never changes which repos are in the result \u2014 the filtering already happened when mappedRepos was built. Flipping the subtraction to an addition changes the NUMBER printed in a log message and nothing else, so the only test that could fail is one asserting the log wording, which is banned.",
+            "decision": "none \u2014 the count feeds a debug line and no observable output",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/eds/services/github/githubRepoOperations.ts",
+            "anchors": [
+                "if (filteredOut > 0) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The whole body of this guard is a single logger.debug call, so every mutation of the condition (always-true, always-false, >= and <=) and the deletion of the block change only whether one debug line prints. The repos it describes were already filtered out of mappedRepos before this line runs, so the returned list is byte-identical under every variant. Killing any of them requires asserting log wording, which pins phrasing rather than behaviour.",
+            "decision": "none \u2014 a log-only guard around a debug line",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/eds/services/github/githubRepoOperations.ts",
+            "anchors": [
+                "const safeCommand = cloneCommand.replace(/https:\\/\\/[^@]+@/g, 'https://***@');"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "safeCommand exists to redact the token before the clone command is written to the trace log; it is passed to logger.trace on the following line and to nothing else. The command git actually runs is cloneCommand, which is built before this line and is unaffected. Widening or narrowing the redaction regex therefore changes only what a log line shows, and the only assertion that could catch it is one on the logger arguments.",
+            "decision": "none \u2014 redaction feeds logger.trace, not the executed command",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/eds/services/github/githubRepoOperations.ts",
+            "anchors": [
+                "} catch (cleanupError) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch sits in the finally block of resetToTemplate and its entire body is a logger.warn. Emptying it keeps the swallow \u2014 the catch still stops a failed fs.rm from replacing the real result or error \u2014 so the operation behaves identically whether the body runs or not. The test that the reset still resolves when cleanup rejects passes under both, because what it proves is the catch existing, not what the body does.",
+            "decision": "none \u2014 the catch body is a single warn; the swallow itself is already tested",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }
