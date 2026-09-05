@@ -105,6 +105,13 @@ describe('CustomStage', () => {
         expect(onSourceChange).toHaveBeenCalledWith({ owner: 'acme', repo: 'widget' });
     });
 
+    it('a whitespace-only value is treated as empty, not as an invalid URL', () => {
+        const { onSourceChange } = renderStage();
+        fireEvent.change(urlField(), { target: { value: '   ' } });
+        expect(onSourceChange).toHaveBeenLastCalledWith(undefined);
+        expect(screen.queryByTestId('spectrum-textfield-error')).not.toBeInTheDocument();
+    });
+
     it('a valid edit after a duplicate clears the message and emits the new source', () => {
         const { onSourceChange } = renderStage({ selectedIds: ['acme-widget'] });
         fireEvent.change(urlField(), { target: { value: VALID_URL } });
