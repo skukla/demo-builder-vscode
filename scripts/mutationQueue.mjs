@@ -115,9 +115,9 @@ why no test can kill it. The score is not the target: a module can be done at 60
 neglected at 90%. Never ledger a mutant to reach zero faster — the ledger is for what
 CANNOT be killed, not what you did not get to.
 
-FIRST, PER MODULE: sibling suites named for a FUNCTION rather than the file are invisible
-to \`suitesFor\`, so their kills count for nothing. Check imports, rename to
-\`<module>-<topic>.test.ts\`. That alone took importHandlers.ts 151 gaps to 62. See PL-45.
+FIRST, PER MODULE: sibling suites named for a FUNCTION, not the file, are invisible to
+\`suitesFor\` — their kills count for nothing. Check imports, rename to
+\`<module>-<topic>.test.ts\`. Took importHandlers.ts 151 gaps to 62. See PL-45.
 
 THE CYCLE, one module at a time — never two measurements at once (the focus configs are
 single generated files and collide):
@@ -143,18 +143,19 @@ difference is which log line prints, it belongs in the ledger. Add rows with
 \`node scripts/mutationLedger.mjs add ...\`; it refuses an anchor that does not resolve.
 
 RULES. Stay on the current work branch; never checkout or merge develop. One commit per
-module, \`Backlog: PL-22\` trailer, staging ONLY your own paths — never \`-a\`/\`add -A\`,
-which swept a concurrent edit into a module commit on 2026-09-05. No cloud writes. No
+module, \`Backlog: PL-22\` trailer, committed with an EXPLICIT pathspec
+(\`git commit -- <your paths>\`), never bare \`git commit\` or \`-a\`: \`git mv\` self-stages
+and swept work into two unrelated commits on 2026-09-05. No cloud writes. No
 attribution trailers.
 
 CHECK PER MODULE, SCOPED: this module's suites, both typecheckers, eslint on changed
 files, and \`npm run validate:test-file-sizes\` — 750 lines blocks CI, and a suite hit
 779 on 2026-09-05. Exit codes in variables, never a pipe. Commit only on green.
 
-PUSH ONCE, WHEN THE BATCH IS DONE — the pre-push hook then runs the full gate against
-committed state, which a scoped run cannot replace. If it refuses, fix and push again;
-nothing has left the machine. NEVER \`--no-verify\`. Gating every module the heavy way
-cost 95 minutes of one run on 2026-09-05: the same suite twice per module.
+PUSH ONCE, WHEN THE BATCH IS DONE — the pre-push hook then runs the full gate, which a
+scoped run cannot replace. If it refuses, fix and push again; nothing has left the
+machine. NEVER \`--no-verify\`. Gating every module the heavy way cost 95 minutes of one
+run on 2026-09-05.
 
 WORK THE BATCH TO THE END — no turn budget; a turn count fired in four batches on
 2026-09-04 and was right in none. Stop early only on evidence: two consecutive checks
