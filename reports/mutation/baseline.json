@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "helixService: purgeCacheAll, the DELETE status ladder, 429 backoff durations, unpublishPages two-partition success, constructor wiring and getResourceStatus edge cases now tested; log-only ternaries and the equivalent 204 operand recorded",
+    "_note": "errorFormatters: the three message tables exercised pattern by pattern, code-beats-message and unknown-code fall-through, technicalDetails status on the pattern path, and every half-populated GitHub rejection body the ?. chains defend against; UNKNOWN-table guard pairs and four proven-unreachable optional chains recorded",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -7504,24 +7504,23 @@
             "openGaps": 0
         },
         "src/features/eds/services/errorFormatters.ts": {
-            "score": 60.63,
-            "killed": 174,
-            "survived": 106,
-            "noCoverage": 7,
+            "score": 85.02,
+            "killed": 244,
+            "survived": 40,
+            "noCoverage": 3,
             "timeout": 0,
             "survivorCategories": {
-                "other": 25,
-                "optionalChain": 16,
-                "branch": 28,
-                "string": 36,
-                "block": 1
+                "other": 5,
+                "optionalChain": 4,
+                "string": 28,
+                "branch": 3
             },
             "uncoveredCategories": {
-                "string": 7
+                "string": 3
             },
-            "highValueSurvivors": 29,
-            "equivalent": 0,
-            "openGaps": 70
+            "highValueSurvivors": 3,
+            "equivalent": 12,
+            "openGaps": 0
         },
         "src/features/eds/services/ewSettingChangeListener.ts": {
             "score": 77.45,

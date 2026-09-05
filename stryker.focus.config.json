@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/helix/helixService.ts"
+        "src/features/eds/services/errorFormatters.ts"
     ],
     "reporters": [
         "clear-text",
