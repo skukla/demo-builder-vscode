@@ -55,3 +55,7 @@ assertions on specific rule ids at specific lines are the control.
 It edits a file every gate reads, while an unattended loop was committing every few
 minutes. Getting it wrong fails every gate and stalls the run, against a fault that today
 costs one retry and heals itself. Do it at a quiet moment, not under a running loop.
+
+## Shipped so far
+
+- 2026-09-04  docs(backlog): PL-44 — the lint probe races every suite that walks tests/ (`575d9ff68`)

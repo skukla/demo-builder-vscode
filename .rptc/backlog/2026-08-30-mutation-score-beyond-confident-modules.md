@@ -378,3 +378,8 @@ which point the cadence drops to release cuts.
 - 2026-09-04  test(project-creation): bring customBlockLibraryUtils to zero open mutation gaps (`552fd174b`)
 - 2026-09-04  test(project-creation): bring catalogPrewarmPhase to zero open mutation gaps (`56d39f045`)
 - 2026-09-04  test(project-creation): bring aiBundleService to zero open mutation gaps (`2dd5bc22a`)
+- 2026-09-04  test(project-creation): bring aiContextWriter to zero open mutation gaps (`ace73dc33`)
+- 2026-09-04  test(project-creation): bring addIntegrationFlowHandlers to zero open mutation gaps (`2de0ec96c`)
+- 2026-09-04  test(project-creation): bring KindStage to zero open mutation gaps (`938d1c6a9`)
+- 2026-09-04  test(project-creation): bring integrationRows to zero open mutation gaps (`48161837c`)
+- 2026-09-04  test(project-creation): bring ChoiceCard to zero open mutation gaps (`236ba91e9`)
