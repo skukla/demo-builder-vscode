@@ -67,13 +67,16 @@ import type { ToolManager } from '@/features/eds/services/toolManager';
 import type { ACOConfig } from '@/features/eds/services/types';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
+import {
+    commandResult,
+    MOCK_HOME,
+    TOOL_PATH,
+    TOOLS_BASE_PATH,
+    validAcoConfig,
+} from './toolManager.testUtils';
 
 describe('ToolManager', () => {
     let toolManager: ToolManager;
-    const MOCK_HOME = '/Users/testuser';
-    const TOOLS_BASE_PATH = `${MOCK_HOME}/.demo-builder/tools`;
-    const INGESTION_TOOL_PATH = `${TOOLS_BASE_PATH}/commerce-demo-ingestion`;
-    const _DATA_REPO_PATH = `${TOOLS_BASE_PATH}/vertical-data-citisignal`;
 
     beforeEach(async () => {
         jest.clearAllMocks();
@@ -88,12 +91,7 @@ describe('ToolManager', () => {
         mockFsRm.mockResolvedValue(undefined);
 
         // Setup default command executor success response
-        mockCommandExecutor.execute.mockResolvedValue({
-            code: 0,
-            stdout: '',
-            stderr: '',
-            duration: 1000,
-        });
+        mockCommandExecutor.execute.mockResolvedValue(commandResult());
 
         // Dynamically import to get fresh instance after mocks are set up
         const module = await import('@/features/eds/services/toolManager');
@@ -198,12 +196,7 @@ describe('ToolManager', () => {
     // Configuration Tests (5 tests)
     // ==========================================================
     describe('Configuration', () => {
-        const mockAcoConfig: ACOConfig = {
-            apiUrl: 'https://aco.example.com/api',
-            apiKey: 'test-api-key-12345',
-            tenantId: 'test-tenant-123',
-            environmentId: 'test-env-456',
-        };
+        const mockAcoConfig = validAcoConfig();
 
         beforeEach(() => {
             // Tool exists for configuration tests
@@ -326,7 +319,7 @@ describe('ToolManager', () => {
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 expect.stringContaining('npm run import:aco'),
                 expect.objectContaining({
-                    cwd: INGESTION_TOOL_PATH,
+                    cwd: TOOL_PATH,
                 })
             );
             expect(result.success).toBe(true);
@@ -426,7 +419,7 @@ describe('ToolManager', () => {
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 expect.stringContaining('npm run delete:aco'),
                 expect.objectContaining({
-                    cwd: INGESTION_TOOL_PATH,
+                    cwd: TOOL_PATH,
                 })
             );
             expect(result.success).toBe(true);
@@ -448,7 +441,7 @@ describe('ToolManager', () => {
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 expect.stringContaining('npm run import:commerce'),
                 expect.objectContaining({
-                    cwd: INGESTION_TOOL_PATH,
+                    cwd: TOOL_PATH,
                 })
             );
             expect(result.success).toBe(true);
@@ -470,7 +463,7 @@ describe('ToolManager', () => {
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 expect.stringContaining('npm run delete:commerce'),
                 expect.objectContaining({
-                    cwd: INGESTION_TOOL_PATH,
+                    cwd: TOOL_PATH,
                 })
             );
             expect(result.success).toBe(true);

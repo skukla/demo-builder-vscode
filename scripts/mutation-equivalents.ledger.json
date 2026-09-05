@@ -7201,6 +7201,19 @@
             "decision": "Equivalent: falling off the end returns the same undefined the handler returns explicitly.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/toolManager.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 320,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch in the private directoryExists() makes it return undefined instead of false. All three call sites read the result in boolean position only \u2014 'forceReinstall && toolExists', '!toolExists || forceReinstall', '!dataRepoExists' \u2014 and the method is private with no other reference, so undefined and false are the same value to every consumer. No test can observe the difference.",
+            "decision": "none \u2014 equivalent; killing it would require exporting the probe or giving a caller a non-boolean use, both of which are changes to src made only to move a number.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }

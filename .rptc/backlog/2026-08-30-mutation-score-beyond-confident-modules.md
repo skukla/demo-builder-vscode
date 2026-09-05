@@ -411,3 +411,4 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): bring configServiceProbe to zero open mutation gaps (`67bff2814`)
 - 2026-09-05  test(eds): bring edsDaLiveAuthHandlers to zero open mutation gaps (`94652dc0f`)
 - 2026-09-05  test(eds): bring cleanupService to zero open mutation gaps (`e490b0f88`)
+- 2026-09-05  test(eds): bring toolManager to zero open mutation gaps (`4cb8334b6`)
