@@ -7842,6 +7842,68 @@
             "decision": "none \u2014 two log-only blocks",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts",
+            "anchors": [
+                "if (selectedBlockLibraries && selectedBlockLibraries.length > 0) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Neither half of this guard can change the outcome. The only caller passes 'options?.selectedBlockLibraries ?? []', so the parameter is never undefined and the truthiness half is always true \u2014 an empty array is truthy. The length half then guards a for-of over that array, and iterating an empty array does nothing, so forcing the condition true, forcing the length test true, or widening '> 0' to '>= 0' all leave allLibraries untouched. The '&&' is kept because the parameter's type is 'string[] | undefined' and the compiler requires it before the for-of.",
+            "decision": "none \u2014 a type-required guard over a value the single call site already defaults",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts",
+            "anchors": [
+                "if (customBlockLibraries && customBlockLibraries.length > 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Only the length half survives here, and it cannot matter: when customBlockLibraries is undefined the '&&' short-circuits regardless (those mutants ARE killed), and when it is an empty array the for-of it guards is a no-op. Forcing the length test true and widening '> 0' to '>= 0' therefore both produce the same allLibraries list, the same install call and the same progress payloads.",
+            "decision": "none \u2014 iterating an empty array is what the guard was avoiding",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts",
+            "anchors": [
+                "const blockMsg ="
+            ],
+            "mutants": 7,
+            "category": "branch",
+            "reason": "Every one of these mutants chooses a different sentence for one logger.info line. blockMsg is declared here, assigned by two nested ternaries \u2014 installed-count versus already-present, and 'library' versus 'libraries' \u2014 and read exactly once, on the next-but-three line, inside logger.info. Nothing else reads it, no progress payload carries it and the phase's return value does not depend on it, so the only test that could separate these is one asserting log wording.",
+            "decision": "none \u2014 a log sentence built by ternaries",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 226,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This else block holds one statement, a logger.warn saying a selected block library has no source configured. The library is skipped either way \u2014 the skip is the absent push, not anything this block does \u2014 so emptying it removes a log line and changes neither the list handed to installBlockCollections nor any progress payload.",
+            "decision": "none \u2014 a log-only else",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 354,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The same shape at the end of applyStandaloneInspectorTagging: the else holds one logger.warn naming why standalone inspector tagging was skipped. The function returns void, sends no progress push on this arm and the caller ignores it, so emptying the block is invisible to everything except the log.",
+            "decision": "none \u2014 a log-only else",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
         }
     ]
 }
