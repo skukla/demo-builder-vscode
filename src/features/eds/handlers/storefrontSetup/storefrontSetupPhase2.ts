@@ -28,7 +28,7 @@ import { installQuickEdit } from '../../services/quickEditPublisher';
 import { type GitHubTreeInput } from '../../services/types';
 import { addPdpCaveat, describeSmart404Skip } from '../edsHelpers';
 import type { StorefrontSetupStartPayload } from './storefrontSetupHandlers';
-import type { RepoInfo, SetupServices, StorefrontSetupResult } from './storefrontSetupTypes';
+import type { RepoInfo, SetupServices } from './storefrontSetupTypes';
 import {
     getBlockLibraryName,
     getBlockLibrarySource,
@@ -71,7 +71,7 @@ export async function executePhaseHelixConfig(
     repoInfo: RepoInfo,
     signal: AbortSignal,
     options?: BlockLibraryOptions,
-): Promise<{ blockCollectionIds?: string[]; earlyReturn?: StorefrontSetupResult }> {
+): Promise<{ blockCollectionIds?: string[] }> {
     const logger = context.logger;
     const { githubFileOps } = services;
     const effectiveBlockLibraries = options?.selectedBlockLibraries ?? [];

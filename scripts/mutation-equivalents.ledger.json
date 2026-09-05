@@ -6231,6 +6231,18 @@
             "decision": "none - the returned verdict selects a log line",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhases.ts",
+            "anchors": [
+                "if (phase3Result) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The surviving variant forces this guard true, so the wrapper always returns { blockCollectionIds, earlyReturn: phase3Result }. When phase 3 has no verdict that field is null, and the orchestrator's own 'if (earlyReturn) return earlyReturn' treats null exactly as it treats an absent field \u2014 the run continues with the same block collection ids either way. The two forms differ only in whether an explicitly-null property is present on an object nothing else reads. Forcing it FALSE is a real change and IS killed, by the test that proves a code-sync verdict stops the run.",
+            "decision": "none - the true-variant produces an object the caller cannot distinguish",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }

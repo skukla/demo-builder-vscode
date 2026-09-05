@@ -181,9 +181,6 @@ async function runConfigCodeSyncPhases(
                 signal,
                 options,
             );
-            if (phase2Result.earlyReturn) {
-                return { blockCollectionIds: undefined, earlyReturn: phase2Result.earlyReturn };
-            }
             const phase3Result = await executePhaseCodeSync(context, edsConfig, services, repoInfo);
             if (phase3Result) {
                 return {
