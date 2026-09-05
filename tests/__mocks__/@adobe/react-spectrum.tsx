@@ -860,14 +860,27 @@ export const Menu: React.FC<any> = ({ children, items, onAction, ...props }) => 
 
     let content: React.ReactNode;
     if (isRenderFunction && items) {
-        // Render function pattern - call the render function for each item
+        // Render function pattern: `items` carries the data and `children` is
+        // `(item) => <Item>…</Item>`.
+        //
+        // CALL IT, as Spectrum does. This branch used to build its own <li> from
+        // `item.label` and never invoke the render function at all — so whatever
+        // a component decided to put inside an Item (icons chosen per row, a
+        // conditional badge) was never executed by any test. Mutating those
+        // expressions changed nothing observable, which is how the projects
+        // dashboard's three per-icon conditions came to be measured as
+        // unreachable rather than untested (2026-09-05).
         content = items.map((item: any) => {
             const key = item.key || item.id;
-            // Extract label from item for accessible name
-            const itemText = item.label || item.name || item.textValue || key;
+            const rendered: any = (children as (item: any) => React.ReactNode)(item);
+            // The Item's own children, so icons and text both land in the DOM.
+            // Falls back to the item's label for a render function that returns
+            // something other than an element.
+            const itemBody =
+                rendered?.props?.children ?? item.label ?? item.name ?? item.textValue ?? key;
             return (
                 <li key={key} role="menuitem" onClick={() => onAction?.(key)} tabIndex={0}>
-                    {itemText}
+                    {itemBody}
                 </li>
             );
         });

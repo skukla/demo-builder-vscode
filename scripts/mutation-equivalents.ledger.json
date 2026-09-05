@@ -10850,6 +10850,42 @@
             "decision": "equivalent",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/projects-dashboard/ui/ProjectsDashboard.tsx",
+            "anchors": [
+                "const isFiltering = searchQuery.trim().length > 0;"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The three WIDENING mutants here (whole condition true, length >= 0, and dropping the trim) all make isFiltering true for a query that is empty or whitespace. isFiltering is read in exactly one place, guarding the no-results line together with filteredProjects.length === 0 - and filteredProjects comes from matchesSearchFields, which trims the same query and returns true for every item when the result is empty. So isFiltering false implies every project matched, and this branch only runs with a non-empty project list. The state where the widened condition would show the line cannot be reached. The two narrowing mutants on the same line are killed by the no-results tests.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/projects-dashboard/ui/ProjectsDashboard.tsx",
+            "anchors": [
+                "} else if (key === 'import' && onImportFromFile) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The three widening mutants (whole condition true, the key test true, and && to ||) all make this the branch taken for a key that reached it. It is the LAST arm of the chain, so there is no later branch to steal a key from, and the only keys the menu can emit are new, copy and import - the Import entry is built by buildMenuItems only when onImportFromFile was supplied, so the callback cannot be missing when the key arrives. Every widening therefore calls onImportFromFile exactly when the original does. The false, block and key !== mutants on the same line are killed by the per-entry dispatch tests.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/projects-dashboard/ui/ProjectsDashboard.tsx",
+            "anchors": [
+                "alwaysShowCount={true}"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "SearchHeader computes showCount as hasLoadedOnce && (alwaysShowCount || totalCount > 0). totalCount here is projects.length, and this JSX is below the !hasProjects guard, so totalCount is always greater than zero and the second operand already carries the decision. The prop cannot change what renders on this surface.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }
