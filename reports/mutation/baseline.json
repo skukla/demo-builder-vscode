@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "configure.ts: full save/notification/env/panel coverage; 8 log-only + equivalent mutants ledgered",
+    "_note": "showDashboard.ts: initial-data payload, execute wiring and push channels covered; 4 equivalent mutants ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -4655,28 +4655,22 @@
             "openGaps": 25
         },
         "src/features/dashboard/commands/showDashboard.ts": {
-            "score": 31.1,
-            "killed": 65,
-            "survived": 40,
-            "noCoverage": 104,
+            "score": 95.69,
+            "killed": 200,
+            "survived": 9,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 18,
-                "string": 4,
-                "other": 10,
-                "optionalChain": 7,
-                "block": 1
-            },
-            "uncoveredCategories": {
-                "block": 34,
-                "string": 20,
-                "branch": 40,
-                "other": 7,
+                "string": 2,
+                "other": 1,
+                "branch": 2,
+                "block": 1,
                 "logPresentation": 3
             },
-            "highValueSurvivors": 19,
-            "equivalent": 0,
-            "openGaps": 117
+            "uncoveredCategories": {},
+            "highValueSurvivors": 3,
+            "equivalent": 4,
+            "openGaps": 0
         },
         "src/features/dashboard/handlers/aiHandlers.ts": {
             "score": 70.77,

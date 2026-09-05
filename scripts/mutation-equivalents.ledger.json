@@ -8690,6 +8690,43 @@
             "decision": "none \u2014 the failed restart is reported to the log and nowhere else",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/commands/showDashboard.ts",
+            "anchors": [
+                "const hasMeshDependency = (project?.componentSelections?.dependencies || []).some("
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty-array fallback with its own one-element array. The array is immediately fed to .some(dep => dep.includes('mesh')), and Stryker's filler string does not contain 'mesh', so the predicate answers false either way. Only a fallback element that happened to contain 'mesh' would be observable, and nothing can produce one.",
+            "decision": "none \u2014 the fallback exists so .some() has something to iterate",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/commands/showDashboard.ts",
+            "anchors": [
+                "if (!project?.selectedPackage && !project?.selectedStack) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Forcing this early return away (condition false, or the body emptied) sends a project that selected neither into the try block, where both inner guards are false and the same empty object is returned; with no project at all the first property read throws into the catch that already returns the same empty object. Every route ends at {} with neither loader called, so no caller can tell the difference. The always-true variant IS killed.",
+            "decision": "none \u2014 the early return skips a try/catch that would reach the same answer",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/commands/showDashboard.ts",
+            "anchors": [
+                "const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');"
+            ],
+            "line": 299,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Same shape as the Configure command's copy: forcing the following 'if (panel)' true calls dispose() on undefined, and the TypeError lands in the try/catch already there for the already-disposed case. Both paths end as a no-op. The false variant is killed by the test that asserts an open panel is disposed.",
+            "decision": "none \u2014 the guard reads as intent and the catch absorbs the difference",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
         }
     ]
 }
