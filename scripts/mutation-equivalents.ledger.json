@@ -6940,6 +6940,80 @@
             "decision": "Equivalent: log-only branches, plus a defensive ?. on a field the validator always populates.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceProbe.ts",
+            "anchors": [
+                "const daLiveOk = result.daLive?.httpStatus === 200;",
+                "if (config?.error) {",
+                "const status = config?.httpStatus;"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "interpret() is module-private and called from exactly one place, the last statement of probeConfigService, by which point result.configService and result.daLive have each been assigned unconditionally - both legs sit in a try/catch where BOTH arms write the field. So neither optional chain can short-circuit and dropping the ?. cannot throw; the mutants are indistinguishable from the source at every call the module can make. Removing the ?. from src is not an option either: the fields are optional on the exported ConfigServiceProbeResult interface, which is what callers outside this module see.",
+            "decision": "Equivalent: the sole caller assigns both legs before interpret reads them.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceProbe.ts",
+            "anchors": [
+                "const emails = result.orgAdmins?.emails ?? [];"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "Two mutants on one line, neither observable. The ?. cannot short-circuit: the roster leg's try/catch writes result.orgAdmins in both arms before interpret runs. The [] fallback DOES fire - the non-ok branch stores no emails key - but emails is then read only at the next line, behind result.orgAdmins?.status === 'ok', and inside the block that guard admits, so a fabricated element is never reached and replacing [] with a non-empty array leaves every verdict byte-identical.",
+            "decision": "Equivalent: the chain never short-circuits and the fallback value is read only behind a guard that excludes it.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceProbe.ts",
+            "anchors": [
+                "? { status: 'ok', emails: roster.admins ?? [] }"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "readOrgAdmins returns admins as a real array on every ok result - it is built by a .filter().map() on the statement before the return, and the only other returns carry a non-ok status, which this ternary arm does not serve. So roster.admins is never nullish where this reads it, the ?? fallback never evaluates, and replacing [] with a non-empty array cannot change what is stored. The fallback stays because the field is optional on the exported OrgAdminsResult interface.",
+            "decision": "Equivalent: the fallback never evaluates on the ok branch.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceProbe.ts",
+            "anchors": [
+                "if (result.orgAdmins?.status === 'ok' && emails.length > 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The ?. cannot short-circuit - the roster leg assigns result.orgAdmins in both arms of its try/catch. And the mutant that forces only the LEFT operand true cannot change the answer either, because emails is non-empty ONLY when the status is ok: the roster leg writes { status: 'ok', emails: [...] } on success and { status } with no emails key on every other outcome, so a non-ok status always yields emails = [] via the fallback on the line above, and emails.length > 0 already implies the left operand. The whole-condition ->true and ->false pair, both equality mutants and the || swap are all killed by the single-admin, three-admin, five-admin and empty-roster tests.",
+            "decision": "Equivalent: the chain never short-circuits, and the right operand cannot be true unless the left already is.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceProbe.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch cannot run. Its try contains one await, readOrgAdmins, and that function cannot throw: every network call it makes goes through the module-private call() helper, whose own try/catch converts a rejected fetch and an unparseable body alike into a { status: 0, error } result, and everything readOrgAdmins does afterwards is classify(), an optional-chained ?? [], a .filter().map() over that array and a logger.debug. Emptying the catch body therefore removes a handler nothing reaches. The probe keeps it because best-effort is the leg's stated contract - a future readOrgAdmins must not be able to cost the report its diagnosis.",
+            "decision": "Equivalent: readOrgAdmins converts every failure into a return value, so nothing reaches this handler.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceProbe.ts",
+            "anchors": [
+                "result.orgAdmins = { status: 'failed' };"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The only statement inside the unreachable catch described in the entry above: readOrgAdmins converts every network and parse failure into a returned status rather than a throw, so nothing enters this handler and emptying the object literal it assigns changes nothing observable. Recorded separately from the block mutant because the two are different mutators on different lines, and a future change that makes the catch reachable must re-triage both.",
+            "decision": "Equivalent: the assignment sits in a handler nothing reaches.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }

@@ -16,51 +16,20 @@
  * could clobber a live storefront, and there is no safe write test: the only
  * non-mutating write probe would be a PUT that 409s, which stops being safe the
  * moment Adobe changes it to an upsert.
+ *
+ * The mock preamble, fetch routers and fixtures live in
+ * `configServiceProbe.testUtils.ts`, shared with `configServiceProbe-legs.test.ts`.
  */
 
-// BYOM is a user setting, so the action leg is off unless a test turns it on.
-// Only `resolveByomOverlayUrl` is imported from this module by the probe.
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    resolveByomOverlayUrl: jest.fn(() => undefined),
-}));
-
-import { probeConfigService } from '@/features/eds/services/configService/configServiceProbe';
-import { resolveByomOverlayUrl } from '@/features/eds/handlers/edsHelpers';
-import { createMockLogger } from '../../../../helpers/loggerFake';
-
-const mockResolveOverlayUrl = resolveByomOverlayUrl as jest.MockedFunction<
-    typeof resolveByomOverlayUrl
->;
-
-const logger = createMockLogger();
-const TOKEN = 'ims-token-value-never-logged';
-
-function tokenProvider() {
-    return { getAccessToken: jest.fn().mockResolvedValue(TOKEN) };
-}
-
-/**
- * The no-credential case needs its own factory. Passing `undefined` to a
- * defaulted parameter triggers the default, so `tokenProvider(undefined)`
- * quietly handed back a valid token and the test asserted nothing.
- */
-function tokenProviderWithNoCredential() {
-    return { getAccessToken: jest.fn().mockResolvedValue(undefined) };
-}
-
-/** Build a fetch stub keyed on which host the probe is calling. */
-function fetchStub(byHost: Record<string, { status: number; headers?: Record<string, string> }>) {
-    return jest.fn().mockImplementation((url: string) => {
-        const key = Object.keys(byHost).find((k) => url.includes(k));
-        if (!key) return Promise.reject(new Error(`unstubbed host: ${url}`));
-        const { status, headers = {} } = byHost[key];
-        return Promise.resolve({
-            ok: status >= 200 && status < 300,
-            status,
-            headers: { get: (n: string) => headers[n.toLowerCase()] ?? null },
-        });
-    });
-}
+import {
+    fetchStub,
+    logger,
+    mockResolveOverlayUrl,
+    probeConfigService,
+    TOKEN,
+    tokenProvider,
+    tokenProviderWithNoCredential,
+} from './configServiceProbe.testUtils';
 
 describe('probeConfigService', () => {
     const org = 'skukla';
