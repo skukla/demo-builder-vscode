@@ -85,20 +85,6 @@ export class GitHubAppService {
     }
 
     /**
-     * Result of checking GitHub App installation status
-     *
-     * code.status values:
-     * - 200: App installed and code sync working
-     * - 400: App installed, sync initializing or config issues (still counts as installed)
-     * - 404: App not installed
-     */
-    public static readonly STATUS_MEANINGS: Record<number, string> = {
-        200: 'App installed and working',
-        400: 'App installed, sync initializing',
-        404: 'App not installed',
-    };
-
-    /**
      * Check if the AEM Code Sync GitHub app is installed on a repository.
      *
      * Uses the Helix admin status endpoint to check if code sync is working.
@@ -291,15 +277,12 @@ export class GitHubAppService {
             this.logger.info(
                 `[GitHub App] AEM Code Sync app installed and working for ${owner}/${repo}`,
             );
-        } else if (codeStatus === 400) {
-            // 400 is expected for repos where sync is initializing - log at trace level to reduce noise
+        } else {
+            // Only 400 reaches here: the isDefinitiveStatus guard above returned for
+            // every status outside {200, 400, 404}. Sync is initializing — trace level
+            // to keep it out of the normal log.
             this.logger.trace(
                 `[GitHub App] AEM Code Sync app sync initializing for ${owner}/${repo} (code.status: 400)`,
-            );
-        } else {
-            // Truly unexpected status codes - keep at info level
-            this.logger.info(
-                `[GitHub App] AEM Code Sync app status unclear for ${owner}/${repo} (code.status: ${codeStatus})${lenient ? ' - accepting in lenient mode' : ''}`,
             );
         }
 

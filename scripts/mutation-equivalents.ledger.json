@@ -8340,6 +8340,68 @@
             "decision": "none \u2014 naming the reused namespace is how an SC signed into the wrong org finds out where it came from",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/github/githubAppService.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch makes tryAdminBearer return undefined instead of {}. Its single caller spreads the result into the fetch headers object, and {...undefined} produces exactly the same object as {...{}} \u2014 no property, no throw. The request that goes out is byte-identical, so no assertion on the collaborator call can separate the two. The explicit return is still correct: it satisfies the declared Promise<Record<string, string>> return type, which the mutated form does not.",
+            "decision": "none \u2014 the mutated form is observably identical at the only call site",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/github/githubAppService.ts",
+            "anchors": [
+                "const token = await this.daLiveTokenProvider?.getAccessToken();"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the ?. makes the call throw when no DA.live provider was injected, and that throw lands in the very next line s catch, which returns {} \u2014 the same value the ?. path returns when the provider is absent. Headers on the outgoing fetch are identical either way, so the two forms cannot be told apart from isAppInstalled, the only public entry point. The ?. is also required by the compiler: daLiveTokenProvider is an optional constructor parameter.",
+            "decision": "none \u2014 the ?. is required by the type and the catch already covers the mutated path",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/github/githubAppService.ts",
+            "anchors": [
+                "const codeStatus = data?.code?.status;"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both ?. removals turn a body without a code object into a TypeError. That error is caught by isAppInstalled, which returns { isInstalled: false, transient: true } \u2014 the identical object the unmutated guard two lines later returns for the same body, because a missing code.status is already classified as transient. checkHelixStatus is private, so there is no seam that sees the difference; the only divergence is which log line prints on the way out.",
+            "decision": "none \u2014 the missing-code.status guard and the thrown-error path return the same verdict by design",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/github/githubAppService.ts",
+            "anchors": [
+                "if (codeStatus === 404) {",
+                "} else if (codeStatus === 200) {"
+            ],
+            "mutants": 8,
+            "category": "branch",
+            "reason": "This if/else chain runs after the return value is already decided: isInstalled and codeStatus were computed above and the same object is returned on every arm. The chain chooses only which logger call fires and at which level, so inverting, forcing or emptying either condition changes nothing a caller can observe. Killing these would mean asserting logger wording, which the ratchet exists to refuse to reward.",
+            "decision": "none \u2014 the chain selects a log line only; the verdict is computed before it",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/github/githubAppService.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 280,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The final arm of the same log-only chain: emptying it removes one logger.trace call and nothing else, because { isInstalled, codeStatus } is returned unchanged below regardless of which arm ran. The arm is a bare else rather than a 400 test because the isDefinitiveStatus guard above already returned for every status outside {200, 400, 404}.",
+            "decision": "none \u2014 log-line selection, and the arm is the only remaining status by construction",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
