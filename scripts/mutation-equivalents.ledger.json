@@ -7423,6 +7423,147 @@
             "decision": "none - unreachable; the guard is a second lock on a door the disabled attribute already holds shut.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 181,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body assigns undefined to a variable declared one line above without an initialiser, so it is already undefined when response.text() throws. Emptying the block leaves the same value on the same path, and the function returns the same object.",
+            "decision": "none - equivalent; the catch restores a value that was never changed.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "const users = (result.body as RawOrgConfig)?.users ?? [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Seeding the fallback array with an element cannot change the result. The very next statement filters on user.roles?.includes('admin') && user.email, and a value that is not a roster entry has neither - so it is dropped and admins comes out empty, exactly as it does from the real empty array. The fallback is only reached when the body carries no users key at all, which the suite pins.",
+            "decision": "none - equivalent; anything the mutant seeds is removed by the filter that follows.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "if (emails.length === 0) {",
+                "return { status: 'invalid', error: 'refusing to write an empty admin list' };"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "grantSiteAdmin is module-private and has exactly two callers. ensureSiteAdmin passes [...admins, email], which is never empty. revokeSiteAdmin passes remaining, and refuses earlier when remaining.length is 0 - the last-admin guard, which the suite pins by its own message and by asserting no POST is issued. No input reaches this function with an empty list, so the guard cannot be driven either way.",
+            "decision": "none - unreachable; the guard documents a footgun that the two wrappers already close.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "if (status === 'ok') {"
+            ],
+            "line": 321,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Both branches of this condition are a single logger call - info on success, warn on failure - and the return below is the same object either way. Whether the grant succeeded is already asserted through that returned status; which log line printed is not behaviour.",
+            "decision": "none - equivalent; the condition selects a log line and nothing else.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 323,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else branch is a single logger.warn. Emptying it leaves the same return, and the failing-grant cases are pinned by the status the caller receives.",
+            "decision": "none - equivalent; only the presence of one warn line differs.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "if (current.status !== 'ok' || !current.roles) {"
+            ],
+            "line": 400,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The two operands are the same predicate on every input this function can see. current comes straight from readSiteAccess, which sets roles only on an ok status and never on any other - including the drifted-shape case, which it deliberately reports as failed rather than as an ok with no roles. So status not-ok implies roles undefined, and status ok implies roles present: forcing the left operand false, or joining them with &&, produces the same decision on every path.",
+            "decision": "none - equivalent; readSiteAccess's own contract makes the two halves inseparable.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "if (current.status !== 'ok' || !current.roles) {"
+            ],
+            "line": 432,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Identical to the same guard in ensureSiteAdmin: current comes from readSiteAccess, which sets roles exactly when the status is ok, so the two operands agree on every input and neither mutation changes the decision.",
+            "decision": "none - equivalent; see the ensureSiteAdmin entry for the same guard.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "const admins = current.roles[ADMIN_ROLE] ?? [];"
+            ],
+            "line": 436,
+            "mutants": 1,
+            "category": "other",
+            "reason": "This fallback is reached when the site has a role map with no admin key. Whatever the mutant seeds it with, the next line asks includesEmail(admins, email), which is false for any value that is not the email being revoked - so the function returns { status: 'ok', changed: false }, exactly what the real empty array produces.",
+            "decision": "none - equivalent; the seeded value cannot match the email and the no-op return is the same.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "if (status === 'ok') {"
+            ],
+            "line": 476,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "As in grantSiteAdmin, both branches are a single logger call and the return below is the same object either way. restoreSiteRoles's outcome is asserted through that returned status, for both the success and the refusal.",
+            "decision": "none - equivalent; the condition selects a log line and nothing else.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "const count = Object.values(roles).reduce((n, list) => n + list.length, 0);"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "count is interpolated into the logger.info on the next line and read nowhere else. Neither emptying the reducer nor flipping its arithmetic changes the role map that was written, the status returned, or anything a caller can observe.",
+            "decision": "none - equivalent; the value exists only to make one log line specific.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/configServiceAccess.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 479,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else branch is a single logger.warn, and the refusal it describes is already asserted through the status restoreSiteRoles returns.",
+            "decision": "none - equivalent; only the presence of one warn line differs.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }

@@ -19,43 +19,17 @@ import {
     readOrgAdmins,
     readSiteAccess,
 } from '@/features/eds/services/configService/configServiceAccess';
-import type { Logger } from '@/types/logger';
-import { createMockLogger } from '../../../../helpers/loggerFake';
+import {
+    logger,
+    mockFailureBody,
+    mockFetchOnce,
+    ORG_CONFIG,
+    resetAccessMocks,
+    SITE_ACCESS,
+    tokenProvider,
+} from './configServiceAccess.testUtils';
 
-const logger: Logger = createMockLogger();
-
-const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('ims-token') };
-
-/**
- * Real response SHAPE from `GET config/{org}.json` (2026-08-14); the identifiers
- * are synthetic. The shape is what the parser must handle — real addresses and
- * IMS ids would only add PII to a public repo.
- */
-const ORG_CONFIG = {
-    users: [{ id: 'Xx0FakeImsUserIdForTests', email: 'admin@example.test', roles: ['admin'] }],
-    lastModified: '2026-08-14T12:31:56.272Z',
-    created: '2026-08-14T12:24:13.748Z',
-    version: 6,
-};
-
-/** Real response shape from `GET config/{org}/sites/{site}/access/admin.json`. */
-const SITE_ACCESS = { role: { admin: ['admin@example.test'] }, requireAuth: 'auto' };
-
-function mockFetchOnce(status: number, body: unknown = {}): void {
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: status >= 200 && status < 300,
-        status,
-        json: async () => body,
-        text: async () => JSON.stringify(body),
-        headers: { get: () => null },
-    });
-}
-
-beforeEach(() => {
-    jest.clearAllMocks();
-    tokenProvider.getAccessToken.mockResolvedValue('ims-token');
-    global.fetch = jest.fn();
-});
+beforeEach(resetAccessMocks);
 
 describe('readOrgAdmins', () => {
     it('returns the org roster emails that hold the admin role', async () => {
@@ -584,17 +558,6 @@ describe('a site with no access doc yet (404)', () => {
  * of this code is one refactor away, and the failure is silent.
  */
 describe('response bodies are masked before they become an error', () => {
-    /** A non-OK body whose `text()` is arbitrary free text, as a real service returns. */
-    function mockFailureBody(text: string): void {
-        (global.fetch as jest.Mock).mockResolvedValueOnce({
-            ok: false,
-            status: 403,
-            json: async () => ({}),
-            text: async () => text,
-            headers: { get: () => null },
-        });
-    }
-
     it('masks EVERY address in a comma-separated list', async () => {
         // The greedy pattern matched 'a@x.test,b' as ONE address, masked that,
         // and left the second address entirely intact.
