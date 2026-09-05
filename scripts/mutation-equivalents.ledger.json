@@ -10754,6 +10754,18 @@
             "decision": "log-only - no behavioural difference",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/readDescriptors.ts",
+            "anchors": [
+                "if (search) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true makes an absent search term run the filter with search=''. The predicate is [code,name,group].some(v => typeof v === 'string' && v.toLowerCase().includes('')), and ''.includes matches every string, so every row that has any string field survives the filter - which is every Console API row, each of which carries a code. The search/matched/totalUnfiltered keys are gated on the same truthiness one line later and stay absent, and total is read nowhere else. Nothing observable differs.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }
