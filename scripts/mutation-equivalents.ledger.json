@@ -11925,6 +11925,19 @@
             "decision": "none \u2014 returning null states the contract the signature declares",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/importResult.ts",
+            "anchors": [
+                "default:"
+            ],
+            "line": 210,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Unreachable through the only route into describeOutcome. Its switch names six outcomes; the record type declares eight. The two it omits cannot arrive: terminalResult returns before this call for 'success', and resolveResult only reaches terminalResult when record.outcome !== 'watching'. So no ImportJobRecord a caller can build lands in the default arm, and no test can distinguish it from the arms above.",
+            "decision": "none \u2014 the default keeps describeOutcome total should the outcome union gain a member",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
         }
     ]
 }

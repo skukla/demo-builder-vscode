@@ -50,4 +50,35 @@ describe('describePerType', () => {
     it('returns nothing for a job that has reported no type yet', () => {
         expect(describePerType(record({}))).toEqual([]);
     });
+
+    /**
+     * The finished view narrows to what needs attention: on a partial run the
+     * successes are the noise, and the short list is what keeps the result
+     * inside StatusDisplay's fixed box.
+     */
+    describe('troubledOnly', () => {
+        const mixed = record({
+            categories: 'success' as DataTypeStatus,
+            products: 'failed' as DataTypeStatus,
+            customer_groups: 'skipped' as DataTypeStatus,
+        });
+
+        it('drops the types that succeeded', () => {
+            expect(describePerType(mixed, { troubledOnly: true })).toEqual([
+                'Products: failed',
+                'Customer groups: skipped',
+            ]);
+        });
+
+        it('keeps every type when it is not asked for', () => {
+            expect(describePerType(mixed)).toHaveLength(3);
+            expect(describePerType(mixed, { troubledOnly: false })).toHaveLength(3);
+        });
+
+        it('returns nothing when every type succeeded', () => {
+            const allGood = record({ categories: 'success' as DataTypeStatus });
+
+            expect(describePerType(allGood, { troubledOnly: true })).toEqual([]);
+        });
+    });
 });

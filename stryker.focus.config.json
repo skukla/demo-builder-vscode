@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/components/services/componentInstallation.ts"
+        "src/features/data-installer/ui/components/importResult.ts"
     ],
     "reporters": [
         "clear-text",
