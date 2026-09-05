@@ -11162,6 +11162,121 @@
             "decision": "Recorded as equivalent. The catch that makes the method safe against an already-disposed panel is what also makes this guard unobservable.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/commands/diagnosticsChecks.ts",
+            "anchors": [
+                "const adobe: AdobeCLIInfo = {"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The literal's only field, 'installed: false', is overwritten two statements later by 'adobe.installed = aioTool.installed', which is always a boolean because checkTools builds CommandCheckResult with a required installed flag. Emptying the literal to {} therefore produces the same object by the time checkAdobeCLI returns, on every input including the not-installed one.",
+            "decision": "Recorded as equivalent. The initialiser is a type-satisfying placeholder, not a decision.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/commands/diagnosticsChecks.ts",
+            "anchors": [
+                "installed: false,"
+            ],
+            "line": 84,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Flipping this initialiser to true is unobservable for the same reason the literal itself is: 'adobe.installed = aioTool.installed' runs unconditionally two statements later and aioTool.installed is always a boolean. No caller can see the value between the two assignments, since checkAdobeCLI builds the object locally and returns it only at the end.",
+            "decision": "Recorded as equivalent. The value that ships is the handed-in one, always.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/commands/diagnosticsChecks.ts",
+            "anchors": [
+                "if (authCheck.installed && authCheck.output && authCheck.output.length > 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Two of the five mutants here cannot decide anything. checkCommand returns output as a trimmed STRING on every clean exit and leaves it undefined only when installed is false, so the third operand is reached only with a non-empty string: 'length > 0' and 'length >= 0' agree on every reachable input, and forcing that operand to true also agrees because the second operand has already excluded the empty string. The other three - the guard as a whole, its installed operand, and the && as || - are killed by the non-zero-exit case.",
+            "decision": "Recorded as equivalent. The length test is dead weight behind the truthiness test in front of it; killing these two would need an output that is both truthy and zero-length.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/commands/diagnosticsChecks.ts",
+            "anchors": [
+                "if (!context) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Removing this guard, or forcing it false, moves the failure by one statement without changing the outcome: parseJSON returns null for anything that is not JSON, and the next statement reads 'context.org?.name', which throws a TypeError on null because the optional chain is on .name and not on .org. Both the thrown guard and the TypeError land in the same catch, which sets currentContext to the raw output either way.",
+            "decision": "Recorded as equivalent. The guard makes the failure legible in the debug log; it does not change what the report shows.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/commands/diagnosticsChecks.ts",
+            "anchors": [
+                "orgCheck.installed && orgCheck.output !== undefined && !orgCheck.output.includes('Error');"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the 'output !== undefined' operand to true cannot change the result. checkCommand leaves output undefined only on the throwing path, and that same path sets installed to false, so the first operand has already short-circuited whenever the second one would have been decisive. On every clean exit output is a string, and the operand is true already. The other four mutants on this line are killed by the non-zero-exit and the 'Error:' printed-on-success cases.",
+            "decision": "Recorded as equivalent. The undefined guard protects the .includes call that follows it, and installed already implies it.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/commands/diagnosticsChecks.ts",
+            "anchors": [
+                "const manifest = vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the optional chain makes the read throw when the extension is not resolvable, and that throw lands in the same try/catch that already returns an empty list. Without the chain the manifest is undefined, contributedKeysFrom returns no keys, and the length-zero guard returns the empty list as well. Both paths return [] for the same input, so no assertion on the returned orphan list can separate them.",
+            "decision": "Recorded as equivalent. The whole function is wrapped in 'return [] on any failure' by design, which absorbs this one.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/commands/diagnosticsChecks.ts",
+            "anchors": [
+                "const result: CommandResultWithContext = {"
+            ],
+            "line": 327,
+            "mutants": 1,
+            "category": "other",
+            "reason": "This object exists only to be handed to getLogger().logCommand; nothing reads it afterwards and checkCommand builds its RETURN value separately from the same locals. Emptying it to {} therefore changes only the text of a debug-log line, and the one assertion that could separate the two would pin the logger's arguments, which this repo forbids because it fixes wording rather than behaviour.",
+            "decision": "Recorded as equivalent. Log-only payload; the returned CommandCheckResult is asserted instead.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/commands/diagnosticsChecks.ts",
+            "anchors": [
+                "const result: CommandResultWithContext = {"
+            ],
+            "line": 357,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The catch path's log record, same as its success-path twin: built solely as the second argument to getLogger().logCommand and never read again, while the value checkCommand returns is assembled independently from err.message, err.code and the duration. Emptying it moves no field the caller can see, and the only test that would notice asserts on logger arguments.",
+            "decision": "Recorded as equivalent. Log-only payload; the returned failure result is asserted instead.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/commands/diagnosticsChecks.ts",
+            "anchors": [
+                "stderr: stderr.trim(),",
+                "code: code ?? 0,",
+                "stdout: err.stdout || '',",
+                "stderr: err.stderr || err.message,",
+                "code: err.code || -1,"
+            ],
+            "mutants": 12,
+            "category": "branch",
+            "reason": "Every one of these five fields belongs to the CommandResultWithContext handed to getLogger().logCommand, and to nothing else: the trimmed stderr the caller sees comes from a separate 'error: stderr.trim()' in the return statement, and the returned code is 'code ?? undefined' and 'err.code', both of which ARE killed. Dropping a trim, swapping ?? for &&, or collapsing a || default here changes one field of a debug-log line and no value any caller receives. Killing them would mean asserting the logger's arguments, which pins wording instead of behaviour.",
+            "decision": "Recorded as equivalent. Log-only payload. If these fields ever start feeding the returned result, the anchors will move and the entry will fail loudly.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

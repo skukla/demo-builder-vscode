@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "showProjectsList: new showProjectsList-refresh suite covers both refresh paths, the streaming-handler registration, the config listener, the handler context and the static dispose; sidebar suite gained the new-panel vs revealed-panel split; 1 equivalent ledgered",
+    "_note": "diagnosticsChecks: three new suites (command execution, aio probe parsing, machine environment) take it from 25% to 86% with zero uncovered mutants; 22 log-only and unreachable-operand survivors recorded in the equivalents ledger",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -356,28 +356,23 @@
             "openGaps": 0
         },
         "src/commands/diagnosticsChecks.ts": {
-            "score": 25.11,
-            "killed": 57,
-            "survived": 61,
-            "noCoverage": 109,
+            "score": 86.34,
+            "killed": 196,
+            "survived": 31,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 11,
-                "branch": 42,
-                "optionalChain": 1,
-                "string": 7
-            },
-            "uncoveredCategories": {
-                "block": 24,
-                "other": 23,
-                "string": 22,
-                "branch": 33,
+                "other": 5,
+                "branch": 15,
                 "logPresentation": 5,
-                "optionalChain": 2
+                "block": 1,
+                "string": 4,
+                "optionalChain": 1
             },
-            "highValueSurvivors": 42,
-            "equivalent": 0,
-            "openGaps": 136
+            "uncoveredCategories": {},
+            "highValueSurvivors": 16,
+            "equivalent": 22,
+            "openGaps": 0
         },
         "src/commands/migrateStorefrontNames.ts": {
             "score": 52.99,
