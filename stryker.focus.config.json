@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/daLive/daLiveConfigService.ts"
+        "src/features/eds/services/blockCollectionHelpers.ts"
     ],
     "reporters": [
         "clear-text",

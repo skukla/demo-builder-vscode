@@ -6771,6 +6771,114 @@
             "decision": "Equivalent: every route returns { hasAccess: false }.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/blockCollectionHelpers.ts",
+            "anchors": [
+                "if (seenBlocks.size > 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The guarded body is one logger.info line saying how many existing blocks the destination has. seenBlocks is already fully populated by the loop above and is read by the discovery pass regardless; neither mutant changes which blocks are claimed, which files are copied, or the returned result.",
+            "decision": "Recorded: log-only guard.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/blockCollectionHelpers.ts",
+            "anchors": [
+                "const skippedCount = discovered.discoveredCount - discovered.uniqueBlockIds.length;"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "skippedCount has exactly one reader: the log-only if on the next line. Turning the subtraction into an addition changes the number printed in a logger.info and nothing else \u2014 no block id, no file, and no field of the returned result is derived from it.",
+            "decision": "Recorded: feeds only a log line.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/blockCollectionHelpers.ts",
+            "anchors": [
+                "if (skippedCount > 0) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The guarded body is one logger.info naming the duplicate count. All five mutants (the two constants, both EqualityOperator rewrites and the emptied block) change only whether and when that line prints; the dedup itself already happened in discoverAndDeduplicateLibraryBlocks.",
+            "decision": "Recorded: log-only guard.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/blockCollectionHelpers.ts",
+            "anchors": [
+                "if (additionalTreeEntries && additionalTreeEntries.length > 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Two mutants rewrite the `additionalTreeEntries.length > 0` comparison alone \u2014 to `>= 0` and to the constant `true` \u2014 leaving the `additionalTreeEntries &&` guard in front of it. An undefined list still short-circuits, so the only case they change is an EMPTY array, where the guarded body is `treeEntries.push(...[])` and adds nothing. The other three mutants on this line ARE killed, by the undefined-list, empty-list and populated-list tests.",
+            "decision": "Equivalent: the extra branch they open pushes nothing.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/blockCollectionHelpers.ts",
+            "anchors": [
+                "destGroup.components?.map((c: { id: string }) => c.id) ?? [],"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The `?? []` fallback builds the set of ids already in the destination group. Substituting ['Stryker was here'] adds an id no component can have, so the very next line \u2014 filter(c => !existingIds.has(c.id)) \u2014 keeps exactly the same entries. The sibling OptionalChaining mutant on this line IS killed, by the destination group that lists no components.",
+            "decision": "Equivalent: the substituted id matches no component.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/blockCollectionHelpers.ts",
+            "anchors": [
+                "if (newEntries.length > 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both mutants make the branch run for an EMPTY newEntries. The body then assigns [...(components || [])] \u2014 the same contents in a new array \u2014 and adds zero to addedCount, so the serialised document and the return value are identical. The empty case cannot arrive with components undefined: existingIds would be empty, so every collected entry would pass the filter and newEntries could not be empty.",
+            "decision": "Equivalent: the branch body is a no-op for an empty list.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/blockCollectionHelpers.ts",
+            "anchors": [
+                "addedCount += newEntries.length;"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "addedCount has one reader: the `addedCount === 0 && enrichedCount === 0` early return. It starts at 0 and every increment is a positive length, so the `-=` mutant makes it negative in exactly the cases the real one makes it positive \u2014 and both are non-zero. The count is never returned, logged or compared to anything else.",
+            "decision": "Equivalent: only its zero-ness is read, and that is unchanged.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/blockCollectionHelpers.ts",
+            "anchors": [
+                "enrichedCount++;"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same shape as addedCount: enrichedCount is read only by the `addedCount === 0 && enrichedCount === 0` early return, and decrementing instead of incrementing keeps it non-zero in precisely the cases incrementing does. Nothing reads the magnitude or the sign.",
+            "decision": "Equivalent: only its zero-ness is read, and that is unchanged.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/blockCollectionHelpers.ts",
+            "anchors": [
+                "return parts.length >= 3 && parts[0] === 'blocks' && uniqueBlockIdSet.has(parts[1]);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the parts.length >= 3 operand with true, leaving the other two intact. For that to change the answer the listing would need a path of exactly two segments, starting with blocks/, whose second segment is in uniqueBlockIdSet \u2014 and that set is built only from three-or-more-segment blocks/<id>/... paths in the SAME listing. Git cannot hold blocks/alpha as a blob and blocks/alpha/ as a tree at once, and listRepoFiles filters to blobs, so no repository can produce both. The other two operands are killed by the path-parsing suite.",
+            "decision": "Equivalent: no git tree can satisfy the differing case.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }
