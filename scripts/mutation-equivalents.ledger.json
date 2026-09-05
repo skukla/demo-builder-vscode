@@ -6879,6 +6879,18 @@
             "decision": "Equivalent: no git tree can satisfy the differing case.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase1.ts",
+            "anchors": [
+                "} else if (edsConfig.existingRepo) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This else-if is reached only when edsConfig.selectedRepo is falsy, and executePhaseExistingRepo is called only when useExistingRepo is truthy \u2014 which is repoMode === 'existing' AND (selectedRepo || existingRepo). With selectedRepo falsy, existingRepo must therefore be truthy every time this test is evaluated, so forcing it to true selects the branch that was already going to be selected. Its ->false and emptied-block siblings ARE killed, by the typed-existingRepo tests.",
+            "decision": "Equivalent: the condition is already true wherever it is evaluated.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }

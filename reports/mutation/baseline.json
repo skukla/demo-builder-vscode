@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "blockCollectionHelpers: the blocks/ path rule pinned at all three places it is applied, both sorts, per-library version accounting, additional tree entries, and every malformed-document shape the three merges guard against; log-only guards and zero-ness-only counters recorded",
+    "_note": "storefrontSetupPhase1: the three-way branch selection with conflicting wizard state, cancellation, both pinIfThinLayer skips, all three owner/repo parsers against four malformed shapes each, the reset path's pin-instead-of-reset choice, and every progress payload; one else-if recorded as already-true where it is evaluated",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -6747,28 +6747,22 @@
             "openGaps": 0
         },
         "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase1.ts": {
-            "score": 32.72,
-            "killed": 53,
-            "survived": 60,
-            "noCoverage": 49,
+            "score": 90.12,
+            "killed": 146,
+            "survived": 15,
+            "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 24,
-                "string": 28,
-                "other": 5,
-                "block": 1,
-                "logPresentation": 2
+                "logPresentation": 7,
+                "string": 7,
+                "branch": 1
             },
             "uncoveredCategories": {
-                "block": 8,
-                "string": 14,
-                "branch": 23,
-                "other": 2,
-                "logPresentation": 2
+                "string": 1
             },
-            "highValueSurvivors": 25,
-            "equivalent": 0,
-            "openGaps": 63
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase2.ts": {
             "score": 9.47,

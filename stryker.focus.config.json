@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/blockCollectionHelpers.ts"
+        "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase1.ts"
     ],
     "reporters": [
         "clear-text",
