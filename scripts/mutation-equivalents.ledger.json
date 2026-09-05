@@ -10586,6 +10586,18 @@
             "decision": "equivalent",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/mesh/utils/errorFormatter.ts",
+            "anchors": [
+                "let summary = fatalMatch[0]"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant drops the .trim() that ends this chain. Three lines later the same value is passed through formatAdobeCliError, whose own last operation is .trim() - so whatever whitespace this call would have removed is removed there instead, and the returned summary is identical either way. No input can separate them while the second call stays in place.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
