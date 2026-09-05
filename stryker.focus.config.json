@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/ewSettingChangeListener.ts"
+        "src/features/eds/services/github/githubHelpers.ts"
     ],
     "reporters": [
         "clear-text",

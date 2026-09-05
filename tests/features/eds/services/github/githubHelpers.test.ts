@@ -2,14 +2,34 @@
  * GitHub Helpers Tests
  */
 
+// The real code calls `Octokit.plugin(retry)` and then `new` on the result. The
+// mapped manual mock is a plain class, so its constructor arguments cannot be
+// asserted; this factory replaces it with a jest.fn whose call arguments are the
+// thing under test — that the token reaches Octokit as `auth`.
+jest.mock('@octokit/core', () => {
+    const MockOctokit = jest.fn().mockImplementation(() => ({ request: jest.fn() }));
+    (MockOctokit as unknown as { plugin: jest.Mock }).plugin = jest.fn(() => MockOctokit);
+    return { Octokit: MockOctokit };
+});
+
+import { Octokit } from '@octokit/core';
+import { retry } from '@octokit/plugin-retry';
 import {
     ERROR_MESSAGES,
+    createAuthenticatedOctokit,
     generateOAuthState,
     injectTokenIntoUrl,
     mapToGitHubUser,
 } from '@/features/eds/services/github/githubHelpers';
 
+const mockOctokit = Octokit as unknown as jest.Mock & { plugin: jest.Mock };
+
 describe('githubHelpers', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockOctokit.plugin.mockReturnValue(mockOctokit);
+    });
+
     describe('ERROR_MESSAGES', () => {
         it('should have OAUTH_CANCELLED message', () => {
             expect(ERROR_MESSAGES.OAUTH_CANCELLED).toBe('OAuth flow cancelled');
@@ -31,6 +51,26 @@ describe('githubHelpers', () => {
             expect(ERROR_MESSAGES.SERVICE_UNAVAILABLE).toBe(
                 'GitHub service is temporarily unavailable'
             );
+        });
+    });
+
+    describe('createAuthenticatedOctokit', () => {
+        it('should construct Octokit with the token as auth credential', () => {
+            createAuthenticatedOctokit('ghp-test-token');
+
+            expect(mockOctokit).toHaveBeenCalledWith({ auth: 'ghp-test-token' });
+        });
+
+        it('should apply the retry plugin before constructing', () => {
+            createAuthenticatedOctokit('ghp-test-token');
+
+            expect(mockOctokit.plugin).toHaveBeenCalledWith(retry);
+        });
+
+        it('should return the constructed instance', () => {
+            const instance = createAuthenticatedOctokit('ghp-test-token');
+
+            expect(instance).toBe(mockOctokit.mock.results[0].value);
         });
     });
 
