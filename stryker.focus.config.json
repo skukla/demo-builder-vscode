@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/steps/storefrontSections.ts"
+        "src/features/eds/services/daLive/daLiveContentCopy.ts"
     ],
     "reporters": [
         "clear-text",

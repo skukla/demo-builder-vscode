@@ -5556,6 +5556,242 @@
             "decision": "none - the '?.' is required by the type and unreachable behind the && short-circuit.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "if (!href) return;"
+            ],
+            "line": 95,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Removing this empty-href guard changes nothing: an empty href fails every later test the same way. It does not start with the source base URL, the scheme regex and the '//' test both fail on an empty string, and the very next guard returns for anything not starting with '/'. Verified by re-running consider() over a 33-href corpus (empty, whitespace, root, anchors, relatives, schemes, absolute same-site and foreign URLs, media, product overlays, .html collapse) with the guard removed: identical output per href and in aggregate.",
+            "decision": "none - the guard is a readability early-exit; the startsWith('/') test below it already rejects everything it catches.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "if (!href || href === '/') return;"
+            ],
+            "line": 109,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "All three mutants (drop the guard, replace || with &&, and drop the href === '/' operand) let an empty-or-root href fall through to the final guard on line 119, which admits a path only when it is non-empty and not '/'. Whatever this guard would have returned for, that one refuses to add. Verified by re-running consider() over a 33-href corpus with the guard removed and with && substituted: identical output per href in both cases. The final guard is NOT equivalent in the same way - '/.html' collapses to '/' after the extension strip and only line 119 catches it - so it is killed by a test rather than recorded here.",
+            "decision": "none - subsumed by the final add guard on line 119, which is separately tested.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "} else if (!result.applied && result.reason) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "This branch's entire body is a logger.debug call: it is the no-report fallback that prints which content patch did not apply. Every mutant of it (force the branch, drop it, swap && for ||, drop the negation, empty the block) changes only whether that debug line prints and with what text. The copy's outcome, the uploaded html and the patch report are all identical, and the report path - the branch that actually records something - is asserted by its own test.",
+            "decision": "none - killing it would require asserting a logger call's arguments, which pins wording rather than behaviour.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "const logLevel = sourceResponse.status === 404 ? 'debug' : 'warn';"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The ternary chooses which logger METHOD reports a non-OK source read - debug for the expected 404 of a block without a doc page, warn for anything else. Both arms then run the same statement and the function returns false either way, so no caller, no response and no written document differs. The only observable difference is which channel the line lands on.",
+            "decision": "none - the sole effect is log level; asserting it would pin the logger call rather than behaviour.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "try {"
+            ],
+            "line": 410,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this inner try leaves errorDetail as the empty string it was initialised to, and errorDetail is read in exactly one place: the warn line that reports a failed copy. The function returns false either way, nothing is written, and the caller sees the same boolean. The try exists only so an unreadable response body cannot turn a reported failure into a thrown one, and that IS tested - a response whose text() rejects still returns false.",
+            "decision": "none - the block's only product is text inside a log line.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "return false;"
+            ],
+            "line": 433,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This is the return after the retry for-loop, and it is unreachable: every iteration either returns or hits the catch, and the catch's last attempt (attempt === MAX_RETRY_ATTEMPTS) returns false rather than continuing. TypeScript cannot see that the loop always exits by return, so it requires a terminal return here; deleting it does not compile. Stryker reports it as NoCoverage for the same reason no test can reach it.",
+            "decision": "none - required by the compiler, unreachable at runtime.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "if (path.match(/\\.(html|htm)$/i) || path === '/' || path.endsWith('/')) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The mutant drops the path === '/' operand only. The very next operand, path.endsWith('/'), is true for '/' as well, so the disjunction still holds and the function still returns false without probing. There is no path for which the two disagree: every string equal to '/' ends with '/'. The other two operands of the same condition ARE tested - a .html path is never probed and a path whose .html is not at the end is.",
+            "decision": "none - the operand is fully subsumed by the endsWith('/') test beside it.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "if (response.status === 204 || response.ok) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The mutant drops the status === 204 operand. 204 is inside the 2xx range, so Response.ok is true for it and the disjunction still holds - a real 204 still reports success. Distinguishing the two would need a Response with status 204 and ok false, which the platform does not produce; fabricating one in a fixture would assert against a shape that cannot occur. The 204 case itself is tested and passes through the ok operand.",
+            "decision": "none - 204 already satisfies response.ok; the explicit test is belt-and-braces.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "const bodyText = await response.text().catch(() => '');"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant changes the catch fallback from '' to undefined. The value is read once, by the ternary bodyText ? ` - ${...}` : '', and both '' and undefined are falsy, so the error string built from it is character-for-character the same. A test covers the unreadable-body case and asserts the exact message, which is identical under both.",
+            "decision": "none - both fallbacks are falsy and the only reader is a truthiness test.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "const filteredCount = originalCount - contentPaths.length;",
+                "if (filteredCount > 0) {"
+            ],
+            "mutants": 6,
+            "category": "branch",
+            "reason": "filteredCount exists to report how many product-overlay paths the filter removed. It is computed, compared to zero, and used in exactly one statement: a logger.info line. The filtering itself has already happened on the line above and is asserted by tests (overlays dropped, the default template kept), so every mutant here - flipping the subtraction, forcing or dropping the guard, loosening the comparison, emptying the block - leaves the copied path list, the writes and the result identical.",
+            "decision": "none - the count and its guard exist only to phrase a log line.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "if (contentPaths.length < preLibraryCount) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The library-index exclusion happens on the line above, unconditionally; this comparison only decides whether to log that it happened. Both index spellings are tested as excluded from the copy, so forcing the branch, dropping it, loosening the comparison or emptying the block changes nothing a caller can see - only whether one info line prints.",
+            "decision": "none - the guard's entire body is a log statement.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "if (contentPaths.includes(path)) return true;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The mutant returns false instead of true when the path is already enumerated. probeAndAdd's return value is read in exactly one place - the auth-page loop, to decide whether to push a stub - and that loop skips already-enumerated pages with its own continue before ever calling probeAndAdd. The spreadsheet and fragment loops discard the return entirely. So the early return's value is never observed. (Mutated together with the auth-page continue the two would differ; Stryker mutates one at a time, and each alone is invisible.)",
+            "decision": "none - the returned value is unreachable from the only caller that reads it.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "if (contentPaths.includes(authPage.path)) continue;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The mutant drops the skip, so an already-enumerated auth page goes into probeAndAdd instead - which returns true immediately on its own includes() guard, without fetching. found is true, no stub is pushed, no probe is issued: exactly what continue produced. The test that an auth page present on source is copied rather than stubbed passes identically either way. (The pair of guards is mutually redundant; each alone is invisible.)",
+            "decision": "none - probeAndAdd's own includes() guard reproduces the skip, fetch-free.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "if (newPaths.length === 0) break;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Without the break the depth loop simply runs its remaining iterations over an empty newPaths: nothing is added to visited, the batch loop's condition is false at once so no token is fetched and no file is copied, and the only statement that executes is the logger.info announcing zero discovered documents. Token counts, copied paths and the result are unchanged - the discovery-batch tests assert the token count exactly and hold under it.",
+            "decision": "none - the break only avoids logging an empty round.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 775,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This is the else of 'did the discovered reference copy succeed', and its body is one logger.debug line saying the reference was skipped. The success arm pushes the path; the failure arm pushes nothing and never has. A test covers a discovered reference that 404s on source - the copy stays successful and the path is absent from copiedFiles - and that holds with the block emptied.",
+            "decision": "none - the block contains only a debug log.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 995,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This is the else of 'did the auth-page stub write succeed', and its body is one logger.warn. The success arm records the path and increments the count; the failure arm records nothing. A test covers a stub whose write returns 500 - it is absent from copiedFiles and from totalFiles while the others land - and that holds with the block emptied.",
+            "decision": "none - the block contains only a warn log.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 1000,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch body leaves the catch itself in place, so a stub write that throws is still swallowed and the loop still continues to the next auth page. The body is a single logger.warn naming the page. A test covers a throwing stub write - the remaining two stubs are still created and the copy still reports success - and it passes with the body removed.",
+            "decision": "none - the block contains only a warn log; the catching, which is the behaviour, is not mutated.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "const batchNum = Math.floor(i / CONTENT_COPY_BATCH_SIZE) + 1;"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "batchNum is a human-facing ordinal used in exactly one statement, the logger.debug that reports how long a batch took. Nothing branches on it, nothing returns it, and no request carries it. Both arithmetic mutants therefore change only a number inside a debug line; the batch boundaries themselves come from the loop's step and ARE tested (a token per batch of five, no empty extra batch on an exact multiple, each path copied once).",
+            "decision": "none - the value is only ever formatted into a log line.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "anchors": [
+                "} else if (/^[a-z]+:/i.test(href) || href.startsWith('//')) {"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The surviving regex mutant is /^[a-z]:/i - the same anchored scheme test with the + quantifier dropped, so it matches a ONE-letter scheme only. Any href it and the original disagree about begins with a letter, and an href beginning with a letter is rejected two lines later by the startsWith('/') test regardless, so the outcome is the same either way. Verified by re-running consider() with the mutated regex over a 33-href corpus including one- and multi-letter schemes, uppercase schemes and colon-bearing paths: identical output per href. The other two regex mutants of this line are killed by tests (/blog/a:b and /2024:review).",
+            "decision": "none - anything the two regexes disagree about is dropped by the site-relative test below.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
