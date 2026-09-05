@@ -11,8 +11,6 @@
  * must be no.
  */
 
-import * as path from 'path';
-
 import {
     parseActivityLog,
     parseDataItem,
@@ -26,9 +24,9 @@ import {
     parseJobStatus,
     parseProcessorOrder,
 } from '@/features/data-installer/services/dataInstallerParsers';
+import { loadFixture } from './dataInstallerParsers.testUtils';
 
-const FIXTURES = path.join(__dirname, '../../../fixtures/data-installer');
-const load = (name: string): unknown => require(path.join(FIXTURES, name));
+const load = loadFixture;
 
 describe('dataInstallerParsers', () => {
     describe('parseDatapackList — the catalog', () => {

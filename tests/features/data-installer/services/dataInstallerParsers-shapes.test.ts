@@ -35,9 +35,7 @@ import {
     parseProcessorOrder,
     parseValidation,
 } from '@/features/data-installer/services/dataInstallerParsers';
-
-/** A catalog row carrying only what an identity needs. */
-const ROW = { datapack_name: 'citisignal', version: 'main' };
+import { IDENTITY_ROW as ROW } from './dataInstallerParsers.testUtils';
 
 // =============================================================================
 // The primitive readers, through the parsers that use them
