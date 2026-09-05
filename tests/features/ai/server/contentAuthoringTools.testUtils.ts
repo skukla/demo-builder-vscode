@@ -13,7 +13,10 @@
 
 import { registerContentAuthoringTools } from '@/features/ai/server/contentAuthoringTools';
 import { getDaLiveAuthService, getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
+import {
+    DaLiveContentOperations,
+    createDaLiveServiceTokenProvider,
+} from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { HelixService } from '@/features/eds/services/helix/helixService';
 import { isEdsProject } from '@/types/typeGuards';
 
@@ -37,6 +40,8 @@ const getGitHubServicesMock = getGitHubServices as jest.Mock;
 const getDaLiveAuthServiceMock = getDaLiveAuthService as jest.Mock;
 const isEdsProjectMock = isEdsProject as unknown as jest.Mock;
 const DaLiveContentOperationsMock = DaLiveContentOperations as unknown as jest.Mock;
+/** The token-provider factory `helixFor` and `daLiveOps` both go through. */
+const createDaLiveServiceTokenProviderMock = createDaLiveServiceTokenProvider as jest.Mock;
 /**
  * The Helix FACTORY the specs hand to `registerContentAuthoringTools`, replacing the
  * module mock that existed only to intercept the constructor (ADR-016 mock wall).
@@ -57,6 +62,7 @@ export { isEdsProject };
 export {
     DaLiveContentOperationsMock,
     HelixServiceMock,
+    createDaLiveServiceTokenProviderMock,
     getCurrentProject,
     getDaLiveAuthServiceMock,
     getGitHubServicesMock,
@@ -70,6 +76,13 @@ export {
  * tool suite's whole interface with the server is "register, then call", and one
  * definition of that is enough.
  */
+export interface ToolDefinition {
+    needsAuth?: string[];
+    annotations?: { readOnlyHint?: boolean; destructiveHint?: boolean };
+    description?: string;
+    inputSchema?: Record<string, unknown>;
+}
+
 export function fakeServer(): {
     registerTool(
         name: string,
@@ -77,23 +90,49 @@ export function fakeServer(): {
         handler: (args: unknown) => Promise<{ content: Array<{ text: string }> }>
     ): void;
     names(): string[];
+    /** The DEFINITION a tool registered with — what the agent surface reads. */
+    definition(name: string): ToolDefinition;
     call<T = Record<string, unknown>>(name: string, args?: unknown): Promise<T>;
+    /**
+     * Invoke a tool with EXACTLY the arguments given, including `undefined`.
+     *
+     * `call` defaults its argument to `{}`, which is right for ordinary use and
+     * wrong for the one thing worth pinning here: a handler that crashes on a
+     * bare invocation takes the MCP session with it, and every tool in this
+     * module reads `args?.path` precisely so it cannot.
+     */
+    callRaw<T = Record<string, unknown>>(name: string, args: unknown): Promise<T>;
 } {
     const tools = new Map<
         string,
         (args: unknown) => Promise<{ content: Array<{ text: string }> }>
     >();
+    const defs = new Map<string, ToolDefinition>();
+    const invoke = async <T>(name: string, args: unknown): Promise<T> => {
+        const handler = tools.get(name);
+        if (!handler) {
+            throw new Error(`no tool registered as "${name}" — registered: ${[...tools.keys()]}`);
+        }
+        return JSON.parse((await handler(args)).content[0].text) as T;
+    };
     return {
-        registerTool(name, _def, handler) {
+        registerTool(name, def, handler) {
             tools.set(name, handler);
+            defs.set(name, (def ?? {}) as ToolDefinition);
         },
         names: () => [...tools.keys()],
-        async call<T = Record<string, unknown>>(name: string, args: unknown = {}): Promise<T> {
-            const handler = tools.get(name);
-            if (!handler) {
+        definition(name) {
+            const def = defs.get(name);
+            if (!def) {
                 throw new Error(`no tool registered as "${name}" — registered: ${[...tools.keys()]}`);
             }
-            return JSON.parse((await handler(args)).content[0].text) as T;
+            return def;
+        },
+        call<T = Record<string, unknown>>(name: string, args: unknown = {}): Promise<T> {
+            return invoke<T>(name, args);
+        },
+        callRaw<T = Record<string, unknown>>(name: string, args: unknown): Promise<T> {
+            return invoke<T>(name, args);
         },
     };
 }

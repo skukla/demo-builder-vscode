@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/app-builder/services/appBuilderComponentRunner.ts"
+        "src/features/ai/server/contentAuthoringTools.ts"
     ],
     "reporters": [
         "clear-text",

@@ -612,6 +612,10 @@ export function registerContentAuthoringTools(
                 });
             }
 
+            // `unpublishError` is deliberately NOT carried past this point: it is
+            // only ever set in the catch above, which leaves `unpublished` false
+            // and returns at the guard. Everything below runs with the unpublish
+            // having succeeded, so there is no error to report alongside.
             try {
                 const result = await runWithAdobeTarget(() =>
                     daLiveOps(r.ctx).deleteSource(daLiveOrg, daLiveSite, sourcePath),
@@ -621,7 +625,6 @@ export function registerContentAuthoringTools(
                     unpublished,
                     path: webPath,
                     ...(result.error ? { error: result.error } : {}),
-                    ...(unpublishError ? { unpublishError } : {}),
                 });
             } catch (err) {
                 return asText({
@@ -629,7 +632,6 @@ export function registerContentAuthoringTools(
                     unpublished,
                     path: webPath,
                     error: message(err),
-                    ...(unpublishError ? { unpublishError } : {}),
                 });
             }
         },

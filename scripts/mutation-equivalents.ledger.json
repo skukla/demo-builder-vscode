@@ -10139,6 +10139,121 @@
             "decision": "none - the forced branch assigns the value the caller already holds.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/ai/server/contentAuthoringTools.ts",
+            "anchors": [
+                "if (p.length > 1 && p.endsWith('/')) p = p.slice(0, -1);"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "These two mutants both weaken the length half of the guard so the slice also runs for a path of length one. The only such path reaching this line is the bare root, and slicing it yields the empty string, which the very next statement turns back into the root through its own fallback. No input can tell the mutated guard from the original; the trailing-slash and root cases are both pinned by the path-normalisation suite.",
+            "decision": "none - the root fallback on the following line absorbs the mutated branch.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/ai/server/contentAuthoringTools.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 187,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch fires only when the URL constructor rejects the string this module just built from a base host that passed SAFE_COORDINATE and a path that passed toWebPath. Both validators run before it, so no reachable input produces a URL the parser refuses, and the guard exists as the assertion that survives someone loosening those rules rather than as a live branch.",
+            "decision": "none - unreachable while the two validators upstream of it hold.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/ai/server/contentAuthoringTools.ts",
+            "anchors": [
+                "return false;"
+            ],
+            "line": 188,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The value returned from the unreachable catch above it. Reaching this line at all requires a malformed URL, which cannot be produced downstream of SAFE_COORDINATE and toWebPath, so flipping the answer from false to true changes nothing any test or caller can observe.",
+            "decision": "none - the return value of an unreachable catch.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/ai/server/contentAuthoringTools.ts",
+            "anchors": [
+                "if (!urlStaysWithin(url, `${base}/`)) {",
+                "return asText({ path: webPath, error: 'Refusing to fetch outside the storefront host' });"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The final containment check, and deliberately belt-and-braces: the URL it tests is built from coordinates SAFE_COORDINATE already restricted and a path toWebPath already rejected traversal in, so it cannot currently fail. Its own docstring says as much - it exists to survive a future simplification of those rules, which is exactly the situation no test can set up today.",
+            "decision": "none - a deliberate redundant assertion behind two validators that already hold.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/ai/server/contentAuthoringTools.ts",
+            "anchors": [
+                "let githubOk = false;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The initialiser and the catch below it assign the same value, so each makes the other unobservable: with the initialiser flipped to true the catch still sets false on a throwing token check, and the throwing case is pinned by the GitHub pre-flight suite. Only mutating both at once would change the answer, which Stryker never does.",
+            "decision": "none - redundant with the catch assignment, which is asserted.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/ai/server/contentAuthoringTools.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 249,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch leaves githubOk holding the false its initialiser gave it, so a throwing token check is still treated as unauthenticated - which is what the GitHub pre-flight suite asserts. The assignment inside the catch restates the initialiser rather than changing it, so removing it is unobservable.",
+            "decision": "none - restates the initialiser; the behaviour it guards is asserted.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/ai/server/contentAuthoringTools.ts",
+            "anchors": [
+                "const content = args?.content;",
+                "const publish = args?.publish === true;",
+                "if (args?.confirm !== true) {"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "Each of these optional chains guards against args being undefined, and each is preceded in its own handler by a path read that returns the required-argument refusal for exactly that case. A bare invocation never reaches these lines, and every other invocation passes an object, so removing the chain cannot throw. The bare-invocation behaviour itself is pinned by the descriptors suite.",
+            "decision": "none - unreachable behind the path guard that returns first.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/ai/server/contentAuthoringTools.ts",
+            "anchors": [
+                "const dir = toWebPath(String(args?.path ?? '/').trim() || '/');"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Removing this trim leaves a whitespace-only directory argument to toWebPath, which trims it itself and then normalises the empty result to the site root - the same answer the fallback here produces. The two trims are redundant for every input, and unlike the page tools list_content has no required-path check for the untrimmed value to slip past.",
+            "decision": "none - redundant with toWebPath's own trim for every input.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/ai/server/contentAuthoringTools.ts",
+            "anchors": [
+                "bytes > MAX_PUBLISHED_READ_BYTES"
+            ],
+            "line": 690,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "This condition chooses between the whole body and a slice of it at the cap. Slicing a body that is at or under the cap returns that body unchanged, so both mutants - always slicing, and slicing at the boundary - produce a byte-identical content field. The sibling condition two lines down decides the truncated flag, which IS observable and is pinned at both the ordinary and the exact-cap sizes.",
+            "decision": "none - a slice at or beyond a string's length is the string.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
