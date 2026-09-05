@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "storefrontSetupPhase1: the three-way branch selection with conflicting wizard state, cancellation, both pinIfThinLayer skips, all three owner/repo parsers against four malformed shapes each, the reset path's pin-instead-of-reset choice, and every progress payload; one else-if recorded as already-true where it is evaluated",
+    "_note": "cleanupService: covered the Configuration Service deletion path end to end, pinned every result shape (success/skipped/error) instead of single fields, added malformed-repo-name cases for both config and GitHub; ledgered the three caller-guaranteed narrowing guards",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -6962,26 +6962,22 @@
             "openGaps": 55
         },
         "src/features/eds/services/cleanupService.ts": {
-            "score": 46.5,
-            "killed": 73,
-            "survived": 33,
-            "noCoverage": 51,
+            "score": 85.35,
+            "killed": 134,
+            "survived": 20,
+            "noCoverage": 3,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 11,
-                "branch": 20,
-                "string": 2
+                "string": 2,
+                "logPresentation": 14,
+                "branch": 4
             },
             "uncoveredCategories": {
-                "block": 13,
-                "string": 5,
-                "branch": 25,
-                "logPresentation": 3,
-                "other": 5
+                "block": 3
             },
-            "highValueSurvivors": 20,
-            "equivalent": 0,
-            "openGaps": 63
+            "highValueSurvivors": 4,
+            "equivalent": 7,
+            "openGaps": 0
         },
         "src/features/eds/services/commerceStoreDiscovery.ts": {
             "score": 76.68,

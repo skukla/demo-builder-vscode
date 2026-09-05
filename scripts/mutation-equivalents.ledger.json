@@ -6891,6 +6891,42 @@
             "decision": "Equivalent: the condition is already true wherever it is evaluated.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/cleanupService.ts",
+            "anchors": [
+                "} else if (metadata.backendType === 'commerce') {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "EdsMetadata declares backendType as 'commerce' | 'aco' | undefined. cleanupBackendData runs only behind the caller guard options.cleanupBackendData && metadata.backendType, so undefined never arrives, and the preceding branch has already taken 'aco'. The value here is therefore 'commerce' on every evaluation: forcing the test to true selects the branch that was already selected, and emptying the else block below it deletes a return no type-correct caller can reach. Reaching either would need a value outside the declared union, which only a cast on the argument could supply - the exact silenced type error this repo bans.",
+            "decision": "Equivalent: the union has no third member, so the else is unreachable and the condition is already true wherever it is evaluated.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/cleanupService.ts",
+            "anchors": [
+                "if (!metadata.daLiveOrg || !metadata.daLiveSite) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "cleanupDaLive is private and has exactly one call site, cleanupEdsResources, which invokes it only inside if (options.deleteDaLive && metadata.daLiveOrg && metadata.daLiveSite). Both fields are therefore truthy on every evaluation, so the guard is false every time: replacing it with false, swapping its || for && (false && false is still false) and emptying its body all leave the same path running. The guard cannot be deleted from src either - it is what narrows the two string | undefined fields for the deleteSite call two lines down. Its ->true sibling IS killed.",
+            "decision": "Equivalent: the sole caller has already proved both fields present; the guard survives only as compiler narrowing.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/cleanupService.ts",
+            "anchors": [
+                "if (!metadata.githubRepo) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "cleanupGitHub is private with one call site, cleanupEdsResources, which invokes it only inside if (options.deleteGitHub && metadata.githubRepo). githubRepo is truthy on every evaluation, so this guard is false every time and forcing it to false, or emptying its body, changes nothing. As with cleanupDaLive the guard stays in src because it narrows githubRepo from string | undefined before the .split('/') on the next line. Its ->true sibling is killed by the tests that require GitHub deletion to run. The malformed-name case that IS reachable, an owner/repo split that yields fewer than two parts, is covered separately.",
+            "decision": "Equivalent: the sole caller has already proved githubRepo present; the guard survives only as compiler narrowing.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }

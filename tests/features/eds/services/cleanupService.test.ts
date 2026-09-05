@@ -5,84 +5,37 @@
  * DA.live deletion, and GitHub repository deletion/archiving.
  *
  * CRITICAL: Cleanup order MUST be Backend -> Config Service -> DA.live -> GitHub
+ *
+ * The Configuration Service half of that order lives in
+ * `cleanupService-configService.test.ts`; the shared harness in
+ * `cleanupService.testUtils.ts`.
  */
 
-// Mock vscode module
-
-// Mock logging
-
-// Mock timeout config - uses semantic categories
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000, // Standard API calls (replaces GITHUB_API, DA_LIVE_API, HELIX_API)
-        EXTENDED: 600000, // Extended operations (replaces DATA_INGESTION)
-    },
-}));
-
-// Import types
-import type { GitHubRepoOperations } from '@/features/eds/services/github/githubRepoOperations';
-import type { DaLiveOrgOperations } from '@/features/eds/services/daLive/daLiveOrgOperations';
-import type { ToolManager } from '@/features/eds/services/toolManager';
-import type {
-    EdsMetadata,
-    EdsCleanupOptions,
-} from '@/features/eds/services/types';
-
-// Type for the service we'll import dynamically
-type CleanupServiceType = import('@/features/eds/services/cleanupService').CleanupService;
+import {
+    setupCleanupHarness,
+    type CleanupHarness,
+    type EdsCleanupOptions,
+    type EdsMetadata,
+} from './cleanupService.testUtils';
 
 describe('CleanupService', () => {
-    let cleanupService: CleanupServiceType;
-    let mockGitHubRepoOps: jest.Mocked<Partial<GitHubRepoOperations>>;
-    let mockDaLiveOrgOps: jest.Mocked<Partial<DaLiveOrgOperations>>;
-    let mockToolManager: jest.Mocked<Partial<ToolManager>>;
+    let harness: CleanupHarness;
+    let cleanupService: CleanupHarness['cleanupService'];
+    let mockGitHubRepoOps: CleanupHarness['githubRepoOps'];
+    let mockDaLiveOrgOps: CleanupHarness['daLiveOrgOps'];
+    let mockToolManager: CleanupHarness['toolManager'];
 
     // Track operation order for verifying cleanup sequence
     let operationOrder: string[];
 
-    beforeEach(async () => {
+    beforeEach(() => {
         jest.clearAllMocks();
-        operationOrder = [];
-
-        // Mock GitHubRepoOperations
-        mockGitHubRepoOps = {
-            deleteRepository: jest.fn().mockImplementation(async () => {
-                operationOrder.push('github');
-                return { success: true };
-            }),
-            archiveRepository: jest.fn().mockImplementation(async () => {
-                operationOrder.push('github');
-                return { success: true };
-            }),
-        };
-
-        // Mock DaLiveOrgOperations
-        mockDaLiveOrgOps = {
-            deleteSite: jest.fn().mockImplementation(async () => {
-                operationOrder.push('dalive');
-                return { success: true };
-            }),
-        };
-
-        // Mock ToolManager
-        mockToolManager = {
-            executeAcoCleanup: jest.fn().mockImplementation(async () => {
-                operationOrder.push('backend');
-                return { success: true, stdout: 'Cleanup complete', stderr: '', duration: 1000 };
-            }),
-            executeCommerceCleanup: jest.fn().mockImplementation(async () => {
-                operationOrder.push('backend');
-                return { success: true, stdout: 'Cleanup complete', stderr: '', duration: 1000 };
-            }),
-        };
-
-        // Dynamically import to get fresh instance after mocks are set up
-        const module = await import('@/features/eds/services/cleanupService');
-        cleanupService = new module.CleanupService(
-            mockGitHubRepoOps as unknown as GitHubRepoOperations,
-            mockDaLiveOrgOps as unknown as DaLiveOrgOperations,
-            mockToolManager as unknown as ToolManager,
-        );
+        harness = setupCleanupHarness();
+        cleanupService = harness.cleanupService;
+        mockGitHubRepoOps = harness.githubRepoOps;
+        mockDaLiveOrgOps = harness.daLiveOrgOps;
+        mockToolManager = harness.toolManager;
+        operationOrder = harness.operationOrder;
     });
 
     // ==========================================================
@@ -131,10 +84,10 @@ describe('CleanupService', () => {
             // When: Running full cleanup
             const result = await cleanupService.cleanupEdsResources(metadata, options);
 
-            // Then: All operations should succeed
-            expect(result.backendData.success).toBe(true);
-            expect(result.daLive.success).toBe(true);
-            expect(result.github.success).toBe(true);
+            // Then: All operations should succeed and none report themselves skipped
+            expect(result.backendData).toEqual({ success: true, skipped: false });
+            expect(result.daLive).toEqual({ success: true, skipped: false });
+            expect(result.github).toEqual({ success: true, skipped: false });
         });
 
         it('should archive instead of delete when option set', async () => {
@@ -361,8 +314,9 @@ describe('CleanupService', () => {
             // When: Running cleanup
             const result = await cleanupService.cleanupEdsResources(metadata, options);
 
-            // Then: GitHub cleanup should fail with scope error
+            // Then: GitHub cleanup should fail with scope error, marked attempted
             expect(result.github.success).toBe(false);
+            expect(result.github.skipped).toBe(false);
             expect(result.github.error).toContain('delete_repo scope');
         });
 
@@ -425,8 +379,8 @@ describe('CleanupService', () => {
             // When: Running cleanup
             const result = await cleanupService.cleanupEdsResources(metadata, options);
 
-            // Then: Should succeed (404 is acceptable)
-            expect(result.daLive.success).toBe(true);
+            // Then: Should succeed (404 is acceptable) and be recorded as attempted
+            expect(result.daLive).toEqual({ success: true, skipped: false });
         });
 
         it('should throw error on 403 access denied', async () => {
@@ -446,8 +400,9 @@ describe('CleanupService', () => {
             // When: Running cleanup
             const result = await cleanupService.cleanupEdsResources(metadata, options);
 
-            // Then: Should fail with access denied
+            // Then: Should fail with access denied, marked attempted rather than skipped
             expect(result.daLive.success).toBe(false);
+            expect(result.daLive.skipped).toBe(false);
             expect(result.daLive.error).toContain('Access denied');
         });
     });
@@ -469,8 +424,8 @@ describe('CleanupService', () => {
             // When: Running cleanup
             const result = await cleanupService.cleanupEdsResources(metadata, options);
 
-            // Then: Backend cleanup should be skipped
-            expect(result.backendData.skipped).toBe(true);
+            // Then: Backend cleanup should be skipped, and a skipped result never claims success
+            expect(result.backendData).toEqual({ success: false, skipped: true });
             expect(mockToolManager.executeAcoCleanup).not.toHaveBeenCalled();
             expect(mockToolManager.executeCommerceCleanup).not.toHaveBeenCalled();
         });
@@ -491,8 +446,9 @@ describe('CleanupService', () => {
             // When: Running cleanup
             const result = await cleanupService.cleanupEdsResources(metadata, options);
 
-            // Then: Should fail with tool error
+            // Then: Should fail with tool error, marked attempted rather than skipped
             expect(result.backendData.success).toBe(false);
+            expect(result.backendData.skipped).toBe(false);
             expect(result.backendData.error).toContain('Tool not installed');
         });
 
@@ -516,9 +472,12 @@ describe('CleanupService', () => {
             // When: Running cleanup
             const result = await cleanupService.cleanupEdsResources(metadata, options);
 
-            // Then: Should report failure
-            expect(result.backendData.success).toBe(false);
-            expect(result.backendData.error).toBeDefined();
+            // Then: Should report the tool's own error verbatim, not skipped
+            expect(result.backendData).toEqual({
+                success: false,
+                skipped: false,
+                error: 'Unauthorized',
+            });
         });
     });
 
