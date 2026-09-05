@@ -259,6 +259,82 @@ describe('SearchHeader', () => {
      * Adobe destination were indistinguishable) nor a row of its own (which spent
      * a line on the least-used fact on the screen). This is that space.
      */
+    describe('the count, without alwaysShowCount', () => {
+        // Every other count test passes alwaysShowCount={true}, which makes the
+        // `totalCount > 0` half of the decision unreachable — so neither the
+        // default nor the item-count test was pinned by anything.
+        it('shows the count for a non-empty list when alwaysShowCount is omitted', () => {
+            renderWithProvider(
+                <SearchHeader {...defaultProps} totalCount={10} filteredCount={10} />
+            );
+
+            expect(screen.getByText('10 items')).toBeInTheDocument();
+        });
+
+        it('hides the count for an empty list when alwaysShowCount is omitted', () => {
+            renderWithProvider(
+                <SearchHeader {...defaultProps} totalCount={0} filteredCount={0} />
+            );
+
+            expect(screen.queryByText(/items/i)).not.toBeInTheDocument();
+        });
+    });
+
+    describe('what counts as filtering', () => {
+        it('treats a whitespace-only query as no filter', () => {
+            // Without the trim, spaces alone flip the count line to "Showing X
+            // of Y" while every item is still listed.
+            renderWithProvider(
+                <SearchHeader
+                    {...defaultProps}
+                    searchQuery="   "
+                    totalCount={10}
+                    filteredCount={10}
+                    alwaysShowCount={true}
+                />
+            );
+
+            expect(screen.getByText('10 items')).toBeInTheDocument();
+            expect(screen.queryByText(/Showing/)).not.toBeInTheDocument();
+        });
+    });
+
+    describe('where the action buttons live', () => {
+        // showSearch decides the header's SHAPE: with a search field the buttons
+        // sit in the search row, without one they move down beside the count.
+        it('puts the refresh button on the count row when the list is below the threshold', () => {
+            renderWithProvider(
+                <SearchHeader
+                    {...defaultProps}
+                    totalCount={3}
+                    filteredCount={3}
+                    searchThreshold={5}
+                    onRefresh={jest.fn()}
+                    alwaysShowCount={true}
+                />
+            );
+
+            expect(screen.queryByPlaceholderText(/type to filter/i)).not.toBeInTheDocument();
+            expect(screen.getByLabelText('Refresh list')).toBeInTheDocument();
+        });
+
+        it('shows the refresh button exactly once when the search field is present', () => {
+            // The buttons move rows; they must not appear on both.
+            renderWithProvider(
+                <SearchHeader
+                    {...defaultProps}
+                    totalCount={10}
+                    filteredCount={10}
+                    searchThreshold={5}
+                    onRefresh={jest.fn()}
+                    alwaysShowCount={true}
+                />
+            );
+
+            expect(screen.getAllByLabelText('Refresh list')).toHaveLength(1);
+        });
+    });
+
     describe('countTrailing', () => {
         it('renders at the end of the count row', () => {
             render(
