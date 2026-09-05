@@ -7564,6 +7564,18 @@
             "decision": "none - equivalent; only the presence of one warn line differs.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/configService/siteAccessManagerHeadless.ts",
+            "anchors": [
+                "if (!verified) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The guard's whole body is one logger.warn. Deleting the block, inverting the condition, or forcing it either way changes nothing a caller can observe: the very next line returns the same object with the same `verified` flag, which is the value every consumer reads and which the suite already asserts on both outcomes. The only difference is whether a warning line prints, and asserting log wording is what the ratchet exists to refuse to reward.",
+            "decision": "none \u2014 the warn is a diagnostic beside a verdict the return value already carries",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
         }
     ]
 }

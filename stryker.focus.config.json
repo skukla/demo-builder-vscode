@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/configService/configServiceAccess.ts"
+        "src/features/eds/services/configService/siteAccessManagerHeadless.ts"
     ],
     "reporters": [
         "clear-text",
