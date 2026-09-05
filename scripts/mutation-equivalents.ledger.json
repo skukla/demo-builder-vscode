@@ -11726,6 +11726,30 @@
             "decision": "Recorded as equivalent. The chain is redundant behind the org guard; its unguarded twin is covered.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/ai/server/eventProviderTools.ts",
+            "anchors": [
+                "if (!mgr) return false;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Deleting the no-auth-manager guard changes nothing observable. Without it, mgr is undefined, the very next line calls mgr.isAuthenticated() inside the try, the TypeError is caught, and the catch returns false \u2014 the same value the guard returns, reaching the same 'Adobe sign-in required' handoff on all five tools. Verified by the no-auth-manager case in eventProviderTools.test.ts, which passes with the guard and with it removed. The sibling BooleanLiteral mutant on this line (return true) IS killed by that same test.",
+            "decision": "none \u2014 the guard says what it means and spares a call that would only throw",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/ai/server/eventProviderTools.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch body makes authed() resolve undefined instead of false. Its only consumer is 'if (!(await authed(ctx)))' in all five tools, and !undefined is !false, so every caller takes the identical branch. No test can tell the two apart without asserting on a value nothing reads. The sibling BooleanLiteral mutant in this catch (return true) IS killed by the auth-check-throws case.",
+            "decision": "none \u2014 returning false states the pre-flight's answer explicitly",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
         }
     ]
 }

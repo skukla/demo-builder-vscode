@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/app-builder/services/appDeployment.ts"
+        "src/features/ai/server/eventProviderTools.ts"
     ],
     "reporters": [
         "clear-text",
