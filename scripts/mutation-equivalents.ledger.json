@@ -10924,6 +10924,58 @@
             "decision": "none \u2014 the optional chain is defensive on a parameter the SDK may hand over as undefined, and the earlier guard already excludes that case here",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/components/handlers/componentHandlers.ts",
+            "anchors": [
+                "if (!payload || typeof payload !== 'object') {"
+            ],
+            "line": 194,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value \u2014 a string, a number, a boolean \u2014 the destructured fields come back undefined and the SECOND guard below refuses with the identical { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
+            "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/components/handlers/componentHandlers.ts",
+            "anchors": [
+                "if (!payload || typeof payload !== 'object') {"
+            ],
+            "line": 232,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value \u2014 a string, a number, a boolean \u2014 the destructured fields come back undefined and the SECOND guard below refuses with the identical { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
+            "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/components/handlers/componentHandlers.ts",
+            "anchors": [
+                "if (!payload || typeof payload !== 'object') {"
+            ],
+            "line": 275,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value \u2014 a string, a number, a boolean \u2014 the destructured fields come back undefined and the SECOND guard below refuses with the identical { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
+            "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/components/handlers/componentHandlers.ts",
+            "anchors": [
+                "if (!payload || typeof payload !== 'object') {"
+            ],
+            "line": 322,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the typeof clause with false, leaving 'if (!payload)'. Every payload that reaches these handlers is a JSON value from a webview message or an in-process tool call, and for every truthy non-object JSON value \u2014 a string, a number, a boolean \u2014 the destructured fields come back undefined and the SECOND guard below refuses with the identical { success: false, error: 'Invalid payload' }. The only input that separates the two is a function or symbol carrying string-typed fields, which no caller can produce and no message channel can carry.",
+            "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }
