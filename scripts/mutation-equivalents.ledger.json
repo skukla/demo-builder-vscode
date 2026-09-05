@@ -7627,6 +7627,18 @@
             "decision": "none \u2014 returning the answer beats throwing and catching it",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/configGenerator.ts",
+            "anchors": [
+                "if (params.selectedPackage) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard true calls injectPackageConfigFlags with an undefined package id. demo-packages.json has no entry whose id is undefined, so the find returns undefined, the flags are undefined, and injectConfigFlags's own `flags &&` short-circuits \u2014 the generated config.json is byte-identical. Killing it would need a catalog carrying a package with no id, which is a shape the real file cannot hold.",
+            "decision": "none \u2014 the guard skips a lookup that is guaranteed to miss",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
         }
     ]
 }

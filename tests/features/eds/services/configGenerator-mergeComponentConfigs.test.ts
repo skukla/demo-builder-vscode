@@ -183,4 +183,24 @@ describe('mergeComponentConfigs — the backend owns the scope, not the last non
 
         expect(result.ACCS_WEBSITE_CODE).toBe('citisignal');
     });
+    it('does NOT plant a MESH_ENDPOINT key when no deployed endpoint was supplied', () => {
+        // `merged.MESH_ENDPOINT = undefined` is not the same as no key: the
+        // merged map is spread into config params and iterated downstream, so a
+        // present-but-undefined key reads as "the mesh answered with nothing"
+        // rather than "there is no mesh".
+        const result = mergeComponentConfigs({
+            'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://direct.example.com' },
+        });
+
+        expect(Object.keys(result)).not.toContain('MESH_ENDPOINT');
+    });
+
+    it('overrides the merged endpoint with the deployed one when supplied', () => {
+        const result = mergeComponentConfigs(
+            { 'adobe-commerce-accs': { MESH_ENDPOINT: 'https://stale.example.com' } },
+            'https://deployed.example.com/graphql',
+        );
+
+        expect(result.MESH_ENDPOINT).toBe('https://deployed.example.com/graphql');
+    });
 });

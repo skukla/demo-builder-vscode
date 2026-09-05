@@ -418,3 +418,4 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): bring configurationService to zero open mutation gaps (`9175f248f`)
 - 2026-09-05  test(eds): bring toolManager to zero open mutation gaps (`f881ec1ee`)
 - 2026-09-05  test(eds): bring siteAccessManagerHeadless to zero open mutation gaps (`7e6578538`)
+- 2026-09-05  test(eds): bring githubTokenService to zero open mutation gaps (`17c613a2a`)

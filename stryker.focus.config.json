@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/github/githubTokenService.ts"
+        "src/features/eds/services/configGenerator.ts"
     ],
     "reporters": [
         "clear-text",
