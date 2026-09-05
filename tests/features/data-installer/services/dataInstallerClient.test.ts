@@ -49,6 +49,16 @@ function textFetch(text: string, status: number, statusText: string): jest.Mock 
     });
 }
 
+/** A fetch stub whose SUCCESS body is not JSON at all. */
+function okTextFetch(text: string): jest.Mock {
+    return jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => text,
+    });
+}
+
 function makeClient(fetchImpl: jest.Mock, extra: Record<string, unknown> = {}): DataInstallerClient {
     return new DataInstallerClient({
         baseUrl: BASE,
@@ -306,6 +316,306 @@ describe('DataInstallerClient', () => {
             const page = await makeClient(jsonFetch({ success: true, count: 0 }), {
                 onDrift: jest.fn(),
             }).findDatapacks({});
+            expect(page.items).toEqual([]);
+        });
+    });
+    /**
+     * Every read endpoint, asserted on what it SENDS.
+     *
+     * These were reached by nothing before: eight methods whose whole body could be
+     * deleted with the suite green. The assertions are on the request the client
+     * built — the query keys are a wire contract with the deployed service, and a
+     * mocked fetch cannot notice a malformed one on its own.
+     */
+    describe('every endpoint, and the query it builds', () => {
+        it('asks get-datapack-metadata for one name and version', async () => {
+            const f = jsonFetch(load('get-datapack-metadata.json'));
+
+            const detail = await makeClient(f).getDatapackDetail({
+                name: 'citisignal_new',
+                version: 'main',
+            });
+
+            const { url } = callArgs(f);
+            expect(url).toContain('/get-datapack-metadata');
+            expect(url).toContain('datapack_name=citisignal_new');
+            expect(url).toContain('version=main');
+            expect(detail.id.name).toBe('citisignal_new');
+            expect(detail.displayName).toBe('CitiSignal (Updated Data)');
+        });
+
+        it('asks get-data-item for a datapack, a type and a version', async () => {
+            const f = jsonFetch(load('get-data-item.json'));
+
+            const item = await makeClient(f).getDataItem(
+                { name: 'citisignal_new', version: 'main' },
+                'categories',
+            );
+
+            const { url } = callArgs(f);
+            expect(url).toContain('datapack_name=citisignal_new');
+            expect(url).toContain('data_type=categories');
+            expect(url).toContain('version=main');
+            expect(item.dataType).toBe('categories');
+        });
+
+        it('returns the export data-type catalog', async () => {
+            const f = jsonFetch(load('get-export-data-types.json'));
+
+            const types = await makeClient(f).getExportDataTypes();
+
+            expect(callArgs(f).url).toContain('/get-export-data-types');
+            expect(types.map((t) => t.dataType)).toContain('product_attributes');
+        });
+
+        it('asks for the processor order of ONE mode and keeps the order', async () => {
+            // Import and export return different lists, so the mode has to reach
+            // the wire — an emptied query silently answers the wrong question.
+            const f = jsonFetch(load('processor-order-export.json'));
+
+            const order = await makeClient(f).getProcessorOrder('export');
+
+            expect(callArgs(f).url).toContain('operation_mode=export');
+            expect(order[0]).toBe('product_attributes');
+            expect(order).toContain('attribute_sets');
+        });
+
+        it('filters installed datapacks by instance, identity and paging', async () => {
+            const f = jsonFetch(load('get-installed-datapacks.json'));
+
+            const page = await makeClient(f).getInstalledDatapacks({
+                commerceInstance: 'instance-04',
+                datapackName: 'AFREEN-LG-DEMO',
+                version: 'dev',
+                limit: 10,
+                skip: 5,
+            });
+
+            const { url } = callArgs(f);
+            expect(url).toContain('/get-installed-datapacks');
+            expect(url).toContain('commerce_instance=instance-04');
+            expect(url).toContain('datapack_name=AFREEN-LG-DEMO');
+            expect(url).toContain('version=dev');
+            expect(url).toContain('limit=10');
+            expect(url).toContain('skip=5');
+            expect(page.items[0].commerceInstance).toBe('instance-04');
+        });
+
+        it('filters the activity log on every field the query carries', async () => {
+            const f = jsonFetch(load('logs.json'));
+
+            const page = await makeClient(f).getActivityLog({
+                datapackName: 'citisignal_new',
+                version: 'main',
+                operationMode: 'import',
+                commerceInstance: 'instance-04',
+                siteType: 'eds',
+                startDate: '2026-08-01',
+                endDate: '2026-08-31',
+                limit: 10,
+                skip: 3,
+            });
+
+            const { url } = callArgs(f);
+            for (const param of [
+                'datapack_name=citisignal_new',
+                'version=main',
+                'operation_mode=import',
+                'commerce_instance=instance-04',
+                'site_type=eds',
+                'start_date=2026-08-01',
+                'end_date=2026-08-31',
+                'limit=10',
+                'skip=3',
+            ]) {
+                expect(url).toContain(param);
+            }
+            expect(page.items[0].activationId).toBe('activation-02');
+        });
+    });
+
+    /**
+     * The activation echo — the only source that says why an accepted job did
+     * nothing. A 400 from it IS the answer; anything else is still a failure.
+     */
+    describe('the activation echo', () => {
+        it('reads the validation error out of a 400 body', async () => {
+            const f = jsonFetch(load('async-process-status-invalidinput.json'), 400, 'Bad Request');
+
+            const reason = await makeClient(f).getJobFailureReason('activation-09');
+
+            expect(callArgs(f).url).toContain('/async-process-status/activation-09');
+            expect(reason?.error).toContain('Invalid input');
+        });
+
+        it('explains nothing for the stale in_progress echo', async () => {
+            // This endpoint reports in_progress for jobs that finished hours ago,
+            // so that body is not evidence of anything.
+            const f = jsonFetch(load('async-process-status-aged.json'));
+
+            expect(await makeClient(f).getJobFailureReason('activation-01')).toBeUndefined();
+        });
+
+        it('rethrows any status other than 400', async () => {
+            const f = jsonFetch({ error: 'boom' }, 500, 'Internal Server Error');
+
+            const err = await makeClient(f)
+                .getJobFailureReason('a')
+                .catch((e: unknown) => e);
+
+            expect(err).toBeInstanceOf(DataInstallerApiError);
+            expect((err as DataInstallerApiError).status).toBe(500);
+        });
+    });
+
+    describe('what the request carries, and what it must not', () => {
+        it('sends neither Content-Type nor a body key on a GET', async () => {
+            const f = jsonFetch(load('find-datapacks.json'));
+
+            await makeClient(f).findDatapacks({});
+
+            const { init } = callArgs(f);
+            expect(headerOf(init, 'Content-Type')).toBeUndefined();
+            // `body: undefined` and no `body` key are different things to fetch,
+            // and only the second is what a GET may carry — so the assertion is
+            // on the KEY, not on the value being undefined.
+            expect(Object.keys(init)).not.toContain('body');
+        });
+
+        it('defaults include_content to false, so a listing pulls no payloads', async () => {
+            const f = jsonFetch(load('batch-ok.json'));
+
+            await makeClient(f).batchGetDataItems({ name: 'x', version: 'main' }, ['categories']);
+
+            expect(JSON.parse(String(callArgs(f).init.body)).include_content).toBe(false);
+        });
+
+        it('sends include_content true when the caller asks for payloads', async () => {
+            const f = jsonFetch(load('batch-ok.json'));
+
+            await makeClient(f).batchGetDataItems(
+                { name: 'x', version: 'main' },
+                ['categories'],
+                true,
+            );
+
+            expect(JSON.parse(String(callArgs(f).init.body)).include_content).toBe(true);
+        });
+
+        it('reports the timeout in SECONDS, not milliseconds', async () => {
+            const abort = new Error('aborted');
+            abort.name = 'AbortError';
+            const f = jest.fn().mockRejectedValue(abort);
+            const client = new DataInstallerClient({
+                baseUrl: BASE,
+                getToken: async () => TOKEN,
+                fetchImpl: f as unknown as typeof fetch,
+                timeoutMs: 5000,
+            });
+
+            await expect(client.findDatapacks({})).rejects.toThrow(/timed out after 5s/);
+        });
+
+        it('does not call an unclassifiable transport failure unreachable', async () => {
+            // Only a TypeError('fetch failed') means unreachable. Anything else
+            // keeps its own message, or a network hiccup gets blamed on the URL
+            // setting and the user edits something that was never wrong.
+            const f = jest.fn().mockRejectedValue(new Error('socket hang up'));
+
+            const err = (await makeClient(f)
+                .findDatapacks({})
+                .catch((e: unknown) => e)) as Error;
+
+            expect(err.message).toContain('socket hang up');
+            expect(err.message).not.toContain('could not reach');
+        });
+    });
+
+    describe('the drift canary, per endpoint', () => {
+        /** Each endpoint that declares expected keys, and the call that reaches it. */
+        const DRIFT_CASES: ReadonlyArray<{
+            action: string;
+            keys: string[];
+            call: (client: DataInstallerClient) => Promise<unknown>;
+        }> = [
+            { action: 'find-datapacks', keys: ['datapacks'], call: (c) => c.findDatapacks({}) },
+            {
+                action: 'get-datapack-metadata',
+                keys: ['datapack_name', 'display_name'],
+                call: (c) => c.getDatapackDetail({ name: 'x', version: 'main' }),
+            },
+            {
+                action: 'get-data-item',
+                keys: ['data'],
+                call: (c) => c.getDataItem({ name: 'x', version: 'main' }, 'categories'),
+            },
+            {
+                action: 'batch-get-data-items',
+                keys: ['results'],
+                call: (c) => c.batchGetDataItems({ name: 'x', version: 'main' }, ['categories']),
+            },
+            {
+                action: 'get-export-data-types',
+                keys: ['data_types'],
+                call: (c) => c.getExportDataTypes(),
+            },
+            {
+                action: 'get-processor-order',
+                keys: ['processors'],
+                call: (c) => c.getProcessorOrder('import'),
+            },
+            {
+                action: 'get-installed-datapacks',
+                keys: ['datapacks'],
+                call: (c) => c.getInstalledDatapacks({}),
+            },
+            { action: 'logs', keys: ['logs'], call: (c) => c.getActivityLog({}) },
+        ];
+
+        it.each(DRIFT_CASES)(
+            'names exactly the missing keys for $action',
+            async ({ action, keys, call }) => {
+                const onDrift = jest.fn();
+
+                await call(makeClient(jsonFetch({ success: true }), { onDrift }));
+
+                expect(onDrift).toHaveBeenCalledWith(action, keys);
+            },
+        );
+
+        it('checks no shape for an endpoint it holds no expectation for', async () => {
+            // datapack-process-status declares no expected keys. The guard is what
+            // stops the check reading `.filter` off undefined and failing a call
+            // that was perfectly fine.
+            const onDrift = jest.fn();
+
+            const snap = await makeClient(jsonFetch({ success: true }), { onDrift }).getJobStatus(
+                'a',
+            );
+
+            expect(onDrift).not.toHaveBeenCalled();
+            expect(snap.activationId).toBe('a');
+        });
+
+        it('reports drift when the body is JSON null rather than crashing', async () => {
+            const onDrift = jest.fn();
+
+            const page = await makeClient(jsonFetch(null), { onDrift }).findDatapacks({});
+
+            expect(onDrift).toHaveBeenCalledWith('find-datapacks', ['datapacks']);
+            expect(page.items).toEqual([]);
+        });
+
+        it('reports drift when a 200 body is not JSON at all', async () => {
+            // A maintenance page served with a 200 parses to its own text. That is
+            // drift — the keys are gone — and not a parse crash.
+            const onDrift = jest.fn();
+
+            const page = await makeClient(okTextFetch('<html>maintenance</html>'), {
+                onDrift,
+            }).findDatapacks({});
+
+            expect(onDrift).toHaveBeenCalledWith('find-datapacks', ['datapacks']);
             expect(page.items).toEqual([]);
         });
     });

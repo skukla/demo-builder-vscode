@@ -11090,6 +11090,30 @@
             "decision": "none \u2014 the guards stay because the alternative is a TypeError inside a failure path, and the fixtures were corrected to the shape CommandResult actually declares rather than kept as an invented one.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/data-installer/services/dataInstallerClient.ts",
+            "anchors": [
+                "const present = typeof body === 'object' && body !== null ? Object.keys(body) : [];"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Two mutants on this line are unobservable through the client's only exit, checkShape's missing-key list. (1) Replacing 'typeof body === object' with true: JSON.parse can only yield object, array, string, number, boolean or null. For null the second half short-circuits identically, and for every other non-object Object.keys returns numeric index strings, which never match an expected key name - so 'missing' is byte-identical either way. (2) Replacing the else-branch [] with ['Stryker was here']: present is only ever read through expected.filter(k => !present.includes(k)), and no EXPECTED_KEYS entry is that string, so missing is again identical. The other three mutants on the line ARE killed, by the JSON-null and non-JSON-body drift tests.",
+            "decision": "Recorded as equivalent. The reachable-value argument is what makes it safe: killing either would need a body JSON.parse cannot produce.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/data-installer/services/dataInstallerClient.ts",
+            "anchors": [
+                "function safeJsonParse(text: string): unknown {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying safeJsonParse's catch block returns undefined instead of the raw text. Every consumer of a parsed body runs it through the parsers' obj() helper, which maps both a non-object string and undefined to {}, and checkShape reads Object.keys of neither (typeof 'text' and typeof undefined are both not 'object', so present is [] either way). safeJsonParse is module-private, so there is no surface on which the two answers differ.",
+            "decision": "Recorded as equivalent. The non-JSON 200 body IS now covered by a test - the block executes - but its two possible returns are indistinguishable downstream.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }
