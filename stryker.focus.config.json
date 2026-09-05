@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/helix/helixBulkJobs.ts"
+        "src/features/eds/services/configSyncService.ts"
     ],
     "reporters": [
         "clear-text",

@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "helixBulkJobs: killed the 404-vs-error-status branch, the flat status:finished path, the >=400 resource boundary, the exact-deadline check and the flat progress format; ledgered the log-only sample/count arms. openGaps 30 -> 0.",
+    "_note": "configSyncService: covered verifyConfigOnCdn's retry loop directly (attempt count, sleep cadence, non-OK body, missing commerce endpoint), pinned the createOrUpdateFile arguments and the outer-catch failure; ledgered the four log-only arms. openGaps 29 -> 0.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -7153,29 +7153,26 @@
             "openGaps": 16
         },
         "src/features/eds/services/configSyncService.ts": {
-            "score": 49.07,
-            "killed": 53,
-            "survived": 36,
-            "noCoverage": 19,
-            "timeout": 0,
+            "score": 71.3,
+            "killed": 76,
+            "survived": 27,
+            "noCoverage": 4,
+            "timeout": 1,
             "survivorCategories": {
-                "branch": 11,
-                "logPresentation": 10,
-                "string": 8,
-                "optionalChain": 3,
-                "block": 2,
-                "other": 2
+                "logPresentation": 16,
+                "string": 4,
+                "branch": 3,
+                "optionalChain": 2,
+                "block": 2
             },
             "uncoveredCategories": {
                 "logPresentation": 2,
-                "string": 6,
-                "block": 5,
-                "other": 1,
-                "branch": 5
+                "string": 1,
+                "block": 1
             },
-            "highValueSurvivors": 13,
-            "equivalent": 0,
-            "openGaps": 29
+            "highValueSurvivors": 5,
+            "equivalent": 8,
+            "openGaps": 0
         },
         "src/features/eds/services/credentialServiceProbe.ts": {
             "score": 56.92,

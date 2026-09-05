@@ -8004,6 +8004,56 @@
             "decision": "none \u2014 the count fallback and the zero-processed warning exist to make a silent no-op job legible in a pasted log, which is a reporting job, not a control-flow one",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/configSyncService.ts",
+            "anchors": [
+                "if (!result.cdnVerified) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The guard's whole body is one logger.warn; result.cdnVerified was already assigned from verification.configVerified on the line above and nothing downstream reads it again before the result is returned. Forcing the condition either way, negating it, or emptying the block leaves the returned ConfigSyncResult byte-identical \u2014 the caller's view of a timed-out verification is the cdnVerified flag itself, which 'returns partial success if CDN publish fails' and the verifyConfigOnCdn suite both pin. Only the warn text moves.",
+            "decision": "none \u2014 the warning is how an unverified publish reaches a pasted log, and the flag it describes is already asserted",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/configSyncService.ts",
+            "anchors": [
+                "if (json.public?.default?.['commerce-endpoint']) {"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Dropping either optional chain makes a config without a 'public' or 'public.default' object throw a TypeError instead of reading undefined. The throw lands in this loop's own catch two blocks down, which logs and falls through to exactly the same place the falsy branch does: the same sleep, the same next attempt, the same final 'return false' after ten. Attempt count, sleep cadence and return value are identical, so the only difference is which debug line prints. The NARROWING mutant on the same guard \u2014 forcing it false \u2014 IS killed by 'does not accept a config that lacks the commerce endpoint'.",
+            "decision": "none \u2014 the chains are required by the type and the catch already handles the shape they guard against",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/configSyncService.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 333,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else arm of the response.ok check contains a single logger.debug naming the status that came back. Emptying it leaves the loop doing the same thing: no assignment, no return, straight on to the between-attempts sleep and the next fetch. That a non-OK status does not end the loop early is pinned by 'does not accept a body served under a non-OK status', which counts all ten attempts; the arm's remaining content is the status number in a debug line.",
+            "decision": "none \u2014 the retry log is what makes a slow edge legible, and the retry itself is asserted",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/configSyncService.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 338,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch exists to swallow a failed fetch so the loop keeps trying; its body is one logger.debug naming the attempt and the error. Emptying it removes the log and nothing else \u2014 control still leaves the try, still hits the between-attempts sleep, still comes back for the next attempt. 'waits between attempts but not after the last one' drives ten rejected fetches through this exact path and pins the ten attempts and the nine waits; what the empty block loses is the message, not a decision.",
+            "decision": "none \u2014 a per-attempt failure line is the only trace a transient CDN error leaves, and the loop behaviour around it is asserted",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
         }
     ]
 }
