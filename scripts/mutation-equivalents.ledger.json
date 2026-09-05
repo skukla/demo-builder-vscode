@@ -11150,6 +11150,18 @@
             "decision": "Recorded as equivalent. Killing it would need readFile to succeed on a directory, which no test may assert because no filesystem does it.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/projects-dashboard/commands/showProjectsList.ts",
+            "anchors": [
+                "public static disposeActivePanel(): void {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Replacing 'if (panel)' with true only changes the no-panel case, and that case is already swallowed: the body is 'try { panel.dispose() } catch {}', so calling dispose on undefined throws a TypeError the catch absorbs. The mutant and the original both return having done nothing observable. The other three mutants here - the guard as false, its block emptied, and the try block emptied - ARE killed, by the test that a live panel gets disposed.",
+            "decision": "Recorded as equivalent. The catch that makes the method safe against an already-disposed panel is what also makes this guard unobservable.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }

@@ -199,6 +199,47 @@ describe('ShowProjectsListCommand - Sidebar Integration', () => {
         });
     });
 
+    describe('execute() - new panel vs revealed panel', () => {
+        it('opens the channel for a NEW panel and sends it no data', async () => {
+            // A new panel asks for its own data after mount. Pushing
+            // projectsUpdated at it as well double-renders and flickers.
+            const command = createCommand();
+
+            internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(lastMintedPanel());
+            internals(command).initializeCommunication = jest.fn().mockResolvedValue({
+                on: jest.fn(),
+                sendMessage: jest.fn().mockResolvedValue(undefined),
+            });
+            internals(command).refreshProjectsList = jest.fn().mockResolvedValue(undefined);
+            internals(command).refreshConfig = jest.fn().mockResolvedValue(undefined);
+
+            await command.execute();
+
+            expect(internals(command).initializeCommunication).toHaveBeenCalled();
+            expect(internals(command).refreshProjectsList).not.toHaveBeenCalled();
+            expect(internals(command).refreshConfig).not.toHaveBeenCalled();
+        });
+
+        it('reuses the channel of an EXISTING panel and pushes fresh data', async () => {
+            const command = createCommand();
+            internals(command).communicationManager = {
+                on: jest.fn(),
+                sendMessage: jest.fn().mockResolvedValue(undefined),
+            };
+
+            internals(command).createOrRevealPanel = jest.fn().mockResolvedValue(lastMintedPanel());
+            internals(command).initializeCommunication = jest.fn().mockResolvedValue(undefined);
+            internals(command).refreshProjectsList = jest.fn().mockResolvedValue(undefined);
+            internals(command).refreshConfig = jest.fn().mockResolvedValue(undefined);
+
+            await command.execute();
+
+            expect(internals(command).initializeCommunication).not.toHaveBeenCalled();
+            expect(internals(command).refreshProjectsList).toHaveBeenCalled();
+            expect(internals(command).refreshConfig).toHaveBeenCalled();
+        });
+    });
+
     describe('ServiceLocator integration', () => {
         it('should check if sidebar is initialized before updating', async () => {
             // Given: A Projects List command instance
