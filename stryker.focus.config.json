@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/configure/hooks/useConfigureFieldValues.ts"
+        "src/features/dashboard/handlers/appBuilderComponentHandlers.ts"
     ],
     "reporters": [
         "clear-text",

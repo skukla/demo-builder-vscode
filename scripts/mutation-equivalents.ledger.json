@@ -8789,6 +8789,92 @@
             "decision": "none \u2014 the empty list says this callback closes over nothing",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+            "anchors": [
+                "if (result.success) {"
+            ],
+            "line": 674,
+            "mutants": 7,
+            "category": "branch",
+            "reason": "The three-way tail of withComponentProgress writes one USER-log line per outcome and nothing else \u2014 no return value changes, no channel is pushed. Forcing any branch, or emptying any body, changes only which line prints, which is what the ratchet exists to refuse to reward. The outcome itself is asserted through the returned result and the row-status pushes.",
+            "decision": "none \u2014 the split exists so a guard refusal is not logged as a failure",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+            "anchors": [
+                "if (payload.source?.owner && payload.source?.repo) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the second optional chain would throw only when payload.source is undefined, and the first half of the same condition short-circuits on exactly that case \u2014 payload.source?.owner is undefined, so repo is never read. The first chain IS killed by the empty-payload case.",
+            "decision": "none \u2014 the type makes source optional and both chains are required by it",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+            "anchors": [
+                "success: false,"
+            ],
+            "line": 474,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The Configure route's inner success flag never reaches a caller: the outer handler matches result.blocked first and returns its own { success: false, error }. Flipping it changes a value that is overwritten one frame later.",
+            "decision": "none \u2014 the inner shape matches GuardableResult, which the outer translates",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+            "anchors": [
+                "const picks = payload?.apis ?? [];"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "This line is unreachable with an undefined payload: resolveAddEntry(payload ?? {}) answers undefined for one, and the handler returns 'Unknown appBuilderComponent' before the progress block opens. So dropping the chain cannot throw. The ?? [] fallback beside it IS exercised.",
+            "decision": "none \u2014 the chain matches the optional payload type the handler declares",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+            "anchors": [
+                "buildToolchainConsent(context, payload?.refreshCli),"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Same unreachability as the picks line above: an undefined payload cannot resolve an entry, so the add never reaches this line with one.",
+            "decision": "none \u2014 the chain matches the optional payload type",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+            "anchors": [
+                "return { cancelled: true };"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The caller tests membership \u2014 'cancelled' in resolved \u2014 not the value, so a false here is still a cancellation and still writes nothing. Only deleting the key would change behaviour, which is not a mutation Stryker makes.",
+            "decision": "none \u2014 true reads as what it means",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/handlers/appBuilderComponentHandlers.ts",
+            "anchors": [
+                "const resolved = await resolveRenameName(payload?.name, entry.name ?? id, takenNames);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Unreachable with an undefined payload: resolveComponentTarget(context, payload?.id) has already returned 'AppBuilderComponent id is required' twenty lines earlier, so payload is always defined here. The id chain on that earlier line is the one that can throw, and it is killed.",
+            "decision": "none \u2014 the chain matches the optional payload type",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08"
         }
     ]
 }

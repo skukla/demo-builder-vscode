@@ -77,6 +77,8 @@ jest.mock('@/features/authentication/services/detectProjectOrgMismatch', () => (
 // ---- dashboard status channels (mocked — no live webview) ------------------
 export const mockSendAppBuilderComponentStatusUpdate = jest.fn();
 export const mockSendAppBuilderComponentsSnapshot = jest.fn();
+export const mockSendMeshStatusUpdate = jest.fn();
+export const mockSendProjectDestinationUpdate = jest.fn();
 /**
  * The status re-run after a set-changing op. Mocked because the real one is a
  * heavy handler (auth guard + mesh checks) and this suite only cares WHETHER the
@@ -93,19 +95,49 @@ jest.mock('@/features/dashboard/commands/showDashboard', () => ({
             mockSendAppBuilderComponentStatusUpdate(...a),
         sendAppBuilderComponentsSnapshot: (...a: unknown[]) =>
             mockSendAppBuilderComponentsSnapshot(...a),
+        sendMeshStatusUpdate: (...a: unknown[]) => mockSendMeshStatusUpdate(...a),
+        sendProjectDestinationUpdate: (...a: unknown[]) => mockSendProjectDestinationUpdate(...a),
         refreshStatus: jest.fn(),
     },
 }));
 
 export {
+    buildToolchainConsent,
+    guardOrBlock,
     handleAddAppBuilderComponent,
     handleDeployAppBuilderComponent,
     handleRedeployAppBuilderComponent,
     handleRemoveAppBuilderComponent,
     handleRenameAppBuilderComponent,
+    postComponentsSnapshot,
+    postDestination,
+    postMeshStatus,
+    postRowStatus,
+    resolveAddEntry,
+    resolveComponentTarget,
+    runGuards,
+    userSuppliedEnvVars,
+    withComponentProgress,
 } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 
 export { setupMocks };
+
+/**
+ * The MOCKED vscode module, resolved through jest rather than imported.
+ *
+ * A spec that writes `import * as vscode from 'vscode'` binds BEFORE this
+ * module's `jest.mock('vscode', ...)` has run — imports evaluate in source order
+ * and a jest.mock only hoists within its own module — so it gets the
+ * moduleNameMapper's copy and watches a different object than the handler calls.
+ * That presented as "Number of calls: 0" on an assertion that was right.
+ */
+export const vscodeMock = jest.requireMock('vscode') as {
+    window: {
+        showWarningMessage: jest.Mock;
+        withProgress: jest.Mock;
+    };
+    commands: { executeCommand: jest.Mock };
+};
 
 export const ERP_ENTRY = {
     id: 'erp-sync',

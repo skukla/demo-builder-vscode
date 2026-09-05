@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "useConfigureFieldValues.ts: read accessors and the write edges covered; 5 equivalent mutants ledgered",
+    "_note": "appBuilderComponentHandlers.ts: guard chain, push channels, both same-source gates and the deploy/remove/rename edges covered; 13 mutants ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -4695,29 +4695,25 @@
             "openGaps": 16
         },
         "src/features/dashboard/handlers/appBuilderComponentHandlers.ts": {
-            "score": 66.75,
-            "killed": 275,
-            "survived": 105,
-            "noCoverage": 32,
+            "score": 89.81,
+            "killed": 370,
+            "survived": 40,
+            "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 10,
-                "other": 10,
-                "string": 23,
-                "optionalChain": 15,
-                "branch": 42,
-                "block": 5
+                "logPresentation": 12,
+                "optionalChain": 4,
+                "string": 15,
+                "branch": 6,
+                "block": 3
             },
             "uncoveredCategories": {
-                "string": 7,
-                "block": 6,
-                "other": 4,
-                "branch": 13,
-                "logPresentation": 2
+                "string": 1,
+                "logPresentation": 1
             },
-            "highValueSurvivors": 47,
-            "equivalent": 0,
-            "openGaps": 95
+            "highValueSurvivors": 9,
+            "equivalent": 13,
+            "openGaps": 0
         },
         "src/features/dashboard/handlers/appManagementInstallHandlers.ts": {
             "score": 70.99,
