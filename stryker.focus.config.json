@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/hooks/useAsyncData.ts"
+        "src/features/app-builder/services/appDeployment.ts"
     ],
     "reporters": [
         "clear-text",

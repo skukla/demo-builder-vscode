@@ -37,6 +37,7 @@ import {
     deployAppComponent,
     isToolchainStalenessError,
 } from '@/features/app-builder/services/appDeployment';
+import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
@@ -230,5 +231,71 @@ describe('deployAppComponent — refresh-and-retry', () => {
         expect(
             execute.mock.calls.filter((c) => (c[0] as string).includes('app deploy'))
         ).toHaveLength(1);
+    });
+});
+
+/**
+ * The refresh command itself, which nothing had looked at.
+ *
+ * It is a global npm install under the DEFAULT shell — deliberately not the
+ * app's node version, because that is the silo the executor's `aio` resolves
+ * from — and it needs the long timeout and the enhanced PATH or it fails on a
+ * machine that has never run it.
+ */
+describe('the CLI refresh command', () => {
+    /** Deploy fails with the staleness signature; `run` decides the refresh. */
+    function executorWhereRefresh(run: { code: number; stdout?: string; stderr?: string }) {
+        return jest.fn().mockImplementation((command: string) => {
+            if (command.startsWith('npm install -g')) {
+                return Promise.resolve({ stdout: '', stderr: '', ...run });
+            }
+            if (command.includes('app deploy')) {
+                return Promise.resolve({ code: 1, stdout: '', stderr: `› Error: ${STALE_ERROR}` });
+            }
+            return Promise.resolve({ code: 0, stdout: '', stderr: '' });
+        });
+    }
+
+    const refresh = async (execute: jest.Mock) =>
+        deployAppComponent('/app', createMockCommandExecutor({ execute }), makeLogger(), {
+            confirmToolchainRefresh: async () => true,
+        });
+
+    it('runs under the default shell, with the long timeout and an enhanced PATH', async () => {
+        const execute = executorWhereRefresh({ code: 0 });
+
+        await refresh(execute);
+
+        const call = execute.mock.calls.find((c) => (c[0] as string).startsWith('npm install -g'));
+        expect(call?.[0]).toBe('npm install -g @adobe/aio-cli --no-fund');
+        expect(call?.[1]).toEqual({
+            shell: DEFAULT_SHELL,
+            timeout: 3000,
+            enhancePath: true,
+        });
+    });
+
+    it('quotes the LAST three lines of a failed refresh, trimmed', async () => {
+        // npm prints a page; the tail is where the cause is. Quoting the head
+        // reports the command that ran instead of the reason it failed.
+        const execute = executorWhereRefresh({
+            code: 1,
+            stderr: '\nnpm ERR! one\nnpm ERR! two\nnpm ERR! three\nnpm ERR! four\n',
+        });
+
+        const result = await refresh(execute);
+
+        expect(result.error).toContain(
+            'Adobe CLI update failed: npm ERR! two npm ERR! three npm ERR! four.',
+        );
+        expect(result.error).not.toContain('npm ERR! one');
+    });
+
+    it('names the exit code when a failed refresh printed nothing', async () => {
+        const execute = executorWhereRefresh({ code: 4, stderr: '' });
+
+        const result = await refresh(execute);
+
+        expect(result.error).toContain('Adobe CLI update failed: exit 4.');
     });
 });

@@ -11052,6 +11052,44 @@
             "decision": "none \u2014 the lists are correct and exhaustive-deps requires them; the mutant is undetectable only because the collaborator it depends on is already stable, which is a property of useLoadingState rather than of this file.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/app-builder/services/appDeployment.ts",
+            "anchors": [
+                "} else if (val && typeof val === 'object') {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "This guard is redundant with the one flattenUrls opens with. Widening it \u2014 to always true, or to val || typeof val === 'object' \u2014 only makes the function recurse into values it would otherwise skip, and every such call hits 'if (!value || typeof value !== \"object\") return result' on entry and answers with an empty object. Object.assign of an empty object changes nothing, so no payload can make the mutated form produce a different deployedUrls map.",
+            "decision": "none \u2014 the check is a cheap early-out that avoids a call per non-object leaf, and the duplicated condition is what makes flattenUrls safe to call from anywhere; narrowing either copy to remove the redundancy would trade the guarantee for the mutant.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/app-builder/services/appDeployment.ts",
+            "anchors": [
+                "return !!error && TOOLCHAIN_STALENESS_PATTERNS.some((pattern) => pattern.test(error));"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "TOOLCHAIN_STALENESS_PATTERNS is a module constant holding exactly one regular expression, and over a single-element array 'some' and 'every' return the same answer for every input. The mutant becomes distinguishable only on the day a second signature is added to the list, at which point a test over two patterns will kill it \u2014 there is no error string that separates them today.",
+            "decision": "none \u2014 'some' is the correct operator for a list of alternative signatures; the array is one element long by circumstance rather than by design.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/app-builder/services/appDeployment.ts",
+            "anchors": [
+                "result.stderr?.trim().split('\\n').slice(-3).join(' ') || `exit ${result.code}`;",
+                "deployResult.stderr?.trim() ||",
+                "deployResult.stdout?.trim() ||"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "CommandResult declares stdout and stderr as required strings, so no typed caller of commandManager.execute can hand these three expressions an absent stream \u2014 the optional chain guards a shape the contract forbids, and dropping it behaves identically for every value the type permits. Killing one needs a result object missing a required field, which is a fixture the compiler rejects; an earlier draft of these tests built exactly that and typecheck:tests refused it.",
+            "decision": "none \u2014 the guards stay because the alternative is a TypeError inside a failure path, and the fixtures were corrected to the shape CommandResult actually declares rather than kept as an invented one.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }
