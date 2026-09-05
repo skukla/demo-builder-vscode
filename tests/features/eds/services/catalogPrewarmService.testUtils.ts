@@ -61,3 +61,32 @@ export function catalogPage(items: Array<{ sku: string; urlKey: string }>) {
         }),
     };
 }
+
+/**
+ * A raw Catalog Service response, for the cases {@link catalogPage} cannot
+ * express: a missing `page_info`, an `errors` array, an item with no
+ * `productView`, or a non-2xx status.
+ */
+export function graphqlResponse(
+    payload: unknown,
+    init: { ok?: boolean; status?: number } = {},
+): { ok: boolean; status: number; json: () => Promise<unknown> } {
+    return {
+        ok: init.ok ?? true,
+        status: init.status ?? 200,
+        json: async () => payload,
+    };
+}
+
+/** The headers `generateHeaders` produces for {@link makeAccsProject}, merged. */
+export const ACCS_ENUMERATION_HEADERS = {
+    Store: 'default',
+    'Magento-Customer-Group': '',
+    'Magento-Store-Code': 'main_website_store',
+    'Magento-Store-View-Code': 'default',
+    'Magento-Website-Code': 'base',
+    'Content-Type': 'application/json',
+};
+
+/** The Catalog Service endpoint {@link makeAccsProject} is configured with. */
+export const ACCS_ENDPOINT = 'https://catalog.example.com/graphql';

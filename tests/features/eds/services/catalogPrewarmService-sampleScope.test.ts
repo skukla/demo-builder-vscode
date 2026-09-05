@@ -117,6 +117,30 @@ describe('pickSampleSku', () => {
             );
         });
 
+        it('does not go looking for a served config it has no repo for', async () => {
+            // The served config lives at a GitHub owner/repo pair. A recorded
+            // value that is not one cannot address it, so the read must not be
+            // attempted at all rather than sent with an undefined half.
+            const noRepo = makeAccsProject({
+                selectedStack: 'eds-accs',
+                componentInstances: {
+                    'eds-storefront': {
+                        id: 'eds-storefront',
+                        name: 'EDS Storefront',
+                        status: 'ready',
+                        metadata: { githubRepo: 'owner-only' },
+                    },
+                },
+            });
+            (global.fetch as jest.Mock).mockResolvedValue(catalogPage([{ sku: 'S1', urlKey: 'u1' }]));
+
+            const sample = await pickSampleSku(noRepo, mockLogger);
+
+            expect(sample?.scopeSource).toBe('manifest');
+            const asked = (global.fetch as jest.Mock).mock.calls.map((c) => String(c[0]));
+            expect(asked.some((u) => u.endsWith('/config.json'))).toBe(false);
+        });
+
         it('falls back to the manifest when the served config cannot be read', async () => {
             // A CDN hiccup must not leave diagnostics with no answer at all.
             routeFetch(undefined);

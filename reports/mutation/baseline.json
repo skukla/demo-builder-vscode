@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "daLiveSourceOperations: asserted the ARGUMENTS every request carries (verb, bearer, URL) rather than only the client's reply, covered readSource end to end, and pinned the four phases of whole-site deletion by call order; ledgered deleteSiteRoot's log-only branch and the empty trailing batch",
+    "_note": "catalogPrewarmService: pinned the Catalog Service request (endpoint, merged header groups, page variables), covered the response shapes that separate an empty catalog from a wrong-shaped payload, the small-sample cap at both mid-page and page-boundary, and the two pickSampleSku guards; ledgered the log-severity branches and the guards their callers have already proved",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -6934,27 +6934,25 @@
             "openGaps": 19
         },
         "src/features/eds/services/catalogPrewarmService.ts": {
-            "score": 61.63,
-            "killed": 156,
-            "survived": 89,
-            "noCoverage": 10,
+            "score": 77.52,
+            "killed": 197,
+            "survived": 52,
+            "noCoverage": 6,
             "timeout": 3,
             "survivorCategories": {
-                "optionalChain": 8,
-                "branch": 30,
-                "block": 10,
-                "logPresentation": 8,
-                "string": 28,
-                "other": 5
+                "logPresentation": 24,
+                "string": 10,
+                "branch": 11,
+                "block": 6,
+                "optionalChain": 1
             },
             "uncoveredCategories": {
-                "string": 7,
-                "block": 2,
-                "logPresentation": 1
+                "logPresentation": 4,
+                "string": 2
             },
-            "highValueSurvivors": 40,
-            "equivalent": 0,
-            "openGaps": 55
+            "highValueSurvivors": 17,
+            "equivalent": 18,
+            "openGaps": 0
         },
         "src/features/eds/services/cleanupService.ts": {
             "score": 85.35,

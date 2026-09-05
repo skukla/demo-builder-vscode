@@ -7065,6 +7065,142 @@
             "decision": "Equivalent: the extra iteration slices an empty batch and issues no work.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/catalogPrewarmService.ts",
+            "anchors": [
+                "if (failed > 0) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "Both arms of this if/else hold exactly one statement, a logger call, and the return that follows is the same object either way - it reports succeeded, failed and attempted as counted, not as branched. Forcing the condition, or flipping > to >= or <=, or emptying the block, changes only whether the summary line goes out at warn or at info and how it is worded. The counts themselves ARE constrained, by the tests that drive one publish to reject and assert attempted/succeeded/failed.",
+            "decision": "Equivalent: a log-severity branch over an unchanged return value.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/catalogPrewarmService.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 342,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else half of the log-severity branch recorded for line 333: its body is one logger.info and the return below it is identical on both paths, so emptying it removes a summary line and nothing the caller can see. Recorded separately because the ledger keys an entry by module, line and anchor, and this block opens on its own line.",
+            "decision": "Equivalent: the block holds only the info half of a log-severity branch.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/catalogPrewarmService.ts",
+            "anchors": [
+                "if (!endpoint) throw new Error('catalog prewarm requires a commerceEndpoint');"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "enumerateAccsCatalog is module-private with exactly two callers, prewarmCatalog and pickSampleSku, and BOTH return early on !params.commerceEndpoint before reaching it - each guard has its own test asserting no request is sent. pickSampleSku passes params through applyServedScope first, but that only overlays websiteCode, storeCode and storeViewCode from the served config, so it cannot remove the endpoint. The guard is therefore never true, and forcing it false selects the path already taken. It stays in src because params is a Partial and TypeScript needs the narrowing before fetch.",
+            "decision": "Equivalent: both callers have already proved the endpoint present.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/catalogPrewarmService.ts",
+            "anchors": [
+                "if (view?.sku && view?.urlKey) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "This is the mutant that drops the ?. from the SECOND operand only. For it to throw, view would have to be undefined - and then view?.sku is undefined and && short-circuits before the second operand is ever evaluated. There is no input that reaches view.urlKey with view undefined. The first operand's ?. IS killed, by the test whose catalog page contains an item with no productView at all.",
+            "decision": "Equivalent: the second operand is unreachable when the first would have thrown.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/catalogPrewarmService.ts",
+            "anchors": [
+                "if (maxItems !== MAX_SKUS) return allPaths;"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Both sides of this branch return allPaths. The only difference is that the false side emits a logger.warn about hitting the real cap first, which is the whole point of the check - a caller asking for a small sample is hitting its OWN limit, not a catalog that is too big, and should not be warned. So forcing the condition either way, or flipping !== to ===, changes only whether that warning prints. The cap itself is constrained by the two tests that assert a one-item sample stops mid-page and at a page boundary.",
+            "decision": "Equivalent: both branches return the same value; only the warning differs.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/catalogPrewarmService.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 479,
+            "mutants": 1,
+            "category": "block",
+            "reason": "publishOne's catch body is a logger.debug and return false. Emptying it drops off the end of the function, which returns undefined - and the single caller does results.filter(Boolean).length, where undefined and false are identical. Per-SKU failures are non-fatal by design, so nothing else reads the value. The failure COUNT is constrained by the test that drives one previewAndPublishPage to reject and asserts attempted 2, succeeded 1, failed 1.",
+            "decision": "Equivalent: the caller only tests truthiness, and undefined is as falsy as false.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/catalogPrewarmService.ts",
+            "anchors": [
+                "if (!owner || !repo) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The pair being tested comes from (getEdsGithubRepo(project) ?? '').split('/'), and getEdsGithubRepo already returns undefined unless BOTH halves are non-empty. So only two states reach this line: a validated owner/repo pair, where both operands are false, or the empty-string fallback, where owner is '' and repo is undefined and both are true. || and && agree on both. Reaching a state where they disagree would need a recorded repo that getEdsGithubRepo accepted and this split did not.",
+            "decision": "Equivalent: the upstream validator makes the two operands always agree.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/catalogPrewarmService.ts",
+            "anchors": [
+                "if (unexpected) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Both arms are a single logger call - warn when the project reads 'published', info otherwise - and the return statement below them is the same object either way, carrying the unexpected flag as a FIELD on scopeDivergence. So the branch decides log severity and wording only. The field itself is constrained: two tests assert scopeDivergence.unexpected is true for a published project and false for a stale one.",
+            "decision": "Equivalent: a log-severity branch over an unchanged return value.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/catalogPrewarmService.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 568,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else half of the log-severity branch recorded for line 566: one logger.info, followed by the same return on both paths. Emptying it removes an info line and nothing observable. Recorded separately because the ledger keys an entry by module, line and anchor.",
+            "decision": "Equivalent: the block holds only the info half of a log-severity branch.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/catalogPrewarmService.ts",
+            "anchors": [
+                "if (!first) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "pickSampleSku returns undefined on both routes out of this guard. Taken, it logs and returns undefined. Skipped - by forcing the condition false or emptying the block - execution falls to the return that reads first.sku, which throws on an undefined first, and the catch four lines below turns that into the same undefined. The caller therefore cannot distinguish them; only the debug wording differs. The empty-catalog case IS constrained, by the test asserting pickSampleSku resolves undefined when the catalog returns no products.",
+            "decision": "Equivalent: both routes out of the guard return undefined.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/catalogPrewarmService.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 647,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch body is a logger.debug and return undefined. Emptying it drops off the end of pickSampleSku, which returns undefined - the same value, and the same one the function's own doc promises for every failure so a Commerce outage cannot colour the storefront verdict. Three tests drive this handler (catalog down, GraphQL errors, enumeration failure) and all three assert undefined, which is what both versions produce.",
+            "decision": "Equivalent: falling off the end returns the same undefined the handler returns explicitly.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }

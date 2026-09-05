@@ -70,4 +70,56 @@ describe('projectTargetsStorefront', () => {
     it('rejects a malformed repo string rather than guessing', () => {
         expect(projectTargetsStorefront(projectFor('no-slash-here'), 'skukla', 'jay-bodea-test')).toBe(false);
     });
+
+    /**
+     * Each of these reaches a DIFFERENT optional link in the chain that reads
+     * the recorded repo. A project can be missing its instance map, missing the
+     * storefront instance, or holding one that carries no metadata — and the
+     * guard has to answer false for all three rather than throw into the setup
+     * path it gates.
+     */
+    it('rejects a project with no component instances at all', () => {
+        const bare = createMockProject({ name: 'demo', componentInstances: undefined });
+
+        expect(projectTargetsStorefront(bare, 'skukla', 'jay-bodea-test')).toBe(false);
+    });
+
+    it('rejects a project whose instances hold no storefront', () => {
+        const noStorefront = createMockProject({ name: 'demo', componentInstances: {} });
+
+        expect(projectTargetsStorefront(noStorefront, 'skukla', 'jay-bodea-test')).toBe(false);
+    });
+
+    it('rejects a storefront instance carrying no metadata', () => {
+        const noMetadata = createMockProject({
+            name: 'demo',
+            componentInstances: {
+                'eds-storefront': { name: 'eds-storefront', status: 'ready', id: 'eds-storefront' },
+            },
+        });
+
+        expect(projectTargetsStorefront(noMetadata, 'skukla', 'jay-bodea-test')).toBe(false);
+    });
+
+    /**
+     * A bare owner with no repo half. The owner MATCHES here on purpose: with a
+     * non-matching owner the comparison short-circuits before it would read the
+     * absent repo name, so the guard looks fine either way.
+     */
+    it('rejects a bare owner even when that owner is the right one', () => {
+        expect(projectTargetsStorefront(projectFor('skukla'), 'skukla', 'jay-bodea-test'))
+            .toBe(false);
+    });
+
+    /** Three segments is not a repo name — matching the first two would be a guess. */
+    it('rejects a repo string carrying an extra path segment', () => {
+        expect(
+            projectTargetsStorefront(
+                projectFor('skukla/jay-bodea-test/extra'),
+                'skukla',
+                'jay-bodea-test',
+            ),
+        ).toBe(false);
+    });
+
 });
