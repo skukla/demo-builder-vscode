@@ -96,20 +96,24 @@ describe('KindStage', () => {
         expect(onPickKind).not.toHaveBeenCalled();
     });
 
-    it('marks the tile matching `kind` selected and the others not', () => {
-        renderStage({ kind: 'blank' });
-        expect(screen.getByRole('button', { name: /Build custom/ })).toHaveAttribute(
-            'data-selected',
-            'true'
-        );
-        expect(screen.getByRole('button', { name: /Import a repo/ })).toHaveAttribute(
-            'data-selected',
-            'false'
-        );
-        expect(screen.getByRole('button', { name: /API Mesh/ })).toHaveAttribute(
-            'data-selected',
-            'false'
-        );
+    // Every kind, not just one: each tile carries its OWN comparison against
+    // `kind`, so a tile whose comparison is wrong stays unselected forever while
+    // the other three still light up — and a one-kind test cannot see it.
+    const TILES: Array<{ kind: Props['kind']; name: RegExp }> = [
+        { kind: 'mesh', name: /API Mesh/ },
+        { kind: 'catalog', name: /Pre-built integration/ },
+        { kind: 'blank', name: /Build custom/ },
+        { kind: 'custom', name: /Import a repo/ },
+    ];
+
+    it.each(TILES)('marks the $kind tile selected and the other three not', ({ kind, name }) => {
+        renderStage({ kind });
+        for (const tile of TILES) {
+            expect(screen.getByRole('button', { name: tile.name })).toHaveAttribute(
+                'data-selected',
+                tile.name === name ? 'true' : 'false'
+            );
+        }
     });
 
     it('marks no tile selected when `kind` is undefined', () => {
