@@ -89,6 +89,20 @@ describe('readLkgSha — happy path', () => {
             .find((u) => u.includes('raw.githubusercontent'));
         expect(calledUrl).toBe('https://raw.githubusercontent.com/skukla/eds-demo-patches/main/b2b/last-known-good');
     });
+
+    it('bounds the content fetch with an abort signal — a hung raw.githubusercontent stalls setup otherwise', async () => {
+        const fetchMock = jest.fn().mockResolvedValue({
+            ok: true,
+            text: () => Promise.resolve(VALID_SHA),
+        });
+        global.fetch = fetchMock;
+
+        await readLkgSha(SOURCE, mockLogger);
+
+        const rawCall = fetchMock.mock.calls.find((c) => String(c[0]).includes('raw.githubusercontent'));
+        expect(rawCall).toBeDefined();
+        expect(rawCall![1]).toEqual(expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    });
 });
 
 // ==========================================================================
@@ -125,6 +139,31 @@ describe('readLkgSha — failure modes', () => {
         const sha = await readLkgSha(SOURCE, mockLogger);
         expect(sha).toBeUndefined();
         expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Invalid'));
+    });
+
+    it('rejects a body that STARTS with a valid SHA but carries trailing content', async () => {
+        // The shape check is anchored at both ends. Without the end anchor a body like
+        // `<sha>deadbeef` — a concatenation, or a file with a second value appended —
+        // would be accepted and handed to the caller as a ref that does not exist.
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: true,
+            text: () => Promise.resolve(`${VALID_SHA}deadbeef`),
+        });
+
+        const sha = await readLkgSha(SOURCE, mockLogger);
+        expect(sha).toBeUndefined();
+    });
+
+    it('rejects a body that ENDS with a valid SHA but carries leading content', async () => {
+        // Without the start anchor, `ref: <sha>` would be accepted whole — the caller
+        // would then check out a ref whose name contains a prefix that is not part of it.
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: true,
+            text: () => Promise.resolve(`ref: ${VALID_SHA}`),
+        });
+
+        const sha = await readLkgSha(SOURCE, mockLogger);
+        expect(sha).toBeUndefined();
     });
 
     it('returns undefined for a short SHA (e.g., 7-char abbreviation)', async () => {

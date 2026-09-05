@@ -8616,6 +8616,18 @@
             "decision": "none \u2014 the guard is a correct fast path; the tests assert the empty-array outcome (applyCodePatches returns [] and no fetch is made), which is the behaviour that matters",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/patches/lkgReader.ts",
+            "anchors": [
+                "const excerpt = trimmed.length > MALFORMED_BODY_LOG_CAP"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "excerpt is read at exactly one place \u2014 the warn line on the next statement. Flipping the cap test to always-true, or moving the boundary from > to >=, changes only how many characters of the malformed body appear in that message; the function returns undefined either way and no collaborator sees the value.",
+            "decision": "none \u2014 killing it would require asserting the warn line's wording, which pins a log string rather than a behaviour",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }

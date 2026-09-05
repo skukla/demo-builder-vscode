@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "accsDiscoveryConfig: URL length cap tested from both sides, unset-setting default and the setting identifier now asserted",
+    "_note": "lkgReader: fetch abort signal and both SHA-pattern anchors now asserted; excerpt log cap ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -7692,20 +7692,19 @@
             "openGaps": 0
         },
         "src/features/eds/services/patches/lkgReader.ts": {
-            "score": 79.31,
-            "killed": 23,
-            "survived": 6,
+            "score": 89.66,
+            "killed": 26,
+            "survived": 3,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 3,
                 "branch": 2,
                 "string": 1
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 2,
-            "equivalent": 0,
-            "openGaps": 5
+            "equivalent": 2,
+            "openGaps": 0
         },
         "src/features/eds/services/patches/patchMissTracker.ts": {
             "score": 68.29,
