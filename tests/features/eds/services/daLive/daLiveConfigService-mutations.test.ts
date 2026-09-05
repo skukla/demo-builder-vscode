@@ -522,5 +522,88 @@ describe('DaLiveConfigService - mutations', () => {
 
             expect(result.success).toBe(true);
         });
+
+        it('succeeds on a config that exists but has no permissions sheet', async () => {
+            // A site config carrying only block-library settings. There is
+            // nothing to revoke, and reaching into the absent sheet would turn
+            // that into a reported failure.
+            mockFetch.mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: jest.fn().mockResolvedValue({
+                    ':names': ['library'],
+                    ':version': 3,
+                    ':type': 'multi-sheet',
+                }),
+            });
+
+            const result = await service.revokeUserAccess(testOrg, testSite, testEmail);
+
+            expect(result).toEqual({ success: true });
+        });
+
+        it('keeps the sheet column widths on the config it writes back', async () => {
+            const existingConfig: MultiSheetConfig = {
+                ':names': ['permissions'],
+                ':version': 3,
+                ':type': 'multi-sheet',
+                permissions: {
+                    total: 1,
+                    limit: 1,
+                    offset: 0,
+                    data: [{ path: '/test-site/+**', groups: testEmail, actions: 'write' }],
+                },
+            };
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: jest.fn().mockResolvedValue(existingConfig),
+                })
+                .mockResolvedValueOnce({ ok: true, status: 200 });
+
+            await service.revokeUserAccess(testOrg, testSite, testEmail);
+
+            const body = mockFetch.mock.calls[1][1].body as FormData;
+            const written = JSON.parse(body.get('config') as string) as MultiSheetConfig;
+
+            expect(written.permissions?.[':colWidths']).toEqual([200, 350, 75, 150]);
+            expect(written.permissions?.data).toEqual([]);
+        });
+
+        it('reports the write failure rather than throwing out of the revoke', async () => {
+            const existingConfig: MultiSheetConfig = {
+                ':names': ['permissions'],
+                ':version': 3,
+                ':type': 'multi-sheet',
+                permissions: {
+                    total: 1,
+                    limit: 1,
+                    offset: 0,
+                    data: [{ path: '/test-site/+**', groups: testEmail, actions: 'write' }],
+                },
+            };
+
+            mockFetch
+                .mockResolvedValueOnce({
+                    ok: true,
+                    status: 200,
+                    json: jest.fn().mockResolvedValue(existingConfig),
+                })
+                .mockResolvedValue({
+                    ok: false,
+                    status: 403,
+                    statusText: 'Forbidden',
+                    text: jest.fn().mockResolvedValue(''),
+                });
+
+            const result = await service.revokeUserAccess(testOrg, testSite, testEmail);
+
+            expect(result).toEqual({
+                success: false,
+                error: 'Failed to update config: 403 Forbidden',
+            });
+        });
     });
 });

@@ -6669,6 +6669,108 @@
             "decision": "Equivalent while UNKNOWN's patterns list is empty.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigService.ts",
+            "anchors": [
+                "const errorText = await response.text().catch(() => '');"
+            ],
+            "line": 165,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker rewrites the .catch(() => '') callback to return undefined. The result feeds only `${errorText ? ` - ${errorText}` : ''}`, and undefined and '' are both falsy, so the assembled message is byte-identical. The callback runs at all only when response.text() rejects, and even then nothing downstream can tell the two values apart.",
+            "decision": "Equivalent: both the real value and the mutant's are falsy at the only site that reads it.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigService.ts",
+            "anchors": [
+                "const errorText = await response.text().catch(() => '');"
+            ],
+            "line": 210,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker rewrites the .catch(() => '') callback to return undefined. The result feeds only `${errorText ? ` - ${errorText}` : ''}`, and undefined and '' are both falsy, so the assembled message is byte-identical. The callback runs at all only when response.text() rejects, and even then nothing downstream can tell the two values apart.",
+            "decision": "Equivalent: both the real value and the mutant's are falsy at the only site that reads it.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigService.ts",
+            "anchors": [
+                "const errorText = await response.text().catch(() => '');"
+            ],
+            "line": 252,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker rewrites the .catch(() => '') callback to return undefined. The result feeds only `${errorText ? ` - ${errorText}` : ''}`, and undefined and '' are both falsy, so the assembled message is byte-identical. The callback runs at all only when response.text() rejects, and even then nothing downstream can tell the two values apart.",
+            "decision": "Equivalent: both the real value and the mutant's are falsy at the only site that reads it.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigService.ts",
+            "anchors": [
+                "const errorText = await response.text().catch(() => '');"
+            ],
+            "line": 298,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker rewrites the .catch(() => '') callback to return undefined. The result feeds only `${errorText ? ` - ${errorText}` : ''}`, and undefined and '' are both falsy, so the assembled message is byte-identical. The callback runs at all only when response.text() rejects, and even then nothing downstream can tell the two values apart.",
+            "decision": "Equivalent: both the real value and the mutant's are falsy at the only site that reads it.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigService.ts",
+            "anchors": [
+                "if (hasRootPermission && hasContentPermission && hasConfigPermission) {"
+            ],
+            "mutants": 6,
+            "category": "branch",
+            "reason": "The whole guarded body is one logger.debug saying the user already has full access. Every one of the six mutants (both LogicalOperator rewrites, three ConditionalExpression constants and the emptied block) changes only whether that line prints \u2014 the permissions array, the PUT body and the returned result are already fully determined by the three preceding if-blocks. Separating them would take an assertion on the debug wording.",
+            "decision": "Recorded: log-only guard.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigService.ts",
+            "anchors": [
+                "const names = existing?.[':names'] || ['permissions'];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the fallback array is undone by the very next statement: with names = [], !names.includes('permissions') is true, so 'permissions' is pushed and names is ['permissions'] again. The fallback only runs when the existing config has no :names at all, which is exactly the case that push covers.",
+            "decision": "Equivalent: the next line reconstructs the same array.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigService.ts",
+            "anchors": [
+                "if (!config?.permissions?.data) {"
+            ],
+            "line": 489,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Same shape as hasUserAccess: the guard and the catch return the identical { configured: false, userCount: 0, users: [] }, so turning the guard off or dropping either ?. throws into the catch and produces the same value. Only a logger.warn differs.",
+            "decision": "Equivalent: guard and catch return the same object.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveConfigService.ts",
+            "anchors": [
+                "if (!config?.permissions?.data) {"
+            ],
+            "line": 444,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "hasUserAccess returns { hasAccess: false } from three places \u2014 this guard, the end of the loop, and the catch \u2014 so disabling the guard (or dropping either ?. so it throws) lands in the catch and returns the SAME object. Nothing observable differs: no argument changes, no request is made, and only a logger.warn separates the paths. The guard is still right to keep, because reaching the loop with no data is a thrown TypeError being swallowed rather than a decision.",
+            "decision": "Equivalent: every route returns { hasAccess: false }.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }

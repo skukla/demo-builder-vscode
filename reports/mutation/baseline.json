@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "errorFormatters: the three message tables exercised pattern by pattern, code-beats-message and unknown-code fall-through, technicalDetails status on the pattern path, and every half-populated GitHub rejection body the ?. chains defend against; UNKNOWN-table guard pairs and four proven-unreachable optional chains recorded",
+    "_note": "daLiveConfigService: the four wrappers' own-error-vs-transport-error fork, grantUserAccess's three email+path dedup decisions driven from four starting configs, the :names sheet list, group-list trimming, and the never-throw contract on both read-only checks; log-only guard and same-return catch paths recorded",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -7348,29 +7348,25 @@
             "openGaps": 0
         },
         "src/features/eds/services/daLive/daLiveConfigService.ts": {
-            "score": 62.79,
-            "killed": 216,
-            "survived": 92,
-            "noCoverage": 36,
+            "score": 83.43,
+            "killed": 287,
+            "survived": 50,
+            "noCoverage": 7,
             "timeout": 0,
             "survivorCategories": {
-                "string": 26,
-                "logPresentation": 16,
-                "other": 10,
-                "branch": 28,
-                "block": 6,
-                "optionalChain": 6
+                "logPresentation": 26,
+                "other": 5,
+                "string": 5,
+                "branch": 7,
+                "block": 3,
+                "optionalChain": 4
             },
             "uncoveredCategories": {
-                "block": 7,
-                "other": 5,
-                "string": 17,
-                "branch": 5,
-                "logPresentation": 2
+                "string": 7
             },
-            "highValueSurvivors": 34,
-            "equivalent": 0,
-            "openGaps": 67
+            "highValueSurvivors": 10,
+            "equivalent": 19,
+            "openGaps": 0
         },
         "src/features/eds/services/daLive/daLiveConstants.ts": {
             "score": 100,

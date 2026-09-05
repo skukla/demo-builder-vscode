@@ -215,6 +215,53 @@ describe('DaLiveConfigService - queries & access', () => {
             expect(result.permissionLevel).toBe('read');
         });
 
+        it('trims the whitespace out of a comma-separated group list', async () => {
+            // DA.live's sheet editor leaves the space a human typed after the
+            // comma. Matching the raw split would miss every user but the first.
+            const config: MultiSheetConfig = {
+                ':names': ['permissions'],
+                ':version': 3,
+                ':type': 'multi-sheet',
+                permissions: {
+                    total: 1,
+                    limit: 1,
+                    offset: 0,
+                    data: [
+                        {
+                            path: '/test-site/+**',
+                            groups: `other@example.com, ${testEmail}`,
+                            actions: 'write',
+                        },
+                    ],
+                },
+            };
+
+            mockFetch.mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: jest.fn().mockResolvedValue(config),
+            });
+
+            const result = await service.hasUserAccess(testOrg, testSite, testEmail);
+
+            expect(result).toEqual({ hasAccess: true, permissionLevel: 'write' });
+        });
+
+        it('answers false rather than throwing when the config read fails', async () => {
+            // This is a CHECK; callers gate on it and none of them expect it to
+            // raise. A 500 must read as "we could not establish access".
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error',
+                text: jest.fn().mockResolvedValue(''),
+            });
+
+            await expect(service.hasUserAccess(testOrg, testSite, testEmail)).resolves.toEqual({
+                hasAccess: false,
+            });
+        });
+
         it('should return false when user not in permissions', async () => {
             const config: MultiSheetConfig = {
                 ':names': ['permissions'],
@@ -258,6 +305,40 @@ describe('DaLiveConfigService - queries & access', () => {
             expect(result.configured).toBe(false);
             expect(result.userCount).toBe(0);
             expect(result.users).toEqual([]);
+        });
+
+        it('reports unconfigured for a permissions sheet with no rows', async () => {
+            // An empty `data` array is truthy, so it passes the guard and reaches
+            // the count — `configured` has to come from the row count itself.
+            mockFetch.mockResolvedValue({
+                ok: true,
+                status: 200,
+                json: jest.fn().mockResolvedValue({
+                    ':names': ['permissions'],
+                    ':version': 3,
+                    ':type': 'multi-sheet',
+                    permissions: { total: 0, limit: 0, offset: 0, data: [] },
+                }),
+            });
+
+            const result = await service.getPermissionsStatus(testOrg, testSite);
+
+            expect(result).toEqual({ configured: false, userCount: 0, users: [] });
+        });
+
+        it('reports the empty status rather than throwing when the read fails', async () => {
+            mockFetch.mockResolvedValue({
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error',
+                text: jest.fn().mockResolvedValue(''),
+            });
+
+            await expect(service.getPermissionsStatus(testOrg, testSite)).resolves.toEqual({
+                configured: false,
+                userCount: 0,
+                users: [],
+            });
         });
 
         it('should return configured with user list', async () => {
