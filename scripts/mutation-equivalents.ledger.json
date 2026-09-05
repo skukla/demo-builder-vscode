@@ -9443,6 +9443,227 @@
             "decision": "none \u2014 equivalent.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "let hasChanges = false;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Starting the flag true only changes which of two references the function returns, and when no write happened those references are the SAME object: newConfigs is initialised to prevConfigs and only reassigned by a write. Verified by planting 'let hasChanges = true': 97 tests still pass.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "if (targets.length === 0) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Removing the early return calls writeToComponents with an EMPTY target list, which writes to nothing and returns configs equal in content. The only difference is object identity on a path where the effect runs once. Verified by planting 'if (false) return': 97 tests still pass, including the one asserting the configs object is returned unchanged when every default is already stored.",
+            "decision": "none \u2014 equivalent in content; the guard is a cheap skip, not a decision.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "if (serviceGroups.length === 0) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Removing the early return runs applyFieldDefaults over an empty group list, which iterates nothing and returns prevConfigs \u2014 the same object the guard would have preserved. Verified by planting 'if (false) return': 97 tests still pass.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "initialConfigs || {},"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "No reachable caller can make initialConfigs falsy. UseComponentConfigProps declares componentConfigs as a required ComponentConfigs, and the single production call site (CommerceStep passing into ConnectStoreStepContent) already writes 'state.componentConfigs ?? EMPTY_CONFIGS'. The fallback guards a case the type and the caller both rule out.",
+            "decision": "none \u2014 equivalent; the guard is defensive against an input no path produces.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "response.error ?? 'components-data returned no data',"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The chosen string becomes the message of an Error that is caught two lines later, logged, and discarded; the state the hook actually sets is a fixed user-facing sentence that does not include it. Nothing a test can read changes.",
+            "decision": "none \u2014 the only observable difference is log wording.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "if (cancelled) return;"
+            ],
+            "line": 238,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "React 18 no longer warns when state is set on an unmounted component, so a late setState has no observable effect at all: no render happens, no console output the gate could catch, and result.current is unreachable after unmount. The suite drives both post-unmount paths (a resolved response and a rejected one) to prove they do not throw, which is the most a test can see here.",
+            "decision": "none \u2014 equivalent. The guard is still correct; nothing can witness its absence.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "if (cancelled) return;"
+            ],
+            "line": 246,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "React 18 no longer warns when state is set on an unmounted component, so a late setState has no observable effect at all: no render happens, no console output the gate could catch, and result.current is unreachable after unmount. The suite drives both post-unmount paths (a resolved response and a rejected one) to prove they do not throw, which is the most a test can see here.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "cancelled = true;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "React 18 no longer warns when state is set on an unmounted component, so a late setState has no observable effect at all: no render happens, no console output the gate could catch, and result.current is unreachable after unmount. The suite drives both post-unmount paths (a resolved response and a rejected one) to prove they do not throw, which is the most a test can see here. Flipping the cleanup's assignment to false is the same mutation seen from the other end: it disarms the two guards above, whose absence is itself unobservable.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "return () => {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "React 18 no longer warns when state is set on an unmounted component, so a late setState has no observable effect at all: no render happens, no console output the gate could catch, and result.current is unreachable after unmount. The suite drives both post-unmount paths (a resolved response and a rejected one) to prove they do not throw, which is the most a test can see here. Emptying the cleanup body leaves 'cancelled' false forever, which disarms the same two unobservable guards.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 255,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Giving the load effect a non-empty dependency array makes it re-run on every render, and both re-entry paths are already idempotent: after the load, 'registryCache !== undefined' returns immediately, and before it, 'registryInFlight ??=' hands every caller the same in-flight promise. The suite pins that the request is made exactly once across two mounts.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "if (field.default !== undefined && field.default !== '') {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Only the '!== \"\"' half survives, forced to true. Entering the block with an empty-string default returns that same empty string, which is exactly what falling past the block returns. The '!== undefined' half and the numeric/boolean stringify below it ARE killed, by reads taken during the render where the field first appears.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "return SERVICE_GROUP_DEFINITIONS.map((def) => toServiceGroupWithSortedFields(def, groups))"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The .sort() is a no-op. SERVICE_GROUP_DEFINITIONS.map() already emits groups in definition-array order, and the array's own 'order' values run 1,2,3,4,5,6,8,99 down it \u2014 monotonically increasing \u2014 so the comparator is asked to reorder a list that is already sorted and never moves anything. Verified by planting 'aOrder + bOrder', which makes the comparator return a positive number for every pair: 97 tests still pass, including the one asserting four groups come back in declared order. Stryker's own MethodExpression mutant deletes the whole .sort() call and also survives, which is the same finding stated a second way.",
+            "decision": "none for coverage. The sort is redundant TODAY and load-bearing the moment a group is declared out of order, so it stays \u2014 but it cannot be killed while the definitions array is sorted, and a test that reordered that array would be testing the fixture.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                ".sort((a, b) => {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The .sort() is a no-op. SERVICE_GROUP_DEFINITIONS.map() already emits groups in definition-array order, and the array's own 'order' values run 1,2,3,4,5,6,8,99 down it \u2014 monotonically increasing \u2014 so the comparator is asked to reorder a list that is already sorted and never moves anything. Verified by planting 'aOrder + bOrder', which makes the comparator return a positive number for every pair: 97 tests still pass, including the one asserting four groups come back in declared order. Stryker's own MethodExpression mutant deletes the whole .sort() call and also survives, which is the same finding stated a second way.",
+            "decision": "none \u2014 see the entry on the .map() line above.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "const aOrder = SERVICE_GROUP_DEFINITIONS.find((d) => d.id === a.id)?.order || 99;"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The .sort() is a no-op. SERVICE_GROUP_DEFINITIONS.map() already emits groups in definition-array order, and the array's own 'order' values run 1,2,3,4,5,6,8,99 down it \u2014 monotonically increasing \u2014 so the comparator is asked to reorder a list that is already sorted and never moves anything. Verified by planting 'aOrder + bOrder', which makes the comparator return a positive number for every pair: 97 tests still pass, including the one asserting four groups come back in declared order. Stryker's own MethodExpression mutant deletes the whole .sort() call and also survives, which is the same finding stated a second way. Each group returned by the map came FROM the definitions array, so the find always hits and the '?.'/'|| 99' arms are unreachable as well.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "const bOrder = SERVICE_GROUP_DEFINITIONS.find((d) => d.id === b.id)?.order || 99;"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The .sort() is a no-op. SERVICE_GROUP_DEFINITIONS.map() already emits groups in definition-array order, and the array's own 'order' values run 1,2,3,4,5,6,8,99 down it \u2014 monotonically increasing \u2014 so the comparator is asked to reorder a list that is already sorted and never moves anything. Verified by planting 'aOrder + bOrder', which makes the comparator return a positive number for every pair: 97 tests still pass, including the one asserting four groups come back in declared order. Stryker's own MethodExpression mutant deletes the whole .sort() call and also survives, which is the same finding stated a second way. Each group returned by the map came FROM the definitions array, so the find always hits and the '?.'/'|| 99' arms are unreachable as well.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "return aOrder - bOrder;"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The .sort() is a no-op. SERVICE_GROUP_DEFINITIONS.map() already emits groups in definition-array order, and the array's own 'order' values run 1,2,3,4,5,6,8,99 down it \u2014 monotonically increasing \u2014 so the comparator is asked to reorder a list that is already sorted and never moves anything. Verified by planting 'aOrder + bOrder', which makes the comparator return a positive number for every pair: 97 tests still pass, including the one asserting four groups come back in declared order. Stryker's own MethodExpression mutant deletes the whole .sort() call and also survives, which is the same finding stated a second way.",
+            "decision": "none \u2014 equivalent, verified by planting.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "if (!result.valid && result.error) {"
+            ],
+            "line": 386,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Swapping && for || cannot be observed because the Validator never produces the disagreeing pair. Its result is either { valid: true } with no error or { valid: false } with one, so '!valid && error' and '!valid || error' agree on every value it returns. Verified by planting the || form on BOTH validation blocks at once: 97 tests still pass, including the ones that assert a bad URL, a pattern mismatch, and their absence on valid input.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useComponentConfig.ts",
+            "anchors": [
+                "if (!result.valid && result.error) {"
+            ],
+            "line": 399,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Swapping && for || cannot be observed because the Validator never produces the disagreeing pair. Its result is either { valid: true } with no error or { valid: false } with one, so '!valid && error' and '!valid || error' agree on every value it returns. Verified by planting the || form on BOTH validation blocks at once: 97 tests still pass, including the ones that assert a bad URL, a pattern mismatch, and their absence on valid input.",
+            "decision": "none \u2014 equivalent.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

@@ -135,9 +135,18 @@ function applyFieldDefaults(
             // wanted. Every write path fans one field's value to all its components,
             // so two copies disagreeing is a defect, never a feature (see
             // resolveWriteTargets).
-            const targets = resolveWriteTargets(field, backendId).filter(
-                (componentId) => !newConfigs[componentId]?.[field.key],
-            );
+            //
+            // "Blank" is undefined or '', NOT falsy. A bare truthiness check sat
+            // here and re-applied the default over a stored `false` or `0` on every
+            // mount — an unticked checkbox re-ticking itself, a numeric field
+            // refusing to hold zero. This is the same defect the validation effect
+            // below already carries a note about, twenty lines apart, and the same
+            // rule `findFieldValue` uses: undefined and '' are absent, everything
+            // else is present.
+            const targets = resolveWriteTargets(field, backendId).filter((componentId) => {
+                const stored = newConfigs[componentId]?.[field.key];
+                return stored === undefined || stored === '';
+            });
             if (targets.length === 0) return;
 
             newConfigs = writeToComponents(newConfigs, targets, { [field.key]: defaultValue });
