@@ -62,6 +62,7 @@ module.exports = {
         '**/tests/core/state/stateManager-utilities.test.ts',
         '**/tests/core/state/stateManager.disposal.test.ts',
         '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-inputValidation.test.ts',
+        '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-prompts.test.ts',
         '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-tokenStorage.test.ts',
         '**/tests/features/eds/handlers/daLive/daLiveAuthPrompt-tokenStrict.test.ts',
         '**/tests/commands/claudeCodeFootprint.test.ts',

@@ -388,6 +388,22 @@ describe('ensureDaLiveAuth — server probe', () => {
         );
     });
 
+    it('says EXPIRED, not refused, when the local check is what failed', async () => {
+        // The two causes send the SC to different places: an expiry means fetch
+        // a fresh token, a refusal means the namespace does not accept this
+        // identity. Defaulting to the refusal copy tells everyone whose token
+        // simply ran out to go check the wrong thing.
+        mockIsAuthenticated.mockResolvedValue(false);
+        showWarningMessageResponse = undefined;
+
+        await ensureDaLiveAuth(mockContext, '[Test]', 'acme');
+
+        expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+            'Your DA.live session has expired. Please sign in to continue.',
+            'Sign In'
+        );
+    });
+
     it('passes without any UI when the server accepts the token', async () => {
         mockIsServerAccepted.mockResolvedValue('accepted');
 

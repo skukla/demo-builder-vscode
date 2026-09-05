@@ -8302,6 +8302,44 @@
             "decision": "none \u2014 the anchor states the intent (drop the trailing colon, not every colon) even though no URL can tell the two apart",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts",
+            "anchors": [
+                "const clipped = (await vscode.env.clipboard.readText())?.trim();"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the optional chain turns a null or undefined clipboard into a TypeError on .trim() \u2014 and that TypeError lands in the very catch six lines below, which already exists for a denied or unavailable clipboard and returns undefined. So both the original and the mutant answer undefined for an empty clipboard and the token for a full one; the return value is identical for every clipboard state. The only difference is which of two debug lines is written. That the clipboard path yields the token when it holds one, and falls through to the paste box when it does not, is asserted by the sign-in suite's clipboard tests.",
+            "decision": "none \u2014 the chain says the clipboard may legitimately be empty, which reading it as an exception would not",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 240,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch holds one logger.debug and a return undefined. Emptying it lets control fall off the end of readTokenFromClipboard, which returns undefined too \u2014 the same value, so the caller opens the paste box either way. A denied or unavailable clipboard is not an auth failure and the function is written to say so by returning nothing; the only observable difference the mutant makes is the missing debug line naming why. That the flow falls through to the paste box when the clipboard yields nothing is asserted in the sign-in suite.",
+            "decision": "none \u2014 the debug line is the only record of a clipboard permission problem, which otherwise looks exactly like an empty clipboard",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 445,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else arm of the pinned-namespace check contains one logger.debug naming the namespace being reused. Emptying it changes no value: orgName already holds the pinned org, and the next statement is the browser gate. That the org box is NOT opened when a namespace is pinned \u2014 the decision this else belongs to \u2014 is asserted by 'should not ask for an org when a namespace is already pinned', which counts the boxes opened.",
+            "decision": "none \u2014 naming the reused namespace is how an SC signed into the wrong org finds out where it came from",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-03, 2026-09-05"
         }
     ]
 }

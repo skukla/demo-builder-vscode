@@ -20,7 +20,8 @@
 let showInputBoxCalls: Array<{
     title?: string;
     password?: boolean;
-    validateInput?: (value: string) => string | null | undefined;
+    ignoreFocusOut?: boolean;
+    validateInput?: (value: string | undefined) => string | null | undefined;
 }> = [];
 let showInputBoxResponses: Array<string | undefined> = [];
 let showInputBoxIndex = 0;
@@ -66,8 +67,22 @@ async function openBothBoxes() {
     await showDaLiveAuthQuickPick(createAuthPromptContext());
 }
 
+/** The options the named box was opened with. */
+function boxOptions(titleFragment: string) {
+    const call = showInputBoxCalls.find((c) => (c.title ?? '').includes(titleFragment));
+    if (!call) {
+        throw new Error(
+            `No box titled like "${titleFragment}" was opened. Opened: ` +
+                showInputBoxCalls.map((c) => c.title).join(', ')
+        );
+    }
+    return call;
+}
+
 /** The live-validation callback the named box was opened with. */
-function validatorFor(titleFragment: string): (value: string) => string | null | undefined {
+function validatorFor(
+    titleFragment: string
+): (value: string | undefined) => string | null | undefined {
     const call = showInputBoxCalls.find((c) => (c.title ?? '').includes(titleFragment));
     if (!call?.validateInput) {
         throw new Error(
@@ -126,4 +141,23 @@ describe('the token box', () => {
         const call = showInputBoxCalls.find((c) => (c.title ?? '').includes('token'));
         expect(call?.password).toBe(true);
     });
+});
+
+describe('both boxes survive the user looking away', () => {
+    // The token lives in a browser: the SC clicks "Open DA.live", runs the
+    // bookmarklet, and comes back. A box that closes on focus loss loses the
+    // whole flow and the token they just copied.
+    it.each([['namespace'], ['token']])('the %s box ignores focus loss', (which) => {
+        expect(boxOptions(which).ignoreFocusOut).toBe(true);
+    });
+
+    it.each([['namespace'], ['token']])(
+        'the %s box refuses a value VS Code never supplied',
+        (which) => {
+            // validateInput is declared to take a string, but VS Code calls it
+            // with nothing on an untouched box. Reaching for .trim() on that
+            // throws inside the box and the message never appears.
+            expect(validatorFor(which)(undefined)).toMatch(/required/i);
+        }
+    );
 });

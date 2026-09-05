@@ -54,9 +54,9 @@ import {
 } from './daLiveAuthPrompt.testUtils';
 
 /** Type an org and then a token into the two boxes. */
-async function signInWith(token: string) {
+async function signInWith(token: string, org = 'my-org') {
     showInputBoxIndex = 0;
-    showInputBoxResponses = ['my-org', token];
+    showInputBoxResponses = [org, token];
     return showDaLiveAuthQuickPick(createAuthPromptContext());
 }
 
@@ -125,5 +125,26 @@ describe('when storing the token fails', () => {
         const result = await signInWith(token);
 
         expect(result).toMatchObject({ success: false, error: 'keychain is locked' });
+    });
+});
+
+describe('what the whitespace around a pasted value does', () => {
+    it('stores the token and the namespace with their surrounding whitespace removed', async () => {
+        // The bookmarklet copy carries a trailing newline and typed orgs pick up
+        // stray spaces. Untrimmed, the token goes out as an Authorization header
+        // with a newline in it and the namespace becomes a different org — both
+        // fail at the far end of a write, nowhere near here.
+        const token = makeDaLiveToken({
+            client_id: 'darkalley',
+            created_at: '9999999999999',
+            expires_in: '3600000',
+            email: 'user@example.com',
+        });
+
+        await signInWith(`  ${token}\n`, '  my-org  ');
+
+        expect(mockStoreToken).toHaveBeenCalledWith(token, expect.objectContaining({
+            orgName: 'my-org',
+        }));
     });
 });

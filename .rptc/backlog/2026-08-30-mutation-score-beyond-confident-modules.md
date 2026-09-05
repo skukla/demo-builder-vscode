@@ -438,3 +438,4 @@ which point the cadence drops to release cuts.
 - 2026-09-05  chore(backlog): log the MUT-02 commits against PL-22 (`100d3b650`)
 - 2026-09-05  test(eds): bring storefrontStalenessDetector to zero open mutation gaps (`49180ae85`)
 - 2026-09-05  test(eds): bring byomOverlay to zero open mutation gaps (`d698fc3f1`)
+- 2026-09-05  test(eds): bring byomOverlay to zero open mutation gaps (`43b768973`)

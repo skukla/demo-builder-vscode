@@ -109,3 +109,60 @@ describe('validateDaLiveTokenStrict', () => {
         expect(refusalFor(expired)).toMatch(/expired/i);
     });
 });
+
+describe('validateDaLiveToken (the lenient check the strict one builds on)', () => {
+    it('reports everything it read off a token it could parse', () => {
+        expect(validateDaLiveToken(liveToken)).toEqual({
+            valid: true,
+            email: 'user@example.com',
+            expiresAt: 9999999999999 + 3600000,
+        });
+    });
+
+    it('accepts a JWT-shaped string it cannot read, with nothing to report', () => {
+        // This is the leniency the strict check exists to close: base64 of ANY
+        // JSON begins "eyJ" and carries no dot, so the payload parser returns
+        // null and this check has no grounds to refuse.
+        expect(validateDaLiveToken('eyJzb21lIjoidGhpbmcifQ')).toEqual({ valid: true });
+    });
+
+    it('does not treat a token as expired at the exact instant it expires', () => {
+        // Strictly greater-than. At the boundary the token is still good, and
+        // a token refused one millisecond early sends the SC to fetch a fresh
+        // one they did not need.
+        const expiresAt = 9999999999999 + 3600000;
+        const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(expiresAt);
+        try {
+            expect(validateDaLiveToken(liveToken)).toMatchObject({ valid: true });
+        } finally {
+            nowSpy.mockRestore();
+        }
+    });
+
+    it('treats a token as expired one millisecond later', () => {
+        const expiresAt = 9999999999999 + 3600000;
+        const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(expiresAt + 1);
+        try {
+            expect(validateDaLiveToken(liveToken)).toEqual({
+                valid: false,
+                error: 'Token has expired. Please get a fresh token from DA.live.',
+            });
+        } finally {
+            nowSpy.mockRestore();
+        }
+    });
+});
+
+describe('validateDaLiveTokenStrict on a payload nothing can read', () => {
+    it('refuses a JWT-shaped string with an unreadable payload, naming the bookmarklet', () => {
+        // The lenient check passes this (see above), so the strict one has to
+        // reach for the payload itself — and the payload is null. Reading
+        // client_id off it without a guard would throw here instead of
+        // refusing, and the throw lands in the sign-in flow's catch as
+        // "Authentication failed" with no usable reason.
+        expect(validateDaLiveTokenStrict('eyJzb21lIjoidGhpbmcifQ')).toEqual({
+            valid: false,
+            error: 'This does not look like a DA.live token. Use the bookmarklet on da.live to copy a fresh one.',
+        });
+    });
+});

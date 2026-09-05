@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/handlers/byomOverlay.ts"
+        "src/features/eds/handlers/daLive/daLiveAuthPrompt.ts"
     ],
     "reporters": [
         "clear-text",
