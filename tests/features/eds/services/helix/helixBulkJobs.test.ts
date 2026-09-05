@@ -173,12 +173,82 @@ describe('pollJobCompletion', () => {
             .mockReturnValue(start + 6 * 60 * 1000); // every later check: past 5-min deadline
         try {
             await expect(pollJobCompletion(makeDeps(), JOB)).rejects.toThrow(
-                'Bulk preview job timed out'
+                'Bulk preview job timed out after 300 seconds'
             );
             expect(mockFetch).not.toHaveBeenCalled();
         } finally {
             nowSpy.mockRestore();
         }
+    });
+
+    it('does not give up at exactly the deadline — the check is strictly past it', async () => {
+        const start = 1_000_000;
+        const nowSpy = jest
+            .spyOn(Date, 'now')
+            .mockReturnValueOnce(start) // startTime
+            .mockReturnValue(start + 5 * 60 * 1000); // exactly the 5-minute deadline
+        mockFetch.mockResolvedValue(statusResponse(FINISHED_OK));
+        try {
+            await pollJobCompletion(makeDeps(), JOB);
+
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+        } finally {
+            nowSpy.mockRestore();
+        }
+    });
+
+    it('throws on a non-404 error status instead of retrying it', async () => {
+        mockFetch
+            .mockResolvedValueOnce(
+                statusResponse(FINISHED_OK, { ok: false, status: 500 })
+            )
+            .mockResolvedValue(statusResponse(FINISHED_OK));
+
+        await expect(pollJobCompletion(makeDeps(), JOB)).rejects.toThrow(
+            'Job status check failed: 500'
+        );
+    });
+
+    it('accepts the flat `status: finished` field while `state` still says running', async () => {
+        mockFetch
+            .mockResolvedValueOnce(
+                statusResponse({
+                    state: 'running',
+                    status: 'finished',
+                    data: { resources: [{ path: '/a', status: 200 }] },
+                })
+            )
+            .mockRejectedValue(new Error('polled again after the job finished'));
+
+        await pollJobCompletion(makeDeps(), JOB);
+
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('treats a resource status of exactly 400 as a failed path', async () => {
+        mockFetch.mockResolvedValueOnce(
+            statusResponse({
+                state: 'finished',
+                data: { resources: [{ path: '/x', status: 400 }] },
+            })
+        );
+
+        await expect(pollJobCompletion(makeDeps(), JOB)).rejects.toThrow(
+            'Bulk preview: 1/1 paths failed (first: /x \u2192 400)'
+        );
+    });
+
+    it('completes a job whose progress arrives only in the flat format', async () => {
+        mockFetch.mockResolvedValueOnce(
+            statusResponse({
+                state: 'finished',
+                processed: 2,
+                total: 2,
+                data: { resources: [{ path: '/a', status: 200 }] },
+            })
+        );
+
+        await expect(pollJobCompletion(makeDeps(), JOB)).resolves.toBeUndefined();
     });
 });
 

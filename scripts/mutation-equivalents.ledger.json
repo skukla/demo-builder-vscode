@@ -7976,6 +7976,34 @@
             "decision": "none \u2014 the guard states the only shape that can carry an error field; widening it changes nothing",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/helix/helixBulkJobs.ts",
+            "anchors": [
+                "const sample = failed",
+                ".map((r) => `${r.path} \u2192 ${r.status}`)",
+                "const truncated = failed.length > 10 ? ', ...' : '';"
+            ],
+            "mutants": 6,
+            "category": "branch",
+            "reason": "sample and truncated are built only to be interpolated into the logger.error line two statements below; the Error thrown right after is assembled from failed.length, resources.length and failed[0] and never reads either variable. So dropping the .slice(0,10), emptying the .map callback, or forcing the >10 comparison either way changes exactly one thing: the wording of a log line. Killing them means asserting logger.error's text, which the ratchet exists to refuse to reward.",
+            "decision": "none \u2014 the 10-path cap and its ellipsis keep a bulk failure log readable, and the thrown Error already carries the machine-checkable facts",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/helix/helixBulkJobs.ts",
+            "anchors": [
+                "const processed = status.progress?.processed ?? status.processed ?? 0;",
+                "const count = resources.length > 0 ? resources.length : processed;",
+                "if (count === 0) {"
+            ],
+            "mutants": 7,
+            "category": "branch",
+            "reason": "Everything past the failed-path throw in assertBulkResourcesSucceeded is presentation: the function returns void down both remaining arms, so the only difference between counting resources.length and counting progress.processed, or between taking the processed-NOTHING arm and the completed arm, is which logger line prints and what number it prints. The one mutant here that IS observable \u2014 dropping the ?. so a flat-format status without a progress object throws \u2014 is killed by 'completes a job whose progress arrives only in the flat format'. The rest can be reached only by pinning log wording.",
+            "decision": "none \u2014 the count fallback and the zero-processed warning exist to make a silent no-op job legible in a pasted log, which is a reporting job, not a control-flow one",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
         }
     ]
 }

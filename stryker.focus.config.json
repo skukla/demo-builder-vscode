@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/commerceStoreDiscovery.ts"
+        "src/features/eds/services/helix/helixBulkJobs.ts"
     ],
     "reporters": [
         "clear-text",

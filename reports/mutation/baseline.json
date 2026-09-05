@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "commerceStoreDiscovery: the discovery service's refusal messages are asserted whole, and the guard chain before the request is covered on both halves of every pair",
+    "_note": "helixBulkJobs: killed the 404-vs-error-status branch, the flat status:finished path, the >=400 resource boundary, the exact-deadline check and the flat progress format; ledgered the log-only sample/count arms. openGaps 30 -> 0.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -7636,25 +7636,24 @@
             "openGaps": 10
         },
         "src/features/eds/services/helix/helixBulkJobs.ts": {
-            "score": 65.67,
-            "killed": 82,
-            "survived": 42,
-            "noCoverage": 4,
-            "timeout": 6,
+            "score": 74.63,
+            "killed": 86,
+            "survived": 31,
+            "noCoverage": 3,
+            "timeout": 14,
             "survivorCategories": {
-                "logPresentation": 5,
-                "branch": 23,
-                "other": 5,
-                "string": 7,
-                "optionalChain": 1,
-                "block": 1
+                "logPresentation": 15,
+                "other": 2,
+                "string": 3,
+                "branch": 11
             },
             "uncoveredCategories": {
-                "string": 4
+                "string": 1,
+                "logPresentation": 2
             },
-            "highValueSurvivors": 24,
-            "equivalent": 0,
-            "openGaps": 30
+            "highValueSurvivors": 11,
+            "equivalent": 13,
+            "openGaps": 0
         },
         "src/features/eds/services/helix/helixService.ts": {
             "score": 83.39,
