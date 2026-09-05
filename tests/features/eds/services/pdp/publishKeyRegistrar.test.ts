@@ -23,6 +23,31 @@ jest.mock('@/features/eds/handlers/edsHelpers', () => ({
 const mockCreateAdminApiKey = jest.fn<Promise<string | null>, [string, string]>();
 const mockForgetApiKey = jest.fn<Promise<void>, [string, string]>();
 
+/**
+ * The DEFAULT seam — what a production caller gets when it omits the fourth argument.
+ *
+ * Every test above hands a fake in, so nothing exercised `realHelix` itself: the
+ * wiring that binds this call's logger and token provider into a `HelixService` was
+ * unasserted, and emptying either arrow changed no test. This is the one place the
+ * real module has to be mocked, because the seam under test IS the construction.
+ */
+const mockRealForgetApiKey = jest.fn<Promise<void>, [string, string]>();
+const mockRealCreateAdminApiKey = jest.fn<Promise<string | null>, [string, string]>();
+const mockHelixConstructor = jest.fn<void, [unknown, unknown, unknown]>();
+jest.mock('@/features/eds/services/helix/helixService', () => ({
+    HelixService: class {
+        static forgetApiKey(owner: string, repo: string): Promise<void> {
+            return mockRealForgetApiKey(owner, repo);
+        }
+        constructor(logger: unknown, apiKey: unknown, tokenProvider: unknown) {
+            mockHelixConstructor(logger, apiKey, tokenProvider);
+        }
+        createAdminApiKey(owner: string, repo: string): Promise<string | null> {
+            return mockRealCreateAdminApiKey(owner, repo);
+        }
+    },
+}));
+
 import {
     registerPublishKey,
     type PublishKeyHelix,
@@ -57,6 +82,8 @@ beforeEach(() => {
     mockResolveOverlayUrl.mockReturnValue(OVERLAY);
     mockCreateAdminApiKey.mockResolvedValue('hlx_minted_key');
     mockForgetApiKey.mockResolvedValue(undefined);
+    mockRealForgetApiKey.mockResolvedValue(undefined);
+    mockRealCreateAdminApiKey.mockResolvedValue('hlx_real_seam_key');
     global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 200 });
 });
 
@@ -136,13 +163,18 @@ describe('registerPublishKey', () => {
             expect(global.fetch).not.toHaveBeenCalled();
         });
 
+        // Handing the seam in matters: with the default seam this test passed for the
+        // wrong reason — it never reached the token check at all, so deleting that
+        // check changed nothing.
         it('when there is no DA.live session', async () => {
             const result = await registerPublishKey(
                 makeTokenProvider(null),
                 SITE,
-                makeLogger()
+                makeLogger(),
+                makeHelix()
             );
             expect(result.registered).toBe(false);
+            expect(result.reason).toMatch(/no DA\.live session/);
             expect(global.fetch).not.toHaveBeenCalled();
         });
 
@@ -176,6 +208,74 @@ describe('registerPublishKey', () => {
         await expect(
             registerPublishKey(makeTokenProvider(), SITE, makeLogger(), makeHelix())
         ).resolves.toEqual(expect.objectContaining({ registered: false }));
+    });
+
+    /**
+     * WHICH CHANNEL a non-registration lands on is a decision, not presentation.
+     *
+     * BYOM off is the normal state of every non-BYOM storefront; warning there
+     * trains the reader to ignore the channel, and then the one warning that
+     * matters — a mint or registration that failed, whose only symptom months
+     * later is "some PDPs 404" — is lost in it. So: the uninteresting case is
+     * debug and stays off `warn`, and a real failure is `warn`. These assert the
+     * channel, never the wording.
+     */
+    describe('reports at the level the consequence deserves', () => {
+        it('keeps the expected BYOM-off case off the warn channel', async () => {
+            mockResolveOverlayUrl.mockReturnValue(undefined);
+            const logger = makeLogger();
+
+            await registerPublishKey(makeTokenProvider(), SITE, logger, makeHelix());
+
+            expect(logger.debug).toHaveBeenCalled();
+            expect(logger.warn).not.toHaveBeenCalled();
+        });
+
+        it('warns when a mint fails, because nothing else connects it to a 404', async () => {
+            mockCreateAdminApiKey.mockResolvedValue(null);
+            const logger = makeLogger();
+
+            await registerPublishKey(makeTokenProvider(), SITE, logger, makeHelix());
+
+            expect(logger.warn).toHaveBeenCalled();
+        });
+
+        it('warns when the action rejects the registration', async () => {
+            (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 403 });
+            const logger = makeLogger();
+
+            await registerPublishKey(makeTokenProvider(), SITE, logger, makeHelix());
+
+            expect(logger.warn).toHaveBeenCalled();
+        });
+    });
+
+    /**
+     * The default fourth argument. Production never passes a seam, so if `realHelix`
+     * were wired to the wrong site, the wrong token source or nothing at all, every
+     * test above would still pass — they all hand their own fake in.
+     */
+    describe('the default Helix seam', () => {
+        it('forgets and re-mints against the real service for THIS site', async () => {
+            const result = await registerPublishKey(makeTokenProvider(), SITE, makeLogger());
+
+            expect(result).toEqual({ registered: true });
+            expect(mockRealForgetApiKey).toHaveBeenCalledWith('skukla', 'demo-site');
+            expect(mockRealCreateAdminApiKey).toHaveBeenCalledWith('skukla', 'demo-site');
+            const [, opts] = (global.fetch as jest.Mock).mock.calls[0];
+            expect(JSON.parse(opts.body).key).toBe('hlx_real_seam_key');
+        });
+
+        // The DA.live bearer authenticates the mint as well as the POST, so the
+        // token provider has to reach HelixService — not just the fetch below it.
+        it('binds this call’s logger and token provider into the service', async () => {
+            const logger = makeLogger();
+            const tokenProvider = makeTokenProvider();
+
+            await registerPublishKey(tokenProvider, SITE, logger);
+
+            expect(mockHelixConstructor).toHaveBeenCalledWith(logger, undefined, tokenProvider);
+        });
     });
 
     it('does not log the key', async () => {
