@@ -10766,6 +10766,78 @@
             "decision": "equivalent",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/ui/hooks/useFocusTrap.ts",
+            "anchors": [
+                "const focusableElementsCacheRef = useRef<HTMLElement[]>([]);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Seeding the cache with a value changes only what updateCache reads as prevLength on its FIRST call, because updateCache overwrites the cache before anything else reads it. prevLength is used for one thing: deciding whether to retry auto-focus on a zero-to-some transition. tryAutoFocus is then called unconditionally on the next line of the effect anyway, so both the seeded and the empty start reach the same focus state in the same tick.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/ui/hooks/useFocusTrap.ts",
+            "anchors": [
+                "focusableElementsCacheRef.current = [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "This is the last statement of the cleanup. After it runs the effect is torn down and nothing reads the cache until the next effect run, whose first updateCache overwrites it - so the value left behind is only ever prevLength for that call, and the analysis is the same as for the useRef initialiser it mirrors.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/ui/hooks/useFocusTrap.ts",
+            "anchors": [
+                "const hasAutoFocusedRef = useRef(false);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The effect assigns hasAutoFocusedRef.current = false as its first statement after the enabled/container guard, so the initial value is overwritten before any read. On the path where the effect returns early - disabled, or no container - no listener is registered and tryAutoFocus is never called, so the flag is not read there either.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/ui/hooks/useFocusTrap.ts",
+            "anchors": [
+                "if (prevLength === 0 && focusableElementsCacheRef.current.length > 0) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The five mutants that WIDEN this guard (whole condition true, && to ||, either operand true, length >= 0) all make updateCache call tryAutoFocus more often. tryAutoFocus is self-guarding: it returns unless autoFocus is on, hasAutoFocused is still false, and the cache is non-empty. That state cannot survive an updateCache with prevLength !== 0 - the effect calls tryAutoFocus directly right after its first updateCache, so as soon as the cache is non-empty the flag is set. Every extra call the widened guard makes is therefore a no-op. The four NARROWING mutants on the same line are killed by the retry tests. The guard is redundant with tryAutoFocus own checks; simplifying it is a src change outside this batch.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/ui/hooks/useFocusTrap.ts",
+            "anchors": [
+                "if (!containFocus) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "handleFocusIn is only ever registered inside if (containFocus), and containFocus is an effect dependency, so the closure's value always matches the condition under which it was attached. The guard can therefore never be true when the handler runs. It is one half of a mutually-masking pair with the registration guard, which is why neither can be killed on its own.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/ui/hooks/useFocusTrap.ts",
+            "anchors": [
+                "if (observerRef.current) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this true is safe because the cleanup only runs when the effect body ran to completion, and that body assigns observerRef.current a new MutationObserver several statements earlier. There is no path that reaches the cleanup with the ref still null, so the guarded call cannot fail. The narrowing mutants on the same line are killed by the disconnect test.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }
