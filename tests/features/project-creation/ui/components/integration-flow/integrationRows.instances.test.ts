@@ -237,6 +237,30 @@ describe('resolveIntegrationRows — AI-built instances (shell-source discrimina
         ]);
     });
 
+    it('a same-owner source under a DIFFERENT repo is a plain import (repo must match too)', () => {
+        // The owner half is not sufficient: every one of this owner's repos would
+        // otherwise render as an AI-built instance of the shell, losing its own
+        // repo line and gaining a Rename affordance that renames nothing.
+        const rows = resolveIntegrationRows(
+            state({
+                selectedAppBuilderComponents: ['other-app'],
+                appBuilderComponentSources: {
+                    'other-app': { owner: 'skukla', repo: 'some-other-app', name: 'Other' },
+                },
+            }),
+            MESH_ENTRY,
+            WITH_BLANK
+        );
+
+        expect(rows).toEqual([
+            expect.objectContaining({
+                kind: 'custom',
+                sourceLine: 'Custom integration · skukla/some-other-app',
+            }),
+        ]);
+        expect(rows[0].renamable).toBeUndefined();
+    });
+
     it('degrades to a custom row when the component list omits the blank entry (documented)', () => {
         // The blank catalog entry IS the discriminator's source of truth; hosts
         // pass the full integration-entry list (incl. blank). Without it there is

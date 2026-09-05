@@ -60,6 +60,24 @@ describe('resolveIntegrationRows — mesh row (single-authority selection)', () 
         expect(rows).toEqual([]);
     });
 
+    it('never doubles the mesh into a custom row, even when a source is keyed by its id', () => {
+        // The mesh id sits in selectedAppBuilderComponents (its single authority),
+        // so the resolver's per-id loop walks over it too. A source record keyed by
+        // that id must not produce a second, custom-kind row for the same mesh.
+        const rows = resolveIntegrationRows(
+            state({
+                selectedAppBuilderComponents: ['eds-accs-mesh'],
+                appBuilderComponentSources: {
+                    'eds-accs-mesh': { owner: 'skukla', repo: 'commerce-mesh' },
+                },
+            }),
+            MESH_ENTRY,
+            CATALOG
+        );
+
+        expect(rows).toEqual([expect.objectContaining({ id: 'eds-accs-mesh', kind: 'mesh' })]);
+    });
+
     it('yields no mesh row when no mesh is selected', () => {
         expect(resolveIntegrationRows(state(), MESH_ENTRY, CATALOG)).toEqual([]);
     });
@@ -249,6 +267,18 @@ describe('resolveIntegrationRows — blank starter ("Build custom") rows', () =>
                 needsSetup: true,
                 apis: [BASELINE_CODE], // baseline only (no free picks)
             } satisfies IntegrationRow,
+        ]);
+    });
+
+    it('blank sourceLine falls back to "Custom integration" when the entry has no description', () => {
+        const rows = resolveIntegrationRows(
+            state({ selectedAppBuilderComponents: ['app-builder-shell'] }),
+            MESH_ENTRY,
+            [MESH_ENTRY, { ...BLANK_ENTRY, description: '' }]
+        );
+
+        expect(rows).toEqual([
+            expect.objectContaining({ kind: 'blank', sourceLine: 'Custom integration' }),
         ]);
     });
 

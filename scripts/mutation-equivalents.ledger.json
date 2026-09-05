@@ -5519,6 +5519,19 @@
             "decision": "none \u2014 required by the compiler, and no return path can observe it",
             "recorded": "2026-09-04",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/project-creation/ui/components/integration-flow/integrationRows.ts",
+            "anchors": [
+                "const ids = state.selectedAppBuilderComponents ?? [];"
+            ],
+            "line": 159,
+            "mutants": 1,
+            "category": "ArrayDeclaration",
+            "reason": "Stryker fills the ?? [] fallback with a one-element array of its own marker string. Every id the loop cannot resolve is dropped: no source record is keyed by it, components.find returns undefined, and the iteration hits continue. The marker id therefore adds no row and the result is identical to the empty fallback.",
+            "decision": "Equivalent for every input a test can legitimately build. Killing it would require a fixture that names Stryker's own marker string as a catalog id or a source key, which asserts the mutation tool rather than the resolver.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }
