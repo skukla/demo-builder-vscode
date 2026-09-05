@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/components/handlers/componentHandlers.ts"
+        "src/features/dashboard/ui/integrationsSurface/EventingSection.tsx"
     ],
     "reporters": [
         "clear-text",

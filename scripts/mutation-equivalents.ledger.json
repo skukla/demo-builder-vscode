@@ -10976,6 +10976,56 @@
             "decision": "none \u2014 the clause is the shared object check every handler in this file runs; the field-type guard below makes it unobservable here, and deleting it would leave the other handlers inconsistent",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/EventingSection.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 74,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker puts a constant string into load's empty useCallback dependency array. useCallback compares dependencies element-wise with Object.is, and a literal array of one unchanging string compares equal on every render, so the memoised callback keeps the same identity exactly as it does with an empty array. Nothing downstream \u2014 the toggle, the delete handler, the refresh button \u2014 can observe a difference.",
+            "decision": "none \u2014 a constant dependency list is as stable as an empty one",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/EventingSection.tsx",
+            "anchors": [
+                "[load],"
+            ],
+            "line": 93,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker empties handleDelete's dependency array. The only dependency is load, whose own useCallback has an empty dependency list and therefore never changes identity for the life of the component, so dropping it from the list cannot stale the closure: both versions capture the same function object and handleDelete keeps the same identity across every render.",
+            "decision": "none \u2014 the listed dependency is correct and the stale-closure it guards against cannot occur while load is constant",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/EventingSection.tsx",
+            "anchors": [
+                "{state === 'collapsed' ? <ChevronRight size=\"S\" /> : <ChevronDown size=\"S\" />}"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The ternary picks between two icons that are the SAME component under test: jest.config.js maps every '@spectrum-icons/workflow/*' specifier onto one stub module, so ChevronRight and ChevronDown resolve to one default export and render identical markup. A suite-level jest.mock of either path registers against that same resolved module, so the two cannot be told apart from the DOM. The expanded state itself IS asserted, through aria-expanded on the same button.",
+            "decision": "none \u2014 the icon choice is unobservable while the shared icon stub is mapped for all workflow icons",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/EventingSection.tsx",
+            "anchors": [
+                "{listing?.reason}"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the '?.', which would throw only if listing were undefined. This node renders only inside showUnavailable, which is computed as state === 'loaded' && listing !== undefined && !listing.available \u2014 so listing is proven defined before the node exists. The optional chain is required by the type, because listing is EventingListing | undefined at the declaration, not by any state the render can be in.",
+            "decision": "none \u2014 the guard that gates this branch already establishes what the chain checks",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }
