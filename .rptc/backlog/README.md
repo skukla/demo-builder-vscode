@@ -274,7 +274,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-36` | fix | [The third Node-version sort in installHandler is untested](2026-09-02-install-handler-target-version-sort.md) | — | med | backlog |
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (39)
+### platform  (40)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -317,6 +317,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-39` | chore | [An item can be marked done while its own body says what is left](2026-09-02-finished-items-carrying-remainders.md) | — | med | backlog |
 | `PL-40` | question | [Can the wizard's configuration warnings even fire, and does anyone need them?](2026-09-03-webview-warnings-reach-nobody.md) | — | med | open |
 | `PL-41` | fix | [Three suites fail only under full-suite load, and it costs real pushes](2026-09-03-suites-that-fail-only-under-load.md) | — | med | active |
+| `PL-44` | fix | └ [A lint probe planted inside tests/ races every suite that walks tests/](2026-09-05-lint-probe-races-every-tree-walker.md) | — | med | backlog |
 
 <!-- END GENERATED registry -->
 
@@ -464,7 +465,7 @@ the table cannot hold: why the layers are ordered this way.*
 - `PL-3` [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) — backlog
 - `PL-4` [Claude Code's storage grows ~4 GB a year, and nothing reports it](2026-08-25-claude-code-disk-footprint.md) — shipped
 
-*66 item(s) sit outside the A–G chain.*
+*67 item(s) sit outside the A–G chain.*
 
 <!-- END GENERATED layers -->
 
