@@ -8066,6 +8066,94 @@
             "decision": "none \u2014 the undefined check states the precondition the earlier error guard already enforces, and is correct to keep as a local statement of it",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/resourceCleanupHelpers.ts",
+            "anchors": [
+                "if (!isEdsProject(project)) {",
+                "const edsInstance = project.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];",
+                "if (!edsInstance) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "These two guards answer the same question and cannot disagree. isEdsProject returns false exactly when componentInstances is missing or does not carry the eds-storefront key \u2014 which is exactly when the lookup on the next line yields undefined \u2014 so removing either guard, or the optional chain between them, still returns null down the other route. Producing a project where the key IS present but the instance behind it is falsy would take a cast at the call boundary, because componentInstances is typed Record<string, ComponentInstance> and cannot hold an absent value; that is lying about how the code is reached rather than testing it.",
+            "decision": "none \u2014 the second guard is the local statement of a precondition the first already enforces, and the optional chain is required by the type",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/resourceCleanupHelpers.ts",
+            "anchors": [
+                "if (metadata) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "getLinkedEdsProjects has already established isEdsProject(project) on the line above before it calls extractEdsMetadata, and extractEdsMetadata returns null only when isEdsProject is false or when the keyed component instance is falsy \u2014 a state the Record<string, ComponentInstance> type cannot produce. So metadata is non-null every time control reaches this guard, and forcing it true changes nothing any test can observe without inventing a project shape the type forbids.",
+            "decision": "none \u2014 the null check keeps the push site honest against extractEdsMetadata's declared return type",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/resourceCleanupHelpers.ts",
+            "anchors": [
+                "success: false,"
+            ],
+            "line": 189,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This initialiser is overwritten on every path out of the function: the last statement before the return is 'result.success = result.daLiveDeleted', which runs whether the delete succeeded, reported nothing deleted, or threw into the catch. The type requires success to be initialised, so it must hold some boolean here, but no caller ever observes the one written at this line. Flipping it to true leaves every returned result byte-identical.",
+            "decision": "none \u2014 the field is required by DaLiveSiteCleanupResult and false is the honest value before any work has been done",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/resourceCleanupHelpers.ts",
+            "anchors": [
+                "if (result.daLiveDeleted) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The guard's body is a single logger.debug reporting the file count. result.daLiveDeleted and result.alreadyDeleted are both assigned above it and read by the caller from the returned object, which 'should successfully delete DA.live site content recursively' and 'should report site as already empty when deletedCount is 0' both pin. Forcing the condition either way, or emptying the block, changes only whether that debug line prints \u2014 the returned result is identical.",
+            "decision": "none \u2014 the success line is what puts the deleted-file count in a pasted log, and the counts it reports are asserted through the result",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/resourceCleanupHelpers.ts",
+            "anchors": [
+                "if (failed.length > 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The body of this guard is a for-of over the very array the guard tests, so entering it with an empty array does nothing at all: no line is pushed and the output is unchanged. Widening the condition to true or to '>= 0' therefore produces byte-identical text for every input. Its two neighbours are NOT equivalent and are killed \u2014 they join a list into one heading line, so an empty group there prints a bare heading, which 'leaves out the skipped heading entirely when nothing was skipped' catches.",
+            "decision": "none \u2014 the guard reads as a group with the two beside it, and the loop it wraps is genuinely a no-op when empty",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/resourceCleanupHelpers.ts",
+            "anchors": [
+                "} else if (failed > 0 && succeeded > 0) {",
+                "} else if (failed > 0 && succeeded === 0) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Each of these arms restates a fact the arm above it has already excluded. Reaching the second means 'failed === 0 && succeeded > 0' was false; combined with failed > 0 that leaves succeeded > 0 implied, so widening the failed half to true or to '>= 0' selects the same arm for every input. Reaching the third means the second was also false, which with failed > 0 forces succeeded to be 0, so widening 'succeeded === 0' to true likewise changes nothing. The messages themselves ARE pinned, by the mixed-run and single-failure cases.",
+            "decision": "none \u2014 spelling out both halves of each arm is what makes the four-way split readable; the redundancy is the point",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/resourceCleanupHelpers.ts",
+            "anchors": [
+                "default:"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "formatResourceName switches on CleanupResultItem['type'], a closed union of four string literals, and the switch has a case for every one of them. The default arm is therefore unreachable for any value the compiler will let a caller pass; driving it would take a cast at the call boundary, which silences the one check that makes the union worth having. Every reachable arm is pinned by the exact-output tests in the formatCleanupResults suite.",
+            "decision": "none \u2014 the default returns the raw name, which is the right answer if the union ever gains a member before this switch does",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
         }
     ]
 }

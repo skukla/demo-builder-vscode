@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/github/githubCredentialProbe.ts"
+        "src/features/eds/services/resourceCleanupHelpers.ts"
     ],
     "reporters": [
         "clear-text",

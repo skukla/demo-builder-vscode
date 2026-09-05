@@ -258,6 +258,29 @@ describe('getLinkedEdsProjects', () => {
         });
     });
 
+    it('loads each project read-only, with no catalog to resolve against', async () => {
+        // A listing must not rewrite state on the way past, and it has no
+        // component catalog to hand the loader — both are arguments, and both
+        // are invisible to any assertion about what came back.
+        const edsProject = createMockProject({
+            name: 'eds-project-1',
+            path: '/path/to/eds1',
+            componentInstances: {
+                [COMPONENT_IDS.EDS_STOREFRONT]: createEdsComponentInstance({
+                    githubRepo: 'owner/repo1',
+                }),
+            },
+        });
+        const stateManager = stateManagerWithProjects([edsProject]);
+
+        await getLinkedEdsProjects(stateManager);
+
+        const call = (stateManager.loadProjectFromPath as jest.Mock).mock.calls[0];
+        expect(call[0]).toBe('/path/to/eds1');
+        expect(call[1]()).toEqual([]);
+        expect(call[2]).toEqual({ persistAfterLoad: false });
+    });
+
     it('should exclude non-EDS projects', async () => {
         const edsProject = createMockProject({
             name: 'eds-project',
@@ -470,6 +493,31 @@ describe('formatCleanupResults', () => {
         expect(formatted).toBe('No cleanup operations performed.');
     });
 
+    it('lists every outcome exactly once, each under its own heading', () => {
+        // The three groups are built by three filters over the same array. A
+        // filter that stops filtering puts every resource under every heading,
+        // and no `toContain` assertion can see that.
+        const results: CleanupResultItem[] = [
+            { type: 'github', name: 'owner/repo', success: true },
+            { type: 'daLive', name: 'org/site', success: false, error: 'Access denied' },
+            { type: 'backend', name: 'commerce', success: false, skipped: true },
+        ];
+
+        expect(formatCleanupResults(results)).toBe(
+            '\u2713 Cleaned up: GitHub repo (owner/repo)\n' +
+                '\u2717 Failed: DA.live site (org/site) - Access denied\n' +
+                '\u25cb Skipped: Backend data (commerce)'
+        );
+    });
+
+    it('leaves out the skipped heading entirely when nothing was skipped', () => {
+        const results: CleanupResultItem[] = [
+            { type: 'github', name: 'owner/repo', success: true },
+        ];
+
+        expect(formatCleanupResults(results)).toBe('\u2713 Cleaned up: GitHub repo (owner/repo)');
+    });
+
     it('should format all failed results', () => {
         const results: CleanupResultItem[] = [
             { type: 'github', name: 'owner/repo', success: false, error: 'Token missing' },
@@ -554,6 +602,28 @@ describe('summarizeCleanupResults', () => {
         expect(summary.failed).toBe(0);
         expect(summary.skipped).toBe(1);
         expect(summary.message).toBe('Successfully cleaned up 1 resource.');
+    });
+
+    it('pluralises the cleaned count and not the failed one in a mixed run', () => {
+        const results: CleanupResultItem[] = [
+            { type: 'github', name: 'owner/repo', success: true },
+            { type: 'daLive', name: 'org/site', success: true },
+            { type: 'helix', name: 'owner/repo', success: false },
+        ];
+
+        expect(summarizeCleanupResults(results).message).toBe(
+            'Cleaned up 2 resources, 1 failed.'
+        );
+    });
+
+    it('does not pluralise a run where the single resource failed', () => {
+        const results: CleanupResultItem[] = [
+            { type: 'github', name: 'owner/repo', success: false },
+        ];
+
+        expect(summarizeCleanupResults(results).message).toBe(
+            'Failed to clean up 1 resource.'
+        );
     });
 
     it('should handle empty results', () => {
