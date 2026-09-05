@@ -171,6 +171,165 @@ describe('GitHub Token Service', () => {
         });
     });
 
+
+    /**
+     * The validated-token path, end to end.
+     *
+     * Nothing exercised it before this: the whole success branch, the user
+     * mapping, the 401 self-clear and the five-minute cache were all reachable
+     * only by a test that lets `GET /user` answer.
+     */
+    describe('validateToken against a live-shaped GitHub response', () => {
+        const STORED = { token: 'ghp_stored', tokenType: 'bearer', scopes: ['repo'] };
+
+        /** Point the mocked Octokit constructor at a request fake. */
+        const useOctokit = async (request: jest.Mock) => {
+            const { Octokit } = await import('@octokit/core');
+            (Octokit as unknown as jest.Mock).mockImplementation(() => ({ request }));
+            return Octokit as unknown as jest.Mock;
+        };
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('maps the API user onto GitHubUser and authenticates with the STORED token', async () => {
+            const service = new GitHubTokenService(mockSecretStorage);
+            mockSecretStorage.get.mockResolvedValue(JSON.stringify(STORED));
+            const request = jest.fn().mockResolvedValue({
+                data: {
+                    login: 'octocat',
+                    email: 'octo@github.com',
+                    name: 'Octo Cat',
+                    avatar_url: 'https://avatars.example/1',
+                },
+            });
+            const Octokit = await useOctokit(request);
+
+            const result = await service.validateToken();
+
+            // The ARGUMENT is the point: a validation run against some other
+            // token says nothing about the one we stored.
+            expect(Octokit).toHaveBeenCalledWith({ auth: 'ghp_stored' });
+            expect(request).toHaveBeenCalledWith('GET /user');
+            expect(result).toEqual({
+                valid: true,
+                user: {
+                    login: 'octocat',
+                    email: 'octo@github.com',
+                    name: 'Octo Cat',
+                    avatarUrl: 'https://avatars.example/1',
+                },
+            });
+        });
+
+        it('normalises every absent profile field to null, not to undefined or ""', async () => {
+            // GitHubUser declares these as `string | null`. An account with a
+            // private email answers `null`, and a missing avatar answers ''.
+            const service = new GitHubTokenService(mockSecretStorage);
+            mockSecretStorage.get.mockResolvedValue(JSON.stringify(STORED));
+            await useOctokit(
+                jest.fn().mockResolvedValue({
+                    data: { login: 'ghost', email: null, name: undefined, avatar_url: '' },
+                })
+            );
+
+            const result = await service.validateToken();
+
+            expect(result.user).toEqual({
+                login: 'ghost',
+                email: null,
+                name: null,
+                avatarUrl: null,
+            });
+        });
+
+        it('clears the stored token when GitHub rejects it with a 401', async () => {
+            // A 401 means the token is dead. Leaving it in SecretStorage makes
+            // every later call fail the same way with nothing to re-auth.
+            const service = new GitHubTokenService(mockSecretStorage);
+            mockSecretStorage.get.mockResolvedValue(JSON.stringify(STORED));
+            await useOctokit(
+                jest.fn().mockRejectedValue(Object.assign(new Error('Bad credentials'), { status: 401 }))
+            );
+
+            const result = await service.validateToken();
+
+            expect(result).toEqual({ valid: false });
+            expect(mockSecretStorage.delete).toHaveBeenCalledWith('github-token');
+        });
+
+        it('KEEPS the token when the failure is not a 401', async () => {
+            // A 500 or a network drop says nothing about the credential.
+            // Clearing on those signs the user out over a transient outage.
+            const service = new GitHubTokenService(mockSecretStorage);
+            mockSecretStorage.get.mockResolvedValue(JSON.stringify(STORED));
+            await useOctokit(
+                jest.fn().mockRejectedValue(Object.assign(new Error('Server error'), { status: 500 }))
+            );
+
+            const result = await service.validateToken();
+
+            expect(result).toEqual({ valid: false });
+            expect(mockSecretStorage.delete).not.toHaveBeenCalled();
+        });
+    });
+
+    /**
+     * The validation cache is a TTL window, and the window has both edges.
+     *
+     * `Date.now` is pinned rather than advanced with timers so each test names
+     * the exact age it is asserting about. TTL is 1000ms in this suite's
+     * `timeoutConfig` mock.
+     */
+    describe('validateToken caches within the TTL and re-checks past it', () => {
+        const STORED = { token: 'ghp_stored', tokenType: 'bearer', scopes: ['repo'] };
+
+        /**
+         * Validate once at `firstAt`, then again at `secondAt`, and report how
+         * many times GitHub was actually asked.
+         */
+        const validateTwice = async (firstAt: number, secondAt: number) => {
+            const service = new GitHubTokenService(mockSecretStorage);
+            mockSecretStorage.get.mockResolvedValue(JSON.stringify(STORED));
+            const request = jest.fn().mockResolvedValue({ data: { login: 'octocat' } });
+            const { Octokit } = await import('@octokit/core');
+            (Octokit as unknown as jest.Mock).mockImplementation(() => ({ request }));
+            const now = jest.spyOn(Date, 'now').mockReturnValue(firstAt);
+
+            await service.validateToken();
+            now.mockReturnValue(secondAt);
+            const second = await service.validateToken();
+
+            return { request, second };
+        };
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('answers from cache 500ms later without asking GitHub again', async () => {
+            const { request, second } = await validateTwice(10_000, 10_500);
+
+            expect(request).toHaveBeenCalledTimes(1);
+            expect(second).toEqual({ valid: true, user: expect.objectContaining({ login: 'octocat' }) });
+        });
+
+        it('re-checks 1500ms later, past the TTL', async () => {
+            const { request } = await validateTwice(10_000, 11_500);
+
+            expect(request).toHaveBeenCalledTimes(2);
+        });
+
+        it('treats an age of exactly the TTL as expired', async () => {
+            // The window is `age < ttl`. `<=` would serve one stale answer at
+            // the boundary, which is the hardest kind of staleness to reproduce.
+            const { request } = await validateTwice(10_000, 11_000);
+
+            expect(request).toHaveBeenCalledTimes(2);
+        });
+    });
+
     describe('getUserOrgs', () => {
         it('returns the list of org logins for the authenticated user', async () => {
             // Given: stored token, /user/orgs returns three orgs

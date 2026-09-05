@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/configService/siteAccessManagerHeadless.ts"
+        "src/features/eds/services/github/githubTokenService.ts"
     ],
     "reporters": [
         "clear-text",

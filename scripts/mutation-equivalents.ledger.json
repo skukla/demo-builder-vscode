@@ -7576,6 +7576,57 @@
             "decision": "none \u2014 the warn is a diagnostic beside a verdict the return value already carries",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/github/githubTokenService.ts",
+            "anchors": [
+                "if (!stored) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Deleting the empty-storage guard is unobservable: with no stored value the code falls into the try and JSON.parse(undefined) throws, the catch returns undefined, and the caller gets exactly what the guard returns. Every observable \u2014 the return value, the SecretStorage call, whether Octokit is constructed \u2014 is identical. Only a warn line differs.",
+            "decision": "none \u2014 the guard says what it means and avoids a thrown-and-caught parse of a value we already know is absent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/github/githubTokenService.ts",
+            "anchors": [
+                "this.logger.warn('[GitHub] Failed to parse stored token');"
+            ],
+            "line": 68,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch block leaves the function returning undefined implicitly, which is what the explicit return already produces. A caller cannot tell the two apart; only the warn line differs.",
+            "decision": "none \u2014 the explicit return states the contract at the site that satisfies it",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/github/githubTokenService.ts",
+            "anchors": [
+                "if (!token) {"
+            ],
+            "line": 106,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Without the no-token guard, validateToken evaluates token.token, throws a TypeError while building the Octokit argument, and the catch returns { valid: false } \u2014 the same object the guard returns, with the same 401-only clearToken decision skipped either way (an undefined status is not 401). No collaborator is called differently: the throw happens while evaluating the argument, so createAuthenticatedOctokit never runs in either version.",
+            "decision": "none \u2014 returning the answer beats throwing and catching it",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/github/githubTokenService.ts",
+            "anchors": [
+                "if (!token) {"
+            ],
+            "line": 153,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Same shape as the validateToken guard: without it, token.token throws inside the try and the bare catch returns [], which is exactly what the guard returns. The graceful-degradation contract (the namespace picker falls back to personal-account-only) holds either way, so no assertion on the return value or on Octokit can separate them.",
+            "decision": "none \u2014 returning the answer beats throwing and catching it",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
         }
     ]
 }
