@@ -8515,6 +8515,19 @@
             "decision": "none \u2014 the non-fatal write failure is asserted; the mutant removes only the warn wording",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/storefront/storefrontProbe.ts",
+            "anchors": [
+                "const sha = typeof body?.sha === 'string' ? body.sha : undefined;",
+                "const version = typeof body?.version === 'string' ? body.version : undefined;"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "The ?. only matters when response.json() resolves to null, and both routes out of that case produce the identical value. Unmutated, typeof null?.sha is undefined, neither field is a string, and the malformed-body guard three lines down returns { unknown: true }. Mutated, the dereference throws inside the same try and the catch returns { unknown: true } as well. The function has no other observable \u2014 it takes a URL and returns that object \u2014 so nothing can separate them. Both ?. are also required by the compiler, since json() is typed unknown-shaped.",
+            "decision": "none \u2014 the null body reaches the same { unknown: true } through the catch that already wraps this block",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }

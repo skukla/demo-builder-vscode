@@ -414,3 +414,190 @@ describe('probeOverlayVersion', () => {
         expect(result.verdict).toMatch(/looks correct/i);
     });
 });
+
+/**
+ * The transport failures and the boundary statuses.
+ *
+ * Everything above drives the probe through canned HTTP answers. This block
+ * covers what happens when there is no answer at all — the two catch paths and
+ * the error-carrying leg result — and the edges of the reachable window, which
+ * decide whether an SC is told to reinstall a storefront that is merely down.
+ */
+describe('probeStorefrontDelivery — no answer, and the edges of "reachable"', () => {
+    /** Canned responses, but a listed path may instead throw the way fetch does. */
+    function mockFetchOrThrow(routes: Record<string, { status: number; body?: string } | Error>) {
+        global.fetch = jest.fn(async (url: RequestInfo | URL) => {
+            const hit = routes[new URL(String(url)).pathname] ?? { status: 404, body: '' };
+            if (hit instanceof Error) throw hit;
+            return {
+                ok: hit.status >= 200 && hit.status < 300,
+                status: hit.status,
+                text: async () => hit.body ?? '',
+            } as unknown as Response;
+        });
+    }
+
+    it('reports an unreachable site with no status when the request never lands', async () => {
+        // DNS failure, TLS failure, timeout: there is no HTTP status to report, and
+        // reporting 0 would print as "HTTP 0" in the verdict.
+        mockFetchOrThrow({ '/': new Error('ENOTFOUND main--demo--skukla.aem.live') });
+
+        const result = await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
+
+        expect(result.site.reachable).toBe(false);
+        expect(result.site.status).toBeUndefined();
+        expect(result.site.error).toBe('ENOTFOUND main--demo--skukla.aem.live');
+        expect(result.verdict).toMatch(/unreachable/i);
+        expect(result.verdict).not.toMatch(/HTTP/);
+    });
+
+    it('keeps the HTTP status when the site answers with an error status', async () => {
+        mockFetch({ '/': { status: 503, body: '' } });
+
+        const result = await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
+
+        expect(result.site.status).toBe(503);
+        expect(result.verdict).toMatch(/HTTP 503/);
+    });
+
+    it('treats 400 as unreachable — the window ends below it', async () => {
+        // 2xx and 3xx are a site answering. 400 is the first status that is not,
+        // and an off-by-one here would send the probe on to report every marker
+        // missing against a site that never served anything.
+        mockFetch({ '/': { status: 400, body: '' } });
+
+        const result = await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
+
+        expect(result.site.reachable).toBe(false);
+        expect(result.smart404Snippet).toBeUndefined();
+    });
+
+    it('carries the transport error onto the leg instead of calling it not installed', async () => {
+        // "delayed.js is missing its marker" points at a reset. "the request for
+        // delayed.js failed" does not — the two must not read the same.
+        mockFetchOrThrow({
+            '/': { status: 200, body: '<html>home</html>' },
+            '/scripts/delayed.js': new Error('socket hang up'),
+        });
+
+        const result = await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
+
+        expect(result.smart404Snippet).toEqual({ installed: false, error: 'socket hang up' });
+    });
+
+    it('does not accept a marker served under a non-200 status', async () => {
+        // aem.live serves the site's 404 page body for an unpublished path, and
+        // that body can contain the marker. Only a published 200 counts.
+        mockFetch({
+            ...HEALTHY,
+            '/404.html': { status: 404, body: `<html>${SMART_404_HEAD_MARKER_START}</html>` },
+        });
+
+        const result = await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
+
+        expect(result.eagerRedirect).toEqual({ installed: false, status: 404 });
+        expect(result.verdict).toMatch(/eager redirect/i);
+    });
+
+    it('names the eager redirect on its own when the smart 404 handler is present', async () => {
+        mockFetch({ ...HEALTHY, '/404.html': { status: 404, body: '' } });
+
+        const result = await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
+
+        expect(result.smart404Snippet?.installed).toBe(true);
+        expect(result.verdict).toMatch(/eager redirect missing/i);
+    });
+
+    it('gives every storefront request an abort signal', async () => {
+        // TIMEOUTS.QUICK is the only thing bounding these GETs; without the signal
+        // a hung storefront hangs the diagnostic with no way out.
+        mockFetch(HEALTHY);
+
+        await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
+
+        for (const [, init] of (global.fetch as jest.Mock).mock.calls) {
+            expect(init).toEqual(
+                expect.objectContaining({ method: 'GET', signal: expect.any(AbortSignal) })
+            );
+        }
+    });
+
+    it('leaves the overlay leg off entirely when no overlay URL is registered', async () => {
+        // Absent, not "unknown": a storefront with no overlay registered has
+        // nothing to report, and {unknown: true} would read as a deployed action
+        // that failed to answer.
+        mockFetch(HEALTHY);
+
+        const result = await probeStorefrontDelivery('skukla', 'demo-builder-test', logger);
+
+        expect(result.overlay).toBeUndefined();
+    });
+});
+
+/**
+ * What the version endpoint is allowed to be believed about.
+ *
+ * The action is in another repo on its own release cadence, so this probe
+ * reports and never compares. That makes the only real decisions here: which
+ * responses count as an answer at all, and which fields of that answer are
+ * usable as-is.
+ */
+describe('probeOverlayVersion — what counts as an answer', () => {
+    const OVERLAY_URL = 'https://ns.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp';
+
+    const answering = (status: number, body: unknown) => {
+        global.fetch = jest.fn(async () => ({ status, json: async () => body }) as Response);
+    };
+
+    it('ignores a version reported under a non-200 status', async () => {
+        // A gateway or error envelope can carry its OWN version field. Reading it
+        // would report the gateway's build as the action's.
+        answering(502, { version: '2.1.0-gateway', sha: 'deadbee' });
+
+        expect(await probeOverlayVersion(OVERLAY_URL)).toEqual({ unknown: true });
+    });
+
+    it('drops a sha that is not a string rather than reporting it', async () => {
+        answering(200, { sha: 9207891, version: '1.0.0' });
+
+        expect(await probeOverlayVersion(OVERLAY_URL)).toEqual({
+            sha: undefined,
+            version: '1.0.0',
+            unknown: false,
+        });
+    });
+
+    it('drops a version that is not a string rather than reporting it', async () => {
+        answering(200, { sha: '9207b91', version: 42 });
+
+        expect(await probeOverlayVersion(OVERLAY_URL)).toEqual({
+            sha: '9207b91',
+            version: undefined,
+            unknown: false,
+        });
+    });
+
+    it('accepts an answer carrying only one of the two fields', async () => {
+        // Either field alone identifies the build well enough for a human to
+        // compare against the other repo's log; requiring both would report every
+        // action that reports only a sha as unknown.
+        answering(200, { version: '1.4.2' });
+
+        expect(await probeOverlayVersion(OVERLAY_URL)).toEqual({
+            sha: undefined,
+            version: '1.4.2',
+            unknown: false,
+        });
+    });
+
+    it('gives the version request an abort signal', async () => {
+        answering(200, { sha: '9207b91' });
+
+        await probeOverlayVersion(OVERLAY_URL);
+
+        const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+        expect(init).toEqual(
+            expect.objectContaining({ method: 'GET', signal: expect.any(AbortSignal) })
+        );
+    });
+});

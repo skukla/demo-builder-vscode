@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/daLive/daLiveContentOperations.ts"
+        "src/features/eds/services/storefront/storefrontProbe.ts"
     ],
     "reporters": [
         "clear-text",
