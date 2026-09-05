@@ -9974,6 +9974,171 @@
             "decision": "none \u2014 presentation.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "anchors": [
+                "for (const envVar of entry.envSchema ?? []) {"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty fallback array with a one-element array. That fallback is reached only when the entry declares no envSchema at all, and the loop body reads envVar.providedBy, which is undefined on the injected string, so the single iteration returns the same 'no missing provider' answer the empty array produces. No catalog entry can distinguish the two.",
+            "decision": "none - the mutated fallback yields an identical result for every entry shape.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "anchors": [
+                "if (!deps.refreshAiBundle) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "With the guard forced false the runner calls an undefined refreshAiBundle, which throws inside the try that already exists so a bundle failure cannot fail a deploy that landed. The add still succeeds, nothing else is written, and the sole difference is one logger.warn line. Pinning it would pin wording rather than behaviour.",
+            "decision": "none - guard and no-guard differ only in a log line.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "anchors": [
+                "recordDeployOutcome(project, entry.kind, entry.id, outcome, { create: true });"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "recordDeployOutcome consults resolveKeyedComponentId only when create is absent, and that helper's first branch returns the instance id whenever the project already keys an entry under it. The add path writes the transient 'deploying' entry under entry.id before dispatchDeploy runs, so by the time persistOutcome is reached the key exists and both paths resolve to the same id for every input.",
+            "decision": "none - the flag is a guard against a future reordering; it cannot change the resolved key while the transient marker is written first.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "anchors": [
+                "const meshInstance = project.componentInstances?.[entry.id];",
+                "if (meshInstance) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The mesh instance is always present here. The add path attaches componentInstances[entry.id] in cloneAndInstall before dispatchDeploy, and the redeploy path returns 'not found' unless componentInstances[id].path already resolves. Neither the optional chain nor the truthiness guard can take its absent branch on any reachable input, so removing either is unobservable.",
+            "decision": "none - defensive reads over state the two callers guarantee.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "anchors": [
+                "const state = project.appBuilderComponents?.[entry.id];",
+                "const result = await deps.installAppManagement(project, state?.deployedUrls, (message) =>",
+                "if (state) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "installIfAppManagement runs only after persistOutcome has written appBuilderComponents[entry.id], and the add path already wrote a transient entry under that same key beforehand. The map and the entry are therefore always present when these three reads execute, so the optional chains and the truthiness guard cannot take their absent branch on any reachable input.",
+            "decision": "none - defensive reads over state persistOutcome guarantees.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "anchors": [
+                "if (result.status === 'failed') {"
+            ],
+            "line": 832,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The guarded body is a single deps.logger.warn call. The Commerce uninstall is best-effort: its outcome is neither surfaced on the RunnerResult nor persisted, and the removal proceeds identically whether the guard is taken, inverted or deleted. Every mutation here changes only which log line is written, which is wording rather than behaviour.",
+            "decision": "none - log-only body; the removal's own effects are asserted separately.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "anchors": [
+                "present = parsed.map((p) => p.name ?? '').filter(Boolean);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The filter drops empty names from the listed namespace. present is used only as the right-hand side of expected.filter(name => present.includes(name)), and every member of expected has already passed RUNTIME_PACKAGE_NAME, which rejects the empty string. An empty entry can therefore never match, so keeping or dropping it cannot change which leftovers are found.",
+            "decision": "none - defensive filter with no reachable effect on the attribution set.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "anchors": [
+                "if (leftovers.length > 0) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The guarded body is one deps.logger.warn summarising the counts. The deleted and failed lists are built above it and returned on the RuntimeCleanupSummary regardless, and those lists are asserted directly by the runtime-verification suite. Every mutation of this condition changes only whether a summary line prints.",
+            "decision": "none - log-only body; the counts it summarises are asserted on the returned summary.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "anchors": [
+                "let declaredPackages: string[] = [];",
+                "declaredPackages = await listDeclaredPackageNames(componentPath).catch(() => []);"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "Both empty arrays are replaced with a one-element array whose value contains spaces. That value flows into verifyRuntimeTeardown's attribution set and is immediately removed by RUNTIME_PACKAGE_NAME, which rejects any name outside the Adobe id charset, so it can never become a delete candidate. The resulting summary is identical to the one the empty default produces.",
+            "decision": "none - the injected name is filtered out before it can affect anything.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 1034,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single deps.logger.warn. Emptying it leaves the catch itself in place, so a failing remote teardown is swallowed exactly as before and the removal continues to clear local state - which the remove-contracts suite asserts directly with a rejecting executor. Only the log line differs.",
+            "decision": "none - log-only catch body; the swallow itself is asserted.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "anchors": [
+                "? { componentApiPicks: { ...project.componentApiPicks } }",
+                "...(project.componentConfigs ? { componentConfigs: { ...project.componentConfigs } } : {}),"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "These two spreads copy maps that the enclosing ...project has already placed on cleared by reference. With the copy removed, cleared keeps the caller's own object, the subsequent delete mutates it in place, and the caller's reference is then assigned that same object anyway. What is saved and what the caller holds afterwards are identical in both versions; only the aliasing differs, and nothing observes it.",
+            "decision": "none - copy versus alias with no observable difference at any surface.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "anchors": [
+                "if (cleared.componentApiPicks) {"
+            ],
+            "line": 1101,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true assigns cleared.componentApiPicks onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
+            "decision": "none - the forced branch assigns the value the caller already holds.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentRunner.ts",
+            "anchors": [
+                "if (cleared.componentConfigs) {"
+            ],
+            "line": 1104,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true assigns cleared.componentConfigs onto the caller's project when it is undefined. cleared is spread from that same project, so an undefined value there means the caller's field was already undefined and the assignment writes back exactly what was there. The mutation is a no-op for every input on which the guard was false.",
+            "decision": "none - the forced branch assigns the value the caller already holds.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }

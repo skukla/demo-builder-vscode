@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/extension.ts"
+        "src/features/app-builder/services/appBuilderComponentRunner.ts"
     ],
     "reporters": [
         "clear-text",

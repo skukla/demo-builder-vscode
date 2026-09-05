@@ -24,6 +24,7 @@ jest.mock('@/features/app-builder/services/appConfigPackages', () => ({
 
 import { removeAppBuilderComponent } from '@/features/app-builder/services/appBuilderComponentRunner';
 import { deriveOwPackage } from '@/features/app-builder/services/owPackageName';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { createDeps, createProject } from './appBuilderComponentRunner.testUtils';
 
 const ID = 'app-builder-shell';
@@ -129,7 +130,14 @@ describe('post-undeploy runtime verification', () => {
         const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
 
         expect(result.success).toBe(true);
-        expect(result.runtimeCleanup?.verified).toBe(false);
+        // Nothing was found and nothing was deleted — the two lists are EMPTY,
+        // not merely present. A summary that named packages it never touched
+        // would read as a cleanup that happened.
+        expect(result.runtimeCleanup).toMatchObject({
+            verified: false,
+            deleted: [],
+            failed: [],
+        });
         expect(result.runtimeCleanup?.note).toContain('Could not list');
     });
 
@@ -148,6 +156,66 @@ describe('post-undeploy runtime verification', () => {
             deleted: [],
             failed: [owPackage],
         });
+    });
+
+    // The declared names come from config FILES, which nothing validates. A name
+    // outside the Adobe id charset is never deleted — and, just as important, is
+    // never interpolated into a shell line. Both of these match a LOOSER pattern
+    // (one at the start, one at the end), so an anchor lost from either end of
+    // the charset check turns them into delete candidates.
+    it('a declared name outside the Adobe id charset is never a delete candidate', async () => {
+        mockListDeclaredPackageNames.mockResolvedValue(['bad name', 'name bad']);
+        const deps = createDeps();
+        routeExecute(deps, {
+            'package list': {
+                stdout: JSON.stringify([{ name: 'bad name' }, { name: 'name bad' }]),
+            },
+        });
+
+        const result = await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        const deleteCall = (deps.commandManager.execute as jest.Mock).mock.calls.find(
+            (c: unknown[]) => String(c[0]).includes('package delete')
+        );
+        expect(deleteCall).toBeUndefined();
+        expect(result.runtimeCleanup).toEqual({ verified: true, deleted: [], failed: [] });
+    });
+
+    it('lists the namespace through the executor with the shared runtime options', async () => {
+        const deps = createDeps();
+        routeExecute(deps, { 'package list': { stdout: '[]' } });
+
+        await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        expect(deps.commandManager.execute).toHaveBeenCalledWith(
+            'aio runtime package list --json',
+            {
+                useNodeVersion: 'auto',
+                enhancePath: true,
+                shell: true,
+                timeout: TIMEOUTS.LONG,
+            }
+        );
+    });
+
+    it('deletes a leftover through the executor with the same options', async () => {
+        const owPackage = deriveOwPackage(ID);
+        const deps = createDeps();
+        routeExecute(deps, {
+            'package list': { stdout: JSON.stringify([{ name: owPackage }]) },
+        });
+
+        await removeAppBuilderComponent(integrationProject(), ID, deps);
+
+        expect(deps.commandManager.execute).toHaveBeenCalledWith(
+            `aio runtime package delete ${owPackage} --recursive`,
+            {
+                useNodeVersion: 'auto',
+                enhancePath: true,
+                shell: true,
+                timeout: TIMEOUTS.LONG,
+            }
+        );
     });
 
     it('a mesh removal runs NO runtime verification (its own status flow owns that)', async () => {
