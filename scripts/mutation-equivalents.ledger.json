@@ -5792,6 +5792,233 @@
             "decision": "none - anything the two regexes disagree about is dropped by the site-relative test below.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "const templateOwner = edsConfig?.templateOwner;",
+                "const templateRepo = edsConfig?.templateRepo;"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both reads sit at the top of handleCreateRepository, which is reachable only from the Create button in NewRepoForm. That button renders only when repoMode is 'new', and repoMode is read off edsConfig (defaulting to 'existing' when it is absent), so by the time this handler can run edsConfig is necessarily an object. Dropping either '?.' therefore cannot throw for any state the surface can produce. The optional chain is required by the type, since edsConfig is optional on WizardState, and the undefined case IS tested one level up - a state with no edsConfig at all renders the existing-repo body.",
+            "decision": "none - the handler is unreachable while edsConfig is undefined; the chain satisfies the type.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "if (!templateOwner || !templateRepo) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "This is a defensive guard behind a disabled control. NewRepoForm disables Create on '!repoName || !isValidRepositoryName(repoName) || isCreating || !templateAvailable', and templateAvailable is exactly '!!(edsConfig?.templateOwner && edsConfig?.templateRepo)' - the same two fields this guard re-checks. A press cannot reach the handler while either is missing, and Spectrum does not fire onPress on a disabled button. Four tests pin the disabled states (no name, invalid name, no template owner, no template repo), which is the observable half of this rule.",
+            "decision": "none - unreachable from the surface; the button's own disabled rule is what is tested.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "setRepoCreationState({"
+            ],
+            "line": 264,
+            "mutants": 3,
+            "category": "other",
+            "reason": "The body of the missing-template guard above, and unreachable for the same reason: the Create button is disabled whenever templateOwner or templateRepo is absent, so this branch never executes and its three mutants (the object literal, and both boolean fields) change nothing any test or user can see. Reported by Stryker as NoCoverage rather than Survived, which is the same fact stated the other way.",
+            "decision": "none - dead behind the disabled Create button.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "if (!repoName || !isValidRepositoryName(repoName)) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The second defensive guard in handleCreateRepository, unreachable for the same reason as the first: Create is disabled on '!repoName || !isValidRepositoryName(repoName)', the identical predicate. Two tests pin it - the button is disabled with no name typed and disabled for a name the validator rejects - so the rule is enforced where it is observable, at the control, and the re-check inside the handler cannot be entered.",
+            "decision": "none - unreachable from the surface; the button's disabled rule carries the behaviour.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "const target = edsConfig?.createdRepo",
+                ": parseRepoFullName(selectedRepo?.fullName);",
+                "if (!target) return;"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "handleCheckAgain runs only from the Check Again button, which lives inside CodeSyncStatusView, which renders only when shouldShowAppStatus - repoCreated in 'new' mode, hasSelectedRepo in 'existing'. Either way edsConfig exists (both facts are read off it) and one of createdRepo / selectedRepo is present, so neither '?.' can throw and 'target' cannot be undefined. A repo whose fullName has no owner would produce an undefined target, but such a repo never gets a readiness verdict, so its Code Sync view stays on 'checking' and offers no Check Again button - which is now a test.",
+            "decision": "none - the button that calls this cannot exist in the states these guards defend against.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "return owner && name ? { owner, name } : undefined;"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "parseRepoFullName has exactly one caller, handleCheckAgain, and its undefined result is only produced by a fullName with no '/'. A repository with such a fullName cannot reach the Check Again button: the readiness effect splits the same fullName first and returns without setting readiness, so the Code Sync view stays in its 'checking' state, which offers no buttons. A test pins that - no Check Again button renders for such a repository - so the branch is unreachable rather than untested.",
+            "decision": "none - the only caller cannot be reached with a fullName the guard rejects.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "const [githubAppStatus, setGitHubAppStatus] = useState<GitHubAppStatus>({"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "The initial value of githubAppStatus is overwritten on mount by the effect at the 'Reset GitHub App status when repo mode changes' hook, which sets exactly the same object unconditionally. React Testing Library flushes passive effects inside the act() wrapper around render, so there is no assertion point at which the initial value is still in state - a spec cannot query between the first paint and that effect. Both mutants (emptying the object, and flipping isChecking to true) therefore change only a frame no test can observe.",
+            "decision": "none - the mount effect writes the same value over it before any query can run.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "setGitHubAppStatus({ isChecking: false, isInstalled: null });"
+            ],
+            "line": 214,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Flipping isChecking to true in resetLocalState would show the Code Sync body as checking. It cannot: resetLocalState runs only from Browse and New, and both leave repoMode in a state where shouldShowAppStatus is false - 'new' with repoCreated false (the same patch clears createdRepo), or 'existing' with the selection cleared. With no Code Sync view rendered there is nothing for the flag to change, and the next real check overwrites it.",
+            "decision": "none - no surface renders the flag between this write and the next one.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 215,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant replaces resetLocalState's empty dependency array with a one-element array built fresh on every render. That makes useCallback return a NEW function each render instead of a stable one, which cascades to handleCreateNew and handleUseExisting (both list it as a dependency) - but all three are used only as onPress handlers, never as dependencies of an effect and never compared. Re-creating them costs identity churn and changes no behaviour any test or user can observe.",
+            "decision": "none - identity churn on callbacks nothing memoises against.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "}, [updateEdsConfig, resetLocalState]);"
+            ],
+            "line": 229,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying handleCreateNew's dependency array pins it to the first updateEdsConfig, and so to the edsConfig present at mount. Its patch cannot show that: handleCreateNew explicitly sets repoMode, repoName, selectedRepo, existingRepo, resetToTemplate, createdRepo and daLiveSite - every field a repository selection or a name keystroke can change between mount and the press. Whatever stale config it spreads is overwritten field for field by the patch itself, so no input distinguishes the stale closure from a fresh one. The sibling handler (handleUseExisting) does NOT overwrite repoName, which is why its equivalent mutant is killed by a test rather than recorded here.",
+            "decision": "none - the patch overwrites every field the stale closure could differ in.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "setGitHubAppStatus({ isChecking: false, isInstalled: null });"
+            ],
+            "line": 313,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Right after a successful creation this writes 'not asked yet'. Flipping isChecking to true is invisible because the very next effect - the created-repo App check, armed by the isInstalled null this line sets - calls probeRepoCodeSync, whose first action is to set isChecking true anyway. The two writes land in the same commit as far as any assertion is concerned, and the created-repo probe IS tested (it runs against the repository just created).",
+            "decision": "none - the probe this line arms sets the same flag before anything can render.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "if (repoMode !== 'existing' || !selectedRepo) return;"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both mutants (dropping the guard, and swapping || for &&) let the effect continue in states this guard rejects - new mode, or existing mode with nothing selected. It reaches the very next line, 'if (readiness === undefined || siteNotPossibleYet) return', and readiness is undefined in exactly those states: the readiness effect sets it to undefined for new mode and for no selection, and it starts undefined. So the extra distance the mutant travels ends at the same return, one line later.",
+            "decision": "none - subsumed by the readiness guard immediately below it.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "if (repoMode === 'new' && edsConfig?.createdRepo && githubAppStatus.isInstalled === null) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Two mutants: forcing the repoMode arm true, and dropping the '?.' on edsConfig. The first needs a state with repoMode 'existing' AND a createdRepo AND isInstalled null to differ - the app never produces one, because both mode switches clear createdRepo in the same patch that sets the mode, so a created repo only ever coexists with 'new'. The second can only throw when edsConfig is undefined, and repoMode is read off edsConfig (defaulting to 'existing'), so the '&&' short-circuits before the mutated access on exactly that input.",
+            "decision": "none - the first needs a state the app cannot reach; the second is short-circuited.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "if (!cancelled) setReadiness(result?.readiness ?? { kind: 'undetermined' });",
+                "if (!cancelled) setReadiness({ kind: 'undetermined' });"
+            ],
+            "mutants": 3,
+            "category": "other",
+            "reason": "Both surviving shapes replace an 'undetermined' verdict with an empty object, and the third forces the catch's cancelled guard. An empty readiness has no 'kind', so siteNotPossibleYet is false and describeResetOption falls through its two kind tests to the default arm - character for character what 'undetermined' produces, by design: undetermined means 'we could not tell', which is the same as saying nothing. The stale-answer guard on the SUCCESS path is killed by a test (a late answer for an abandoned selection must not overwrite the current one); the catch's copy cannot be, because a late FAILURE also resolves to undetermined, which is what the screen already shows.",
+            "decision": "none - an empty readiness and 'undetermined' drive every reader identically.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "const templateAvailable = !!(edsConfig?.templateOwner && edsConfig?.templateRepo);",
+                "createdRepo={edsConfig?.createdRepo}"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both surviving chains are unreachable in the undefined case they guard. In templateAvailable the mutant drops the '?.' on the SECOND read, and '&&' short-circuits on the first one whenever edsConfig is undefined - the first read's own mutant is killed by the no-configuration render test. The createdRepo prop sits inside 'showAppStatus && (...)', and showAppStatus is false whenever edsConfig is absent (it needs a created or selected repo, both read off edsConfig), so the JSX carrying the mutated access is never built.",
+            "decision": "none - one is short-circuited, the other sits behind a conditional render that cannot be true.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "setRepoCreationState({ isCreating: false, isCreated: false });"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "Emptying either object literal in resetLocalState (this one and the setGitHubAppStatus beside it) leaves the fields undefined instead of false/null, and every reader treats them the same: isCreating and isCreated are used as booleans, where undefined is falsy; and the created-repo App check tests 'isInstalled === null', which undefined fails - but that effect also requires repoMode 'new' AND a createdRepo, and resetLocalState runs only from the two mode switches, both of which clear createdRepo in the same patch. So the one branch that could tell null from undefined cannot be entered afterwards.",
+            "decision": "none - undefined and the written values are indistinguishable to every reader that can run next.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "setIsRechecking(true);"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "handleCheckAgain raises TWO checking flags at once - isRechecking here and isChecking in the setGitHubAppStatus on the next lines - and resolveCodeSyncView reads them as 'status.isChecking || isRechecking'. Stryker mutates one at a time, so whichever of the three mutants fires (isRechecking false, isChecking false, or that whole status object emptied), the other flag still puts the view in its checking state and the poll still runs to completion. Only mutating both together would be observable, which Stryker never does.",
+            "decision": "none - two flags express one state; each masks the other's mutant.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/ui/steps/RepoSelectionInline.tsx",
+            "anchors": [
+                "}, [repoMode, selectedRepo]);"
+            ],
+            "line": 374,
+            "mutants": 3,
+            "category": "block",
+            "reason": "The effect this closes resets the App status when the repo mode or selection changes. On mount it writes exactly the initial state, so it is a no-op there. On a change it is immediately followed by the Code Sync probe for the new selection, which sets isChecking true - measured while writing these tests, that probe fires even when the new repository's readiness has not landed, because the effect reads the previous selection's readiness. So the reset and the probe land in the same commit from any assertion's point of view, and emptying the effect body, emptying its write, or emptying this dependency array all leave the same observable sequence.",
+            "decision": "none - the probe that follows it writes the same flag before anything renders.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
