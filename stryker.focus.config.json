@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/ui/components/GitHubServiceCard.tsx"
+        "src/features/eds/handlers/refreshBlockLibraryHandler.ts"
     ],
     "reporters": [
         "clear-text",

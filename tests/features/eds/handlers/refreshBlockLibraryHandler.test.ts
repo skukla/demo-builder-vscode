@@ -78,6 +78,18 @@ describe('handleRefreshBlockLibraryHeadless', () => {
         });
     });
 
+    it('reports an empty path list, not undefined, when nothing was published', async () => {
+        // The agent surface reads data.libraryPaths and iterates it. A core that
+        // succeeded without publishing anything omits the field, and handing the
+        // caller `undefined` where it expects a list breaks the tool rather than
+        // reporting "nothing to publish".
+        mockRefresh.mockResolvedValue({ success: true });
+
+        const result = await handleRefreshBlockLibraryHeadless(ctx({ name: 'p', path: '/p' }));
+
+        expect(result).toEqual({ success: true, data: { libraryPaths: [] } });
+    });
+
     it('surfaces a refresh failure error', async () => {
         mockRefresh.mockResolvedValue({ success: false, error: 'publish failed' });
         const result = await handleRefreshBlockLibraryHeadless(ctx({ name: 'p', path: '/p' }));
