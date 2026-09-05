@@ -366,6 +366,73 @@ describe('migrateStorefrontNamingIfNeeded', () => {
             expect(result.lostGrants).toEqual(['a****@x.test']);
         });
 
+        it('does NOT report lost grants when the restore succeeded', async () => {
+            // `grantsRestored` is the decision, not the presence of the array —
+            // the service echoes the addresses it handled either way. Reporting
+            // them on a successful restore would send an SC to re-invite admins
+            // who never lost access.
+            const configService = makeConfigService(
+                jest.fn().mockResolvedValue({
+                    success: true,
+                    grantsRestored: true,
+                    lostGrants: ['a****@x.test'],
+                })
+            );
+
+            const result = await migrateStorefrontNamingIfNeeded(
+                makeCtx(),
+                makeProject('b2b-boilerplate-content'),
+                makeDaOps(),
+                configService,
+                mockLogger
+            );
+
+            expect(result.migrated).toBe(true);
+            expect(result).not.toHaveProperty('lostGrants');
+        });
+
+        it('names the re-registration failure "unknown" when the service returns no error text', async () => {
+            // The message is the only thing the SC sees when reset stops here.
+            // An empty tail reads as a truncated log line rather than a state.
+            const configService = makeConfigService(
+                jest.fn().mockResolvedValue({ success: false })
+            );
+
+            const result = await migrateStorefrontNamingIfNeeded(
+                makeCtx(),
+                makeProject('b2b-boilerplate-content'),
+                makeDaOps(),
+                configService,
+                mockLogger
+            );
+
+            expect(result.migrated).toBe(false);
+            expect(result.error).toBe(
+                'Storefront name migration failed during Helix re-registration: unknown',
+            );
+        });
+
+        it('tolerates a project with no componentInstances at all (no crash, ctx still mutated)', async () => {
+            // A manifest written before componentInstances existed. Reaching for
+            // the storefront must not throw the migration out midway — Helix is
+            // already re-pointed by this line, so a throw here strands the
+            // storefront between two names.
+            const ctx = makeCtx();
+            const project = createMockProject({ name: 'no-instances' });
+            delete (project as Partial<Project>).componentInstances;
+
+            const result = await migrateStorefrontNamingIfNeeded(
+                ctx,
+                project,
+                makeDaOps(),
+                makeConfigService(),
+                mockLogger
+            );
+
+            expect(result.migrated).toBe(true);
+            expect(ctx.daLiveSite).toBe('b2b-boilerplate');
+        });
+
         it('tolerates a project missing the eds-storefront instance (no crash, ctx still mutated)', async () => {
             const ctx = makeCtx();
             const project = createMockProject({ name: 'no-eds', componentInstances: {} });
