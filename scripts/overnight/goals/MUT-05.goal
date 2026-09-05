@@ -1,11 +1,10 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-05. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/ai/server/readDescriptors.ts  (56 open gaps)
-  - src/core/ui/hooks/useFocusTrap.ts  (56 open gaps)
-  - src/core/logging/debugLogger.ts  (55 open gaps)
-  - src/features/components/services/demoPackageLoader.ts  (55 open gaps)
-  - src/features/projects-dashboard/ui/ProjectsDashboard.tsx  (55 open gaps)
+  - src/features/ai/server/adobeResourceTools.ts  (43 open gaps)
+  - src/features/dashboard/handlers/meshStatusHelpers.ts  (43 open gaps)
+  - src/features/data-installer/handlers/exportHandlers.ts  (43 open gaps)
+  - src/features/mesh/services/meshDeployment.ts  (43 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the

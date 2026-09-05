@@ -1,10 +1,10 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-02. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/ai/server/cloudResourceTools.ts  (78 open gaps)
   - src/features/ai/server/eventProviderTools.ts  (77 open gaps)
   - src/types/typeGuards.ts  (73 open gaps)
   - src/features/components/services/componentInstallation.ts  (70 open gaps)
+  - src/features/data-installer/ui/components/importResult.ts  (70 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the

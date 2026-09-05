@@ -1,7 +1,9 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-10. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/mesh/services/meshDeployment.ts  (43 open gaps)
+  - src/features/mesh/services/meshDeploymentVerifier.ts  (33 open gaps)
+  - src/commands/ResetAllCommand.ts  (32 open gaps)
+  - src/core/ui/components/ui/Modal.tsx  (32 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the

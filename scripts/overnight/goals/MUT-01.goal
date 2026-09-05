@@ -4,8 +4,8 @@ these modules to ZERO open gaps, in this order:
   - src/commands/diagnosticsChecks.ts  (136 open gaps)
   - src/core/shell/commandExecutor.ts  (130 open gaps)
   - src/features/components/services/ComponentRegistryManager.ts  (111 open gaps)
-  - src/features/ai/server/inExtensionMcpServer.ts  (83 open gaps)
   - src/features/mesh/services/meshVerifier.ts  (79 open gaps)
+  - src/features/ai/server/cloudResourceTools.ts  (78 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the
