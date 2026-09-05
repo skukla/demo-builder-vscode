@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/services/appBuilderComponentSelection.ts"
+        "src/features/project-creation/ui/components/integration-flow/instanceId.ts"
     ],
     "reporters": [
         "clear-text",

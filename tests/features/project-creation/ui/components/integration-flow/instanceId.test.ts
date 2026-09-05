@@ -199,6 +199,22 @@ describe('mintInstance (optional-name model, 2026-08-27)', () => {
         });
     });
 
+    it('trims the label before it becomes the DISPLAY name', () => {
+        // The id slugs whitespace away either way; the display name is what the
+        // user reads on the card, so stray padding must not survive into it.
+        expect(mintInstance('  Order Sync  ', new Set())).toEqual({
+            id: 'order-sync',
+            name: 'Order Sync',
+        });
+    });
+
+    it('trims before appending a collision suffix to the display name', () => {
+        expect(mintInstance('  Order Sync  ', new Set(['order-sync']))).toEqual({
+            id: 'order-sync-2',
+            name: 'Order Sync 2',
+        });
+    });
+
     it('a label with no usable letters falls back to the custom-integration stem', () => {
         expect(mintInstance('123', new Set())).toEqual({ id: 'custom-integration', name: '123' });
     });
