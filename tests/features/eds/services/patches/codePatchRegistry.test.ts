@@ -323,6 +323,43 @@ describe('applyCodePatches — failure cases', () => {
         expect(unknownResult!.applied).toBe(false);
         expect(unknownResult!.reason).toContain('not in external ledger');
     });
+
+    /**
+     * The mirror of the test above, and the half that was missing: a run where
+     * every requested ID resolved must say NOTHING about unknown IDs. Without
+     * it the guard could be replaced by `true` and the only symptom would be a
+     * bare "Unknown patch IDs: " in Debug Logs on every clean create — a
+     * warning naming no patch, which reads as a real problem to whoever is
+     * triaging one.
+     */
+    it('says nothing about unknown IDs when every requested ID resolved', async () => {
+        mockExternalLedger([
+            {
+                id: 'known',
+                target: 'scripts/a.js',
+                description: 'D',
+                precondition: 'foo',
+                replacement: 'bar',
+            },
+        ]);
+        // Warm the per-source ledger cache first. The fetcher warns once that the
+        // patches repo has no published release; that warning belongs to the
+        // fetcher, not to this gate, and a warm cache keeps it out of the way
+        // instead of loosening the assertion to tolerate it.
+        await applyCodePatches(
+            new Map<string, string>([['scripts/a.js', 'foo']]),
+            ['known'],
+            SOURCE,
+            mockLogger
+        );
+        (mockLogger.warn as jest.Mock).mockClear();
+        const files = new Map<string, string>([['scripts/a.js', 'foo']]);
+
+        const results = await applyCodePatches(files, ['known'], SOURCE, mockLogger);
+
+        expect(results).toEqual([expect.objectContaining({ patchId: 'known', applied: true })]);
+        expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
 });
 
 // ==========================================================================
@@ -433,6 +470,41 @@ describe('applyCodePatches — critical flag', () => {
         await expect(
             applyCodePatches(files, ['must-apply'], SOURCE, mockLogger)
         ).rejects.toBeInstanceOf(CodePatchCriticalError);
+    });
+
+    /**
+     * A critical failure aborts create/reset, and this message is what the SC
+     * ends up looking at. It has to say WHY — the same why the attached result
+     * carries, so the two cannot drift. Asserting it against `result.reason`
+     * rather than against a literal keeps the tie without pinning the wording.
+     */
+    it('names the failure reason, matching the result it carries', async () => {
+        mockExternalLedger([
+            {
+                id: 'must-apply',
+                target: 'scripts/a.js',
+                description: 'Load-bearing',
+                precondition: 'NOT_THERE',
+                replacement: 'X',
+                critical: true,
+            },
+        ]);
+        const files = new Map<string, string>([['scripts/a.js', 'something else']]);
+
+        let error: CodePatchCriticalError | undefined;
+        try {
+            await applyCodePatches(files, ['must-apply'], SOURCE, mockLogger);
+        } catch (thrown) {
+            // Narrow rather than cast: anything else thrown here is a real
+            // failure and must not be quietly reshaped into the expected type.
+            if (!(thrown instanceof CodePatchCriticalError)) throw thrown;
+            error = thrown;
+        }
+
+        expect(error).toBeInstanceOf(CodePatchCriticalError);
+        expect(error!.result.reason).toBeDefined();
+        expect(error!.message).toContain(error!.result.reason!);
+        expect(error!.message).toContain('must-apply');
     });
 
     it('does not throw for non-critical failures (default behavior — proceed and warn)', async () => {

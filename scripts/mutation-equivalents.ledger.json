@@ -8604,6 +8604,18 @@
             "decision": "none \u2014 the `?.` is correct as written; the catch that makes the mutant equivalent is the documented true-negative-only contract, not an accident",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/patches/codePatchRegistry.ts",
+            "anchors": [
+                "if (!patchIds || patchIds.length === 0) return results;"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The guard is an early exit whose absence is fully absorbed downstream. With an empty array and the guard removed, getCodePatches hits its OWN empty check and returns [] without fetching, then the `patches.length === 0` branch loops over the same empty patchIds and pushes nothing \u2014 so the return value, the file map, the collaborator calls and the logs are byte-identical. The `&&` mutant is the same story: for every array, empty or not, the condition is false either way. The one input that separates them is a nullish patchIds, which the `string[]` signature forbids and both call sites in codePatchPipelineHelpers already exclude with their own guard; reaching it from a test would take an `as unknown as string[]` at the call boundary, which this repo treats as a silenced type error rather than as coverage.",
+            "decision": "none \u2014 the guard is a correct fast path; the tests assert the empty-array outcome (applyCodePatches returns [] and no fetch is made), which is the behaviour that matters",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }
