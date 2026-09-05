@@ -43,15 +43,19 @@ const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
 };
 
 export class DebugLogger {
-    private logsChannel: vscode.LogOutputChannel;   // User-facing messages
-    private debugChannel: vscode.LogOutputChannel;  // Technical diagnostics (complete record)
+    private logsChannel: vscode.LogOutputChannel; // User-facing messages
+    private debugChannel: vscode.LogOutputChannel; // Technical diagnostics (complete record)
     private logBuffer: string[] = []; // Track info/warn/error for export (not debug/trace)
     private static readonly MAX_BUFFER_SIZE = 10000; // Cap at 10K entries to prevent unbounded growth
 
     constructor(context: vscode.ExtensionContext) {
         // Both channels use LogOutputChannel for consistent VS Code formatting
-        this.logsChannel = vscode.window.createOutputChannel('Demo Builder: User Logs', { log: true });
-        this.debugChannel = vscode.window.createOutputChannel('Demo Builder: Debug Logs', { log: true });
+        this.logsChannel = vscode.window.createOutputChannel('Demo Builder: User Logs', {
+            log: true,
+        });
+        this.debugChannel = vscode.window.createOutputChannel('Demo Builder: Debug Logs', {
+            log: true,
+        });
 
         context.subscriptions.push(this.logsChannel);
         context.subscriptions.push(this.debugChannel);
@@ -77,14 +81,20 @@ export class DebugLogger {
     private tagged(text: string): string {
         const tag = currentCallTag();
         if (tag === undefined) return text;
-        const m = /^(\[(?:debug|trace)\] )?\[([^\]#]+)\]/.exec(text);
-        if (m) {
-            const level = m[1] ?? '';
-            return `${level}[${m[2]} #${tag}]${text.slice(m[0].length)}`;
+        // The level prefix is taken off FIRST and put back untouched. It used to
+        // be an optional group in one combined pattern, which meant a line with
+        // a level prefix and NO subsystem — `[debug] deploy starting` — backtracked
+        // and matched `[debug]` as the subsystem, yielding `[debug #47] deploy
+        // starting`: the level prefix rewritten, contrary to the rule above, and
+        // invisible to anyone filtering the channel on `[debug] `. The bracketless
+        // fallback existed for that case and could never be reached.
+        const level = /^\[(?:debug|trace)\] /.exec(text)?.[0] ?? '';
+        const rest = text.slice(level.length);
+        const subsystem = /^\[([^\]#]+)\]/.exec(rest);
+        if (subsystem) {
+            return `${level}[${subsystem[1]} #${tag}]${rest.slice(subsystem[0].length)}`;
         }
-        const lvl = /^(\[(?:debug|trace)\] )/.exec(text);
-        if (lvl) return `${lvl[1]}[#${tag}] ${text.slice(lvl[1].length)}`;
-        return `[#${tag}] ${text}`;
+        return `${level}[#${tag}] ${rest}`;
     }
 
     /**
@@ -96,9 +106,8 @@ export class DebugLogger {
         const config = vscode.workspace.getConfiguration('demoBuilder');
         const rawLevel = config.get<string>('logLevel');
         // Validate configured level is valid, default to 'debug' if not
-        const configuredLevel: LogLevel = (rawLevel && rawLevel in LOG_LEVEL_PRIORITY)
-            ? rawLevel as LogLevel
-            : 'debug';
+        const configuredLevel: LogLevel =
+            rawLevel && rawLevel in LOG_LEVEL_PRIORITY ? (rawLevel as LogLevel) : 'debug';
         return LOG_LEVEL_PRIORITY[level] <= LOG_LEVEL_PRIORITY[configuredLevel];
     }
 
@@ -144,7 +153,11 @@ export class DebugLogger {
 
         // Log verbose error details at trace level (reduces noise, available for deep debugging)
         if (error?.stack && this.shouldLog('trace')) {
-            this.debugChannel.info(this.tagged(`[trace] Error stack: ${error.name}: ${error.stack.split('\n').slice(0, 5).join('\n')}`));
+            this.debugChannel.info(
+                this.tagged(
+                    `[trace] Error stack: ${error.name}: ${error.stack.split('\n').slice(0, 5).join('\n')}`,
+                ),
+            );
         }
     }
 
@@ -187,8 +200,17 @@ export class DebugLogger {
         if (data !== undefined) {
             try {
                 const formatted = JSON.stringify(data, null, 2);
-                // SECURITY: Sanitize to redact API keys, tokens, secrets
-                const sanitized = sanitizeErrorForLogging(formatted);
+                // SECURITY: Sanitize to redact API keys, tokens, secrets.
+                // LINE BY LINE, because sanitizeErrorForLogging keeps only the
+                // FIRST line of what it is given — it exists to flatten an error
+                // message and drop its stack. Handing it the whole pretty-printed
+                // blob reduced every trace payload to "{": the data this method
+                // exists to record was discarded, and the redaction it advertises
+                // never ran on any line but the first.
+                const sanitized = formatted
+                    .split('\n')
+                    .map((line) => sanitizeErrorForLogging(line))
+                    .join('\n');
                 this.debugChannel.info(this.tagged(`[trace] ${sanitized}`));
             } catch {
                 this.debugChannel.info(this.tagged(`[trace] ${String(data)}`));
@@ -238,7 +260,9 @@ export class DebugLogger {
             // and taught the reader to ignore the warning (live 2026-08-08:
             // "aio config get ims.contexts.cli took 3927ms" on a cold start).
             if (result.duration > slowCommandThreshold(command)) {
-                this.logsChannel.warn(`Slow command detected - ${command} took ${result.duration}ms`);
+                this.logsChannel.warn(
+                    `Slow command detected - ${command} took ${result.duration}ms`,
+                );
             }
         }
 
@@ -269,14 +293,21 @@ export class DebugLogger {
         if (!this.shouldLog('debug')) return;
 
         this.debugChannel.info(this.tagged(`[debug] Environment - ${label}`));
-        this.debugChannel.info('[debug] ' + JSON.stringify({
-            PATH: env.PATH?.split(':').join('\n  '),
-            HOME: env.HOME,
-            SHELL: env.SHELL,
-            USER: env.USER,
-            NODE_PATH: env.NODE_PATH,
-            npm_config_prefix: env.npm_config_prefix,
-        }, null, 2));
+        this.debugChannel.info(
+            '[debug] ' +
+                JSON.stringify(
+                    {
+                        PATH: env.PATH?.split(':').join('\n  '),
+                        HOME: env.HOME,
+                        SHELL: env.SHELL,
+                        USER: env.USER,
+                        NODE_PATH: env.NODE_PATH,
+                        npm_config_prefix: env.npm_config_prefix,
+                    },
+                    null,
+                    2,
+                ),
+        );
     }
 
     /**
@@ -333,9 +364,8 @@ export class DebugLogger {
         });
 
         if (uri) {
-            const content = this.logBuffer.length > 0
-                ? this.logBuffer.join('\n')
-                : 'No log content available';
+            const content =
+                this.logBuffer.length > 0 ? this.logBuffer.join('\n') : 'No log content available';
             await fs.writeFile(uri.fsPath, content);
             this.info(`Log exported to: ${uri.fsPath}`);
             return uri.fsPath;
