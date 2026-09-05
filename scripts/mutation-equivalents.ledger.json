@@ -6243,6 +6243,115 @@
             "decision": "none - the true-variant produces an object the caller cannot distinguish",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/edsPipeline.ts",
+            "anchors": [
+                "if (!result.success) {"
+            ],
+            "line": 199,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "publishBrandAssets never throws \u2014 fetch and write failures come back as a partly-successful result \u2014 and this guard's whole body is a logger.warn naming the targets that did not land. Nothing downstream reads result: the pipeline proceeds to the next step either way, deliberately, because an incomplete brand set degrades to an unbranded storefront rather than a failed run (proceed-and-warn, ADR-006 D1). Forcing the guard either way, or emptying it, changes only whether that warn prints.",
+            "decision": "none - the guard wraps one warn and nothing else reads the result",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/edsPipeline.ts",
+            "anchors": [
+                "const failed = failedTargets(result).map((r) => `${r.path} (${r.reason ?? 'unknown'})`);"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "This list exists to be joined into the warn on the next line. Emptying the mapper, or swapping the reason fallback, changes the words in that one log message; the pipeline's result, its progress pushes and every later step are byte-identical. The FILTER it calls (failedTargets) is real logic and is exercised through the operations suite's brand-asset tests.",
+            "decision": "none - the mapped strings only ever reach a warn",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/edsPipeline.ts",
+            "anchors": [
+                "unpublished.previewFailed > 0"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "previewFailed decides whether a parenthetical rides along in the warn about live pages that could not be unpublished. Stale preview pages are the same class of leftover but are not public, so they are never their own message and never their own progress push \u2014 the progress the SC sees is gated on liveFailed, which IS tested on both sides. Forcing this sub-condition changes one clause of one sentence.",
+            "decision": "none - it selects a clause inside a warn",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/edsPipeline.ts",
+            "anchors": [
+                "? ` (${unpublished.previewFailed} preview page${unpublished.previewFailed === 1 ? '' : 's'} also failed)`"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Singular-or-plural inside the same warn clause as the row above. Every variant changes 'page' to 'pages' or the reverse in a log line; nothing reads the string.",
+            "decision": "none - pluralisation inside a warn",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/edsPipeline.ts",
+            "anchors": [
+                "if (msg.includes('No publishable pages')) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this branch's body removes a logger.info and nothing else \u2014 the branch's PURPOSE is to not re-throw, and the else that does re-throw is untouched. Both sides of the decision are tested (a 'No publishable pages' failure finishes the run, any other publish error fails it); only the explanatory log inside the tolerated side is unobservable.",
+            "decision": "none - the tolerated branch's body is a single info log",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/edsPipeline.ts",
+            "anchors": [
+                "if (error instanceof DaLiveError && error.statusCode === 403) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Same shape: the 403 branch's body is one logger.info saying the CDN fallback will handle this source. Emptying it keeps the swallow, which is the behaviour \u2014 and the swallow is tested on both sides (a 403 lets the run finish, a 504 and a plain Error both fail it).",
+            "decision": "none - the tolerated branch's body is a single info log",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/edsPipeline.ts",
+            "anchors": [
+                "if (previewed) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The surviving mutant empties the TRUE arm, whose only statement is a logger.info that the library published. The false arm \u2014 the one that reads the site config for diagnostics \u2014 is untouched and is tested on both sides. So the mutant removes a success log and changes nothing a caller or a collaborator can see.",
+            "decision": "none - the success arm is a single info log",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/edsPipeline.ts",
+            "anchors": [
+                "if (!result.skipped) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "prewarmCatalog reports its own outcome; this guard decides only whether the pipeline logs a 'n/m SKUs pre-published' summary for a run that was not skipped. The step is declared onError:'continue' and returns nothing, so neither the pipeline result nor any progress push depends on it. Whether the catalog is pre-warmed AT ALL is decided by the step's `when` descriptor, which is tested on all three of its gates.",
+            "decision": "none - the guard wraps a summary log",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/edsPipeline.ts",
+            "anchors": [
+                "message: `\u26a0\ufe0f ${unpublished.liveFailed} of ${unpublished.total} pages could not be unpublished`,"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the optional call makes this line throw when the pipeline was given no progress callback \u2014 which the reset flow does. But the line sits INSIDE the try that wraps the whole CDN unpublish, and that catch exists precisely to keep an unpublish problem non-fatal, so the throw is swallowed into a warn and the run finishes identically. There is no statement after it inside the try, so nothing is skipped either. A test with a callback cannot tell the two forms apart at all.",
+            "decision": "none - a throw here lands in the unpublish step's own swallow",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }

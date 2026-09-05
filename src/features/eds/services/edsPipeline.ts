@@ -214,8 +214,14 @@ function toWebPaths(daLivePaths: string[]): string[] {
         if (!p.endsWith('.html')) {
             return p;
         }
-        let web = p.replace(/\.html$/i, '');
-        if (web === '/index' || web.endsWith('/index')) {
+        // No `i` flag: the guard above is case-sensitive, so anything reaching
+        // this line already ends in a lowercase `.html` and the flag could never
+        // fire. The `$` anchor IS load-bearing — without it a folder named
+        // `docs.html` loses its own extension instead of the page's.
+        let web = p.replace(/\.html$/, '');
+        // `endsWith` alone: a path EQUAL to '/index' also ends with it, so the
+        // equality half could never decide anything.
+        if (web.endsWith('/index')) {
             web = web.slice(0, -6) || '/';
         }
         return web || '/';
