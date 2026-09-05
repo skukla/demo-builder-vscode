@@ -189,3 +189,59 @@ describe('daLiveSite repo-name fallback', () => {
         });
     });
 });
+
+/**
+ * getEdsDaLiveTarget's own guards. Each of these resolves to "no target" — a
+ * partial pair addresses nothing, and reading a non-EDS project's leftover
+ * storefront metadata would address someone ELSE's content.
+ */
+describe('getEdsDaLiveTarget - guards', () => {
+    function withMetadata(metadata: Record<string, unknown>, stack = 'eds-dalive') {
+        return createMockProject({
+            selectedStack: stack,
+            componentInstances: {
+                'eds-storefront': {
+                    id: 'eds-storefront',
+                    name: 'Edge Delivery Services',
+                    status: 'deployed',
+                    metadata,
+                },
+            },
+        });
+    }
+
+    it('returns undefined for a non-EDS project even when DA.live metadata lingers', () => {
+        const headless = withMetadata({ daLiveOrg: 'org', daLiveSite: 'site' }, 'headless');
+        expect(getEdsDaLiveTarget(headless)).toBeUndefined();
+    });
+
+    it('returns undefined when the org is missing but the site is not', () => {
+        expect(getEdsDaLiveTarget(withMetadata({ daLiveSite: 'site' }))).toBeUndefined();
+    });
+
+    it('returns undefined when the site is missing but the org is not', () => {
+        expect(getEdsDaLiveTarget(withMetadata({ daLiveOrg: 'org' }))).toBeUndefined();
+    });
+
+    it('returns undefined, rather than throwing, when neither a site nor a repo is recorded', () => {
+        // Nothing to derive the site from: the repo fallback must not be read
+        // off an absent value.
+        expect(getEdsDaLiveTarget(withMetadata({ daLiveOrg: 'org' }))).toBeUndefined();
+    });
+
+    it('returns undefined when the project holds no instances record at all', () => {
+        const noInstances = createMockProject({
+            selectedStack: 'eds-dalive',
+            componentInstances: undefined,
+        });
+        expect(getEdsDaLiveTarget(noInstances)).toBeUndefined();
+        expect(getEdsDaLiveUrl(noInstances, 'da-live-classic')).toBeUndefined();
+    });
+
+    it.each([
+        ['undefined', undefined],
+        ['null', null],
+    ])('returns undefined for a %s project', (_label, value) => {
+        expect(getEdsDaLiveTarget(value)).toBeUndefined();
+    });
+});

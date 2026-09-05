@@ -17,8 +17,6 @@ import {
     getComponentConfigPort,
     isEdsStackId,
     isEdsProject,
-    getEdsLiveUrl,
-    getEdsPreviewUrl,
     getAdminPanelUrl,
 } from '@/types/typeGuards';
 import { createMockProject } from '../helpers/projectFake';
@@ -56,7 +54,9 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return undefined when componentVersions is undefined', () => {
-            const project = createMockProject();
+            // EXPLICITLY undefined: the canonical fixture supplies `{}`, so a bare
+            // createMockProject() never reaches the `?.` this test is named for.
+            const project = createMockProject({ componentVersions: undefined });
             expect(getComponentVersion(project, 'headless')).toBeUndefined();
         });
     });
@@ -93,7 +93,8 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return undefined when componentInstances is undefined', () => {
-            const project = createMockProject();
+            // EXPLICITLY undefined — see the componentVersions note above.
+            const project = createMockProject({ componentInstances: undefined });
             expect(getProjectFrontendPort(project)).toBeUndefined();
         });
     });
@@ -242,83 +243,6 @@ describe('typeGuards - Project Accessors', () => {
     });
 
     // =================================================================
-    // getEdsLiveUrl Tests (SOP §4 compliance - EDS metadata access)
-    // =================================================================
-
-    describe('getEdsLiveUrl', () => {
-        it('should return live URL from EDS component metadata', () => {
-            const project = createMockProject({
-                selectedStack: 'eds-dalive',
-                componentInstances: {
-                    'eds-storefront': {
-                        id: 'eds-storefront',
-                        name: 'Edge Delivery Services',
-                        status: 'deployed',
-                        metadata: {
-                            liveUrl: 'https://main--my-site--owner.aem.live',
-                        },
-                    },
-                },
-            });
-            expect(getEdsLiveUrl(project)).toBe('https://main--my-site--owner.aem.live');
-        });
-
-        it('should return undefined for undefined project', () => {
-            expect(getEdsLiveUrl(undefined)).toBeUndefined();
-        });
-
-        it('should return undefined for null project', () => {
-            expect(getEdsLiveUrl(null)).toBeUndefined();
-        });
-
-        it('should return undefined when not an EDS project', () => {
-            const project = createMockProject({
-                selectedStack: 'headless',
-                componentInstances: {
-                    eds: {
-                        id: 'eds',
-                        name: 'EDS',
-                        status: 'deployed',
-                        metadata: {
-                            liveUrl: 'https://main--my-site--owner.aem.live',
-                        },
-                    },
-                },
-            });
-            expect(getEdsLiveUrl(project)).toBeUndefined();
-        });
-
-        it('should return undefined when EDS component has no metadata', () => {
-            const project = createMockProject({
-                selectedStack: 'eds-dalive',
-                componentInstances: {
-                    eds: {
-                        id: 'eds',
-                        name: 'EDS',
-                        status: 'deployed',
-                    },
-                },
-            });
-            expect(getEdsLiveUrl(project)).toBeUndefined();
-        });
-
-        it('should return undefined when no EDS component exists', () => {
-            const project = createMockProject({
-                selectedStack: 'eds-dalive',
-                componentInstances: {},
-            });
-            expect(getEdsLiveUrl(project)).toBeUndefined();
-        });
-
-        it('should return undefined when componentInstances is undefined', () => {
-            const project = createMockProject({
-                selectedStack: 'eds-dalive',
-            });
-            expect(getEdsLiveUrl(project)).toBeUndefined();
-        });
-    });
-
-    // =================================================================
     // getAdminPanelUrl Tests (SOP §4 compliance - admin URL access)
     // =================================================================
 
@@ -416,59 +340,4 @@ describe('typeGuards - Project Accessors', () => {
         });
     });
 
-    // =================================================================
-    // getEdsPreviewUrl Tests (SOP §4 compliance - EDS metadata access)
-    // =================================================================
-
-    describe('getEdsPreviewUrl', () => {
-        it('should return preview URL from EDS component metadata', () => {
-            const project = createMockProject({
-                selectedStack: 'eds-dalive',
-                componentInstances: {
-                    'eds-storefront': {
-                        id: 'eds-storefront',
-                        name: 'Edge Delivery Services',
-                        status: 'deployed',
-                        metadata: {
-                            previewUrl: 'https://main--my-site--owner.aem.page',
-                        },
-                    },
-                },
-            });
-            expect(getEdsPreviewUrl(project)).toBe('https://main--my-site--owner.aem.page');
-        });
-
-        it('should return undefined for undefined project', () => {
-            expect(getEdsPreviewUrl(undefined)).toBeUndefined();
-        });
-
-        it('should return undefined for null project', () => {
-            expect(getEdsPreviewUrl(null)).toBeUndefined();
-        });
-
-        it('should return undefined when not an EDS project', () => {
-            const project = createMockProject({
-                selectedStack: 'headless',
-            });
-            expect(getEdsPreviewUrl(project)).toBeUndefined();
-        });
-
-        it('should return undefined when EDS component has no previewUrl', () => {
-            const project = createMockProject({
-                selectedStack: 'eds-dalive',
-                componentInstances: {
-                    eds: {
-                        id: 'eds',
-                        name: 'EDS',
-                        status: 'deployed',
-                        metadata: {
-                            liveUrl: 'https://main--my-site--owner.aem.live',
-                            // no previewUrl
-                        },
-                    },
-                },
-            });
-            expect(getEdsPreviewUrl(project)).toBeUndefined();
-        });
-    });
 });

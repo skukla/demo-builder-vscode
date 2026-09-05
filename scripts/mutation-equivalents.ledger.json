@@ -11750,6 +11750,83 @@
             "decision": "none \u2014 returning false states the pre-flight's answer explicitly",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/types/typeGuards.ts",
+            "anchors": [
+                "const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];"
+            ],
+            "line": 326,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Unreachable, so no test can distinguish it. Every one of these functions returns on the line above when isEdsProject(project) is false, and isEdsProject answers false for both undefined and null (isEdsStackId optional-chains the stack id and defaults to false). So by the time this line runs, project is a real object and the '?.' on it can never short-circuit. The compiler still requires it: the guard call does not narrow the parameter's type. The SECOND optional chain on this line \u2014 the one on componentInstances \u2014 IS killed, by the 'no instances record at all' case.",
+            "decision": "none \u2014 the optional chain is required by the type and correct as written",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/types/typeGuards.ts",
+            "anchors": [
+                "const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];"
+            ],
+            "line": 369,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Unreachable, so no test can distinguish it. Every one of these functions returns on the line above when isEdsProject(project) is false, and isEdsProject answers false for both undefined and null (isEdsStackId optional-chains the stack id and defaults to false). So by the time this line runs, project is a real object and the '?.' on it can never short-circuit. The compiler still requires it: the guard call does not narrow the parameter's type. The SECOND optional chain on this line \u2014 the one on componentInstances \u2014 IS killed, by the 'no instances record at all' case.",
+            "decision": "none \u2014 the optional chain is required by the type and correct as written",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/types/typeGuards.ts",
+            "anchors": [
+                "const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];"
+            ],
+            "line": 390,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Unreachable, so no test can distinguish it. Every one of these functions returns on the line above when isEdsProject(project) is false, and isEdsProject answers false for both undefined and null (isEdsStackId optional-chains the stack id and defaults to false). So by the time this line runs, project is a real object and the '?.' on it can never short-circuit. The compiler still requires it: the guard call does not narrow the parameter's type. The SECOND optional chain on this line \u2014 the one on componentInstances \u2014 IS killed, by the 'no instances record at all' case.",
+            "decision": "none \u2014 the optional chain is required by the type and correct as written",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/types/typeGuards.ts",
+            "anchors": [
+                "const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];"
+            ],
+            "line": 442,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Unreachable, so no test can distinguish it. Every one of these functions returns on the line above when isEdsProject(project) is false, and isEdsProject answers false for both undefined and null (isEdsStackId optional-chains the stack id and defaults to false). So by the time this line runs, project is a real object and the '?.' on it can never short-circuit. The compiler still requires it: the guard call does not narrow the parameter's type. The SECOND optional chain on this line \u2014 the one on componentInstances \u2014 IS killed, by the 'no instances record at all' case.",
+            "decision": "none \u2014 the optional chain is required by the type and correct as written",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/types/typeGuards.ts",
+            "anchors": [
+                "const edsInstance = project?.componentInstances?.[COMPONENT_IDS.EDS_STOREFRONT];"
+            ],
+            "line": 493,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Unreachable, so no test can distinguish it. Every one of these functions returns on the line above when isEdsProject(project) is false, and isEdsProject answers false for both undefined and null (isEdsStackId optional-chains the stack id and defaults to false). So by the time this line runs, project is a real object and the '?.' on it can never short-circuit. The compiler still requires it: the guard call does not narrow the parameter's type. The SECOND optional chain on this line \u2014 the one on componentInstances \u2014 IS killed, by the 'no instances record at all' case.",
+            "decision": "none \u2014 the optional chain is required by the type and correct as written",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/types/typeGuards.ts",
+            "anchors": [
+                "return owner && repo ? { owner, repo } : undefined;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The two halves are truthy together or not at all, so && and || cannot diverge here. owner and repo come from splitting getEdsGithubRepo's return, and that function performs the SAME split and returns undefined unless both halves are truthy \u2014 so this line sees either 'owner/repo' (both truthy) or '' (both falsy). No project shape produces exactly one.",
+            "decision": "none \u2014 && states the requirement the caller actually has: a pair, or nothing",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
         }
     ]
 }
