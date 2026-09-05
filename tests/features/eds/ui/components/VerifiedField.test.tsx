@@ -240,6 +240,31 @@ describe('VerifiedField', () => {
         });
     });
 
+    describe('Idle State', () => {
+        it('should NOT show the verified indicator before anything has been verified', async () => {
+            // The default state of every one of these fields. A checkmark here
+            // tells the SC a value was accepted that the backend never saw.
+            const { VerifiedField } = await import(
+                '@/features/eds/ui/components/VerifiedField'
+            );
+
+            render(
+                <TestWrapper>
+                    <VerifiedField
+                        label="Organization"
+                        value="my-org"
+                        onChange={mockOnChange}
+                        onBlur={mockOnBlur}
+                        isVerifying={false}
+                        isVerified={false}
+                    />
+                </TestWrapper>
+            );
+
+            expect(screen.queryByText('Verified')).not.toBeInTheDocument();
+        });
+    });
+
     describe('Error State', () => {
         it('should show error message when error provided', async () => {
             // Given: Error state
@@ -291,6 +316,59 @@ describe('VerifiedField', () => {
             expect(screen.getByText('Organization not found')).toBeInTheDocument();
             // The error alert icon should be present (via SVG)
             expect(container.querySelector('svg')).toBeInTheDocument();
+        });
+    });
+
+    describe('Status colours', () => {
+        // The colour IS the status on this field — the word "Verified" and the
+        // error text sit in the same place, in the same size, and differ only by
+        // it. Both carry a semantic token so they follow the Spectrum theme
+        // rather than a hardcoded green/red.
+        it('renders the verified label in the positive semantic colour', async () => {
+            const { VerifiedField } = await import(
+                '@/features/eds/ui/components/VerifiedField'
+            );
+
+            render(
+                <TestWrapper>
+                    <VerifiedField
+                        label="Organization"
+                        value="my-org"
+                        onChange={mockOnChange}
+                        onBlur={mockOnBlur}
+                        isVerifying={false}
+                        isVerified={true}
+                    />
+                </TestWrapper>
+            );
+
+            expect(screen.getByText('Verified').getAttribute('style')).toContain(
+                '--spectrum-semantic-positive-color-text-small'
+            );
+        });
+
+        it('renders the error message in the negative semantic colour', async () => {
+            const { VerifiedField } = await import(
+                '@/features/eds/ui/components/VerifiedField'
+            );
+
+            render(
+                <TestWrapper>
+                    <VerifiedField
+                        label="Organization"
+                        value="invalid-org"
+                        onChange={mockOnChange}
+                        onBlur={mockOnBlur}
+                        isVerifying={false}
+                        isVerified={false}
+                        error="Organization not found"
+                    />
+                </TestWrapper>
+            );
+
+            expect(screen.getByText('Organization not found').getAttribute('style')).toContain(
+                '--spectrum-semantic-negative-color-text-small'
+            );
         });
     });
 
