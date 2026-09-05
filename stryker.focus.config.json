@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/configService/configurationService.ts"
+        "src/features/eds/services/daLive/daLiveAuthService.ts"
     ],
     "reporters": [
         "clear-text",

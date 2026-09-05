@@ -7312,6 +7312,105 @@
             "decision": "none - equivalent for behaviour; only the Debug channel level differs.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveAuthService.ts",
+            "anchors": [
+                "if (parts.length < 2) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both routes out of this guard return null. Taken, it returns null explicitly. Forced false or emptied, execution falls to Buffer.from(parts[1], 'base64') with parts[1] undefined, which throws a TypeError that the catch four lines below turns into the same null. parseJwtPayload has no other output, so no caller can tell the two apart.",
+            "decision": "none - equivalent; the guard is a fast path for a case the catch already handles.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveAuthService.ts",
+            "anchors": [
+                "return tokenInfo !== null && tokenInfo.expiresAt > Date.now();"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Every route that produces a non-null tokenInfo has already applied the five-minute expiry buffer - readValidStateToken and hydrateFromDaAuthHelper both return null unless expiresAt is at least now plus 300000. So when the left operand is true the right one is true as well, and it is strictly greater than Date.now(), never equal. Neither forcing the comparison true nor relaxing it to >= reaches a state any input can produce.",
+            "decision": "none - unreachable; the buffer upstream makes this comparison a tautology.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveAuthService.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 165,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch body is a single logger.warn. Caching the adopted token into globalState is best-effort by design, and the function returns the helper token immediately afterwards whether the cache write threw or not - which the fallback suite pins with a globalState.update that rejects. Emptying the block changes only whether one warn line prints.",
+            "decision": "none - equivalent; the behaviour it guards is already asserted, and only the log line differs.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveAuthService.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 256,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else branch of the response.ok check contains only a logger.warn. Both the taken and the untaken path fall through to the same return null at the end of fetchUserEmail, which the refused-response test asserts.",
+            "decision": "none - equivalent; only the presence of one warn line differs.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveAuthService.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 259,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch body is a single logger.warn, and control falls through to the same return null either way - pinned by the test that makes fetch reject and asserts null. Emptying it changes only the log.",
+            "decision": "none - equivalent; only the presence of one warn line differs.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveAuthService.ts",
+            "anchors": [
+                "if (!opts?.expiresAt || !opts?.email) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Two mutants, both unreachable. Forcing the condition true only changes the case where BOTH opts.expiresAt and opts.email were supplied, and entering the block then does nothing: the inner guard on expiry is false, the inner guard on email is false, and the else-if that would warn is not reached because the payload parsed - so every write inside is skipped and globalState ends up identical. Removing the optional chain on opts.email cannot throw either, because the right operand is only evaluated when opts?.expiresAt is truthy, which requires opts to exist; when opts is undefined the || short-circuits before reaching it.",
+            "decision": "none - equivalent; the block is a no-op for the inputs the first mutant changes, and short-circuit evaluation makes the second unreachable.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveAuthService.ts",
+            "anchors": [
+                "} else if (!opts?.expiresAt && !opts?.email) {"
+            ],
+            "mutants": 6,
+            "category": "branch",
+            "reason": "The body of this else-if is a single logger.warn and nothing else. It runs only when the JWT payload failed to parse, and in every version of the condition storeToken goes on to store the org name, mark setup complete, mirror and fire - none of which this branch touches. No mutation of it changes anything a caller or globalState can see.",
+            "decision": "none - equivalent; the whole branch is a diagnostic message.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveAuthService.ts",
+            "anchors": [
+                "if (writeDaAuthHelperToken({ accessToken: token, expiresAt })) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The block guarded by the write's return value is a single logger.debug. Whether the mirror was attempted, and with what arguments, is asserted directly against writeDaAuthHelperToken; what the success case logs afterwards is the only thing this mutant changes.",
+            "decision": "none - equivalent; the write itself is pinned, the confirmation log is not behaviour.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }

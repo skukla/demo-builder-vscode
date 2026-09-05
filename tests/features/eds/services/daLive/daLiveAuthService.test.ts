@@ -209,6 +209,27 @@ describe('DaLiveAuthService', () => {
             expect(result?.email).toBe(email);
         });
 
+        // The buffer is a `<` against `now + 5 minutes`, so a token expiring at
+        // EXACTLY that instant is still usable. One character the other way and
+        // every sign-in loses its last five minutes of life — invisible in any
+        // test that picks a round hour.
+        it('keeps a token whose expiry sits exactly on the 5-minute buffer', async () => {
+            const now = 1_700_000_000_000;
+            const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+            try {
+                const boundary = now + 5 * 60 * 1000;
+                globalStateStore.set('daLive.accessToken', 'boundary-token');
+                globalStateStore.set('daLive.tokenExpiration', boundary);
+
+                const result = await service.getStoredToken();
+
+                expect(result?.accessToken).toBe('boundary-token');
+                expect(result?.expiresAt).toBe(boundary);
+            } finally {
+                nowSpy.mockRestore();
+            }
+        });
+
         it('should return token info without email if not stored', async () => {
             // Given: Token without email
             const validExpiration = Date.now() + 60 * 60 * 1000;

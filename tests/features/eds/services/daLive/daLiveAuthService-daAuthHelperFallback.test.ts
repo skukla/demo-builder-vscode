@@ -55,6 +55,41 @@ describe('DaLiveAuthService — da-auth-helper fallback', () => {
         expect(await service.getAccessToken()).toBeNull();
     });
 
+    // The cached token gets the SAME 5-minute buffer as a state token, and the
+    // buffer is `now + 5 * 60 * 1000`. Both halves are pinned here: a token
+    // expiring exactly on the boundary is adopted, and one expiring a minute
+    // from now — well inside the buffer, but not yet expired — is not.
+    it('adopts a cached token whose expiry sits exactly on the 5-minute buffer', async () => {
+        const now = 1_700_000_000_000;
+        const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+        try {
+            readMock.mockReturnValue({ accessToken: 'eyJ.boundary', expiresAt: now + 5 * 60 * 1000 });
+            const { service } = makeService();
+
+            expect(await service.getAccessToken()).toBe('eyJ.boundary');
+        } finally {
+            nowSpy.mockRestore();
+        }
+    });
+
+    it('ignores a cached token that expires inside the buffer but has not expired yet', async () => {
+        readMock.mockReturnValue({ accessToken: 'eyJ.nearly', expiresAt: Date.now() + 60_000 });
+        const { service } = makeService();
+
+        expect(await service.getAccessToken()).toBeNull();
+    });
+
+    it('still adopts the token when caching it into globalState fails', async () => {
+        // Caching is best-effort — the token is usable for this call either way.
+        const expiresAt = Date.now() + 3600_000;
+        readMock.mockReturnValue({ accessToken: 'eyJ.from-helper', expiresAt });
+        const { globalState } = createStatefulGlobalState();
+        jest.spyOn(globalState, 'update').mockRejectedValue(new Error('state write failed'));
+        const service = new DaLiveAuthService(createMockExtensionContext({ globalState }));
+
+        expect(await service.getAccessToken()).toBe('eyJ.from-helper');
+    });
+
     it('reports unauthenticated when there is no cached token', async () => {
         const { service } = makeService();
         expect(await service.isAuthenticated()).toBe(false);
