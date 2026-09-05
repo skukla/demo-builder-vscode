@@ -7411,6 +7411,18 @@
             "decision": "none - equivalent; the write itself is pinned, the confirmation log is not behaviour.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/eds/ui/components/DaLiveServiceCard.tsx",
+            "anchors": [
+                "if (canSubmit) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "handleSubmit is wired to exactly one thing: the Verify button's onClick. That button carries disabled={!canSubmit}, and a disabled button emits no click event, so there is no path on which handleSubmit runs while canSubmit is false. Forcing this guard true therefore cannot be reached - the tests that leave the form incomplete assert the button is disabled, which is the same fact from the other side.",
+            "decision": "none - unreachable; the guard is a second lock on a door the disabled attribute already holds shut.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }

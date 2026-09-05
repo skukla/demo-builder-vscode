@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/daLive/daLiveAuthService.ts"
+        "src/features/eds/ui/components/DaLiveServiceCard.tsx"
     ],
     "reporters": [
         "clear-text",
