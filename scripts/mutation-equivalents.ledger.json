@@ -6067,6 +6067,170 @@
             "decision": "none \u2014 the catch body is a single warn; the swallow itself is already tested",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+            "anchors": [
+                "if (!payload?.projectName || !payload?.edsConfig) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The surviving mutant drops the optional chain from the SECOND operand only (payload.edsConfig). That operand is evaluated exclusively when the first one is false, which requires payload?.projectName to be truthy, which requires payload to be non-null. There is therefore no input for which the two forms differ: a bare message with no payload short-circuits at the first operand (and that mutant IS killed). The chain is defensive spelling, not a decision.",
+            "decision": "none - the second operand cannot be reached with a null payload",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+            "anchors": [
+                "const needsMesh = hasMeshInDependencies(payload.dependencies ?? []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant replaces the empty-array fallback with ['Stryker was here']. hasMeshInDependencies answers true only for the three ids in MESH_COMPONENT_IDS (src/core/constants.ts), so both the empty array and the one-junk-string array answer false and needsMesh is identical. The fallback exists to stop .some() being called on undefined, and any array of non-mesh ids proves the same thing.",
+            "decision": "none - both the real fallback and the mutant answer 'no mesh'",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+            "anchors": [
+                "context.logger.info('[Storefront Setup] No mesh selected \u2014 skipping Adobe I/O auth check');"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else branch of the mesh gate contains one statement, a logger.info. Emptying the block removes that line and nothing else \u2014 the handler proceeds to the DA.live guard either way, and the tests that prove ensureAdobeIOAuth is NOT called for a storefront-only run pass under both forms. The only assertion that could tell them apart is one on the logger arguments.",
+            "decision": "none - the else branch is a single log line",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+            "anchors": [
+                "if (cleanupResult.success) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "cleanupStorefrontSetupResources returns { success, error } and this if is its ONLY reader. Both arms are a single logger call (info on success, warn with the error on failure), and the handler returns { success: true } to the caller regardless \u2014 deliberately, because the webview that asked for the cancel has already unmounted and there is no surface left to report to. Forcing the condition either way, and emptying either arm, changes which log line prints and nothing a test can observe.",
+            "decision": "none - the cleanup outcome is consumed by two log lines",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+            "anchors": [
+                "context.logger.error('[Storefront Setup] Cleanup failed', error as Error);"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch wraps the progress push and the cleanup call; its entire body is a logger.error. Emptying the body keeps the swallow \u2014 the catch clause still stops a cleanup failure from escaping, which is what makes the handler answer { success: true } \u2014 so the observable result is identical. The swallow itself is proved by the test where cleanupEdsResources rejects and the handler still resolves successfully.",
+            "decision": "none - the catch body is a single error log; the swallow is separately tested",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+            "anchors": [
+                "const failures = [];"
+            ],
+            "line": 403,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant seeds the failures list with one junk string, which flips the aggregate to 'cleanup had errors'. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
+            "decision": "none - the failure list only ever becomes a warn message",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+            "anchors": [
+                "if (!result.github.success && !result.github.skipped) {"
+            ],
+            "line": 404,
+            "mutants": 6,
+            "category": "branch",
+            "reason": "Every variant of this guard \u2014 forced true, forced false, && to ||, either negation dropped, and the body emptied \u2014 changes only whether a 'GitHub: ...' string joins the failure list. The GitHub deletion itself already happened inside CleanupService; this line classifies its report. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
+            "decision": "none - the guard only decides what a warn line says",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+            "anchors": [
+                "if (!result.daLive.success && !result.daLive.skipped) {"
+            ],
+            "line": 407,
+            "mutants": 6,
+            "category": "branch",
+            "reason": "The DA.live twin of the GitHub guard above, with the same shape and the same fate: it appends a 'DA.live: ...' string to the failure list after the deletion has already been attempted. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
+            "decision": "none - the guard only decides what a warn line says",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+            "anchors": [
+                "if (failures.length > 0) {"
+            ],
+            "line": 411,
+            "mutants": 5,
+            "category": "branch",
+            "reason": "This is the point where the failure list becomes a success flag, so it is the closest thing here to a decision \u2014 but the flag has one reader and that reader picks a log line. Forcing it either way, or comparing with >= or <=, changes 'Cleanup completed successfully' into 'Cleanup completed with errors' or the reverse. Its return value is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. So nothing this expression computes can reach a test except through log wording.",
+            "decision": "none - the flag it computes selects a log line",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+            "anchors": [
+                "return { success: false, error: failures.join('; ') };"
+            ],
+            "line": 412,
+            "mutants": 2,
+            "category": "other",
+            "reason": "Emptying this object literal, or flipping its false to true, changes the shape and the verdict of the cleanup report. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
+            "decision": "none - the returned verdict selects a log line",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+            "anchors": [
+                "return { success: true };"
+            ],
+            "line": 415,
+            "mutants": 2,
+            "category": "other",
+            "reason": "The all-clear answer from the cleanup helper. Emptying the literal or flipping its true to false turns a clean cleanup into a reported failure. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
+            "decision": "none - the returned verdict selects a log line",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 416,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch body makes the helper return undefined instead of a failure verdict. The caller then throws a TypeError reading .success on undefined, which its own catch swallows into a different log line \u2014 so the handler still resolves { success: true } and no resource is treated differently. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way.",
+            "decision": "none - both the body and its absence end in a swallowed log",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+            "anchors": [
+                "return { success: false, error: (error as Error).message };"
+            ],
+            "line": 417,
+            "mutants": 2,
+            "category": "other",
+            "reason": "The failure verdict for an exception thrown anywhere in the helper \u2014 including the fail-fast when there is no authenticated session. Emptying the literal or flipping its false to true changes only that verdict. The value returned here is read at exactly one place \u2014 'if (cleanupResult.success)' \u2014 whose two arms are a logger.info and a logger.warn, and the handler answers { success: true } to the caller either way. The fail-fast ITSELF is tested: with no authManager, no CleanupService is constructed and cleanupEdsResources is never called.",
+            "decision": "none - the returned verdict selects a log line",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
