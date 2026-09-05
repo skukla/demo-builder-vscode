@@ -10254,6 +10254,18 @@
             "decision": "none - a slice at or beyond a string's length is the string.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/data-installer/services/dataInstallerParsers.ts",
+            "anchors": [
+                "return typeof value === 'number' && Number.isFinite(value) ? value : undefined;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the typeof half true leaves Number.isFinite deciding alone, and it already answers false for every value that is not a number - so the two operands cannot disagree at runtime and no input distinguishes them. The typeof check earns its place with the COMPILER instead: Number.isFinite is declared to take unknown and return a plain boolean, with no type predicate, so it narrows nothing and the ternary would not return number | undefined without it.",
+            "decision": "none - runtime-redundant with Number.isFinite, but load-bearing for the return type.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
