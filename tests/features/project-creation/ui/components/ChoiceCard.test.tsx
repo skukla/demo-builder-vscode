@@ -73,6 +73,25 @@ describe('ChoiceCard', () => {
         expect(screen.getByRole('button')).not.toHaveAttribute('aria-pressed');
     });
 
+    it('defaults to unselected: data-selected is false and no check renders', () => {
+        // The default matters: a grid of cards renders many at once, and a `true`
+        // default would mark every unpicked card as the current pick.
+        const { container } = renderCard(<ChoiceCard name="A" checkTestId="a-check" />);
+        expect(container.querySelector('.choice-card')).toHaveAttribute(
+            'data-selected',
+            'false',
+        );
+        expect(screen.queryByTestId('a-check')).not.toBeInTheDocument();
+    });
+
+    it('omits the description and note spans entirely when those props are absent', () => {
+        // Not "renders them empty": an empty span still occupies the card's layout
+        // and would push a name-only tile out of alignment with its neighbours.
+        const { container } = renderCard(<ChoiceCard name="A" />);
+        expect(container.querySelector('.choice-card-description')).toBeNull();
+        expect(container.querySelector('.choice-card-note')).toBeNull();
+    });
+
     it('when disabled: is not clickable and does not fire onSelect', () => {
         const onSelect = jest.fn();
         renderCard(<ChoiceCard name="A" testId="card-a" disabled onSelect={onSelect} />);

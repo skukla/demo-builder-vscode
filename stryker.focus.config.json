@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/ui/components/BuildYourProjectSummary.tsx"
+        "src/features/project-creation/ui/components/ChoiceCard.tsx"
     ],
     "reporters": [
         "clear-text",
