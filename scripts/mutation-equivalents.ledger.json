@@ -7691,6 +7691,42 @@
             "decision": "none \u2014 the empty deps array is correct; the mutant is a no-op array of equal primitives",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/configService/configAccessRecovery.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "logConfigAccessState's final else contains one logger.debug and nothing else. The function's RETURN value is the probe result unchanged, and the suite already asserts that 'unknown' comes back as 'unknown' and that nothing is warned about it. Emptying the block changes only whether a debug line prints.",
+            "decision": "none \u2014 the quiet branch is deliberate: unknown must not read as a permissions problem",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/configService/configAccessRecovery.ts",
+            "anchors": [
+                "if (pinned.status === 'ok' && pinned.changed) {"
+            ],
+            "mutants": 6,
+            "category": "branch",
+            "reason": "pinSiteAdmin returns void and performs no work after ensureSiteAdmin. Everything below this line is a choice between one logger.info and one logger.debug, so no mutation of this condition changes the call the function makes, the value it returns, or anything a caller can observe. The behaviour that IS observable \u2014 which site and address the grant targets, and that a refusal does not throw \u2014 is asserted by argument in the pinSiteAdmin suite.",
+            "decision": "none \u2014 the split says which outcome happened, in the buffer users paste into tickets",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/configService/configAccessRecovery.ts",
+            "anchors": [
+                "} else if (pinned.status !== 'ok') {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Same function, same reason: the else-if only selects the debug line for a failed pin. pinSiteAdmin has already made its one collaborator call by this point and returns void either way.",
+            "decision": "none \u2014 a failed pin is worth a diagnostic and nothing more",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
         }
     ]
 }

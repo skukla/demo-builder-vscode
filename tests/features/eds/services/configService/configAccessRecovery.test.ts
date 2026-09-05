@@ -10,6 +10,7 @@
 import {
     announceConfigAccess,
     logConfigAccessState,
+    pinSiteAdmin,
     waitForConfigAccess,
 } from '@/features/eds/services/configService/configAccessRecovery';
 import type { Logger } from '@/types/logger';
@@ -18,18 +19,23 @@ jest.mock('@/features/eds/services/configService/configServiceAccess', () => ({
     ...jest.requireActual('@/features/eds/services/configService/configServiceAccess'),
     probeConfigWriteAccess: jest.fn(),
     readOrgAdmins: jest.fn(),
+    ensureSiteAdmin: jest.fn(),
 }));
 
 jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 
 import {
+    ensureSiteAdmin,
     probeConfigWriteAccess,
     readOrgAdmins,
 } from '@/features/eds/services/configService/configServiceAccess';
+import { sleep } from '@/core/utils/sleep';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockProbe = probeConfigWriteAccess as jest.Mock;
 const mockReadOrgAdmins = readOrgAdmins as jest.Mock;
+const mockEnsureSiteAdmin = ensureSiteAdmin as jest.Mock;
+const mockSleep = sleep as jest.Mock;
 
 const logger: Logger = createMockLogger();
 
@@ -174,5 +180,217 @@ describe('a refused session is not a missing role', () => {
         const said = JSON.stringify(announce.mock.calls);
         expect(said).not.toMatch(/admin role/i);
         expect(said).toMatch(/sign in/i);
+    });
+});
+
+/**
+ * The poll SCHEDULE, not just its verdict.
+ *
+ * The count is user-facing — the progress notification says "check N of TOTAL" —
+ * and the delays are the 30/30/45 front-loading the module docstring argues for
+ * against the 30/45/60 used elsewhere. Both are assertable as arguments; neither
+ * was asserted, so an off-by-one in the count and a divided-instead-of-multiplied
+ * final delay both survived.
+ */
+describe('waitForConfigAccess polls on the schedule it promises', () => {
+    it('checks four times in total and reports that total to the caller', async () => {
+        mockProbe.mockResolvedValue('refused');
+        const onAttempt = jest.fn();
+
+        await waitForConfigAccess(tokenProvider, SITE, logger, onAttempt);
+
+        // One immediate check plus one per delay.
+        expect(mockProbe).toHaveBeenCalledTimes(4);
+        expect(onAttempt).toHaveBeenCalledTimes(3);
+        expect(onAttempt.mock.calls.map(([, total]) => total)).toEqual([4, 4, 4]);
+    });
+
+    it('numbers the attempts from one, in order', async () => {
+        mockProbe.mockResolvedValue('refused');
+        const onAttempt = jest.fn();
+
+        await waitForConfigAccess(tokenProvider, SITE, logger, onAttempt);
+
+        expect(onAttempt.mock.calls.map(([attempt]) => attempt)).toEqual([1, 2, 3]);
+    });
+
+    /**
+     * The delay table is a module-level constant, so it is evaluated when the
+     * module is first imported — before any test body starts. Re-importing it
+     * inside the test puts that evaluation where it can be observed; asserting
+     * against the already-loaded module measures nothing about how the table
+     * was computed.
+     */
+    it('waits 30s, 30s then 45s — front-loaded, ~105s in total', async () => {
+        jest.resetModules();
+        const fresh = await import(
+            '@/features/eds/services/configService/configAccessRecovery'
+        );
+        const { sleep: freshSleep } = await import('@/core/utils/sleep');
+        const { probeConfigWriteAccess: freshProbe } = await import(
+            '@/features/eds/services/configService/configServiceAccess'
+        );
+        const { TIMEOUTS: freshTimeouts } = await import('@/core/utils/timeoutConfig');
+        (freshProbe as jest.Mock).mockResolvedValue('refused');
+
+        await fresh.waitForConfigAccess(tokenProvider, SITE, logger);
+
+        expect((freshSleep as jest.Mock).mock.calls.flat()).toEqual([
+            freshTimeouts.CONFIG_SERVICE_RETRY_DELAY,
+            freshTimeouts.CONFIG_SERVICE_RETRY_DELAY,
+            freshTimeouts.CONFIG_SERVICE_RETRY_DELAY * 1.5,
+        ]);
+    });
+
+    it('stops polling the moment the oracle flips', async () => {
+        mockProbe
+            .mockResolvedValueOnce('refused')
+            .mockResolvedValueOnce('granted')
+            .mockResolvedValue('refused');
+
+        const result = await waitForConfigAccess(tokenProvider, SITE, logger);
+
+        expect(result).toBe('granted');
+        expect(mockSleep).toHaveBeenCalledTimes(1);
+    });
+});
+
+/**
+ * The wizard-facing half of the telegraph.
+ *
+ * Every branch here decides what a refused user is TOLD, and the two failure
+ * modes are opposite: saying nothing when they are locked out, and naming
+ * people to chase who cannot help.
+ */
+describe('announceConfigAccess', () => {
+    const announceFake = () => jest.fn().mockResolvedValue(undefined);
+
+    it('says nothing at all when access is granted', async () => {
+        mockProbe.mockResolvedValue('granted');
+        const announce = announceFake();
+
+        const access = await announceConfigAccess(tokenProvider, SITE, logger, announce);
+
+        expect(access).toBe('granted');
+        expect(announce).not.toHaveBeenCalled();
+        // The roster read is only worth its round trip on a refusal.
+        expect(mockReadOrgAdmins).not.toHaveBeenCalled();
+    });
+
+    it('says nothing when the probe could not answer', async () => {
+        mockProbe.mockResolvedValue('unknown');
+        const announce = announceFake();
+
+        const access = await announceConfigAccess(tokenProvider, SITE, logger, announce);
+
+        expect(access).toBe('unknown');
+        expect(announce).not.toHaveBeenCalled();
+    });
+
+    it('names the consequence AND who can grant, when the roster is readable', async () => {
+        mockProbe.mockResolvedValue('refused');
+        mockReadOrgAdmins.mockResolvedValue({
+            status: 'ok',
+            admins: ['owner@example.test', 'lead@example.test'],
+        });
+        const announce = announceFake();
+
+        await announceConfigAccess(tokenProvider, SITE, logger, announce);
+
+        const said = announce.mock.calls.flat().join(' ');
+        expect(said).toMatch(/product pages/i);
+        expect(said).toContain('owner@example.test');
+        expect(said).toContain('lead@example.test');
+    });
+
+    it('still announces the refusal when the roster CANNOT be read', async () => {
+        // The consequence is the part the user needs; the names are a bonus.
+        mockProbe.mockResolvedValue('refused');
+        mockReadOrgAdmins.mockResolvedValue({ status: 'not_authorized' });
+        const announce = announceFake();
+
+        await announceConfigAccess(tokenProvider, SITE, logger, announce);
+
+        const said = announce.mock.calls.flat().join(' ');
+        expect(said).toMatch(/no admin role/i);
+        expect(said).not.toMatch(/org admin can grant/i);
+    });
+
+    it('does NOT name admins a failed roster read happened to carry', async () => {
+        // The fake answers with a roster beside a non-ok status on purpose: a
+        // check keyed off the array instead of the status would publish a list
+        // the service never confirmed.
+        mockProbe.mockResolvedValue('refused');
+        mockReadOrgAdmins.mockResolvedValue({
+            status: 'not_authorized',
+            admins: ['stale@example.test'],
+        });
+        const announce = announceFake();
+
+        await announceConfigAccess(tokenProvider, SITE, logger, announce);
+
+        const said = announce.mock.calls.flat().join(' ');
+        expect(said).not.toContain('stale@example.test');
+        expect(said).not.toMatch(/org admin can grant/i);
+    });
+
+    it('does not offer an empty list of people to ask', async () => {
+        mockProbe.mockResolvedValue('refused');
+        mockReadOrgAdmins.mockResolvedValue({ status: 'ok' });
+        const announce = announceFake();
+
+        await announceConfigAccess(tokenProvider, SITE, logger, announce);
+
+        const said = announce.mock.calls.flat().join(' ');
+        expect(said).toMatch(/no admin role/i);
+        expect(said).not.toMatch(/org admin can grant/i);
+    });
+});
+
+/**
+ * Pinning the creating user's admin role.
+ *
+ * The role otherwise exists only as a side effect of whoever installed the Code
+ * Sync App, which is how a site ends up refusing its own owner. Nothing here
+ * had ever been called.
+ */
+describe('pinSiteAdmin', () => {
+    beforeEach(() => {
+        mockEnsureSiteAdmin.mockResolvedValue({ status: 'ok', changed: true });
+    });
+
+    it('grants the role to the given address on the given site', async () => {
+        await pinSiteAdmin(tokenProvider, SITE, 'creator@example.test', logger);
+
+        // The ARGUMENTS are the behaviour: a pin against the wrong site or the
+        // wrong address is a silent no-op that every mock agrees with.
+        expect(mockEnsureSiteAdmin).toHaveBeenCalledWith(
+            tokenProvider,
+            'leahrayard',
+            'leah-b2b-demo',
+            'creator@example.test',
+            logger,
+        );
+    });
+
+    it('does nothing at all when no address is known', async () => {
+        // An anonymous pin would write a role keyed to `undefined`.
+        await pinSiteAdmin(tokenProvider, SITE, undefined, logger);
+
+        expect(mockEnsureSiteAdmin).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the address is empty', async () => {
+        await pinSiteAdmin(tokenProvider, SITE, '', logger);
+
+        expect(mockEnsureSiteAdmin).not.toHaveBeenCalled();
+    });
+
+    it('never throws when the grant is refused — a pin is not worth failing setup for', async () => {
+        mockEnsureSiteAdmin.mockResolvedValue({ status: 'not_authorized' });
+
+        await expect(
+            pinSiteAdmin(tokenProvider, SITE, 'creator@example.test', logger),
+        ).resolves.toBeUndefined();
     });
 });

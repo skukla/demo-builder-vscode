@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "useGitHubAuth: reported flags, all three actions and all three incoming pushes now asserted, plus unmount unsubscribe; four constant-deps-array mutants ledgered",
+    "_note": "configAccessRecovery: poll schedule and count, the whole announce-on-refusal branch, and pinSiteAdmin (previously uncalled) now asserted; eleven log-selection mutants ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -7013,28 +7013,21 @@
             "openGaps": 0
         },
         "src/features/eds/services/configService/configAccessRecovery.ts": {
-            "score": 48.6,
-            "killed": 49,
-            "survived": 14,
-            "noCoverage": 41,
+            "score": 72.9,
+            "killed": 75,
+            "survived": 29,
+            "noCoverage": 0,
             "timeout": 3,
             "survivorCategories": {
-                "string": 7,
-                "block": 1,
-                "logPresentation": 2,
-                "other": 2,
-                "branch": 2
-            },
-            "uncoveredCategories": {
-                "branch": 22,
-                "string": 13,
-                "other": 2,
+                "logPresentation": 11,
                 "block": 3,
-                "logPresentation": 1
+                "string": 7,
+                "branch": 8
             },
-            "highValueSurvivors": 3,
-            "equivalent": 0,
-            "openGaps": 32
+            "uncoveredCategories": {},
+            "highValueSurvivors": 11,
+            "equivalent": 11,
+            "openGaps": 0
         },
         "src/features/eds/services/configService/configServiceAccess.ts": {
             "score": 82.95,

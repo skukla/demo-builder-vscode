@@ -420,3 +420,4 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): bring siteAccessManagerHeadless to zero open mutation gaps (`7e6578538`)
 - 2026-09-05  test(eds): bring githubTokenService to zero open mutation gaps (`17c613a2a`)
 - 2026-09-05  test(eds): bring configGenerator to zero open mutation gaps (`0d686661a`)
+- 2026-09-05  test(eds): bring useGitHubAuth to zero open mutation gaps (`0b81d2a8f`)

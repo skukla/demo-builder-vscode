@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/ui/hooks/useGitHubAuth.ts"
+        "src/features/eds/services/configService/configAccessRecovery.ts"
     ],
     "reporters": [
         "clear-text",
