@@ -14,14 +14,13 @@
  * service-response bodies containing the words "timeout" and "fetch failed".
  */
 
-jest.mock('@/core/utils/timeoutConfig', () => ({ TIMEOUTS: { NORMAL: 30000 } }));
-
 import {
     discoverStoreStructure,
+    errorFromDiscovery,
     fetchStoreStructurePaas,
-} from '@/features/eds/services/commerceStoreDiscovery';
-import type { CommerceStoreStructure } from '@/types/commerceStore';
-import type { StoreDiscoveryParams } from '@/types/commerceStore';
+    spyOnFetch,
+} from './commerceStoreDiscovery.testUtils';
+import type { CommerceStoreStructure, StoreDiscoveryParams } from '@/types/commerceStore';
 
 const SERVICE_URL = 'https://actions.adobeioruntime.net/api/v1/web/discovery/discover-stores';
 
@@ -50,18 +49,12 @@ const ACCS_PARAMS: StoreDiscoveryParams = {
 let fetchSpy: jest.SpyInstance;
 
 beforeEach(() => {
-    fetchSpy = jest.spyOn(globalThis, 'fetch');
+    fetchSpy = spyOnFetch();
 });
 
 afterEach(() => {
     fetchSpy.mockRestore();
 });
-
-/** The error a failed discovery reported, or a marker if it unexpectedly worked. */
-async function errorFrom(params: StoreDiscoveryParams): Promise<string> {
-    const result = await discoverStoreStructure(params);
-    return result.success ? '<succeeded unexpectedly>' : result.error;
-}
 
 describe('fetchStoreResource — how an HTTP failure is described', () => {
     it.each([401, 403])('calls %s an access problem, naming the status', async (status) => {
@@ -142,7 +135,7 @@ describe('what the discovery service said when it refused', () => {
         // Whole message, not a substring: a raw body containing the same words
         // reads identically to a parsed one, which is how the parse block could
         // stop working without any test noticing.
-        await expect(errorFrom(ACCS_PARAMS)).resolves.toBe(
+        await expect(errorFromDiscovery(ACCS_PARAMS)).resolves.toBe(
             '401 Unauthorized — Token is invalid or expired',
         );
     });
@@ -150,7 +143,7 @@ describe('what the discovery service said when it refused', () => {
     it('falls back to the raw body when it is not JSON at all', async () => {
         refuseWith('<html>Bad Gateway</html>');
 
-        await expect(errorFrom(ACCS_PARAMS)).resolves.toBe(
+        await expect(errorFromDiscovery(ACCS_PARAMS)).resolves.toBe(
             '401 Unauthorized — <html>Bad Gateway</html>',
         );
     });
@@ -158,19 +151,19 @@ describe('what the discovery service said when it refused', () => {
     it('falls back to the raw body when the JSON carries no error field', async () => {
         refuseWith('{"detail":"nope"}');
 
-        await expect(errorFrom(ACCS_PARAMS)).resolves.toBe('401 Unauthorized — {"detail":"nope"}');
+        await expect(errorFromDiscovery(ACCS_PARAMS)).resolves.toBe('401 Unauthorized — {"detail":"nope"}');
     });
 
     it('says so plainly when there was no body to read', async () => {
         refuseWith('');
 
-        await expect(errorFrom(ACCS_PARAMS)).resolves.toBe('401 Unauthorized — (empty body)');
+        await expect(errorFromDiscovery(ACCS_PARAMS)).resolves.toBe('401 Unauthorized — (empty body)');
     });
 
     it('says so plainly when the body could not be read at all', async () => {
         refuseWith('', true);
 
-        await expect(errorFrom(ACCS_PARAMS)).resolves.toBe('401 Unauthorized — (empty body)');
+        await expect(errorFromDiscovery(ACCS_PARAMS)).resolves.toBe('401 Unauthorized — (empty body)');
     });
 });
 
@@ -182,7 +175,7 @@ describe('what the discovery service returned when it answered', () => {
     it('reports the service error when it says it did not succeed', async () => {
         answerWith({ success: false, error: 'Commerce unreachable from the action' });
 
-        await expect(errorFrom(ACCS_PARAMS)).resolves.toBe(
+        await expect(errorFromDiscovery(ACCS_PARAMS)).resolves.toBe(
             'Commerce unreachable from the action',
         );
     });
@@ -190,19 +183,19 @@ describe('what the discovery service returned when it answered', () => {
     it('does not trust data attached to an unsuccessful answer', async () => {
         answerWith({ success: false, error: 'partial read', data: STRUCTURE });
 
-        await expect(errorFrom(ACCS_PARAMS)).resolves.toBe('partial read');
+        await expect(errorFromDiscovery(ACCS_PARAMS)).resolves.toBe('partial read');
     });
 
     it('says the service returned no data when it succeeded with none', async () => {
         answerWith({ success: true });
 
-        await expect(errorFrom(ACCS_PARAMS)).resolves.toBe('Discovery service returned no data');
+        await expect(errorFromDiscovery(ACCS_PARAMS)).resolves.toBe('Discovery service returned no data');
     });
 
     it('says the service returned no data when it failed without saying why', async () => {
         answerWith({ success: false });
 
-        await expect(errorFrom(ACCS_PARAMS)).resolves.toBe('Discovery service returned no data');
+        await expect(errorFromDiscovery(ACCS_PARAMS)).resolves.toBe('Discovery service returned no data');
     });
 });
 
@@ -212,7 +205,7 @@ describe('the guards before any request is made', () => {
         ['no username', { password: 'fake-test-pw-not-a-secret' }],
         ['neither', {}],
     ])('refuses a PaaS discovery with %s', async (_label, credentials) => {
-        const error = await errorFrom({
+        const error = await errorFromDiscovery({
             backendType: 'paas',
             baseUrl: 'https://magento.test',
             ...credentials,
@@ -229,7 +222,7 @@ describe('the guards before any request is made', () => {
         ['no service URL', { imsToken: 'mock-ims-token' }],
         ['neither', {}],
     ])('refuses an ACCS discovery with %s', async (_label, partial) => {
-        const error = await errorFrom({
+        const error = await errorFromDiscovery({
             backendType: 'accs',
             baseUrl: 'https://na1-sandbox.api.commerce.adobe.com',
             ...partial,
@@ -240,7 +233,7 @@ describe('the guards before any request is made', () => {
     });
 
     it('refuses a discovery service URL that is not HTTPS', async () => {
-        const error = await errorFrom({
+        const error = await errorFromDiscovery({
             ...ACCS_PARAMS,
             discoveryServiceUrl: 'http://actions.adobeioruntime.net/api/v1/web/discovery',
         });
@@ -250,7 +243,7 @@ describe('the guards before any request is made', () => {
     });
 
     it('refuses a discovery service URL pointing at a private address', async () => {
-        const error = await errorFrom({
+        const error = await errorFromDiscovery({
             ...ACCS_PARAMS,
             discoveryServiceUrl: 'https://192.168.1.10/discover',
         });
@@ -264,7 +257,7 @@ describe('classifying a thrown failure', () => {
     it('recognises a real network failure by its type AND message', async () => {
         fetchSpy.mockRejectedValue(new TypeError('fetch failed'));
 
-        await expect(errorFrom(ACCS_PARAMS)).resolves.toBe(
+        await expect(errorFromDiscovery(ACCS_PARAMS)).resolves.toBe(
             'Cannot reach the Commerce instance. Check the URL and ensure the server is running.',
         );
     });
@@ -272,7 +265,7 @@ describe('classifying a thrown failure', () => {
     it('does not claim unreachable for a different TypeError', async () => {
         fetchSpy.mockRejectedValue(new TypeError('Invalid URL'));
 
-        await expect(errorFrom(ACCS_PARAMS)).resolves.toBe('Invalid URL');
+        await expect(errorFromDiscovery(ACCS_PARAMS)).resolves.toBe('Invalid URL');
     });
 
     it('does not claim unreachable for an ordinary error that merely says so', async () => {
@@ -280,13 +273,13 @@ describe('classifying a thrown failure', () => {
         // these words; a substring match swallowed the HTTP status they carry.
         fetchSpy.mockRejectedValue(new Error('fetch failed'));
 
-        await expect(errorFrom(ACCS_PARAMS)).resolves.toBe('fetch failed');
+        await expect(errorFromDiscovery(ACCS_PARAMS)).resolves.toBe('fetch failed');
     });
 
     it('recognises an aborted request by its name', async () => {
         fetchSpy.mockRejectedValue(Object.assign(new Error('aborted'), { name: 'AbortError' }));
 
-        await expect(errorFrom(ACCS_PARAMS)).resolves.toBe(
+        await expect(errorFromDiscovery(ACCS_PARAMS)).resolves.toBe(
             'Connection timed out. Check the Commerce URL and try again.',
         );
     });

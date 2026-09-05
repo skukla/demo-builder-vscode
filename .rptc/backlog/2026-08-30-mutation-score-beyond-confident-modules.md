@@ -427,3 +427,4 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): bring edsHandlers to zero open mutation gaps (`1ec0ae48e`)
 - 2026-09-05  test(eds): bring storefrontSetupPhase2 to zero open mutation gaps (`731afa776`)
 - 2026-09-05  test(eds): bring githubFileOperations to zero open mutation gaps (`0c04b6352`)
+- 2026-09-05  test(eds): bring commerceStoreDiscovery to zero open mutation gaps (`89a07ce91`)

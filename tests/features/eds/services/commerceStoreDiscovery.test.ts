@@ -5,18 +5,11 @@
  * Covers PaaS (admin token auth) and ACCS (IMS OAuth auth) paths.
  */
 
-// Mock timeoutConfig before imports
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-    },
-}));
-
 import {
     getAdminToken,
     fetchStoreStructurePaas,
     discoverStoreStructure,
-} from '@/features/eds/services/commerceStoreDiscovery';
+} from './commerceStoreDiscovery.testUtils';
 
 // ==========================================================
 // Test Fixtures
