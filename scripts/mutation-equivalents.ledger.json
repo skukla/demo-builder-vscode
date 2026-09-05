@@ -5544,6 +5544,18 @@
             "decision": "none - the default's only consumer cannot see a non-package element, so no input distinguishes [] from a junk-filled array.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/storefrontSections.ts",
+            "anchors": [
+                "Boolean(state.edsConfig?.daLiveAuth?.isAuthenticated)"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the second '?.' after state.edsConfig, which would throw only when edsConfig is undefined. That operand is reached only when the left side of the && already held, and the left side is Boolean(state.edsConfig?.githubAuth?.isAuthenticated) \u2014 false whenever edsConfig is undefined. So && short-circuits before the mutated access on exactly the input that would make it throw, and no state can reach it: edsConfig defined means the property access is safe, edsConfig undefined means the expression is never evaluated. The type still requires the '?.' because edsConfig is optional on WizardState.",
+            "decision": "none - the '?.' is required by the type and unreachable behind the && short-circuit.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
