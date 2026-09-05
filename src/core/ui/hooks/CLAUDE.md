@@ -17,7 +17,7 @@ is the inventory plus the handful of behaviours the source will not tell you.
 | `useLoadingState` | Loading/error/data, plus `hasLoadedOnce` and `isRefreshing` |
 | `useSelection` | Single-item selection with key extraction |
 | `useSelectionStep` | A whole wizard selection step (see below) |
-| `useAsyncData` | Async fetch wired to VS Code messages; auto-load, auto-select-single |
+| `useAsyncData` | Async fetch wired to VS Code messages; auto-select-single |
 | `useAsyncOperation` | Run an async operation with `isExecuting`/message/error, safe across unmount |
 | `useCanProceed` | Drive the wizard's `canProceed` from a validation value |
 | `usePollingWithTimeout` | Poll until a condition holds or a timeout elapses |
@@ -89,7 +89,7 @@ rejected: more overhead, and unreliable against React's render cycle.
 ## Composing them
 
 ```tsx
-const { data, loading } = useAsyncData<Project[]>({ messageType: 'projects', autoLoad: true });
+const { data, loading } = useAsyncData<Project[]>({ messageType: 'projects' });
 const { query, setQuery, filteredItems } = useSearchFilter(data ?? [], { searchFields: ['title'] });
 const { selectedItem, select } = useSelection<Project>({ getKey: (p) => p.id });
 ```

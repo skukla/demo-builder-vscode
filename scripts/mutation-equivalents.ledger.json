@@ -11038,6 +11038,20 @@
             "decision": "none \u2014 kept as the explicit statement that a service-returned failure maps to UNKNOWN (a Retry affordance) rather than arriving there by falling through; the redundancy is deliberate documentation, and it is recorded here so a future reader does not mistake the survivors for a missing test.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/core/ui/hooks/useAsyncData.ts",
+            "anchors": [
+                "}, [setLoading, setRefreshing]);",
+                "[setDataState],",
+                "[setErrorState],"
+            ],
+            "mutants": 3,
+            "category": "other",
+            "reason": "Each of these three useCallback dependency lists names only setters returned by useLoadingState, and every one of those is declared there as useCallback(fn, []) \u2014 so their identities are fixed for the component's whole lifetime. Emptying the list leaves the callback closing over the same functions it would have re-captured, which makes the memoised value identical on every render. No sequence of renders, props or messages can produce a difference to assert on.",
+            "decision": "none \u2014 the lists are correct and exhaustive-deps requires them; the mutant is undetectable only because the collaborator it depends on is already stable, which is a property of useLoadingState rather than of this file.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }

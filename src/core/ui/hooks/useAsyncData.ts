@@ -1,12 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useLoadingState } from './useLoadingState';
 import { useVSCodeMessage } from './useVSCodeMessage';
 
 interface UseAsyncDataOptions<T> {
   /** Initial data */
   initialData?: T | null;
-  /** Automatically load data on mount */
-  autoLoad?: boolean;
   /** Message type to listen for data updates */
   messageType?: string;
   /** Message type to listen for errors */
@@ -62,7 +60,6 @@ interface UseAsyncDataReturn<T> {
  * } = useAsyncData<Project[]>({
  *   messageType: 'projects',
  *   errorMessageType: 'project-error',
- *   autoLoad: true,
  *   autoSelectSingle: true,
  *   onAutoSelect: (project) => selectProject(project)
  * });
@@ -87,7 +84,6 @@ export function useAsyncData<T>(
 ): UseAsyncDataReturn<T> {
   const {
     initialData = null,
-    autoLoad = false,
     messageType,
     errorMessageType,
     transform,
@@ -107,8 +103,6 @@ export function useAsyncData<T>(
     setRefreshing,
     reset,
   } = useLoadingState<T>(initialData);
-
-  const [_loadRequested, setLoadRequested] = useState(autoLoad);
 
   // Listen for data messages - hook must be called at top level
   useVSCodeMessage(
@@ -160,7 +154,6 @@ export function useAsyncData<T>(
     } else {
       setLoading(true);
     }
-    setLoadRequested(true);
   }, [setLoading, setRefreshing]);
 
   const setData = useCallback(

@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/data-installer/handlers/dataInstallerHandlers.ts"
+        "src/core/ui/hooks/useAsyncData.ts"
     ],
     "reporters": [
         "clear-text",
