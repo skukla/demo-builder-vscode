@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "useDashboardStatus.ts: org-badge lifecycle, regenerate cycle, progress channel and transition clearing covered; 6 equivalent mutants ledgered",
+    "_note": "dashboardHandlers: 205 open gaps -> 0. Score is 0.20 below the row written minutes earlier because that row was measured with a one-character src edit (dropping a dead '?.' on context.sendMessage) that has since been reverted — it collided with the Pattern B push-message ceiling, which counts sendMessage( textually and does not see the optional form. The mutant is ledgered as equivalent instead; every other number is equal or better.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -10099,29 +10099,25 @@
             "openGaps": 44
         },
         "src/features/projects-dashboard/handlers/dashboardHandlers.ts": {
-            "score": 36.38,
-            "killed": 159,
-            "survived": 39,
-            "noCoverage": 239,
+            "score": 88.56,
+            "killed": 387,
+            "survived": 48,
+            "noCoverage": 2,
             "timeout": 0,
             "survivorCategories": {
-                "other": 5,
-                "branch": 21,
-                "string": 9,
-                "logPresentation": 1,
-                "block": 3
+                "string": 6,
+                "logPresentation": 32,
+                "block": 4,
+                "branch": 4,
+                "optionalChain": 2
             },
             "uncoveredCategories": {
-                "other": 35,
-                "block": 53,
-                "string": 46,
-                "branch": 77,
-                "logPresentation": 17,
-                "optionalChain": 11
+                "block": 1,
+                "logPresentation": 1
             },
-            "highValueSurvivors": 24,
-            "equivalent": 0,
-            "openGaps": 205
+            "highValueSurvivors": 8,
+            "equivalent": 11,
+            "openGaps": 0
         },
         "src/features/projects-dashboard/services/projectDeletionService.ts": {
             "score": 36.56,

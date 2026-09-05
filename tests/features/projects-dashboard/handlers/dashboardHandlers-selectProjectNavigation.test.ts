@@ -6,6 +6,7 @@
 
 
 import * as vscode from 'vscode';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import {
     handleSelectProject,
 } from '@/features/projects-dashboard/handlers/dashboardHandlers';
@@ -216,6 +217,77 @@ describe('handleSelectProject - Navigation', () => {
                 expect.anything(),
             );
             expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showProjectDashboard');
+        });
+    });
+
+    describe('unexpected failures', () => {
+        it('reports a failure rather than throwing when the load itself rejects', async () => {
+            const project = createProjectsDashboardProject({ name: 'Load Failure' });
+            const context = createProjectsDashboardContext([project]);
+            context.stateManager.loadProjectFromPath.mockRejectedValue(new Error('io error'));
+
+            const result = await handleSelectProject(context, { projectPath: project.path });
+
+            expect(mockExecuteCommand).not.toHaveBeenCalled();
+            expect(result).toEqual({ success: false, error: 'Failed to select project' });
+        });
+
+        it('reports a failure when setting the current-project pointer rejects', async () => {
+            const project = createProjectsDashboardProject({ name: 'Save Failure' });
+            const context = createProjectsDashboardContext([project]);
+            context.stateManager.saveProject.mockRejectedValue(new Error('disk full'));
+
+            const result = await handleSelectProject(context, { projectPath: project.path });
+
+            // Navigation must not happen off a pointer that was never written.
+            expect(mockExecuteCommand).not.toHaveBeenCalled();
+            expect(result).toEqual({ success: false, error: 'Failed to select project' });
+        });
+    });
+
+    describe('surface selection and the webview transition', () => {
+        it('opens the Integrations webview when the payload names that surface', async () => {
+            const project = createProjectsDashboardProject({ name: 'Integrations Target' });
+            const context = createProjectsDashboardContext([project]);
+
+            await handleSelectProject(context, {
+                projectPath: project.path,
+                surface: 'integrations',
+            });
+
+            // Selection is otherwise identical — only WHICH webview opens changes.
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showIntegrations');
+            expect(mockExecuteCommand).not.toHaveBeenCalledWith(
+                'demoBuilder.showProjectDashboard',
+            );
+            expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+        });
+
+        it('holds the transition open across the navigation and closes it afterwards', async () => {
+            const project = createProjectsDashboardProject({ name: 'Transition Target' });
+            const context = createProjectsDashboardContext([project]);
+            let openDuringNavigation: boolean | undefined;
+            mockExecuteCommand.mockImplementation(async () => {
+                openDuringNavigation = BaseWebviewCommand.isWebviewTransitionInProgress();
+            });
+
+            await handleSelectProject(context, { projectPath: project.path });
+
+            // The outgoing Projects List must not dispose mid-handoff...
+            expect(openDuringNavigation).toBe(true);
+            // ...and the flag must not be left set once the handoff is done.
+            expect(BaseWebviewCommand.isWebviewTransitionInProgress()).toBe(false);
+        });
+
+        it('closes the transition even when the navigation command rejects', async () => {
+            const project = createProjectsDashboardProject({ name: 'Transition Failure' });
+            const context = createProjectsDashboardContext([project]);
+            mockExecuteCommand.mockRejectedValue(new Error('no webview'));
+
+            await handleSelectProject(context, { projectPath: project.path });
+
+            // A stuck flag would block every later webview handoff for the session.
+            expect(BaseWebviewCommand.isWebviewTransitionInProgress()).toBe(false);
         });
     });
 });

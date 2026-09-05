@@ -8949,6 +8949,96 @@
             "decision": "none \u2014 [runVerify] states the real dependency, which happens to be constant",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08"
+        },
+        {
+            "module": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+            "anchors": [
+                "} catch (openError) {"
+            ],
+            "line": 214,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger.error call \u2014 emptying it leaves the same swallowed error and the same returned success, so the only observable difference is which log line prints. The classifier reads the 'catch (openError) {' line, which carries no logger token.",
+            "decision": "none \u2014 a test could only assert the log wording, which the logger-argument rule forbids.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+            "anchors": [
+                "if (edsStorefront) {"
+            ],
+            "line": 510,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The whole block is three logger.debug calls describing the EDS metadata for troubleshooting. Both branch outcomes produce the same wizard command and the same response; only the debug transcript differs.",
+            "decision": "none \u2014 asserting it means asserting log wording.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+            "anchors": [
+                "if (edsStorefront.metadata) {"
+            ],
+            "line": 512,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Nested inside the debug-only block above: its body is three more logger.debug lines. Nothing downstream reads anything it computes.",
+            "decision": "none \u2014 log-only, same reason as its parent at line 510.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+            "anchors": [
+                "if (settings.edsConfig) {"
+            ],
+            "line": 525,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Body is four logger.debug calls echoing the already-extracted edsConfig. The settings object handed to the wizard is identical either way.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+            "anchors": [
+                ".then(undefined, (error) => {"
+            ],
+            "line": 777,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The rejection arm of a fire-and-forget notification chain; its body is a single logger.error. Emptying it leaves the same unhandled-free promise and the same already-returned success response.",
+            "decision": "none \u2014 log-only.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+            "anchors": [
+                "if (!payload?.projectPath || !payload?.newName) {"
+            ],
+            "line": 572,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Two optional chains on one line; only the SECOND is unreachable. Dropping the '?' on payload?.newName throws only when payload is undefined, and short-circuiting means the left operand already returned in that case. No input reaches it. The first chain on the same line IS killed, by the absent-payload test.",
+            "decision": "none \u2014 the mutant is equivalent: no call can distinguish it.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/projects-dashboard/handlers/dashboardHandlers.ts",
+            "anchors": [
+                "context.sendMessage?.('projectDeleted', {});"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the '?' cannot be observed: HandlerContext declares sendMessage as REQUIRED (src/types/handlers.ts:195) and every builder supplies one, including the headless MCP context whose sendMessage is a no-op. No reachable caller can hand this handler a context without it.",
+            "decision": "none. The '?.' is in fact dead \u2014 the only such call in src against 147 direct ones \u2014 but deleting it makes a pre-existing push visible to the Pattern B ceiling in tests/sop/architecture-rules.test.ts, which counts /\\bsendMessage\\(/ and does not match the optional form. That is a decision about the push ratchet, not about coverage.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }
