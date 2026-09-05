@@ -11548,6 +11548,80 @@
             "decision": "Recorded as equivalent. The transform in front of it cannot emit the shape the guard tests for.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/mesh/services/meshVerifier.ts",
+            "anchors": [
+                "if (!output || output.trim().length === 0) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "Every mutant here is a variant of NOT returning early, and the paths below return null for the same inputs anyway: an empty or whitespace-only output fails parseJSON, matches neither regex, and falls through to the final return null. An undefined stdout throws on the very next line and lands in the outer catch, which also returns null. Dropping the trim is the same story - a whitespace string reaches the regexes and matches nothing. The guard is an early exit with a distinct log line, not a distinct answer, and killing these would mean asserting which debug message printed.",
+            "decision": "Recorded as equivalent. The early exit exists to explain the empty case in the log; the answer is null either way.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/mesh/services/meshVerifier.ts",
+            "anchors": [
+                "if (meshData) {"
+            ],
+            "line": 114,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "parseJSON returns null rather than throwing for output that is not JSON, so forcing this guard true reads .meshId off null - and that TypeError lands in the inner catch two lines below, whose whole purpose is to fall through to the regex parsing. The mutant therefore reaches the same regex path the original reaches by taking the guard, and returns the same value for every input. Forcing it FALSE is killed, by the JSON-output tests.",
+            "decision": "Recorded as equivalent. The catch that makes the JSON attempt optional is what absorbs the widened guard.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/mesh/services/meshVerifier.ts",
+            "anchors": [
+                "if (meshData) {"
+            ],
+            "line": 246,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The verify path's copy of the same guard, absorbed the same way: parseJSON answers null for non-JSON output, reading a property off it throws a TypeError, and the inner catch directly below exists to continue with the regex matches. Both the original and the widened guard end at the mesh-id comparison with the same foundMeshId and endpoint. Forcing it false is killed by the JSON-response test.",
+            "decision": "Recorded as equivalent, for the same reason as its twin in fetchMeshInfoFromAdobeIO.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/mesh/services/meshVerifier.ts",
+            "anchors": [
+                "const endpointMatch = /(?:mesh\\s+)?endpoint[:\\s]+([^\\s\\n]+)/i.exec(output);"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "The mutated part is the OPTIONAL non-capturing prefix (?:mesh\\s+)?, and changing it cannot change what the expression returns. Whatever the prefix matches is discarded, and because the group is optional the engine can always skip it and match 'endpoint' on its own - which is exactly what it does for 'Mesh  Endpoint: url' under both mutants. Capture group 1, the only value read, is identical for every output. Mutants of the capture class itself ARE killed.",
+            "decision": "Recorded as equivalent. An optional non-capturing prefix in front of a literal cannot alter the capture.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/mesh/services/meshVerifier.ts",
+            "anchors": [
+                "if (!foundMeshId || !endpoint) {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "This guard only decides whether to ATTEMPT a JSON parse of output the regexes have already been run over, and for every output aio api-mesh:describe emits the two paths converge. A JSON document matches neither regex - both require a colon or whitespace immediately after the key word and JSON puts a closing quote there - so on JSON input both operands are true under either operator and the parse is attempted regardless. On a plain-text listing parseJSON returns null, the block falls through, and the regex values are returned exactly as the skipped branch would have returned them. Separating the mutants needs an output that is simultaneously valid JSON and carries a plain-text mesh-id listing inside a string value.",
+            "decision": "Recorded as equivalent. The guard is an optimisation over which parser to try first, not a decision about the answer.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/mesh/services/meshVerifier.ts",
+            "anchors": [
+                "meshComponent.status !== 'deployed' &&"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this operand true only matters when the component is ALREADY 'deployed', and the body of the guard sets it to 'deployed'. So the mutant performs a write that changes nothing, on the one input that distinguishes it from the original. The other two mutants on this condition are killed, by the test that a project with no keyed mesh record does not throw - widening the record operand reaches hasDeploymentEvidence(undefined).",
+            "decision": "Recorded as equivalent. The guard skips a redundant assignment, not a wrong one.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

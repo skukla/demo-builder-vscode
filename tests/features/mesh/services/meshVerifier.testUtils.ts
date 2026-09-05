@@ -40,6 +40,7 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 // the mocked modules. `import/first` is not a registered eslint rule here.
 export {
     MeshVerifierService,
+    fetchMeshInfoFromAdobeIO,
     verifyMeshDeployment,
     syncMeshStatus,
 } from '@/features/mesh/services/meshVerifier';
