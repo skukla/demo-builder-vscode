@@ -40,6 +40,7 @@ jest.mock('@/features/eds/services/appInstallationResolver', () => ({
 }));
 
 import { executePhaseCodeSync } from '@/features/eds/handlers/storefrontSetup/storefrontSetupPhase3';
+import { configureDaLivePermissions } from '@/features/eds/handlers/edsHelpers';
 import type { StorefrontSetupStartPayload } from '@/features/eds/handlers/storefrontSetup/storefrontSetupHandlers';
 import type {
     RepoInfo,
@@ -102,6 +103,15 @@ const messages = (context: HandlerContext): string =>
         .filter((c) => c[0] === 'storefront-setup-progress')
         .map((c) => String((c[1] as { message?: string }).message))
         .join('\n');
+
+const progressPayloads = (context: HandlerContext): unknown[] =>
+    (context.sendMessage as unknown as jest.Mock).mock.calls
+        .filter((c) => c[0] === 'storefront-setup-progress')
+        .map((c) => c[1]);
+
+const mockConfigurePermissions = configureDaLivePermissions as jest.Mock;
+
+const REPO_LABEL = 'skukla/kukla-bodea';
 
 const sentTypes = (context: HandlerContext): string[] =>
     (context.sendMessage as unknown as jest.Mock).mock.calls.map((c) => c[0] as string);
@@ -240,5 +250,215 @@ describe('who can actually fix it', () => {
         // No "the usual cause is" hedging: Helix HAS the site and reports no
         // code sync for it.
         expect(appRequiredPayload(context).message).not.toMatch(/usual cause/i);
+    });
+});
+
+/**
+ * The phase AROUND the verdict.
+ *
+ * Everything this phase does reaches the outside world as an ARGUMENT — the
+ * progress payloads the webview renders, the repo coordinates handed to Helix,
+ * the email handed to the DA.live permissions call. A mocked collaborator
+ * answers the same whatever it is passed, so asserting what came back says
+ * nothing about whether the call was well formed.
+ */
+describe('what the phase reports and calls', () => {
+    it('reports each step in order, naming the repo it is working on', async () => {
+        const context = makeContext();
+
+        await run(context, makeServices());
+
+        expect(progressPayloads(context)).toEqual([
+            {
+                phase: 'code-sync',
+                message: expect.stringContaining('Verifying code synchronization'),
+                subMessage: REPO_LABEL,
+                progress: 40,
+            },
+            {
+                phase: 'code-sync',
+                message: expect.stringContaining('Publishing code to CDN'),
+                subMessage: REPO_LABEL,
+                progress: 43,
+            },
+            { phase: 'code-sync', message: expect.stringContaining('Code synchronized'), progress: 45 },
+            {
+                phase: 'site-config',
+                message: expect.stringContaining('Configuring site permissions'),
+                subMessage: REPO_LABEL,
+                progress: 46,
+            },
+            {
+                phase: 'site-config',
+                message: expect.stringContaining('Verifying AEM Code Sync'),
+                subMessage: REPO_LABEL,
+                progress: 48,
+            },
+            {
+                phase: 'site-config',
+                message: expect.stringContaining('AEM Code Sync verified'),
+                progress: 48,
+            },
+            {
+                phase: 'site-config',
+                message: expect.stringContaining('Site configuration complete'),
+                progress: 49,
+            },
+        ]);
+    });
+
+    it('publishes the whole repo from main to the CDN', async () => {
+        const services = makeServices();
+
+        await run(makeContext(), services);
+
+        expect(services.helixService.previewCode).toHaveBeenCalledWith(
+            'skukla',
+            'kukla-bodea',
+            '/*',
+            'main'
+        );
+    });
+
+    it('carries on when the CDN preview fails — the code is on GitHub either way', async () => {
+        const services = makeServices();
+        (services.helixService.previewCode as jest.Mock).mockRejectedValue(new Error('helix 503'));
+        const context = makeContext();
+
+        const result = await run(context, services);
+
+        expect(result).toBeNull();
+        expect(messages(context)).toMatch(/Code synchronized/);
+    });
+});
+
+describe('who the DA.live site is opened up to', () => {
+    it('grants permissions to the signed-in DA.live user', async () => {
+        const services = makeServices();
+
+        await run(makeContext(), services);
+
+        expect(mockConfigurePermissions).toHaveBeenCalledWith(
+            services.daLiveTokenProvider,
+            'skukla',
+            'kukla-bodea',
+            'k@adobe.com',
+            expect.anything()
+        );
+    });
+
+    it('falls back to the GitHub account email when DA.live has none', async () => {
+        const services = makeServices();
+        (services.daLiveAuthService.getUserEmail as jest.Mock).mockResolvedValue(undefined);
+        const config = {
+            ...EDS_CONFIG,
+            githubAuth: { user: { login: 'skukla', email: 'gh@example.com' } },
+        } as unknown as StorefrontSetupStartPayload['edsConfig'];
+
+        await run(makeContext(), services, config);
+
+        expect(mockConfigurePermissions).toHaveBeenCalledWith(
+            expect.anything(),
+            'skukla',
+            'kukla-bodea',
+            'gh@example.com',
+            expect.anything()
+        );
+    });
+
+    it('skips permissions when no email is known anywhere, without failing the phase', async () => {
+        const services = makeServices();
+        (services.daLiveAuthService.getUserEmail as jest.Mock).mockResolvedValue(undefined);
+        const config = {
+            daLiveOrg: 'skukla',
+            daLiveSite: 'kukla-bodea',
+            repoMode: 'existing',
+        } as unknown as StorefrontSetupStartPayload['edsConfig'];
+
+        const result = await run(makeContext(), services, config);
+
+        expect(result).toBeNull();
+        expect(mockConfigurePermissions).not.toHaveBeenCalled();
+    });
+
+    it('skips permissions when the GitHub record carries no user', async () => {
+        const services = makeServices();
+        (services.daLiveAuthService.getUserEmail as jest.Mock).mockResolvedValue(undefined);
+        const config = {
+            ...EDS_CONFIG,
+            githubAuth: {},
+        } as unknown as StorefrontSetupStartPayload['edsConfig'];
+
+        const result = await run(makeContext(), services, config);
+
+        expect(result).toBeNull();
+        expect(mockConfigurePermissions).not.toHaveBeenCalled();
+    });
+
+    it('surfaces a partial permissions result through the UI and keeps going', async () => {
+        mockConfigurePermissions.mockResolvedValueOnce({
+            success: false,
+            error: 'not a site admin',
+        });
+        const context = makeContext();
+
+        const result = await run(context, makeServices());
+
+        expect(result).toBeNull();
+        expect(progressPayloads(context)).toContainEqual({
+            phase: 'site-config',
+            message: expect.stringContaining('Permissions partially configured: not a site admin'),
+            progress: 47,
+        });
+    });
+});
+
+describe('the App-required payload', () => {
+    beforeEach(() => {
+        mockResolve.mockResolvedValue({ kind: 'not-installed', codeStatus: 404 });
+    });
+
+    it('names the repo and the install URL, and does not claim the site is unregistered', async () => {
+        // siteUnregistered says the SITE is missing. Here Helix has the site and
+        // reports code.status 404, so claiming otherwise would send the webview
+        // down the wrong recovery path.
+        const context = makeContext();
+
+        await run(context, makeServices());
+
+        expect(appRequiredPayload(context)).toEqual({
+            owner: 'skukla',
+            repo: 'kukla-bodea',
+            installUrl: 'https://github.com/apps/aem-code-sync',
+            siteUnregistered: false,
+            message: expect.any(String),
+        });
+    });
+
+    it('does not chase an admin when the GitHub identity is unknown', async () => {
+        const context = makeContext();
+        const config = {
+            daLiveOrg: 'skukla',
+            daLiveSite: 'kukla-bodea',
+            repoMode: 'existing',
+        } as unknown as StorefrontSetupStartPayload['edsConfig'];
+
+        const result = await run(context, makeServices(), config);
+
+        expect(result).toMatchObject({ awaitingGitHubApp: true });
+        expect(appRequiredPayload(context).message).not.toMatch(/admin rights/i);
+    });
+
+    it('does not chase an admin when the GitHub record carries no user', async () => {
+        const context = makeContext();
+        const config = {
+            ...EDS_CONFIG,
+            githubAuth: {},
+        } as unknown as StorefrontSetupStartPayload['edsConfig'];
+
+        const result = await run(context, makeServices(), config);
+
+        expect(result).toMatchObject({ awaitingGitHubApp: true });
+        expect(appRequiredPayload(context).message).not.toMatch(/admin rights/i);
     });
 });

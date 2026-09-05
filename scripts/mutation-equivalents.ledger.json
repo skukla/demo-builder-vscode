@@ -8154,6 +8154,44 @@
             "decision": "none \u2014 the default returns the raw name, which is the right answer if the union ever gains a member before this switch does",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase3.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 50,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch exists to swallow a failed CDN preview so the phase continues; its body is one logger.warn naming the error. Emptying the block still swallows it \u2014 control still leaves the try and still sends the 'Code synchronized' progress message and everything after it. 'carries on when the CDN preview fails' drives a rejecting previewCode through this exact path and pins that the phase completes; what an empty catch loses is the message, not a decision.",
+            "decision": "none \u2014 a failed publish that the phase deliberately continues past leaves no other trace, so the warning is the only record of it",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase3.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 85,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else arm of the user-email check contains only a logger.warn saying no email was available. Emptying it leaves the phase doing exactly the same thing: no permissions call, straight on to registerConfigurationService. That the permissions call is genuinely skipped, and that the phase still completes, is pinned by 'skips permissions when no email is known anywhere' and 'skips permissions when the GitHub record carries no user', both of which assert the collaborator was not called.",
+            "decision": "none \u2014 the warning is what explains a storefront whose DA.live permissions were never opened up, and the skip itself is asserted",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase3.ts",
+            "anchors": [
+                "if (outcome.kind === 'not-installed' && outcome.codeStatus === 404) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Widening the kind half of this guard to true only changes the verdict for an outcome whose kind is NOT 'not-installed' while its codeStatus is 404, and AppInstallationOutcome admits no such value here. The union gives codeStatus to exactly two variants: 'installed', which returned four lines above this guard, and 'not-installed' itself. The third variant, 'undetermined', has no codeStatus field at all, so its codeStatus is undefined and both the original and the mutant fall through to the could-not-verify path. The narrowing direction IS killed, by 'does NOT halt on a site Helix still cannot place'.",
+            "decision": "none \u2014 naming the kind states which measurement earns a halt, and is the reason the 404 here cannot be confused with the outer one",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-02, 2026-09-05"
         }
     ]
 }

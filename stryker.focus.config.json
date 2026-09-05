@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/resourceCleanupHelpers.ts"
+        "src/features/eds/handlers/storefrontSetup/storefrontSetupPhase3.ts"
     ],
     "reporters": [
         "clear-text",
