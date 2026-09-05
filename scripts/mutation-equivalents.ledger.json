@@ -10499,6 +10499,93 @@
             "decision": "equivalent",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/core/ui/utils/WebviewClient.ts",
+            "anchors": [
+                "if (this.readyResolve) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "readyResolve is assigned in the constructor, inside the executor of the readyPromise built on the line above, and is never cleared. Forcing this guard true therefore calls a function that is always defined; there is no state in which the client reaches a handshake-complete message with readyResolve unset.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/core/ui/utils/WebviewClient.ts",
+            "anchors": [
+                "if (message.type && this.listeners) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "this.listeners is a Map assigned as the first statement of the constructor and never reassigned, so the second operand is always truthy. Forcing the whole condition true, or turning the && into ||, therefore only changes what happens for a message with no type at all - and there the body immediately does listeners.get(undefined), finds nothing, and the inner if (handlers) guard skips everything. No delivery, no response, no observable difference.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/core/ui/utils/WebviewClient.ts",
+            "anchors": [
+                "if (!this.vscodeApi) {"
+            ],
+            "line": 158,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "This guard re-runs initialize() when the API handle is missing, but initialize() opens with 'if (this.initialized) return' and the constructor has already set that flag. So calling it, skipping it, inverting the operand or emptying the block all reach line 161 with vscodeApi exactly as it was: either the handle the constructor acquired, or nothing, in which case the throw below fires identically. The only path that could distinguish them needs initialize() to be able to run twice, which the flag forbids.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/core/ui/utils/WebviewClient.ts",
+            "anchors": [
+                "return `msg_${Date.now()}_${++this.messageIdCounter}`;"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The counter exists to make ids unique within one webview session, and decrementing is as unique as incrementing: msg_T_-1, msg_T_-2 collide with nothing. Nothing reads the id for ordering or magnitude - the pendingRequests map and responseToId correlation only ever compare ids for equality - so the direction of the counter is not observable through any behaviour the client offers.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/core/ui/utils/WebviewClient.ts",
+            "anchors": [
+                "if (!this.initialized) {"
+            ],
+            "line": 252,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "onMessage guards a call to initialize(), which is itself idempotent: its first statement returns when this.initialized is set, and the constructor sets it. Whether this guard passes, fails, inverts or loses its body, the outcome is the same - either initialize() is not called, or it is called and returns immediately. No second listener is registered and no second ready signal is posted, which the initialisation test pins from the other side.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/core/ui/utils/WebviewClient.ts",
+            "anchors": [
+                "handlers?.add(handler);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The two lines above guarantee the entry exists: if the map has no Set for this type one is created, and then the Set is read straight back out of the same map with the same key. handlers is therefore never nullish here, so removing the optional hop cannot throw and cannot skip the add.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/core/ui/utils/WebviewClient.ts",
+            "anchors": [
+                "if (handlers) {"
+            ],
+            "line": 265,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This is inside the unsubscribe closure returned by onMessage, which only exists once a Set has been created for that type, and nothing ever deletes a type's Set from the listeners map - it is emptied, never removed. So the lookup here always finds the Set and forcing the guard true changes nothing.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
