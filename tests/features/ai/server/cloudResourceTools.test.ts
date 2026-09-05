@@ -1,120 +1,34 @@
 /**
- * cloud-resource tools — GitHub repo list/delete adapters. The EDS service layer
- * is mocked (no real GitHub calls); covers auth handoff, pagination/projection,
- * and the extra-strict (confirm + confirmName echo) gate on the irreversible
- * delete.
+ * cloud-resource tools — the five GitHub / DA.live adapters end to end. The EDS
+ * and DA.live service layers are mocked in `cloudResourceTools.testUtils` (no
+ * real GitHub calls); this suite covers auth handoff, pagination/projection, and
+ * the extra-strict (confirm + confirmName echo) gate on the irreversible
+ * deletions.
+ *
+ * The sibling `-arguments` suite covers what each tool does with the ARGUMENTS
+ * an agent sends — a missing object, whitespace, one field of three — and the
+ * declarations it registers itself with.
  */
 
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: jest.fn(),
-}));
-
-const mockInspectToken = jest.fn();
-const mockListOrgSites = jest.fn();
-const mockDeleteAllSiteContent = jest.fn();
-
-jest.mock('@/core/di/serviceLocator', () => ({
-    ServiceLocator: {
-        getAuthenticationService: jest.fn(() => ({
-            getTokenManager: () => ({ inspectToken: mockInspectToken }),
-        })),
-    },
-}));
-jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
-    DaLiveOrgOperations: jest.fn(() => ({ listOrgSites: mockListOrgSites })),
-}));
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn(() => ({ deleteAllSiteContent: mockDeleteAllSiteContent })),
-}));
-jest.mock('@/features/ai/server/adobeTargetStore', () => ({
-    getAdobeTarget: jest.fn(() => ({ orgId: 'org-stored' })),
-    runWithAdobeTarget: jest.fn(async (fn: () => Promise<unknown>) => fn()),
-}));
-
-import { registerCloudResourceTools } from '@/features/ai/server/cloudResourceTools';
-import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
-import { getGitHubServices } from '@/features/eds/handlers/edsHelpers';
-import { ErrorCode } from '@/types/errorCodes';
+import {
+    ctxFactory,
+    fakeServer,
+    getGitHubServicesMock,
+    gh,
+    mockDeleteAllSiteContent,
+    mockInspectToken,
+    mockListOrgSites,
+    registerCloudResourceTools,
+    resetCloudResourceMocks,
+    runWithAdobeTarget,
+} from './cloudResourceTools.testUtils';
 import { AuthError } from '@/core/errors';
+import { ErrorCode } from '@/types/errorCodes';
 import { expectWithinCeiling } from './responseCeilings';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
-import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
-
-const getGitHubServicesMock = getGitHubServices as jest.Mock;
 
 beforeEach(() => {
-    jest.clearAllMocks();
-    mockInspectToken.mockResolvedValue({ valid: true, expiresIn: 60, token: 'ims-token' });
-    mockListOrgSites.mockResolvedValue([]);
-    mockDeleteAllSiteContent.mockResolvedValue({ success: true, deletedCount: 0 });
+    resetCloudResourceMocks();
 });
-
-function fakeServer() {
-    const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
-    return {
-        registerTool(
-            name: string,
-            _def: unknown,
-            handler: (args: any) => Promise<{ content: Array<{ text: string }> }>
-        ) {
-            tools.set(name, handler);
-        },
-
-        async call(name: string, args?: unknown): Promise<any> {
-            return JSON.parse((await tools.get(name)!(args)).content[0].text);
-        },
-    };
-}
-
-// A real HandlerContext carries the extension context and its secret store, and
-// these tools read it to reach the GitHub services. The fixture used to be `{}`
-// cast straight to HandlerContext — which typechecked, because a cast at a call
-// boundary silences exactly this, and passed only because every consumer of the
-// context was mocked.
-const ctxFactory = () =>
-    createMockHandlerContext({
-        context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
-    });
-
-/** Build a GitHub services double; override pieces per test. */
-function gh(
-    overrides: {
-        valid?: boolean;
-        validateThrows?: boolean;
-        repos?: Array<{ fullName: string; isPrivate: boolean; updatedAt: string }>;
-        deleteRepository?: jest.Mock;
-        createFromTemplate?: jest.Mock;
-        waitForContent?: jest.Mock;
-    } = {}
-) {
-    const validateToken = overrides.validateThrows
-        ? jest.fn(async () => {
-              throw new Error('network');
-          })
-        : jest.fn(async () => ({ valid: overrides.valid ?? true }));
-    return {
-        tokenService: { validateToken },
-        repoOperations: {
-            listUserRepositories: jest.fn(async () => overrides.repos ?? []),
-            deleteRepository: overrides.deleteRepository ?? jest.fn(async () => undefined),
-            // Shape from GitHubRepo (`types.ts:47-66`): fullName/htmlUrl/defaultBranch,
-            // and NO `owner` field — the tool derives the owner from fullName.
-            createFromTemplate:
-                overrides.createFromTemplate ??
-                jest.fn(async () => ({
-                    id: 1,
-                    name: 'my-site',
-                    fullName: 'acme/my-site',
-                    htmlUrl: 'https://github.com/acme/my-site',
-                    cloneUrl: 'https://github.com/acme/my-site.git',
-                    defaultBranch: 'main',
-                    isPrivate: false,
-                })),
-            waitForContent: overrides.waitForContent ?? jest.fn(async () => true),
-        },
-    };
-}
 
 describe('cloud-resource tools (GitHub)', () => {
     describe('list_github_repos', () => {

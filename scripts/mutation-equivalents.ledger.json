@@ -11622,6 +11622,110 @@
             "decision": "Recorded as equivalent. The guard skips a redundant assignment, not a wrong one.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/ai/server/cloudResourceTools.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 33,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch makes githubAuthed return undefined instead of false, and its single call site is 'if (!(await githubAuthed(ctx)))' - which takes the same branch for both, returning the needsAuth handoff. The function's return type is boolean, so no caller can distinguish them either; the test that a throwing token validation is treated as unauthenticated already covers the path and passes under both.",
+            "decision": "Recorded as equivalent. The explicit false documents the intent; the guard reading it cannot tell the difference.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/ai/server/cloudResourceTools.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 70,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Same shape as its twin in githubAuthed: emptying this catch makes buildDaLiveOps return undefined rather than null, and both call sites read 'if (!ops) return asText(NEEDS_ADOBE)'. Both values are falsy, so both produce the Adobe sign-in handoff, and the test that a throwing token inspection hands off to Adobe auth passes under either. Nothing downstream ever holds the value long enough to compare it.",
+            "decision": "Recorded as equivalent. The null is the documented 'could not build' answer; the guard cannot see which falsy value it got.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/ai/server/cloudResourceTools.ts",
+            "anchors": [
+                "args?.isPrivate === true,",
+                "args?.targetOwner ? String(args.targetOwner).trim() : undefined,",
+                "if (args?.waitForContent !== false) {"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "All three of these sit AFTER the required-field guard at the top of create_github_repo, which reads args?.templateOwner, args?.templateRepo and args?.name and returns early unless all three are non-empty strings. Reaching any of these lines therefore proves args is an object with those properties, so dropping the optional chain cannot throw. The same chains on the guard's own reads ARE killed, by the test that calls the tool with no argument object at all.",
+            "decision": "Recorded as equivalent. The chains are defensive repetition behind a guard that has already established the object exists.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/ai/server/cloudResourceTools.ts",
+            "anchors": [
+                "...(contentReady === undefined ? {} : { contentReady }),"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this to always spread { contentReady } produces an object with the key set to undefined, and the result travels to the caller through JSON.stringify, which drops undefined-valued keys entirely. The bytes an agent receives are therefore identical whether the key was omitted by the conditional or serialised away afterwards, so no assertion on the tool's response can separate them. The other direction - always omitting it - is killed by the wait-for-content tests.",
+            "decision": "Recorded as equivalent. The JSON transport erases the distinction before any caller sees it.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/ai/server/cloudResourceTools.ts",
+            "anchors": [
+                "if (args?.confirm !== true || args?.confirmName !== fullName) {"
+            ],
+            "line": 232,
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "delete_github_repo reads args?.owner and args?.repo above this line and returns early unless both are non-empty, so by the time the confirmation gate runs, args is known to be an object carrying them. Dropping either optional chain here cannot throw on any input that reaches the line. The chains on the owner and repo reads ARE killed, by the no-arguments test - which is where a missing argument object actually arrives.",
+            "decision": "Recorded as equivalent. Both halves of the gate itself are killed; only the redundant chaining survives.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/ai/server/cloudResourceTools.ts",
+            "anchors": [
+                "if (args?.confirm !== true || args?.confirmName !== fullName) {"
+            ],
+            "line": 319,
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "cleanup_dalive_site's copy of the same situation: args?.org and args?.site are read above and the tool returns early unless both are non-empty strings, so args is an object by the time this gate runs and the optional chains cannot fire. Both halves of the gate - confirm:true and the confirmName echo - are killed by their own tests, including one that supplies a correct echo without confirm.",
+            "decision": "Recorded as equivalent, for the same reason as the delete_github_repo gate.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/ai/server/cloudResourceTools.ts",
+            "anchors": [
+                "const offset = Math.max(0, Math.trunc(args?.offset ?? 0));"
+            ],
+            "line": 280,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all.",
+            "decision": "Recorded as equivalent. The chain is redundant behind the org guard; its unguarded twin is covered.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/ai/server/cloudResourceTools.ts",
+            "anchors": [
+                "const limit = Math.min(100, Math.max(1, Math.trunc(args?.limit ?? 30)));"
+            ],
+            "line": 281,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "This line is inside list_dalive_sites, past its \"org is required\" guard, which reads args?.org and returns early when it is empty - so args is an object with a non-empty org string by the time pagination is computed. Dropping the optional chain here cannot throw on any input that reaches the line. The identical line in list_github_repos has no guard in front of it and its chain IS killed, by the test that calls that tool with no argument object at all.",
+            "decision": "Recorded as equivalent. The chain is redundant behind the org guard; its unguarded twin is covered.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

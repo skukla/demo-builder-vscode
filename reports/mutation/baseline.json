@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "meshVerifier: two new suites (fetchMeshInfoFromAdobeIO end to end, mesh-id recovery and deployment evidence) take it from 53% to 82%; the JSON/regex fallback chain and the three convergent guards recorded in the ledger",
+    "_note": "cloudResourceTools: a new -arguments suite (argument handling plus the tool declarations and input schemas) and a shared testUtils take it from 59% to 84% with zero uncovered mutants; 13 redundant optional chains and two indistinguishable falsy returns recorded in the ledger",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -2544,26 +2544,21 @@
             "openGaps": 26
         },
         "src/features/ai/server/cloudResourceTools.ts": {
-            "score": 59.09,
-            "killed": 169,
-            "survived": 113,
-            "noCoverage": 4,
+            "score": 84.27,
+            "killed": 241,
+            "survived": 45,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "block": 1,
-                "other": 38,
-                "string": 37,
-                "branch": 18,
-                "optionalChain": 19
+                "block": 2,
+                "string": 33,
+                "optionalChain": 9,
+                "branch": 1
             },
-            "uncoveredCategories": {
-                "branch": 1,
-                "block": 1,
-                "string": 2
-            },
-            "highValueSurvivors": 19,
-            "equivalent": 0,
-            "openGaps": 78
+            "uncoveredCategories": {},
+            "highValueSurvivors": 3,
+            "equivalent": 12,
+            "openGaps": 0
         },
         "src/features/ai/server/commerceEndpointsTool.ts": {
             "score": 75,
