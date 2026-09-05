@@ -6,7 +6,7 @@
     "typesPurity": {
         "src/types/typeGuards.ts": "RATIFIED by the owner 2026-08-31. Runtime type guards colocated with the types they narrow, and genuinely runtime: needs COMPONENT_IDS, getMeshAppBuilderComponent, deriveAccsAdminUrl, lookupComponentConfigValue and two endpoint constants as VALUES \u2014 measured by converting every import in the file to type-only and reading tsc. A type guard is the one kind of runtime code that belongs beside its types; separating it would make the guards harder to find and they are imported very widely. PERMANENT EXCEPTION, not debt."
     },
-    "patternBSendMessageCeiling": 142,
+    "patternBSendMessageCeiling": 143,
     "layerDirection": {
         "src/core/di/serviceLocator.ts": "RATIFIED by the owner 2026-08-31. A service locator has to name what it locates. Type-only imports of AuthenticationService and SidebarProvider, so no runtime coupling and no cycle. Measured before ratifying: extracting interfaces does not work (both are CLASSES, and AuthenticationService has 44 public methods across 855 lines, so the copy would drift), and converting callers does not either (all 48 are handlers, commands or MCP tools, which the rule explicitly permits to fetch). The alternative considered and rejected was a typed-token registry, which removes the naming but rewrites the DI shape and 50+ call sites. PERMANENT EXCEPTION, not debt."
     },

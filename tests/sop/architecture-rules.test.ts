@@ -336,7 +336,12 @@ describe('ADR-015: handlers return results (push-message ratchet)', () => {
         let count = 0;
         for (const f of FILES) {
             if (!/\/handlers\//.test(f)) continue;
-            count += ((src.get(f) as string).match(/\bsendMessage\(/g) ?? []).length;
+            // `sendMessage?.(` counts too. Without the optional-chaining branch the pattern
+            // measured SYNTAX rather than call sites: one push in dashboardHandlers.ts was
+            // written with `?.` and had never been counted, so DELETING that dead `?.` — the
+            // type declares the method required, and 142 other calls do not guard it — read
+            // to this ratchet as a new push and refused a change that removed one (2026-09-05).
+            count += ((src.get(f) as string).match(/\bsendMessage(?:\?\.)?\(/g) ?? []).length;
         }
         // Grew → a handler started pushing results; return them instead.
         // Shrank → lower the pin, or it can grow back to the old number unnoticed.
@@ -427,7 +432,7 @@ describe('ADR-022: a module is imported by the path that DEFINES the symbol', ()
      */
     const entrySource = readFileSync(join(ROOT, 'esbuild.config.js'), 'utf8');
     const BUNDLE_ENTRIES = new Set(
-        [...entrySource.matchAll(/'(src\/[^']*\.tsx?)'/g)].map((m) => m[1]),
+        [...entrySource.matchAll(/'(src\/[^']*\.tsx?)'/g)].map((m) => m[1])
     );
 
     it('CONTROL: the bundle entries were actually read', () => {
@@ -441,7 +446,7 @@ describe('ADR-022: a module is imported by the path that DEFINES the symbol', ()
         (f) =>
             /(?:^|\/)index\.tsx?$/.test(f) &&
             !BUNDLE_ENTRIES.has(f) &&
-            /^\s*export\s+(?:type\s+)?[{*]/m.test(readFileSync(join(ROOT, f), 'utf8')),
+            /^\s*export\s+(?:type\s+)?[{*]/m.test(readFileSync(join(ROOT, f), 'utf8'))
     );
 
     it('CONTROL: the detector distinguishes a re-export index from a plain one', () => {
