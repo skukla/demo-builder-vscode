@@ -11277,6 +11277,119 @@
             "decision": "Recorded as equivalent. Log-only payload. If these fields ever start feeding the returned result, the anchors will move and the entry will fail loudly.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/shell/commandExecutor.ts",
+            "anchors": [
+                "return options.useNodeVersion ?? null;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Swapping ?? for && changes the answer only when useNodeVersion is undefined rather than null, and that value is returned only from inside the guard that just tested for both. The returned version is used for the Adobe CLI cache key, and every Adobe CLI command reaches this line with useNodeVersion already normalised to null by applyAdobeCLIDefaults, which runs first and sets it whenever it was undefined. For every non-Adobe command the return value is never read at all.",
+            "decision": "Recorded as equivalent. The two values are indistinguishable downstream because the only consumer is gated on isAdobeCLI, and applyAdobeCLIDefaults has already replaced undefined with null on that path.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/shell/commandExecutor.ts",
+            "anchors": [
+                "if (nodeVersion !== 'current') {"
+            ],
+            "mutants": 4,
+            "category": "branch",
+            "reason": "This is the defense-in-depth validation named in the comment above it, and the first validation is what makes it unobservable: validateNodeVersion(options.useNodeVersion) runs six lines earlier on the SAME value, since the 'auto' case has already returned by here. So an invalid version has thrown before this line is reached, and validateNodeVersion accepts 'current' anyway - it is one of the allowed keywords. Skipping it, forcing it, or inverting its comparison all leave every reachable input with the same outcome.",
+            "decision": "Recorded as equivalent. Kept as defence in depth against a future path that reaches wrapCommandWithFnm without the caller-side check; the resolved-version twin in resolveAutoNodeVersion IS killed, because that value comes from the environment.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/shell/commandExecutor.ts",
+            "anchors": [
+                "if (nodeVersion && nodeVersion !== 'current') {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Three of the four mutants on this guard widen it, and validateNodeVersion accepts both values the guard exists to exclude: it returns immediately for null or undefined, and 'current' matches its allowlist. So validating when the guard said not to changes nothing on any reachable input. The fourth mutant, which SKIPS the validation, is killed by the test that a resolved version carrying shell metacharacters is refused - that is the case this guard is actually protecting.",
+            "decision": "Recorded as equivalent. Only the narrowing mutant is observable, and it is killed.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/shell/commandExecutor.ts",
+            "anchors": [
+                "if (command === 'aio plugins') {",
+                "} else if (command === 'aio plugins') {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "CommandResultCache keys every entry by command text - buildCacheKey joins the command, two hashes and the node version - so widening either of these guards stores or looks up an entry under a key nothing will ever ask for. A read for a command other than 'aio plugins' finds no entry and returns undefined, exactly as the unmutated guard does; a write for such a command lands under a key the read side can never reach, because the read is behind the same comparison. No sequence of commands can make either visible.",
+            "decision": "Recorded as equivalent. The cache's key includes the command, which is what makes a mis-scoped read or write inert rather than wrong.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/shell/commandExecutor.ts",
+            "anchors": [
+                "(options.useNodeVersion === undefined && command.startsWith('aio '));"
+            ],
+            "line": 254,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "This clause can never be true. It asks whether useNodeVersion is still undefined on a command starting 'aio ' - but every such command has already been through applyAdobeCLIDefaults, which sets useNodeVersion to null when it was undefined. For any other command the startsWith half is false. So forcing the clause false, or reading the command from its END instead of its start, changes no decision: shouldEnhance is decided entirely by options.enhancePath. The three mutants that WIDEN the clause are killed by the enhancePath:false case, because widening makes it fire where it never did.",
+            "decision": "Recorded as equivalent. The clause is unreachable-true rather than wrong; removing it is a source change outside this batch's scope, and is noted rather than made.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/shell/commandExecutor.ts",
+            "anchors": [
+                "(options.configureTelemetry || (command.startsWith('aio ') && options.configureTelemetry !== false));"
+            ],
+            "line": 290,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The second clause here is unreachable-true for the same reason as its sibling on line 254: a command starting 'aio ' has already passed through applyAdobeCLIDefaults, which sets configureTelemetry to a boolean, so 'configureTelemetry !== false' is false whenever startsWith is true - and when configureTelemetry is true the first operand has short-circuited already. Forcing the clause false, or reading the command from its end, therefore leaves needsTelemetry decided by options.configureTelemetry alone, which is what it is decided by today.",
+            "decision": "Recorded as equivalent. Noted as dead logic rather than deleted, since removing it is a source change outside this batch.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/shell/commandExecutor.ts",
+            "anchors": [
+                "if (isAdobeCLI) {"
+            ],
+            "line": 328,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard true runs checkAdobeCLICache for a non-Adobe command, and that helper compares the command against the two literals 'aio --version' and 'aio plugins' before touching the cache at all. A command that is not Adobe CLI matches neither, so the helper returns undefined and execution continues exactly as it would have. There is no input for which the guard and the helper's own comparisons disagree.",
+            "decision": "Recorded as equivalent. The guard is a cheap skip in front of a helper that already re-checks; only the narrowing mutant would be observable, and it is killed.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/shell/commandExecutor.ts",
+            "anchors": [
+                "if (isAdobeCLI) {"
+            ],
+            "line": 353,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The write-side twin of the cache-read guard: forcing it true calls cacheAdobeCLIResult for a non-Adobe command, and that helper returns early on a non-zero code and otherwise compares the command against the same two literals before storing anything. A non-Adobe command matches neither, so nothing is written and nothing downstream can observe the difference.",
+            "decision": "Recorded as equivalent. Only the narrowing mutant is observable, and the failed-probe caching test kills it.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/shell/commandExecutor.ts",
+            "anchors": [
+                "if (result.exitCode && result.exitCode !== 0) {"
+            ],
+            "mutants": 6,
+            "category": "branch",
+            "reason": "The entire body of this guard is a single this.logger.debug call reporting the exit code and duration; the CommandResult returned two lines below carries result.exitCode whatever this guard decided. So every mutant here - the guard forced either way, its && as ||, its !== as ===, and the emptied block - changes only whether a debug line prints. Killing any of them would mean asserting on the logger's arguments, which pins the wording of a message rather than a behaviour.",
+            "decision": "Recorded as equivalent. Log-only branch; the exit code itself is asserted through the returned result instead.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }
