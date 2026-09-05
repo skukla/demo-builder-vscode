@@ -9,39 +9,24 @@
  * - Overall aggregation: error > warning > ok
  */
 
+// The mock scaffold and the subject import both live in the family's testUtils —
+// listed first so its jest.mock calls register before anything else resolves.
+import {
+    verifyAiSetup,
+    gatherInventory,
+    inspectSkills,
+    inspectAllServers,
+    detectSessionMcps,
+    PROJECT_PATH,
+    EXT_DIST_PATH,
+} from './aiSetupVerifier.testUtils';
+import type { AiCheckResult } from './aiSetupVerifier.testUtils';
+
 import { createHash } from 'crypto';
 import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 
-jest.mock('fs/promises', () => ({
-    realpath: jest.fn(async (p: string) => p),
-    readFile: jest.fn(),
-    access: jest.fn(),
-    readdir: jest.fn(),
-}));
-
-// Inventory inspectors — mocked so the file-presence checks remain the focus
-// of this suite. Per-inspector behavior has dedicated test files.
-jest.mock('@/features/ai/skillInspector', () => ({
-    inspectSkills: jest.fn().mockResolvedValue([]),
-}));
-jest.mock('@/features/ai/mcpInspector', () => ({
-    inspectAllServers: jest.fn().mockResolvedValue([]),
-}));
-jest.mock('@/features/ai/sessionMcpDetector', () => ({
-    detectSessionMcps: jest.fn().mockResolvedValue([]),
-}));
-
-import { verifyAiSetup, gatherInventory } from '@/features/ai/aiSetupVerifier';
-import type { AiCheckResult } from '@/features/ai/aiSetupVerifier';
-import { inspectSkills } from '@/features/ai/skillInspector';
-import { inspectAllServers } from '@/features/ai/mcpInspector';
-import { detectSessionMcps } from '@/features/ai/sessionMcpDetector';
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const PROJECT_PATH = '/projects/test-project';
-const EXT_DIST_PATH = '/ext/dist';
 
 function setupAllOk(): void {
     (fsPromises.readFile as jest.Mock).mockImplementation((filePath: string) => {

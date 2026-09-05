@@ -13,40 +13,24 @@
  * rather than on whatever this machine happens to have installed.
  */
 
-import * as fsPromises from 'fs/promises';
-import * as os from 'os';
-import * as path from 'path';
-
-jest.mock('fs/promises', () => ({
-    realpath: jest.fn(async (p: string) => p),
-    readFile: jest.fn(),
-    access: jest.fn(),
-    readdir: jest.fn(),
-}));
-
 // A homedir no probe can accidentally succeed against: every fs call here is
 // mocked, and a real home leaking in would make a cache hit depend on the
-// machine running the suite.
+// machine running the suite. This one is local — the sibling suite never
+// reaches os, because its arrangement always finds Chrome first.
 jest.mock('os', () => ({
     ...jest.requireActual('os'),
     homedir: jest.fn(() => '/nonexistent-home'),
 }));
 
-jest.mock('@/features/ai/skillInspector', () => ({
-    inspectSkills: jest.fn().mockResolvedValue([]),
-}));
-jest.mock('@/features/ai/mcpInspector', () => ({
-    inspectAllServers: jest.fn().mockResolvedValue([]),
-}));
-jest.mock('@/features/ai/sessionMcpDetector', () => ({
-    detectSessionMcps: jest.fn().mockResolvedValue([]),
-}));
+// The fs and inspector scaffold, and the subject itself, come from the family's
+// testUtils — listed first so its jest.mock calls register before anything else.
+import { verifyAiSetup, PROJECT_PATH, EXT_DIST_PATH } from './aiSetupVerifier.testUtils';
+import type { AiCheckResult } from './aiSetupVerifier.testUtils';
 
-import { verifyAiSetup } from '@/features/ai/aiSetupVerifier';
-import type { AiCheckResult } from '@/features/ai/aiSetupVerifier';
+import * as fsPromises from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 
-const PROJECT_PATH = '/projects/test-project';
-const EXT_DIST_PATH = '/ext/dist';
 const HOME = '/home/tester';
 
 /** Where the check looks for the package that makes it applicable at all. */
