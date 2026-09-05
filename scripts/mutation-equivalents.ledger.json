@@ -7952,6 +7952,30 @@
             "decision": "none \u2014 a log line that only makes sense when there is more than one batch",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/commerceStoreDiscovery.ts",
+            "anchors": [
+                "const rawBody = await response.text().catch(() => '');"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the catch's fallback with undefined, and the next use absorbs it: detail is 'parsedError || rawBody || (empty body)', so an empty string and undefined both fall through to the same '(empty body)'. The only reader in between is JSON.parse, which throws on either and lands in the same catch that leaves parsedError empty. A body that cannot be read produces a byte-identical message whichever fallback is used.",
+            "decision": "none \u2014 '' is the honest value for an unreadable body, and the falsy chain treats it the same as undefined",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/services/commerceStoreDiscovery.ts",
+            "anchors": [
+                "if (parsed && typeof parsed === 'object') {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Three of this guard's mutants widen it to admit values that then read '.error' to no effect. JSON.parse returns exactly one of: an object or array (both admitted already), null, a number, a string or a boolean. Reading '.error' off a number, string or boolean gives undefined, which the '?? \\'\\'' turns into the same empty parsedError the guard would have left; reading it off null THROWS, and the throw lands in this very try's catch, which also leaves parsedError empty. So detail falls back to rawBody either way and the surfaced message is byte-identical. The narrowing mutants \u2014 forcing the condition false, or flipping the typeof to '!==' \u2014 ARE killed, because they lose a real parsed error.",
+            "decision": "none \u2014 the guard states the only shape that can carry an error field; widening it changes nothing",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
         }
     ]
 }

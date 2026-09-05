@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/github/githubFileOperations.ts"
+        "src/features/eds/services/commerceStoreDiscovery.ts"
     ],
     "reporters": [
         "clear-text",
