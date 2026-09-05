@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-07. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/eds/services/storeStructureReader.ts  (mixed, 81.25%, 16 open gaps)
-  - src/features/eds/services/storefront/storefrontSyncService.ts  (orchestration, 68.79%, 14 open gaps)
-  - src/features/eds/services/pdp/publishKeyRenewalSweep.ts  (orchestration, 70.49%, 13 open gaps)
-  - src/features/eds/services/patches/contentPatchRegistry.ts  (mixed, 78.46%, 11 open gaps)
-  - src/features/eds/services/patches/patchTargetPolicy.ts  (pure, 60%, 11 open gaps)
+  - src/features/eds/services/patches/lkgReader.ts  (orchestration, 79.31%, 5 open gaps)
+  - src/features/eds/handlers/authoringExperience.ts  (pure, 80.77%, 3 open gaps)
+  - src/features/eds/handlers/credentialServiceHandler.ts  (orchestration, 72%, 3 open gaps)
+  - src/features/eds/services/storefront/storefrontNameMigration.ts  (mixed, 81.36%, 3 open gaps)
+  - src/features/eds/ui/components/VerifiedField.tsx  (pure, 70.83%, 3 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test that asserts
@@ -19,11 +19,11 @@ THE CYCLE, one module at a time, never two measurements at once (the focus confi
 single generated files and collide):
   1. node scripts/focusModule.mjs <module>
   2. npx stryker run stryker.focus.config.json > /tmp/focus.txt 2>&1
-     Run it in the FOREGROUND and let it block. If you background it and poll instead,
-     wait for the string `Done in` — Stryker's own summary says `Mutation score` with
-     a capital M, and a case-sensitive grep for the lowercase phrase never matches, so
-     the wait never ends. That cost 16 minutes on 2026-09-04 against a run that had
-     already finished.
+     START IT IN THE BACKGROUND and READ THE MODULE while it runs — its source, and the
+     suites that already cover it. A measurement is about a fifth of a session's time and
+     you have nothing else blocking on it. Wait on the string `Done in`. Do NOT wait on
+     `mutation score`: Stryker capitalises it, a case-sensitive match never fires, and
+     that cost 16 minutes on 2026-09-04 against a run which had already finished.
   3. node scripts/mutationWorklist.mjs         — the decisions nothing constrains, ranked
   4. write the tests (or the ledger entries), run them
   5. re-measure (1–2), then: node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
