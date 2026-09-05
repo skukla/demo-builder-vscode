@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/data-installer/services/dataInstallerWriteClient.ts"
+        "src/core/ui/components/forms/FieldHelpButton.tsx"
     ],
     "reporters": [
         "clear-text",

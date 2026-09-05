@@ -10303,6 +10303,54 @@
             "decision": "equivalent",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/ui/components/forms/FieldHelpButton.tsx",
+            "anchors": [
+                "}, [onClose]);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the dependency array changes only HOW OFTEN the listeners are re-registered, not what they do: onClose is a fresh arrow on every render but always calls the same stable setZoomedImage(null), so one registration and N re-registrations bind identical behaviour. Nothing a test can observe distinguishes them.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/ui/components/forms/FieldHelpButton.tsx",
+            "anchors": [
+                "setCurrentStep((prev) => Math.min(totalSteps - 1, prev + 1));"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Math.min's first argument only decides the result when prev + 1 exceeds it, i.e. when prev is already the last step. goToNext is reached only from the Next button, which carries isDisabled={currentStep === totalSteps - 1} \u2014 exactly that step. The mutated bound is unreachable.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/ui/components/forms/FieldHelpButton.tsx",
+            "anchors": [
+                "total={help.steps?.length ?? 0}"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "This expression is inside {help.steps && help.steps.map(...)}, so the map callback runs only when help.steps is truthy. Dropping the optional chain cannot throw, because there is no render in which help.steps is nullish here.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/ui/components/forms/FieldHelpButton.tsx",
+            "anchors": [
+                "<DialogTrigger type=\"modal\" onOpenChange={(isOpen) => isOpen && handleDialogOpen()}>"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The || mutant moves the step reset from open-time to close-time. DialogTrigger unmounts its content while closed, so by the time the user can see the dialog again the index is 0 either way \u2014 the two orders produce the same visible dialog on every open. Only the mocked DialogTrigger, which never unmounts, can tell them apart, and asserting that would pin the mock rather than the component.",
+            "decision": "equivalent",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }
