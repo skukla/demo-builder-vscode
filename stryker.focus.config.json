@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/handlers/addIntegrationFlowHandlers.ts"
+        "src/features/project-creation/services/aiBundle/aiContextWriter.ts"
     ],
     "reporters": [
         "clear-text",

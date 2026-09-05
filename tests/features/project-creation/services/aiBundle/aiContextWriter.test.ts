@@ -30,6 +30,27 @@ describe('aiContextWriter', () => {
             expect(result).toMatch(/stops receiving bundle updates/);
         });
 
+        it('puts that banner FIRST, ahead of every section', () => {
+            // Anything prepended ahead of the notice pushes it below the head of
+            // the file, where neither an agent nor a person reading the top learns
+            // the file is generated or what editing it costs.
+            const result = generateAgentsMd(makeEdsProject(), STACKS);
+            expect(result.indexOf('<!-- GENERATED')).toBe(0);
+            // And on its own line: sections are blank-line separated, so without
+            // that separator the banner's `-->` and the first heading share a
+            // line and neither the comment nor the heading parses.
+            expect(result.split('\n')[0].endsWith('-->')).toBe(true);
+        });
+
+        it('drops empty sections instead of joining them into blank gaps', () => {
+            // Most sections are conditional and contribute '' for a project that
+            // lacks them. Joined unfiltered, each one becomes a run of blank lines
+            // in the middle of the document.
+            for (const project of [makeEdsProject(), makeHeadlessProject()]) {
+                expect(generateAgentsMd(project, STACKS)).not.toMatch(/\n{3,}/);
+            }
+        });
+
         describe('EDS projects', () => {
             it('includes the GitHub repo URL', () => {
                 const project = makeEdsProject();
