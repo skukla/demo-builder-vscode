@@ -1,69 +1,35 @@
 /**
- * DaLiveSourceOperations Tests — source-tree CRUD.
+ * DaLiveSourceOperations Tests — single-path source CRUD.
  *
- * Focused unit suite for the source-CRUD cluster extracted from
- * DaLiveContentOperations: listDirectory, createSource, deleteSource,
- * deleteSiteRoot, deleteAllSiteContent, and sourceExists. The service is
- * constructed with a mock DaLiveApiClient and mock logger; global.fetch is
- * mocked for the DELETE/GET paths that bypass the client.
+ * listDirectory, createSource, deleteSource, readSource and sourceExists: the
+ * operations that address ONE path. The whole-site operations (deleteSiteRoot and
+ * deleteAllSiteContent) live in `daLiveSourceOperations-siteContent.test.ts`, and
+ * the shared harness in `daLiveSourceOperations.testUtils.ts`.
+ *
+ * These tests assert the ARGUMENTS the api client receives, not just what it
+ * answers. A mock cannot see a malformed call: a request sent with the wrong verb
+ * or no Authorization header is indistinguishable from a correct one when the
+ * only assertion is on the fake's reply.
  */
 
-import { DaLiveSourceOperations } from '@/features/eds/services/daLive/daLiveSourceOperations';
-import { DaLiveNetworkError } from '@/features/eds/services/types';
-import type { DaLiveApiClient } from '@/features/eds/services/daLive/daLiveApiClient';
-import type { Logger } from '@/types/logger';
-import { createMockLogger } from '../../../../helpers/loggerFake';
-
-// Mock the timeout config
-jest.mock('@/core/utils/timeoutConfig', () => ({
-    TIMEOUTS: {
-        NORMAL: 30000,
-        QUICK: 5000,
-    },
-}));
-
-// Mock global fetch
-const mockFetch = jest.fn();
-global.fetch = mockFetch;
-
-type MockApiClient = {
-    getImsToken: jest.Mock;
-    fetchWithRetry: jest.Mock;
-    createErrorFromResponse: jest.Mock;
-};
-
-function makeResponse(
-    status: number,
-    body?: unknown,
-    headers: Record<string, string> = {}
-): Response {
-    const lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]));
-    return {
-        ok: status >= 200 && status < 300,
-        status,
-        statusText: status === 200 ? 'OK' : status === 404 ? 'Not Found' : 'Error',
-        headers: { get: (key: string) => lower[key.toLowerCase()] ?? null } as unknown as Headers,
-        json: jest.fn().mockResolvedValue(body),
-    } as unknown as Response;
-}
+import {
+    DaLiveNetworkError,
+    DELETE_INIT,
+    GET_INIT,
+    makeResponse,
+    setupSourceOperations,
+    TOKEN,
+    type DaLiveSourceOperations,
+    type MockApiClient,
+} from './daLiveSourceOperations.testUtils';
 
 describe('DaLiveSourceOperations', () => {
     let service: DaLiveSourceOperations;
     let apiClient: MockApiClient;
-    let logger: Logger;
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        apiClient = {
-            getImsToken: jest.fn().mockResolvedValue('t'),
-            fetchWithRetry: jest.fn(),
-            createErrorFromResponse: jest.fn(),
-        };
-
-        logger = createMockLogger() as unknown as Logger;
-
-        service = new DaLiveSourceOperations(apiClient as unknown as DaLiveApiClient, logger);
+        ({ service, apiClient } = setupSourceOperations());
     });
 
     describe('listDirectory', () => {
@@ -75,14 +41,14 @@ describe('DaLiveSourceOperations', () => {
 
         it('parses JSON on 200', async () => {
             const entries = [{ path: '/org/site/a', ext: 'html' }];
-            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200, entries));
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200, { body: entries }));
 
             await expect(service.listDirectory('org', 'site', '/')).resolves.toEqual(entries);
         });
 
         it('throws DaLiveNetworkError on 429', async () => {
             apiClient.fetchWithRetry.mockResolvedValue(
-                makeResponse(429, undefined, { 'Retry-After': '30' })
+                makeResponse(429, { headers: { 'Retry-After': '30' } })
             );
 
             await expect(service.listDirectory('org', 'site', '/')).rejects.toBeInstanceOf(
@@ -167,58 +133,189 @@ describe('DaLiveSourceOperations', () => {
         });
     });
 
-    describe('deleteAllSiteContent', () => {
-        it('orchestrates list → delete files → delete dirs → delete root', async () => {
-            // First list (root): one file + one subdir; second list (subdir): one file.
-            apiClient.fetchWithRetry
-                .mockResolvedValueOnce(
-                    makeResponse(200, [
-                        { path: '/org/site/page', ext: 'html' },
-                        { path: '/org/site/sub' }, // no ext → directory
-                    ])
-                )
-                .mockResolvedValueOnce(
-                    makeResponse(200, [{ path: '/org/site/sub/inner', ext: 'html' }])
-                );
+    describe('listDirectory — the request it sends', () => {
+        it('sends a GET with the bearer token to the list endpoint', async () => {
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200, { body: [] }));
 
-            // Since the 2026-08-22 transport consolidation, deleteSource and
-            // deleteSiteRoot ALSO ride the shared client.
-            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200));
+            await service.listDirectory('org', 'site', '/pages');
 
-            const onProgress = jest.fn();
-            const result = await service.deleteAllSiteContent('org', 'site', onProgress);
-
-            expect(result.success).toBe(true);
-            // Two files deleted (relative paths, org/site prefix stripped).
-            expect(result.deletedCount).toBe(2);
-            expect(result.deletedPaths).toEqual(['/page', '/sub/inner']);
-            expect(onProgress).toHaveBeenCalledTimes(2);
-            // 2 list calls + deleteSource for 2 files + 1 dir + deleteSiteRoot = 6 client calls.
-            expect(apiClient.fetchWithRetry).toHaveBeenCalledTimes(6);
+            expect(apiClient.fetchWithRetry).toHaveBeenCalledWith(
+                'https://admin.da.live/list/org/site/pages',
+                GET_INIT,
+            );
         });
 
-        it('deletes only the site root when the site is already empty', async () => {
-            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200, []));
+        it('carries the service\'s own Retry-After into the thrown error', async () => {
+            apiClient.fetchWithRetry.mockResolvedValue(
+                makeResponse(429, { headers: { 'Retry-After': '120' } }),
+            );
 
-            const result = await service.deleteAllSiteContent('org', 'site');
+            await expect(service.listDirectory('org', 'site', '/')).rejects.toMatchObject({
+                retryAfter: 120,
+            });
+        });
 
-            expect(result).toEqual({ success: true, deletedCount: 0, deletedPaths: [] });
-            // The empty list + the site-root DELETE, both via the client.
-            expect(apiClient.fetchWithRetry).toHaveBeenCalledTimes(2);
+        it('falls back to 60 seconds when the service states no Retry-After', async () => {
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(429));
+
+            await expect(service.listDirectory('org', 'site', '/')).rejects.toMatchObject({
+                retryAfter: 60,
+            });
         });
     });
 
-    describe('deleteSiteRoot', () => {
-        it('resolves without throwing on ok', async () => {
-            mockFetch.mockResolvedValue(makeResponse(200));
+    describe('createSource — the request it sends', () => {
+        /** The init the subject handed the client on its only call. */
+        const sentInit = (): RequestInit => apiClient.fetchWithRetry.mock.calls[0][1];
 
-            await expect(service.deleteSiteRoot('org', 'site')).resolves.toBeUndefined();
+        it('POSTs the content as an HTML blob under the data field', async () => {
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200));
+
+            await service.createSource('org', 'site', '/page', '<p>hello</p>');
+
+            expect(apiClient.fetchWithRetry).toHaveBeenCalledWith(
+                'https://admin.da.live/source/org/site/page',
+                expect.objectContaining({
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${TOKEN}` },
+                }),
+            );
+            const data = (sentInit().body as FormData).get('data') as Blob;
+            expect(data.type).toBe('text/html');
+            await expect(data.text()).resolves.toBe('<p>hello</p>');
         });
 
-        it('swallows fetch errors (best-effort)', async () => {
-            mockFetch.mockRejectedValue(new Error('network'));
+        it('omits the overwrite field unless it was asked for', async () => {
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200));
 
-            await expect(service.deleteSiteRoot('org', 'site')).resolves.toBeUndefined();
+            await service.createSource('org', 'site', '/page', '<p/>');
+
+            expect((sentInit().body as FormData).get('overwrite')).toBeNull();
+        });
+
+        it('sends overwrite=true when the caller asked to replace', async () => {
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200));
+
+            await service.createSource('org', 'site', '/page', '<p/>', { overwrite: true });
+
+            expect((sentInit().body as FormData).get('overwrite')).toBe('true');
+        });
+
+        it('reports a non-conflict failure with the status it got', async () => {
+            // 409 has its own remedy — overwrite. Anything else must not be
+            // reported as one, or the caller retries with a flag that cannot help.
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(500));
+
+            await expect(service.createSource('org', 'site', '/page', '<p/>')).resolves.toEqual({
+                success: false,
+                path: '/page',
+                error: 'Failed to create source: 500 Error',
+            });
+        });
+    });
+
+    describe('deleteSource — the request it sends', () => {
+        it('sends a DELETE with the bearer token to the source path', async () => {
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200));
+
+            await service.deleteSource('org', 'site', '/page');
+
+            expect(apiClient.fetchWithRetry).toHaveBeenCalledWith(
+                'https://admin.da.live/source/org/site/page',
+                DELETE_INIT,
+            );
+        });
+
+        it('reports the status it could not delete under', async () => {
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(500));
+
+            await expect(service.deleteSource('org', 'site', '/page')).resolves.toEqual({
+                success: false,
+                error: 'Failed to delete: 500 Error',
+            });
+        });
+
+        it('reports a transport failure rather than throwing at the caller', async () => {
+            apiClient.fetchWithRetry.mockRejectedValue(new Error('socket hang up'));
+
+            await expect(service.deleteSource('org', 'site', '/page')).resolves.toEqual({
+                success: false,
+                error: 'socket hang up',
+            });
+        });
+    });
+
+    describe('readSource', () => {
+        it('sends a GET with the bearer token to the source path', async () => {
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200, { text: 'hi' }));
+
+            await service.readSource('org', 'site', '/page');
+
+            expect(apiClient.fetchWithRetry).toHaveBeenCalledWith(
+                'https://admin.da.live/source/org/site/page',
+                GET_INIT,
+            );
+        });
+
+        it('returns the body and its true size when it fits', async () => {
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200, { text: 'hello' }));
+
+            await expect(service.readSource('org', 'site', '/page')).resolves.toEqual({
+                status: 200,
+                body: 'hello',
+                bytes: 5,
+                truncated: false,
+            });
+        });
+
+        it('reports an absent document by status, with no body', async () => {
+            // The caller has to tell "absent" from "failed", so 404 must come
+            // back as a status rather than as an empty successful read.
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(404, { text: 'nope' }));
+
+            await expect(service.readSource('org', 'site', '/page')).resolves.toEqual({
+                status: 404,
+                body: '',
+                bytes: 0,
+                truncated: false,
+            });
+        });
+
+        it('truncates the body but still states the true size', async () => {
+            // MCP callers pay for the body as context tokens, so it is capped —
+            // but a caller's own size check has to stay honest.
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200, { text: 'hello' }));
+
+            await expect(service.readSource('org', 'site', '/page', 3)).resolves.toEqual({
+                status: 200,
+                body: 'hel',
+                bytes: 5,
+                truncated: true,
+            });
+        });
+
+        it('leaves a body of exactly the cap untruncated', async () => {
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200, { text: 'hello' }));
+
+            await expect(service.readSource('org', 'site', '/page', 5)).resolves.toEqual({
+                status: 200,
+                body: 'hello',
+                bytes: 5,
+                truncated: false,
+            });
+        });
+    });
+
+    describe('sourceExists — the request it sends', () => {
+        it('sends a GET with the bearer token to the source path', async () => {
+            apiClient.fetchWithRetry.mockResolvedValue(makeResponse(200));
+
+            await service.sourceExists('org', 'site', '/page');
+
+            expect(apiClient.fetchWithRetry).toHaveBeenCalledWith(
+                'https://admin.da.live/source/org/site/page',
+                GET_INIT,
+            );
         });
     });
 });

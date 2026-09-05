@@ -7014,6 +7014,57 @@
             "decision": "Equivalent: the assignment sits in a handler nothing reaches.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveSourceOperations.ts",
+            "anchors": [
+                "if (response.ok || response.status === 404) {"
+            ],
+            "line": 179,
+            "mutants": 6,
+            "category": "branch",
+            "reason": "Both arms of this if/else hold exactly one statement, a this.logger.debug, and deleteSiteRoot returns void with nothing after them - so whichever arm runs, the caller sees the same undefined and the same set of requests already sent. Forcing the condition either way, swapping its || for &&, flipping the === 404 to !== or emptying the block changes only which debug line prints, and the only test that could separate them is one asserting a logger call's arguments. That pins wording rather than behaviour. The request this method sends IS constrained, by a test asserting the DELETE verb, the bearer header and the site-root URL.",
+            "decision": "Equivalent: a log-only branch in a void, best-effort method.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveSourceOperations.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 183,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else half of the log-only branch described in the entry for line 179: its body is one this.logger.debug and deleteSiteRoot returns void, so emptying it removes a debug line and nothing else. Recorded separately because the ledger keys an entry by module, line and anchor, and this block sits on its own line four lines below the condition that selects it.",
+            "decision": "Equivalent: the block holds only a debug line in a void method.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveSourceOperations.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 188,
+            "mutants": 1,
+            "category": "block",
+            "reason": "deleteSiteRoot is documented best-effort and returns void: it swallows a transport failure on purpose, so its catch body is one this.logger.debug and nothing more. Emptying that body still swallows the error and still returns undefined, which is exactly what the caller sees today - the test that drives fetchWithRetry to reject asserts the method resolves rather than throws, and it passes either way. Separating the two would need an assertion on the debug line's wording.",
+            "decision": "Equivalent: the handler's only statement is a debug line, and swallowing is the contract.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/daLive/daLiveSourceOperations.ts",
+            "anchors": [
+                "for (let i = 0; i < filePaths.length; i += CONTENT_COPY_BATCH_SIZE) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Relaxing i < filePaths.length to i <= filePaths.length can only add ONE extra pass, and only when the file count is an exact multiple of the batch size. That pass takes filePaths.slice(n, n + 5) where n is already the length, which is always the empty array, so batch.map produces no promises, Promise.all resolves immediately, deletedCount does not move and no request is sent. Nothing downstream can see it. The three siblings that DO matter - the slice becoming the whole list, the += becoming -=, and the success check - are killed by the six-file batching test and the partial-failure test.",
+            "decision": "Equivalent: the extra iteration slices an empty batch and issues no work.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }
