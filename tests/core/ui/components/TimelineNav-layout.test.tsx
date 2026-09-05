@@ -10,30 +10,16 @@
  */
 
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
+import { screen, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { TimelineNav, type TimelineStep } from '@/core/ui/components/TimelineNav';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
-
-const renderWithProvider = (ui: React.ReactElement) =>
-    render(<Provider theme={defaultTheme}>{ui}</Provider>);
-
-const STEPS: TimelineStep[] = [
-    { id: 'welcome', name: 'Welcome' },
-    { id: 'build', name: 'Build Your Project' },
-    { id: 'review', name: 'Review' },
-];
-
-const CHILDREN: TimelineStep[] = [
-    { id: 'commerce', name: 'Commerce' },
-    { id: 'storefront', name: 'Storefront' },
-];
+import { renderWithProvider, step, CHILDREN, STEPS } from './TimelineNav.testUtils';
 
 const STEP_GAP = 'var(--spectrum-global-dimension-size-400)';
 const COMPACT_STEP_GAP = 'var(--spectrum-global-dimension-size-300)';
 
-const step = (id: string) => screen.getByTestId(`timeline-step-${id}`);
 /** The positioned wrapper around a step — it carries the children-clip class. */
 const wrapper = (id: string) => step(id).parentElement as HTMLElement;
 const connectors = () => Array.from(document.querySelectorAll('.timeline-connector'));

@@ -17,31 +17,10 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
+import { screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { TimelineNav, type TimelineStep } from '@/core/ui/components/TimelineNav';
-
-// Helper to render with Spectrum Provider
-const renderWithProvider = (ui: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme}>
-            {ui}
-        </Provider>
-    );
-};
-
-const STEPS: TimelineStep[] = [
-    { id: 'welcome', name: 'Welcome' },
-    { id: 'build', name: 'Build Your Project' },
-    { id: 'review', name: 'Review' },
-];
-
-const CHILDREN: TimelineStep[] = [
-    { id: 'commerce', name: 'Commerce' },
-    { id: 'storefront', name: 'Storefront' },
-    { id: 'integrations', name: 'Integrations' },
-];
+import { TimelineNav } from '@/core/ui/components/TimelineNav';
+import { renderWithProvider, CHILDREN, STEPS } from './TimelineNav.testUtils';
 
 describe('TimelineNav', () => {
     describe('flat rendering (backward compatible)', () => {

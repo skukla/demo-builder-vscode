@@ -6,6 +6,7 @@
  * module registry (see WebviewClient.testUtils).
  */
 
+import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import {
     completeHandshake,
     loadClient,
@@ -290,7 +291,10 @@ describe('WebviewClient - messaging', () => {
         });
 
         it('createProject sends the config through unchanged', () => {
-            const config = { projectName: 'demo', components: [] } as never;
+            const config: ProjectCreationConfig = {
+                projectName: 'demo',
+                components: { frontend: 'eds', backend: 'aco' },
+            };
             loaded.client.createProject(config);
 
             expect(lastMessage()).toMatchObject({ type: 'create-project' });

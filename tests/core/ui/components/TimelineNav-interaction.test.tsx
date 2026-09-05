@@ -8,21 +8,10 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
+import { fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { TimelineNav, type TimelineStep } from '@/core/ui/components/TimelineNav';
-
-const renderWithProvider = (ui: React.ReactElement) =>
-    render(<Provider theme={defaultTheme}>{ui}</Provider>);
-
-const STEPS: TimelineStep[] = [
-    { id: 'welcome', name: 'Welcome' },
-    { id: 'build', name: 'Build Your Project' },
-    { id: 'review', name: 'Review' },
-];
-
-const step = (id: string) => screen.getByTestId(`timeline-step-${id}`);
+import { TimelineNav } from '@/core/ui/components/TimelineNav';
+import { renderWithProvider, step, STEPS } from './TimelineNav.testUtils';
 
 /** Steps 0 completed, 1 current, 2 upcoming — the ordinary mid-wizard shape. */
 const renderNav = (onStepClick?: (i: number) => void) =>
