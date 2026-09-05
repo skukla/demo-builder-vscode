@@ -429,3 +429,8 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): bring githubFileOperations to zero open mutation gaps (`0c04b6352`)
 - 2026-09-05  test(eds): bring commerceStoreDiscovery to zero open mutation gaps (`89a07ce91`)
 - 2026-09-05  test(eds): share the commerceStoreDiscovery suites' setup (`162d1bffe`)
+- 2026-09-05  test(eds): bring storefrontSetupPhase3 to zero open mutation gaps (`2c522f661`)
+- 2026-09-05  test(eds): bring resourceCleanupHelpers to zero open mutation gaps (`7a63d10c8`)
+- 2026-09-05  test(eds): bring githubCredentialProbe to zero open mutation gaps (`ffb3df517`)
+- 2026-09-05  test(eds): bring configSyncService to zero open mutation gaps (`b2e164b6e`)
+- 2026-09-05  test(eds): bring helixBulkJobs to zero open mutation gaps (`170f95cf3`)
