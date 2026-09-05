@@ -5532,6 +5532,18 @@
             "decision": "Equivalent for every input a test can legitimately build. Killing it would require a fixture that names Stryker's own marker string as a catalog id or a source key, which asserts the mutation tool rather than the resolver.",
             "recorded": "2026-09-05",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/project-creation/ui/steps/buildYourProjectAreas.ts",
+            "anchors": [
+                "packages: DemoPackage[] = [],"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The ArrayDeclaration mutant replaces the empty default with a one-element array whose element is not a DemoPackage. The default is read only by statusForArea -> isIntegrationsComplete -> meshComponentForStack, which does packages.find(p => p.id === state.selectedPackage). A junk element has an undefined id, so it is selected ONLY when selectedPackage is undefined; and a non-package pkg resolves getResolvedMeshRequirement to undefined and nativeForPackages?.includes(undefined) to false, so every entry comes back 'optional' and the mesh?.requirement === 'required' branch is not taken - exactly the outcome of pkg being undefined. Probed directly: buildYourProjectAreas(state, stacks) and buildYourProjectAreas(state, stacks, junk) return byte-identical results across six state shapes (no stack, EDS stack, undefined package, real package id, deployable selected, commerce configured).",
+            "decision": "none - the default's only consumer cannot see a non-package element, so no input distinguishes [] from a junk-filled array.",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
