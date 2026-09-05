@@ -8628,6 +8628,19 @@
             "decision": "none \u2014 killing it would require asserting the warn line's wording, which pins a log string rather than a behaviour",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/storefront/storefrontNameMigrationForProject.ts",
+            "anchors": [
+                "return undefined;"
+            ],
+            "line": 125,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Stryker empties resolveOverlayForNewName's catch block. Nothing follows the try/catch in that function, so an empty catch falls off the end and the function still evaluates to undefined \u2014 the same value the explicit `return undefined` produces. Both versions return undefined for a throwing resolveStorefrontConfig, so the existing 'still yields a candidate when the package config throws' test (which asserts byomOverlayUrl is undefined) passes either way, and no other assertion can separate them.",
+            "decision": "Equivalent \u2014 the explicit return and the implicit fall-through produce an identical value. The explicit return stays because a bare `catch {}` reads as forgotten rather than deliberately swallowed.",
+            "recorded": "2026-09-05",
+            "source": "src/features/eds/services/storefront/storefrontNameMigrationForProject.ts resolveOverlayForNewName (lines 113-127)"
         }
     ]
 }

@@ -152,6 +152,19 @@ describe('findStorefrontNameMismatch', () => {
         expect(findStorefrontNameMismatch(createMockProject({ name: 'x', path: '/x' }))).toBeNull();
     });
 
+    it('returns null for a legacy manifest with no componentInstances field', () => {
+        // Manifests written before `componentInstances` existed are still on
+        // disk. The command sweeps every project, so one of them throwing here
+        // takes out the whole migration run rather than skipping one project.
+        const legacy = createMockProject({
+            name: 'legacy',
+            path: '/projects/legacy',
+            componentInstances: undefined,
+        });
+
+        expect(findStorefrontNameMismatch(legacy)).toBeNull();
+    });
+
     it('stamps the overlay with the NEW name, not the one being retired', () => {
         findStorefrontNameMismatch(projectWith(MISMATCHED));
 
