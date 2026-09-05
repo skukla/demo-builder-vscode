@@ -8592,6 +8592,18 @@
             "decision": "none \u2014 the ?. is required by the type and unreachable behind the isEdsProject filter",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/b2bReadinessDetection.ts",
+            "anchors": [
+                "const flag = payload.data?.storeConfig?.is_requisition_list_active;"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Stryker drops each `?.` in turn. Both mutants differ from the original ONLY by throwing a TypeError when the parent is absent \u2014 and this function's whole contract is that it never throws into the create/reset flow, so the enclosing catch converts that TypeError into the same 'unknown' the optional chain already returns. Every reachable input therefore produces an identical return value: data absent gives 'unknown' both ways, storeConfig absent gives 'unknown' both ways, and both present makes the two expressions the same code. Nothing else is observable \u2014 the throw happens after the single fetch, so call counts and arguments are unchanged too.",
+            "decision": "none \u2014 the `?.` is correct as written; the catch that makes the mutant equivalent is the documented true-negative-only contract, not an accident",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }
