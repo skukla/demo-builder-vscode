@@ -14,7 +14,11 @@
  * decision, deliberately not taken here.
  */
 
-import { getEwCanvasBranch, resolveAuthoringExperience } from '@/features/eds/handlers/authoringExperience';
+import {
+    getEwCanvasBranch,
+    resolveAuthoringExperience,
+    resolveProjectAuthoringExperience,
+} from '@/features/eds/handlers/authoringExperience';
 // Service imports required by the authoringExperience module to load.
 jest.mock('@/features/eds/services/github/githubTokenService');
 jest.mock('@/features/eds/services/github/githubRepoOperations');
@@ -25,4 +29,4 @@ jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
     hasWriteAccess: jest.fn(),
 }));
 
-export { getEwCanvasBranch, resolveAuthoringExperience };
+export { getEwCanvasBranch, resolveAuthoringExperience, resolveProjectAuthoringExperience };

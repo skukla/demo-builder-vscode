@@ -78,6 +78,15 @@ describe('resolveAuthoringExperience', () => {
         expect(resolveAuthoringExperience('garbage')).toBe('da-live-classic');
     });
 
+    it('coerces a corrupted global setting to da-live-classic (fail-safe)', () => {
+        // Nothing validates settings.json. A value that is not a union member
+        // must never reach the Author button as-is, or it builds a URL for an
+        // authoring experience that does not exist.
+        mockAuthoringExperienceValue = 'ue';
+
+        expect(resolveAuthoringExperience(undefined)).toBe('da-live-classic');
+    });
+
     it('reads from the demoBuilder.daLive configuration section', () => {
         resolveAuthoringExperience(undefined);
 
