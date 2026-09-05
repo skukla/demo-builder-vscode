@@ -105,6 +105,35 @@ describe('HelixService - Preview/Publish', () => {
                 /access denied|permission/i
             );
         });
+
+        // A 401 is NOT a generic failure. Once a site has any `access.admin`
+        // role the whole admin API closes, and the message has to say so —
+        // falling through to "Failed to preview page: 401" tells an SC nothing
+        // they can act on.
+        it('reports a 401 on preview as the admin-API refusal, not a generic failure', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 401, statusText: 'Unauthorized' });
+            await expect(service.previewPage('testuser', 'my-site', '/')).rejects.toThrow(
+                /Adobe rejected the request \(401\)/
+            );
+        });
+
+        it('reports a 401 on publish as the admin-API refusal, not a generic failure', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: false, status: 401, statusText: 'Unauthorized' });
+            await expect(service.publishPage('testuser', 'my-site', '/')).rejects.toThrow(
+                /Adobe rejected the request \(401\)/
+            );
+        });
+
+        it('reports any other publish failure with its status', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                statusText: 'Server Error',
+            });
+            await expect(service.publishPage('testuser', 'my-site', '/')).rejects.toThrow(
+                'Failed to publish page: 500 Server Error'
+            );
+        });
     });
 
     describe('Bulk Preview/Publish', () => {

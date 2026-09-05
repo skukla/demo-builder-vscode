@@ -58,7 +58,13 @@ describe('getResourceStatus', () => {
 
         expect(mockFetch).toHaveBeenCalledWith(
             'https://admin.hlx.page/status/skukla/team-bodea-demo/main/.da/library/blocks/text',
-            expect.objectContaining({ method: 'GET' }),
+            expect.objectContaining({
+                method: 'GET',
+                // The GitHub token is what the admin API identifies the caller
+                // by; a status GET sent without it answers 401 and the
+                // diagnostic reports nothing.
+                headers: expect.objectContaining({ 'x-auth-token': 'gh-token' }),
+            }),
         );
     });
 
@@ -95,6 +101,68 @@ describe('getResourceStatus', () => {
         await expect(service.getResourceStatus('o', 's', '/x')).resolves.toMatchObject({
             httpStatus: 0,
         });
+    });
+
+    it('reports the status even when the response carries no headers at all', async () => {
+        // Not hypothetical: a cached/synthetic response can arrive without a
+        // `headers` bag, and the diagnostic must still answer rather than
+        // collapsing into its own catch and reporting httpStatus 0.
+        mockFetch.mockResolvedValue({ ok: true, status: 200, json: async () => statusBody });
+
+        const result = await service.getResourceStatus('o', 's', '/x');
+
+        expect(result).toMatchObject({ httpStatus: 200, previewStatus: 404, liveStatus: 404 });
+    });
+
+    it('reports the status when the headers bag has no get()', async () => {
+        // A plain-object `headers` reaches this code from cached responses and
+        // from every fetch fake that does not bother with a Headers instance.
+        // Calling `.get` on it would throw and the diagnostic would report
+        // httpStatus 0 — a reachable admin API described as unreachable.
+        mockFetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            headers: {},
+            json: async () => statusBody,
+        });
+
+        const result = await service.getResourceStatus('o', 's', '/x');
+
+        expect(result).toMatchObject({ httpStatus: 200, previewStatus: 404 });
+    });
+
+    it('reports a 200 whose body names neither partition', async () => {
+        // Helix omits `preview`/`live` for a path it has never seen. That is an
+        // ANSWER — "nothing here" — not a failure to reach the admin API.
+        mockFetch.mockResolvedValue({
+            ok: true,
+            status: 200,
+            headers: { get: () => null },
+            json: async () => ({}),
+        });
+
+        const result = await service.getResourceStatus('o', 's', '/x');
+
+        expect(result.httpStatus).toBe(200);
+        expect(result.previewStatus).toBeUndefined();
+        expect(result.liveStatus).toBeUndefined();
+    });
+
+    it('does not try to parse the body of a refusal — 401/403 send an empty one', async () => {
+        // The reason lives in `x-error`; reading the body throws, and doing it
+        // anyway turns a reportable 401 into httpStatus 0.
+        mockFetch.mockResolvedValue({
+            ok: false,
+            status: 403,
+            headers: { get: (h: string) => (h === 'x-error' ? '[admin] not authorized' : null) },
+            json: async () => {
+                throw new SyntaxError('Unexpected end of JSON input');
+            },
+        });
+
+        const result = await service.getResourceStatus('o', 's', '/x');
+
+        expect(result).toEqual({ httpStatus: 403, error: '[admin] not authorized' });
     });
 
     it('normalises a relative path', async () => {

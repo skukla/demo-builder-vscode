@@ -6482,6 +6482,55 @@
             "decision": "none - both fallbacks are falsy at the only place the value is read",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/eds/services/helix/helixService.ts",
+            "anchors": [
+                "return captureErrorDetail(response);"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The private wrapper has exactly one caller (deleteResource's 401/403 rung) and its result is interpolated into a logger.warn and nowhere else. Emptying the body makes that warning say 'undefined'; every return value, every thrown error and every subsequent request is byte-identical. The only test that could tell the difference would assert the warning's wording, which the ratchet rejects as padding.",
+            "decision": "Recorded rather than killed: the sole observable is a log string.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/helix/helixService.ts",
+            "anchors": [
+                "const action = partition === 'live' ? 'Unpublishing' : 'Deleting preview';"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "action is read at two sites, both logger calls (the debug line before the DELETE and the warn line on a 401/403). Flipping the ternary either way changes which verb those two lines print and nothing else \u2014 the URL comes from buildPartitionUrl(partition,...), the return value from the status ladder, and the thrown message from errorPrefix, which IS killed by a test. No assertion short of pinning the log wording separates the three mutants.",
+            "decision": "Recorded: log wording only. Its sibling errorPrefix reaches a thrown message and is killed by the 500 tests in helixService-delete.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/helix/helixService.ts",
+            "anchors": [
+                "const successLog = partition === 'live' ? 'Unpublished' : 'Preview deleted';"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "successLog is read once, inside the logger.debug on the 204/404 success rung. Both partitions return the identical { success: true } regardless of which string the ternary picks, so the mutants are separable only by asserting the debug line's text.",
+            "decision": "Recorded: log wording only.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/eds/services/helix/helixService.ts",
+            "anchors": [
+                "if (response.status === 204 || response.status === 404) {"
+            ],
+            "line": 478,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the FIRST operand (response.status === 204, cols 13-36) with false, leaving the 404 arm intact. A 204 is response.ok, so with the operand disabled the ladder simply falls one rung further and returns the identical { success: true } from the trailing return. The return value, the thrown errors and the request sequence are unchanged for every status; the only difference is that one logger.debug line does not print. The 404 arm IS constrained (helixService-delete: 'treats 404 as done').",
+            "decision": "Recorded as equivalent: a 204 reaches the same return either way.",
+            "recorded": "2026-09-05",
+            "source": "mutationLedger add"
         }
     ]
 }

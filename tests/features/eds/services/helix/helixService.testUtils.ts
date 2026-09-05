@@ -55,10 +55,18 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
  */
 export const mockListDirectory = jest.fn();
 
+/**
+ * The content-client CONSTRUCTOR, exported so a suite can read the DA.live
+ * credential the service built it with. A suite cannot import the real symbol
+ * and expect the mock: its own `import` of that module runs before this file's
+ * `jest.mock` registers, so it binds to the real class.
+ */
+export const mockDaLiveContentOperations = jest.fn().mockImplementation(() => ({
+    listDirectory: mockListDirectory,
+}));
+
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({
-        listDirectory: mockListDirectory,
-    })),
+    DaLiveContentOperations: mockDaLiveContentOperations,
 }));
 
 export type HelixServiceType = import('@/features/eds/services/helix/helixService').HelixService;

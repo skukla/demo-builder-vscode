@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "daLiveConfigOperations: new applySiteConfig and config-document suites",
+    "_note": "helixService: purgeCacheAll, the DELETE status ladder, 429 backoff durations, unpublishPages two-partition success, constructor wiring and getResourceStatus edge cases now tested; log-only ternaries and the equivalent 204 operand recorded",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -7741,29 +7741,23 @@
             "openGaps": 30
         },
         "src/features/eds/services/helix/helixService.ts": {
-            "score": 55.35,
-            "killed": 142,
-            "survived": 68,
-            "noCoverage": 53,
+            "score": 83.39,
+            "killed": 218,
+            "survived": 39,
+            "noCoverage": 6,
             "timeout": 8,
             "survivorCategories": {
-                "block": 4,
-                "branch": 25,
-                "other": 6,
-                "optionalChain": 4,
-                "logPresentation": 10,
-                "string": 19
+                "string": 13,
+                "block": 1,
+                "logPresentation": 18,
+                "branch": 7
             },
             "uncoveredCategories": {
-                "block": 13,
-                "string": 18,
-                "branch": 16,
-                "other": 3,
-                "logPresentation": 3
+                "string": 6
             },
-            "highValueSurvivors": 29,
-            "equivalent": 0,
-            "openGaps": 71
+            "highValueSurvivors": 8,
+            "equivalent": 8,
+            "openGaps": 0
         },
         "src/features/eds/services/patches/codePatchPipelineHelpers.ts": {
             "score": 63.16,
