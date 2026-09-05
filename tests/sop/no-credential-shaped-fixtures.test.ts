@@ -24,6 +24,30 @@ const ROOT = join(__dirname, '..', '..');
 const USERINFO_URL = /https?:\/\/[^/\s:@"'`]+:[^@\s"'`]+@/;
 const BASIC_HEADER = /\bBasic\s+[A-Za-z0-9+/]{16,}={0,2}/;
 
+/**
+ * The third shape, added 2026-09-05 after GitGuardian raised two alerts this file was
+ * built to prevent. It banned exactly two shapes and never looked for the commonest
+ * credential of all: a JWT. Anything starting `eyJ` is base64 for `{"`, so a scanner
+ * reads a token there whatever it decodes to — the one that fired decoded to
+ * `{"some":"thing"}`.
+ *
+ * SHRINK-ONLY, because 18 such literals in 8 files predate the rule and rewriting them
+ * is not this change. A file may lower its count or vanish; it may never raise it, and
+ * a file not listed must have none. Build the shape instead: `tests/helpers/jwtFake.ts`
+ * assembles a structurally valid token at run time, so no literal enters the source.
+ */
+const JWT_LITERAL = /eyJ[A-Za-z0-9_-]{12,}/g;
+
+const JWT_CEILINGS: Record<string, number> = {
+    'tests/core/validation/securityValidation-network.test.ts': 6,
+    'tests/features/eds/handlers/daLive/daLiveAuthPrompt-tokenStrict.test.ts': 2,
+    'tests/features/eds/handlers/edsHelpers.test.ts': 3,
+    'tests/features/eds/services/configService/configurationService.testUtils.ts': 1,
+    'tests/features/eds/services/daLive/daLiveAuthService-parseJwt.test.ts': 2,
+    'tests/features/eds/services/daLive/daLiveAuthService.security.test.ts': 1
+};
+
+
 function files(dir: string): string[] {
     const out: string[] = [];
     // `withFileTypes` answers directory-or-file from the SAME syscall as the listing.
@@ -87,5 +111,56 @@ describe('no credential-shaped string under tests/', () => {
             });
         }
         expect(offenders).toEqual([]);
+    });
+
+    it('CONTROL: the token pattern matches a built shape and not an ordinary word', () => {
+        const planted = ['eyJ', 'hbGciOiJIUzI1NiJ9'].join('');
+        expect(planted.match(JWT_LITERAL)).toHaveLength(1);
+        expect('const eyJustAName = 1;'.match(JWT_LITERAL)).toBeNull(); // 8 chars: a name, not a token
+        expect("fakeJwt({ note: 'x' })".match(JWT_LITERAL)).toBeNull();
+    });
+
+    it('no file carries MORE token-shaped literals than its recorded ceiling', () => {
+        const counts = new Map<string, number>();
+        for (const f of corpus) {
+            let body: string;
+            try {
+                body = readFileSync(f, 'utf8');
+            } catch {
+                continue;
+            }
+            const n = (body.match(JWT_LITERAL) ?? []).length;
+            if (n) counts.set(relative(ROOT, f), n);
+        }
+        const over: string[] = [];
+        for (const [file, n] of counts) {
+            const ceiling = JWT_CEILINGS[file] ?? 0;
+            if (n > ceiling) over.push(`${file}: ${n} (ceiling ${ceiling})`);
+        }
+        // A new token-shaped literal is the thing this rule exists to stop. Build it with
+        // tests/helpers/jwtFake.ts instead — the same shape, assembled at run time.
+        expect(over).toEqual([]);
+    });
+
+    it('the token ledger only shrinks: no ceiling stands above the count on disk', () => {
+        const counts = new Map<string, number>();
+        for (const f of corpus) {
+            let body: string;
+            try {
+                body = readFileSync(f, 'utf8');
+            } catch {
+                continue;
+            }
+            const n = (body.match(JWT_LITERAL) ?? []).length;
+            if (n) counts.set(relative(ROOT, f), n);
+        }
+        const stale = Object.entries(JWT_CEILINGS)
+            .filter(([file, ceiling]) => (counts.get(file) ?? 0) < ceiling)
+            .map(
+                ([file, ceiling]) => `${file}: ceiling ${ceiling}, on disk ${counts.get(file) ?? 0}`
+            );
+        // Rewriting one of these to use the helper means lowering its ceiling in the
+        // same change. Headroom nobody chose is how a ratchet stops ratcheting.
+        expect(stale).toEqual([]);
     });
 });

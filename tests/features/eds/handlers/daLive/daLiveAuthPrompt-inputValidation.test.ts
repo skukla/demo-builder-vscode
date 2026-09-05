@@ -57,6 +57,7 @@ jest.mock('vscode', () => ({
 }));
 
 import { showDaLiveAuthQuickPick, createAuthPromptContext } from './daLiveAuthPrompt.testUtils';
+import { fakeJwt } from '../../../../helpers/jwtFake';
 
 /** Run the flow far enough to open both boxes, cancelling at the token step. */
 async function openBothBoxes() {
@@ -134,7 +135,10 @@ describe('the token box', () => {
     it('accepts a token once it starts the way a JWT does, whitespace and all', () => {
         // The bookmarklet copy often carries a trailing newline; the box must not
         // reject that, because the flow trims it moments later.
-        expect(validatorFor('token')('  eyJhbGciOiJIUzI1NiJ9.payload.signature  ')).toBeNull();
+        //
+        // The token is BUILT, not written: a literal starting `eyJ` is what a secret
+        // scanner matches on, whatever it decodes to, and this repository is public.
+        expect(validatorFor('token')(`  ${fakeJwt()}  `)).toBeNull();
     });
 
     it('is password-masked, so a shoulder-surfer does not read the credential', () => {
