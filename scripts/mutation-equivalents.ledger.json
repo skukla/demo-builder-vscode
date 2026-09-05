@@ -7639,6 +7639,58 @@
             "decision": "none \u2014 the guard skips a lookup that is guaranteed to miss",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/ui/hooks/useGitHubAuth.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 100,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty dependency array with a one-element array holding a constant string. React compares dependency arrays element-wise with Object.is and never compares the array's identity, and that element is the same primitive on every render \u2014 so the memo (or the mount effect) is preserved exactly as it is with []. No render, no callback identity and no message ordering differs, which is why no assertion can separate them. The mutant that DOES matter on this hook \u2014 replacing a real dependency list with [] \u2014 is killed by 'writes the LATEST edsConfig, not the one present at mount'.",
+            "decision": "none \u2014 the empty deps array is correct; the mutant is a no-op array of equal primitives",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/ui/hooks/useGitHubAuth.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 109,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty dependency array with a one-element array holding a constant string. React compares dependency arrays element-wise with Object.is and never compares the array's identity, and that element is the same primitive on every render \u2014 so the memo (or the mount effect) is preserved exactly as it is with []. No render, no callback identity and no message ordering differs, which is why no assertion can separate them. The mutant that DOES matter on this hook \u2014 replacing a real dependency list with [] \u2014 is killed by 'writes the LATEST edsConfig, not the one present at mount'.",
+            "decision": "none \u2014 the empty deps array is correct; the mutant is a no-op array of equal primitives",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/ui/hooks/useGitHubAuth.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 123,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty dependency array with a one-element array holding a constant string. React compares dependency arrays element-wise with Object.is and never compares the array's identity, and that element is the same primitive on every render \u2014 so the memo (or the mount effect) is preserved exactly as it is with []. No render, no callback identity and no message ordering differs, which is why no assertion can separate them. The mutant that DOES matter on this hook \u2014 replacing a real dependency list with [] \u2014 is killed by 'writes the LATEST edsConfig, not the one present at mount'.",
+            "decision": "none \u2014 the empty deps array is correct; the mutant is a no-op array of equal primitives",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/ui/hooks/useGitHubAuth.ts",
+            "anchors": [
+                "}, []); // Empty deps - runs once on mount"
+            ],
+            "line": 184,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty dependency array with a one-element array holding a constant string. React compares dependency arrays element-wise with Object.is and never compares the array's identity, and that element is the same primitive on every render \u2014 so the memo (or the mount effect) is preserved exactly as it is with []. No render, no callback identity and no message ordering differs, which is why no assertion can separate them. The mutant that DOES matter on this hook \u2014 replacing a real dependency list with [] \u2014 is killed by 'writes the LATEST edsConfig, not the one present at mount'.",
+            "decision": "none \u2014 the empty deps array is correct; the mutant is a no-op array of equal primitives",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-08 focus run, 2026-09-05"
         }
     ]
 }
