@@ -10886,6 +10886,44 @@
             "decision": "equivalent",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/ai/server/createProjectTool.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 145,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Stryker empties the catch, so a throwing validateToken leaves githubOk unassigned instead of false. Both readings are falsy at the 'if (!githubOk)' below, so the tool returns the same needsAuth:'github' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
+            "decision": "none \u2014 the catch assignment and the absent one are indistinguishable to every caller",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/ai/server/createProjectTool.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 158,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Stryker empties the catch, so a throwing isAuthenticated leaves daLiveOk unassigned instead of false. Both readings are falsy at the 'if (!daLiveOk)' below, so the tool returns the same needsAuth:'dalive' handoff and calls the same collaborators either way. The only difference is the variable's binding, which nothing observes; a test asserting it would have to reach inside the function.",
+            "decision": "none \u2014 the catch assignment and the absent one are indistinguishable to every caller",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/ai/server/createProjectTool.ts",
+            "anchors": [
+                "if (args?.confirm !== true) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the '?.', which would throw only if args were nullish. It cannot be nullish here: the guard three lines above computes projectName from String(args?.projectName ?? '') and returns early when it is empty, so reaching this line means args carried a non-empty projectName and is therefore an object. The '?.' is required by the handler's 'any' argument type, not by any reachable input.",
+            "decision": "none \u2014 the optional chain is defensive on a parameter the SDK may hand over as undefined, and the earlier guard already excludes that case here",
+            "recorded": "2026-09-05",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }

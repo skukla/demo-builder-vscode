@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/ai/server/adobeTools.ts"
+        "src/features/ai/server/createProjectTool.ts"
     ],
     "reporters": [
         "clear-text",

@@ -137,7 +137,9 @@ async function requireAdobeWorkspace(ctx: HandlerContext): Promise<
 
 /** Pre-flight GitHub + DA.live auth; return a needsAuth handoff or null. */
 async function edsAuthHandoff(ctx: HandlerContext): Promise<Record<string, unknown> | null> {
-    let githubOk = false;
+    // Declared without an initializer on purpose: both arms below assign, so a
+    // starting value would be a store nothing can read.
+    let githubOk: boolean;
     try {
         githubOk = (await getGitHubServices(ctx.context.secrets).tokenService.validateToken()).valid;
     } catch {
@@ -150,7 +152,7 @@ async function edsAuthHandoff(ctx: HandlerContext): Promise<Record<string, unkno
                 'GitHub sign-in required to create the storefront repo. Check get_auth_status, then sign_in(provider:"github", confirm:true).',
         };
     }
-    let daLiveOk = false;
+    let daLiveOk: boolean;
     try {
         daLiveOk = await getDaLiveAuthService(ctx.context).isAuthenticated();
     } catch {

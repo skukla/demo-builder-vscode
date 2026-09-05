@@ -1,129 +1,32 @@
 /**
- * create_project tests — headless + EDS paths, with heavy deps mocked
- * (no real cloud resources). Covers validation, auth handoffs, the captured
- * per-phase progress timeline, and re-runnable failure results.
+ * create_project tests — the headless and EDS creation PATHS, with heavy deps
+ * mocked (no real cloud resources). Auth handoffs, Adobe-context resolution, the
+ * captured per-phase progress timeline, and re-runnable failure results.
+ *
+ * Argument validation and the registered schema live in
+ * `createProjectTool-validation.test.ts`; the mocks both share live in
+ * `createProjectTool.testUtils.ts`.
  */
 
-jest.mock('@/features/project-creation/handlers/executor', () => ({
-    executeProjectCreation: jest.fn(async () => undefined),
-}));
-jest.mock('@/features/project-creation/ui/wizard/wizardHelpers', () => ({
-    buildProjectConfig: jest.fn(() => ({ projectName: 'assembled' })),
-}));
-jest.mock('@/features/components/services/demoPackageLoader', () => ({
-    getSelectablePackages: jest.fn(async () => [
-        { id: 'citisignal', storefronts: { 'headless-paas': {}, 'eds-paas': {} } },
-    ]),
-    getStorefrontForStack: jest.fn(async () => ({
-        templateOwner: 'o',
-        templateRepo: 'r',
-        contentSource: { org: 'co', site: 'cs' },
-    })),
-    getAvailableStacksForPackage: jest.fn(async () => ['headless-paas', 'eds-paas']),
-    getAutoSelectedOptionalDependencies: jest.fn(async () => []),
-    getResolvedMeshRequirement: jest.fn(() => false),
-}));
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    getGitHubServices: jest.fn(() => ({
-        tokenService: { validateToken: jest.fn(async () => ({ valid: true })) },
-    })),
-    getDaLiveAuthService: jest.fn(() => ({ isAuthenticated: jest.fn(async () => true) })),
-}));
-jest.mock('@/features/eds/handlers/edsHandlers', () => ({
-    edsHandlers: { 'storefront-setup-start': jest.fn() },
-}));
-jest.mock('@/features/ai/server/adobeTargetStore', () => ({
-    getAdobeTarget: jest.fn(() => ({ orgId: 'org-stored' })),
-    runWithAdobeTarget: jest.fn(async (fn: () => Promise<unknown>) => fn()),
-}));
-
-import { registerCreateProjectTool } from '@/features/ai/server/createProjectTool';
-import { getAdobeTarget, runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
-import { buildProjectConfig } from '@/features/project-creation/ui/wizard/wizardHelpers';
-import { executeProjectCreation } from '@/features/project-creation/handlers/executor';
-import { edsHandlers } from '@/features/eds/handlers/edsHandlers';
-import { getGitHubServices, getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
-import {
-    getResolvedMeshRequirement,
-    getStorefrontForStack,
-} from '@/features/components/services/demoPackageLoader';
 import { ErrorCode } from '@/types/errorCodes';
 import { AuthError } from '@/core/errors';
-import type { HandlerContext } from '@/types/handlers';
 
-const storefrontSetup = edsHandlers['storefront-setup-start'] as jest.Mock;
-
-/** Default storefront-setup mock: emits a progress + complete event, succeeds. */
-function defaultStorefrontSetup() {
-    storefrontSetup.mockImplementation(
-        async (ctx: { sendMessage: (t: string, d?: unknown) => Promise<void> }) => {
-            await ctx.sendMessage('storefront-setup-progress', {
-                phase: 'repo',
-                message: 'Creating repo',
-                progress: 10,
-            });
-            await ctx.sendMessage('storefront-setup-complete', {
-                repoUrl: 'https://github.com/o/r',
-            });
-            return { success: true };
-        }
-    );
-}
-
-function fakeServer() {
-    const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
-    return {
-        registerTool(
-            name: string,
-            _def: unknown,
-            handler: (args: any) => Promise<{ content: Array<{ text: string }> }>
-        ) {
-            tools.set(name, handler);
-        },
-
-        async call(args?: unknown): Promise<any> {
-            return JSON.parse((await tools.get('create_project')!(args)).content[0].text);
-        },
-    };
-}
-
-const authManager = {
-    isAuthenticated: jest.fn(async () => true),
-    getCurrentOrganization: jest.fn(async () => ({ id: 'org-1', name: 'Org' })),
-    getCurrentProject: jest.fn(async () => ({ id: 'proj-1', name: 'Proj' })),
-    // Typed to include `undefined` because that is a REAL runtime answer — the
-    // production guard branches on `if (!workspace)`. Narrowing the mock to the
-    // happy shape would make the unset case untypeable, which is how a test suite
-    // ends up unable to express the condition the code exists to handle.
-    getCurrentWorkspace: jest.fn(
-        async (): Promise<{ id: string; name: string } | undefined> => ({
-            id: 'ws-1',
-            name: 'Stage',
-        })
-    ),
-};
-const ctxFactory = () =>
-    ({
-        authManager,
-        context: {},
-        sendMessage: jest.fn(async () => undefined),
-    }) as unknown as HandlerContext;
-
-const HEADLESS = {
-    projectName: 'my-proj',
-    package: 'citisignal',
-    stack: 'headless-paas',
-    confirm: true,
-};
-const EDS = {
-    projectName: 'eds-proj',
-    package: 'citisignal',
-    stack: 'eds-paas',
-    repoName: 'my-repo',
-    daLiveOrg: 'org',
-    daLiveSite: 'site',
-    confirm: true,
-};
+import {
+    EDS,
+    HEADLESS,
+    SESSION_TARGET,
+    authManager,
+    capturedWizardState,
+    defaultStorefrontSetup,
+    executeProjectCreation,
+    getAdobeTarget,
+    getDaLiveAuthService,
+    getGitHubServices,
+    getResolvedMeshRequirement,
+    runWithAdobeTarget,
+    storefrontSetup,
+    toolServer,
+} from './createProjectTool.testUtils';
 
 describe('create_project', () => {
     beforeEach(() => {
@@ -132,26 +35,8 @@ describe('create_project', () => {
     });
 
     describe('headless', () => {
-        it('requires confirm:true', async () => {
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
-            const res = await s.call({ ...HEADLESS, confirm: false });
-            expect(res.error).toMatch(/requires confirm:true/);
-            expect(executeProjectCreation).not.toHaveBeenCalled();
-        });
-
-        it('rejects an invalid (package, stack) pair with valid stacks', async () => {
-            (getStorefrontForStack as jest.Mock).mockResolvedValueOnce(undefined);
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
-            const res = await s.call({ ...HEADLESS, stack: 'headless-accs' });
-            expect(res.validStacksForPackage).toEqual(['headless-paas', 'eds-paas']);
-            expect(executeProjectCreation).not.toHaveBeenCalled();
-        });
-
         it('creates a non-mesh project without anchoring the workspace', async () => {
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             const res = await s.call(HEADLESS);
             // Always-root model: creation never anchors the window, so no options
             // arg is passed.
@@ -162,8 +47,7 @@ describe('create_project', () => {
         });
 
         it('runs project creation under the stored session org context', async () => {
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             await s.call(HEADLESS);
             // INVARIANT: aio-touching work runs inside withOrgContext(storedTarget, …)
             expect(runWithAdobeTarget).toHaveBeenCalled();
@@ -184,11 +68,10 @@ describe('create_project', () => {
                 workspaceId: 'ws-session',
                 workspaceName: 'Session Workspace',
             });
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             await s.call(HEADLESS);
 
-            const state = (buildProjectConfig as jest.Mock).mock.calls[0][0];
+            const state = capturedWizardState();
             expect(state.adobeWorkspace).toMatchObject({ id: 'ws-session' });
             expect(state.adobeOrg).toMatchObject({ id: 'org-session' });
             expect(state.adobeProject).toMatchObject({ id: 'proj-session' });
@@ -203,19 +86,17 @@ describe('create_project', () => {
             (getResolvedMeshRequirement as jest.Mock).mockReturnValueOnce(true);
             (getAdobeTarget as jest.Mock).mockReturnValueOnce(undefined);
 
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             await s.call(HEADLESS);
 
-            const state = (buildProjectConfig as jest.Mock).mock.calls[0][0];
+            const state = capturedWizardState();
             expect(state.adobeWorkspace).toMatchObject({ id: 'ws-1' });
         });
 
         it('mesh project hands off when not signed in', async () => {
             (getResolvedMeshRequirement as jest.Mock).mockReturnValueOnce(true);
             authManager.isAuthenticated.mockResolvedValueOnce(false);
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             expect(await s.call(HEADLESS)).toMatchObject({ needsAuth: 'adobe' });
             expect(executeProjectCreation).not.toHaveBeenCalled();
         });
@@ -224,11 +105,71 @@ describe('create_project', () => {
             (executeProjectCreation as jest.Mock).mockRejectedValueOnce(
                 new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org')
             );
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             const res = await s.call(HEADLESS);
             expect(res).toMatchObject({ error_type: 'ORG_MISMATCH', non_retryable: true });
             expect(res.created).toBeUndefined();
+        });
+
+        // The mismatch result carries the org the agent was AIMING at, so the
+        // user can be asked to switch to a named org rather than a guess.
+        it('names the targeted org on the mismatch result', async () => {
+            (getResolvedMeshRequirement as jest.Mock).mockReturnValueOnce(true);
+            (getAdobeTarget as jest.Mock).mockReturnValueOnce(SESSION_TARGET);
+            (executeProjectCreation as jest.Mock).mockRejectedValueOnce(
+                new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org')
+            );
+            const s = toolServer();
+
+            const res = await s.call(HEADLESS);
+
+            expect(res.target_org).toEqual({ id: 'org-session', name: 'Session Org' });
+        });
+
+        // Only an ORG_MISMATCH gets the typed handoff. Everything else has to
+        // come back as the failure it was — rewriting every error into the
+        // "switch org" prose is how a disk-full reads as an auth problem.
+        it('returns any other creation failure verbatim', async () => {
+            (executeProjectCreation as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
+            const s = toolServer();
+
+            const res = await s.call(HEADLESS);
+
+            expect(res).toMatchObject({ created: false, error: 'disk full' });
+            expect(res.error_type).toBeUndefined();
+        });
+
+        // A package that declares no mesh must not be anchored to whatever org
+        // the machine last selected — the recorded context would be a fiction.
+        it('records no Adobe context, and never asks the CLI, for a mesh-free package', async () => {
+            const s = toolServer();
+
+            await s.call(HEADLESS);
+
+            const state = capturedWizardState();
+            expect(state.adobeOrg).toBeUndefined();
+            expect(state.adobeProject).toBeUndefined();
+            expect(state.adobeWorkspace).toBeUndefined();
+            expect(authManager.getCurrentWorkspace).not.toHaveBeenCalled();
+        });
+
+        it('hands the wizard the named project with empty addon selections', async () => {
+            const s = toolServer();
+
+            await s.call(HEADLESS);
+
+            const state = capturedWizardState();
+            expect(state).toMatchObject({
+                projectName: 'my-proj',
+                selectedPackage: 'citisignal',
+                selectedStack: 'headless-paas',
+            });
+            // Headless creation selects nothing extra; a non-empty default here
+            // would install components the agent never asked for.
+            expect(state.selectedAddons).toEqual([]);
+            expect(state.selectedBlockLibraries).toEqual([]);
+            expect(state.customBlockLibraries).toEqual([]);
+            expect(state.componentConfigs).toEqual({});
         });
     });
 
@@ -248,8 +189,7 @@ describe('create_project', () => {
             (getResolvedMeshRequirement as jest.Mock).mockReturnValueOnce(false);
             authManager.getCurrentWorkspace.mockResolvedValueOnce(undefined);
 
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             const res = await s.call(EDS);
 
             expect(JSON.stringify(res)).not.toMatch(/API Mesh/);
@@ -261,8 +201,7 @@ describe('create_project', () => {
             (getAdobeTarget as jest.Mock).mockReturnValueOnce(undefined);
             authManager.getCurrentWorkspace.mockResolvedValueOnce(undefined);
 
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             const res = await s.call(EDS);
 
             expect(JSON.stringify(res)).toMatch(/API Mesh/);
@@ -274,18 +213,16 @@ describe('create_project', () => {
             (getResolvedMeshRequirement as jest.Mock).mockReturnValueOnce(false);
             authManager.getCurrentWorkspace.mockResolvedValueOnce(undefined);
 
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             await s.call(EDS);
 
-            const state = (buildProjectConfig as jest.Mock).mock.calls[0][0];
+            const state = capturedWizardState();
             expect(state.adobeWorkspace).toBeUndefined();
             expect(state.adobeOrg).toBeUndefined();
         });
 
         it('requires repoName / daLiveOrg / daLiveSite', async () => {
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             const res = await s.call({ ...EDS, repoName: undefined });
             expect(res.error).toMatch(/repoName/);
             expect(executeProjectCreation).not.toHaveBeenCalled();
@@ -295,8 +232,7 @@ describe('create_project', () => {
             (getGitHubServices as jest.Mock).mockReturnValueOnce({
                 tokenService: { validateToken: jest.fn(async () => ({ valid: false })) },
             });
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             const res = await s.call(EDS);
             expect(res).toMatchObject({ needsAuth: 'github' });
             expect(storefrontSetup).not.toHaveBeenCalled();
@@ -306,16 +242,14 @@ describe('create_project', () => {
             (getDaLiveAuthService as jest.Mock).mockReturnValueOnce({
                 isAuthenticated: jest.fn(async () => false),
             });
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             const res = await s.call(EDS);
             expect(res).toMatchObject({ needsAuth: 'dalive' });
             expect(storefrontSetup).not.toHaveBeenCalled();
         });
 
         it('provisions the storefront then creates the project, returning the captured timeline', async () => {
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             const res = await s.call(EDS);
 
             expect(storefrontSetup).toHaveBeenCalled();
@@ -337,8 +271,7 @@ describe('create_project', () => {
         });
 
         it('passes selectedPackage AND selectedStack to storefront setup so package-derived config rehydrates', async () => {
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             await s.call(EDS);
 
             // storefrontSetupConfigRehydration needs BOTH ids to restore
@@ -356,8 +289,7 @@ describe('create_project', () => {
             (executeProjectCreation as jest.Mock).mockRejectedValueOnce(
                 new AuthError(ErrorCode.ORG_MISMATCH, 'wrong org')
             );
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             const res = await s.call(EDS);
             expect(res).toMatchObject({ error_type: 'ORG_MISMATCH', non_retryable: true });
             expect(res.created).toBeUndefined();
@@ -372,8 +304,7 @@ describe('create_project', () => {
                 });
                 return { success: false, error: 'rate limited' };
             });
-            const s = fakeServer();
-            registerCreateProjectTool(s, ctxFactory);
+            const s = toolServer();
             const res = await s.call(EDS);
 
             expect(res).toMatchObject({
@@ -384,6 +315,139 @@ describe('create_project', () => {
             expect(res.error).toMatch(/rate limited/);
             expect(res.phases.length).toBeGreaterThan(0);
             expect(executeProjectCreation).not.toHaveBeenCalled();
+        });
+
+        it('returns a re-runnable failure when project finalization fails', async () => {
+            // The storefront IS provisioned by this point — a repo and DA.live
+            // content exist. The result has to say so, or a re-run reads as a
+            // fresh attempt at something already half-built.
+            (executeProjectCreation as jest.Mock).mockRejectedValueOnce(new Error('disk full'));
+            const s = toolServer();
+
+            const res = await s.call(EDS);
+
+            expect(res).toMatchObject({
+                created: false,
+                stage: 'project-creation',
+                rerunSafe: true,
+            });
+            expect(res.error).toMatch(/disk full/);
+            expect(res.phases.length).toBeGreaterThan(0);
+        });
+
+        it('hands off to GitHub auth when the token check throws', async () => {
+            // A network failure while validating is not a valid token.
+            (getGitHubServices as jest.Mock).mockReturnValueOnce({
+                tokenService: {
+                    validateToken: jest.fn(async () => {
+                        throw new Error('network down');
+                    }),
+                },
+            });
+            const s = toolServer();
+
+            expect(await s.call(EDS)).toMatchObject({ needsAuth: 'github' });
+            expect(storefrontSetup).not.toHaveBeenCalled();
+        });
+
+        it('hands off to DA.live auth when the session check throws', async () => {
+            (getDaLiveAuthService as jest.Mock).mockReturnValueOnce({
+                isAuthenticated: jest.fn(async () => {
+                    throw new Error('network down');
+                }),
+            });
+            const s = toolServer();
+
+            expect(await s.call(EDS)).toMatchObject({ needsAuth: 'dalive' });
+            expect(storefrontSetup).not.toHaveBeenCalled();
+        });
+
+        it('refuses an -accs stack with no accsEndpoint', async () => {
+            const s = toolServer();
+
+            const res = await s.call({ ...EDS, stack: 'eds-accs' });
+
+            expect(res.error).toMatch(/accsEndpoint/);
+            expect(storefrontSetup).not.toHaveBeenCalled();
+        });
+
+        it('proceeds on an -accs stack once accsEndpoint is supplied', async () => {
+            const s = toolServer();
+
+            await s.call({ ...EDS, stack: 'eds-accs', accsEndpoint: 'https://commerce.example' });
+
+            expect(storefrontSetup).toHaveBeenCalled();
+            expect(capturedWizardState().edsConfig).toMatchObject({
+                accsEndpoint: 'https://commerce.example',
+                accsHost: 'https://commerce.example',
+            });
+        });
+
+        it('does not refuse a NON-accs stack that omits accsEndpoint', async () => {
+            const s = toolServer();
+
+            await s.call(EDS);
+
+            expect(storefrontSetup).toHaveBeenCalled();
+        });
+
+        it('creates a mesh-requiring EDS project from the session target', async () => {
+            (getResolvedMeshRequirement as jest.Mock).mockReturnValueOnce(true);
+            (getAdobeTarget as jest.Mock).mockReturnValueOnce(SESSION_TARGET);
+            const s = toolServer();
+
+            const res = await s.call(EDS);
+
+            expect(res).toMatchObject({ created: true });
+            expect(capturedWizardState().adobeWorkspace).toMatchObject({ id: 'ws-session' });
+        });
+
+        it('hands storefront setup the full EDS config, not a hollow one', async () => {
+            const s = toolServer();
+
+            await s.call(EDS);
+
+            expect(storefrontSetup).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.objectContaining({
+                    edsConfig: {
+                        repoName: 'my-repo',
+                        repoMode: 'new',
+                        daLiveOrg: 'org',
+                        daLiveSite: 'site',
+                        accsEndpoint: undefined,
+                        templateOwner: 'o',
+                        templateRepo: 'r',
+                        contentSource: { org: 'co', site: 'cs' },
+                    },
+                })
+            );
+        });
+
+        it('records the provisioned repo and marks the preflight complete', async () => {
+            const s = toolServer();
+
+            await s.call(EDS);
+
+            const state = capturedWizardState();
+            expect(state).toMatchObject({
+                projectName: 'eds-proj',
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-paas',
+            });
+            // preflightComplete=true is what stops creation redoing the
+            // provisioning the storefront-setup phase just did.
+            expect(state.edsConfig).toMatchObject({
+                repoName: 'my-repo',
+                daLiveOrg: 'org',
+                daLiveSite: 'site',
+                repoUrl: 'https://github.com/o/r',
+                contentPatches: [{ path: '/index' }],
+                preflightComplete: true,
+            });
+            expect(state.selectedAddons).toEqual([]);
+            expect(state.selectedBlockLibraries).toEqual([]);
+            expect(state.customBlockLibraries).toEqual([]);
         });
     });
 });
