@@ -7805,6 +7805,43 @@
             "decision": "none \u2014 false is the honest seed for 'not running yet'",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/edsHandlers.ts",
+            "anchors": [
+                "if (!payload?.baseUrl || !payload?.backendType) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the '?.' from the SECOND operand only. That operand is unreachable with an absent payload: '!payload?.baseUrl' is already true when payload is undefined, so '||' short-circuits and 'payload.backendType' is never evaluated. Every payload that does reach the second operand is an object, where the optional chain and a plain access behave identically. The '?.' is kept because the parameter is optional and the compiler requires it on the first operand for the same reason.",
+            "decision": "none \u2014 short-circuit makes the second chain unreachable, and symmetry with the first is the readable form",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/edsHandlers.ts",
+            "anchors": [
+                "if (result.success) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this branch false picks the OTHER log line and nothing else. Both arms fall through to the same 'await context.sendMessage(store-discovery-result, result)' and the same 'return { success: true }', so a successful result logged through logger.warn instead of logger.info produces an identical message to the webview and an identical handler response. The true-forcing mutant IS killed, because it reads result.data on a failure and the throw changes what the webview receives.",
+            "decision": "none \u2014 the two arms differ only in which log line prints",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
+        },
+        {
+            "module": "src/features/eds/handlers/edsHandlers.ts",
+            "anchors": [
+                "if (result.success) {"
+            ],
+            "line": 168,
+            "mutants": 2,
+            "category": "block",
+            "reason": "Both arms of this if/else contain exactly one statement, and each is a logger call: context.logger.info with the website/store-group/store-view counts, and context.logger.warn with the discovery error. Emptying either block removes a log line and changes nothing the webview sees or the caller receives, so the only test that could tell them apart would assert log wording \u2014 which is what the ratchet exists to refuse to reward. The anchor names the if because '} else {' appears twice in this module.",
+            "decision": "none \u2014 two log-only blocks",
+            "recorded": "2026-09-05",
+            "source": "PL-22 MUT-01, 2026-09-05"
         }
     ]
 }

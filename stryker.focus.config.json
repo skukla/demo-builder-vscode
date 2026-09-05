@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/ui/steps/StorefrontSetupStep.tsx"
+        "src/features/eds/handlers/edsHandlers.ts"
     ],
     "reporters": [
         "clear-text",
