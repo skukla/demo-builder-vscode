@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/data-installer/services/dataInstallerWriteClient.ts"
+        "src/features/ai/server/adobeTools.ts"
     ],
     "reporters": [
         "clear-text",

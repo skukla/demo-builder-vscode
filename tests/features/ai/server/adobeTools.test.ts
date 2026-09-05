@@ -16,65 +16,8 @@ import {
 import { getActiveOrgContext } from '@/core/shell/orgContextEnv';
 import { ErrorCode } from '@/types/errorCodes';
 import { AuthError } from '@/core/errors';
-import type { HandlerContext } from '@/types/handlers';
 import { expectWithinCeiling } from './responseCeilings';
-
-function fakeServer() {
-     
-    const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
-    return {
-         
-        registerTool(name: string, _def: unknown, handler: (args: any) => Promise<{ content: Array<{ text: string }> }>) {
-            tools.set(name, handler);
-        },
-         
-        async call(name: string, args?: unknown): Promise<any> {
-            return JSON.parse((await tools.get(name)!(args)).content[0].text);
-        },
-        tools,
-    };
-}
-
-
-/**
- * A token the REAL `decodeImsUserId` accepts — header.payload.signature with a
- * base64url payload carrying `user_id`. Built rather than mocked so the
- * ownership path under test is the production one.
- */
-function tokenFor(userId: string): string {
-    const payload = Buffer.from(JSON.stringify({ user_id: userId }), 'utf8').toString('base64url');
-    return `hdr.${payload}.sig`;
-}
-
-/** Auth stub whose token names `userId`; omit for the no-token (fail-closed) case. */
-function withToken(userId?: string) {
-    return {
-        getTokenManager: () => ({
-            inspectToken: async () => ({ valid: Boolean(userId), expiresIn: 3600, token: userId ? tokenFor(userId) : undefined }),
-        }),
-    };
-}
-
-function makeAuth(overrides: Record<string, unknown> = {}) {
-    return {
-        isAuthenticated: jest.fn(async () => true),
-        getOrganizations: jest.fn(async () => [
-            { id: 'org-1', code: 'C1@AdobeOrg', name: 'Org One' },
-            { id: 'org-2', code: 'C2@AdobeOrg', name: 'Org Two' },
-        ]),
-        getProjects: jest.fn(async () => [
-            { id: 'proj-1', name: 'Proj One', title: 'P1', who_created: 'ABC123@AdobeID.e' },
-        ]),
-        getWorkspaces: jest.fn(async () => [{ id: 'ws-1', name: 'Stage' }]),
-        getCurrentOrganization: jest.fn(async () => ({ id: 'org-1', name: 'Org One' })),
-        getCurrentProject: jest.fn(async () => ({ id: 'proj-1', name: 'Proj One' })),
-        ...overrides,
-    };
-}
-
-function ctxFactoryWith(auth: unknown): () => HandlerContext {
-    return () => ({ authManager: auth }) as unknown as HandlerContext;
-}
+import { ctxFactoryWith, fakeServer, makeAuth, withToken } from './adobeTools.testUtils';
 
 describe('registerAdobeTools', () => {
     beforeEach(() => {
