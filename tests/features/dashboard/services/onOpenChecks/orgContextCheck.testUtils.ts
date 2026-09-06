@@ -26,7 +26,7 @@ import { createMockProject } from '../../../../helpers/projectFake';
  * list (~14.5s, launches a browser) or an interactive login. Built on the
  * canonical fake so the members a suite does not name are present too.
  */
-export function makeAuth(
+export function makeOrgContextAuth(
     overrides: Partial<jest.Mocked<AuthenticationService>> = {},
 ): jest.Mocked<AuthenticationService> {
     return createMockAuthenticationService({
@@ -43,7 +43,7 @@ export function makeAuth(
 }
 
 /** A run context with a captured `post` spy. */
-export function makeCtx(project: Project): { ctx: OnOpenCheckContext; post: jest.Mock } {
+export function makeOrgCheckContext(project: Project): { ctx: OnOpenCheckContext; post: jest.Mock } {
     const post = jest.fn();
     return { ctx: { project, logger: createMockLogger(), post }, post };
 }
@@ -57,7 +57,7 @@ export function projectWithOrg(organization?: string, extra: Partial<AdobeConfig
 }
 
 /** The check under test, with both of its dependencies handed in. */
-export function makeCheck(
+export function buildOrgContextCheck(
     authManager: jest.Mocked<AuthenticationService>,
     stateManager: OrgContextCheckDeps['stateManager'],
 ): OnOpenCheck {
