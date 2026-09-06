@@ -116,6 +116,54 @@ describe('ActionGrid — overflow menu', () => {
         });
     });
 
+    /**
+     * Refresh Block Library needs BOTH halves: block libraries are an EDS
+     * concept, and the item is a door to a handler the host only wires for
+     * projects that have one. Neither half was driven before — no fixture in
+     * these suites passed the handler at all, so the item never rendered and
+     * the whole gate was free to say anything.
+     */
+    describe('Refresh Block Library — EDS AND wired, not either', () => {
+        it('appears for an EDS project whose host wired the handler', () => {
+            const { container } = render(
+                <ActionGrid {...edsProps} handleRefreshBlockLibrary={jest.fn()} />
+            );
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).getByText('Refresh Block Library')).toBeInTheDocument();
+        });
+
+        it('is absent for a non-EDS project even when the handler is passed', () => {
+            const { container } = render(
+                <ActionGrid {...defaultProps} handleRefreshBlockLibrary={jest.fn()} />
+            );
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).queryByText('Refresh Block Library')).not.toBeInTheDocument();
+        });
+
+        it('is absent for an EDS project with no handler wired', () => {
+            // An item with nothing behind it is a dead menu entry, and the
+            // dispatcher would have nothing to call.
+            const { container } = render(<ActionGrid {...edsProps} />);
+
+            const menu = container.querySelector('[role="menu"]') as HTMLElement;
+            expect(within(menu).queryByText('Refresh Block Library')).not.toBeInTheDocument();
+        });
+
+        it('runs the refresh when the item is clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const handleRefreshBlockLibrary = jest.fn();
+            render(
+                <ActionGrid {...edsProps} handleRefreshBlockLibrary={handleRefreshBlockLibrary} />
+            );
+
+            await user.click(screen.getByText('Refresh Block Library'));
+
+            expect(handleRefreshBlockLibrary).toHaveBeenCalled();
+        });
+    });
+
     describe('Delete (destructive, in the More overflow)', () => {
         it('renders NO isolated delete footer zone (Delete moved into More)', () => {
             const { container } = render(<ActionGrid {...defaultProps} />);

@@ -16782,6 +16782,18 @@
             "decision": "none \u2014 every falsy input reaches the same undefined by a longer route; the guard is a type requirement, not a behavioural branch",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/ActionGrid.tsx",
+            "anchors": [
+                "handlers[key as OverflowKey]?.();"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "No rendered menu item can carry a key with no handler, so the optional call is unreachable from the component. Four of the six items are unconditional and their handler props are REQUIRED (export, devConsole, reset, delete); the other two render only inside a guard on the handler itself (syncStorefront, refreshBlockLibrary). Menu onAction fires with the key of an item that rendered, so the lookup always resolves. Verified by planting the mutation rather than by reasoning: with the ?. removed, all 199 tests across the three ActionGrid suites and the eight ProjectDashboardScreen suites still pass. Reaching it would need an Item wired into the menu with no handler prop, which is the state the two guards above exist to prevent.",
+            "decision": "none \u2014 the guard is required by the type (two handlers are optional props) and the cast from React.Key is unchecked, so removing it would trade a no-op for a throw on an input the compiler never validated",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }
