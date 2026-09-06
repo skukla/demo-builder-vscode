@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-06: OAuth flow settlement + timer lifecycle, pdp404 retry/404.html paths, the real runtime-surface fetcher, trace-file listing/pruning, and the component-requirements declarations + malformed-catalog paths",
+    "_note": "MUT-07: appBuilderDeployOutcome, meshCatalogDerivation, skillInspector, appBuilderComponentMigration, appConfigPackages to zero open gaps",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -3076,20 +3076,19 @@
             "openGaps": 15
         },
         "src/features/ai/skillInspector.ts": {
-            "score": 80.61,
-            "killed": 79,
-            "survived": 19,
+            "score": 96.94,
+            "killed": 95,
+            "survived": 3,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 12,
-                "other": 5,
-                "string": 2
+                "other": 1,
+                "branch": 2
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 12,
-            "equivalent": 0,
-            "openGaps": 17
+            "highValueSurvivors": 2,
+            "equivalent": 3,
+            "openGaps": 0
         },
         "src/features/app-builder/services/allowedDomain.ts": {
             "score": 50,
@@ -3140,24 +3139,21 @@
             "openGaps": 1
         },
         "src/features/app-builder/services/appBuilderComponentMigration.ts": {
-            "score": 73.33,
-            "killed": 55,
-            "survived": 15,
-            "noCoverage": 5,
+            "score": 92,
+            "killed": 69,
+            "survived": 6,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 9,
-                "other": 4,
-                "optionalChain": 2
-            },
-            "uncoveredCategories": {
-                "string": 3,
+                "branch": 1,
+                "optionalChain": 2,
                 "block": 1,
-                "branch": 1
+                "logPresentation": 2
             },
-            "highValueSurvivors": 9,
-            "equivalent": 0,
-            "openGaps": 17
+            "uncoveredCategories": {},
+            "highValueSurvivors": 2,
+            "equivalent": 6,
+            "openGaps": 0
         },
         "src/features/app-builder/services/appBuilderComponentRunner.ts": {
             "score": 88.72,
@@ -3183,45 +3179,30 @@
             "openGaps": 0
         },
         "src/features/app-builder/services/appBuilderDeployOutcome.ts": {
-            "score": 66.13,
-            "killed": 41,
-            "survived": 16,
-            "noCoverage": 5,
+            "score": 100,
+            "killed": 62,
+            "survived": 0,
+            "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "optionalChain": 3,
-                "branch": 6,
-                "block": 3,
-                "other": 2,
-                "string": 2
-            },
-            "uncoveredCategories": {
-                "branch": 3,
-                "string": 1,
-                "other": 1
-            },
-            "highValueSurvivors": 9,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 18
+            "openGaps": 0
         },
         "src/features/app-builder/services/appConfigPackages.ts": {
-            "score": 78.02,
-            "killed": 71,
-            "survived": 18,
-            "noCoverage": 2,
+            "score": 95.6,
+            "killed": 87,
+            "survived": 4,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 3,
-                "block": 4,
-                "optionalChain": 6,
-                "branch": 5
+                "block": 4
             },
-            "uncoveredCategories": {
-                "block": 2
-            },
-            "highValueSurvivors": 9,
-            "equivalent": 0,
-            "openGaps": 17
+            "uncoveredCategories": {},
+            "highValueSurvivors": 4,
+            "equivalent": 4,
+            "openGaps": 0
         },
         "src/features/app-builder/services/appDeployment.ts": {
             "score": 85.57,
@@ -4130,23 +4111,22 @@
             "openGaps": 4
         },
         "src/features/components/services/meshCatalogDerivation.ts": {
-            "score": 68.33,
-            "killed": 41,
-            "survived": 13,
-            "noCoverage": 6,
+            "score": 91.67,
+            "killed": 55,
+            "survived": 4,
+            "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 9,
-                "optionalChain": 4
+                "other": 2,
+                "branch": 1,
+                "optionalChain": 1
             },
             "uncoveredCategories": {
-                "other": 4,
-                "optionalChain": 1,
-                "string": 1
+                "other": 1
             },
-            "highValueSurvivors": 9,
-            "equivalent": 0,
-            "openGaps": 18
+            "highValueSurvivors": 1,
+            "equivalent": 5,
+            "openGaps": 0
         },
         "src/features/components/services/projectAppBuilderPredicate.ts": {
             "score": 85.71,

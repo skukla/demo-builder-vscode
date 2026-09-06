@@ -14972,6 +14972,191 @@
             "decision": "Recorded, not killed: no entry can distinguish an always-spread undefined tag from an omitted one once the line is serialised.",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/components/services/meshCatalogDerivation.ts",
+            "anchors": [
+                "const stacks = (stacksConfig as unknown as { stacks?: StackRow[] }).stacks ?? [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The fallback array is only ever iterated as a list of STACK rows, and Stryker replaces it with ['Stryker was here'] \u2014 a string. A string has no .dependencies, .optionalDependencies, .frontend or .backend, so the loop reads undefined from all four and contributes no mesh id. A config with no stacks key derives an empty catalog either way; no input distinguishes them.",
+            "decision": "none \u2014 the empty fallback is the correct shape and the difference is unobservable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/components/services/meshCatalogDerivation.ts",
+            "anchors": [
+                "const meshIds = [...(stack.dependencies ?? []), ...(stack.optionalDependencies ?? [])];"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "Both empty fallbacks become ['Stryker was here'], which enters the list as a mesh id and is dropped by the very next line's 'id in registryMeshes' guard \u2014 no registry mesh can be keyed by that string. A stack that omits either list derives exactly the same entries with or without the mutation.",
+            "decision": "none \u2014 the guard on the next line already refuses any id the registry does not define",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/components/services/meshCatalogDerivation.ts",
+            "anchors": [
+                "if (!url) return undefined;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Removing this guard hands the missing url straight to parseGitHubUrl, whose regex .exec coerces undefined and '' to a non-matching string, so it answers undefined and the '!parsed' guard two lines down returns undefined by the other route. Both a missing source.url and an empty one derive nothing either way \u2014 the guard only saves a regex call.",
+            "decision": "none \u2014 the type requires the narrowing and the guard says what it means",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/components/services/meshCatalogDerivation.ts",
+            "anchors": [
+                "const gitOptions = definition.source?.gitOptions;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the ?. would throw only if definition.source were undefined, and this line cannot be reached in that state: three lines earlier 'const url = definition.source?.url' is undefined for a definition with no source, and '!url' returns before execution ever arrives here. The compiler still requires the ?. because source is optional on the type.",
+            "decision": "none \u2014 required by the type, unreachable in the state that would differ",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/ai/skillInspector.ts",
+            "anchors": [
+                "const match = /^---\\r?\\n([\\s\\S]*?)\\r?\\n---\\r?\\n([\\s\\S]*)$/.exec(content);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker drops the trailing $ anchor from the body capture. The group is the greedy [\\\\s\\\\S]* that follows a fixed delimiter, so it already runs to the end of the input from the leftmost match the lazy header group settles on; requiring the end explicitly cannot change which characters it captures. Group 1 \u2014 the only group parseFrontmatter reads \u2014 is chosen before the tail is matched at all.",
+            "decision": "none \u2014 the anchor documents intent and constrains nothing the greedy quantifier does not already",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/ai/skillInspector.ts",
+            "anchors": [
+                "if (!match) return {};"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Removing the guard leaves yaml.parse(match[1]) reading a property of null, and that TypeError is raised INSIDE the try whose catch returns {} \u2014 the very value the guard returns. A file with no frontmatter block yields an empty record by either route, so no content can tell them apart.",
+            "decision": "none \u2014 the guard is the direct answer and the catch is the backstop for invalid YAML",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/ai/skillInspector.ts",
+            "anchors": [
+                "return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};"
+            ],
+            "line": 145,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the typeof test true only matters for a frontmatter block that parses to a TRUTHY NON-object \u2014 a bare scalar such as a string or number. Every downstream read is a typeof guard ('typeof frontmatter.name === string', same for description), and a scalar has neither property, so the entry built from it is byte-identical to the one built from {}. The null case, which does differ, is caught by the '&&' half the mutation leaves in place.",
+            "decision": "none \u2014 the shape check is correct and its only difference is on values that read identically",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentMigration.ts",
+            "anchors": [
+                "const entry = project.appBuilderComponents?.[id];"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the ?. throws only when appBuilderComponents is undefined, and the loop cannot run in that state: ids comes from Object.keys(project.appBuilderComponents ?? {}) and an empty ids list returns from the function before this line. The compiler requires the ?. because the field is optional on Project.",
+            "decision": "none \u2014 required by the type, unreachable in the state that would differ",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentMigration.ts",
+            "anchors": [
+                "if (entry) await onRowStatus?.(id, 'deploying', inFlightLabelFor(entry.kind));"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The ids being iterated are the keys of the very record entry is read from, and nothing has run between the two, so entry is always defined here. Forcing the branch true changes behaviour only for an id whose entry is missing, which this loop cannot produce; the guard exists to satisfy the optional index type.",
+            "decision": "none \u2014 the guard narrows a type the loop already guarantees",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentMigration.ts",
+            "anchors": [
+                "if (!project.appBuilderComponents?.[id]) continue;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the ?. throws only if a deploy replaced the whole appBuilderComponents record with undefined mid-loop. deployAppBuilderComponent writes entries through recordDeployOutcome, which always assigns an object; no production path clears the record itself. The guard's real job \u2014 an individual entry removed mid-move \u2014 is covered by a test and killed the branch mutant on the same line.",
+            "decision": "none \u2014 the entry-level case is tested; only the record-level case would differ and nothing produces it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/app-builder/services/appBuilderComponentMigration.ts",
+            "anchors": [
+                "deps.logger.warn("
+            ],
+            "mutants": 3,
+            "category": "other",
+            "reason": "restoreStorefront's catch block contains nothing but a logger.warn, so emptying the block or blanking either half of its message changes only what is written to the log. The behaviour that matters \u2014 an abort survives a failed republish and still returns its rolled-back result \u2014 is asserted by a test, which is what killed the surrounding mutants. Killing these three would mean pinning log wording, which the ratchet exists to refuse to reward.",
+            "decision": "none \u2014 best-effort catch whose only effect is a diagnostic line",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/app-builder/services/appConfigPackages.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 47,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying readConfigDoc's read-catch leaves raw unassigned and falls into the next try, where yaml.parse(undefined) throws a TypeError that the parse-catch returns undefined for. A missing app.config.yaml answers undefined by either route, so no caller and no input can tell the two apart.",
+            "decision": "none \u2014 returning at the point of failure is clearer than relying on the next catch",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/app-builder/services/appConfigPackages.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 52,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying readConfigDoc's parse-catch drops its 'return undefined' and the function falls off its end, which returns undefined anyway. Unparseable YAML answers undefined either way; the statement is explicit rather than load-bearing.",
+            "decision": "none \u2014 an explicit return beats an implicit one, and the two agree",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/app-builder/services/appConfigPackages.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 166,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the include-read catch drops its continue, leaving raw unassigned when the file cannot be read; the next statement is yaml.parse(raw), whose TypeError on undefined lands in the parse-catch immediately below and continues from there. An unreadable include is skipped by either route.",
+            "decision": "none \u2014 skipping at the point of failure says what it means",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/app-builder/services/appConfigPackages.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 176,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the extension-config parse-catch drops its continue, leaving extDoc undefined; the very next statement reads it through an optional chain with a '?? {}' fallback, so the loop adds no names and moves on. An unparseable included config contributes nothing either way.",
+            "decision": "none \u2014 the continue states the intent that the optional chain would otherwise imply",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
         }
     ]
 }

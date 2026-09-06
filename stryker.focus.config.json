@@ -8,11 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/github/githubOAuthService.ts",
-        "src/features/eds/services/pdp/pdp404HandlerPublisher.ts",
-        "src/features/eds/services/runtimeSurfaceResolver.ts",
-        "src/features/ai/server/agentTraceSink.ts",
-        "src/features/ai/server/componentRequirementsTool.ts"
+        "src/features/app-builder/services/appBuilderDeployOutcome.ts",
+        "src/features/components/services/meshCatalogDerivation.ts",
+        "src/features/ai/skillInspector.ts",
+        "src/features/app-builder/services/appBuilderComponentMigration.ts",
+        "src/features/app-builder/services/appConfigPackages.ts"
     ],
     "reporters": [
         "clear-text",
