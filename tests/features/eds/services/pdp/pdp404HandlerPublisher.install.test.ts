@@ -285,7 +285,8 @@ describe('installSmart404Handler', () => {
  * Re-reading and retrying once covers both the staleness and genuine interleaving.
  */
 describe('installSmart404Handler — stale SHA', () => {
-    const SHA_MISMATCH = 'scripts/delayed.js does not match 15be5fb9e97773471ea4124c259d6d1e2eeb2626';
+    const SHA_MISMATCH =
+        'scripts/delayed.js does not match 15be5fb9e97773471ea4124c259d6d1e2eeb2626';
 
     /** Contents API hands back `sha` on each successive read of delayed.js. */
     /** Returns the shared `GithubFake`, so the publisher accepts it uncast. */
@@ -295,13 +296,15 @@ describe('installSmart404Handler — stale SHA', () => {
             getFileContent: jest.fn().mockImplementation((_o: string, _r: string, path: string) => {
                 if (path === 'head.html') {
                     return Promise.resolve({
-                        content: '<meta charset="UTF-8">\n<script nonce="aem" type="importmap">{}</script>\n',
+                        content:
+                            '<meta charset="UTF-8">\n<script nonce="aem" type="importmap">{}</script>\n',
                         sha: 'head-sha',
                     });
                 }
                 if (path === '404.html') {
                     return Promise.resolve({
-                        content: '<!DOCTYPE html><html><head><script nonce="aem">w.x=1;</script></head></html>',
+                        content:
+                            '<!DOCTYPE html><html><head><script nonce="aem">w.x=1;</script></head></html>',
                         sha: '404-sha',
                     });
                 }
@@ -322,16 +325,108 @@ describe('installSmart404Handler — stale SHA', () => {
             .mockResolvedValue({ sha: 'new', commitSha: 'c' });
 
         const result = await installSmart404Handler(
-            gh, repoOwner, repoName, overlayUrl, mockLogger,
-            daLiveOrg, daLiveSite,
+            gh,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(result).toEqual({ installed: true });
         const delayedWrites = gh.createOrUpdateFile.mock.calls.filter(
-            c => c[2] === 'scripts/delayed.js',
+            (c) => c[2] === 'scripts/delayed.js'
         );
         expect(delayedWrites).toHaveLength(2);
         expect(delayedWrites[1][5]).toBe('fresh-sha');
+        // The retry re-derives its content from the file it just re-read — the
+        // freshly read body with the snippet appended, not a rebuild of the
+        // stale one.
+        const retried = delayedWrites[1][3] as string;
+        expect(retried.startsWith('// Existing delayed.js\n')).toBe(true);
+        expect(retried).toContain('Smart 404 PDP rebuild');
+    });
+
+    it('gives up when the re-read comes back empty, reporting the original SHA failure', async () => {
+        // Nothing to rebuild from. The honest reason is the rejection that sent
+        // us here, not whatever the empty re-read would go on to throw.
+        const gh = makeGithub(['stale-sha']);
+        gh.getFileContent.mockImplementation((_o: string, _r: string, path: string) => {
+            if (path === 'scripts/delayed.js') {
+                return Promise.resolve(
+                    gh.getFileContent.mock.calls.length > 1
+                        ? null
+                        : {
+                              content: '// Existing delayed.js\n',
+                              sha: 'stale-sha',
+                          }
+                );
+            }
+            return Promise.resolve({
+                content: '<script nonce="aem" type="importmap">{}</script>',
+                sha: 'other-sha',
+            });
+        });
+        gh.createOrUpdateFile.mockRejectedValue(new Error(SHA_MISMATCH));
+
+        const result = await installSmart404Handler(
+            gh,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger,
+            daLiveOrg,
+            daLiveSite
+        );
+
+        expect(result.installed).toBe(false);
+        expect(result.reason).toBe(`GitHub commit failed: ${SHA_MISMATCH}`);
+        const delayedWrites = gh.createOrUpdateFile.mock.calls.filter(
+            (c) => c[2] === 'scripts/delayed.js'
+        );
+        expect(delayedWrites).toHaveLength(1);
+    });
+
+    it('stops when the re-read shows another run already vendored the snippet', async () => {
+        // The interleaving the retry exists for can be another install of THIS
+        // snippet. Writing again would duplicate the block.
+        const gh = makeGithub(['stale-sha']);
+        gh.getFileContent.mockImplementation((_o: string, _r: string, path: string) => {
+            if (path === 'scripts/delayed.js') {
+                return Promise.resolve(
+                    gh.getFileContent.mock.calls.length > 1
+                        ? {
+                              content: '// === Smart 404 PDP rebuild (Demo Builder) ===\n// body\n',
+                              sha: 'fresh-sha',
+                          }
+                        : { content: '// Existing delayed.js\n', sha: 'stale-sha' }
+                );
+            }
+            return Promise.resolve({
+                content: '<script nonce="aem" type="importmap">{}</script>',
+                sha: 'other-sha',
+            });
+        });
+        gh.createOrUpdateFile
+            .mockRejectedValueOnce(new Error(SHA_MISMATCH))
+            .mockResolvedValue({ sha: 'new', commitSha: 'c' });
+
+        const result = await installSmart404Handler(
+            gh,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger,
+            daLiveOrg,
+            daLiveSite
+        );
+
+        expect(result).toEqual({ installed: true });
+        const delayedWrites = gh.createOrUpdateFile.mock.calls.filter(
+            (c) => c[2] === 'scripts/delayed.js'
+        );
+        expect(delayedWrites).toHaveLength(1);
     });
 
     it('retries only once — a second stale rejection gives up', async () => {
@@ -339,13 +434,18 @@ describe('installSmart404Handler — stale SHA', () => {
         gh.createOrUpdateFile.mockRejectedValue(new Error(SHA_MISMATCH));
 
         const result = await installSmart404Handler(
-            gh, repoOwner, repoName, overlayUrl, mockLogger,
-            daLiveOrg, daLiveSite,
+            gh,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(result.installed).toBe(false);
         const delayedWrites = gh.createOrUpdateFile.mock.calls.filter(
-            c => c[2] === 'scripts/delayed.js',
+            (c) => c[2] === 'scripts/delayed.js'
         );
         expect(delayedWrites).toHaveLength(2);
     });
@@ -354,16 +454,23 @@ describe('installSmart404Handler — stale SHA', () => {
         // Permissions and missing-file failures are not transient. Retrying
         // them just doubles the latency of a certain failure.
         const gh = makeGithub(['sha-1']);
-        gh.createOrUpdateFile.mockRejectedValue(new Error('Resource not accessible by integration'));
+        gh.createOrUpdateFile.mockRejectedValue(
+            new Error('Resource not accessible by integration')
+        );
 
         const result = await installSmart404Handler(
-            gh, repoOwner, repoName, overlayUrl, mockLogger,
-            daLiveOrg, daLiveSite,
+            gh,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger,
+            daLiveOrg,
+            daLiveSite
         );
 
         expect(result.installed).toBe(false);
         const delayedWrites = gh.createOrUpdateFile.mock.calls.filter(
-            c => c[2] === 'scripts/delayed.js',
+            (c) => c[2] === 'scripts/delayed.js'
         );
         expect(delayedWrites).toHaveLength(1);
     });

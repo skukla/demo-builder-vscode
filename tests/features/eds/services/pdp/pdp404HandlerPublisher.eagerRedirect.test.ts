@@ -166,6 +166,142 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         // Original content preserved (title, body, etc.)
         expect(fourOhFourContent).toContain('Page not found');
         expect(fourOhFourContent).toContain('window.isErrorPage = true');
+        // SPLICED, not duplicated. Slicing the wrong half back on leaves a file
+        // that still contains the snippet and the original markers, and reads as
+        // correct to every assertion above.
+        expect(fourOhFourContent.match(/<!DOCTYPE html>/g)).toHaveLength(1);
+    });
+    it('404.html vendor skips a storefront that has no 404.html at all', async () => {
+        // A storefront without the boilerplate's static 404.html has nowhere to
+        // put the eager redirect. Skip it — reading through the missing file
+        // would take the whole install down, which the delayed.js handler
+        // (already committed by this point) does not deserve.
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
+            if (path === '404.html') return Promise.resolve(null);
+            if (path === 'head.html') {
+                return Promise.resolve({
+                    content: '<script nonce="aem" type="importmap">{}</script>',
+                    sha: 'head-sha',
+                });
+            }
+            return Promise.resolve({ content: '// delayed.js\n', sha: 'delayed-sha' });
+        });
+
+        const result = await installSmart404Handler(
+            mockGithub,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger,
+            daLiveOrg,
+            daLiveSite
+        );
+
+        expect(result).toEqual({ installed: true });
+        const fourOhFourCommits = mockGithub.createOrUpdateFile.mock.calls.filter(
+            (c) => c[2] === '404.html'
+        );
+        expect(fourOhFourCommits).toHaveLength(0);
+    });
+    it('404.html vendor skips when no nonced script tag exists (CSP would block it)', async () => {
+        // Same reasoning as head.html: without a nonce the inline script is
+        // likely blocked, so shipping it would be dead code in the storefront.
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
+            if (path === '404.html') {
+                return Promise.resolve({
+                    content: '<!DOCTYPE html><html><head><title>404</title></head></html>',
+                    sha: '404-sha',
+                });
+            }
+            if (path === 'head.html') {
+                return Promise.resolve({
+                    content: '<script nonce="aem" type="importmap">{}</script>',
+                    sha: 'head-sha',
+                });
+            }
+            return Promise.resolve({ content: '// delayed.js\n', sha: 'delayed-sha' });
+        });
+
+        const result = await installSmart404Handler(
+            mockGithub,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger,
+            daLiveOrg,
+            daLiveSite
+        );
+
+        expect(result).toEqual({ installed: true });
+        const fourOhFourCommits = mockGithub.createOrUpdateFile.mock.calls.filter(
+            (c) => c[2] === '404.html'
+        );
+        expect(fourOhFourCommits).toHaveLength(0);
+    });
+    it('appends the snippet when 404.html has no </head> to insert before', async () => {
+        // The fallback exists so a non-boilerplate 404.html still gets the
+        // redirect. Splicing at the not-found index (-1) instead would cut the
+        // last character off the document and wrap the snippet around it.
+        const noHead = '<script nonce="aem">window.isErrorPage = true;</script><h1>404</h1>';
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
+            if (path === '404.html') return Promise.resolve({ content: noHead, sha: '404-sha' });
+            if (path === 'head.html') {
+                return Promise.resolve({
+                    content: '<script nonce="aem" type="importmap">{}</script>',
+                    sha: 'head-sha',
+                });
+            }
+            return Promise.resolve({ content: '// delayed.js\n', sha: 'delayed-sha' });
+        });
+
+        await installSmart404Handler(
+            mockGithub,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger,
+            daLiveOrg,
+            daLiveSite
+        );
+
+        const written = mockGithub.createOrUpdateFile.mock.calls.find(
+            (c) => c[2] === '404.html'
+        )![3] as string;
+        expect(written.startsWith(noHead)).toBe(true);
+        expect(written).toContain('Smart 404 PDP eager redirect');
+    });
+    it('inserts before </head> even when it is the very start of the file', async () => {
+        // The insertion point is wherever </head> is, index 0 included — the
+        // boundary between "found it" and "there is none" is -1, not 0.
+        const headFirst = '</head><body><script nonce="aem">x</script></body>';
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
+            if (path === '404.html') return Promise.resolve({ content: headFirst, sha: '404-sha' });
+            if (path === 'head.html') {
+                return Promise.resolve({
+                    content: '<script nonce="aem" type="importmap">{}</script>',
+                    sha: 'head-sha',
+                });
+            }
+            return Promise.resolve({ content: '// delayed.js\n', sha: 'delayed-sha' });
+        });
+
+        await installSmart404Handler(
+            mockGithub,
+            repoOwner,
+            repoName,
+            overlayUrl,
+            mockLogger,
+            daLiveOrg,
+            daLiveSite
+        );
+
+        const written = mockGithub.createOrUpdateFile.mock.calls.find(
+            (c) => c[2] === '404.html'
+        )![3] as string;
+        expect(written.endsWith(headFirst)).toBe(true);
+        expect(written.indexOf('Smart 404 PDP eager redirect')).toBeLessThan(
+            written.indexOf('</head>')
+        );
     });
     it('404.html vendor is idempotent: skips if marker already present', async () => {
         mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
@@ -264,8 +400,12 @@ describe('installSmart404Handler — eager redirect vendoring', () => {
         mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
             if (path === 'head.html') {
                 return Promise.resolve({
+                    // NONCED on purpose. With a nonce-free head.html the "no
+                    // nonced script" guard skips the commit on its own, so the
+                    // marker check would be doing nothing and the test would
+                    // still pass — which is exactly how it read until 2026-09-06.
                     content:
-                        '<meta charset="UTF-8">\n<!-- === Smart 404 PDP eager redirect (Demo Builder) === -->\n<script>existing</script>\n',
+                        '<meta charset="UTF-8">\n<!-- === Smart 404 PDP eager redirect (Demo Builder) === -->\n<script nonce="aem">existing</script>\n',
                     sha: 'head-sha',
                 });
             }
