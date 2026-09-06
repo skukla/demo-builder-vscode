@@ -8,9 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/commands/claudeCodeFootprint.ts",
-        "src/features/dashboard/handlers/aiHandlers.ts",
-        "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts"
+        "src/core/ui/components/ui/Drawer.tsx",
+        "src/core/ui/hooks/usePollingWithTimeout.ts"
     ],
     "reporters": [
         "clear-text",

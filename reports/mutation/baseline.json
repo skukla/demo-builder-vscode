@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-22 MUT-01: footprint symlink/unreadable-dir/format-boundary tests; orgContextCheck self-heal + detector-call decisions; aiHandlers progress payloads and inventory merge",
+    "_note": "PL-22 MUT-01: Drawer key/cleanup/edge-vs-middle Tab decisions; usePollingWithTimeout enabled default and timer-clear contract",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -1845,21 +1845,20 @@
             "openGaps": 1
         },
         "src/core/ui/components/ui/Drawer.tsx": {
-            "score": 71.62,
-            "killed": 53,
-            "survived": 21,
+            "score": 86.49,
+            "killed": 64,
+            "survived": 10,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 10,
-                "string": 5,
-                "other": 3,
-                "optionalChain": 3
+                "optionalChain": 3,
+                "branch": 3,
+                "string": 4
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 10,
-            "equivalent": 0,
-            "openGaps": 16
+            "highValueSurvivors": 3,
+            "equivalent": 6,
+            "openGaps": 0
         },
         "src/core/ui/components/ui/Modal.tsx": {
             "score": 96.88,
@@ -5415,22 +5414,19 @@
             "openGaps": 0
         },
         "src/core/ui/hooks/usePollingWithTimeout.ts": {
-            "score": 71.43,
-            "killed": 40,
-            "survived": 15,
-            "noCoverage": 1,
+            "score": 82.14,
+            "killed": 46,
+            "survived": 10,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 12,
-                "block": 2,
+                "branch": 9,
                 "other": 1
             },
-            "uncoveredCategories": {
-                "branch": 1
-            },
-            "highValueSurvivors": 14,
-            "equivalent": 0,
-            "openGaps": 16
+            "uncoveredCategories": {},
+            "highValueSurvivors": 9,
+            "equivalent": 10,
+            "openGaps": 0
         },
         "src/core/ui/hooks/useVerificationMessage.ts": {
             "score": 100,

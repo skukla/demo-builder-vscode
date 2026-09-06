@@ -15394,6 +15394,95 @@
             "decision": "none \u2014 the guard states the empty case instead of leaving the reader to work out that two undefined comparisons are safe",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/ui/hooks/usePollingWithTimeout.ts",
+            "anchors": [
+                "const isMountedRef = useRef(true);",
+                "const isPollingRef = useRef(false);"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Neither initial value is ever read. The effect's first statement assigns isMountedRef.current = true before anything else runs, and it runs on mount whatever enabled is; isPollingRef is assigned true when polling starts and false by cleanup() on the disabled path, both before executeFetch \u2014 its only reader \u2014 can be scheduled. So a flipped seed is overwritten in the same tick it is created. Planted together 2026-09-06 with useRef(false) and useRef(true): all 16 tests pass, including the disabled path where the effect returns early.",
+            "decision": "none \u2014 the seeds state the intent and the effect owns the values from its first line onwards",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/ui/hooks/usePollingWithTimeout.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant replaces useCallback's empty dependency array with an array holding one constant string. A dependency list of literals that never change is indistinguishable from an empty one: React compares the entries on each render, they compare equal every time, and cleanup keeps the same identity \u2014 which is the only property anything here depends on, since cleanup sits in the polling effect's own dependency array. Planted 2026-09-06: all 16 tests pass, including the two that assert the effect does not re-run.",
+            "decision": "none \u2014 the empty array is correct and a constant-valued array is behaviourally the same list",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/ui/hooks/usePollingWithTimeout.ts",
+            "anchors": [
+                "if (intervalRef.current) {",
+                "if (timeoutRef.current) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "These are the always-take mutants, not the never-take ones \u2014 the tests that assert both timers are actually cleared kill those. Forcing each branch to run when its ref is null does nothing: clearInterval(null) and clearTimeout(null) are no-ops per the DOM and Node timer APIs, and the assignment that follows writes null over null. The only path that reaches cleanup() with a null ref is the disabled branch at mount, which the idle test exercises. Planted together as if (true) on 2026-09-06: all 16 tests pass.",
+            "decision": "none \u2014 the guards say which timer is live and cost nothing; their false direction is what the timer-count tests pin",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/ui/hooks/usePollingWithTimeout.ts",
+            "anchors": [
+                "if (!isMountedRef.current || !isPollingRef.current) return;"
+            ],
+            "line": 103,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The entry guard is never reached in its true state. executeFetch has exactly two callers: the direct call two lines after isPollingRef is set true, and the interval \u2014 which is cleared by cleanup() at the same moment the flag is cleared, so a fake-timer advance cannot fire a callback that has already been removed. Both mutants therefore run against mounted, polling state: skipping the return changes nothing, and flipping || to && evaluates false for the same reason. Planted individually on 2026-09-06 (a combined plant of all three mount guards does fail one test, which is a combination no mutation run produces): 16 tests pass for each.",
+            "decision": "none \u2014 the guard is the in-flight defence its sibling at the next await needs, stated once at entry too",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/ui/hooks/usePollingWithTimeout.ts",
+            "anchors": [
+                "if (!isMountedRef.current) return;"
+            ],
+            "line": 120,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This is the only guard a late rejection can reach, and reaching it changes nothing observable. Removing it lets setError and setLoading run on an unmounted hook, and a state update on an unmounted component neither re-renders nor warns in React 18, so renderHook's result stays frozen at its last value either way; the cleanup() that follows finds both timers already cleared. The suite drives exactly that case \u2014 a fetch held open, the hook unmounted, then rejected. Planted 2026-09-06 with that test present: all 16 tests pass.",
+            "decision": "none \u2014 the guard is correct discipline against setState-after-unmount, which is by design invisible",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/ui/hooks/usePollingWithTimeout.ts",
+            "anchors": [
+                "if (!isMountedRef.current) return;"
+            ],
+            "line": 143,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The timeout callback cannot run unmounted. The effect's cleanup calls cleanup(), which clears the very timeout this guard sits inside, so after an unmount the callback is gone rather than pending \u2014 and the timer-count assertions in the suite prove the clear happens. The guard is defence against an ordering the timer API does not produce, so removing it is unobservable. Planted 2026-09-06: all 16 tests pass.",
+            "decision": "none \u2014 a cleared timeout is why the guard never fires; keeping it costs nothing and states the intent",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/ui/hooks/usePollingWithTimeout.ts",
+            "anchors": [
+                "isMountedRef.current = false;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Setting the flag true on teardown instead of false is masked twice over. On an enabled-to-disabled change the next effect run assigns true one line later, so the two are identical; on unmount the flag's only remaining readers are the three guards above, and every one of those is itself unobservable here \u2014 the interval and timeout are cleared by the same cleanup, and a late rejection reaching setError on an unmounted hook does not re-render. Planted 2026-09-06 against the unmount and enabled-toggle tests: all 16 tests pass.",
+            "decision": "none \u2014 the flag is the honest record of mount state even where nothing can currently observe it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

@@ -132,6 +132,76 @@ describe('usePollingWithTimeout', () => {
         });
     });
 
+    describe('Enabled default and timer cleanup', () => {
+        it('polls when enabled is omitted (the default is on)', async () => {
+            const fetcher = jest.fn().mockResolvedValue({ ready: true });
+            const condition = jest.fn().mockReturnValue(true);
+
+            const { result } = renderHook(() => usePollingWithTimeout({
+                fetcher,
+                condition,
+                interval: 100,
+                timeout: 1000,
+            }));
+
+            await act(async () => {
+                await Promise.resolve();
+            });
+
+            expect(fetcher).toHaveBeenCalledTimes(1);
+            expect(result.current.loading).toBe(false);
+        });
+
+        it('starts idle when disabled: no timers, no timeout, no error', async () => {
+            const fetcher = jest.fn().mockResolvedValue({ ready: true });
+            const condition = jest.fn().mockReturnValue(true);
+
+            const { result } = renderHook(() => usePollingWithTimeout({
+                fetcher,
+                condition,
+                interval: 100,
+                timeout: 1000,
+                enabled: false,
+            }));
+
+            await act(async () => {
+                await Promise.resolve();
+            });
+
+            // Nothing ran, so nothing can have reported a timeout or an error.
+            expect(result.current.timedOut).toBe(false);
+            expect(result.current.error).toBeUndefined();
+            expect(result.current.data).toBeNull();
+            expect(result.current.loading).toBe(false);
+            expect(jest.getTimerCount()).toBe(0);
+        });
+
+        it('clears BOTH timers once the condition is met', async () => {
+            const fetcher = jest.fn().mockResolvedValue({ ready: true });
+            const condition = jest.fn().mockReturnValue(true);
+
+            renderHook(() => usePollingWithTimeout({
+                fetcher,
+                condition,
+                interval: 100,
+                timeout: 1000,
+                enabled: true,
+            }));
+
+            // While the first fetch is in flight both the interval and the
+            // timeout are armed.
+            expect(jest.getTimerCount()).toBe(2);
+
+            await act(async () => {
+                await Promise.resolve();
+            });
+
+            // Stopping means clearing them, not just refusing to act on them:
+            // an interval left running is a leak the fetch count cannot see.
+            expect(jest.getTimerCount()).toBe(0);
+        });
+    });
+
     describe('Timeout Handling', () => {
         it('should stop on timeout and return timeout error', async () => {
             const fetcher = jest.fn().mockResolvedValue({ ready: false });
@@ -161,6 +231,8 @@ describe('usePollingWithTimeout', () => {
             expect(result.current.timedOut).toBe(true);
             expect(result.current.error).toBe('Timeout');
             expect(result.current.loading).toBe(false);
+            // The interval is cleared by the timeout, not merely ignored.
+            expect(jest.getTimerCount()).toBe(0);
         });
 
         it('should not trigger timeout if condition met before timeout', async () => {
@@ -215,6 +287,7 @@ describe('usePollingWithTimeout', () => {
 
             expect(result.current.error).toBe('Network error');
             expect(result.current.loading).toBe(false);
+            expect(jest.getTimerCount()).toBe(0);
         });
 
         it('should handle non-Error throws', async () => {
@@ -268,6 +341,39 @@ describe('usePollingWithTimeout', () => {
 
             // Only the initial call should have happened
             expect(fetcher).toHaveBeenCalledTimes(1);
+        });
+
+        it('survives a fetch that rejects after unmount', async () => {
+            let rejectFetch: (error: Error) => void = () => undefined;
+            const fetcher = jest.fn(
+                () => new Promise<{ ready: boolean }>((_resolve, reject) => {
+                    rejectFetch = reject;
+                }),
+            );
+            const condition = jest.fn().mockReturnValue(false);
+
+            const { result, unmount } = renderHook(() => usePollingWithTimeout({
+                fetcher,
+                condition,
+                interval: 100,
+                timeout: 1000,
+                enabled: true,
+            }));
+
+            await act(async () => {
+                await Promise.resolve();
+            });
+
+            unmount();
+
+            // The in-flight promise settles with nobody left to tell.
+            await act(async () => {
+                rejectFetch(new Error('too late'));
+                await Promise.resolve();
+            });
+
+            expect(result.current.error).toBeUndefined();
+            expect(jest.getTimerCount()).toBe(0);
         });
 
         it('should stop polling when enabled changes to false', async () => {
