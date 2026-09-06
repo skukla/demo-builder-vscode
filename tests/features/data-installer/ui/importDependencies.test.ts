@@ -29,11 +29,26 @@ import {
  * cannot name a type the service no longer has.
  */
 const LIVE_IMPORT_TYPES = [
-    'attribute_sets', 'product_attributes', 'attribute_assign_to_set', 'categories',
-    'customer_groups', 'stocks', 'sources', 'stock_source_links', 'products',
-    'product_export', 'giftcards', 'source_items', 'customers_export', 'customers',
-    'cart_rules', 'coupons', 'b2b_shared_catalogs', 'b2b_companies',
-    'b2b_shared_catalog_company_assignments', 'b2b_shared_catalog_categories',
+    'attribute_sets',
+    'product_attributes',
+    'attribute_assign_to_set',
+    'categories',
+    'customer_groups',
+    'stocks',
+    'sources',
+    'stock_source_links',
+    'products',
+    'product_export',
+    'giftcards',
+    'source_items',
+    'customers_export',
+    'customers',
+    'cart_rules',
+    'coupons',
+    'b2b_shared_catalogs',
+    'b2b_companies',
+    'b2b_shared_catalog_company_assignments',
+    'b2b_shared_catalog_categories',
     'b2b_shared_catalog_products',
 ];
 
@@ -43,7 +58,7 @@ const ALL = LIVE_IMPORT_TYPES;
 describe('withDependencies', () => {
     it('adds the three types products needs', () => {
         expect(withDependencies(['products'], ALL).sort()).toEqual(
-            ['attribute_sets', 'categories', 'customer_groups', 'products'].sort(),
+            ['attribute_sets', 'categories', 'customer_groups', 'products'].sort()
         );
     });
 
@@ -80,6 +95,18 @@ describe('withDependencies', () => {
         expect(withDependencies(['categories'], ALL)).toEqual(['categories']);
     });
 
+    it('adds cart_rules for coupons — the rule_id → rule_name substitution', () => {
+        // STRONG evidence: the coupons processor "converts rule_id to rule_name for
+        // import compatibility", so the rules have to be there first.
+        expect(withDependencies(['coupons'], ALL).sort()).toEqual(['cart_rules', 'coupons']);
+    });
+
+    it('adds both types an attribute assignment needs', () => {
+        expect(withDependencies(['attribute_assign_to_set'], ALL).sort()).toEqual(
+            ['attribute_assign_to_set', 'attribute_sets', 'product_attributes'].sort()
+        );
+    });
+
     it('does not mutate the caller’s array', () => {
         const selected = ['products'];
         withDependencies(selected, ALL);
@@ -104,6 +131,12 @@ describe('blockedBy', () => {
     it('never reports the type as blocking itself', () => {
         expect(blockedBy('products', ['products'])).toEqual([]);
     });
+
+    it('does not let a self-referencing map make a type block its own removal', () => {
+        // The map is hand-written, so a typo CAN name a type as its own dependency.
+        // Reading that literally would disable the checkbox permanently.
+        expect(blockedBy('a', ['a'], { a: ['a'] })).toEqual([]);
+    });
 });
 
 describe('missingDependencies', () => {
@@ -117,6 +150,12 @@ describe('missingDependencies', () => {
 
     it('is empty when every dependency is present', () => {
         expect(missingDependencies(['products'], ALL)).toEqual([]);
+    });
+
+    it('reports nothing for a type the map does not name at all', () => {
+        // Most of the 21 types have no entry. Absence has to read as "needs
+        // nothing", not as a dependency the pack can never satisfy.
+        expect(missingDependencies(['categories'], ALL)).toStrictEqual([]);
     });
 
     it('only considers SELECTED types', () => {
@@ -199,6 +238,17 @@ describe('deselectType', () => {
         expect(out.selected).toContain('customer_groups');
         expect(out.selected).toContain('customers');
         expect(out.selected).not.toContain('products');
+    });
+
+    it('keeps the provenance of a dependency that survives the removal', () => {
+        // customer_groups stays because customers needs it, and it is still the
+        // SYSTEM's — unticking customers next has to be able to take it away too.
+        const one = selectType({ selected: [], auto: [] }, 'products', ALL);
+        const two = selectType(one, 'customers', ALL);
+
+        const out = deselectType(two, 'products');
+
+        expect(out.auto).toEqual(['customer_groups']);
     });
 
     it('refuses while something selected still needs the type', () => {
