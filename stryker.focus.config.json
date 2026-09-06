@@ -8,7 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/vscode/workspaceWatcherManager.ts"
+        "src/features/ai/server/validateSelectionTool.ts",
+        "src/core/shell/ensureNodeVersion.ts",
+        "src/features/components/services/componentManager.ts"
     ],
     "reporters": [
         "clear-text",
