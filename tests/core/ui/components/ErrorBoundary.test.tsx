@@ -243,9 +243,12 @@ describe('ErrorBoundary', () => {
                 </ErrorBoundary>
             );
 
-            // The error boundary shows componentStack in a monospace text element
-            // We verify the error UI is rendered (which includes the stack)
+            // The stack is the whole reason componentDidCatch stores errorInfo:
+            // it names the component that threw, which is what the Debug Logs
+            // reader is looking for. Asserting only the heading passed just as
+            // well with the stack block never rendered at all.
             expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+            expect(screen.getByText(/at ErrorBoundary/)).toBeInTheDocument();
         });
 
         it('handles error with no message gracefully', () => {
@@ -259,8 +262,10 @@ describe('ErrorBoundary', () => {
                 </ErrorBoundary>
             );
 
-            // Should show default message or empty message without crashing
+            // A message-less error leaves the body empty, so the boundary says
+            // something rather than showing a heading over a blank line.
             expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+            expect(screen.getByText('An unexpected error occurred')).toBeInTheDocument();
         });
     });
 });
