@@ -9,28 +9,42 @@
 
 import componentsConfig from '@/features/components/config/components.json';
 import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
+import { COMPONENT_SECTIONS } from '@/features/ai/server/discoveryTools';
+import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { expectWithinCeiling } from './responseCeilings';
 
 function serve() {
     const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
+    let definition: McpToolSchema | undefined;
     registerComponentRequirementsTool({
-        registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h),
+        registerTool: (n: string, d: McpToolSchema, h: never) => {
+            definition = d;
+            return tools.set(n, h);
+        },
     });
-    const invoke = (componentId?: string) =>
-        tools.get('get_component_requirements')!({ componentId });
+    const handler = tools.get('get_component_requirements')!;
+    const invoke = (componentId?: string) => handler({ componentId });
     return {
+        definition: definition as McpToolSchema,
         raw: async (id?: string) => (await invoke(id)).content[0].text,
         call: async (id?: string) => JSON.parse((await invoke(id)).content[0].text),
+        /** Invoked with NO arguments object at all, the way a bare SDK call arrives. */
+        callWithNoArgs: async () => JSON.parse((await handler(undefined)).content[0].text),
     };
 }
 
 const CONFIG = componentsConfig as unknown as Record<string, Record<string, unknown>>;
 
+/** Every id the tool can answer for, in the order it reports them on a miss. */
+const ALL_IDS = COMPONENT_SECTIONS.flatMap((s) => Object.keys(CONFIG[s] ?? {}))
+    .slice()
+    .sort();
+
 describe('get_component_requirements', () => {
     it('resolves env-var keys to what they MEAN, not just their names', async () => {
         const out = await serve().call('adobe-commerce-accs');
         const endpoint = (out.requiredEnvVars as Array<Record<string, string>>).find(
-            (v) => v.key === 'ACCS_GRAPHQL_ENDPOINT',
+            (v) => v.key === 'ACCS_GRAPHQL_ENDPOINT'
         );
 
         // A key alone is not actionable — the agent needs to know what goes in it.
@@ -68,12 +82,30 @@ describe('get_component_requirements', () => {
         const out = await serve().call('no-such-component');
 
         expect(out.error).toMatch(/no-such-component/);
-        expect(out.known).toContain('eds-storefront');
-        expect(out.known).toContain('adobe-commerce-aco');
+        // The full catalog, alphabetically — the list IS the fix for the error,
+        // so an agent reading it must not have to guess at the order or wonder
+        // whether an entry it does not recognise is real.
+        expect(out.known).toStrictEqual(ALL_IDS);
     });
 
     it('treats a missing componentId as a miss, not a crash', async () => {
         expect((await serve().call(undefined)).error).toMatch(/No component/);
+    });
+
+    it('treats a call with no arguments object at all as a miss, not a crash', async () => {
+        // The SDK hands the handler whatever the client sent. A client that sends
+        // no arguments must get the catalog back, not a TypeError.
+        expect((await serve().callWithNoArgs()).error).toMatch(/No component/);
+    });
+
+    it('declares itself read-only, unauthenticated, and asking for one component id', async () => {
+        // These are the DECLARATIONS, not the answer: they decide whether the
+        // server will run the tool without consent and what a client may send.
+        const { definition } = serve();
+
+        expect(definition.needsAuth).toBe(false);
+        expect(definition.annotations).toEqual({ readOnlyHint: true, destructiveHint: false });
+        expect(Object.keys(definition.inputSchema ?? {})).toStrictEqual(['componentId']);
     });
 
     it('carries none of the rest of the catalog', async () => {
@@ -88,8 +120,8 @@ describe('get_component_requirements', () => {
     it('stays within its recorded ceiling on the largest component', async () => {
         const sizes = await Promise.all(
             ['frontends', 'backends', 'mesh', 'integrations', 'addons'].flatMap((s) =>
-                Object.keys(CONFIG[s] ?? {}).map(async (id) => await serve().raw(id)),
-            ),
+                Object.keys(CONFIG[s] ?? {}).map(async (id) => await serve().raw(id))
+            )
         );
         const largest = sizes.sort((a, b) => b.length - a.length)[0];
         expectWithinCeiling('get_component_requirements', largest);
