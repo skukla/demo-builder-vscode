@@ -16883,6 +16883,19 @@
             "decision": "none \u2014 the guard states the string|undefined parameter's falsy case instead of leaning on a property lookup that happens to miss, and the optional chain behind it already returns undefined",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useInlineRename.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 36,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker fills the useCallback dependency array with a constant string. React compares dependency arrays element-by-element with Object.is, and a constant is equal to itself on every render, so the memoised commit function keeps the same identity exactly as it does with []. Planted the mutation and re-ran the suite (2026-09-06): all six tests pass, and no assertion could separate the two \u2014 an identity-stability test across rerenders passes under both.",
+            "decision": "none \u2014 the empty dependency array is correct; the callback closes over nothing",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
         }
     ]
 }

@@ -8,11 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/components/services/backendCommerce.ts",
-        "src/features/components/services/componentConfigWrites.ts",
-        "src/features/components/ui/components/BrokeredCredentialFields.tsx",
-        "src/features/dashboard/services/onOpenChecks/meshVerifyCheck.ts",
-        "src/features/dashboard/ui/components/AppBuilderComponentRemoveDialog.tsx"
+        "src/features/dashboard/ui/hooks/dashboardCheckRouting.ts",
+        "src/features/dashboard/ui/hooks/useInlineRename.ts"
     ],
     "reporters": [
         "clear-text",

@@ -47,10 +47,7 @@ module.exports = {
     moduleNameMapper: { ...node.moduleNameMapper, ...react.moduleNameMapper },
     transformIgnorePatterns: node.transformIgnorePatterns,
     testMatch: [
-        '**/tests/features/components/services/backendCommerce.test.ts',
-        '**/tests/features/components/services/componentConfigWrites.test.ts',
-        '**/tests/features/dashboard/services/onOpenChecks/meshVerifyCheck.test.ts',
-        '**/tests/features/components/ui/components/BrokeredCredentialFields.test.tsx',
-        '**/tests/features/dashboard/ui/components/AppBuilderComponentRemoveDialog.test.tsx',
+        '**/tests/features/dashboard/ui/hooks/dashboardCheckRouting.test.ts',
+        '**/tests/features/dashboard/ui/hooks/useInlineRename.test.ts',
     ],
 };
