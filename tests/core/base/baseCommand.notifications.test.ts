@@ -15,10 +15,9 @@ import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
 import { sleep } from '@/core/utils/sleep';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { Logger } from '@/types/logger';
-import type { StateManager } from '@/types/state';
 import { createMockLogger } from '../../helpers/loggerFake';
 import { createMockExtensionContext } from '../../helpers/extensionContextFake';
+import { createMockStateManager } from '../../helpers/stateManagerFake';
 
 jest.mock('@/core/utils/sleep');
 
@@ -70,13 +69,16 @@ class TestCommand extends BaseCommand {
 
 describe('BaseCommand notification helpers', () => {
     let command: TestCommand;
-    let logger: Logger;
+    let logger: ReturnType<typeof createMockLogger>;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        logger = createMockLogger() as unknown as Logger;
-        const stateManager = { getCurrentProject: jest.fn() } as unknown as StateManager;
-        command = new TestCommand(createMockExtensionContext(), stateManager, logger);
+        logger = createMockLogger();
+        command = new TestCommand(
+            createMockExtensionContext(),
+            createMockStateManager(),
+            logger,
+        );
     });
 
     describe('withProgress', () => {

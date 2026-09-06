@@ -11,11 +11,10 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base/baseCommand';
-import type { Logger } from '@/types/logger';
-import type { Project } from '@/types/base';
-import type { StateManager } from '@/types/state';
 import { createMockLogger } from '../../helpers/loggerFake';
 import { createMockExtensionContext } from '../../helpers/extensionContextFake';
+import { createMockProject } from '../../helpers/projectFake';
+import { createMockStateManager } from '../../helpers/stateManagerFake';
 
 class TestCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -67,11 +66,10 @@ describe('BaseCommand prompt helpers', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         getCurrentProject = jest.fn().mockResolvedValue(undefined);
-        const stateManager = { getCurrentProject } as unknown as StateManager;
         command = new TestCommand(
             createMockExtensionContext(),
-            stateManager,
-            createMockLogger() as unknown as Logger
+            createMockStateManager({ getCurrentProject }),
+            createMockLogger(),
         );
         setWorkspaceFolders([]);
     });
@@ -153,9 +151,9 @@ describe('BaseCommand prompt helpers', () => {
 
     describe('getTerminalCwd', () => {
         it("returns the project's PARENT directory when a project is loaded", async () => {
-            getCurrentProject.mockResolvedValue({
-                path: path.join('/projects', 'alpha'),
-            } as Project);
+            getCurrentProject.mockResolvedValue(
+                createMockProject({ path: path.join('/projects', 'alpha') }),
+            );
 
             expect(await command.runGetTerminalCwd()).toBe('/projects');
             expect(vscode.window.createTerminal).not.toHaveBeenCalled();
@@ -168,7 +166,7 @@ describe('BaseCommand prompt helpers', () => {
         });
 
         it('falls back to the workspace folder when the project has no path', async () => {
-            getCurrentProject.mockResolvedValue({ path: '' } as Project);
+            getCurrentProject.mockResolvedValue(createMockProject({ path: '' }));
             setWorkspaceFolders([{ uri: { fsPath: '/workspace/root' }, name: 'root', index: 0 }]);
 
             expect(await command.runGetTerminalCwd()).toBe('/workspace/root');
