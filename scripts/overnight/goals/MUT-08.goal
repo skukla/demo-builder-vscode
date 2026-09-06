@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-08. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/core/ui/components/navigation/StepRail.tsx  (13 open gaps)
-  - src/features/eds/services/pdp/publishKeyRenewalSweep.ts  (13 open gaps)
-  - src/core/vscode/workspaceWatcherManager.ts  (12 open gaps)
-  - src/features/ai/server/applyUpdatesTool.ts  (12 open gaps)
-  - src/features/ai/server/toolDescriptors.ts  (12 open gaps)
+  - src/core/ui/components/forms/ConfigSection.tsx  (6 open gaps)
+  - src/core/ui/hooks/useAsyncOperation.ts  (6 open gaps)
+  - src/core/ui/hooks/useLoadingState.ts  (6 open gaps)
+  - src/core/ui/hooks/useTimerCleanup.ts  (6 open gaps)
+  - src/features/ai/server/mcpProxySession.ts  (6 open gaps)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;

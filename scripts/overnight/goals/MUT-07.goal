@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-07. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/features/eds/services/storefront/storefrontSyncService.ts  (14 open gaps)
-  - src/features/projects-dashboard/ui/components/ProjectActionsMenu.tsx  (14 open gaps)
-  - src/features/ai/server/lifecycleTools.ts  (13 open gaps)
-  - src/features/dashboard/ui/components/AiSkillsList.tsx  (13 open gaps)
-  - src/features/dashboard/ui/components/integrations/IntegrationDetailPanel.tsx  (13 open gaps)
+  - src/features/data-installer/ui/components/DatapackDetailPanel.tsx  (8 open gaps)
+  - src/core/constants.ts  (7 open gaps)
+  - src/features/ai/server/commerceEndpointsTool.ts  (7 open gaps)
+  - src/features/components/services/appBuilderComponentCatalogLoader.ts  (7 open gaps)
+  - src/core/utils/disposableStore.ts  (6 open gaps)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;

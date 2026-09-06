@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-03. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/features/mesh/services/deployMeshHeadless.ts  (16 open gaps)
-  - src/features/ai/server/siteTools.ts  (15 open gaps)
-  - src/commands/openInClaude.ts  (15 open gaps)
-  - src/commands/orphanedSettings.ts  (15 open gaps)
-  - src/commands/refreshBlockLibrary.ts  (15 open gaps)
+  - src/core/utils/quickPickUtils.ts  (10 open gaps)
+  - src/features/ai/server/consentViaChat.ts  (10 open gaps)
+  - src/features/app-builder/services/owPackageName.ts  (10 open gaps)
+  - src/features/dashboard/ui/configure/configureFieldValidation.ts  (10 open gaps)
+  - src/features/data-installer/services/accsCredentialProvisioner.ts  (10 open gaps)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;
