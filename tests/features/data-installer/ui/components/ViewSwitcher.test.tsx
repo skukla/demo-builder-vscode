@@ -52,6 +52,33 @@ describe('ViewSwitcher', () => {
         );
     });
 
+    it('renders as soon as there are TWO views to switch between', () => {
+        // The boundary the "nothing to switch" rule turns on: one view is chrome,
+        // two is a switcher. Off by one here hides the strip entirely on the
+        // panel's own two-view configuration.
+        renderSwitcher('catalog', [
+            { id: 'catalog', label: 'Catalog' },
+            { id: 'installed', label: 'Installed' },
+        ]);
+
+        expect(screen.getByRole('button', { name: 'Catalog' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Installed' })).toBeInTheDocument();
+    });
+
+    it('puts the active-tab class on the active button ONLY', () => {
+        // `is-active` draws the underline in data-installer.css, so it is the
+        // visible half of the same decision `aria-pressed` states.
+        renderSwitcher('installed');
+
+        expect(screen.getByRole('button', { name: 'Installed' })).toHaveClass(
+            'view-switcher-button',
+            'is-active'
+        );
+        expect(screen.getByRole('button', { name: 'Catalog' })).toHaveClass('view-switcher-button');
+        expect(screen.getByRole('button', { name: 'Catalog' })).not.toHaveClass('is-active');
+        expect(screen.getByRole('button', { name: 'Activity' })).not.toHaveClass('is-active');
+    });
+
     it('reports the picked view id', () => {
         const { onSelect } = renderSwitcher();
 

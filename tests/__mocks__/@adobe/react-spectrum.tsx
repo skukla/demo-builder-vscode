@@ -333,6 +333,7 @@ export const ActionButton: React.FC<any> = ({
     onPress,
     onClick,
     isDisabled,
+    UNSAFE_className,
     ...props
 }) => (
     <button
@@ -344,6 +345,10 @@ export const ActionButton: React.FC<any> = ({
             onPress?.(e);
         }}
         disabled={isDisabled}
+        // Surfaced as the View/Flex/Text mocks already do. Real Spectrum applies it,
+        // and swallowing it made a caller's active/inactive treatment — a decision,
+        // not decoration — invisible to every test that renders a button.
+        className={UNSAFE_className}
         {...filterSpectrumProps(props)}
     >
         {children}
