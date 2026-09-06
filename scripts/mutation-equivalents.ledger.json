@@ -11968,9 +11968,9 @@
             "anchors": [
                 "if (!trimmedLine || trimmedLine.startsWith('#')) {"
             ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Neither half of this skip is observable, because the whitelist at the end of the loop swallows what it would let through. A comment line parses to a key that still carries its leading '#', which is never one of MESH_ENV_VARS; an empty line has no '=' and is dropped by the equalsIndex guard instead. Making the condition never fire, or ANDing it, therefore produces the same record.",
+            "mutants": 3,
+            "category": "block+branch",
+            "reason": "Neither half of this skip is observable, because the whitelist at the end of the loop swallows what it would let through. A comment line parses to a key that still carries its leading '#', which is never one of MESH_ENV_VARS; an empty line has no '=' and is dropped by the equalsIndex guard instead. Making the condition never fire, or ANDing it, therefore produces the same record. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
             "decision": "none \u2014 skipping comments and blanks up front is what the .env format means, whatever the whitelist would do afterwards",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -11978,36 +11978,12 @@
         {
             "module": "src/features/mesh/services/stalenessDetector.ts",
             "anchors": [
-                "if (!trimmedLine || trimmedLine.startsWith('#')) {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this block removes the 'continue', so comment and blank lines fall through into the parser. Both are then discarded anyway: a comment parses to a key beginning with '#', which is not in MESH_ENV_VARS, and a blank line has no '=' and is dropped by the equalsIndex guard. The returned record is byte-identical, so nothing observable distinguishes the two.",
-            "decision": "none \u2014 the early continue is the cheap and readable way to say what a .env comment is",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/features/mesh/services/stalenessDetector.ts",
-            "anchors": [
                 "if (equalsIndex <= 0) {"
             ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "Both survivors let a malformed line through to the parser, and the whitelist then drops it. With '< 0' the only newly admitted line is one starting with '=', whose key parses to the empty string; with the condition never firing, a line carrying no '=' gives equalsIndex -1, and substring(0, -1) clamps to the empty string too. The empty string is not in MESH_ENV_VARS, so neither line reaches the result.",
+            "mutants": 3,
+            "category": "block+branch",
+            "reason": "Both survivors let a malformed line through to the parser, and the whitelist then drops it. With '< 0' the only newly admitted line is one starting with '=', whose key parses to the empty string; with the condition never firing, a line carrying no '=' gives equalsIndex -1, and substring(0, -1) clamps to the empty string too. The empty string is not in MESH_ENV_VARS, so neither line reaches the result. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
             "decision": "none \u2014 the guard keeps malformed lines out of the parser instead of relying on the whitelist to absorb them",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/features/mesh/services/stalenessDetector.ts",
-            "anchors": [
-                "if (equalsIndex <= 0) {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this block drops the 'continue', so a line with no '=' is parsed instead of skipped. equalsIndex is then -1, substring(0, -1) clamps to the empty string, and the empty key is not in MESH_ENV_VARS \u2014 the line contributes nothing either way. No returned record differs, so no assertion on the result can separate them.",
-            "decision": "none \u2014 skipping a line that is not key=value is the guard's whole job",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
         },
@@ -12040,9 +12016,9 @@
             "anchors": [
                 "if (envVarsChanged) {"
             ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "The whole body of this branch is a single logger.debug call, so flipping the condition either way changes only whether a debug line is printed. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the mutation-burn-down rules forbid. Nothing a caller receives moves: changedEnvVars and envVarsChanged are already computed.",
+            "mutants": 3,
+            "category": "block+branch",
+            "reason": "The whole body of this branch is a single logger.debug call, so flipping the condition either way changes only whether a debug line is printed. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the mutation-burn-down rules forbid. Nothing a caller receives moves: changedEnvVars and envVarsChanged are already computed. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
             "decision": "none \u2014 the log names the changed vars for debugging and carries no decision",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -12050,36 +12026,12 @@
         {
             "module": "src/features/mesh/services/stalenessDetector.ts",
             "anchors": [
-                "if (envVarsChanged) {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this block removes one logger.debug call and nothing else \u2014 the values it reports, changedEnvVars and its length, are computed before it and returned to the caller regardless. The only test that could see the difference would assert the logger's arguments, which pins wording rather than behaviour.",
-            "decision": "none \u2014 a debug line, not a decision",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/features/mesh/services/stalenessDetector.ts",
-            "anchors": [
                 "if (sourceFilesChanged) {"
             ],
-            "mutants": 2,
-            "category": "branch",
-            "reason": "The body of this branch is a single logger.debug call reporting the old and new source hashes, so flipping the condition changes only whether that line prints. sourceFilesChanged has already been decided above and is returned to the caller either way, so no observable result moves and the only possible assertion would be on the logger's arguments.",
+            "mutants": 3,
+            "category": "block+branch",
+            "reason": "The body of this branch is a single logger.debug call reporting the old and new source hashes, so flipping the condition changes only whether that line prints. sourceFilesChanged has already been decided above and is returned to the caller either way, so no observable result moves and the only possible assertion would be on the logger's arguments. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
             "decision": "none \u2014 the log reports the hashes for debugging and decides nothing",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/features/mesh/services/stalenessDetector.ts",
-            "anchors": [
-                "if (sourceFilesChanged) {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this block removes one logger.debug call. The verdict it narrates, sourceFilesChanged, is computed above and returned to the caller unchanged, so nothing a test can read moves. Separating the two versions would require asserting the logger's arguments, which pins wording rather than behaviour.",
-            "decision": "none \u2014 a debug line, not a decision",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
         },
@@ -12343,35 +12295,9 @@
                 "if (this.config.enableLogging) {"
             ],
             "line": 189,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, the message is pushed onto the queue on the line after this block either way.",
-            "decision": "none \u2014 the log narrates; the behaviour beside it is what the suite pins",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/core/communication/webviewCommunicationManager.ts",
-            "anchors": [
-                "if (this.config.enableLogging) {"
-            ],
-            "line": 189,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this block removes a logger call and nothing else. The work it narrates happens either side of it, so no message on the wire, no promise and no piece of manager state differs. The only assertion that could separate the two versions is one on the logger's arguments, which pins wording rather than behaviour. Here, the message is pushed onto the queue on the line after this block either way.",
-            "decision": "none \u2014 a log line, not a decision",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/core/communication/webviewCommunicationManager.ts",
-            "anchors": [
-                "if (this.config.enableLogging) {"
-            ],
-            "line": 364,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, it sits inside the timeout hint's catch, which is documented fire-and-forget, and the handler runs next regardless.",
+            "mutants": 3,
+            "category": "block+branch",
+            "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, the message is pushed onto the queue on the line after this block either way. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
             "decision": "none \u2014 the log narrates; the behaviour beside it is what the suite pins",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -12382,22 +12308,9 @@
                 "if (this.config.enableLogging) {"
             ],
             "line": 364,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this block removes a logger call and nothing else. The work it narrates happens either side of it, so no message on the wire, no promise and no piece of manager state differs. The only assertion that could separate the two versions is one on the logger's arguments, which pins wording rather than behaviour. Here, it sits inside the timeout hint's catch, which is documented fire-and-forget, and the handler runs next regardless.",
-            "decision": "none \u2014 a log line, not a decision",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/core/communication/webviewCommunicationManager.ts",
-            "anchors": [
-                "if (this.config.enableLogging) {"
-            ],
-            "line": 449,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, the sleep and the recursive send that perform the retry are outside the block.",
+            "mutants": 3,
+            "category": "block+branch",
+            "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, it sits inside the timeout hint's catch, which is documented fire-and-forget, and the handler runs next regardless. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
             "decision": "none \u2014 the log narrates; the behaviour beside it is what the suite pins",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -12408,22 +12321,9 @@
                 "if (this.config.enableLogging) {"
             ],
             "line": 449,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this block removes a logger call and nothing else. The work it narrates happens either side of it, so no message on the wire, no promise and no piece of manager state differs. The only assertion that could separate the two versions is one on the logger's arguments, which pins wording rather than behaviour. Here, the sleep and the recursive send that perform the retry are outside the block.",
-            "decision": "none \u2014 a log line, not a decision",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/core/communication/webviewCommunicationManager.ts",
-            "anchors": [
-                "if (this.config.enableLogging) {"
-            ],
-            "line": 475,
-            "mutants": 2,
-            "category": "branch",
-            "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, it sits in sendRawMessage's catch immediately before an unconditional rethrow, so the caller sees the identical error.",
+            "mutants": 3,
+            "category": "block+branch",
+            "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, the sleep and the recursive send that perform the retry are outside the block. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
             "decision": "none \u2014 the log narrates; the behaviour beside it is what the suite pins",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
@@ -12434,10 +12334,10 @@
                 "if (this.config.enableLogging) {"
             ],
             "line": 475,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this block removes a logger call and nothing else. The work it narrates happens either side of it, so no message on the wire, no promise and no piece of manager state differs. The only assertion that could separate the two versions is one on the logger's arguments, which pins wording rather than behaviour. Here, it sits in sendRawMessage's catch immediately before an unconditional rethrow, so the caller sees the identical error.",
-            "decision": "none \u2014 a log line, not a decision",
+            "mutants": 3,
+            "category": "block+branch",
+            "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, it sits in sendRawMessage's catch immediately before an unconditional rethrow, so the caller sees the identical error. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
+            "decision": "none \u2014 the log narrates; the behaviour beside it is what the suite pins",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
         },
@@ -12447,23 +12347,10 @@
                 "if (this.config.enableLogging && this.messageQueue.length > 0) {"
             ],
             "line": 486,
-            "mutants": 6,
-            "category": "branch",
-            "reason": "Every survivor on this line changes only whether one debug line prints \u2014 the block holds a single logger.debug and nothing else. The flush itself happens on the three lines below, outside the guard, so the queued messages are copied, the queue cleared and each message sent whichever way the condition goes. Separating the versions would need an assertion on the logger's arguments.",
+            "mutants": 7,
+            "category": "block+branch",
+            "reason": "Every survivor on this line changes only whether one debug line prints \u2014 the block holds a single logger.debug and nothing else. The flush itself happens on the three lines below, outside the guard, so the queued messages are copied, the queue cleared and each message sent whichever way the condition goes. Separating the versions would need an assertion on the logger's arguments. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
             "decision": "none \u2014 the flush is pinned by the handshake suite; the count it logs is diagnostic",
-            "recorded": "2026-09-06",
-            "source": "PL-22 MUT-03, 2026-09-05"
-        },
-        {
-            "module": "src/core/communication/webviewCommunicationManager.ts",
-            "anchors": [
-                "if (this.config.enableLogging && this.messageQueue.length > 0) {"
-            ],
-            "line": 486,
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying this block removes the queue-depth debug line and nothing else. The flush that follows it is outside the guard: the queue is copied, cleared and sent message by message either way, so nothing on the wire or in manager state differs and only a logger-argument assertion could tell them apart.",
-            "decision": "none \u2014 a debug line, not a decision",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
         },

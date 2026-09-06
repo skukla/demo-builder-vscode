@@ -77,6 +77,26 @@ function main() {
     }
 
     const ledger = JSON.parse(readFileSync(LEDGER, 'utf8'));
+
+    // One anchor, one row. A guard and the block it guards are the SAME mutant site
+    // with the same argument, and filing them as two rows reads to
+    // `mutation-equivalents-ledger.test.ts` as double-counting — which it refuses,
+    // because two rows subtracting from one site is indistinguishable from an honest
+    // single row. Nine such pairs were written in one session (PL-22 MUT-03) and the
+    // pre-push gate caught every one, which is the wrong place to find out: sum the
+    // mutants into the existing row instead.
+    const identity = (e) => `${e.module}::${e.line ?? '*'}::${e.anchors.join('|')}`;
+    const proposed = identity({ module: a.module, line, anchors: a.anchors });
+    const clash = ledger.entries.find((e) => identity(e) === proposed);
+    if (clash) {
+        console.error(
+            `REFUSED — this anchor already has a row (${clash.mutants} mutant(s), ` +
+                `category ${clash.category}). One anchor, one row: raise that row's ` +
+                'mutant count and widen its reason instead of adding a second.',
+        );
+        process.exit(2);
+    }
+
     const entry = {
         module: a.module,
         anchors: a.anchors,
