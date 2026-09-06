@@ -16352,6 +16352,19 @@
             "decision": "The 204 stays named because it is the documented success case the caller reasons about (204/404 ok), and the redundancy is with ok, not with 404 \u2014 a 404 IS not-ok and its arm is killed.",
             "recorded": "2026-09-06",
             "source": "Planted 2026-09-06: with the 204 arm replaced by false, a delete answering {ok:true,status:204} still resolves true and the whole suite passes."
+        },
+        {
+            "module": "src/features/ai/server/mcpSocketDiscovery.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 148,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying pathExists's catch makes it resolve undefined instead of false. Both call sites are `if (await pathExists(...))` \u2014 steps 4a and 4b of resolveProxyTarget \u2014 and undefined and false are both falsy there, so no caller can tell the two apart. The function is module-private, so no test can call it directly either. Planted and confirmed: the suite passes unchanged with the body removed.",
+            "decision": "none \u2014 the explicit `return false` is right for the declared Promise<boolean>, and nothing observable depends on it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

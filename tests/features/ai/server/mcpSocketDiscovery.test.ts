@@ -85,6 +85,37 @@ describe('mcpSocketDiscovery', () => {
             await expect(probeSocket(socketPath)).resolves.toBe(false);
         });
 
+        it('refuses a stale socket at once rather than waiting out the budget', async () => {
+            // A dead socket file refuses instantly (ECONNREFUSED) — that is what
+            // the error handler is for. If it stopped resolving, the probe would
+            // sit on the full budget instead, and the proxy's startup would wait
+            // 500ms per stale file it finds.
+            const socketPath = path.join(dir, 'stale.sock');
+            await fsPromises.writeFile(socketPath, '');
+            const started = Date.now();
+
+            await expect(probeSocket(socketPath, 30_000)).resolves.toBe(false);
+
+            expect(Date.now() - started).toBeLessThan(1_000);
+        });
+
+        it('gives up on a listener that never answers within the budget', async () => {
+            // Fake timers make this the timeout branch and only the timeout
+            // branch: the connect event is real I/O, so it cannot have fired
+            // during the synchronous advance below.
+            const socketPath = path.join(dir, 'wedged.sock');
+            cleanups.push(await listen(socketPath));
+            jest.useFakeTimers();
+            try {
+                const probe = probeSocket(socketPath, 500);
+                jest.advanceTimersByTime(500);
+
+                await expect(probe).resolves.toBe(false);
+            } finally {
+                jest.useRealTimers();
+            }
+        });
+
         it('resolves false for a nonexistent path', async () => {
             await expect(probeSocket(path.join(dir, 'nope.sock'))).resolves.toBe(false);
         });
@@ -130,6 +161,47 @@ describe('mcpSocketDiscovery', () => {
             const target = await resolveProxyTarget(pinned, '/anywhere', dir);
 
             expect(target).toEqual({ socketPath: pinned, via: 'env' });
+        });
+
+        it('uses a live env socket that lives outside the discovery directory', async () => {
+            // Liveness at step 1, not existence: the pin wins on its own
+            // evidence, without the directory sweep having to corroborate it.
+            const otherDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'dbmcp-env-'));
+            cleanups.push(() => fsPromises.rm(otherDir, { recursive: true, force: true }));
+            const pinned = path.join(otherDir, 'pinned.sock');
+            cleanups.push(await listen(pinned));
+
+            const target = await resolveProxyTarget(pinned, '/anywhere', dir);
+
+            expect(target).toEqual({ socketPath: pinned, via: 'env' });
+        });
+
+        it('uses the cwd-derived socket when it is live and no pin is set', async () => {
+            const cwd = path.join(dir, 'workspace');
+            const derived = resolveMcpSocketPath(cwd, dir);
+            cleanups.push(await listen(derived));
+
+            await expect(resolveProxyTarget(undefined, cwd, dir)).resolves.toEqual({
+                socketPath: derived,
+                via: 'cwd',
+            });
+        });
+
+        it('prefers a LIVE cwd socket over a pin whose file merely exists', async () => {
+            // The two deterministic paths are not interchangeable: liveness at
+            // step 2 outranks the step-4 existence fallback, which would hand
+            // back the dead pin — a different workspace, and a ~23s retry window
+            // spent on a window that is not coming back.
+            const cwd = path.join(dir, 'workspace');
+            const derived = resolveMcpSocketPath(cwd, dir);
+            cleanups.push(await listen(derived));
+            const deadPin = path.join(dir, 'dead-pin.sock');
+            await fsPromises.writeFile(deadPin, '');
+
+            await expect(resolveProxyTarget(deadPin, cwd, dir)).resolves.toEqual({
+                socketPath: derived,
+                via: 'cwd',
+            });
         });
 
         // Socket files outlive their window: nothing unlinks the shared name any
