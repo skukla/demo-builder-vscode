@@ -14317,6 +14317,32 @@
             "decision": "Keep the operator for the type, record the mutant.",
             "recorded": "2026-09-06",
             "source": "Planted 2026-09-06 as plain '.order' with the 17-test useServiceGroups family green."
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectRenameService.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 258,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else branch contains a single logger.warn and nothing else \u2014 no state change, no return, no call the caller can observe. Emptying it leaves the rename result, the project object and every collaborator call identical.",
+            "decision": "Killing it would mean asserting a logger call's wording, which an enforcer refuses.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06 with the 37-test projectRenameService family green."
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectRenameService.ts",
+            "anchors": [
+                "} catch (rollbackError) {"
+            ],
+            "line": 314,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch drops a logger.error and a 'return false'; falling off the end returns undefined instead, and the caller's guard is 'if (!undone)' \u2014 falsy either way. Same branch, same message, same result.",
+            "decision": "The only remaining difference is the log line, which cannot be asserted.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06 with the 37-test projectRenameService family green."
         }
     ]
 }

@@ -1,92 +1,72 @@
 /**
- * projectRenameService Tests
+ * projectRenameService Tests — validation, the move, and the AI-bundle refresh
  *
- * Tests for the shared rename core extracted from the kebab handler. Operates on
- * an already-loaded project + new name: validates, renames the folder on disk,
- * updates componentInstances paths + recent-projects, and saves the project.
+ * The shared rename core called by both the projects-list kebab handler and the
+ * dashboard More menu. Operates on an already-loaded project + new name:
+ * validates, renames the folder on disk, updates componentInstances paths +
+ * recent-projects, saves, and re-runs the AI-bundle writers for the new path.
  *
- * Both the projects-list kebab handler and the dashboard More handler call this.
+ * Rollback and the remote Adobe I/O title sync live in
+ * `projectRenameService-recovery.test.ts`. The harness both share — including
+ * the subject import that makes its hoisting work — is in
+ * `projectRenameService.testUtils.ts`.
  */
 
-import { HandlerContext } from '@/types/handlers';
-import { Project } from '@/types/base';
+import {
+    createMockContext,
+    mockAccess,
+    mockGenerateAIContextFiles,
+    mockRename,
+    mockValidateName,
+    projectToRename,
+    renameProjectCore,
+    resetRenameMocks,
+} from './projectRenameService.testUtils';
 
 jest.setTimeout(5000);
 
-// fs/promises - control rename + access
-const mockRename = jest.fn().mockResolvedValue(undefined);
-const mockAccess = jest.fn();
-jest.mock('fs/promises', () => ({
-    rename: (...args: unknown[]) => mockRename(...args),
-    access: (...args: unknown[]) => mockAccess(...args),
-}));
-
-// validation - validateProjectNameSecurity throws on invalid
-const mockValidateName = jest.fn();
-jest.mock('@/core/validation/validators/ProjectNameValidator', () => ({
-    validateProjectNameSecurity: (...args: unknown[]) => mockValidateName(...args),
-}));
-
-// project finalization - AI context regeneration (dynamic import inside the service).
-// Rename must re-run this so the MCP configs (which bake the absolute project path)
-// point at the new path instead of the old one.
-const mockGenerateAIContextFiles = jest.fn().mockResolvedValue({ skills: [] });
-jest.mock('@/features/project-creation/services/aiBundle/aiBundleService', () => ({
-    generateAIContextFiles: (...args: unknown[]) => mockGenerateAIContextFiles(...args),
-}));
-
-import { renameProjectCore } from '@/features/projects-dashboard/services/projectRenameService';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockStateManager } from '../../../helpers/stateManagerFake';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockProject } from '../../../helpers/projectFake';
-
-function projectToRename(overrides?: Partial<Project>): Project {
-    return createMockProject({
-        name: 'old-name',
-        path: '/projects/old-name',
-        status: 'ready',
-        componentInstances: {
-            'eds-storefront': {
-                id: 'eds-storefront',
-                name: 'EDS Storefront',
-                status: 'ready',
-                path: '/projects/old-name/storefront',
-            },
-        },
-        ...overrides,
-    });
-}
-
-function createMockContext(): HandlerContext {
-    return createMockHandlerContext({
-        stateManager: createMockStateManager({
-            saveProject: jest.fn().mockResolvedValue(undefined),
-            saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined),
-            removeFromRecentProjects: jest.fn().mockResolvedValue(undefined),
-        }),
-        logger: createMockLogger() as unknown as HandlerContext['logger'],
-        context: { extensionPath: '/ext' } as unknown as HandlerContext['context'],
-    });
-}
+beforeEach(() => {
+    resetRenameMocks();
+});
 
 describe('renameProjectCore', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        // Default: new folder does NOT exist (access rejects)
-        mockAccess.mockRejectedValue(new Error('ENOENT'));
-        mockValidateName.mockImplementation(() => undefined);
-        mockGenerateAIContextFiles.mockReset().mockResolvedValue({ skills: [] });
-    });
-
+    // The message matters: whitespace also normalises to an empty slug, so both
+    // guards refuse the same input and only the wording says which one fired.
     it('should reject an empty name', async () => {
         const project = projectToRename();
         const context = createMockContext();
 
         const result = await renameProjectCore(context, project, '   ');
 
-        expect(result.success).toBe(false);
+        expect(result).toStrictEqual({
+            success: false,
+            error: 'Project name cannot be empty',
+        });
         expect(mockRename).not.toHaveBeenCalled();
+    });
+
+    // What arrives is a title as typed, and the folder is a slug derived from it.
+    // Padding kept on the title would render on every surface.
+    it('trims the requested title before using it', async () => {
+        const project = projectToRename();
+        const context = createMockContext();
+
+        await renameProjectCore(context, project, '  Bodea B2B Demo  ');
+
+        expect(project.title).toBe('Bodea B2B Demo');
+        expect(project.name).toBe('bodea-b2b-demo');
+    });
+
+    it('reports a generic message when validation throws something that is not an Error', async () => {
+        const project = projectToRename();
+        const context = createMockContext();
+        mockValidateName.mockImplementation(() => {
+            throw 'not an Error';
+        });
+
+        const result = await renameProjectCore(context, project, 'new-name');
+
+        expect(result).toStrictEqual({ success: false, error: 'Invalid project name' });
     });
 
     it('should block rename while the demo is running', async () => {
@@ -204,6 +184,70 @@ describe('renameProjectCore', () => {
         expect(mockGenerateAIContextFiles).not.toHaveBeenCalled();
     });
 
+    // Renaming a project to the name it already has must not touch the disk at
+    // all — moving a folder onto itself and dropping it from recent projects are
+    // both real actions with nothing to undo them.
+    it('touches neither the folder nor the recent list for a no-op rename', async () => {
+        const project = projectToRename();
+        const context = createMockContext();
+
+        const result = await renameProjectCore(context, project, 'old-name');
+
+        expect(result.success).toBe(true);
+        expect(mockAccess).not.toHaveBeenCalled();
+        expect(mockRename).not.toHaveBeenCalled();
+        expect(context.stateManager.removeFromRecentProjects as jest.Mock).not.toHaveBeenCalled();
+    });
+
+    describe('rewriting component paths', () => {
+        it('renames a project that has no componentInstances at all', async () => {
+            const project = projectToRename({ componentInstances: undefined });
+            const context = createMockContext();
+
+            const result = await renameProjectCore(context, project, 'new-name');
+
+            expect(result.success).toBe(true);
+            expect(project.path).toBe('/projects/new-name');
+        });
+
+        // A component instance need not have a path (nothing has been installed
+        // for it yet), and one may sit outside the project folder entirely.
+        // Neither can be re-pointed, and reaching into either must not throw.
+        it('leaves alone a component with no path, and one outside the project', async () => {
+            const project = projectToRename({
+                componentInstances: {
+                    'not-installed': {
+                        id: 'not-installed',
+                        name: 'Not installed',
+                        status: 'ready',
+                    },
+                    elsewhere: {
+                        id: 'elsewhere',
+                        name: 'Elsewhere',
+                        status: 'ready',
+                        path: '/somewhere/else',
+                    },
+                    'eds-storefront': {
+                        id: 'eds-storefront',
+                        name: 'EDS Storefront',
+                        status: 'ready',
+                        path: '/projects/old-name/storefront',
+                    },
+                },
+            });
+            const context = createMockContext();
+
+            const result = await renameProjectCore(context, project, 'new-name');
+
+            expect(result.success).toBe(true);
+            expect(project.componentInstances!['not-installed'].path).toBeUndefined();
+            expect(project.componentInstances!['elsewhere'].path).toBe('/somewhere/else');
+            expect(project.componentInstances!['eds-storefront'].path).toBe(
+                '/projects/new-name/storefront'
+            );
+        });
+    });
+
     it('treats AI context regeneration failure as non-fatal (rename still succeeds)', async () => {
         const project = projectToRename();
         const context = createMockContext();
@@ -214,22 +258,31 @@ describe('renameProjectCore', () => {
         expect(result.success).toBe(true);
         expect(context.logger.warn as jest.Mock).toHaveBeenCalled();
     });
-});
 
-/**
- * Own setup, deliberately.
- *
- * These sit outside the original `describe('renameProjectCore')`, so they do NOT
- * inherit its `beforeEach` -- a first draft of them read `mockRename` call
- * history left over from earlier tests and failed on counts that had nothing to
- * do with the code under test.
- */
-beforeEach(() => {
-    jest.clearAllMocks();
-    mockAccess.mockRejectedValue(new Error('ENOENT'));
-    mockValidateName.mockImplementation(() => undefined);
-    mockRename.mockReset().mockResolvedValue(undefined);
-    mockGenerateAIContextFiles.mockReset().mockResolvedValue({ skills: [] });
+    // The bundle writers stamp `aiContextVersion` on the project as they go.
+    // Losing that stamp because the regeneration failed halfway leaves the
+    // activation sweep refreshing the bundle on every start, for ever.
+    it('still persists what the failed regeneration landed', async () => {
+        const project = projectToRename();
+        const context = createMockContext();
+        mockGenerateAIContextFiles.mockRejectedValueOnce(new Error('regen boom'));
+
+        await renameProjectCore(context, project, 'new-name');
+
+        expect(context.stateManager.saveProjectConfigOnly as jest.Mock).toHaveBeenCalledWith(
+            project
+        );
+    });
+
+    it('reports a failure the caller can render when the move itself fails', async () => {
+        const project = projectToRename();
+        const context = createMockContext();
+        mockRename.mockRejectedValue(new Error('EPERM'));
+
+        const result = await renameProjectCore(context, project, 'new-name');
+
+        expect(result).toStrictEqual({ success: false, error: 'Failed to rename project' });
+    });
 });
 
 describe('renaming by TITLE', () => {
@@ -280,141 +333,10 @@ describe('renaming by TITLE', () => {
 
         const result = await renameProjectCore(context, project, '!!!');
 
-        expect(result.success).toBe(false);
-        expect(mockRename).not.toHaveBeenCalled();
-    });
-});
-
-describe('rollback when the save fails after the move', () => {
-    /**
-     * The folder has already moved by the time the manifest is written, so a
-     * failed save leaves the directory at the new path and the manifest naming
-     * the old one. `projectFileLoader` reads `manifest.name`, so the project
-     * would render under its old name from a folder carrying the new one --
-     * exactly the disagreement titles exist to prevent.
-     *
-     * Every step is local filesystem work, so this is undoable in a way the
-     * cloud operations elsewhere in this codebase are not.
-     */
-    const failSave = (context: HandlerContext) => {
-        (context.stateManager.saveProject as jest.Mock).mockRejectedValue(new Error('disk full'));
-    };
-
-    it('moves the folder back', async () => {
-        const project = projectToRename();
-        const context = createMockContext();
-        failSave(context);
-
-        await renameProjectCore(context, project, 'Bodea B2B Demo').catch(() => undefined);
-
-        expect(mockRename).toHaveBeenNthCalledWith(
-            2,
-            '/projects/bodea-b2b-demo',
-            '/projects/old-name'
-        );
-    });
-
-    it('restores the project to exactly what it was', async () => {
-        const project = projectToRename();
-        const context = createMockContext();
-        failSave(context);
-
-        await renameProjectCore(context, project, 'Bodea B2B Demo').catch(() => undefined);
-
-        expect(project.name).toBe('old-name');
-        expect(project.path).toBe('/projects/old-name');
-        expect(project.title).toBeUndefined();
-        expect(project.componentInstances?.['eds-storefront'].path).toBe(
-            '/projects/old-name/storefront'
-        );
-    });
-
-    it('reports the unrecoverable case rather than pretending it rolled back', async () => {
-        // Both directions failed. This is the one state a user cannot infer from
-        // the UI, because the folder and the manifest genuinely disagree.
-        const project = projectToRename();
-        const context = createMockContext();
-        failSave(context);
-        mockRename
-            .mockResolvedValueOnce(undefined)
-            .mockRejectedValueOnce(new Error('permission denied'));
-
-        const result = await renameProjectCore(context, project, 'Bodea B2B Demo');
-
-        expect(result.success).toBe(false);
-        expect(String(result.error)).toMatch(/could not be undone/i);
-    });
-});
-
-describe('remote Adobe I/O project title sync', () => {
-    // The Console project title is set from the demo name when the wizard
-    // provisions a project in-app. Renaming the demo re-syncs that title —
-    // but ONLY when the remote title still matches the demo's old title/name:
-    // project.adobe can reference a PRE-EXISTING Console project the user
-    // selected, and a demo rename must never mutate shared infrastructure
-    // named by someone else. Best-effort: a remote failure never fails the
-    // local rename.
-    const remoteRename = jest.fn().mockResolvedValue(true);
-
-    function contextWithAuth(): HandlerContext {
-        const ctx = createMockContext();
-        (ctx as unknown as { authManager: unknown }).authManager = {
-            renameRemoteProject: remoteRename,
-        };
-        return ctx;
-    }
-
-    function adobeProject(remoteTitle: string): Project {
-        mockAccess.mockRejectedValue(new Error('ENOENT'));
-        return projectToRename({
-            title: 'Old Title',
-            adobe: {
-                organization: 'org-1',
-                projectId: 'proj-1',
-                projectTitle: remoteTitle,
-            },
+        expect(result).toStrictEqual({
+            success: false,
+            error: '"!!!" has no letters or numbers to build a folder name from',
         });
-    }
-
-    beforeEach(() => {
-        remoteRename.mockClear();
-        remoteRename.mockResolvedValue(true);
-    });
-
-    it('renames the remote project when its title matches the old demo title', async () => {
-        const project = adobeProject('Old Title');
-        const result = await renameProjectCore(contextWithAuth(), project, 'New Title');
-
-        expect(result.success).toBe(true);
-        expect(remoteRename).toHaveBeenCalledWith('org-1', 'proj-1', 'New Title');
-        expect(project.adobe?.projectTitle).toBe('New Title');
-    });
-
-    it('does NOT touch a remote project whose title differs (user-selected shared project)', async () => {
-        const project = adobeProject('Corporate Shared Project');
-        const result = await renameProjectCore(contextWithAuth(), project, 'New Title');
-
-        expect(result.success).toBe(true);
-        expect(remoteRename).not.toHaveBeenCalled();
-        expect(project.adobe?.projectTitle).toBe('Corporate Shared Project');
-    });
-
-    it('treats a remote rename failure as non-fatal (local rename still succeeds)', async () => {
-        remoteRename.mockRejectedValue(new Error('403'));
-        const project = adobeProject('Old Title');
-        const ctx = contextWithAuth();
-
-        const result = await renameProjectCore(ctx, project, 'New Title');
-
-        expect(result.success).toBe(true);
-        expect(ctx.logger.warn).toHaveBeenCalledWith(expect.stringContaining('remote'));
-    });
-
-    it('skips silently when the context has no authManager', async () => {
-        const project = adobeProject('Old Title');
-        const result = await renameProjectCore(createMockContext(), project, 'New Title');
-
-        expect(result.success).toBe(true);
-        expect(remoteRename).not.toHaveBeenCalled();
+        expect(mockRename).not.toHaveBeenCalled();
     });
 });
