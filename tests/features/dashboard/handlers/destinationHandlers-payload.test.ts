@@ -13,7 +13,7 @@
 // and an import of the handler above this line would load it unmocked.
 import {
     NEW_DESTINATION,
-    makeContext,
+    makeDestinationContext,
     makeContextWithComponents,
     mockBuildDefaultRunnerDeps,
     mockBuildRunnerDepsContext,
@@ -38,7 +38,7 @@ beforeEach(() => {
 
 describe('handleSetProjectDestination — a payload that is not a destination', () => {
     it('rejects a missing payload instead of throwing', async () => {
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context);
 
@@ -54,7 +54,7 @@ describe('handleSetProjectDestination — a payload that is not a destination', 
         ['a project with no id', { project: { name: 'X' }, workspace: NEW_DESTINATION.workspace }],
         ['a workspace with no id', { project: NEW_DESTINATION.project, workspace: { name: 'Y' } }],
     ])('rejects %s', async (_label, payload) => {
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(
             context,
@@ -68,7 +68,7 @@ describe('handleSetProjectDestination — a payload that is not a destination', 
 
 describe('handleSetProjectDestination — what it names the destination', () => {
     it('titles the notification with both halves of the destination', async () => {
-        const { context } = makeContext();
+        const { context } = makeDestinationContext();
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -81,7 +81,7 @@ describe('handleSetProjectDestination — what it names the destination', () => 
     it('falls back to the NAME when a half carries no title', async () => {
         // The console API sends `title` for a workspace it has one for and only
         // `name` otherwise; a destination named "undefined" is what the ?? avoids.
-        const { context } = makeContext();
+        const { context } = makeDestinationContext();
 
         await handleSetProjectDestination(context, {
             project: { id: 'new-project-id', name: 'NewProject' },
@@ -97,7 +97,7 @@ describe('handleSetProjectDestination — what it names the destination', () => 
 
 describe('handleSetProjectDestination — what counts as unchanged', () => {
     it('is a change when only the workspace differs', async () => {
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context, {
             project: { id: 'old-project-id', name: 'OldProject', title: 'Old Project' },
@@ -109,7 +109,7 @@ describe('handleSetProjectDestination — what counts as unchanged', () => {
     });
 
     it('is a change when only the Adobe project differs', async () => {
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context, {
             project: NEW_DESTINATION.project,
@@ -123,7 +123,7 @@ describe('handleSetProjectDestination — what counts as unchanged', () => {
     it('says so in the response when nothing changed', async () => {
         // The caller needs to tell "saved" from "nothing to do" — step-02 skips
         // its follow-up entirely on an unchanged destination.
-        const { context } = makeContext();
+        const { context } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context, {
             project: { id: 'old-project-id', name: 'OldProject', title: 'Old Project' },
@@ -138,7 +138,7 @@ describe('handleSetProjectDestination — what counts as unchanged', () => {
 });
 
 describe('handleSetProjectDestination — a project with no Adobe binding yet', () => {
-    /** A project carrying no `adobe` at all — makeContext's default fills one in. */
+    /** A project carrying no `adobe` at all — makeDestinationContext's default fills one in. */
     function withNoAdobe() {
         const project = { name: 'demo', path: '/p/demo' };
         const saveProject = jest.fn().mockResolvedValue(undefined);

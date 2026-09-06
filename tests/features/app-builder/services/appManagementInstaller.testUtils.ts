@@ -50,7 +50,7 @@ export function paasProject(overrides: Partial<Project> = {}): Project {
     });
 }
 
-export function makeClient(overrides: Partial<jest.Mocked<InstallerClient>> = {}) {
+export function makeInstallerClient(overrides: Partial<jest.Mocked<InstallerClient>> = {}) {
     return {
         getInstallationState: jest.fn().mockResolvedValue({ id: 'i1', status: 'succeeded' }),
         reconcileInstallation: jest.fn().mockResolvedValue({ operation: 'install', message: 'ok' }),
@@ -59,7 +59,7 @@ export function makeClient(overrides: Partial<jest.Mocked<InstallerClient>> = {}
     } as jest.Mocked<InstallerClient>;
 }
 
-export function makeDeps(
+export function makeInstallerDeps(
     client: InstallerClient,
     overrides: Partial<AppManagementInstallDeps> = {}
 ): AppManagementInstallDeps {

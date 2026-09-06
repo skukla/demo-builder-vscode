@@ -18,7 +18,7 @@
 // and an import of the handler above this line would load it unmocked.
 import {
     NEW_DESTINATION,
-    makeContext,
+    makeDestinationContext,
     makeContextWithComponents,
     mockMove,
     mockPostComponentsSnapshot,
@@ -44,7 +44,7 @@ beforeEach(() => {
 
 describe('handleSetProjectDestination', () => {
     it('persists the new project and workspace onto project.adobe', async () => {
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -63,7 +63,7 @@ describe('handleSetProjectDestination', () => {
     it('keeps the org — sign-in owns org selection, this control never changes it', async () => {
         // `adobe-org-context`: IMS tokens are org-bound and there is no in-app org
         // picker. A destination change moves project/workspace WITHIN the org.
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -76,7 +76,7 @@ describe('handleSetProjectDestination', () => {
         // An aborted move points the project back at the old destination. Once
         // `project.adobe` holds the new ref the old one is unrecoverable, so the
         // write has to hand it back. (It is NOT undeployed — a move only deploys.)
-        const { context } = makeContext();
+        const { context } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -100,7 +100,7 @@ describe('handleSetProjectDestination', () => {
     });
 
     it('rejects an incomplete destination without writing', async () => {
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context, {
             project: { id: 'new-project-id', name: 'NewProject', title: 'New Project' },
@@ -218,7 +218,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
     });
 
     it('does not move when there is nothing deployed', async () => {
-        const { context } = makeContext();
+        const { context } = makeDestinationContext();
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -267,7 +267,7 @@ describe('handleSetProjectDestination — moving existing integrations', () => {
  */
 describe('handleSetProjectDestination — telegraph and guards', () => {
     it('narrates through the standard progress notification', async () => {
-        const { context } = makeContext();
+        const { context } = makeDestinationContext();
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -278,7 +278,7 @@ describe('handleSetProjectDestination — telegraph and guards', () => {
     });
 
     it('reports the destination it is saving, as a step', async () => {
-        const { context } = makeContext();
+        const { context } = makeDestinationContext();
 
         await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -289,7 +289,7 @@ describe('handleSetProjectDestination — telegraph and guards', () => {
 
     it('runs the guards, and a guard failure writes NOTHING', async () => {
         mockRunGuards.mockResolvedValue({ error: 'Not signed in', code: 'AUTH' });
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context, NEW_DESTINATION);
 
@@ -301,7 +301,7 @@ describe('handleSetProjectDestination — telegraph and guards', () => {
 
 describe('handleSetProjectDestination — selecting the destination already in use', () => {
     it('does not persist or move — there is nothing to change', async () => {
-        const { context, saveProject } = makeContext();
+        const { context, saveProject } = makeDestinationContext();
 
         const result = await handleSetProjectDestination(context, {
             project: { id: 'old-project-id', name: 'OldProject', title: 'Old Project' },

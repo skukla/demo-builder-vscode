@@ -23,8 +23,8 @@ import type { InstallationState } from '@/features/app-builder/services/appManag
 import type { Project } from '@/types/base';
 import {
     DEPLOYED_URLS,
-    makeClient,
-    makeDeps,
+    makeInstallerClient,
+    makeInstallerDeps,
     paasProject,
 } from './appManagementInstaller.testUtils';
 
@@ -186,13 +186,13 @@ describe('installAppManagementApp — 409s that are NOT the benign no-op', () =>
         // The no-op is a 409 specifically; a 500 that happens to carry the same
         // reason is a broken call, and reporting it as "already installed" would
         // hide it.
-        const client = makeClient({
+        const client = makeInstallerClient({
             reconcileInstallation: jest
                 .fn()
                 .mockRejectedValue(new AppManagementApiError('boom', 500, 'already-current')),
         });
 
-        return installAppManagementApp(paasProject(), DEPLOYED_URLS, makeDeps(client)).then(
+        return installAppManagementApp(paasProject(), DEPLOYED_URLS, makeInstallerDeps(client)).then(
             (result) => {
                 expect(result.status).toBe('failed');
                 expect(result.detail).toContain(APP_MANAGEMENT_HANDS_BACK);
@@ -201,7 +201,7 @@ describe('installAppManagementApp — 409s that are NOT the benign no-op', () =>
     });
 
     it('treats a 409 with some OTHER message as a failure', async () => {
-        const client = makeClient({
+        const client = makeInstallerClient({
             reconcileInstallation: jest
                 .fn()
                 .mockRejectedValue(
@@ -217,14 +217,14 @@ describe('installAppManagementApp — 409s that are NOT the benign no-op', () =>
         const result = await installAppManagementApp(
             paasProject(),
             DEPLOYED_URLS,
-            makeDeps(client)
+            makeInstallerDeps(client)
         );
 
         expect(result.status).toBe('failed');
     });
 
     it('names the no-op when it IS one', async () => {
-        const client = makeClient({
+        const client = makeInstallerClient({
             reconcileInstallation: jest
                 .fn()
                 .mockRejectedValue(new AppManagementApiError('409', 409, 'already-current')),
@@ -233,7 +233,7 @@ describe('installAppManagementApp — 409s that are NOT the benign no-op', () =>
         const result = await installAppManagementApp(
             paasProject(),
             DEPLOYED_URLS,
-            makeDeps(client)
+            makeInstallerDeps(client)
         );
 
         expect(result).toEqual({ status: 'skipped', detail: 'Already installed and current.' });
@@ -243,7 +243,7 @@ describe('installAppManagementApp — 409s that are NOT the benign no-op', () =>
 describe('installAppManagementApp — the poll budget', () => {
     /** A reconcile that queues, and a state that never leaves in-progress. */
     function neverLands() {
-        return makeClient({
+        return makeInstallerClient({
             reconcileInstallation: jest
                 .fn()
                 .mockResolvedValue({ operation: 'install', message: 'queued', id: 'job-1' }),
@@ -259,7 +259,7 @@ describe('installAppManagementApp — the poll budget', () => {
         const result = await installAppManagementApp(
             paasProject(),
             DEPLOYED_URLS,
-            makeDeps(client)
+            makeInstallerDeps(client)
         );
 
         expect(result.status).toBe('failed');
@@ -270,7 +270,7 @@ describe('installAppManagementApp — the poll budget', () => {
     it('spends exactly the allowance, not one round more', async () => {
         const client = neverLands();
 
-        await installAppManagementApp(paasProject(), DEPLOYED_URLS, makeDeps(client));
+        await installAppManagementApp(paasProject(), DEPLOYED_URLS, makeInstallerDeps(client));
 
         expect(client.getInstallationState).toHaveBeenCalledTimes(POLL_ROUNDS);
     });
@@ -282,14 +282,14 @@ describe('installAppManagementApp — the poll budget', () => {
         await installAppManagementApp(
             paasProject(),
             DEPLOYED_URLS,
-            makeDeps(client, { wait })
+            makeInstallerDeps(client, { wait })
         );
 
         expect(wait).toHaveBeenCalledWith(5000);
     });
 
     it('answers a synchronous 200 without polling at all', async () => {
-        const client = makeClient({
+        const client = makeInstallerClient({
             reconcileInstallation: jest
                 .fn()
                 .mockResolvedValue({ operation: 'upgrade', message: 'plan applied' }),
@@ -298,7 +298,7 @@ describe('installAppManagementApp — the poll budget', () => {
         const result = await installAppManagementApp(
             paasProject(),
             DEPLOYED_URLS,
-            makeDeps(client)
+            makeInstallerDeps(client)
         );
 
         expect(result).toEqual({ status: 'installed', detail: 'plan applied' });
@@ -311,12 +311,12 @@ describe('installAppManagementApp — what it tells the user', () => {
 
     it('narrates the association, then the install', async () => {
         const onProgress = jest.fn();
-        const client = makeClient();
+        const client = makeInstallerClient();
 
         await installAppManagementApp(
             paasProject(),
             DEPLOYED_URLS,
-            makeDeps(client, { onProgress })
+            makeInstallerDeps(client, { onProgress })
         );
 
         expect(progressFrom(onProgress.mock.calls.map((c) => c[0] as string))).toEqual([
@@ -332,7 +332,7 @@ describe('installAppManagementApp — what it tells the user', () => {
             error: { message: 'HTTP 409 Conflict — Error 409 from upstream' },
         };
         const onProgress = jest.fn();
-        const client = makeClient({
+        const client = makeInstallerClient({
             reconcileInstallation: jest
                 .fn()
                 .mockResolvedValue({ operation: 'install', message: 'queued', id: 'j' }),
@@ -345,7 +345,7 @@ describe('installAppManagementApp — what it tells the user', () => {
         await installAppManagementApp(
             paasProject(),
             DEPLOYED_URLS,
-            makeDeps(client, { onProgress })
+            makeInstallerDeps(client, { onProgress })
         );
 
         const messages = onProgress.mock.calls.map((c) => c[0] as string);
@@ -355,7 +355,7 @@ describe('installAppManagementApp — what it tells the user', () => {
 
     it('narrates each poll round while the install is queued', async () => {
         const onProgress = jest.fn();
-        const client = makeClient({
+        const client = makeInstallerClient({
             reconcileInstallation: jest
                 .fn()
                 .mockResolvedValue({ operation: 'install', message: 'queued', id: 'j' }),
@@ -368,7 +368,7 @@ describe('installAppManagementApp — what it tells the user', () => {
         await installAppManagementApp(
             paasProject(),
             DEPLOYED_URLS,
-            makeDeps(client, { onProgress })
+            makeInstallerDeps(client, { onProgress })
         );
 
         expect(onProgress.mock.calls.map((c) => c[0] as string)).toContain(
@@ -379,10 +379,10 @@ describe('installAppManagementApp — what it tells the user', () => {
 
 describe('installAppManagementApp — the guards before any call', () => {
     it('stops on an underivable Commerce target, naming it', async () => {
-        const client = makeClient();
+        const client = makeInstallerClient();
         const project = paasProject({ componentSelections: {} });
 
-        const result = await installAppManagementApp(project, DEPLOYED_URLS, makeDeps(client));
+        const result = await installAppManagementApp(project, DEPLOYED_URLS, makeInstallerDeps(client));
 
         expect(result.status).toBe('failed');
         expect(result.detail).toContain('no Commerce backend');
@@ -390,11 +390,11 @@ describe('installAppManagementApp — the guards before any call', () => {
     });
 
     it('stops on an incomplete Adobe context, naming the field', async () => {
-        const client = makeClient();
+        const client = makeInstallerClient();
         const project = paasProject();
         delete project.adobe?.workspaceName;
 
-        const result = await installAppManagementApp(project, DEPLOYED_URLS, makeDeps(client));
+        const result = await installAppManagementApp(project, DEPLOYED_URLS, makeInstallerDeps(client));
 
         expect(result.status).toBe('failed');
         expect(result.detail).toContain('workspaceName');
@@ -418,7 +418,7 @@ describe('installAppManagementApp — the default client', () => {
         global.fetch = fetchMock as unknown as typeof fetch;
 
         try {
-            const deps = makeDeps(makeClient());
+            const deps = makeInstallerDeps(makeInstallerClient());
             delete deps.clientFactory;
 
             const result = await installAppManagementApp(paasProject(), DEPLOYED_URLS, deps);

@@ -74,7 +74,7 @@ export const NEW_DESTINATION = {
 };
 
 /** A handler context over a project carrying the given `adobe` binding. */
-export function makeContext(adobe: Record<string, unknown> | undefined = EXISTING_ADOBE) {
+export function makeDestinationContext(adobe: Record<string, unknown> | undefined = EXISTING_ADOBE) {
     const project = { name: 'demo', path: '/p/demo', adobe: adobe ? { ...adobe } : undefined };
     const saveProject = jest.fn().mockResolvedValue(undefined);
     const context = createMockHandlerContext({
