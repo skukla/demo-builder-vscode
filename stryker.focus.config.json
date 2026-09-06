@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/components/AiMcpsList.tsx"
+        "src/features/sidebar/ui/Sidebar.tsx"
     ],
     "reporters": [
         "clear-text",

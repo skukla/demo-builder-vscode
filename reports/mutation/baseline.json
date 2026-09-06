@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-06: AiMcpsList — absent tools field, message-less error entry, and the memo re-sorting on a changed mcps prop",
+    "_note": "MUT-07: Sidebar AiZone gate — both AI callbacks or nothing",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -4683,21 +4683,16 @@
             "openGaps": 0
         },
         "src/features/dashboard/ui/dashboardPredicates.ts": {
-            "score": 88,
-            "killed": 22,
-            "survived": 2,
-            "noCoverage": 1,
+            "score": 100,
+            "killed": 25,
+            "survived": 0,
+            "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 1,
-                "string": 1
-            },
-            "uncoveredCategories": {
-                "branch": 1
-            },
-            "highValueSurvivors": 1,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 2
+            "openGaps": 0
         },
         "src/features/dashboard/ui/hooks/aiStatusDerivations.ts": {
             "score": 100,
@@ -5353,20 +5348,18 @@
             "openGaps": 0
         },
         "src/features/data-installer/services/workspaceConfigDownload.ts": {
-            "score": 83.33,
-            "killed": 15,
-            "survived": 3,
+            "score": 94.44,
+            "killed": 17,
+            "survived": 1,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 1,
-                "other": 1,
-                "branch": 1
+                "string": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 1,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 2
+            "openGaps": 0
         },
         "src/features/data-installer/ui/DataInstallerScreen.tsx": {
             "score": 92.86,
@@ -7438,21 +7431,18 @@
             "openGaps": 0
         },
         "src/features/mesh/handlers/deployHandler.ts": {
-            "score": 77.78,
-            "killed": 28,
-            "survived": 7,
-            "noCoverage": 1,
+            "score": 86.11,
+            "killed": 31,
+            "survived": 5,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 5,
-                "branch": 2
+                "string": 5
             },
-            "uncoveredCategories": {
-                "string": 1
-            },
-            "highValueSurvivors": 2,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 2
+            "openGaps": 0
         },
         "src/features/mesh/handlers/shared.ts": {
             "score": 96.43,
@@ -7606,20 +7596,18 @@
             "openGaps": 0
         },
         "src/features/mesh/services/meshStatusResolver.ts": {
-            "score": 90.77,
-            "killed": 59,
-            "survived": 6,
+            "score": 95.08,
+            "killed": 58,
+            "survived": 3,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 4,
-                "block": 1,
-                "branch": 1
+                "string": 3
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 2,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 2
+            "openGaps": 0
         },
         "src/features/mesh/services/meshUpdateDecline.ts": {
             "score": 92.86,
@@ -9227,18 +9215,16 @@
             "openGaps": 0
         },
         "src/features/sidebar/ui/Sidebar.tsx": {
-            "score": 71.43,
-            "killed": 5,
-            "survived": 2,
+            "score": 100,
+            "killed": 7,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 2
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 2,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 2
+            "openGaps": 0
         },
         "src/features/sidebar/ui/views/UtilityBar.tsx": {
             "score": 92.86,
