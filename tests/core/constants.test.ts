@@ -5,7 +5,17 @@
  * type-safe access to component identifiers matching templates/components.json.
  */
 
-import { AI_CONTEXT_VERSION, COMPONENT_IDS, ComponentId } from '@/core/constants';
+import {
+    AI_CONTEXT_VERSION,
+    BASELINE_API,
+    COMPONENT_IDS,
+    ComponentId,
+    LAST_UPDATE_CHECK,
+    LAST_UPDATE_CHECK_VERSION,
+    MESH_COMPONENT_IDS,
+    hasMeshInDependencies,
+    isMeshComponentId,
+} from '@/core/constants';
 
 describe('AI_CONTEXT_VERSION', () => {
     // Pin the current bundle version. Bump this pin ONLY together with a real
@@ -186,5 +196,75 @@ describe('COMPONENT_IDS', () => {
             expect(edsAccsMesh).toBe('eds-accs-mesh');
             expect(headlessCommerceMesh).toBe('headless-commerce-mesh');
         });
+    });
+});
+
+/**
+ * These two are globalState KEYS, not display strings. A rename does not fail
+ * anything: the new key reads back undefined, the old value is orphaned, and the
+ * only symptom is a check that starts running every activation again. The same
+ * shape orphaned a settings override here for six months.
+ */
+describe('global state keys', () => {
+    it('stores the last-checked version under lastUpdateCheckVersion', () => {
+        expect(LAST_UPDATE_CHECK_VERSION).toBe('lastUpdateCheckVersion');
+    });
+
+    it('stores the auto-check throttle timestamp under lastUpdateCheck', () => {
+        expect(LAST_UPDATE_CHECK).toBe('lastUpdateCheck');
+    });
+});
+
+describe('BASELINE_API', () => {
+    // The SDK code goes into a subscription PUT and an Adobe project teardown.
+    // A wrong or empty one is accepted by the API and leaves the workspace
+    // unable to run `aio app` operations.
+    it('is the management SDK every App Builder workspace subscribes to', () => {
+        expect(BASELINE_API).toBe('AdobeIOManagementAPISDK');
+    });
+});
+
+describe('isMeshComponentId', () => {
+    it('accepts every id in MESH_COMPONENT_IDS', () => {
+        for (const id of MESH_COMPONENT_IDS) {
+            expect(isMeshComponentId(id)).toBe(true);
+        }
+    });
+
+    it('rejects a component that is not a mesh', () => {
+        expect(isMeshComponentId(COMPONENT_IDS.EDS_STOREFRONT)).toBe(false);
+    });
+
+    it('rejects an id no catalog entry uses', () => {
+        expect(isMeshComponentId('some-other-component')).toBe(false);
+    });
+});
+
+describe('hasMeshInDependencies', () => {
+    it('finds a mesh among dependencies that are mostly not one', () => {
+        expect(
+            hasMeshInDependencies([COMPONENT_IDS.EDS_STOREFRONT, COMPONENT_IDS.EDS_ACCS_MESH])
+        ).toBe(true);
+    });
+
+    // SOME, not every: a component depending on a mesh depends on other things
+    // too, and requiring all of them to be meshes would answer false for every
+    // real dependency list.
+    it('does not require every dependency to be a mesh', () => {
+        expect(hasMeshInDependencies([COMPONENT_IDS.EDS_ACCS_MESH, 'anything-else'])).toBe(true);
+    });
+
+    it('answers false when nothing in the list is a mesh', () => {
+        expect(hasMeshInDependencies([COMPONENT_IDS.EDS_STOREFRONT])).toBe(false);
+    });
+
+    it('answers false for an empty dependency list', () => {
+        expect(hasMeshInDependencies([])).toBe(false);
+    });
+
+    // Dependencies are optional on a catalog entry, so undefined is the common
+    // case rather than an edge one — it must answer, not throw.
+    it('answers false when a component declares no dependencies at all', () => {
+        expect(hasMeshInDependencies(undefined)).toBe(false);
     });
 });
