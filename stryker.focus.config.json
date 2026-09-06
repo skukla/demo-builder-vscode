@@ -8,8 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/hooks/dashboardCheckRouting.ts",
-        "src/features/dashboard/ui/hooks/useInlineRename.ts"
+        "src/features/data-installer/services/commerceCredentials.ts",
+        "src/features/data-installer/services/dataInstallerConfig.ts",
+        "src/features/mesh/services/deployMeshWithFeedback.ts"
     ],
     "reporters": [
         "clear-text",

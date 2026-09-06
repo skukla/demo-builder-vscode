@@ -131,6 +131,56 @@ describe('progress register', () => {
         expect(stepPushes).toEqual([]);
     });
 
+    // The core sends step-ish text on the STATUS channel too ("Starting
+    // deployment…"). Passing it through would put narration back on the card
+    // through a second door, so an in-flight status keeps the static label.
+    it('replaces an in-flight status message with the card label', async () => {
+        stubWithProgress();
+        mockDeployMeshHeadless.mockImplementation(
+            async ({
+                onStatus,
+            }: {
+                onStatus?: (s: string, m?: string, e?: string) => Promise<void> | void;
+            }) => {
+                await onStatus?.('deploying', 'Starting deployment...');
+                return { success: true };
+            }
+        );
+
+        await deployMeshWithFeedback(deps());
+
+        expect(mockSendMeshStatusUpdate.mock.calls).toStrictEqual([
+            // The register's own opening push, then the in-flight status —
+            // both the static label, neither the core's wording.
+            ['deploying', 'Deploying Mesh'],
+            ['deploying', 'Deploying Mesh'],
+        ]);
+    });
+
+    // A terminal status with no endpoint must push TWO arguments, not three with
+    // an undefined tail — the card reads arity to tell "no endpoint" from "this
+    // endpoint".
+    it('omits the endpoint argument entirely when the core sends none', async () => {
+        stubWithProgress();
+        mockDeployMeshHeadless.mockImplementation(
+            async ({
+                onStatus,
+            }: {
+                onStatus?: (s: string, m?: string, e?: string) => Promise<void> | void;
+            }) => {
+                await onStatus?.('error', 'Mesh deployment failed');
+                return { success: false };
+            }
+        );
+
+        await deployMeshWithFeedback(deps());
+
+        expect(mockSendMeshStatusUpdate.mock.calls).toStrictEqual([
+            ['deploying', 'Deploying Mesh'],
+            ['error', 'Mesh deployment failed'],
+        ]);
+    });
+
     // onStatus is a different channel from onProgress: it carries the terminal
     // status (and the endpoint on success), which the card still needs.
     it('still forwards the core status pushes to the card', async () => {
