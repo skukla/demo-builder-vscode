@@ -103,11 +103,32 @@ describe('checkPatchTarget', () => {
         });
     });
 
-    it('explains every refusal', () => {
+    describe('every refusal names the rule that refused it', () => {
         // The reason reaches the patch report, so a refused patch is visible
-        // rather than a silent no-op.
-        for (const target of ['package.json', '../x.js', '/abs.js', 'head.html']) {
-            expect(checkPatchTarget(target).reason).toEqual(expect.any(String));
-        }
+        // rather than a silent no-op — and WHICH rule refused it is what tells a
+        // patch author to move the file rather than rename it.
+        //
+        // Checking only `allowed` made the four guards interchangeable: each one
+        // could be deleted, or have its condition inverted, and a later rule
+        // still returned false for the same input. Whitespace is the clearest
+        // case — with the emptiness check gone, '   ' is refused for sitting
+        // outside blocks/ and scripts/, which is true and useless.
+        it.each<[string, RegExp]>([
+            ['', /empty/i],
+            ['   ', /empty/i],
+            ['/etc/passwd', /absolute path/i],
+            ['/scripts/commerce.js', /absolute path/i],
+            ['../package.json', /path escape/i],
+            ['blocks/../package.json', /path escape/i],
+            ['blocks\\header\\header.js', /path escape/i],
+            ['package.json', /permitted directories/i],
+            ['blocksy/header/header.js', /permitted directories/i],
+            ['scripts/styles.css', /not a \.js file/i],
+        ])('refuses %j and says why', (target, reason) => {
+            const result = checkPatchTarget(target);
+
+            expect(result.allowed).toBe(false);
+            expect(result.reason).toMatch(reason);
+        });
     });
 });
