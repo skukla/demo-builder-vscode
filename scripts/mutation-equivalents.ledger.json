@@ -14614,6 +14614,19 @@
             "decision": "none \u2014 an assignment restating the declaration's own initial value",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/ai/server/connectionScope.ts",
+            "anchors": [
+                "if (settled) return;",
+                "settled = true;"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "A re-entrancy guard nothing can re-enter. finish() is reachable only through the three listeners attached in this promise \u2014 'data', 'error' and 'end' \u2014 and its first act is to removeListener all three, synchronously, before anything else. 'error' and 'end' are registered with once(), so they self-remove too. Planted both mutants (guard removed AND settled left false) and ran connectionScope.test.ts plus mcpProxySession.test.ts: 36 tests, all green, because no stream can deliver a second event to a removed listener. Killing it would need a fake socket whose removeListener does nothing, which is a lie about how the code is reached.",
+            "decision": "none \u2014 the guard is defence against a re-entry the listener bookkeeping makes impossible",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
