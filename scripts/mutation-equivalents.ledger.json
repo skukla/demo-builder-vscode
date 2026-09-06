@@ -13963,6 +13963,68 @@
             "decision": "none \u2014 a type check whose only distinguishable inputs cannot come out of JSON.parse",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/mesh/utils/meshHelpers.ts",
+            "anchors": [
+                "if (arrayStart !== -1 && (objectStart === -1 || arrayStart < objectStart)) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Two mutations of this choice cannot change an outcome. Forcing arrayStart !== -1 to true only matters when the output has no '[' at all, and then the array attempt scans for a bracket that is not there, returns null, and the object branch below runs exactly as it would have. Relaxing < to <= only matters when the two indices are EQUAL, which cannot happen: they are the positions of two different characters, and the one case where both are -1 is already taken by the left side of the ||. Both planted; the three suites stay green.",
+            "decision": "none \u2014 a guard whose false case is absorbed by the fallback, and a comparison whose boundary is unreachable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/mesh/utils/meshHelpers.ts",
+            "anchors": [
+                "if (objectStart !== -1) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this to true runs the object attempt when the output contains no '{'. substring(-1) hands over the whole string, the balanced scan never raises its depth because there is no opening brace, and it returns null \u2014 after which the function returns null, which is what the unmutated guard returns directly. No stdout can separate the two paths, since needing a '{' is exactly what the guard tests. Planted; the suites stay green.",
+            "decision": "none \u2014 a guard in front of a scan that already fails for precisely the inputs it excludes",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/mesh/utils/meshHelpers.ts",
+            "anchors": [
+                "if (parsed !== null) {"
+            ],
+            "line": 95,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This is the LAST return in the function: the statement after the guard is 'return null'. So forcing the condition true returns parsed, which in that case is null \u2014 the identical value by the identical route one line later. The first copy of this guard, at line 86, is a real decision and is killed by the unterminated-array case; this one has nothing after it to fall through to. Planted; the suites stay green.",
+            "decision": "none \u2014 the fall-through below it returns the same null the guard is protecting",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/mesh/utils/meshHelpers.ts",
+            "anchors": [
+                "for (let i = 0; i < str.length; i++) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Running one iteration past the end reads str[length], which is undefined, and undefined matches none of the four characters the body tests \u2014 it is not the escape state, not a backslash, not a quote, and neither the open nor the close bracket. So the extra pass changes no variable and returns nothing; the loop still falls out to the same 'return null'. Every earlier iteration is unaffected, and a scan that had already balanced would have returned before reaching the end. Planted; the suites stay green.",
+            "decision": "none \u2014 an off-by-one that reads undefined, which no branch in the body matches",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/mesh/utils/meshHelpers.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 138,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch lets the scan continue past a prefix that failed to parse instead of giving up, and no input can profit from that. The parse always starts at index 0, so a later balanced close would hand JSON.parse a LONGER prefix beginning with the same invalid text \u2014 and reaching depth zero again requires another opening bracket, so that longer prefix is two values in a row rather than whitespace-padded. Both forms end at the same 'return null'. Planted; the suites stay green.",
+            "decision": "none \u2014 continuing the scan after a failed parse can only produce longer prefixes that fail too",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
