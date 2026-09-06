@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-06. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/data-installer/ui/views/DatapackCatalogView.tsx  (29 open gaps)
   - src/features/ai/mcpInspector.ts  (28 open gaps)
   - src/features/dashboard/ui/configure/hooks/useServiceGroups.ts  (28 open gaps)
   - src/features/projects-dashboard/services/projectRenameService.ts  (27 open gaps)
   - src/commands/migrateStorefrontNames.ts  (26 open gaps)
+  - src/core/utils/envVarExtraction.ts  (26 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the

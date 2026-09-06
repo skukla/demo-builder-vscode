@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-01. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/core/vscode/envFileWatcherService.ts  (41 open gaps)
   - src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx  (41 open gaps)
   - src/features/dashboard/ui/configure/ConfigureScreen.tsx  (40 open gaps)
   - src/features/data-installer/ui/components/ExportDatapackModal.tsx  (40 open gaps)
   - src/features/components/ui/components/StoreConfigFieldRow.tsx  (39 open gaps)
+  - src/features/data-installer/services/commerceCredentialBroker.ts  (39 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the

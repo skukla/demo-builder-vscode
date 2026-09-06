@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-02. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/data-installer/services/commerceCredentialBroker.ts  (39 open gaps)
   - src/features/dashboard/ui/ProjectDashboardScreen.tsx  (38 open gaps)
   - src/features/components/ui/hooks/useAutoStoreDetect.ts  (38 open gaps)
   - src/core/ui/components/selection/ApiAccessPicker.tsx  (37 open gaps)
   - src/features/dashboard/handlers/destinationHandlers.ts  (36 open gaps)
+  - src/features/app-builder/services/appManagementInstaller.ts  (35 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the
