@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-22 MUT-08: ConfigSection divider/footer branches, useAsyncOperation unmount guards + callback freshness, useLoadingState refresh-vs-error and reset seed, useTimerCleanup ref init + clear guards (inert useCallback removed), mcpProxySession handshake recapture/BOM/arming",
+    "_note": "PL-22 MUT-01: apiSubscriber's empty-group and unmatched paths, blockLibraryLoader's stack guard and synthetic-registry rules, importDependencies' weaker edges and provenance, authoringExperienceFlip's half-coordinates and malformed repo",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -2977,23 +2977,18 @@
             "openGaps": 3
         },
         "src/features/app-builder/services/apiSubscriber.ts": {
-            "score": 90.72,
-            "killed": 88,
-            "survived": 7,
-            "noCoverage": 2,
+            "score": 96.91,
+            "killed": 94,
+            "survived": 3,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 2,
-                "other": 2,
                 "string": 3
             },
-            "uncoveredCategories": {
-                "other": 1,
-                "block": 1
-            },
-            "highValueSurvivors": 2,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 6
+            "openGaps": 0
         },
         "src/features/app-builder/services/apiSubscriberClientAdapter.ts": {
             "score": 84.62,
@@ -3821,22 +3816,16 @@
             "openGaps": 3
         },
         "src/features/components/services/blockLibraryLoader.ts": {
-            "score": 92.31,
-            "killed": 72,
-            "survived": 5,
-            "noCoverage": 1,
+            "score": 100,
+            "killed": 78,
+            "survived": 0,
+            "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 1,
-                "optionalChain": 1,
-                "other": 3
-            },
-            "uncoveredCategories": {
-                "branch": 1
-            },
-            "highValueSurvivors": 1,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 6
+            "openGaps": 0
         },
         "src/features/components/services/commerceSecretMigration.ts": {
             "score": 91.18,
@@ -5596,19 +5585,16 @@
             "openGaps": 0
         },
         "src/features/data-installer/ui/components/ViewSwitcher.tsx": {
-            "score": 55.56,
-            "killed": 10,
-            "survived": 8,
+            "score": 100,
+            "killed": 18,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 6,
-                "string": 2
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 6,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 6
+            "openGaps": 0
         },
         "src/features/data-installer/ui/components/importResult.ts": {
             "score": 96.8,
@@ -5668,19 +5654,16 @@
             "openGaps": 1
         },
         "src/features/data-installer/ui/importDependencies.ts": {
-            "score": 92.41,
-            "killed": 68,
-            "survived": 6,
+            "score": 100,
+            "killed": 74,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 5,
-            "survivorCategories": {
-                "other": 5,
-                "branch": 1
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 1,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 6
+            "openGaps": 0
         },
         "src/features/data-installer/ui/views/DatapackActivityView.tsx": {
             "score": 91.84,
@@ -6028,23 +6011,18 @@
             "openGaps": 0
         },
         "src/features/eds/services/authoringExperienceFlip.ts": {
-            "score": 81.03,
-            "killed": 47,
-            "survived": 9,
-            "noCoverage": 2,
+            "score": 93.1,
+            "killed": 54,
+            "survived": 4,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "optionalChain": 2,
-                "branch": 3,
-                "string": 4
+                "logPresentation": 4
             },
-            "uncoveredCategories": {
-                "block": 1,
-                "string": 1
-            },
-            "highValueSurvivors": 3,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 6
+            "openGaps": 0
         },
         "src/features/eds/services/b2bReadinessDetection.ts": {
             "score": 94.12,
