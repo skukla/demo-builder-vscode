@@ -80,12 +80,18 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** True when the user gave this key an explicit value at any scope. */
-function isUserSet(inspection: SettingInspection | undefined): boolean {
+/**
+ * True when the user gave this key an explicit value at any scope.
+ *
+ * Takes a resolved inspection, not `SettingInspection | undefined`: the one caller
+ * has already tested it. The three optional chains this used to carry could not
+ * fire, and three mutants sat on them saying so.
+ */
+function isUserSet(inspection: SettingInspection): boolean {
     return (
-        inspection?.globalValue !== undefined ||
-        inspection?.workspaceValue !== undefined ||
-        inspection?.workspaceFolderValue !== undefined
+        inspection.globalValue !== undefined ||
+        inspection.workspaceValue !== undefined ||
+        inspection.workspaceFolderValue !== undefined
     );
 }
 

@@ -76,6 +76,27 @@ describe('contributedKeysFrom', () => {
         expect(contributedKeysFrom({ contributes: {} })).toEqual([]);
         expect(contributedKeysFrom('nonsense')).toEqual([]);
     });
+
+    it('skips a section that declares no properties', () => {
+        // A configuration section may exist purely for its title and order.
+        expect(contributedKeysFrom({ contributes: { configuration: [{ title: 'Demo' }] } })).toEqual(
+            []
+        );
+    });
+
+    it('skips a section that is not an object at all', () => {
+        expect(contributedKeysFrom({ contributes: { configuration: [null, undefined] } })).toEqual(
+            []
+        );
+    });
+
+    it('skips a section whose properties is not an object', () => {
+        // A string has keys ('0', '1', …). Treated as properties, the report would
+        // name settings that are single characters of somebody's typo.
+        expect(
+            contributedKeysFrom({ contributes: { configuration: [{ properties: 'oops' }] } })
+        ).toEqual([]);
+    });
 });
 
 describe('collectUserSetKeys', () => {
@@ -140,5 +161,84 @@ describe('collectUserSetKeys', () => {
 
     it('survives a null or non-object tree', () => {
         expect(collectUserSetKeys(null as unknown as Record<string, unknown>, 'demoBuilder', () => undefined)).toEqual([]);
+    });
+
+    it.each([['workspaceValue'], ['workspaceFolderValue']])(
+        'counts a value the user set at %s, not just globally',
+        (scope) => {
+            const tree = { daLive: { aemAuthorUrl: 'author.example' } };
+
+            const keys = collectUserSetKeys(tree, 'demoBuilder', (key) =>
+                key === 'demoBuilder.daLive.aemAuthorUrl'
+                    ? { defaultValue: 'x', [scope]: 'author.example' }
+                    : undefined
+            );
+
+            // A key set only in the workspace is exactly as orphaned by a rename as
+            // one set globally, and it is the scope a shared demo repo carries.
+            expect(keys).toEqual(['demoBuilder.daLive.aemAuthorUrl']);
+        }
+    );
+
+    /**
+     * What the walk ASKS about is the behaviour, not only what it returns. Descending
+     * into a value that is not a container invents keys no schema ever declared, and
+     * the invented ones resolve to nothing — so the returned list looks fine while the
+     * walk has wandered through the characters of a string.
+     */
+    it('never asks about a key below a value that is not a container', () => {
+        const asked: string[] = [];
+        const tree = {
+            blockLibraries: { defaults: { foo: true } },
+            someList: ['a', 'b'],
+            someText: 'hello',
+        };
+
+        collectUserSetKeys(tree, 'demoBuilder', (key) => {
+            asked.push(key);
+            return key === 'demoBuilder.blockLibraries.defaults'
+                ? { globalValue: { foo: true } }
+                : undefined;
+        });
+
+        expect(asked).toEqual([
+            'demoBuilder.blockLibraries',
+            'demoBuilder.blockLibraries.defaults',
+            'demoBuilder.someList',
+            'demoBuilder.someText',
+        ]);
+    });
+
+    /**
+     * The depth backstop. `MAX_DEPTH` is 6, so a key seven segments below the section
+     * is the deepest the walk reaches and one more is refused — a settings tree is not
+     * deep, and an unbounded walk over a cyclic or pathological object is how a
+     * diagnostic hangs the command that called it.
+     */
+    function nest(depth: number): { tree: Record<string, unknown>; key: string } {
+        const leafKey = ['demoBuilder', ...Array.from({ length: depth }, (_, i) => `l${i}`)].join(
+            '.'
+        );
+        let node: Record<string, unknown> = { leaf: 'value' };
+        for (let i = depth - 1; i >= 0; i--) {
+            node = { [`l${i}`]: i === depth - 1 ? 'value' : node };
+        }
+        return { tree: node, key: leafKey };
+    }
+
+    it('reaches a setting seven segments below the section', () => {
+        const { tree, key } = nest(7);
+
+        expect(collectUserSetKeys(tree, 'demoBuilder', (k) =>
+            k === key ? { globalValue: 'value' } : undefined
+        )).toEqual([key]);
+    });
+
+    it('refuses to walk deeper than that', () => {
+        const { tree, key } = nest(8);
+
+        expect(collectUserSetKeys(tree, 'demoBuilder', (k) =>
+            k === key ? { globalValue: 'value' } : undefined
+        )).toEqual([]);
     });
 });
