@@ -8,11 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/hooks/aiStatusDerivations.ts",
-        "src/core/ui/hooks/useElapsedStage.ts",
-        "src/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydration.ts",
-        "src/features/eds/services/daLive/daLiveContentHelpers.ts",
-        "src/core/build/buildStampUi.ts"
+        "src/core/ui/components/WebviewApp.tsx",
+        "src/core/ui/components/integrations/IntegrationCard.tsx"
     ],
     "reporters": [
         "clear-text",
