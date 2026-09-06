@@ -10,18 +10,27 @@
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { expectWithinCeiling } from './responseCeilings';
 
-/** Fake McpServer capturing registrations. */
+/**
+ * Fake McpServer capturing registrations — the DEFINITION as well as the handler.
+ *
+ * Discarding the second argument is what let every declaration on these three
+ * tools (needsAuth, the read-only annotations, the title) go unasserted while
+ * the suite stayed green.
+ */
 function fakeServer() {
     const tools = new Map<string, () => Promise<{ content: Array<{ text: string }> }>>();
+    const defs = new Map<string, Record<string, unknown>>();
     return {
-        registerTool(name: string, _def: unknown, handler: () => Promise<{ content: Array<{ text: string }> }>) {
+        registerTool(name: string, def: unknown, handler: () => Promise<{ content: Array<{ text: string }> }>) {
             tools.set(name, handler);
+            defs.set(name, def as Record<string, unknown>);
         },
         async call(name: string): Promise<unknown> {
             const result = await tools.get(name)!();
             return JSON.parse(result.content[0].text);
         },
         tools,
+        defs,
     };
 }
 
@@ -83,6 +92,17 @@ describe('registerDiscoveryTools', () => {
         expect(ids).toContain('app-builder-shell');
     });
 
+    it('a stack that declares no auth requirements comes back false, not true', async () => {
+        // `headless-paas` carries neither flag in stacks.json; the tool's job is
+        // to turn "absent" into an explicit false an agent can read.
+        const server = fakeServer();
+        registerDiscoveryTools(server);
+
+        const stacks = (await server.call('list_stacks')) as Array<Record<string, unknown>>;
+        const headless = stacks.find((s) => s.id === 'headless-paas')!;
+        expect(headless).toMatchObject({ requiresGitHub: false, requiresDaLive: false });
+    });
+
     it('emits compact JSON (no pretty-print newlines)', async () => {
         const server = fakeServer();
         registerDiscoveryTools(server);
@@ -102,4 +122,26 @@ describe('response-size ceilings', () => {
             expectWithinCeiling(tool, JSON.stringify(await s.call(tool)));
         },
     );
+});
+
+// ─── what each tool is registered AS ─────────────────────────────────────────
+describe('discovery tool declarations', () => {
+    it.each([
+        ['list_stacks', 'List Stacks'],
+        ['list_demo_packages', 'List Demo Packages'],
+        ['list_components', 'List Components'],
+    ])('%s registers read-only, non-destructive and without auth', (tool, title) => {
+        const server = fakeServer();
+        registerDiscoveryTools(server);
+
+        const def = server.defs.get(tool)!;
+        expect(def.title).toBe(title);
+        // Discovery is the pre-auth surface: an agent must be able to see the
+        // choice space before anyone signs in.
+        expect(def.needsAuth).toBe(false);
+        expect(def.annotations).toStrictEqual({ readOnlyHint: true, destructiveHint: false });
+        expect(def.inputSchema).toStrictEqual({});
+        // The wording is free to change; that there IS one is not.
+        expect(typeof def.description).toBe('string');
+    });
 });

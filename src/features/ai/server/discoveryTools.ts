@@ -35,8 +35,14 @@ export const COMPONENT_SECTIONS = [
     'addons',
 ] as const;
 
-function listComponentSection(section: string): Array<{ id: string; name: string }> {
-    const entries = (componentsConfig as Record<string, unknown>)[section];
+/** The shape `list_components` reads: section id -> the entries in that section. */
+type ComponentRegistry = Record<string, unknown>;
+
+function listComponentSection(
+    section: string,
+    registry: ComponentRegistry,
+): Array<{ id: string; name: string }> {
+    const entries = registry[section];
     if (!entries || typeof entries !== 'object') return [];
     return Object.entries(entries as Record<string, { name?: string }>).map(([id, def]) => ({
         id,
@@ -47,8 +53,14 @@ function listComponentSection(section: string): Array<{ id: string; name: string
 /**
  * Register the discovery tools on `server`.
  * @param server McpServer (typed `any`; see registerProjectTools docstring).
+ * @param registry Injectable component registry; defaults to the bundled
+ *   components.json. Tests pass a fixture here instead of mocking the JSON leaf
+ *   module (the seam-injection standard — see tests/sop/no-config-leaf-mocks).
  */
-export function registerDiscoveryTools(server: McpToolServer): void {
+export function registerDiscoveryTools(
+    server: McpToolServer,
+    registry: ComponentRegistry = componentsConfig as ComponentRegistry,
+): void {
     server.registerTool(
         'list_stacks',
         {
@@ -109,7 +121,10 @@ export function registerDiscoveryTools(server: McpToolServer): void {
         },
         async () => {
             const lean: Record<string, unknown> = Object.fromEntries(
-                COMPONENT_SECTIONS.map((section) => [section, listComponentSection(section)]),
+                COMPONENT_SECTIONS.map((section) => [
+                    section,
+                    listComponentSection(section, registry),
+                ]),
             );
             // The App Builder catalog — where add_integration ids come from. Its
             // own description sends agents HERE for ids, and until 2026-08-27
