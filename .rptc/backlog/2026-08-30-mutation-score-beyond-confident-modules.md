@@ -473,6 +473,7 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): close credentialServiceHandler's mutation gaps (`c6d858b20`)
 - 2026-09-05  test(eds): close authoringExperience's mutation gaps (`5ebccce7e`)
 - 2026-09-05  test(eds): close lkgReader's mutation gaps (`9ae61a0fc`)
+- 2026-09-06  Burn-down complete: 610 of 610 modules at zero open gaps. Every behavioural mutant is killed by a test asserting the decision or recorded in the equivalence ledger. Runs 6-7 pushed green; batch size raised 5->10 after measuring that 80% of a batch was fixed setup cost.
 
 ## Two lanes were tried and reverted — the gate is what blocks it (2026-09-05)
 
