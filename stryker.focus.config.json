@@ -8,8 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/components/WebviewApp.tsx",
-        "src/core/ui/components/integrations/IntegrationCard.tsx"
+        "src/core/ui/components/layout/TwoColumnLayout.tsx",
+        "src/core/ui/hooks/useSelection.ts",
+        "src/features/ai/server/projectors.ts",
+        "src/features/components/services/envVarHelpers.ts",
+        "src/features/components/services/serviceGroupTransforms.ts"
     ],
     "reporters": [
         "clear-text",
