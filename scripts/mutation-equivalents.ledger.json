@@ -14821,6 +14821,56 @@
             "decision": "Recorded, not killed: killing it would need a default containing one of the two step ids, which would be a wrong default rather than a test.",
             "recorded": "2026-09-06",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/dashboard/ui/aiSurface/components/PromptEditDialog.tsx",
+            "anchors": [
+                "if (!isValid) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "handleSave's only caller is the Modal's Save button, and Modal's FocusableButton already refuses the press when isDisabled \u2014 which the dialog sets to the very same !isValid from the very same render. So the guard cannot be entered while isValid is false, and removing it changes nothing any test can observe. Verified by planting 'if (false) return;': all 24 tests green, against the control of the other four L59/L62 mutants on the same callback, which the new id and trimming tests do kill.",
+            "decision": "Recorded, not killed: reaching it would need a Save button that presses while disabled, which would be a broken Modal rather than a test.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter.tsx",
+            "anchors": [
+                "if (updates.adobeWorkspace) destinationRef.current.workspace = updates.adobeWorkspace;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "destinationRef.current.workspace is read in exactly one place \u2014 the setProjectDestination guard three lines below \u2014 and that guard already requires updates.adobeWorkspace to be truthy. So on every call that can reach the read, both the original and the always-assign mutant have just written the same updates.adobeWorkspace into the ref; on every call that cannot, the value is never read. Verified by planting 'if (true)' (all 35 tests green) against the CONTROL of the same mutation on the adobeProject line above, which the suite fails \u2014 the project ref IS read across calls, the workspace ref is not.",
+            "decision": "Recorded, not killed: distinguishing it would need a read of the workspace ref on a call that carries no workspace, and there is none.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter.tsx",
+            "anchors": [
+                "[],"
+            ],
+            "line": 242,
+            "mutants": 1,
+            "category": "other",
+            "reason": "React compares a dependency array element-wise with Object.is, so a constant one-element array of the same string literal is as stable across renders as an empty one \u2014 the builder memo recomputes on neither. The mutant changes the array's contents and not the memo's behaviour, which is the only thing any caller can see. Verified by planting ['Stryker was here'] as the dependency list: all 35 tests green, including the rerender tests that DO fail when a genuinely dependent memo is frozen.",
+            "decision": "Recorded, not killed: every replacement Stryker can put here is a constant, and constants are indistinguishable from the empty array to useMemo.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter.tsx",
+            "anchors": [
+                "[],"
+            ],
+            "line": 250,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same argument as the builder memo on line 242: useCallback compares dependency arrays element-wise with Object.is, and a constant one-element array of a string literal never changes between renders, so the signIn callback is rebuilt on neither the original nor the mutant. Verified by planting ['Stryker was here'] as the dependency list \u2014 all 35 tests green, while the rerender tests that pin genuinely dependent memos do fail when those are frozen.",
+            "decision": "Recorded, not killed: the only replacements available are constants, which useCallback cannot tell apart from an empty list.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

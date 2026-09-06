@@ -8,9 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/aiSurface/components/PromptGrid.tsx",
-        "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
-        "src/core/ui/components/wizard/ConfigurationSummary.tsx"
+        "src/features/dashboard/ui/aiSurface/components/PromptEditDialog.tsx",
+        "src/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter.tsx",
+        "src/core/ui/components/selection/SelectionStepContent.tsx"
     ],
     "reporters": [
         "clear-text",
