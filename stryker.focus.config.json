@@ -8,7 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/components/navigation/SearchableList.tsx"
+        "src/features/ai/server/discoveryTools.ts",
+        "src/types/errorCodes.ts"
     ],
     "reporters": [
         "clear-text",
