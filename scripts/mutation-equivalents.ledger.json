@@ -12912,6 +12912,71 @@
             "decision": "none - the inner falsy check already covers every value this guard excludes",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/retryStrategyManager.ts",
+            "anchors": [
+                "if (attempt > 1) {"
+            ],
+            "line": 146,
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The whole body of this guard is one logger.debug announcing which retry is starting. Every mutant on it - the condition forced either way, the comparison loosened in both directions, the block emptied - changes only whether that line is written and with what attempt number. Nothing else in the loop reads the decision: the identical `attempt > 1` guard eleven lines above it drives the rate limiter, and that one IS pinned by tests asserting the limiter is called for the retry and not for the first try.",
+            "decision": "none - a log-only twin of the rate-limiter guard, which is tested",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/retryStrategyManager.ts",
+            "anchors": [
+                "const duration = Date.now() - startTime;"
+            ],
+            "line": 152,
+            "mutants": 1,
+            "category": "other",
+            "reason": "This value has exactly two consumers: the threshold comparison on the next decision line, whose only body is a logger.debug, and that same debug line's formatted text. Turning the subtraction into an addition makes the number large enough to cross the threshold, so the only visible consequence is that a success line prints when it otherwise would not, carrying a wrong duration. No result, no delay and no retry decision depends on it.",
+            "decision": "none - a duration measured solely to decide whether, and with what number, to log",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/retryStrategyManager.ts",
+            "anchors": [
+                "if (attempt > 1 || duration > TIMEOUTS.SLOW_COMMAND_THRESHOLD) {"
+            ],
+            "line": 154,
+            "mutants": 10,
+            "category": "branch",
+            "reason": "Ten mutants sit on this guard - each operand forced, both comparisons loosened, the operator swapped, the block emptied - and all of them decide the same single thing: whether a success line is written for a command that either was retried or ran slowly. The result is returned on the very next statement regardless. Separating the arms would mean asserting the logger's arguments, which pins wording rather than behaviour.",
+            "decision": "none - the guard chooses whether to narrate a success it does not otherwise affect",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/retryStrategyManager.ts",
+            "anchors": [
+                "if (attempt === strategy.maxAttempts) {"
+            ],
+            "line": 164,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "The body is three consecutive logger.debug calls describing the final failure, and control continues to the timeout check either way. Forcing the comparison, inverting it, or emptying the block changes which attempts get narrated and nothing about which attempt runs next, how long the loop waits, or what it finally throws - all of which are pinned by separate tests on the rate limiter, the backoff delays and the rejection.",
+            "decision": "none - a log-only guard in front of three debug lines",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/retryStrategyManager.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 191,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this else arm removes a warning and a `throw error`. The loop then falls out of its final iteration and reaches the trailing `throw lastError || new Error(...)`, where lastError is the very error object the catch just assigned - so the caller receives the same rejection with the same identity, one statement later. A test proves the rejection and the attempt count; neither can see the difference.",
+            "decision": "none - the trailing throw re-raises the same error object this arm would have thrown",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
         }
     ]
 }
