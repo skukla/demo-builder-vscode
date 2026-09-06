@@ -84,6 +84,23 @@ describe('useImportProgress', () => {
         expect(seen).not.toHaveTextContent('processing');
     });
 
+    /**
+     * The channel hands the listener whatever arrived; a push with no payload is
+     * `undefined`, and reading `.activationId` off it throws inside the message
+     * dispatcher — which would take down every other listener on the same push.
+     */
+    it('survives a push with no payload rather than throwing at the dispatcher', () => {
+        render(<Probe activationId="act-1" />);
+
+        expect(() => {
+            act(() => {
+                handlerFor()(undefined);
+            });
+        }).not.toThrow();
+
+        expect(screen.getByTestId('seen')).toHaveTextContent('null');
+    });
+
     it('subscribes to nothing until there is a job to watch', () => {
         render(<Probe />);
 
