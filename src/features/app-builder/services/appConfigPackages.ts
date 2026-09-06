@@ -155,21 +155,29 @@ export async function listDeclaredPackageNames(componentPath: string): Promise<s
         if (typeof include !== 'string') {
             continue;
         }
+        // Resolved OUTSIDE the try, which guards the IO. Building the path inside
+        // it meant a non-string `$include` failed in `path.join` and was reported
+        // as an unreadable file — the same skip, arrived at by a route that hides
+        // which of the two actually went wrong.
+        const includePath = path.join(componentPath, include);
         let raw: string;
         try {
-            raw = await fsPromises.readFile(path.join(componentPath, include), 'utf-8');
+            raw = await fsPromises.readFile(includePath, 'utf-8');
         } catch {
             continue;
         }
+        // The catch guards the PARSE and nothing else. Reading the packages off a
+        // parsed doc cannot throw — the optional chain answers for every shape a
+        // config file can hold — so leaving it inside would swallow a real error
+        // as if it were an unparseable include.
+        let extDoc: { runtimeManifest?: { packages?: RuntimePackages } } | undefined;
         try {
-            const extDoc = yaml.parse(raw) as {
-                runtimeManifest?: { packages?: RuntimePackages };
-            };
-            for (const name of Object.keys(extDoc?.runtimeManifest?.packages ?? {})) {
-                names.add(name);
-            }
+            extDoc = yaml.parse(raw) as { runtimeManifest?: { packages?: RuntimePackages } };
         } catch {
             continue;
+        }
+        for (const name of Object.keys(extDoc?.runtimeManifest?.packages ?? {})) {
+            names.add(name);
         }
     }
     return [...names];
