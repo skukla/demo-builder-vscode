@@ -5,6 +5,7 @@
  */
 
 import { registerCurrentProjectTool } from '@/features/ai/server/currentProjectTool';
+import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { expectWithinCeiling } from './responseCeilings';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -13,13 +14,18 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 function fakeServer() {
     const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
+    // The DEFINITION is kept, not discarded: it carries the declarations the MCP
+    // server reads to decide whether a call needs auth and whether it may write.
+    const definitions = new Map<string, McpToolSchema>();
     return {
+        definitions,
         registerTool(
             name: string,
-            _def: unknown,
+            def: McpToolSchema,
             handler: (args: any) => Promise<{ content: Array<{ text: string }> }>
         ) {
             tools.set(name, handler);
+            definitions.set(name, def);
         },
         async call(args?: unknown): Promise<any> {
             return JSON.parse((await tools.get('get_current_project')!(args)).content[0].text);
@@ -83,6 +89,32 @@ describe('get_current_project', () => {
         const res = await s.call({});
 
         expect(res).toEqual({ currentProject: null, scope: 'dashboard-pointer' });
+    });
+
+    it('says the project came from the SESSION DIRECTORY when the connection is scoped', async () => {
+        // The other half of the scope field, and the one that matters: an agent
+        // must be able to tell "the project I am standing in" from "whatever the
+        // dashboard points at". Nothing else in the response distinguishes them.
+        getCurrentProject.mockResolvedValue({ name: 'alpha', path: '/p/alpha', status: 'ready' });
+        const s = fakeServer();
+        registerCurrentProjectTool(s, ctxFactory, '/p/alpha');
+
+        expect((await s.call({})).scope).toBe('session-directory');
+    });
+
+    it('declares no sign-in and no writes, so orienting never gates on auth or consent', () => {
+        // Three declarations the SERVER reads and the handler never sees, so
+        // nothing in the response can show them being wrong. `needsAuth: false`
+        // is what lets an agent find its feet before Adobe sign-in; the two
+        // annotations are what keep this call outside the write-consent gate and
+        // inside a dry run.
+        const s = fakeServer();
+        registerCurrentProjectTool(s, ctxFactory);
+
+        expect(s.definitions.get('get_current_project')).toMatchObject({
+            needsAuth: false,
+            annotations: { readOnlyHint: true, destructiveHint: false },
+        });
     });
 
     it('registers under the get_current_project name', () => {
