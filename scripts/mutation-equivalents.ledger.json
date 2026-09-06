@@ -16846,6 +16846,30 @@
             "decision": "none \u2014 the function's final statement already returns undefined for every value that reaches it, so the early return cannot change an answer",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/core/utils/githubUrlParser.ts",
+            "anchors": [
+                "if (!url) return null;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the guard's condition with false, so the falsy-url fast path never fires. Nothing observable changes: every value that makes `!url` true is also rejected by `new URL`, which throws into the function's own `catch { return null }`. Verified by planting the mutation and diffing both versions over undefined, null, '', 0, false and NaN plus the valid and invalid URL cases the suite already covers \u2014 zero differences on any input. The function has no side effects and logs nothing, so there is no other channel a test could observe.",
+            "decision": "none \u2014 the guard is a correct, cheap fast path for the argument's declared `string | undefined` type",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/utils/githubUrlParser.ts",
+            "anchors": [
+                "if (parts.length >= 2) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the length check with true, so a path with fewer than two segments falls into the body instead of returning null. Nothing observable changes: with fewer than two segments `parts[1]` is undefined, `parts[1].replace` throws a TypeError, and the function's own `catch { return null }` returns exactly what the guard would have returned. There is no input where the check is false and `parts[1]` is defined, so no test can separate them. Verified by planting the mutation and diffing over 'https://github.com', 'https://github.com/', 'https://github.com//', 'https://github.com/owner' and the valid cases \u2014 zero differences.",
+            "decision": "none \u2014 the check states the requirement instead of relying on a thrown TypeError, which is worth keeping even though the two agree",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
         }
     ]
 }

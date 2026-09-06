@@ -22,6 +22,13 @@ describe('parseGitHubUrl', () => {
             expect(result).toEqual({ owner: 'user', repo: 'my-repo_v2' });
         });
 
+        it('should strip .git only at the END of the repo name', () => {
+            // `.github` is a real repo in almost every org, and it CONTAINS `.git`.
+            // An unanchored strip would turn it into `hub`.
+            const result = parseGitHubUrl('https://github.com/demo-system-stores/.github');
+            expect(result).toEqual({ owner: 'demo-system-stores', repo: '.github' });
+        });
+
         it('should ignore trailing path segments', () => {
             const result = parseGitHubUrl('https://github.com/owner/repo/tree/main');
             expect(result).toEqual({ owner: 'owner', repo: 'repo' });
