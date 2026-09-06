@@ -16097,6 +16097,42 @@
             "decision": "none \u2014 the sink is append-only and matched by .type, which a sentinel string cannot carry",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-08, planted 2026-09-06"
+        },
+        {
+            "module": "src/features/components/services/componentManager.ts",
+            "anchors": [
+                "if (!componentDef.source?.package) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the `?.`. installNpmComponent is private and has exactly one caller: the 'npm' arm of the switch in installComponent, which runs AFTER `if (!componentDef.source) return` and reads `componentDef.source.type` to get there. So `source` is provably truthy on every path that reaches this line and the mutant cannot throw. The `?.` is required by the compiler because `source` is optional on TransformedComponentDefinition.",
+            "decision": "none \u2014 the `?.` is what the type demands and the guard still catches a source with no package",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/components/services/componentManager.ts",
+            "anchors": [
+                "if (!componentDef.source?.url) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Same shape as installNpmComponent above: linkLocalComponent is private, reached only from the 'local' arm of the switch, which is itself past the `if (!componentDef.source) return` guard and a read of `source.type`. `source` cannot be undefined here, so removing the `?.` changes nothing observable.",
+            "decision": "none \u2014 the `?.` is what the type demands and the guard still catches a local source with no url",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/components/services/componentManager.ts",
+            "anchors": [
+                "if (project.componentInstances) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the guard with `true`. removeComponent reaches this line only after `getComponent` returned a component, and getComponent reads `project.componentInstances?.[componentId]` \u2014 a project with no componentInstances yields undefined and the function has already thrown 'Component ... not found'. There is no state in which the guard is false here, so no test can distinguish the mutant.",
+            "decision": "none \u2014 the guard is what the optional type requires to index the record",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
         }
     ]
 }

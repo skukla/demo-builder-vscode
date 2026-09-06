@@ -15,7 +15,6 @@ import { Project } from '@/types/base';
 import { Logger } from '@/types/logger';
 import { setupComponentManager } from './componentManager.testUtils';
 
-
 // Mock fs/promises
 jest.mock('fs/promises');
 
@@ -36,17 +35,13 @@ describe('ComponentManager - Lifecycle', () => {
                     name: 'Test Component',
                     type: 'frontend',
                     status: 'ready',
-                    lastUpdated: new Date()
-                }
+                    lastUpdated: new Date(),
+                },
             };
         });
 
         it('should update component status', async () => {
-            await componentManager.updateComponentStatus(
-                mockProject,
-                'test-component',
-                'running'
-            );
+            await componentManager.updateComponentStatus(mockProject, 'test-component', 'running');
 
             expect(mockProject.componentInstances!['test-component'].status).toBe('running');
         });
@@ -54,45 +49,36 @@ describe('ComponentManager - Lifecycle', () => {
         it('should update lastUpdated timestamp', async () => {
             const beforeUpdate = new Date();
 
-            await componentManager.updateComponentStatus(
-                mockProject,
-                'test-component',
-                'running'
-            );
+            await componentManager.updateComponentStatus(mockProject, 'test-component', 'running');
 
             const lastUpdated = mockProject.componentInstances!['test-component'].lastUpdated!;
             expect(lastUpdated.getTime()).toBeGreaterThanOrEqual(beforeUpdate.getTime());
         });
 
         it('should update metadata', async () => {
-            await componentManager.updateComponentStatus(
-                mockProject,
-                'test-component',
-                'running',
-                { port: 3000, pid: 12345 }
-            );
+            await componentManager.updateComponentStatus(mockProject, 'test-component', 'running', {
+                port: 3000,
+                pid: 12345,
+            });
 
             expect(mockProject.componentInstances!['test-component'].metadata).toMatchObject({
                 port: 3000,
-                pid: 12345
+                pid: 12345,
             });
         });
 
         it('should merge metadata with existing', async () => {
             mockProject.componentInstances!['test-component'].metadata = {
-                existing: 'data'
+                existing: 'data',
             };
 
-            await componentManager.updateComponentStatus(
-                mockProject,
-                'test-component',
-                'running',
-                { port: 3000 }
-            );
+            await componentManager.updateComponentStatus(mockProject, 'test-component', 'running', {
+                port: 3000,
+            });
 
             expect(mockProject.componentInstances!['test-component'].metadata).toMatchObject({
                 existing: 'data',
-                port: 3000
+                port: 3000,
             });
         });
 
@@ -100,6 +86,15 @@ describe('ComponentManager - Lifecycle', () => {
             await expect(
                 componentManager.updateComponentStatus(mockProject, 'nonexistent', 'running')
             ).rejects.toThrow('Component nonexistent not found in project');
+        });
+
+        // A status update with no metadata must LEAVE metadata alone. Spreading an
+        // absent argument would replace `undefined` with an empty object, which
+        // reads downstream as "this component has metadata, and it is empty".
+        it('should leave metadata untouched when none is supplied', async () => {
+            await componentManager.updateComponentStatus(mockProject, 'test-component', 'running');
+
+            expect(mockProject.componentInstances!['test-component'].metadata).toBeUndefined();
         });
 
         it('should initialize componentInstances if undefined', async () => {
@@ -122,8 +117,8 @@ describe('ComponentManager - Lifecycle', () => {
                     name: 'Test Component',
                     type: 'frontend',
                     status: 'ready',
-                    path: '/test/project/components/test-component'
-                }
+                    path: '/test/project/components/test-component',
+                },
             };
         });
 
@@ -139,10 +134,10 @@ describe('ComponentManager - Lifecycle', () => {
 
             await componentManager.removeComponent(mockProject, 'test-component', true);
 
-            expect(fs.rm).toHaveBeenCalledWith(
-                '/test/project/components/test-component',
-                { recursive: true, force: true }
-            );
+            expect(fs.rm).toHaveBeenCalledWith('/test/project/components/test-component', {
+                recursive: true,
+                force: true,
+            });
         });
 
         it('should not delete files if deleteFiles is false', async () => {
@@ -150,6 +145,18 @@ describe('ComponentManager - Lifecycle', () => {
             (fs.rm as jest.Mock).mockResolvedValue(undefined);
 
             await componentManager.removeComponent(mockProject, 'test-component', false);
+
+            expect(fs.rm).not.toHaveBeenCalled();
+        });
+
+        // KEEPING the files is the default. Removing a component from the project
+        // is reversible; deleting its directory is not, so an omitted argument must
+        // never be read as consent to delete.
+        it('should keep files when deleteFiles is omitted', async () => {
+            const fs = require('fs/promises');
+            (fs.rm as jest.Mock).mockResolvedValue(undefined);
+
+            await componentManager.removeComponent(mockProject, 'test-component');
 
             expect(fs.rm).not.toHaveBeenCalled();
         });
