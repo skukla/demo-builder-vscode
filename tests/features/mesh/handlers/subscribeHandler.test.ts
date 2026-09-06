@@ -126,6 +126,42 @@ describe('handleEnsureMeshApiSubscribed', () => {
         expect(mockEnsureMeshApiSubscribed).not.toHaveBeenCalled();
     });
 
+    it("carries the guard's needsAuth marker through to the AGENT caller", async () => {
+        // The headless branch of ensureAuthenticated answers with `needsAuth`, and
+        // defaultShape only returns a failure whole when it carries more than
+        // error/code. Dropping the marker leaves the agent with prose it cannot act on.
+        mockEnsureAuthenticated.mockResolvedValue({
+            authenticated: false,
+            error: 'Adobe sign-in required to enable the API Mesh API.',
+            code: ErrorCode.AUTH_REQUIRED,
+            needsAuth: 'adobe',
+        });
+
+        const result = await handleEnsureMeshApiSubscribed(mockContext, validPayload);
+
+        expect(result).toStrictEqual({
+            success: false,
+            error: 'Adobe sign-in required to enable the API Mesh API.',
+            code: ErrorCode.AUTH_REQUIRED,
+            needsAuth: 'adobe',
+        });
+        expect(mockEnsureMeshApiSubscribed).not.toHaveBeenCalled();
+    });
+
+    it('omits the needsAuth key entirely on the webview surface', async () => {
+        // A webview gets the notification instead, and a marker it cannot use; the
+        // key must be absent rather than present-and-undefined.
+        mockEnsureAuthenticated.mockResolvedValue({
+            authenticated: false,
+            error: 'Adobe authentication required',
+            code: ErrorCode.AUTH_REQUIRED,
+        });
+
+        const result = await handleEnsureMeshApiSubscribed(mockContext, validPayload);
+
+        expect(Object.keys(result).sort()).toStrictEqual(['code', 'error', 'success']);
+    });
+
     it('should call the service once with a target built from the payload and return success', async () => {
         const result = await handleEnsureMeshApiSubscribed(mockContext, validPayload);
 
