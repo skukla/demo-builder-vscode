@@ -37,6 +37,17 @@ describe('ResetAllCommand - cleanup steps', () => {
         return { uri: { fsPath }, name: fsPath, index: 0 };
     }
 
+    /**
+     * `workspaceFolders` is readonly on the real type; the manual mock makes it a
+     * plain property, so it is written through the module object — the same route
+     * the shared setup takes.
+     */
+    function setWorkspaceFolders(folders: unknown[] | undefined): void {
+        (
+            vscode.workspace as unknown as { workspaceFolders: unknown[] | undefined }
+        ).workspaceFolders = folders;
+    }
+
     beforeEach(() => {
         jest.restoreAllMocks();
         jest.clearAllMocks();
@@ -99,11 +110,11 @@ describe('ResetAllCommand - cleanup steps', () => {
     // never reach the call at all.
     describe('removing Demo Builder workspace folders', () => {
         it('removes only the Demo Builder folders, highest index first', async () => {
-            (vscode.workspace as any).workspaceFolders = [
+            setWorkspaceFolders([
                 folder(path.join(demoBuilderPath, 'projects', 'alpha')),
                 folder('/Users/someone/code/unrelated-repo'),
                 folder(path.join(demoBuilderPath, 'projects', 'beta')),
-            ];
+            ]);
 
             await command.execute();
 
@@ -114,7 +125,7 @@ describe('ResetAllCommand - cleanup steps', () => {
 
         // No workspace is open at all — the reset must still run.
         it('carries on when there are no workspace folders', async () => {
-            (vscode.workspace as any).workspaceFolders = undefined;
+            setWorkspaceFolders(undefined);
 
             await command.execute();
 
