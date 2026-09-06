@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PromptCard: kebab default + missing-handler guard + memoised-handler deps pinned; IntegrationsSummaryTile: needs-auth/config-incomplete ranked (real gap), single SEVERITY lookup, mesh-record filter pinned",
+    "_note": "contentPatchRegistry: unknown-id warning moved above the page filter (real defect) + local-path offline/quiet pins; patchTargetPolicy: every refusal reason categorised; servedStorefrontConfig: abort signal, non-OK body, non-object public.default, non-string values, per-code scope match",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -6902,22 +6902,19 @@
             "openGaps": 0
         },
         "src/features/eds/services/patches/contentPatchRegistry.ts": {
-            "score": 78.46,
-            "killed": 51,
-            "survived": 14,
+            "score": 95,
+            "killed": 57,
+            "survived": 3,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 7,
-                "block": 2,
-                "other": 2,
                 "logPresentation": 2,
                 "string": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 9,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 11
+            "openGaps": 0
         },
         "src/features/eds/services/patches/externalPatchFetcher.ts": {
             "score": 61.54,
@@ -7006,21 +7003,18 @@
             "openGaps": 0
         },
         "src/features/eds/services/patches/patchTargetPolicy.ts": {
-            "score": 60,
-            "killed": 27,
-            "survived": 18,
+            "score": 95.56,
+            "killed": 43,
+            "survived": 2,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 6,
-                "string": 7,
-                "block": 3,
-                "other": 2
+                "string": 2
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 9,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 11
+            "openGaps": 0
         },
         "src/features/eds/services/pdp/pdp404HandlerPublisher.ts": {
             "score": 79.26,
@@ -7310,24 +7304,22 @@
             "openGaps": 0
         },
         "src/features/eds/services/storefront/servedStorefrontConfig.ts": {
-            "score": 75,
-            "killed": 45,
-            "survived": 14,
+            "score": 90,
+            "killed": 54,
+            "survived": 5,
             "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 6,
-                "other": 1,
                 "logPresentation": 3,
-                "block": 3,
-                "optionalChain": 1
+                "optionalChain": 1,
+                "block": 1
             },
             "uncoveredCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 9,
-            "equivalent": 0,
-            "openGaps": 11
+            "highValueSurvivors": 1,
+            "equivalent": 2,
+            "openGaps": 0
         },
         "src/features/eds/services/storefront/storefrontNameMigration.ts": {
             "score": 86.44,

@@ -10,6 +10,7 @@ import {
     describeScope,
     fetchServedStorefrontConfig,
     scopesMatch,
+    type StoreScope,
 } from '@/features/eds/services/storefront/servedStorefrontConfig';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -103,6 +104,63 @@ describe('fetchServedStorefrontConfig', () => {
             await fetchServedStorefrontConfig('acme', 'shop', mockLogger)
         ).toBeUndefined();
     });
+
+    // An unreachable CDN must not hold a diagnostics run open. The timeout is
+    // the only thing that guarantees that, and it travels in the request
+    // options, where nothing about the RESULT can see whether it was passed.
+    it('bounds the request with an abort signal', async () => {
+        respond({ public: { default: {} } });
+
+        await fetchServedStorefrontConfig('acme', 'shop', mockLogger);
+
+        const [, init] = (global.fetch as jest.Mock).mock.calls[0];
+        expect(init?.signal).toBeInstanceOf(AbortSignal);
+    });
+
+    // A 404 body still parses. Reading it would report the CDN's error page as
+    // the storefront's configuration — worse than no answer, because the caller
+    // trusts an answer over the manifest.
+    it('does not read the body of a non-OK response', async () => {
+        respond(
+            { public: { default: { 'commerce-endpoint': 'https://ghost.example.com' } } },
+            false,
+            404
+        );
+
+        expect(await fetchServedStorefrontConfig('acme', 'shop', mockLogger)).toBeUndefined();
+    });
+
+    // config.json comes off a CDN, so its shape is not guaranteed. A
+    // public.default that is not an object must read as "no answer" rather than
+    // as a storefront serving an empty scope — the second is a state a caller
+    // would report as drift.
+    it('returns undefined when public.default is not an object', async () => {
+        respond({ public: { default: '' } });
+
+        expect(await fetchServedStorefrontConfig('acme', 'shop', mockLogger)).toBeUndefined();
+    });
+
+    it.each<[string, unknown]>([
+        ['a number', 42],
+        ['an object', { code: 'citisignal' }],
+    ])('treats %s header value as absent rather than passing it through', async (_l, value) => {
+        respond({
+            public: { default: { headers: { cs: { 'Magento-Website-Code': value } } } },
+        });
+
+        const result = await fetchServedStorefrontConfig('acme', 'shop', mockLogger);
+
+        expect(result?.scope.websiteCode).toBeUndefined();
+    });
+
+    it('treats a non-string commerce-endpoint as absent', async () => {
+        respond({ public: { default: { 'commerce-endpoint': 42, headers: { cs: CS } } } });
+
+        const result = await fetchServedStorefrontConfig('acme', 'shop', mockLogger);
+
+        expect(result?.commerceEndpoint).toBeUndefined();
+        expect(result?.scope.websiteCode).toBe('citisignal');
+    });
 });
 
 describe('scopesMatch', () => {
@@ -119,8 +177,17 @@ describe('scopesMatch', () => {
         ).toBe(true);
     });
 
-    it('does not match when any one code differs', () => {
-        expect(scopesMatch({ websiteCode: 'a' }, { websiteCode: 'b' })).toBe(false);
+    // One case per code. With only the website case, either of the other two
+    // comparisons could be dropped and every test still passed — and a storefront
+    // serving the wrong store VIEW is the drift this module was written to catch.
+    it.each<[string, StoreScope]>([
+        ['website', { websiteCode: 'z', storeCode: 'b', storeViewCode: 'c' }],
+        ['store', { websiteCode: 'a', storeCode: 'z', storeViewCode: 'c' }],
+        ['store view', { websiteCode: 'a', storeCode: 'b', storeViewCode: 'z' }],
+    ])('does not match when the %s code differs', (_label, other) => {
+        expect(scopesMatch({ websiteCode: 'a', storeCode: 'b', storeViewCode: 'c' }, other)).toBe(
+            false
+        );
     });
 
     it('treats two empty scopes as matching', () => {

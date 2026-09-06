@@ -8,8 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/aiSurface/components/PromptCard.tsx",
-        "src/features/dashboard/ui/components/IntegrationsSummaryTile.tsx"
+        "src/features/eds/services/patches/contentPatchRegistry.ts",
+        "src/features/eds/services/patches/patchTargetPolicy.ts",
+        "src/features/eds/services/storefront/servedStorefrontConfig.ts"
     ],
     "reporters": [
         "clear-text",

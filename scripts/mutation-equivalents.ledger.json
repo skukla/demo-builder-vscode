@@ -16205,6 +16205,30 @@
             "decision": "none \u2014 the second operand is what makes the tooltip type-safe",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/storefront/servedStorefrontConfig.ts",
+            "anchors": [
+                "const defaults = json.public?.default;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the ?. makes the read throw when config.json has no 'public' key \u2014 straight into this function's own catch, which returns undefined, which is exactly what the guard two lines below returns for the same body. Both paths produce the identical result for the identical input; only the debug line differs ('has no public.default block' vs 'Could not read <url>'). Verified by planting the mutation: all 19 tests stay green, and the enforcer in tests/sop/no-logger-wording-assertions.test.ts is explicit that a mutant whose only observable difference is which log line prints belongs here rather than being killed by pinning the wording.",
+            "decision": "none \u2014 the ?. is required by the type and keeps the diagnostic accurate",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/storefront/servedStorefrontConfig.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body only logs and returns undefined. Emptying it drops off the end of an async function, which resolves undefined \u2014 the same value, for every throwing input. Nothing a caller can observe changes; only the debug line is lost. Verified by planting an empty catch: all 19 tests stay green.",
+            "decision": "none \u2014 the log is the only reason the block has a body, and pinning its wording is banned",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
