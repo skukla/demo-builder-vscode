@@ -24,7 +24,14 @@ import * as net from 'net';
 import * as os from 'os';
 import * as path from 'path';
 import { z } from 'zod';
+import { ElicitResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import { InExtensionMcpServer } from '@/features/ai/server/inExtensionMcpServer';
+import {
+    askChatForConsent,
+    CHAT_CONSENT_TIMEOUT_MS,
+    type ElicitCapableExtra,
+} from '@/features/ai/server/consentViaChat';
+import { buildConsentPrompt } from '@/features/ai/server/consentText';
 import { SocketRpc, makeLogger } from './inExtensionMcpServer.testUtils';
 
 /** Answers the server's elicitation with `action`, or ignores it entirely. */
@@ -201,5 +208,93 @@ describe('consent in the chat', () => {
 
         expect(asked).toBe(false);
         expect(modalGate).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The elicitation REQUEST itself — what `askChatForConsent` hands the SDK.
+ *
+ * The socket tests above prove the round trip and say nothing about the shape of
+ * the ask: a client handed an empty schema, or no timeout, still answers. Those
+ * are arguments a collaborator receives, so they are asserted against the SDK
+ * handle directly — which also reaches the two routes a socket cannot, no
+ * per-call handle at all and an ask that fails outright.
+ *
+ * The two-minute timeout is asserted as a NUMBER rather than through the
+ * exported constant, which would agree with itself whatever it held.
+ */
+
+/** A tool with authored consent copy that names its target from the args. */
+const TOOL = 'start_datapack_import';
+const ARGS = { datapackName: 'citisignal', version: '1.2.0' };
+
+/** The per-call handle, with `sendRequest` answering `action`. */
+function extraAnswering(action: string): {
+    extra: ElicitCapableExtra;
+    sendRequest: jest.Mock;
+} {
+    const sendRequest = jest.fn().mockResolvedValue({ action });
+    return { extra: { sendRequest }, sendRequest };
+}
+
+describe('askChatForConsent', () => {
+    it('asks with the authored prompt, the allow schema and a two-minute timeout', async () => {
+        const { extra, sendRequest } = extraAnswering('accept');
+        const prompt = buildConsentPrompt(TOOL, ARGS);
+
+        const verdict = await askChatForConsent(TOOL, ARGS, extra, true);
+
+        expect(verdict).toBe('accept');
+        expect(sendRequest).toHaveBeenCalledWith(
+            {
+                method: 'elicitation/create',
+                params: {
+                    message: `${prompt?.title}\n\n${prompt?.detail}`,
+                    requestedSchema: {
+                        type: 'object',
+                        properties: {
+                            allow: {
+                                type: 'boolean',
+                                description: 'Allow this operation?',
+                            },
+                        },
+                        required: ['allow'],
+                    },
+                },
+            },
+            ElicitResultSchema,
+            { timeout: 120_000 }
+        );
+    });
+
+    it('exports that timeout as two minutes', () => {
+        expect(CHAT_CONSENT_TIMEOUT_MS).toBe(120_000);
+    });
+
+    it.each(['decline', 'cancel', 'something-else'])('treats %s as a refusal', async (action) => {
+        const { extra } = extraAnswering(action);
+
+        await expect(askChatForConsent(TOOL, ARGS, extra, true)).resolves.toBe('refuse');
+    });
+
+    it('is unavailable when the client declared no elicitation capability', async () => {
+        const { extra, sendRequest } = extraAnswering('accept');
+
+        await expect(askChatForConsent(TOOL, ARGS, extra, false)).resolves.toBe('unavailable');
+        expect(sendRequest).not.toHaveBeenCalled();
+    });
+
+    it('is unavailable when the call carries no SDK handle at all', async () => {
+        // Not a refusal, and not a throw either: the modal is the floor, and a
+        // gate that crashed here would take the tool call down with it.
+        await expect(askChatForConsent(TOOL, ARGS, undefined, true)).resolves.toBe('unavailable');
+    });
+
+    it('is unavailable when the ask itself fails', async () => {
+        const sendRequest = jest.fn().mockRejectedValue(new Error('transport closed'));
+
+        await expect(askChatForConsent(TOOL, ARGS, { sendRequest }, true)).resolves.toBe(
+            'unavailable'
+        );
     });
 });

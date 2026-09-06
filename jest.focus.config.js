@@ -32,7 +32,6 @@ module.exports = {
     // Environment: node
     testMatch: [
         '**/tests/core/utils/quickPickUtils.test.ts',
-        '**/tests/features/ai/server/consentViaChat-elicitation.test.ts',
         '**/tests/features/ai/server/consentViaChat.test.ts',
         '**/tests/features/app-builder/services/owPackageName.test.ts',
         '**/tests/features/dashboard/ui/configure/configureFieldValidation.test.ts',
