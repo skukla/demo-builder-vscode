@@ -8,11 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/components/layout/TwoColumnLayout.tsx",
-        "src/core/ui/hooks/useSelection.ts",
-        "src/features/ai/server/projectors.ts",
-        "src/features/components/services/envVarHelpers.ts",
-        "src/features/components/services/serviceGroupTransforms.ts"
+        "src/features/dashboard/ui/hooks/useRowStatusOverrides.ts",
+        "src/core/ui/utils/spectrumTokens.ts",
+        "src/core/ui/utils/stepCompletion.ts"
     ],
     "reporters": [
         "clear-text",
