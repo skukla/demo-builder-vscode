@@ -11,8 +11,24 @@
  * the content only ever returned — never logged.
  */
 
+// The real fs/promises, with `rm` observable: the cleanup contract is an
+// ARGUMENT contract (`recursive` + `force`), and the module swallows the call's
+// outcome in a `.catch`, so nothing about the returned value can see it.
+const mockRm = jest.fn();
+jest.mock('fs/promises', () => {
+    const actual = jest.requireActual('fs/promises');
+    return {
+        ...actual,
+        rm: (...args: unknown[]) => {
+            mockRm(...args);
+            return (actual.rm as (...a: unknown[]) => Promise<void>)(...args);
+        },
+    };
+});
+
 import * as fs from 'fs';
 import { downloadWorkspaceConfigJson } from '@/features/data-installer/services/workspaceConfigDownload';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 const TARGET = { orgId: '285361', projectId: 'proj-1', workspaceId: 'ws-1' };
@@ -31,6 +47,10 @@ function executorWriting(content: string | null, code = 0, stderr = '') {
 }
 
 describe('downloadWorkspaceConfigJson', () => {
+    beforeEach(() => {
+        mockRm.mockClear();
+    });
+
     it('returns the downloaded JSON', async () => {
         const executor = executorWriting('{"project":{}}');
 
@@ -49,6 +69,32 @@ describe('downloadWorkspaceConfigJson', () => {
         expect(command).toContain('--orgId 285361');
         expect(command).toContain('--projectId proj-1');
         expect(command).toContain('--workspaceId ws-1');
+    });
+
+    it('gives the download a LONG timeout — a workspace download outlives the default', async () => {
+        const executor = executorWriting('{}');
+
+        await downloadWorkspaceConfigJson(executor, TARGET);
+
+        // Dropping the options object entirely leaves the executor on its own
+        // default, which nothing else here would notice.
+        expect(executor.execute).toHaveBeenCalledWith(expect.any(String), {
+            timeout: TIMEOUTS.LONG,
+        });
+    });
+
+    it('removes the scratch directory RECURSIVELY and by force', async () => {
+        const executor = executorWriting('{"secret":"here"}');
+
+        await downloadWorkspaceConfigJson(executor, TARGET);
+
+        // Asserted on the CALL, not on the outcome: the removal is wrapped in a
+        // best-effort `.catch`, so a weakened option set still returns the same
+        // JSON and leaves the same (already-absent) directory behind.
+        expect(mockRm).toHaveBeenCalledWith(expect.any(String), {
+            recursive: true,
+            force: true,
+        });
     });
 
     it('removes the temp file even on success — it holds the client secret', async () => {
