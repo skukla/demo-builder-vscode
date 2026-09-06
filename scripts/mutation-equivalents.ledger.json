@@ -15618,6 +15618,177 @@
             "decision": "none \u2014 the guard below is a type narrowing, not a duplicate of this catch; both are correct",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/data-installer/services/importJobRunner.ts",
+            "anchors": [
+                "onProgress?.(perType);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "report() wraps the call in try/catch so a throwing listener cannot fail an import that is running correctly on the server. Dropping the `?.` makes a MISSING listener throw a TypeError into that same catch, which swallows it \u2014 no log, no state change, no different return value. A test can observe nothing at all, and planting the mutation leaves all 32 tests green.",
+            "decision": "none \u2014 the `?.` says the callback is optional; the catch that makes the mutant invisible is deliberate",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/data-installer/services/importJobRunner.ts",
+            "anchors": [
+                "return status !== undefined && TERMINAL.includes(status);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The surviving mutant replaces only the left half (`status !== undefined` -> `true`), and that half is logically redundant: TERMINAL holds 'success' and 'error', so TERMINAL.includes(undefined) is false whatever the guard says. It is there because snapshot.perType[type] is typed DataTypeStatus | undefined and a readonly DataTypeStatus[] .includes() refuses undefined at compile time. Removing it would not typecheck; keeping it cannot change an answer.",
+            "decision": "none \u2014 the guard is required by the type and unreachable as a decision",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/data-installer/services/importJobRunner.ts",
+            "anchors": [
+                "return (await client.getJobFailureReason(activationId))?.error;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "readFailureReason already returns undefined from its own catch when the echo fails. Dropping the `?.` turns an echo that answers with nothing into a TypeError, which lands in that catch and returns undefined \u2014 the same value by the other route. Planted: all 32 tests green, including the one that asserts never-registered with no reason.",
+            "decision": "none \u2014 the `?.` handles the echo that has nothing to say without going through the catch meant for a failing request",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/data-installer/services/importJobRunner.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 232,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is `return undefined`, and an async function that falls off its end resolves to undefined too \u2014 so emptying the block produces the identical value on the identical path. The rejecting-echo case IS now driven (importJobRunner-interrupted.test.ts, 'still reports never-registered when the echo request fails'); it constrains the outcome, which is all there is to constrain here.",
+            "decision": "none \u2014 the explicit return states the intent; both forms return undefined",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
+            "anchors": [
+                "if (!iso) return undefined;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Removing the guard leaves `new Date(iso)` to handle the falsy cases, and it already does: `new Date(undefined)` and `new Date('')` are both Invalid Date, so getTime() is NaN and the function returns undefined by the other route. undefined and the empty string are the only falsy values a `string | undefined` can hold, so there is no input that separates the two forms. Planted alongside six siblings: 105 of 106 tests green, the one failure belonging to a different mutant.",
+            "decision": "none \u2014 the guard says 'no date' in one line instead of relying on Invalid Date",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
+            "anchors": [
+                "const staticLabel = shared?.label ?? '';"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "`shared` is getStatusDisplay(status) where status has just been through normalizeIntegrationStatus, which returns one of exactly five values \u2014 all five are keys of STATUS_DISPLAY, so the lookup cannot answer null here. The `?.` is required because getStatusDisplay is declared `| null` for the callers that DO pass an unknown status; on this path there is no input that makes it fire.",
+            "decision": "none \u2014 required by getStatusDisplay's nullable return, unreachable through this caller",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
+            "anchors": [
+                "const dotVariant = severityToDot(shared?.severity ?? 'neutral');"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The same `shared` as the line above it: normalizeIntegrationStatus has already narrowed the status to five values that STATUS_DISPLAY all carry, so the lookup never answers null on this path and the fallback severity is unreachable.",
+            "decision": "none \u2014 required by getStatusDisplay's nullable return, unreachable through this caller",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
+            "anchors": [
+                "const label = shared?.label ?? '';"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The mesh side of the same lookup. toMeshCardStatus maps every MeshStatus onto 'stale', 'checking' or the value itself, and each of the nine results is a key of STATUS_DISPLAY \u2014 so getStatusDisplay cannot answer null for a mesh card either, whatever the caller passes.",
+            "decision": "none \u2014 required by getStatusDisplay's nullable return, unreachable through this caller",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
+            "anchors": [
+                "const dot = severityToDot(shared?.severity ?? 'neutral');"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Same `shared` as the mesh label line: toMeshCardStatus's output is always a STATUS_DISPLAY key, so the neutral fallback has no input that reaches it.",
+            "decision": "none \u2014 required by getStatusDisplay's nullable return, unreachable through this caller",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
+            "anchors": [
+                "source: entry?.source ?? { owner: '', repo: '' },"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The mutant replaces the fallback with `{}`. That source reaches only deriveKindFacet, which asks isBlankSource (false for both shapes \u2014 neither owner is 'skukla') and then formatSourceLine, where `'' && ''` and `undefined && undefined` are both falsy and both render the em-dash. Nothing else on the card reads source, so the two objects are indistinguishable from outside.",
+            "decision": "none \u2014 the typed empty source is the honest shape for an id no catalog carries",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/integrationCardModel.ts",
+            "anchors": [
+                "if (meshCardComponentId) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the branch open adds the falsy value itself to the covered set. `covered` is only ever asked `has(id)` for keys of the overrides record, which are strings, so adding undefined changes no answer. The one input that would separate them is an override keyed by the empty string, and no producer can emit one: override keys are component ids and catalog ids, both non-empty by construction. Planted with six siblings \u2014 no test moved.",
+            "decision": "none \u2014 the guard keeps a meaningless value out of the set; nothing reachable can observe the difference",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/shell/buildComponent.ts",
+            "anchors": [
+                "const prefix = opts.logPrefix ?? '[Build]';"
+            ],
+            "line": 158,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The integration path's `prefix` reaches nothing but the text of two logger calls \u2014 a debug line and an install warning \u2014 so the only test that separates `??` from `&&` asserts a logged MESSAGE. That is the one kill this burn-down forbids outright (it pins wording, which is what the ratchet exists to refuse to reward), and no other observable differs: the commands, their options and the return value are identical. Recorded as rule-bounded rather than logically impossible, so the constraint is visible and can be overruled.",
+            "decision": "none \u2014 killing it would mean pinning a log message's wording",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/shell/buildComponent.ts",
+            "anchors": [
+                "return false;"
+            ],
+            "line": 59,
+            "mutants": 1,
+            "category": "block",
+            "reason": "hasPackageJson's catch returns false; emptying the block returns undefined instead. Both call sites read the result only through `!(await hasPackageJson(...))`, and undefined and false are equally falsy there, so the two forms take the same branch on every input. No caller stores, compares or returns the value. Planted with three siblings: 31 tests green.",
+            "decision": "none \u2014 the explicit false matches the declared Promise<boolean>",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/AiCapabilitiesModal.tsx",
+            "anchors": [
+                "sections.length > 0;"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The conjunct cannot be false where it is evaluated. It is reached only after mcps.length > 0, and buildIntegrationSections never returns an empty list for a non-empty inventory: an MCP either matches one of the four integration definitions, which keeps that section, or it is a leftover, which pushes the 'Other' section. So sections.length is at least 1 on every input that gets this far, and both mutants (`true` and `>= 0`) agree with the original everywhere. Planted `true`: 36 tests green.",
+            "decision": "none \u2014 the guard is honest about buildIntegrationSections' declared return, and unreachable behind the length checks above it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

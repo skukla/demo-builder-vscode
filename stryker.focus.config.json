@@ -8,10 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/ai/server/edsResetTool.ts",
-        "src/features/ai/server/viewTools.ts",
-        "src/features/ai/sessionMcpDetector.ts",
-        "src/features/components/services/commerceSecretSweep.ts"
+        "src/features/dashboard/ui/components/AiCapabilitiesModal.tsx"
     ],
     "reporters": [
         "clear-text",
