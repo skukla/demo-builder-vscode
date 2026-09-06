@@ -19,7 +19,6 @@ import type { GitHubTokenService } from '@/features/eds/services/github/githubTo
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
-
 const mockApplyDaLiveOrgConfigSettings = jest.fn().mockResolvedValue(undefined);
 jest.mock('@/features/eds/handlers/edsHelpers', () => ({
     applyDaLiveOrgConfigSettings: (...args: unknown[]) => mockApplyDaLiveOrgConfigSettings(...args),
@@ -137,6 +136,55 @@ describe('applyAuthoringExperienceFlip', () => {
 
         expect(mockApplyDaLiveOrgConfigSettings).not.toHaveBeenCalled();
         expect(result.editorPath).toBe('ok');
+    });
+
+    it('skips editor.path when the DA org is known but the site is not', async () => {
+        // BOTH coordinates are required to address a site config. Half of them is
+        // not a partial write, it is a write to the wrong place.
+        const halfCoords = createMockProject({
+            name: 'Half Coords',
+            path: '/test/project',
+            componentInstances: {
+                [COMPONENT_IDS.EDS_STOREFRONT]: {
+                    id: COMPONENT_IDS.EDS_STOREFRONT,
+                    name: 'EDS Storefront',
+                    status: 'ready',
+                    metadata: { daLiveOrg: 'my-org' },
+                },
+            },
+        });
+
+        const result = await flip(halfCoords, 'da-live-classic');
+
+        expect(mockApplyDaLiveOrgConfigSettings).not.toHaveBeenCalled();
+        expect(result.editorPath).toBe('ok');
+    });
+
+    it('a project with NO componentInstances no-ops every step rather than throwing', async () => {
+        // The metadata write has already landed by the time this runs, so a project
+        // that carries no instances at all must still return — reading through the
+        // missing record is the one place a throw would escape the per-step catches.
+        const bare = createMockProject({
+            name: 'Bare',
+            path: '/test/bare',
+            componentInstances: undefined,
+        });
+
+        const result = await flip(bare, 'experience-workspace');
+
+        expect(mockApplyDaLiveOrgConfigSettings).not.toHaveBeenCalled();
+        expect(mockInstallQuickEdit).not.toHaveBeenCalled();
+        expect(result).toEqual({ editorPath: 'ok', quickEdit: 'ok', configRegen: 'ok' });
+    });
+
+    it('skips Quick Edit vendoring when githubRepo is not owner/repo', async () => {
+        // A malformed value splits into an owner and NO repo. Vendoring against a
+        // half-resolved repo would push a commit at a repository nobody named.
+        const result = await flip(makeEdsProject('acme-storefront'), 'experience-workspace');
+
+        expect(mockInstallQuickEdit).not.toHaveBeenCalled();
+        expect(mockPreviewCode).not.toHaveBeenCalled();
+        expect(result.quickEdit).toBe('ok');
     });
 
     it('da-live-classic SKIPS Quick Edit + config.json regen', async () => {
