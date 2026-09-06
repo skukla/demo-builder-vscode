@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/projects-dashboard/utils/projectStatusUtils.ts"
+        "src/core/communication/webviewCommunicationManager.ts"
     ],
     "reporters": [
         "clear-text",

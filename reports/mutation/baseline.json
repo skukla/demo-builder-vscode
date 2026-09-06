@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-22 MUT-03: projectStatusUtils — transitional statuses, storefront pair, getProjectStatusDisplay and port selection; deploymentSummary suite renamed into the family; 7 equivalents ledgered",
+    "_note": "PL-22 MUT-03: webviewCommunicationManager — reply/acknowledge rules, dispose, retry loop edges and config budgets; two dead handshake flags removed; 26 equivalents ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -581,25 +581,22 @@
             "openGaps": 1
         },
         "src/core/communication/webviewCommunicationManager.ts": {
-            "score": 60.89,
-            "killed": 99,
-            "survived": 66,
-            "noCoverage": 4,
+            "score": 78.61,
+            "killed": 126,
+            "survived": 37,
+            "noCoverage": 0,
             "timeout": 10,
             "survivorCategories": {
-                "branch": 44,
-                "block": 8,
-                "logPresentation": 3,
-                "other": 4,
-                "string": 7
-            },
-            "uncoveredCategories": {
-                "block": 3,
+                "branch": 18,
+                "block": 6,
+                "logPresentation": 10,
+                "other": 2,
                 "string": 1
             },
-            "highValueSurvivors": 52,
-            "equivalent": 0,
-            "openGaps": 59
+            "uncoveredCategories": {},
+            "highValueSurvivors": 24,
+            "equivalent": 26,
+            "openGaps": 0
         },
         "src/core/config/backendOwnedScope.ts": {
             "score": 95,

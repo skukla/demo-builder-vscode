@@ -107,11 +107,10 @@ export class WebviewCommunicationManager {
     private messageQueue: Message[] = [];
     private pendingRequests = new Map<string, PendingRequest>();
     private messageHandlers = new Map<string, MessageHandlerFunction>();
-    // Tracking state for handshake protocol - values assigned but read indirectly
-
-    private isWebviewReady = false;
-
-    private isExtensionReady = false;
+    // `handshakeComplete` is the only handshake flag anything reads. Two more —
+    // `isWebviewReady` and `isExtensionReady` — were written here and at the two
+    // points below and read by nothing in src or tests, under a comment saying
+    // they were "read indirectly". They were not. Removed 2026-09-05.
     private handshakeComplete = false;
     private stateVersion = 0;
     private disposables: vscode.Disposable[] = [];
@@ -141,9 +140,6 @@ export class WebviewCommunicationManager {
             this.disposables,
         );
 
-        // Mark extension as ready
-        this.isExtensionReady = true;
-
         // Wait for handshake to complete
         return new Promise((resolve, reject) => {
             const handshakeTimeout = setTimeout(() => {
@@ -153,8 +149,6 @@ export class WebviewCommunicationManager {
             // Set up handshake completion handler
             // Extension waits passively for webview ready signal (VS Code Issue #125546)
             this.once('__webview_ready__', () => {
-                this.isWebviewReady = true;
-
                 // Send handshake confirmation
                 this.sendRawMessage({
                     id: uuidv4(),
