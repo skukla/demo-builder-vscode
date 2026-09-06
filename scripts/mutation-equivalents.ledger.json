@@ -16730,6 +16730,19 @@
             "decision": "none \u2014 any non-empty default is erased by the window filter on the following line, so no input can distinguish it from []",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/ui/components/WebviewApp.tsx",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 134,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The whole body of this else arm is a single log.debug describing the already-sent case; the branch itself is now pinned by the 'sends ready ONCE even when the effect runs again' test, which asserts exactly one postMessage('ready'). Emptying the arm therefore removes only a debug line, and the only assertion that could notice is one on the logger's wording, which this repo bans. Verified by planting '} else {}' and re-running the suite: 21 tests, all still green.",
+            "decision": "none \u2014 the decision the arm belongs to is already constrained; its body is log-only, and pinning log wording is not allowed",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

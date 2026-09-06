@@ -138,6 +138,62 @@ describe('WebviewApp', () => {
         });
     });
 
+    // The effect re-subscribes and re-checks on every dependency change, and the
+    // ready guard is a REF, so it has to survive those re-runs. Both directions
+    // were unconstrained: nothing noticed a second `ready`, and nothing noticed a
+    // handler left closed over the first render's props.
+    describe('effect re-runs', () => {
+        it('sends ready ONCE even when the effect runs again (StrictMode remount)', async () => {
+            const view = render(
+                <WebviewApp notifyReady onInit={jest.fn()}>
+                    <div>Content</div>
+                </WebviewApp>
+            );
+
+            await waitFor(() => {
+                expect(mockPostMessage).toHaveBeenCalledWith('ready');
+            });
+
+            // A NEW onInit identity re-runs the effect, and `ready()` resolves again.
+            await act(async () => {
+                view.rerender(
+                    <WebviewApp notifyReady onInit={jest.fn()}>
+                        <div>Content</div>
+                    </WebviewApp>
+                );
+            });
+
+            expect(mockReady.mock.calls.length).toBeGreaterThan(1);
+            expect(mockPostMessage.mock.calls.filter(([type]) => type === 'ready'))
+                .toHaveLength(1);
+        });
+
+        it('calls the CURRENT onInit after a rerender, not the one from mount', async () => {
+            const first = jest.fn();
+            const second = jest.fn();
+
+            const view = render(
+                <WebviewApp onInit={first}>
+                    <div>Content</div>
+                </WebviewApp>
+            );
+            view.rerender(
+                <WebviewApp onInit={second}>
+                    <div>Content</div>
+                </WebviewApp>
+            );
+
+            triggerMessage('init', { project: 'test-project' });
+
+            await waitFor(() => {
+                expect(second).toHaveBeenCalledWith(
+                    expect.objectContaining({ project: 'test-project' })
+                );
+            });
+            expect(first).not.toHaveBeenCalled();
+        });
+    });
+
     describe('theme handling (unified theme system)', () => {
         // Unified theme system: Always uses dark mode, ignores VS Code theme preferences
 
