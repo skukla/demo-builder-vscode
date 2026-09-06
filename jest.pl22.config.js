@@ -99,6 +99,7 @@ module.exports = {
         '**/tests/features/project-creation/ui/helpers/buttonTextHelpers.test.ts',
         '**/tests/features/prerequisites/handlers/installHandler-plugins.test.ts',
         '**/tests/features/dashboard/ui/components/integrations/integrationCardModel-commerceScope.test.ts',
+        '**/tests/features/dashboard/ui/components/integrations/integrationCardModel-fallbacks.test.ts',
         '**/tests/features/dashboard/ui/components/integrations/integrationCardModel-installation.test.ts',
         '**/tests/features/dashboard/ui/components/integrations/integrationCardModel-mesh.test.ts',
         '**/tests/features/dashboard/ui/components/integrations/integrationCardModel-vocabularyContract.test.ts',
