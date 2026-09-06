@@ -29,6 +29,27 @@ describe('daLiveContentHelpers', () => {
             expect(out).toContain(`src="${base}/media_abc123.png?width=750"`);
         });
 
+        it('preserves query params on ABSOLUTE /media_ URLs too', () => {
+            // The two rewrites are separate regexes. Optimization hints reach the
+            // Media Bus only if the whole query string survives, so a pattern
+            // that matches one query character — or stops at the first one — is
+            // the same as not rewriting the URL at all.
+            const out = transformHtmlForDaLive('<img src="/media_abc123.png?width=750">', base);
+            expect(out).toContain(`src="${base}/media_abc123.png?width=750"`);
+        });
+
+        it('rewrites media URLs whose extension is a single character', () => {
+            // The closing delimiter must be the QUOTE. Matching any character
+            // there instead lets the pattern borrow the last character of the
+            // filename, which silently stops matching whenever the extension has
+            // no character to spare.
+            const relative = transformHtmlForDaLive('<img src="./media_abc123.p">', base);
+            const absolute = transformHtmlForDaLive('<img src="/media_abc123.p">', base);
+
+            expect(relative).toContain(`src="${base}/media_abc123.p"`);
+            expect(absolute).toContain(`src="${base}/media_abc123.p"`);
+        });
+
         it('replaces empty structural divs with a preserved placeholder', () => {
             expect(transformHtmlForDaLive('<div></div>', base)).toContain(
                 '<div><p>&nbsp;</p></div>'

@@ -69,7 +69,9 @@ export function buildSourceUrl(
     if (!isHtmlPath) {
         return `${sourceBaseUrl}${sourcePath}`;
     }
-    if (sourcePath === '/' || sourcePath.endsWith('/')) {
+    // `endsWith('/')` already covers the bare root — an explicit `=== '/'` test
+    // alongside it is a decision that can never go the other way.
+    if (sourcePath.endsWith('/')) {
         return `${sourceBaseUrl}${sourcePath}index.plain.html`;
     }
     return `${sourceBaseUrl}${sourcePath}.plain.html`;
