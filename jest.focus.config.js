@@ -47,10 +47,10 @@ module.exports = {
     moduleNameMapper: { ...node.moduleNameMapper, ...react.moduleNameMapper },
     transformIgnorePatterns: node.transformIgnorePatterns,
     testMatch: [
-        '**/tests/core/utils/githubUrlParser.test.ts',
-        '**/tests/core/utils/timeoutConfig.test.ts',
-        '**/tests/features/app-builder/services/allowedDomain.test.ts',
-        '**/tests/core/ui/components/layout/PageHeader.test.tsx',
-        '**/tests/core/ui/components/ui/StatusDot.test.tsx',
+        '**/tests/features/components/services/backendCommerce.test.ts',
+        '**/tests/features/components/services/componentConfigWrites.test.ts',
+        '**/tests/features/dashboard/services/onOpenChecks/meshVerifyCheck.test.ts',
+        '**/tests/features/components/ui/components/BrokeredCredentialFields.test.tsx',
+        '**/tests/features/dashboard/ui/components/AppBuilderComponentRemoveDialog.test.tsx',
     ],
 };

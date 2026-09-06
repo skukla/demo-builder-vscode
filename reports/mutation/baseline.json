@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-01: all five modules to zero open gaps — slowCommandThreshold covered at all, PageHeader's three secondary-line branches and StatusDot's class-list filter pinned, allowedDomain's three optional chains driven, githubUrlParser's .git strip anchored",
+    "_note": "PL-22 MUT-02: backendCommerce, componentConfigWrites, BrokeredCredentialFields, meshVerifyCheck, AppBuilderComponentRemoveDialog to zero open gaps",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -3740,19 +3740,18 @@
             "openGaps": 0
         },
         "src/features/components/services/backendCommerce.ts": {
-            "score": 57.14,
-            "killed": 4,
-            "survived": 3,
+            "score": 85.71,
+            "killed": 6,
+            "survived": 1,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 1,
-                "optionalChain": 2
+                "branch": 1
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 1,
-            "equivalent": 0,
-            "openGaps": 3
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/features/components/services/blockLibraryLoader.ts": {
             "score": 100,
@@ -3798,19 +3797,16 @@
             "openGaps": 0
         },
         "src/features/components/services/componentConfigWrites.ts": {
-            "score": 93.02,
-            "killed": 40,
-            "survived": 3,
+            "score": 100,
+            "killed": 43,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 1,
-                "other": 2
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 1,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 3
+            "openGaps": 0
         },
         "src/features/components/services/componentDependencies.ts": {
             "score": 85.06,
@@ -3952,19 +3948,18 @@
             "openGaps": 0
         },
         "src/features/components/ui/components/BrokeredCredentialFields.tsx": {
-            "score": 83.33,
-            "killed": 35,
-            "survived": 7,
+            "score": 90.48,
+            "killed": 38,
+            "survived": 4,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 3,
                 "string": 4
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 3,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 3
+            "openGaps": 0
         },
         "src/features/components/ui/components/ConfigFieldRenderer.tsx": {
             "score": 86.27,
@@ -4319,22 +4314,19 @@
             "openGaps": 1
         },
         "src/features/dashboard/services/onOpenChecks/meshVerifyCheck.ts": {
-            "score": 68.75,
-            "killed": 22,
-            "survived": 9,
-            "noCoverage": 1,
+            "score": 81.25,
+            "killed": 26,
+            "survived": 6,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "string": 2,
-                "optionalChain": 3,
                 "logPresentation": 4
             },
-            "uncoveredCategories": {
-                "logPresentation": 1
-            },
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 3
+            "openGaps": 0
         },
         "src/features/dashboard/services/onOpenChecks/orchestrator.ts": {
             "score": 94.29,
@@ -4505,18 +4497,16 @@
             "openGaps": 0
         },
         "src/features/dashboard/ui/components/AppBuilderComponentRemoveDialog.tsx": {
-            "score": 72.73,
-            "killed": 8,
-            "survived": 3,
+            "score": 100,
+            "killed": 11,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 3
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 3,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 3
+            "openGaps": 0
         },
         "src/features/dashboard/ui/components/DashboardTile.tsx": {
             "score": 90,

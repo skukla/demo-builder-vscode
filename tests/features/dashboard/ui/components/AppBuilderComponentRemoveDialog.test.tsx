@@ -27,7 +27,14 @@ jest.mock('@adobe/react-spectrum', () => ({
             {children}
         </div>
     ),
-    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+    // Tagged so a test can count the LINES the dialog body renders — an extra
+    // empty one and a consequence rendered as bare text both read identically to
+    // getByText, and both are wrong.
+    Text: ({ children, ...props }: any) => (
+        <span data-testid="dialog-line" {...props}>
+            {children}
+        </span>
+    ),
 }));
 
 jest.mock('@/core/ui/components/ui/Modal', () => ({
@@ -85,6 +92,39 @@ describe('AppBuilderComponentRemoveDialog', () => {
         expect(
             screen.getByText(/permanently|destructive|undeploy|tear.?down|cloud/i)
         ).toBeInTheDocument();
+    });
+
+    it('renders the extra consequence as its OWN line when one is supplied', () => {
+        // The mesh is the case that needs it: removing it also strips MESH_ENDPOINT
+        // from the storefront config, which the generic warning does not say.
+        render(
+            <AppBuilderComponentRemoveDialog
+                isOpen
+                appBuilderComponentId="api-mesh"
+                consequence="This also removes MESH_ENDPOINT from the storefront config."
+                onConfirm={jest.fn()}
+                onClose={jest.fn()}
+            />
+        );
+
+        const lines = screen.getAllByTestId('dialog-line');
+        expect(lines).toHaveLength(2);
+        expect(lines[1]).toHaveTextContent('This also removes MESH_ENDPOINT');
+    });
+
+    it('renders ONE line when the teardown reaches no further than itself', () => {
+        // Without the guard the second line still renders, empty — a blank gap under
+        // the warning on every component that has no extra consequence.
+        render(
+            <AppBuilderComponentRemoveDialog
+                isOpen
+                appBuilderComponentId="erp-sync"
+                onConfirm={jest.fn()}
+                onClose={jest.fn()}
+            />
+        );
+
+        expect(screen.getAllByTestId('dialog-line')).toHaveLength(1);
     });
 
     it('fires onConfirm (the consumer posts removeAppBuilderComponent) then closes on confirm', async () => {

@@ -8,11 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/utils/githubUrlParser.ts",
-        "src/core/utils/timeoutConfig.ts",
-        "src/core/ui/components/layout/PageHeader.tsx",
-        "src/core/ui/components/ui/StatusDot.tsx",
-        "src/features/app-builder/services/allowedDomain.ts"
+        "src/features/components/services/backendCommerce.ts",
+        "src/features/components/services/componentConfigWrites.ts",
+        "src/features/components/ui/components/BrokeredCredentialFields.tsx",
+        "src/features/dashboard/services/onOpenChecks/meshVerifyCheck.ts",
+        "src/features/dashboard/ui/components/AppBuilderComponentRemoveDialog.tsx"
     ],
     "reporters": [
         "clear-text",
