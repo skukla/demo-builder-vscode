@@ -8,9 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/ai/server/validateSelectionTool.ts",
-        "src/core/shell/ensureNodeVersion.ts",
-        "src/features/components/services/componentManager.ts"
+        "src/features/components/ui/components/StoreSelectionRow.tsx",
+        "src/core/ui/components/feedback/StatusCard.tsx"
     ],
     "reporters": [
         "clear-text",

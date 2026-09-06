@@ -16133,6 +16133,42 @@
             "decision": "none \u2014 the guard is what the optional type requires to index the record",
             "recorded": "2026-09-06",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/components/ui/components/StoreSelectionRow.tsx",
+            "anchors": [
+                "if (!websiteField) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the guard with false, so the early return never fires. handleWebsiteSelect is only ever reached through the Website picker, and that picker is rendered inside {websiteField && ...} \u2014 it does not exist in the tree when websiteField is undefined. There is no render in which the callback runs with the field missing, so the mutant cannot be observed. The guard is what narrows UniqueField | undefined for the updateField call below it.",
+            "decision": "none \u2014 the guard is required for the type narrowing and states the precondition",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/components/ui/components/StoreSelectionRow.tsx",
+            "anchors": [
+                "if (!storeField) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Same shape as the website guard above: handleStoreSelect is only reached through the Store picker, which renders inside {storeField && ...}. The callback cannot run with storeField undefined, so removing the early return changes nothing observable.",
+            "decision": "none \u2014 the guard is required for the type narrowing and states the precondition",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/ui/components/feedback/StatusCard.tsx",
+            "anchors": [
+                "const getSizeInPixels = (): number => {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker empties the default arm of the size switch. size is typed 'S' | 'M' | 'L' and defaults to 'M', and each of the three has its own case, so the default arm is unreachable without casting a fourth value in \u2014 which would be asserting against a state the component's own contract forbids. It stays as the runtime backstop for a prop arriving from an untyped boundary.",
+            "decision": "none \u2014 the three real sizes are each pinned by their own test",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
         }
     ]
 }

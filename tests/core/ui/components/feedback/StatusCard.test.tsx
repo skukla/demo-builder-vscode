@@ -1,6 +1,6 @@
 import React from 'react';
-import { renderWithProviders, screen, fireEvent } from "../../../../helpers/react-test-utils";
-import { StatusCard } from '@/core/ui/components/feedback/StatusCard';
+import { renderWithProviders, screen, fireEvent } from '../../../../helpers/react-test-utils';
+import { StatusCard, type StatusCardProps } from '@/core/ui/components/feedback/StatusCard';
 
 describe('StatusCard', () => {
     describe('Rendering', () => {
@@ -15,9 +15,7 @@ describe('StatusCard', () => {
         });
 
         it('renders with label', () => {
-            renderWithProviders(
-                <StatusCard label="Demo Status" status="Running" color="green" />
-            );
+            renderWithProviders(<StatusCard label="Demo Status" status="Running" color="green" />);
             expect(screen.getByText('Demo Status')).toBeInTheDocument();
             expect(screen.getByText('Running')).toBeInTheDocument();
         });
@@ -109,9 +107,7 @@ describe('StatusCard', () => {
 
         it('renders with horizontal layout (flex-row), not stacked (flex-col)', () => {
             // Given: StatusCard component rendered
-            renderWithProviders(
-                <StatusCard status="Running" color="green" />
-            );
+            renderWithProviders(<StatusCard status="Running" color="green" />);
 
             // When: We find the status text (this verifies component renders)
             const statusText = screen.getByText('Running');
@@ -134,9 +130,7 @@ describe('StatusCard', () => {
         });
 
         it('shows label and status when label provided', () => {
-            renderWithProviders(
-                <StatusCard label="Mesh Status" status="Deployed" color="green" />
-            );
+            renderWithProviders(<StatusCard label="Mesh Status" status="Deployed" color="green" />);
             expect(screen.getByText('Mesh Status')).toBeInTheDocument();
             expect(screen.getByText('Deployed')).toBeInTheDocument();
         });
@@ -144,9 +138,7 @@ describe('StatusCard', () => {
 
     describe('Text Styling', () => {
         it('applies correct font weight to status without label', () => {
-            renderWithProviders(
-                <StatusCard status="Running" color="green" />
-            );
+            renderWithProviders(<StatusCard status="Running" color="green" />);
             const status = screen.getByText('Running');
             expect(status).toBeInTheDocument();
         });
@@ -162,33 +154,25 @@ describe('StatusCard', () => {
 
     describe('Dashboard Use Cases', () => {
         it('renders demo status indicator', () => {
-            renderWithProviders(
-                <StatusCard label="Frontend" status="Running" color="green" />
-            );
+            renderWithProviders(<StatusCard label="Frontend" status="Running" color="green" />);
             expect(screen.getByText('Frontend')).toBeInTheDocument();
             expect(screen.getByText('Running')).toBeInTheDocument();
         });
 
         it('renders mesh status indicator', () => {
-            renderWithProviders(
-                <StatusCard label="API Mesh" status="Deployed" color="green" />
-            );
+            renderWithProviders(<StatusCard label="API Mesh" status="Deployed" color="green" />);
             expect(screen.getByText('API Mesh')).toBeInTheDocument();
             expect(screen.getByText('Deployed')).toBeInTheDocument();
         });
 
         it('renders stale mesh status', () => {
-            renderWithProviders(
-                <StatusCard label="API Mesh" status="Stale" color="yellow" />
-            );
+            renderWithProviders(<StatusCard label="API Mesh" status="Stale" color="yellow" />);
             expect(screen.getByText('API Mesh')).toBeInTheDocument();
             expect(screen.getByText('Stale')).toBeInTheDocument();
         });
 
         it('renders error status', () => {
-            renderWithProviders(
-                <StatusCard label="Deployment" status="Failed" color="red" />
-            );
+            renderWithProviders(<StatusCard label="Deployment" status="Failed" color="red" />);
             expect(screen.getByText('Deployment')).toBeInTheDocument();
             expect(screen.getByText('Failed')).toBeInTheDocument();
         });
@@ -203,12 +187,57 @@ describe('StatusCard', () => {
             expect(dot).toBeInTheDocument();
         });
 
-        it('passes size to StatusDot', () => {
-            renderWithProviders(
-                <StatusCard status="Running" color="green" size="L" />
-            );
-            // StatusDot should be rendered (exact verification depends on implementation)
-            expect(screen.getByText('Running')).toBeInTheDocument();
+        // `color` is the CALLER's vocabulary and `variant` is StatusDot's; this
+        // component is the only thing that maps between them, and StatusDot
+        // publishes what it received as `data-variant`.
+        describe('maps the colour prop to the dot variant', () => {
+            const variantFor = (color: StatusCardProps['color']) => {
+                const { container } = renderWithProviders(
+                    <StatusCard status="Running" color={color} />
+                );
+                return container
+                    .querySelector('span[role="presentation"]')!
+                    .getAttribute('data-variant');
+            };
+
+            it.each([
+                ['green', 'success'],
+                ['red', 'error'],
+                ['yellow', 'warning'],
+                ['orange', 'warning'],
+                ['blue', 'info'],
+                ['gray', 'neutral'],
+            ] as Array<[StatusCardProps['color'], string]>)('%s → %s', (color, variant) => {
+                expect(variantFor(color)).toBe(variant);
+            });
+        });
+
+        // Size is a t-shirt name here and a pixel count on the dot. Nothing else
+        // in the tree makes that translation.
+        describe('translates the size prop to dot pixels', () => {
+            const dotWidth = (props: Partial<StatusCardProps>) => {
+                const { container } = renderWithProviders(
+                    <StatusCard status="Running" color="green" {...props} />
+                );
+                return (container.querySelector('span[role="presentation"]') as HTMLElement).style
+                    .width;
+            };
+
+            it('renders a 6px dot at S', () => {
+                expect(dotWidth({ size: 'S' })).toBe('6px');
+            });
+
+            it('renders an 8px dot at M', () => {
+                expect(dotWidth({ size: 'M' })).toBe('8px');
+            });
+
+            it('renders a 10px dot at L', () => {
+                expect(dotWidth({ size: 'L' })).toBe('10px');
+            });
+
+            it('defaults to the 8px M dot when no size is given', () => {
+                expect(dotWidth({})).toBe('8px');
+            });
         });
     });
 
@@ -241,9 +270,7 @@ describe('StatusCard', () => {
         });
 
         it('updates when color changes', () => {
-            const { rerender } = renderWithProviders(
-                <StatusCard status="Status" color="gray" />
-            );
+            const { rerender } = renderWithProviders(<StatusCard status="Status" color="gray" />);
 
             rerender(<StatusCard status="Status" color="green" />);
             expect(screen.getByText('Status')).toBeInTheDocument();
@@ -263,7 +290,7 @@ describe('StatusCard', () => {
                     status="Session expired"
                     color="yellow"
                     action={{ label: 'Sign in', onPress: jest.fn() }}
-                />,
+                />
             );
             expect(screen.getByText('Sign in')).toBeInTheDocument();
         });
@@ -276,7 +303,7 @@ describe('StatusCard', () => {
                     status="Unknown"
                     color="gray"
                     action={{ label: 'Sign in to check', onPress }}
-                />,
+                />
             );
             fireEvent.click(screen.getByText('Sign in to check'));
             expect(onPress).toHaveBeenCalledTimes(1);
@@ -288,8 +315,12 @@ describe('StatusCard', () => {
                     label="AI"
                     status="Setup incomplete"
                     color="yellow"
-                    action={{ label: 'Regenerate AI files', onPress: jest.fn(), testId: 'ai-regenerate-trigger' }}
-                />,
+                    action={{
+                        label: 'Regenerate AI files',
+                        onPress: jest.fn(),
+                        testId: 'ai-regenerate-trigger',
+                    }}
+                />
             );
             expect(screen.getByTestId('ai-regenerate-trigger')).toBeInTheDocument();
         });
