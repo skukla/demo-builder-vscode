@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-05: loadingHTML min-display boundary, useDebouncedLoading unref, useFocusOnMount deps+null-container tiers, useVSCodeRequest type deps (+worker-safe rejection capture), progressRegister cancellable+card-less agent path",
+    "_note": "MUT-06: AiMcpsList — absent tools field, message-less error entry, and the memo re-sorting on a changed mcps prop",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -2626,18 +2626,18 @@
             "openGaps": 0
         },
         "src/features/ai/server/mcpProxyRetry.ts": {
-            "score": 91.67,
-            "killed": 22,
-            "survived": 2,
+            "score": 95.83,
+            "killed": 23,
+            "survived": 1,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 2
+                "branch": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 2,
-            "equivalent": 0,
-            "openGaps": 2
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/features/ai/server/mcpProxySession.ts": {
             "score": 98.21,
@@ -3892,18 +3892,16 @@
             "openGaps": 0
         },
         "src/features/components/services/projectAppBuilderPredicate.ts": {
-            "score": 85.71,
-            "killed": 12,
-            "survived": 2,
+            "score": 100,
+            "killed": 14,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "other": 2
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 2
+            "openGaps": 0
         },
         "src/features/components/services/serviceGroupTransforms.ts": {
             "score": 82.69,
@@ -4024,18 +4022,16 @@
             "openGaps": 0
         },
         "src/features/dashboard/commands/configureEnvLoader.ts": {
-            "score": 92.86,
-            "killed": 26,
-            "survived": 2,
+            "score": 100,
+            "killed": 28,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 2
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 2,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 2
+            "openGaps": 0
         },
         "src/features/dashboard/commands/openAi.ts": {
             "score": 93.33,
@@ -4240,19 +4236,18 @@
             "openGaps": 0
         },
         "src/features/dashboard/services/defaultPromptsSeeder.ts": {
-            "score": 60.53,
-            "killed": 23,
-            "survived": 15,
+            "score": 65.79,
+            "killed": 25,
+            "survived": 13,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 2,
                 "string": 13
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 2,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 2
+            "openGaps": 0
         },
         "src/features/dashboard/services/onOpenChecks/aiContextFreshnessCheck.ts": {
             "score": 82.05,
@@ -4451,21 +4446,16 @@
             "openGaps": 0
         },
         "src/features/dashboard/ui/components/AiMcpsList.tsx": {
-            "score": 93.02,
-            "killed": 40,
-            "survived": 2,
-            "noCoverage": 1,
+            "score": 100,
+            "killed": 43,
+            "survived": 0,
+            "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "optionalChain": 1,
-                "other": 1
-            },
-            "uncoveredCategories": {
-                "string": 1
-            },
+            "survivorCategories": {},
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 2
+            "openGaps": 0
         },
         "src/features/dashboard/ui/components/AiSkillsList.tsx": {
             "score": 96.55,

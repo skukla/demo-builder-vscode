@@ -8,11 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/utils/loadingHTML.ts",
-        "src/core/ui/hooks/useDebouncedLoading.ts",
-        "src/core/ui/hooks/useFocusOnMount.ts",
-        "src/core/ui/hooks/useVSCodeRequest.ts",
-        "src/core/vscode/progressRegister.ts"
+        "src/features/dashboard/ui/components/AiMcpsList.tsx"
     ],
     "reporters": [
         "clear-text",
