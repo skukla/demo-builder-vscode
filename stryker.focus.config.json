@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/sidebar/ui/Sidebar.tsx"
+        "src/core/ui/utils/statusVocabulary.ts"
     ],
     "reporters": [
         "clear-text",
