@@ -40,6 +40,9 @@ it('is the ai-verify check (guarded — verify spawns servers, run once per sess
     const check = makeCheck({ status: 'ok', checks: okChecks, inventory: emptyInventory });
     expect(check.id).toBe(CHECK_IDS.AI_VERIFY);
     expect(check.reRunnable).toBeFalsy();
+    // Background: the verify spawns MCP servers, so it must never hold the
+    // dashboard open while it runs.
+    expect(check.mode).toBe('background');
 });
 
 it('all checks ok + healthy inventory → ok; data carries checks + inventory', async () => {
@@ -81,6 +84,66 @@ it('inventory inspector failure names the failing MCP server + reason (which/why
     expect(outcome.message).toMatch(/MODULE_NOT_FOUND/);
     // …and the inventory is still in data for the modal.
     expect(outcome.data?.inventory).toEqual(inventory);
+});
+
+it('a healthy MCP server is not reported as a failure', async () => {
+    // The inspector scans for `status !== 'ok'`. A predicate that matched every
+    // entry would turn the first healthy server into the badge's "failure",
+    // which no other assertion here would notice — every other inventory in
+    // this suite has an empty `mcps`.
+    const inventory = {
+        skills: [],
+        mcps: [{ id: 'demo-builder', status: 'ok' }],
+        sessionMcps: [],
+    };
+    const check = makeCheck({ status: 'ok', checks: okChecks, inventory });
+
+    const outcome = (await check.run(makeCtx())) as CheckResult;
+
+    expect(outcome.status).toBe('ok');
+    expect(outcome.message).toBeUndefined();
+});
+
+it('an inventory with no mcps array at all → ok, not a crash', async () => {
+    // The inspector's shape is whatever verifyAiSetup returns; an inventory
+    // that never got as far as listing servers has no `mcps` key, and reading
+    // through it unguarded turns a missing list into a thrown check.
+    const check = makeCheck({
+        status: 'ok',
+        checks: okChecks,
+        inventory: { skills: [], sessionMcps: [] },
+    });
+
+    const outcome = (await check.run(makeCtx())) as CheckResult;
+
+    expect(outcome.status).toBe('ok');
+});
+
+it('a skillsError → warning naming the skills inspector failure', async () => {
+    const inventory = { skills: [], mcps: [], sessionMcps: [], skillsError: 'ENOENT skills/' };
+    const check = makeCheck({ status: 'ok', checks: okChecks, inventory });
+
+    const outcome = (await check.run(makeCtx())) as CheckResult;
+
+    expect(outcome.status).toBe('warning');
+    expect(outcome.message).toMatch(/Skills/);
+    expect(outcome.message).toMatch(/ENOENT skills\//);
+});
+
+it('a sessionMcpsError → warning naming the session MCP inspector failure', async () => {
+    const inventory = {
+        skills: [],
+        mcps: [],
+        sessionMcps: [],
+        sessionMcpsError: 'no .mcp.json',
+    };
+    const check = makeCheck({ status: 'ok', checks: okChecks, inventory });
+
+    const outcome = (await check.run(makeCtx())) as CheckResult;
+
+    expect(outcome.status).toBe('warning');
+    expect(outcome.message).toMatch(/Session MCP/);
+    expect(outcome.message).toMatch(/no \.mcp\.json/);
 });
 
 it('an mcpsError (whole inspector failed) → warning naming the inspector failure', async () => {
