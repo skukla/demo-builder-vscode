@@ -16,7 +16,7 @@
  *     `{ installed: false, reason }`. Never throws.
  *
  * The anchors the transform searches for are pinned against the canonical
- * boilerplate by `quickEditAnchorMatch.test.ts`.
+ * boilerplate by `quickEditPublisher-anchorMatch.test.ts`.
  */
 
 import {
@@ -40,7 +40,7 @@ const mockLogger = createMockLogger();
 // Minimal canonical-shaped scripts.js: the loadLazy + loadPage declarations
 // plus the standalone `loadPage();` call. Mirrors the pinned boilerplate's
 // shape without pulling the whole 220-line file into the unit test (the full
-// file is asserted by quickEditAnchorMatch.test.ts).
+// file is asserted by quickEditPublisher-anchorMatch.test.ts).
 const CANONICAL_SCRIPTS_JS = [
     '// ... eager/lazy/delayed helpers above ...',
     '',
@@ -434,6 +434,39 @@ describe('installQuickEdit', () => {
         // ... without duplicating the three already-present edits.
         expect(writtenContent.split(QUICK_EDIT_BRANCH_MARKER).length - 1).toBe(1);
         expect(writtenContent.split(QUICK_EDIT_SIDEKICK_MARKER).length - 1).toBe(1);
+    });
+
+    it('re-vendors a scripts.js missing ONLY the ?quick-edit branch', async () => {
+        // "Already installed" is all four edits, not most of them. Each of the
+        // four flags has to be able to fail on its own, or a repo that carries
+        // three of the markers is declared done and the missing edit is never
+        // repaired. This is the branch-shaped hole; the sidekick- and
+        // guard-shaped ones are covered above.
+        const missingBranch = [
+            CANONICAL_SCRIPTS_JS.replace(QUICK_EDIT_LOAD_PAGE_ANCHOR, QUICK_EDIT_LOAD_PAGE_EXPORTED),
+            QUICK_EDIT_SIDEKICK_MARKER,
+            QUICK_EDIT_FIRSTIMAGE_MARKER,
+        ].join('\n');
+        mockGithub.getFileContent.mockImplementation((_o, _r, path) => {
+            if (path === SCRIPTS_JS_PATH) {
+                return Promise.resolve({ content: missingBranch, sha: 'scripts-sha' });
+            }
+            return Promise.resolve(null);
+        });
+
+        const result = await installQuickEdit(
+            mockGithub, repoOwner, repoName, mockLogger,
+        );
+
+        expect(result).toEqual({ installed: true });
+        const scriptsCall = mockGithub.createOrUpdateFile.mock.calls.find(c => c[2] === SCRIPTS_JS_PATH);
+        expect(scriptsCall).toBeDefined();
+        const writtenContent = scriptsCall![3] as string;
+        // The missing edit is added exactly once and the three present ones are
+        // left alone — no duplicated markers.
+        expect(writtenContent.split(QUICK_EDIT_BRANCH_MARKER).length - 1).toBe(1);
+        expect(writtenContent.split(QUICK_EDIT_SIDEKICK_MARKER).length - 1).toBe(1);
+        expect(writtenContent.split(QUICK_EDIT_FIRSTIMAGE_MARKER).length - 1).toBe(1);
     });
 
     it('is idempotent for quick-edit.js: skips the write when the module already exists', async () => {

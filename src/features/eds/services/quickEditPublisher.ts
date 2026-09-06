@@ -47,7 +47,7 @@ export const QUICK_EDIT_JS_PATH = 'tools/quick-edit/quick-edit.js';
  * Literal anchor for edit #1 — the canonical un-exported `loadPage`
  * declaration in `hlxsites/aem-boilerplate-commerce` `scripts/scripts.js`.
  *
- * Stable string pinned by `quickEditAnchorMatch.test.ts` against the
+ * Stable string pinned by `quickEditPublisher-anchorMatch.test.ts` against the
  * LKG-pinned canonical fixture. DO NOT edit without bumping the canonical
  * fixture (and the anchor-match test will tell you the moment it drifts).
  */
@@ -59,7 +59,7 @@ export const QUICK_EDIT_LOAD_PAGE_EXPORTED = 'export async function loadPage() {
 /**
  * Literal anchor for edit #2 — the canonical standalone `loadPage();` call.
  * The `?quick-edit` branch is inserted immediately after it. Stable string
- * pinned by `quickEditAnchorMatch.test.ts`. DO NOT edit without bumping the
+ * pinned by `quickEditPublisher-anchorMatch.test.ts`. DO NOT edit without bumping the
  * canonical fixture.
  */
 export const QUICK_EDIT_BRANCH_ANCHOR = 'loadPage();';
@@ -80,7 +80,7 @@ export const QUICK_EDIT_BRANCH_MARKER = '// === Quick Edit dynamic import (Demo 
  *
  * Verified byte-identical in BOTH the pinned canonical fixture
  * (`aem-boilerplate-commerce-scripts.js:175`) and the live B2B template.
- * Pinned by `quickEditAnchorMatch.test.ts`. DO NOT edit without bumping the
+ * Pinned by `quickEditPublisher-anchorMatch.test.ts`. DO NOT edit without bumping the
  * canonical fixture.
  */
 export const QUICK_EDIT_LOADLAZY_ANCHOR = 'async function loadLazy(doc) {';
@@ -100,7 +100,7 @@ export const QUICK_EDIT_SIDEKICK_MARKER = '// === Quick Edit Sidekick listener (
  *
  * Verified byte-identical in BOTH the pinned canonical fixture
  * (`aem-boilerplate-commerce-scripts.js:158`) and the live storefront. Pinned
- * by `quickEditAnchorMatch.test.ts`. DO NOT edit without bumping the canonical
+ * by `quickEditPublisher-anchorMatch.test.ts`. DO NOT edit without bumping the canonical
  * fixture.
  */
 export const QUICK_EDIT_FIRSTIMAGE_ANCHOR =
