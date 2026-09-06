@@ -12119,6 +12119,148 @@
             "decision": "none \u2014 a debug summary that mirrors the return value; the return value itself is pinned",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+            "anchors": [
+                "const [selection, setSelection] = useState<TypeSelection>({ selected: [], auto: [] });"
+            ],
+            "line": 128,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The 'auto' provenance set is only ever consulted as auto.has(t) for a type that is already in 'selected' and is a declared dependency of the type being unticked. A seeded entry that is not a real data type therefore matches nothing, and deselectType's final filter (auto kept only where it appears in the surviving selection) removes it on the first untick. Nothing rendered or sent reads 'auto' at all.",
+            "decision": "none \u2014 the empty provenance set is what an untouched selection means",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+            "anchors": [
+                "allSelected ? { selected: [], auto: [] } : { selected: [...availableTypes], auto: [] },"
+            ],
+            "line": 228,
+            "mutants": 2,
+            "category": "other",
+            "reason": "Both survivors seed the 'auto' provenance set rather than the selection. 'auto' is read only as auto.has(t) while unticking, and only for types that are both currently selected and declared dependencies of the departing type, so an entry that is not a real data type can never match. The checkboxes, the Start guard and the request body all read 'selected'; none of them reads 'auto'.",
+            "decision": "none \u2014 choosing everything or nothing is a user choice, so nothing in it is automatic",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+            "anchors": [
+                "const [dismissed, setDismissed] = useState(false);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The initial value cannot be observed because the only thing it gates is resolveResult, which returns null for a null lastAction \u2014 its switch has an arm for each of the four actions and a default that returns null. So before any action the result is null whether dismissed is true or false, and the first action calls act(), which sets dismissed false before the result is next read.",
+            "decision": "none \u2014 starting undismissed is what 'the user has seen nothing yet' means",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+            "anchors": [
+                "}, [loadStatus]);"
+            ],
+            "line": 158,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying this dependency array changes nothing, because loadStatus is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
+            "decision": "none \u2014 naming the dependency is what keeps it true if load ever stops being stable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+            "anchors": [
+                "}, [loadTarget]);"
+            ],
+            "line": 163,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying this dependency array changes nothing, because loadTarget is referentially stable for the life of the modal: useDataInstallerRequest returns load as a useCallback keyed on execute, and useVSCodeRequest builds execute as a useCallback keyed on the request type, which is a literal here. The effect therefore runs exactly once either way.",
+            "decision": "none \u2014 naming the dependency is what keeps it true if load ever stops being stable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 249,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function exactly as it does now. Nothing about act's identity or behaviour moves.",
+            "decision": "none \u2014 act closes over nothing that can change, so its dependency list is empty",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+            "anchors": [
+                "const goBack = useCallback((): void => setDismissed(true), []);"
+            ],
+            "line": 276,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Replacing this empty dependency array with a one-element constant array keeps the callback just as stable: React compares dependency arrays element by element with Object.is, and the same string literal is produced on every render, so the comparison succeeds and useCallback returns the memoised function. goBack closes over nothing but a setState function, which React guarantees is stable.",
+            "decision": "none \u2014 goBack closes over nothing that can change",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+            "anchors": [
+                "}, [act, provision]);"
+            ],
+            "line": 274,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying this dependency array freezes provisionCredentials on the FIRST render's closure, and neither thing it closes over can go stale: act is a useCallback with an empty dependency list, and the only member of provision it touches is load, which useDataInstallerRequest memoises on execute, itself memoised on the literal request type. So the frozen callback calls the same two functions the fresh one would.",
+            "decision": "none \u2014 the array names what the callback reads, which is what makes it checkable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+            "anchors": [
+                "setWatching(true);"
+            ],
+            "line": 258,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Unreachable with watching already false. watching only becomes false through the Stop watching button, which buildActions renders solely for the 'watching' view; that view requires a running record, and turning the watch off also stops the poll that could retire it. So while watching is false the modal shows the watching view and offers no Start import, and this call can only ever re-assert a value that is already true.",
+            "decision": "none \u2014 the call states that starting a job means watching it, which the next reader needs",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+            "anchors": [
+                "setWatching(true);"
+            ],
+            "line": 265,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Unreachable with watching already false. watching only becomes false through the Stop watching button, which buildActions renders solely for the 'watching' view; that view requires a running record, and turning the watch off also stops the poll that could retire it. So while watching is false the modal offers no Remove data affordance to arm, and this call can only ever re-assert a value that is already true.",
+            "decision": "none \u2014 the call states that a confirmed removal is watched, which the next reader needs",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ImportDatapackModal.tsx",
+            "anchors": [
+                "{view === 'result' && ctx.result ? ("
+            ],
+            "line": 484,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both survivors need a state the state machine cannot produce: a non-null result while the view is not 'result'. resolveView returns 'result' whenever result is truthy and none of busy, resetArmed or running outranks it; result is forced null while busy, resolveResult returns null for a record still watching, and the affordances that set lastAction or arm a reset are absent from the views that outrank it. So view === 'result' and a truthy result coincide exactly.",
+            "decision": "none \u2014 the view check keeps this body consistent with the five beside it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
         }
     ]
 }

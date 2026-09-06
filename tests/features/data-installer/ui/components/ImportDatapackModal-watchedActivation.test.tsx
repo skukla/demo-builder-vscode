@@ -50,6 +50,21 @@ describe('watchedActivation', () => {
         }
     );
 
+    /**
+     * A started import that produced NO id watches nothing — it does not fall
+     * through to a reset from earlier in the session. Without this the 'start'
+     * arm can be deleted entirely and every other case still passes, because
+     * the fallback below happens to return the same id whenever both exist.
+     */
+    it('watches nothing when the started import has no id, even with a reset id to hand', () => {
+        expect(watchedActivation('start', undefined, 'act-reset')).toBeUndefined();
+    });
+
+    /** The same for the reset arm, so neither is load-bearing by accident. */
+    it('watches nothing when the confirmed removal has no id', () => {
+        expect(watchedActivation('reset', 'act-import', undefined)).toBeUndefined();
+    });
+
     it('has nothing to watch before any job starts', () => {
         expect(watchedActivation(null, undefined, undefined)).toBeUndefined();
     });

@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-22 MUT-03: stalenessDetector — env-parser, mesh-response, hash-composition and change-decision tests; 21 equivalents ledgered",
+    "_note": "PL-22 MUT-03: ImportDatapackModal — poll lifecycle, removal wording, view exclusivity and startability tests; watchedActivation suite renamed into the family; 13 equivalents ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -6145,24 +6145,20 @@
             "openGaps": 40
         },
         "src/features/data-installer/ui/components/ImportDatapackModal.tsx": {
-            "score": 70.3,
-            "killed": 211,
-            "survived": 83,
-            "noCoverage": 7,
+            "score": 92.41,
+            "killed": 278,
+            "survived": 23,
+            "noCoverage": 0,
             "timeout": 2,
             "survivorCategories": {
-                "branch": 37,
-                "block": 9,
-                "string": 20,
-                "other": 17
+                "other": 8,
+                "branch": 5,
+                "string": 10
             },
-            "uncoveredCategories": {
-                "branch": 1,
-                "string": 6
-            },
-            "highValueSurvivors": 46,
-            "equivalent": 0,
-            "openGaps": 64
+            "uncoveredCategories": {},
+            "highValueSurvivors": 5,
+            "equivalent": 13,
+            "openGaps": 0
         },
         "src/features/data-installer/ui/components/ViewSwitcher.tsx": {
             "score": 55.56,

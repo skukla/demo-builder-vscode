@@ -23,6 +23,10 @@ import { ImportDatapackModal } from '@/features/data-installer/ui/components/Imp
 
 export const mockRequest = webviewClient.request as jest.Mock;
 
+// Re-exported so specs can rerender with new props without importing the SUT
+// themselves — see the module docstring for why that import must live here.
+export { ImportDatapackModal };
+
 export const DEFAULTS = {
     id: { name: 'bodea', version: 'main' },
     displayName: 'Bodea',
