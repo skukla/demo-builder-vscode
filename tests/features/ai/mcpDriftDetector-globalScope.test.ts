@@ -34,7 +34,6 @@ jest.mock('os', () => {
 import { detectMcpDrift } from '@/features/ai/mcpDriftDetector';
 
 const STALE_DIST = '/ext/skukla.adobe-demo-builder-1.0.0-beta.111/dist';
-const CURRENT_DIST = '/ext/skukla.adobe-demo-builder-1.0.0-beta.128/dist';
 
 let home: string;
 let project: string;
@@ -111,11 +110,30 @@ describe('user scope — the entry nothing has ever looked at', () => {
 
     it('reports drift for a retired entry point even at the CURRENT version', async () => {
         // `mcp-server.js` is the retired standalone process; esbuild builds only
-        // mcp-proxy.js. An entry naming it is wrong even if the directory exists.
-        await fsPromises.mkdir(CURRENT_DIST, { recursive: true }).catch(() => undefined);
-        await writeUserMcp([path.join(CURRENT_DIST, 'mcp-server.js')]);
+        // mcp-proxy.js. An entry naming it is wrong even if the FILE is there.
+        //
+        // The file is really written. This test used to mkdir a path under /ext
+        // and swallow the failure, so the retired name was never what made it
+        // pass — a build that still carried mcp-server.js would have read as
+        // healthy and the assertion would not have moved (2026-09-06).
+        const retired = path.join(project, 'mcp-server.js');
+        await fsPromises.writeFile(retired, '', 'utf-8');
+        await writeUserMcp([retired]);
 
         expect((await detectMcpDrift(project)).drifted).toBe(true);
+    });
+
+    it('stays quiet when ~/.claude.json declares no servers at all', async () => {
+        // A config with no `mcpServers` key is ordinary — Claude Code writes
+        // plenty of other things into that file. Reading through it must not
+        // throw on the dashboard-open path this runs from.
+        await fsPromises.writeFile(
+            path.join(home, '.claude.json'),
+            JSON.stringify({ numStartups: 12 }),
+            'utf-8'
+        );
+
+        await expect(detectMcpDrift(project)).resolves.toEqual({ drifted: false, missing: [] });
     });
 
     it('stays quiet when there is no user-scope entry at all', async () => {
