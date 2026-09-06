@@ -126,6 +126,29 @@ describe('projectRequiresAppBuilder', () => {
         expect(projectRequiresAppBuilder(project, emptyRegistry)).toBe(false);
     });
 
+    it('contributes no ids when BOTH registry sections are absent, so a malformed instance cannot match', () => {
+        // A hand-edited .demo-builder.json can carry an instance with no id. The
+        // empty-section fallbacks must contribute nothing to the id set — if either
+        // one ever yields an entry whose `id` is undefined, an id-less instance
+        // matches it and the project wrongly demands the Developer role.
+        const orphan = { name: 'orphan', status: 'ready', path: '/path/orphan' } as unknown as ComponentInstance;
+        const project = createMockProject({
+            name: 'test',
+            status: 'ready',
+            componentInstances: { orphan },
+        });
+        const registry: ComponentRegistry = {
+            version: 'test',
+            components: {
+                frontends: [],
+                backends: [],
+                dependencies: [],
+                // mesh and appBuilder intentionally omitted — both fall back
+            },
+        };
+        expect(projectRequiresAppBuilder(project, registry)).toBe(false);
+    });
+
     it('handles a registry where mesh is undefined', () => {
         const project = makeProject(['eds-storefront']);
         const registry: ComponentRegistry = {
