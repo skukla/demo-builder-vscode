@@ -9,10 +9,7 @@ import type { ComponentStatus, Project } from '@/types/base';
 
 // We'll import from the new service location
 import type { MeshStatusInfo } from '@/types/webviewPayloads';
-import {
-    hasMeshDeploymentRecord,
-    getMeshEndpoint,
-} from '@/core/state/appBuilderComponentState';
+import { hasMeshDeploymentRecord, getMeshEndpoint } from '@/core/state/appBuilderComponentState';
 import {
     buildStatusPayload,
     deriveMeshStatus,
@@ -38,7 +35,7 @@ describe('dashboardStatusService', () => {
                     workspace: 'Production',
                 },
                 componentInstances: {
-                    'headless': {
+                    headless: {
                         id: 'headless',
                         name: 'CitiSignal NextJS',
                         type: 'frontend',
@@ -154,12 +151,12 @@ describe('dashboardStatusService', () => {
                         kind: 'mesh',
                         status: 'deployed',
                         source: { owner: '', repo: '' },
-                            envVars: {
-                                MESH_ENDPOINT: 'https://mesh.adobe.io/graphql',
-                            },
-                            sourceHash: 'abc123',
-                            lastDeployed: '2024-01-01T00:00:00Z',
-                                    },
+                        envVars: {
+                            MESH_ENDPOINT: 'https://mesh.adobe.io/graphql',
+                        },
+                        sourceHash: 'abc123',
+                        lastDeployed: '2024-01-01T00:00:00Z',
+                    },
                 },
             };
 
@@ -263,10 +260,10 @@ describe('dashboardStatusService', () => {
                         kind: 'mesh',
                         status: 'deployed',
                         source: { owner: '', repo: '' },
-                            envVars: {},
-                            sourceHash: null,
-                            lastDeployed: '',
-                                    },
+                        envVars: {},
+                        sourceHash: null,
+                        lastDeployed: '',
+                    },
                 },
             };
 
@@ -329,11 +326,11 @@ describe('dashboardStatusService', () => {
                         kind: 'mesh',
                         status: 'deployed',
                         source: { owner: '', repo: '' },
-                            envVars: {},
-                            sourceHash: null,
-                            lastDeployed: '2024-01-01',
-                            endpoint: 'https://mesh.adobe.io/graphql',
-                                    },
+                        envVars: {},
+                        sourceHash: null,
+                        lastDeployed: '2024-01-01',
+                        endpoint: 'https://mesh.adobe.io/graphql',
+                    },
                 },
             };
 
@@ -374,10 +371,10 @@ describe('dashboardStatusService', () => {
                         kind: 'mesh',
                         status: 'deployed',
                         source: { owner: '', repo: '' },
-                            envVars: {},
-                            sourceHash: null,
-                            lastDeployed: '2024-01-01',
-                                    },
+                        envVars: {},
+                        sourceHash: null,
+                        lastDeployed: '2024-01-01',
+                    },
                 },
             };
 
@@ -401,11 +398,11 @@ describe('dashboardStatusService', () => {
                         kind: 'mesh',
                         status: 'deployed',
                         source: { owner: '', repo: '' },
-                            envVars: {},
-                            sourceHash: null,
-                            lastDeployed: '2024-01-01',
-                            endpoint: '',
-                                    },
+                        envVars: {},
+                        sourceHash: null,
+                        lastDeployed: '2024-01-01',
+                        endpoint: '',
+                    },
                 },
             };
 
@@ -429,11 +426,11 @@ describe('dashboardStatusService', () => {
                         kind: 'mesh',
                         status: 'deployed',
                         source: { owner: '', repo: '' },
-                            envVars: {},
-                            sourceHash: null,
-                            lastDeployed: '2024-01-01',
-                            endpoint: '   ',
-                                    },
+                        envVars: {},
+                        sourceHash: null,
+                        lastDeployed: '2024-01-01',
+                        endpoint: '   ',
+                    },
                 },
             };
 
@@ -488,11 +485,11 @@ describe('dashboardStatusService', () => {
                         kind: 'mesh',
                         status: 'deployed',
                         source: { owner: '', repo: '' },
-                            envVars: {},
-                            sourceHash: null,
-                            lastDeployed: '2024-01-01',
-                            endpoint: 'https://correct-endpoint.adobe.io/graphql',
-                                    },
+                        envVars: {},
+                        sourceHash: null,
+                        lastDeployed: '2024-01-01',
+                        endpoint: 'https://correct-endpoint.adobe.io/graphql',
+                    },
                 },
             };
 
@@ -532,22 +529,39 @@ describe('dashboardStatusService', () => {
         it.each([
             ['deploying', 'deploying'],
             ['error', 'error'],
-        ] as const)('reports %s without consulting auth', (instanceStatus, expected) => {
-            const p = createMockProject(meshInstance(instanceStatus));
-            // Same answer signed out — a failed deploy must not cost a sign-in.
-            expect(deriveMeshStatus(p, false)?.status).toBe(expected);
-            expect(deriveMeshStatus(p, true)?.status).toBe(expected);
-        });
+        ] as const)(
+            'reports %s without consulting auth, and asks for no verify',
+            (instanceStatus, expected) => {
+                const p = createMockProject(meshInstance(instanceStatus));
+                // Same answer signed out — a failed deploy must not cost a sign-in.
+                // shouldVerify stays FALSE on both: an in-flight or failed deploy has
+                // nothing deployed to verify, and asking would spend a live call.
+                expect(deriveMeshStatus(p, false)).toEqual({
+                    status: expected,
+                    shouldVerify: false,
+                });
+                expect(deriveMeshStatus(p, true)).toEqual({
+                    status: expected,
+                    shouldVerify: false,
+                });
+            }
+        );
 
         it('reports needs-auth when signed out', () => {
             const p = createMockProject(meshInstance('deployed'));
-            expect(deriveMeshStatus(p, false)).toEqual({ status: 'needs-auth', shouldVerify: false });
+            expect(deriveMeshStatus(p, false)).toEqual({
+                status: 'needs-auth',
+                shouldVerify: false,
+            });
         });
 
         it('reports not-deployed when no deployment record exists', () => {
             // The instance says 'deployed'; the DEPLOY RECORD is what decides.
             const p = createMockProject(meshInstance('deployed'));
-            expect(deriveMeshStatus(p, true)).toEqual({ status: 'not-deployed', shouldVerify: false });
+            expect(deriveMeshStatus(p, true)).toEqual({
+                status: 'not-deployed',
+                shouldVerify: false,
+            });
         });
 
         it('maps a stale summary to config-changed, and asks for verification', () => {
@@ -563,7 +577,10 @@ describe('dashboardStatusService', () => {
                 },
                 meshStatusSummary: 'stale',
             });
-            expect(deriveMeshStatus(p, true)).toEqual({ status: 'config-changed', shouldVerify: true });
+            expect(deriveMeshStatus(p, true)).toEqual({
+                status: 'config-changed',
+                shouldVerify: true,
+            });
         });
 
         it.each([undefined, 'unknown'] as const)('treats %s summary as deployed', (summary) => {
@@ -581,5 +598,27 @@ describe('dashboardStatusService', () => {
             });
             expect(deriveMeshStatus(p, true)).toEqual({ status: 'deployed', shouldVerify: true });
         });
+
+        it.each(['config-incomplete', 'update-declined', 'not-deployed'] as const)(
+            'passes a known %s summary through unchanged, still asking for verification',
+            (summary) => {
+                // Every OTHER summary is already a MeshStatus and is reported as
+                // itself — collapsing them to 'deployed' would tell the dashboard a
+                // mesh needing configuration was fine.
+                const p = createMockProject({
+                    ...meshInstance('deployed'),
+                    appBuilderComponents: {
+                        'eds-accs-mesh': {
+                            kind: 'mesh',
+                            status: 'deployed',
+                            source: { owner: '', repo: '' },
+                            endpoint: 'https://mesh.test/graphql',
+                        },
+                    },
+                    meshStatusSummary: summary,
+                });
+                expect(deriveMeshStatus(p, true)).toEqual({ status: summary, shouldVerify: true });
+            }
+        );
     });
 });
