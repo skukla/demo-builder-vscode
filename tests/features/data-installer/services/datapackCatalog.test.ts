@@ -19,6 +19,7 @@ import {
     orderVersions,
     pickDefaultVersion,
 } from '@/features/data-installer/services/datapackCatalog';
+import type { DatapackGroup } from '@/features/data-installer/services/datapackCatalog';
 import { parseDatapackList } from '@/features/data-installer/services/dataInstallerParsers';
 import type { DatapackSummary } from '@/features/data-installer/types';
 
@@ -78,6 +79,25 @@ describe('datapackCatalog', () => {
             expect(groups[0].shared).toBe(true);
         });
 
+        it('leaves a group unshared when NO version is shared', () => {
+            // The reverse of the case above, and the one that matters: shared drives
+            // curation, so a rule that merely reports "shared" for every group would
+            // put private packs on the curated surface.
+            const groups = groupDatapacks([
+                pack('mixed', 'main', { shared: false }),
+                pack('mixed', 'dev', { shared: false }),
+            ]);
+            expect(groups[0].shared).toBe(false);
+        });
+
+        it('orders each group\'s versions itself, not just on the way out', () => {
+            // pickDefaultVersion re-orders, so a grouping that skipped the ordering
+            // pass still answered every default-version question correctly while
+            // handing the picker its versions in arrival order.
+            const group = groupDatapacks([pack('x', 'dev'), pack('x', 'main')])[0];
+            expect(group.versions.map((v) => v.id.version)).toEqual(['main', 'dev']);
+        });
+
         it('returns an empty list for an empty catalog rather than throwing', () => {
             expect(groupDatapacks([])).toEqual([]);
         });
@@ -116,6 +136,17 @@ describe('datapackCatalog', () => {
         it('is stable when nothing has an updatedAt', () => {
             const ordered = orderVersions([pack('x', 'a'), pack('x', 'b')]);
             expect(ordered.map((v) => v.id.version)).toEqual(['a', 'b']);
+        });
+
+        it('stays stable when only ONE side has an updatedAt', () => {
+            // A half-populated pair is not comparable: localeCompare against an
+            // absent timestamp reads it as the literal string "undefined" and
+            // reorders on alphabet, so the pair must be treated as equal instead.
+            const ordered = orderVersions([
+                pack('x', 'undated'),
+                pack('x', 'dated', { updatedAt: '2026-06-01T00:00:00.000Z' }),
+            ]);
+            expect(ordered.map((v) => v.id.version)).toEqual(['undated', 'dated']);
         });
 
         it('does not mutate its input', () => {
@@ -168,6 +199,19 @@ describe('datapackCatalog', () => {
         it('falls back to an archived version when that is all there is', () => {
             const group = groupDatapacks([pack('x', 'archive_06112026')])[0];
             expect(pickDefaultVersion(group)).toBe('archive_06112026');
+        });
+
+        it('returns undefined for a group with no versions at all', () => {
+            // Not reachable from groupDatapacks (a group exists because a version
+            // did), but the picker is exported and a caller holding filtered state
+            // can hand it an emptied group — it must answer, not throw.
+            const empty: DatapackGroup = {
+                name: 'x',
+                displayName: 'X',
+                shared: false,
+                versions: [],
+            };
+            expect(pickDefaultVersion(empty)).toBeUndefined();
         });
 
         it('every live curated group resolves to a real version', () => {
