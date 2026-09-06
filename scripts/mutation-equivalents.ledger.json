@@ -16958,6 +16958,44 @@
             "decision": "none \u2014 the guard is what lets tsc accept `status in STATUS_DISPLAY`, whose left operand may not be `string | undefined`. Deleting it needs a cast, which trades a checked narrowing for a silenced one.",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-08, statusVocabulary focus run 2026-09-06"
+        },
+        {
+            "module": "src/core/ui/hooks/useVSCodeMessage.ts",
+            "anchors": [
+                "deps: DependencyList = [],"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty dependency array with a one-element array holding a constant string. React compares dependency arrays element-wise with Object.is, and the length never changes between renders, so a constant literal is equal to itself on every render and the memoized callback is recomputed exactly as often as before: never. No caller, and no test that could be written, can observe the difference \u2014 the mutation was planted and all three suites in the group stayed green. The mutated value here is a PARAMETER DEFAULT, so it also only reaches callers that omit deps \u2014 and for those the effect is meant to run once, which both spellings do.",
+            "decision": "none \u2014 the default is correct; a caller that omits deps wants the callback captured once",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/ui/components/ui/CardActionsMenu.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 61,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty dependency array with a one-element array holding a constant string. React compares dependency arrays element-wise with Object.is, and the length never changes between renders, so a constant literal is equal to itself on every render and the memoized callback is recomputed exactly as often as before: never. No caller, and no test that could be written, can observe the difference \u2014 the mutation was planted and all three suites in the group stayed green.",
+            "decision": "none \u2014 the empty deps array is correct; the containment callback depends on nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/ui/hooks/useSelectableDefault.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 27,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty dependency array with a one-element array holding a constant string. React compares dependency arrays element-wise with Object.is, and the length never changes between renders, so a constant literal is equal to itself on every render and the memoized callback is recomputed exactly as often as before: never. No caller, and no test that could be written, can observe the difference \u2014 the mutation was planted and all three suites in the group stayed green.",
+            "decision": "none \u2014 the empty deps array is correct; the focus handler depends on nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }
