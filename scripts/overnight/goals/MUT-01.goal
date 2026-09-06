@@ -1,11 +1,16 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-01. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/core/utils/githubUrlParser.ts  (3 open gaps)
-  - src/core/utils/timeoutConfig.ts  (3 open gaps)
-  - src/core/ui/components/layout/PageHeader.tsx  (3 open gaps)
-  - src/core/ui/components/ui/StatusDot.tsx  (3 open gaps)
-  - src/features/app-builder/services/allowedDomain.ts  (3 open gaps)
+  - src/core/utils/maskEmail.ts  (1 open gaps)
+  - src/core/utils/sleep.ts  (1 open gaps)
+  - src/core/ui/components/feedback/EmptyState.tsx  (1 open gaps)
+  - src/core/ui/components/layout/ControlPanelLayout.tsx  (1 open gaps)
+  - src/core/ui/components/layout/GridLayout.tsx  (1 open gaps)
+  - src/core/ui/components/ui/CardActionsMenu.tsx  (1 open gaps)
+  - src/core/ui/components/ui/Spinner.tsx  (1 open gaps)
+  - src/core/ui/hooks/useSelectableDefault.ts  (1 open gaps)
+  - src/core/ui/hooks/useVSCodeMessage.ts  (1 open gaps)
+  - src/features/app-builder/services/apiSubscriberClientAdapter.ts  (1 open gaps)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;

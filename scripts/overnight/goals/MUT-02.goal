@@ -1,11 +1,16 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-02. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/features/components/services/backendCommerce.ts  (3 open gaps)
-  - src/features/components/services/componentConfigWrites.ts  (3 open gaps)
-  - src/features/components/ui/components/BrokeredCredentialFields.tsx  (3 open gaps)
-  - src/features/dashboard/services/onOpenChecks/meshVerifyCheck.ts  (3 open gaps)
-  - src/features/dashboard/ui/components/AppBuilderComponentRemoveDialog.tsx  (3 open gaps)
+  - src/features/dashboard/services/onOpenChecks/mcpHealthCheck.ts  (1 open gaps)
+  - src/features/dashboard/services/onOpenChecks/orchestrator.ts  (1 open gaps)
+  - src/features/dashboard/ui/hooks/useLiveDaLiveUrl.ts  (1 open gaps)
+  - src/features/dashboard/ui/hooks/useLiveDestination.ts  (1 open gaps)
+  - src/features/dashboard/ui/hooks/useOrgSwitchFlow.ts  (1 open gaps)
+  - src/features/data-installer/ui/hooks/useImportProgress.ts  (1 open gaps)
+  - src/features/mesh/handlers/shared.ts  (1 open gaps)
+  - src/features/mesh/handlers/subscribeHandler.ts  (1 open gaps)
+  - src/features/mesh/services/meshUpdateDecline.ts  (1 open gaps)
+  - src/features/sidebar/ui/views/UtilityBar.tsx  (1 open gaps)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;
