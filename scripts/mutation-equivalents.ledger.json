@@ -15368,6 +15368,32 @@
             "decision": "none \u2014 the values and blocks are observability; the response shape they sit beside is asserted separately",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/ui/components/ui/Drawer.tsx",
+            "anchors": [
+                "const first = panelRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);",
+                "(first ?? panelRef.current)?.focus();",
+                "const focusables = panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "All three chains guard a ref that is never null when they run. The panel div is ALWAYS mounted \u2014 that is the component's design, since the closed state is a CSS slide rather than an unmount \u2014 so React has attached panelRef before either effect runs, and handleTabWrap is the panel's own onKeyDown, which cannot fire without it. The second chain is doubly safe: first falls back to panelRef.current, and querySelector returning null is exactly what that fallback exists for. The optional chains are what the RefObject type requires, not a case any render can produce. Planted 2026-09-06 as non-null assertions, including against the new empty-panel test that exercises the fallback: 17 tests pass.",
+            "decision": "none \u2014 the ref type demands the chains and the always-mounted panel guarantees they never short-circuit",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/ui/components/ui/Drawer.tsx",
+            "anchors": [
+                "if (!focusables || focusables.length === 0) return;"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Removing this guard changes nothing observable. querySelectorAll never returns null and the ref is never null, so the left operand is always false and the guard reduces to the empty case. In that empty case the two comparisons below it read focusables[0] and focusables[-1], both undefined, and document.activeElement can never equal undefined \u2014 so neither branch is taken, no preventDefault happens and no focus moves, exactly as the early return produces. Planted twice on 2026-09-06 with the empty-panel Tab test present, once as if(false) and once with the operator flipped to &&: 17 tests pass each time.",
+            "decision": "none \u2014 the guard states the empty case instead of leaving the reader to work out that two undefined comparisons are safe",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }
