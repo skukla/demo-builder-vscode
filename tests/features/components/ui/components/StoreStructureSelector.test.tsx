@@ -8,7 +8,7 @@
  * renders nothing (legacy behavior preserved).
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import '@testing-library/jest-dom';
 import { StoreStructureSelector } from '@/features/components/ui/components/StoreStructureSelector';
@@ -19,6 +19,65 @@ const items = [
 ];
 
 describe('StoreStructureSelector', () => {
+    it('offers every item as a choice', () => {
+        render(
+            <StoreStructureSelector
+                label="Website"
+                items={items}
+                selectedCode=""
+                onSelect={jest.fn()}
+            />
+        );
+        const options = Array.from(
+            screen.getByTestId('spectrum-picker-select').querySelectorAll('option')
+        );
+        expect(options.map((o) => o.textContent)).toStrictEqual(['Base', 'Alt']);
+    });
+
+    it('shows the selected item, and shows nothing when the selection is empty', () => {
+        // The picker is a CONTROLLED field: its selected key comes from
+        // selectedCode, and '' has to arrive as "no selection" rather than as a
+        // key nothing matches, or a fresh field would look pre-filled.
+        const { rerender } = render(
+            <StoreStructureSelector
+                label="Website"
+                items={items}
+                selectedCode="alt"
+                onSelect={jest.fn()}
+            />
+        );
+        expect(screen.getByTestId('spectrum-picker')).toHaveTextContent('Alt');
+
+        rerender(
+            <StoreStructureSelector
+                label="Website"
+                items={items}
+                selectedCode=""
+                onSelect={jest.fn()}
+            />
+        );
+        expect(screen.getByTestId('spectrum-picker')).toHaveTextContent('');
+    });
+
+    it('reports the chosen item CODE, not its name, to onSelect', () => {
+        const onSelect = jest.fn();
+        render(
+            <StoreStructureSelector
+                label="Website"
+                items={items}
+                selectedCode=""
+                onSelect={onSelect}
+            />
+        );
+
+        fireEvent.change(screen.getByTestId('spectrum-picker-select'), {
+            target: { value: 'alt' },
+        });
+
+        // The code is what the cascading store lookups key off.
+        expect(onSelect).toHaveBeenCalledWith('alt');
+    });
+
     it('renders a picker with items', () => {
         render(
             <StoreStructureSelector
@@ -26,7 +85,7 @@ describe('StoreStructureSelector', () => {
                 items={items}
                 selectedCode=""
                 onSelect={jest.fn()}
-            />,
+            />
         );
         expect(screen.getByTestId('spectrum-picker')).toBeInTheDocument();
     });
@@ -39,7 +98,7 @@ describe('StoreStructureSelector', () => {
                 selectedCode=""
                 onSelect={jest.fn()}
                 isDisabled
-            />,
+            />
         );
         // Disabled + empty must still occupy space so the layout does not shift.
         expect(screen.getByTestId('spectrum-picker')).toBeInTheDocument();
@@ -52,7 +111,7 @@ describe('StoreStructureSelector', () => {
                 items={[]}
                 selectedCode=""
                 onSelect={jest.fn()}
-            />,
+            />
         );
         expect(container).toBeEmptyDOMElement();
     });
@@ -65,7 +124,7 @@ describe('StoreStructureSelector', () => {
                 selectedCode=""
                 onSelect={jest.fn()}
                 isDisabled
-            />,
+            />
         );
         expect(screen.getByTestId('spectrum-picker')).toBeDisabled();
     });
