@@ -100,9 +100,11 @@ export class GitHubOAuthService {
             // timer that fires after the callback already won rejects an
             // orphaned promise, surfacing as an unhandled rejection that
             // crashes/poisons other tests sharing the worker process.
-            if (timeoutHandle) {
-                clearTimeout(timeoutHandle);
-            }
+            //
+            // Unguarded on purpose: the `timeoutPromise` executor runs
+            // synchronously, so `timeoutHandle` is always assigned by the time
+            // this runs, and `clearTimeout` accepts undefined regardless.
+            clearTimeout(timeoutHandle);
         }
     }
 

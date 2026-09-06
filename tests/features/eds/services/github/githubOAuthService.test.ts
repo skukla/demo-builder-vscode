@@ -6,6 +6,7 @@
 
 import * as vscode from 'vscode';
 
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 // Mock timeoutConfig - uses semantic categories
 jest.mock('@/core/utils/timeoutConfig', () => ({
@@ -19,6 +20,11 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 
 // Mock logger
 
+/** Drain the microtask queue — deep enough for a rejection to cross the race. */
+async function flushMicrotasks(): Promise<void> {
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+}
+
 describe('GitHub OAuth Service', () => {
     // Import after mocks are set up
     let GitHubOAuthService: any;
@@ -26,6 +32,12 @@ describe('GitHub OAuth Service', () => {
 
     beforeEach(async () => {
         jest.clearAllMocks();
+        // FAKE timers for the whole file. The flow arms a real OAuth timeout, and
+        // a test that leaves one pending rejects an orphaned promise seconds after
+        // the file finished — an unhandled rejection that takes the whole worker
+        // down (seen killing a Stryker worker, 2026-09-06). Under fake timers an
+        // uncleared timer simply never fires.
+        jest.useFakeTimers();
         // Note: Don't reset modules - it clears the mock setup
 
         // Create mock secret storage
@@ -38,6 +50,11 @@ describe('GitHub OAuth Service', () => {
         // Dynamic import after mocks
         const module = await import('@/features/eds/services/github/githubOAuthService');
         GitHubOAuthService = module.GitHubOAuthService;
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+        jest.useRealTimers();
     });
 
     describe('startOAuthFlow', () => {
@@ -98,6 +115,104 @@ describe('GitHub OAuth Service', () => {
             // Check for either encoded or non-encoded version
             const hasRepoScope = capturedUrl.includes('repo') || capturedUrl.includes('repo%20');
             expect(hasRepoScope).toBe(true);
+        });
+    });
+
+    /**
+     * The flow's two ways of settling, and the timer it arms to guarantee one of
+     * them. Nothing above drives a flow that actually completes: every test lets
+     * `openExternal` fail, so the callback, the timeout and the cleanup were all
+     * unconstrained.
+     */
+    describe('startOAuthFlow — settling the pending flow', () => {
+        it('resolves with the params handleOAuthCallback hands over', async () => {
+            const service = new GitHubOAuthService(mockSecretStorage);
+            (vscode.env.openExternal as jest.Mock).mockResolvedValue(true);
+
+            // The callback promise is armed synchronously, so the callback can
+            // arrive before the browser round-trip has settled.
+            const flow = service.startOAuthFlow('test-client-id', 'vscode://redirect');
+            service.handleOAuthCallback({ code: 'auth-code-42', state: 'csrf-state' });
+
+            await expect(flow).resolves.toEqual({ code: 'auth-code-42', state: 'csrf-state' });
+        });
+
+        it('rejects with a timeout only once the configured OAuth window elapses', async () => {
+            const service = new GitHubOAuthService(mockSecretStorage);
+            (vscode.env.openExternal as jest.Mock).mockResolvedValue(true);
+
+            const flow = service.startOAuthFlow('test-client-id', 'vscode://redirect');
+            // Hold the outcome BEFORE advancing: asserting on a promise that is
+            // still in flight scores as a runtime error rather than a result.
+            let settled: string | undefined;
+            const outcome = flow.then(
+                () => {
+                    settled = 'resolved';
+                },
+                (error: Error) => {
+                    settled = error.message;
+                }
+            );
+
+            jest.advanceTimersByTime(TIMEOUTS.LONG - 1);
+            // A rejection travels several microtask hops to get here — the race,
+            // the async function, then this handler. Two ticks were not enough,
+            // and the shortfall read as "the timer has not fired yet".
+            await flushMicrotasks();
+            expect(settled).toBeUndefined();
+
+            jest.advanceTimersByTime(1);
+            await outcome;
+            expect(settled).toBe('OAuth flow timed out');
+        });
+
+        it('unrefs the OAuth timer and clears it with the handle it was given', async () => {
+            // The timer must not hold the extension host's event loop open, and it
+            // must not outlive the flow — a leaked timer rejects an orphaned
+            // promise long after the flow settled.
+            const unref = jest.fn();
+            const handle = { unref } as unknown as NodeJS.Timeout;
+            jest.spyOn(global, 'setTimeout').mockReturnValue(handle);
+            const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+            const service = new GitHubOAuthService(mockSecretStorage);
+            (vscode.env.openExternal as jest.Mock).mockResolvedValue(false);
+
+            await expect(
+                service.startOAuthFlow('test-client-id', 'vscode://redirect')
+            ).rejects.toThrow('OAuth flow cancelled');
+
+            expect(unref).toHaveBeenCalled();
+            expect(clearTimeoutSpy).toHaveBeenCalledWith(handle);
+        });
+
+        it('tolerates a host whose setTimeout returns a bare id with no unref', async () => {
+            // Browser-shaped hosts return a number. Calling `.unref()` on it
+            // throws inside the timeout promise's executor, which rejects that
+            // promise — so the flow blows up with a TypeError instead of waiting
+            // for its callback. That is what the typeof guard is for.
+            const bareId = 7 as unknown as NodeJS.Timeout;
+            jest.spyOn(global, 'setTimeout').mockReturnValue(bareId);
+            const service = new GitHubOAuthService(mockSecretStorage);
+            (vscode.env.openExternal as jest.Mock).mockResolvedValue(true);
+
+            const flow = service.startOAuthFlow('test-client-id', 'vscode://redirect');
+            let settled: string | undefined;
+            const outcome = flow.then(
+                () => {
+                    settled = 'resolved';
+                },
+                (error: Error) => {
+                    settled = error.message;
+                }
+            );
+
+            await flushMicrotasks();
+            expect(settled).toBeUndefined();
+
+            // Finish it, so nothing is left pending on the way out.
+            service.handleOAuthCallback({ code: 'auth-code-42', state: 'csrf-state' });
+            await outcome;
+            expect(settled).toBe('resolved');
         });
     });
 
