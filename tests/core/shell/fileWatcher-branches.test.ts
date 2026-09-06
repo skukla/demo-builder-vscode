@@ -179,6 +179,31 @@ describe('FileWatcher Branch Coverage', () => {
             await expect(waitPromise).rejects.toThrow('File system wait timeout');
         });
 
+        /**
+         * The condition branch keeps its OWN timeout beside the poller's. The
+         * poller is given the same deadline and normally reports first, so this
+         * one only ever fires when the poller does not come back at all — and a
+         * caller waiting on a file that will never appear must be told, not left
+         * holding a promise nothing will settle.
+         */
+        it('rejects on its own deadline when the poller never settles', async () => {
+            mockPollingService.pollUntilCondition.mockReturnValue(new Promise<void>(() => {}));
+
+            // Held as a value BEFORE the clock moves: asserting on a rejection
+            // that is created and settled inside the same statement leaves the
+            // failure unattached for a tick, which reads as a crash, not a fail.
+            const outcome = fileWatcher
+                .waitForFileSystem('/path/to/file.txt', jest.fn().mockResolvedValue(false), 1000)
+                .then(
+                    () => 'resolved',
+                    (error: Error) => error.message,
+                );
+
+            jest.advanceTimersByTime(1000);
+
+            await expect(outcome).resolves.toBe('File system wait timeout: /path/to/file.txt');
+        });
+
         it('should clear timeout when polling rejection occurs', async () => {
             // This test verifies the polling rejection path (lines 43-46 in fileWatcher.ts)
             // where pollUntilCondition rejection propagates and clears the timeout
