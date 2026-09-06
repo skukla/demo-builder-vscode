@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "storeStructureReader: drove the SSRF/parse rejections, the secret-over-config read, every ACCS request-build refusal and the missing-adobe-block path; deleted a duplicated protocol allowlist",
+    "_note": "deleteHandler: drove the sign-in pre-flight (both halves), the exact CLI options, the pre-existing-mesh flag clear and both incomplete-project targeting paths",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -7822,28 +7822,21 @@
             "openGaps": 0
         },
         "src/features/mesh/handlers/deleteHandler.ts": {
-            "score": 43.18,
-            "killed": 19,
-            "survived": 20,
-            "noCoverage": 5,
+            "score": 79.55,
+            "killed": 35,
+            "survived": 8,
+            "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "logPresentation": 6,
-                "string": 2,
-                "branch": 5,
-                "optionalChain": 4,
-                "other": 2,
-                "block": 1
-            },
-            "uncoveredCategories": {
-                "block": 1,
-                "other": 2,
-                "branch": 1,
+                "logPresentation": 7,
                 "string": 1
             },
-            "highValueSurvivors": 6,
+            "uncoveredCategories": {
+                "string": 1
+            },
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 16
+            "openGaps": 0
         },
         "src/features/mesh/handlers/deployHandler.ts": {
             "score": 77.78,
