@@ -105,7 +105,10 @@ export async function checkMeshConfigCompleteness(
     // Check INPUT variables from .env file (backend-specific)
     for (const field of requiredVars) {
         const value = envConfig[field];
-        if (value === undefined || value === null || value === '') {
+        // No `=== null` arm: `parseEnvFile` returns `Record<string, string>` and
+        // only ever assigns strings, so the only two absent shapes are a key that
+        // is not there at all and one whose value is empty.
+        if (value === undefined || value === '') {
             missingFields.push(field);
         }
     }

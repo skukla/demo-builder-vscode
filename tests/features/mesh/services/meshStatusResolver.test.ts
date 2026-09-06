@@ -43,6 +43,19 @@ describe('meshStatusResolver', () => {
             expect(result.missingFields).toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
         });
 
+        it('reports MESH_ENDPOINT missing too when the .env cannot be read, endpoint or not', async () => {
+            // The unreadable-.env arm returns a fixed "everything is missing"
+            // list rather than falling through to the per-field loop. Only a
+            // caller that DOES supply an endpoint can tell the two apart: the
+            // loop would then leave MESH_ENDPOINT out.
+            mockFs.readFile.mockRejectedValue(new Error('EACCES: permission denied'));
+
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
+
+            expect(result.missingFields).toContain('MESH_ENDPOINT');
+            expect(result.missingFields).toHaveLength(9);
+        });
+
         it('returns incomplete when .env file is empty', async () => {
             mockFs.readFile.mockResolvedValue('');
 
