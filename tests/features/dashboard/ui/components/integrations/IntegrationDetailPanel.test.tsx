@@ -21,9 +21,7 @@
  * Strict TDD: written BEFORE the component exists.
  */
 
-import {
-    IntegrationDetailPanel,
-} from './IntegrationDetailPanel.testUtils';
+import { IntegrationDetailPanel } from './IntegrationDetailPanel.testUtils';
 import React from 'react';
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
@@ -68,6 +66,14 @@ function makeMeshModel(overrides: Partial<IntegrationCardModel> = {}): Integrati
         canRename: false,
         ...overrides,
     });
+}
+
+/** The value cell of the row whose key column reads exactly `key`. */
+function rowValue(panel: HTMLElement, key: string): HTMLElement | null {
+    const keyNode = Array.from(panel.querySelectorAll('.integration-panel-row-key')).find(
+        (n) => n.textContent === key
+    );
+    return keyNode?.parentElement?.querySelector('.integration-panel-row-value') ?? null;
 }
 
 function renderPanel(
@@ -383,6 +389,49 @@ describe('IntegrationDetailPanel', () => {
             ]);
             expect(screen.getByText('Last deploy')).toBeInTheDocument();
             expect(screen.getByText('6/1/2026, 10:00:00 AM')).toBeInTheDocument();
+        });
+
+        // The mono modifier is per-row, not a panel-wide default: an owner/repo
+        // identifier is typeset as code, a status label is prose. A default of
+        // `true`, or a modifier that ignored its argument, would monospace both.
+        it('monospaces only the rows that asked for it', () => {
+            const { panel } = renderPanel(makeModel(), { destinationLabel: 'Kukla Mesh · Stage' });
+
+            expect(rowValue(panel!, 'Destination')).toHaveClass(
+                'integration-panel-row-value--mono'
+            );
+            expect(rowValue(panel!, 'Status')).not.toHaveClass('integration-panel-row-value--mono');
+        });
+
+        // The prefix exists to keep the pre-built/imported distinction; it is cut
+        // when it would print the title back at the reader.
+        it('drops the kind prefix when it would only repeat the name', () => {
+            const { panel } = renderPanel(
+                makeModel({ name: 'Custom App', kindLabel: 'Custom App' })
+            );
+
+            expect(panel!.querySelector('.integration-panel-row-prefix')).toBeNull();
+            expect(screen.getByText('acme/custom-app')).toBeInTheDocument();
+        });
+
+        it('leaves a healthy Status without the error treatment', () => {
+            renderPanel(makeModel());
+
+            expect(screen.getByText('Deployed')).not.toHaveClass('integration-card-status--error');
+        });
+
+        it('renders no status-message line at all when the model carries no message', () => {
+            // An always-rendered span would leave an empty element under Status
+            // holding the row open for nothing.
+            const { panel } = renderPanel(makeModel({ message: undefined }));
+
+            expect(panel!.querySelectorAll('.integration-panel-status-message')).toHaveLength(0);
+        });
+
+        it('omits the APIs row for an EMPTY api list, not just an absent one', () => {
+            renderPanel(makeModel({ apis: [] }));
+
+            expect(screen.queryByText('APIs in use')).not.toBeInTheDocument();
         });
 
         it('omits every row whose datum is absent', () => {

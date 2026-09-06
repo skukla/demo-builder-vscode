@@ -14,9 +14,7 @@
  * the hoisting trap only bites across module boundaries.
  */
 
-import {
-    IntegrationDetailPanel,
-} from './IntegrationDetailPanel.testUtils';
+import { IntegrationDetailPanel } from './IntegrationDetailPanel.testUtils';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
@@ -179,6 +177,21 @@ describe('IntegrationDetailPanel — Commerce scope reads the way the picker did
 
         const code = container.querySelector('.integration-panel-scope-code');
         expect(code).toHaveTextContent('(citisignal)');
+        // The muting is the `--aside` modifier: it exists to push the code behind
+        // the name, so it applies only where there IS a name to be behind.
+        expect(code).toHaveClass('integration-panel-scope-code--aside');
+    });
+
+    it('does not mute a code that is standing alone', () => {
+        // With no name the code is the whole value, so muting it would dim the
+        // only thing on the line — the pre-name-capture rendering looking broken.
+        const { container } = renderPanel(
+            makeMeshModel({ commerceScope: [{ label: 'Website', code: 'citisignal' }] })
+        );
+
+        const code = container.querySelector('.integration-panel-scope-code');
+        expect(code).toHaveTextContent('citisignal');
+        expect(code).not.toHaveClass('integration-panel-scope-code--aside');
     });
 
     it('wraps a long value rather than widening the drawer', () => {

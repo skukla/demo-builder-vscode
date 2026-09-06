@@ -49,9 +49,12 @@ function makeModel(overrides: Partial<IntegrationCardModel> = {}): IntegrationCa
     };
 }
 
-function renderPanel(model: IntegrationCardModel | undefined): { onAction: jest.Mock } {
+function renderPanel(model: IntegrationCardModel | undefined): {
+    onAction: jest.Mock;
+    detailLines: () => string[];
+} {
     const onAction = jest.fn();
-    render(
+    const view = render(
         <IntegrationDetailPanel
             model={model}
             onClose={jest.fn()}
@@ -59,7 +62,13 @@ function renderPanel(model: IntegrationCardModel | undefined): { onAction: jest.
             onRename={jest.fn(() => Promise.resolve(null))}
         />
     );
-    return { onAction };
+    return {
+        onAction,
+        detailLines: () =>
+            Array.from(view.container.querySelectorAll('.integration-panel-status-message')).map(
+                (el) => el.textContent ?? ''
+            ),
+    };
 }
 
 describe('IntegrationDetailPanel — Commerce install row', () => {
@@ -96,6 +105,35 @@ describe('IntegrationDetailPanel — Commerce install row', () => {
         screen.getByText('Open Commerce Admin').click();
 
         expect(onAction).toHaveBeenCalledWith(model, 'open-admin');
+    });
+
+    it('renders no detail lines at all for a record carrying only a label', () => {
+        // Detail and timestamp are each optional. Rendering them unconditionally
+        // leaves two empty lines under the label, which reads as a truncated
+        // message rather than as an absent one.
+        const { detailLines } = renderPanel(
+            makeModel({ installation: { label: 'Installed', failed: false } })
+        );
+
+        expect(detailLines()).toStrictEqual([]);
+    });
+
+    it('renders exactly the two detail lines the record carries (control)', () => {
+        const { detailLines } = renderPanel(
+            makeModel({
+                installation: {
+                    label: 'Installed',
+                    detail: 'Already installed and current.',
+                    at: '6/1/2026, 10:00:00 AM',
+                    failed: false,
+                },
+            })
+        );
+
+        expect(detailLines()).toStrictEqual([
+            'Already installed and current.',
+            '6/1/2026, 10:00:00 AM',
+        ]);
     });
 
     it('a failed install wears the error treatment', () => {
