@@ -1,15 +1,50 @@
 /**
- * Configure Helpers Accessor Functions Tests
+ * configureHelpers — what the Configure screen decides a project HAS to configure.
  *
- * Tests for accessor functions that extract deeply nested values from component definitions.
- * These accessors reduce optional chaining depth from 3+ levels to improve readability.
+ * Three jobs, and until 2026-09-06 only the first had a test. `hasComponentEnvVars`
+ * is the accessor that flattens three levels of optional chaining into one
+ * question. The other two are the fallback the screen runs for a project with no
+ * recorded selections: flatten the catalog, then keep the component instances
+ * whose definition actually asks for something. That fallback is what an older
+ * project falls back TO, so a silent empty answer there shows as a Configure
+ * screen with nothing on it.
  */
 
-import { hasComponentEnvVars } from '@/features/dashboard/ui/configure/configureHelpers';
+import {
+    discoverComponentsFromInstances,
+    getAllComponentDefinitions,
+    hasComponentEnvVars,
+} from '@/features/dashboard/ui/configure/configureHelpers';
+import type { ComponentsData } from '@/features/dashboard/ui/configure/configureTypes';
 import type { TransformedComponentDefinition } from '@/types/components';
 
-describe('configureHelpers accessor functions', () => {
-    describe('hasComponentEnvVars', () => {
+/** A definition that asks for env vars, so the discovery keeps it. */
+const withEnvVars = (id: string): TransformedComponentDefinition => ({
+    id,
+    name: id,
+    configuration: { requiredEnvVars: [`${id.toUpperCase()}_URL`] },
+});
+
+/** A definition that asks for nothing, so the discovery drops it. */
+const withoutEnvVars = (id: string): TransformedComponentDefinition => ({ id, name: id });
+
+/**
+ * The wire's shape, with only the categories a test cares about filled in.
+ *
+ * `frontends`, `backends`, `dependencies` and `envVars` are REQUIRED on the real
+ * payload — `mesh` and `integrations` are the two an older project can arrive
+ * without, which is the case the skip test is about.
+ */
+const componentsData = (over: Partial<ComponentsData> = {}): ComponentsData => ({
+    frontends: [],
+    backends: [],
+    dependencies: [],
+    envVars: {},
+    ...over,
+});
+
+describe('hasComponentEnvVars', () => {
+    describe('one component at a time', () => {
         it('should return true when required env vars are present', () => {
             // Given: A component with required environment variables
             const componentDef: TransformedComponentDefinition = {
@@ -222,5 +257,91 @@ describe('configureHelpers accessor functions', () => {
                 expect(result).toBe(false);
             });
         });
+    });
+});
+
+describe('getAllComponentDefinitions', () => {
+    it('flattens every category, in catalog order', () => {
+        const data = componentsData({
+            frontends: [withEnvVars('headless')],
+            backends: [withEnvVars('adobe-commerce-paas')],
+            dependencies: [withEnvVars('catalog-service')],
+            mesh: [withEnvVars('api-mesh')],
+            integrations: [withEnvVars('erp')],
+        });
+
+        expect(getAllComponentDefinitions(data).map((d) => d.id)).toStrictEqual([
+            'headless',
+            'adobe-commerce-paas',
+            'catalog-service',
+            'api-mesh',
+            'erp',
+        ]);
+    });
+
+    it('skips a category the wire did not send, and invents nothing for it', () => {
+        // Older projects arrive without `mesh` or `integrations` at all; a
+        // placeholder in their place would render as a component to configure.
+        const data = componentsData({ frontends: [withEnvVars('headless')] });
+
+        expect(getAllComponentDefinitions(data)).toStrictEqual([withEnvVars('headless')]);
+    });
+
+    it('answers with an empty list when nothing was sent', () => {
+        expect(getAllComponentDefinitions(componentsData())).toStrictEqual([]);
+    });
+});
+
+describe('discoverComponentsFromInstances', () => {
+    it('keeps the instances whose definition asks for something, and only those', () => {
+        const erp = withEnvVars('erp');
+
+        const discovered = discoverComponentsFromInstances(
+            { erp: { type: 'integration' }, storefront: { type: 'frontend' } },
+            [erp, withoutEnvVars('storefront')]
+        );
+
+        expect(discovered).toStrictEqual([{ id: 'erp', data: erp, type: 'Integration' }]);
+    });
+
+    it('matches an instance to its OWN definition, not merely the first one', () => {
+        const erp = withEnvVars('erp');
+
+        const discovered = discoverComponentsFromInstances({ erp: { type: 'integration' } }, [
+            withEnvVars('crm'),
+            erp,
+        ]);
+
+        expect(discovered).toStrictEqual([{ id: 'erp', data: erp, type: 'Integration' }]);
+    });
+
+    it('drops an instance the catalog no longer describes', () => {
+        // A component removed from the catalog between releases still sits in an
+        // existing project's state; it has no fields to draw.
+        expect(
+            discoverComponentsFromInstances({ erp: { type: 'integration' } }, [withEnvVars('crm')])
+        ).toStrictEqual([]);
+    });
+
+    it('capitalises the instance type for display, leaving the rest of the word alone', () => {
+        const mesh = withEnvVars('api-mesh');
+
+        const discovered = discoverComponentsFromInstances({ 'api-mesh': { type: 'dependency' } }, [
+            mesh,
+        ]);
+
+        expect(discovered[0].type).toBe('Dependency');
+    });
+
+    it('falls back to "Component" when the instance records no type', () => {
+        const mesh = withEnvVars('api-mesh');
+
+        const discovered = discoverComponentsFromInstances({ 'api-mesh': {} }, [mesh]);
+
+        expect(discovered[0].type).toBe('Component');
+    });
+
+    it('answers with an empty list when the project has no instances', () => {
+        expect(discoverComponentsFromInstances({}, [withEnvVars('erp')])).toStrictEqual([]);
     });
 });
