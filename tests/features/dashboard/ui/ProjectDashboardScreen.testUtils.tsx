@@ -12,14 +12,6 @@ jest.mock('@/core/ui/hooks/useFocusTrap', () => ({
     useFocusTrap: jest.fn(() => ({ current: null })),
 }));
 
-jest.mock('@/core/ui/hooks/useTimerCleanup', () => ({
-    useSingleTimer: jest.fn(() => ({
-        ref: { current: null },
-        set: jest.fn(),
-        clear: jest.fn(),
-    })),
-}));
-
 // Mock the WebviewClient
 jest.mock('@/core/ui/utils/WebviewClient', () => ({
     webviewClient: {
@@ -93,7 +85,10 @@ jest.mock('@/core/ui/components/feedback/StatusCard', () => ({
 
 // Mock dashboard predicates
 jest.mock('@/features/dashboard/ui/dashboardPredicates', () => ({
-    isStartActionDisabled: () => false,
+    // A jest.fn, not `() => false`: the screen's decision is WHICH arguments it
+    // hands the predicate (notably `status || 'ready'`), and a bare arrow cannot
+    // see a malformed call. ProjectDashboardScreen-wiring asserts them.
+    isStartActionDisabled: jest.fn(() => false),
 }));
 
 // Mock Adobe React Spectrum components
@@ -160,8 +155,15 @@ jest.mock('@adobe/react-spectrum', () => {
                 {children}
             </a>
         ),
-        DialogContainer: ({ children }: any) => (
-            <div data-testid="dialog-container">{children}</div>
+        DialogContainer: ({ children, onDismiss }: any) => (
+            <div data-testid="dialog-container">
+                {onDismiss && (
+                    <button data-testid="dialog-dismiss" onClick={() => onDismiss()}>
+                        Dismiss
+                    </button>
+                )}
+                {children}
+            </div>
         ),
         TextField: ({ label, value, onChange, ...props }: any) => (
             <input
@@ -190,12 +192,14 @@ jest.mock('@/features/dashboard/ui/components/AiCapabilitiesModal', () => ({
         onClose,
         onRegenerate,
         isBusy,
+        progress,
     }: any) => (
         <div
             data-testid="ai-capabilities-modal"
             data-skills-error={String(Boolean(hasSkillsError))}
             data-mcps-error={String(Boolean(hasMcpsError))}
             data-busy={String(Boolean(isBusy))}
+            data-progress-operation={progress?.currentOperation ?? 'none'}
         >
             <span data-testid="ai-capabilities-modal-skills-count">{skills.length}</span>
             <span data-testid="ai-capabilities-modal-mcps-count">{mcps.length}</span>
@@ -320,5 +324,11 @@ export function setupTestContext(): TestContext {
 }
 
 export function renderDashboard(props: Parameters<typeof ProjectDashboardScreen>[0] = {}) {
-    return render(<ProjectDashboardScreen {...props} />);
+    const utils = render(<ProjectDashboardScreen {...props} />);
+    return {
+        ...utils,
+        /** Re-render the SAME instance with different props. */
+        rerenderWith: (next: Parameters<typeof ProjectDashboardScreen>[0]) =>
+            utils.rerender(<ProjectDashboardScreen {...next} />),
+    };
 }
