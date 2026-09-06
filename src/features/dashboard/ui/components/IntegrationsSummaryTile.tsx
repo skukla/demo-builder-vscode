@@ -22,7 +22,7 @@ import type { MeshStatus } from '../hooks/useDashboardStatus';
 import { DashboardTile } from './DashboardTile';
 import { toMeshCardStatus } from './integrations/integrationCardModel';
 import { type StatusDotVariant } from '@/core/ui/components/ui/StatusDot';
-import { getStatusDisplay } from '@/core/ui/utils/statusVocabulary';
+import { getStatusDisplay, type DisplayStatus } from '@/core/ui/utils/statusVocabulary';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { AppBuilderComponentState } from '@/types/base';
 
@@ -41,33 +41,48 @@ export interface IntegrationsSummaryTileProps {
     meshStatus?: MeshStatus;
 }
 
+/** One ranked state: the word the tooltip names and the colour the dot wears. */
+interface SeverityRank {
+    status: DisplayStatus;
+    variant: StatusDotVariant;
+}
+
 /**
  * Worst-status precedence, most alarming first. The tile shows one dot, so a
  * single failing integration must not be hidden behind four healthy ones.
+ *
+ * It ranks the WHOLE display vocabulary bar one: `checking` is in flight, not
+ * health, so it deliberately has no row here and can never become the worst
+ * status — which is also why nothing needs to filter it out on the way in.
+ *
+ * `needs-auth` and `config-incomplete` were missing until 2026-09-06, and both
+ * are reachable MESH states (`MeshStatus` carries them and `toMeshCardStatus`
+ * passes them straight through). A mesh whose session had expired, or whose
+ * required config was never filled in, showed a warning dot on its card on the
+ * integrations surface and no dot at all here — the exact disagreement this
+ * tile exists to prevent.
  */
-const SEVERITY: Array<{ status: string; variant: StatusDotVariant }> = [
+const SEVERITY: SeverityRank[] = [
     { status: 'error', variant: 'error' },
+    { status: 'needs-auth', variant: 'warning' },
     { status: 'stale', variant: 'warning' },
+    { status: 'config-incomplete', variant: 'warning' },
     { status: 'deploying', variant: 'info' },
     { status: 'not-deployed', variant: 'neutral' },
     { status: 'deployed', variant: 'success' },
 ];
 
-/** The most alarming status present, or success when there is nothing to report. */
-export function worstStatusVariant(statuses: string[]): StatusDotVariant {
-    const match = SEVERITY.find((entry) => statuses.includes(entry.status));
-    return match?.variant ?? 'success';
-}
-
 /**
- * The most alarming status itself, so the tooltip can NAME what the dot colours.
+ * The most alarming rank present, or undefined when nothing here is rankable —
+ * which is what "no health to report" looks like.
  *
- * The dot shipped without any words: amber or red with nothing to hover, so the
- * only way to learn whether the colour mattered was to open the surface — the
- * opposite of what a summary tile is for.
+ * ONE lookup, so the colour and the word come from the same row and cannot
+ * disagree. The dot shipped without any words at all: amber or red with nothing
+ * to hover, so the only way to learn whether the colour mattered was to open the
+ * surface — the opposite of what a summary tile is for.
  */
-function worstStatus(statuses: string[]): string | undefined {
-    return SEVERITY.find((entry) => statuses.includes(entry.status))?.status;
+function worstRank(statuses: string[]): SeverityRank | undefined {
+    return SEVERITY.find((entry) => statuses.includes(entry.status));
 }
 
 export function IntegrationsSummaryTile({
@@ -86,28 +101,26 @@ export function IntegrationsSummaryTile({
         (entry) => entry.kind === 'integration',
     );
     // The mesh folds in through the SAME mapping the mesh card uses, so the dot
-    // can never disagree with the card the surface shows. 'checking' is not a
-    // health signal, so it is excluded rather than reported as neutral.
+    // can never disagree with the card the surface shows. An in-flight
+    // 'checking' mesh arrives here and simply ranks nowhere.
     const meshCardStatus = hasMesh ? toMeshCardStatus(meshStatus) : undefined;
-    const reportable = [
+    const reportable: string[] = [
         ...integrations.map((entry) => entry.status),
-        ...(meshCardStatus && meshCardStatus !== 'checking' ? [meshCardStatus] : []),
+        ...(meshCardStatus ? [meshCardStatus] : []),
     ];
-    // The dot reports HEALTH, so with nothing deployed there is nothing to report
-    // and the tile carries no dot at all. worstStatusVariant falls back to
-    // 'success' on an empty list, which painted an empty project green — "all
-    // good" about nothing. The tile still renders: it is the way in to add the
-    // first integration.
-    const variant = reportable.length > 0 ? worstStatusVariant(reportable) : undefined;
-
+    // The dot reports HEALTH, so with nothing rankable there is no worst state
+    // and the tile carries no dot at all — an empty project used to be painted
+    // green, "all good" about nothing. The tile still renders: it is the way in
+    // to add the first integration.
+    //
     // Shaped like its build-zone neighbours (icon above label) so the row reads
     // as one bar; the dot rides the icon as a small overlay rather than widening
     // the tile, which is what made it wrap onto its own line before.
     //
     // Wording comes from the SHARED vocabulary, so the tooltip cannot disagree
     // with the card the integrations surface shows for the same state.
-    const worst = variant ? worstStatus(reportable) : undefined;
-    const worstLabel = getStatusDisplay(worst)?.label;
+    const worst = worstRank(reportable);
+    const worstLabel = getStatusDisplay(worst?.status)?.label;
 
     return (
         <DashboardTile
@@ -118,8 +131,12 @@ export function IntegrationsSummaryTile({
             className="integrations-tile"
             tooltip="View and manage this project's integrations"
             status={
-                variant && worstLabel
-                    ? { variant, tooltip: worstLabel, testId: 'integrations-tile-dot' }
+                worst && worstLabel
+                    ? {
+                          variant: worst.variant,
+                          tooltip: worstLabel,
+                          testId: 'integrations-tile-dot',
+                      }
                     : undefined
             }
         />

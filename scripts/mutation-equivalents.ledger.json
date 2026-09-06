@@ -16169,6 +16169,42 @@
             "decision": "none \u2014 the three real sizes are each pinned by their own test",
             "recorded": "2026-09-06",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/dashboard/ui/aiSurface/components/PromptCard.tsx",
+            "anchors": [
+                "if (onCopy) onCopy(promptBody);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The 'copy' menu item is rendered only when onCopy is supplied (`{onCopy ? <Item key=\"copy\"> : null}`), so Spectrum's Menu can never dispatch the 'copy' key while onCopy is undefined \u2014 the guard is unreachable by construction. Verified by planting the mutation: calling onCopy unconditionally leaves all 30 tests green, and no test could turn it red without driving onAction with a key the menu does not render. The guard cannot be deleted either: onCopy is optional, so removing it needs a cast at the call boundary, which this repo bans.",
+            "decision": "none \u2014 the truthiness check is the type-safe way to narrow an optional handler",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/IntegrationsSummaryTile.tsx",
+            "anchors": [
+                "...(meshCardStatus ? [meshCardStatus] : []),"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the EMPTY else-branch array with ['Stryker was here'], adding an unrankable string to `reportable`. The dot is decided by `worstRank`, which returns the FIRST SEVERITY row whose status appears in the list \u2014 a value that matches no row cannot become the worst status, cannot change the colour, and cannot change the tooltip, because the label is read off the same row. So injecting any unranked value there is invisible by construction. Verified by planting it: all 29 tests stay green, and no assertion could see it without the component reporting a state it does not rank.",
+            "decision": "none \u2014 an unrankable entry is inert; the branch that matters ([meshCardStatus] vs []) is killed by the mesh-error tests",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/IntegrationsSummaryTile.tsx",
+            "anchors": [
+                "worst && worstLabel"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Swapping && for || cannot change the render. worstLabel is DERIVED from worst (getStatusDisplay(worst?.status)?.label), so when worst is undefined getStatusDisplay(undefined) returns null and worstLabel is undefined too \u2014 both operands are falsy together. The only case where the two operators differ is worst truthy with worstLabel falsy, i.e. a SEVERITY row whose status has no entry in the shared vocabulary; SEVERITY has seven rows and every one of them is pinned by a test asserting the tile renders a dot for it, which is only possible when worstLabel is truthy. The pair is defence in depth for DashboardTile's rule that a dot always arrives with words, and it cannot be simplified away: worstLabel is string|undefined and DashboardTileStatus.tooltip is a required string, so dropping the second operand needs a cast at the call boundary, which this repo bans.",
+            "decision": "none \u2014 the second operand is what makes the tooltip type-safe",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }

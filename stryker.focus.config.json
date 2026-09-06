@@ -8,8 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/components/ui/components/StoreSelectionRow.tsx",
-        "src/core/ui/components/feedback/StatusCard.tsx"
+        "src/features/dashboard/ui/aiSurface/components/PromptCard.tsx",
+        "src/features/dashboard/ui/components/IntegrationsSummaryTile.tsx"
     ],
     "reporters": [
         "clear-text",
