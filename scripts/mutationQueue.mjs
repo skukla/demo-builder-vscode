@@ -55,7 +55,15 @@ const BASELINE = 'reports/mutation/baseline.json';
 const QUEUE = 'scripts/overnight/queue';
 const GOALS = 'scripts/overnight/goals';
 const BATCH = 5;
-const CAP = 4000; // the hard limit on a goal condition
+// The cap on a goal condition. 4,000 was a GUESS and it bound three times on
+// 2026-09-05, each time costing batch size — the module list is what gets squeezed.
+// Measured that day: the runner delivers the text as a shell argument
+// (`claude -p "/goal $(cat …)"`), ARG_MAX here is 1,048,576, and a 4,606-character
+// argument arrives whole. Raised to 4,600 rather than removed, because the /goal
+// mechanism's own handling is not measured — its documentation states no length
+// limit, which is not the same as proving there is none. If a session ever ignores
+// the instructions at the END of the text, suspect this first.
+const CAP = 4600;
 
 /**
  * The areas whose breakage costs an SC existing work. A module here is worked before any
@@ -119,8 +127,14 @@ FIRST, PER MODULE: sibling suites named for a FUNCTION, not the file, are invisi
 \`suitesFor\` — their kills count for nothing. Check imports, rename to
 \`<module>-<topic>.test.ts\`. Took importHandlers.ts 151 gaps to 62. See PL-45.
 
-THE CYCLE, one module at a time — never two measurements at once (the focus configs are
-single generated files and collide):
+SMALL MODULES SHARE A MEASUREMENT: \`node scripts/focusModule.mjs <a> <b> <c>\` focuses
+several at once, so a group pays one measure and one re-measure instead of one each.
+Worth it below ~20 gaps apiece — that fixed toll is most of a small module's cost (1.0
+gaps/min at 1-5 gaps against 13.7 at 100+). The report is per-module and the ratchet
+writes a row for each, so nothing downstream changes. Still ONE COMMIT PER MODULE.
+
+THE CYCLE — never two measurements at once (the focus configs are single generated
+files and collide):
   1. node scripts/focusModule.mjs <module>
   2. npx stryker run stryker.focus.config.json > /tmp/focus.txt 2>&1
      Start it in the BACKGROUND and read the module while it runs — nothing blocks on

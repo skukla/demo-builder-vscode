@@ -1,10 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-08. Bring each of
 these modules to ZERO open gaps, in this order:
 
-  - src/features/components/ui/components/StoreConfigFieldRow.tsx  (39 open gaps)
-  - src/features/data-installer/services/commerceCredentialBroker.ts  (39 open gaps)
-  - src/features/dashboard/ui/ProjectDashboardScreen.tsx  (38 open gaps)
-  - src/features/components/ui/hooks/useAutoStoreDetect.ts  (38 open gaps)
+  - src/core/ui/hooks/useSearchFilter.ts  (25 open gaps)
+  - src/features/dashboard/commands/openAi.ts  (25 open gaps)
+  - src/features/data-installer/services/sampleDataInstallDeps.ts  (25 open gaps)
+  - src/features/mesh/commands/deployMesh.ts  (25 open gaps)
+  - src/features/ai/server/diagnosticsTools.ts  (24 open gaps)
 
 WHAT DONE MEANS, per module: its `openGaps` row in reports/mutation/baseline.json reads 0.
 Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the
@@ -18,8 +19,14 @@ FIRST, PER MODULE: sibling suites named for a FUNCTION, not the file, are invisi
 `suitesFor` — their kills count for nothing. Check imports, rename to
 `<module>-<topic>.test.ts`. Took importHandlers.ts 151 gaps to 62. See PL-45.
 
-THE CYCLE, one module at a time — never two measurements at once (the focus configs are
-single generated files and collide):
+SMALL MODULES SHARE A MEASUREMENT: `node scripts/focusModule.mjs <a> <b> <c>` focuses
+several at once, so a group pays one measure and one re-measure instead of one each.
+Worth it below ~20 gaps apiece — that fixed toll is most of a small module's cost (1.0
+gaps/min at 1-5 gaps against 13.7 at 100+). The report is per-module and the ratchet
+writes a row for each, so nothing downstream changes. Still ONE COMMIT PER MODULE.
+
+THE CYCLE — never two measurements at once (the focus configs are single generated
+files and collide):
   1. node scripts/focusModule.mjs <module>
   2. npx stryker run stryker.focus.config.json > /tmp/focus.txt 2>&1
      Start it in the BACKGROUND and read the module while it runs — nothing blocks on
