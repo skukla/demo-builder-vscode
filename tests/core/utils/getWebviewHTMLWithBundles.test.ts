@@ -18,6 +18,26 @@ function createMockScriptUri(): vscode.Uri {
     return vscode.Uri.parse('vscode-resource://wizard-bundle.js');
 }
 
+/**
+ * Test helper: read ONE CSP directive's exact value.
+ *
+ * `toContain('img-src a b c')` still passes when the directive has grown a fourth
+ * source, which is exactly the mistake a wrong default for `additionalImgSources`
+ * would make. Comparing the whole directive is what notices.
+ */
+function cspDirective(html: string, name: string): string {
+    const match = html.match(new RegExp(`\\s${name} ([^;]*);`));
+    if (!match) throw new Error(`CSP directive "${name}" not found`);
+    return match[1].trim();
+}
+
+/**
+ * Test helper: everything the generator puts between </title> and </head>.
+ */
+function headTail(html: string): string {
+    return html.slice(html.indexOf('</title>') + '</title>'.length, html.indexOf('</head>'));
+}
+
 describe('getWebviewHTML', () => {
     describe('HTML Structure and Bundle Loading', () => {
         it('should generate HTML with the feature bundle', () => {
@@ -107,9 +127,10 @@ describe('getWebviewHTML', () => {
             expect(html).toContain(`default-src 'none'`);
             expect(html).toContain(`script-src 'nonce-${nonce}' ${cspSource}`);
             expect(html).toContain(`style-src ${cspSource} 'unsafe-inline'`);
-            // img-src includes cspSource for local resources plus default sources
-            expect(html).toContain(`img-src ${cspSource} https: data:`);
-            expect(html).toContain(`font-src ${cspSource}`);
+            // img-src includes cspSource for local resources plus default sources —
+            // and NOTHING else when no additional sources were asked for.
+            expect(cspDirective(html, 'img-src')).toBe(`${cspSource} https: data:`);
+            expect(cspDirective(html, 'font-src')).toBe(cspSource);
         });
     });
 
@@ -146,11 +167,65 @@ describe('getWebviewHTML', () => {
             const html = getWebviewHTML(options);
 
             // Assert: CSP includes cspSource + default + additional image sources
-            expect(html).toContain('img-src vscode-resource: https: data: https://example.com https://cdn.adobe.com');
+            expect(cspDirective(html, 'img-src'))
+                .toBe('vscode-resource: https: data: https://example.com https://cdn.adobe.com');
+        });
+    });
+
+    describe('Base URI script', () => {
+        it('should expose the base URI to the bundle when one is given', () => {
+            // Arrange
+            const baseUri = vscode.Uri.parse('vscode-resource://media');
+            const options = {
+                scriptUri: createMockScriptUri(),
+                nonce: 'base-uri-nonce',
+                cspSource: 'vscode-resource:',
+                title: 'Test',
+                baseUri,
+            };
+
+            // Act
+            const html = getWebviewHTML(options);
+
+            // Assert: an extra nonce'd inline script sets the global the bundle reads
+            expect(headTail(html)).toContain(
+                `<script nonce="base-uri-nonce">window.__WEBVIEW_BASE_URI__ = "${baseUri.toString()}";</script>`,
+            );
+            expect(html.match(/<script nonce="[^"]+"/g)).toHaveLength(2);
+        });
+
+        it('should add nothing to the head when no base URI is given', () => {
+            // Arrange
+            const options = {
+                scriptUri: createMockScriptUri(),
+                nonce: 'no-base-uri',
+                cspSource: 'vscode-resource:',
+                title: 'Test',
+            };
+
+            // Act
+            const html = getWebviewHTML(options);
+
+            // Assert: the slot is EMPTY, not filled with some other string
+            expect(headTail(html).trim()).toBe('');
         });
     });
 
     describe('Error Handling', () => {
+        it('should throw error if nonce is whitespace only', () => {
+            // Arrange: a nonce that is truthy but carries no value
+            const options = {
+                scriptUri: createMockScriptUri(),
+                nonce: '   ',
+                cspSource: 'vscode-resource:',
+                title: 'Test',
+            };
+
+            // Act & Assert: `!nonce` is false here, so only the trim() check catches it
+            expect(() => getWebviewHTML(options))
+                .toThrow('Nonce is required for CSP compliance');
+        });
+
         it('should throw error if nonce is missing', () => {
             // Arrange
             const options = {
