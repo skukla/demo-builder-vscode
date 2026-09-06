@@ -421,3 +421,176 @@ describe('moveAppBuilderComponentsToDestination — an abort restores what the d
         );
     });
 });
+
+/**
+ * The no-op cases must be no-ops all the way down.
+ *
+ * `subscribeRequiredApis` is a PUT that sets the workspace's APIs to exactly the
+ * union it is given. Running it for a move that is not happening reconciles a
+ * workspace nobody asked to touch — and on the same-destination path, the one the
+ * project is already using.
+ */
+describe('moveAppBuilderComponentsToDestination — the two no-op paths', () => {
+    it('subscribes nothing and reports an empty result when there is nothing to move', async () => {
+        const calls: string[] = [];
+        const deps = makeDeps(calls);
+        const empty = createMockProject({ ...makeProject(), appBuilderComponents: {} });
+
+        const result = await moveAppBuilderComponentsToDestination(empty, PREVIOUS, deps);
+
+        expect(deps.subscribeRequiredApis).not.toHaveBeenCalled();
+        expect(result.moved).toStrictEqual([]);
+        expect(result.failed).toStrictEqual([]);
+    });
+
+    it('subscribes nothing when the destination did not change', async () => {
+        const calls: string[] = [];
+        const deps = makeDeps(calls);
+        const SAME = { organization: '285361', projectId: 'new-proj', workspace: 'new-ws' };
+
+        await moveAppBuilderComponentsToDestination(makeProject(), SAME, deps);
+
+        expect(deps.subscribeRequiredApis).not.toHaveBeenCalled();
+    });
+
+    it('reports an empty failure list on a completed move', async () => {
+        mockDeployAppBuilderComponent.mockResolvedValue({ success: true });
+
+        const result = await moveAppBuilderComponentsToDestination(
+            makeProject(),
+            PREVIOUS,
+            makeDeps([])
+        );
+
+        expect(result.failed).toStrictEqual([]);
+    });
+});
+
+/**
+ * What counts as "the same destination".
+ *
+ * Project AND workspace, both. Org is deliberately not compared — sign-in owns org
+ * selection — but treating either half as sufficient turns a real move into a
+ * silent no-op, and the SC sees a destination change that changed nothing.
+ */
+describe('sameDestination, through the move it gates', () => {
+    async function movesGiven(previous: Parameters<
+        typeof moveAppBuilderComponentsToDestination
+    >[1]): Promise<boolean> {
+        mockDeployAppBuilderComponent.mockResolvedValue({ success: true });
+        await moveAppBuilderComponentsToDestination(makeProject(), previous, makeDeps([]));
+        return mockDeployAppBuilderComponent.mock.calls.length > 0;
+    }
+
+    it('moves when only the workspace differs', async () => {
+        expect(
+            await movesGiven({ organization: '285361', projectId: 'new-proj', workspace: 'old-ws' })
+        ).toBe(true);
+    });
+
+    it('moves when only the Console project differs', async () => {
+        expect(
+            await movesGiven({ organization: '285361', projectId: 'old-proj', workspace: 'new-ws' })
+        ).toBe(true);
+    });
+
+    // A project that had no destination at all is not "already there". This is the
+    // first-time case: setting a destination on a project that never had one has to
+    // deploy, and there is nothing to roll back to if it fails.
+    it('moves when there is no previous destination to compare against', async () => {
+        expect(await movesGiven(undefined)).toBe(true);
+    });
+});
+
+describe('moveAppBuilderComponentsToDestination — a failure with nowhere to roll back to', () => {
+    it('leaves the project pointing at the new destination and says it did not roll back', async () => {
+        mockDeployAppBuilderComponent.mockResolvedValue({ success: false, error: 'boom' });
+        const project = makeProject();
+
+        const result = await moveAppBuilderComponentsToDestination(
+            project,
+            undefined,
+            makeDeps([])
+        );
+
+        expect(result.success).toBe(false);
+        expect(result.rolledBack).toBe(false);
+        // Nothing to point back AT — clearing it would strand the components that
+        // did land, with no record of where they went.
+        expect(project.adobe).toMatchObject({ projectId: 'new-proj', workspace: 'new-ws' });
+    });
+
+    // The card and the result both have to say something. A deploy that fails
+    // without a reason still gets one, or the drawer shows an empty error.
+    it('supplies a reason when the deploy gives none', async () => {
+        mockDeployAppBuilderComponent.mockResolvedValue({ success: false });
+
+        const result = await moveAppBuilderComponentsToDestination(
+            makeProject(),
+            PREVIOUS,
+            makeDeps([])
+        );
+
+        expect(result.failed).toEqual([
+            { id: 'eds-accs-mesh', error: 'Deploy to the new destination failed.' },
+        ]);
+    });
+});
+
+describe('moveAppBuilderComponentsToDestination — the rollback republish', () => {
+    it('republishes against THIS project, with the secrets and logger it was given', async () => {
+        deployWritingEndpointsExcept('erp-sync');
+        const project = makeProject();
+        const deps = makeDeps([]);
+
+        await moveAppBuilderComponentsToDestination(project, PREVIOUS, deps);
+
+        // The publish reads the mesh endpoint off the project it is handed, so
+        // handing it anything else republishes against the wrong record. A mock
+        // answers the same however it is called; the ARGUMENTS are the contract.
+        expect(deps.republishStorefront).toHaveBeenCalledWith({
+            project,
+            secrets: deps.secrets,
+            logger: deps.logger,
+        });
+    });
+
+    // Best-effort. The records are already correct by the time this runs, so a
+    // publish failure must not turn a handled abort into an unhandled throw.
+    it('still returns the abort result when the republish fails', async () => {
+        deployWritingEndpointsExcept('erp-sync');
+        mockRepublish.mockRejectedValueOnce(new Error('helix 503'));
+
+        const result = await moveAppBuilderComponentsToDestination(
+            makeProject(),
+            PREVIOUS,
+            makeDeps([])
+        );
+
+        expect(result.success).toBe(false);
+        expect(result.rolledBack).toBe(true);
+    });
+});
+
+/**
+ * The id list is snapshotted before the first deploy, so it can name a component
+ * that is gone by the time the loop reaches it. Deploying one that is no longer
+ * keyed would re-create the entry a removal had just cleared.
+ */
+describe('moveAppBuilderComponentsToDestination — an entry that disappears mid-move', () => {
+    it('skips a component whose keyed entry is gone by the time its turn comes', async () => {
+        mockDeployAppBuilderComponent.mockImplementation(async (p: Project, id: string) => {
+            if (id === 'eds-accs-mesh') delete p.appBuilderComponents!['erp-sync'];
+            return { success: true };
+        });
+
+        const result = await moveAppBuilderComponentsToDestination(
+            makeProject(),
+            PREVIOUS,
+            makeDeps([])
+        );
+
+        expect(mockDeployAppBuilderComponent).toHaveBeenCalledTimes(1);
+        expect(result.moved).toEqual(['eds-accs-mesh']);
+    });
+});
