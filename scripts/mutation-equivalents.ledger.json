@@ -12261,6 +12261,81 @@
             "decision": "none \u2014 the view check keeps this body consistent with the five beside it",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/projects-dashboard/utils/projectStatusUtils.ts",
+            "anchors": [
+                "].filter((concern): concern is DeploymentConcern => concern !== null);"
+            ],
+            "line": 246,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both survivors here let nulls stay in the concerns array, and a null cannot change the answer: the winner is chosen with CONCERN_ORDER.find(c => concerns.includes(c)), and CONCERN_ORDER holds only the four real concerns, so a null matches nothing. When every source is null the array is non-empty but the find still returns undefined, and the guard below returns null exactly as the length check would have.",
+            "decision": "none \u2014 the filter is what makes the array's type honest, and the type predicate is what lets  be typed",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/projects-dashboard/utils/projectStatusUtils.ts",
+            "anchors": [
+                "if (concerns.length === 0) return null;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Removing this early return reaches the same answer one line later. With no concerns, CONCERN_ORDER.find returns undefined and the '!worst' guard below returns null \u2014 the same null, for the same reason. The two guards are belt and braces, and Stryker applies one mutation at a time, so neither alone is observable.",
+            "decision": "none \u2014 saying 'nothing deployable' at the point it is known reads better than inferring it from a failed find",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/projects-dashboard/utils/projectStatusUtils.ts",
+            "anchors": [
+                "if (worst === 'attention' && hasError) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The left half is implied by the right. hasError is true only when an integration status or the mesh status key is 'error', and concernFromComponentStatus maps 'error' to 'attention' \u2014 which is first in CONCERN_ORDER, so it always wins. There is therefore no input where hasError holds and worst is anything but 'attention', and forcing the left half true changes no result.",
+            "decision": "none \u2014 naming the concern the error variant belongs to keeps the rule readable where it is applied",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/projects-dashboard/utils/projectStatusUtils.ts",
+            "anchors": [
+                "text: getStatusText(project.status, undefined, true),"
+            ],
+            "line": 292,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This call is only reached for an EDS project whose status is 'resetting' or 'republishing' \u2014 the in-flight guard three lines above returns null for anything else. getStatusText answers 'Resetting...' and 'Republishing...' for both of those whether isEds is true or false, because its EDS branch and its switch spell those two states identically. So the flag cannot change the text here.",
+            "decision": "none \u2014 passing true states that this branch is the EDS one, which the reader needs",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/projects-dashboard/utils/projectStatusUtils.ts",
+            "anchors": [
+                "variant: getStatusVariant(project.status, true),"
+            ],
+            "line": 293,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This call is only reached for an EDS project whose status is 'resetting' or 'republishing' \u2014 the in-flight guard three lines above returns null for anything else. getStatusVariant answers 'warning' for both of those whether isEds is true or false, because its EDS branch and its switch agree on the transitional states. So the flag cannot change the variant here.",
+            "decision": "none \u2014 passing true states that this branch is the EDS one, which the reader needs",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/projects-dashboard/utils/projectStatusUtils.ts",
+            "anchors": [
+                "if (!worst) return null;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This guard cannot fire. The length check on the line above already returned for an empty concerns array, and every value that survives the filter is one of the four members of CONCERN_ORDER \u2014 so find always matches something when there is anything to match. Removing the guard therefore returns the same value the line below returns, for every input a caller can build.",
+            "decision": "none \u2014 the pair of guards makes the empty and the unmatched cases each say so where they arise",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
         }
     ]
 }

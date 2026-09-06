@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/data-installer/ui/components/ImportDatapackModal.tsx"
+        "src/features/projects-dashboard/utils/projectStatusUtils.ts"
     ],
     "reporters": [
         "clear-text",
