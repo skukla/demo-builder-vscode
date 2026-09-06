@@ -8,7 +8,13 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/utils/statusVocabulary.ts"
+        "src/core/ui/components/feedback/EmptyState.tsx",
+        "src/core/ui/components/layout/ControlPanelLayout.tsx",
+        "src/core/ui/components/layout/GridLayout.tsx",
+        "src/core/ui/components/ui/CardActionsMenu.tsx",
+        "src/core/ui/components/ui/Spinner.tsx",
+        "src/core/ui/hooks/useSelectableDefault.ts",
+        "src/core/ui/hooks/useVSCodeMessage.ts"
     ],
     "reporters": [
         "clear-text",
