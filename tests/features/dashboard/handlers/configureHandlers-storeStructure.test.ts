@@ -107,6 +107,11 @@ describe('handleDiscoverStoreStructureAndPersist', () => {
             success: true,
         });
         expect(saveProject).not.toHaveBeenCalled();
+        // Silence matters: "no project open" is the ordinary case on this
+        // surface, not a failure. Writing onto a missing project and letting
+        // the catch mop it up would still return success — and would fill the
+        // support trail with a warning on every discovery.
+        expect(context.logger.warn).not.toHaveBeenCalled();
     });
 
     it('survives a save failure — the picker already has its data', async () => {

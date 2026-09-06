@@ -36,6 +36,7 @@ import {
     handleOpenEdsSettings,
 } from '@/features/dashboard/handlers/configureHandlers';
 import { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
+import { validateURL } from '@/core/validation/URLValidator';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -144,6 +145,16 @@ describe('configureHandlers', () => {
             expect(context.panel?.dispose).toHaveBeenCalled();
             expect(result.success).toBe(true);
         });
+
+        it('succeeds when there is no panel to dispose', async () => {
+            // Cancel is reachable from a context with no panel attached (the
+            // handler map is dispatched headlessly by the MCP surface, which
+            // never opens one). Optional access is what keeps that a no-op
+            // rather than a TypeError.
+            const context = createMockContext({ panel: undefined });
+
+            await expect(handleCancelConfigure(context)).resolves.toEqual({ success: true });
+        });
     });
 
     describe('handleOpenExternal', () => {
@@ -155,12 +166,31 @@ describe('configureHandlers', () => {
             expect(result.success).toBe(true);
         });
 
+        it('validates against exactly the two web schemes before opening', async () => {
+            // The scheme allow-list is the whole guard: an empty list, or one
+            // that dropped http, would let a `file:`/`vscode:` URL through to
+            // openExternal. Assert the ARGUMENT, not that the call happened.
+            const context = createMockContext();
+            await handleOpenExternal(context, { url: 'http://example.com' });
+
+            expect(validateURL).toHaveBeenCalledWith('http://example.com', ['https', 'http']);
+        });
+
         it('should handle missing URL gracefully', async () => {
             const context = createMockContext();
             const result = await handleOpenExternal(context, {});
 
             expect(vscode.env.openExternal).not.toHaveBeenCalled();
             expect(result.success).toBe(true);
+        });
+
+        it('should handle a missing payload entirely', async () => {
+            // `payload` is optional on the handler signature, so a sender that
+            // omits it must get the same no-op, not a TypeError.
+            const context = createMockContext();
+
+            await expect(handleOpenExternal(context)).resolves.toEqual({ success: true });
+            expect(vscode.env.openExternal).not.toHaveBeenCalled();
         });
     });
 
