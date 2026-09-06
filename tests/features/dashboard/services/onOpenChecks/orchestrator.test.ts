@@ -10,7 +10,11 @@
  *   - concurrency (all checks post)
  */
 
-import { _resetOnOpenChecksGuardForTests, armOnOpenChecks, runOnOpenChecks } from '@/features/dashboard/services/onOpenChecks/orchestrator';
+import {
+    _resetOnOpenChecksGuardForTests,
+    armOnOpenChecks,
+    runOnOpenChecks,
+} from '@/features/dashboard/services/onOpenChecks/orchestrator';
 import type { CheckOutcome, OnOpenCheck } from '@/features/dashboard/services/onOpenChecks/types';
 import { CHECK_RESULT_MESSAGE } from '@/types/messages';
 import type { Logger } from '@/types/logger';
@@ -79,12 +83,38 @@ it('skips an edsOnly check on a non-EDS project (no run, no post)', async () => 
     expect(outcomes(postMessage)).toHaveLength(0);
 });
 
+it('runs an edsOnly check on an EDS project (the gate skips only when BOTH hold)', async () => {
+    const { deps, postMessage } = makeDeps(true);
+    const run = jest.fn(async () => ({ status: 'ok' as const }));
+    const check: OnOpenCheck = { id: 'mcp-health', mode: 'background', edsOnly: true, run };
+
+    await runOnOpenChecks(deps, [check]);
+
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(outcomes(postMessage)).toHaveLength(1);
+});
+
+it('runs an ungated check on a non-EDS project', async () => {
+    // The other half of the same gate: `edsOnly` absent means the project's kind
+    // is irrelevant. A check skipped here would never run on a non-EDS project.
+    const { deps, postMessage } = makeDeps(false);
+    const run = jest.fn(async () => ({ status: 'ok' as const }));
+    const check: OnOpenCheck = { id: 'org-context', mode: 'background', run };
+
+    await runOnOpenChecks(deps, [check]);
+
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(outcomes(postMessage)).toHaveLength(1);
+});
+
 it('P2: a throwing check posts an error outcome and never rejects; others still run', async () => {
     const { deps, postMessage } = makeDeps();
     const thrower: OnOpenCheck = {
         id: 'org-context',
         mode: 'background',
-        run: async () => { throw new Error('boom'); },
+        run: async () => {
+            throw new Error('boom');
+        },
     };
     const healthy: OnOpenCheck = {
         id: 'ai-verify',
@@ -176,12 +206,16 @@ it('reRunnable: a check opts out of the per-session guard and runs every time', 
 it('runs multiple checks concurrently and posts each', async () => {
     const { deps, postMessage } = makeDeps();
     const mk = (id: string): OnOpenCheck => ({
-        id, mode: 'background', run: async () => ({ status: 'ok' }),
+        id,
+        mode: 'background',
+        run: async () => ({ status: 'ok' }),
     });
 
     await runOnOpenChecks(deps, [mk('org-context'), mk('mesh-verify'), mk('ai-verify')]);
 
-    const ids = outcomes(postMessage).map((o) => o.checkId).sort();
+    const ids = outcomes(postMessage)
+        .map((o) => o.checkId)
+        .sort();
     expect(ids).toEqual(['ai-verify', 'mesh-verify', 'org-context']);
 });
 
@@ -206,11 +240,11 @@ describe('re-opening a project re-arms its checks (2026-08-06 regression)', () =
         const run = jest.fn(async () => ({ status: 'ok' as const }));
         const check: OnOpenCheck = { id: 'ai-verify', mode: 'background', run };
 
-        await runOnOpenChecks(deps, [check]);        // first open
-        await runOnOpenChecks(deps, [check]);        // re-requestStatus, same mount → guarded
+        await runOnOpenChecks(deps, [check]); // first open
+        await runOnOpenChecks(deps, [check]); // re-requestStatus, same mount → guarded
         expect(run).toHaveBeenCalledTimes(1);
 
-        armOnOpenChecks(deps.project.path);          // dashboard re-opened for this project
+        armOnOpenChecks(deps.project.path); // dashboard re-opened for this project
         await runOnOpenChecks(deps, [check]);
 
         expect(run).toHaveBeenCalledTimes(2);
@@ -236,7 +270,11 @@ describe('re-opening a project re-arms its checks (2026-08-06 regression)', () =
         // makeDeps shares ONE module-level project object, so a second project needs
         // its own — mutating the shared one changes both and the test proves nothing.
         const { deps: a } = makeDeps();
-        const b = { ...a, project: createMockProject({ path: '/projects/other' }), postMessage: jest.fn() };
+        const b = {
+            ...a,
+            project: createMockProject({ path: '/projects/other' }),
+            postMessage: jest.fn(),
+        };
         const runA = jest.fn(async () => ({ status: 'ok' as const }));
         const runB = jest.fn(async () => ({ status: 'ok' as const }));
 
