@@ -14199,6 +14199,59 @@
             "decision": "none \u2014 a handler that posts to Adobe should not depend on its button being drawn correctly",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/views/DatapackCatalogView.tsx",
+            "anchors": [
+                "}, [loadProjectContext]);",
+                "}, []);",
+                "[],",
+                "[loadDetail],",
+                "const closeDetail = useCallback((): void => setSelected(undefined), []);",
+                "const openImport = useCallback((id: DatapackId): void => setImporting(id), []);"
+            ],
+            "mutants": 6,
+            "category": "other",
+            "reason": "Six dependency lists whose entries never change between renders. Two of them name a hook's `load`, which is a useCallback over `execute` from useVSCodeRequest and is stable for the component's lifetime \u2014 dropping it leaves the effect and the callback firing exactly as before (and if it were NOT stable the effect at line 104 would re-fire on every render, which it does not). The other four are empty and constant, and Stryker replaces them with a different constant array: React compares dependency lists element by element between renders, and two renders both produce the same one, so the memoisation is identical. Each planted individually: all 38 tests pass. The three dependency lists in this file that DO carry a changing value \u2014 refresh's includeCommunity, closeImport's commerceInstance, retryDetail's selected \u2014 are each killed by a test.",
+            "decision": "none \u2014 every one of these lists is required and correct as written",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/views/DatapackCatalogView.tsx",
+            "anchors": [
+                "if (recorded) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The set holds pack NAMES and is read only through has(name) against a group's name, which is always a string. Dropping the guard adds the undefined that `recorded` was when absent, and no lookup can match it \u2014 nothing reads the set's size or iterates it. Planted: all 38 tests pass.",
+            "decision": "none \u2014 the guard says the set holds names, not maybe-names",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/views/DatapackCatalogView.tsx",
+            "anchors": [
+                "if (selected) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The retry cannot be invoked with nothing selected. It reaches the user only through DatapackDetailPanel, which renders its body under `selected ? ...` and its Drawer under `selected !== undefined`, so no button carrying this callback exists until a card has been opened. Killing it would mean calling the callback around the panel that owns it. Planted: all 38 tests pass. The other branch of the same guard \u2014 never calling loadDetail \u2014 is killed by the Try Again test.",
+            "decision": "none \u2014 the callback must not depend on the panel drawing its guard correctly",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/data-installer/ui/views/DatapackCatalogView.tsx",
+            "anchors": [
+                "isInstalled={installedPacks?.has(group.name) ?? false}"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "`installedPacks` is optional on renderBody's argument type but the view is its only caller and always passes the memoised set, so neither the `?.` nor the `?? false` it feeds can be reached: the left side is never nullish. renderBody is module-private, so there is no way to call it without the set short of exporting a function nothing else needs. Both planted: all 38 tests pass.",
+            "decision": "none \u2014 the parameter is optional in the type and the fallback is the safe direction for a checkmark",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }
