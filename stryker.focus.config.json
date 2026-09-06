@@ -8,8 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/ai/server/settingsTools.ts",
-        "src/features/eds/services/brandAssetPublisher.ts"
+        "src/features/eds/services/github/githubOAuthService.ts",
+        "src/features/eds/services/pdp/pdp404HandlerPublisher.ts",
+        "src/features/eds/services/runtimeSurfaceResolver.ts",
+        "src/features/ai/server/agentTraceSink.ts",
+        "src/features/ai/server/componentRequirementsTool.ts"
     ],
     "reporters": [
         "clear-text",

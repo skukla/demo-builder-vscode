@@ -14908,6 +14908,70 @@
             "decision": "Recorded, not killed: no snippet exists that carries a marker and would otherwise pass the line allowlist, so nothing can distinguish the guard from its absence.",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/eds/services/pdp/pdp404HandlerPublisher.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 282,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch is the whole failure handling for the 404.html eager-redirect commit: its body is a logger.warn and nothing else, and the caller deliberately ignores the outcome so a failed eager redirect still reports installed:true (the delayed.js handler is the load-bearing half). Emptying the body therefore changes nothing any caller or return value can see. Verified by planting it \u2014 both eager-redirect catch bodies emptied, 64 tests green \u2014 against the control of forcing the 404.html marker check to false, which fails one test.",
+            "decision": "Recorded, not killed: the mutated code feeds only a log message on a path whose outcome the caller intentionally discards.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/pdp/pdp404HandlerPublisher.ts",
+            "anchors": [
+                "const reason = (error as Error).message ?? 'unknown';"
+            ],
+            "line": 283,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "`reason` is read by the logger.warn on the next line and by nothing else, so swapping ?? for && only changes the words in a log message. Pinning it would mean asserting logger wording, which an enforcer refuses. Verified by planting && in both eager-redirect catches, 64 tests green, against the control of forcing the 404.html marker check to false, which fails one test.",
+            "decision": "Recorded, not killed: the mutated code feeds only a log message on a path whose outcome the caller intentionally discards.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/pdp/pdp404HandlerPublisher.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 330,
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch is the whole failure handling for the head.html eager-redirect commit: its body is a logger.warn and nothing else, and the caller ignores the outcome so a failed head.html commit still reports installed:true. Emptying the body changes nothing observable. Verified by planting it \u2014 both eager-redirect catch bodies emptied, 64 tests green \u2014 against the control of forcing the 404.html marker check to false, which fails one test.",
+            "decision": "Recorded, not killed: the mutated code feeds only a log message on a path whose outcome the caller intentionally discards.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/pdp/pdp404HandlerPublisher.ts",
+            "anchors": [
+                "const reason = (error as Error).message ?? 'unknown';"
+            ],
+            "line": 331,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "`reason` is read by the logger.warn on the next line and by nothing else, so swapping ?? for && only changes the words in a log message. Pinning it would mean asserting logger wording, which an enforcer refuses. Verified by planting && in both eager-redirect catches, 64 tests green, against the control of forcing the 404.html marker check to false, which fails one test.",
+            "decision": "Recorded, not killed: the mutated code feeds only a log message on a path whose outcome the caller intentionally discards.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/ai/server/agentTraceSink.ts",
+            "anchors": [
+                "...(entry.tag !== undefined ? { tag: entry.tag } : {}),"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The only mutant left on this guard is the always-true one, and the object it builds is handed straight to JSON.stringify, which omits a key whose value is undefined. So spreading { tag: undefined } and spreading nothing produce the same line, byte for byte, for every entry. Verified by planting true: 9 tests green, against the control of planting false on the same guard, which fails the test asserting a tagged entry carries its tag.",
+            "decision": "Recorded, not killed: no entry can distinguish an always-spread undefined tag from an omitted one once the line is serialised.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }

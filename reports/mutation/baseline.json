@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-22 MUT-05: settingsTools descriptor+argument handling, brandAssetPublisher fetch bound, retry contention and snippet line shapes",
+    "_note": "MUT-06: OAuth flow settlement + timer lifecycle, pdp404 retry/404.html paths, the real runtime-surface fetcher, trace-file listing/pruning, and the component-requirements declarations + malformed-catalog paths",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -2372,23 +2372,19 @@
             "openGaps": 0
         },
         "src/features/ai/server/agentTraceSink.ts": {
-            "score": 55.1,
-            "killed": 27,
-            "survived": 18,
-            "noCoverage": 4,
+            "score": 95.92,
+            "killed": 47,
+            "survived": 2,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 6,
-                "other": 8,
-                "string": 4
+                "string": 1,
+                "branch": 1
             },
-            "uncoveredCategories": {
-                "block": 1,
-                "other": 3
-            },
-            "highValueSurvivors": 6,
-            "equivalent": 0,
-            "openGaps": 18
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/features/ai/server/applyUpdatesTool.ts": {
             "score": 67.92,
@@ -2479,23 +2475,18 @@
             "openGaps": 0
         },
         "src/features/ai/server/componentRequirementsTool.ts": {
-            "score": 57.14,
-            "killed": 28,
-            "survived": 19,
-            "noCoverage": 2,
+            "score": 93.88,
+            "killed": 46,
+            "survived": 3,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 8,
-                "other": 7,
-                "string": 3,
-                "optionalChain": 1
+                "string": 3
             },
-            "uncoveredCategories": {
-                "other": 2
-            },
-            "highValueSurvivors": 8,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 18
+            "openGaps": 0
         },
         "src/features/ai/server/configureProjectTool.ts": {
             "score": 88.89,
@@ -6959,24 +6950,19 @@
             "openGaps": 0
         },
         "src/features/eds/services/github/githubOAuthService.ts": {
-            "score": 40.54,
-            "killed": 15,
-            "survived": 19,
-            "noCoverage": 3,
+            "score": 94.12,
+            "killed": 32,
+            "survived": 2,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 2,
-                "logPresentation": 1,
-                "block": 6,
-                "branch": 10
+                "string": 1,
+                "logPresentation": 1
             },
-            "uncoveredCategories": {
-                "block": 2,
-                "other": 1
-            },
-            "highValueSurvivors": 16,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 19
+            "openGaps": 0
         },
         "src/features/eds/services/github/githubRepoOperations.ts": {
             "score": 85.35,
@@ -7210,28 +7196,23 @@
             "openGaps": 11
         },
         "src/features/eds/services/pdp/pdp404HandlerPublisher.ts": {
-            "score": 67.41,
-            "killed": 91,
-            "survived": 38,
-            "noCoverage": 6,
+            "score": 79.26,
+            "killed": 107,
+            "survived": 25,
+            "noCoverage": 3,
             "timeout": 0,
             "survivorCategories": {
-                "string": 13,
-                "optionalChain": 2,
-                "branch": 9,
-                "other": 2,
-                "logPresentation": 8,
-                "block": 4
+                "string": 3,
+                "logPresentation": 18,
+                "block": 2,
+                "branch": 2
             },
             "uncoveredCategories": {
-                "string": 3,
-                "block": 1,
-                "logPresentation": 1,
-                "other": 1
+                "string": 3
             },
-            "highValueSurvivors": 13,
-            "equivalent": 0,
-            "openGaps": 19
+            "highValueSurvivors": 4,
+            "equivalent": 4,
+            "openGaps": 0
         },
         "src/features/eds/services/pdp/pdpUrlEncoding.ts": {
             "score": 97.22,
@@ -7459,26 +7440,18 @@
             "openGaps": 0
         },
         "src/features/eds/services/runtimeSurfaceResolver.ts": {
-            "score": 41.86,
-            "killed": 18,
-            "survived": 4,
-            "noCoverage": 21,
+            "score": 93.02,
+            "killed": 40,
+            "survived": 3,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 1,
-                "other": 1,
-                "block": 1,
-                "string": 1
+                "logPresentation": 3
             },
-            "uncoveredCategories": {
-                "block": 6,
-                "string": 5,
-                "branch": 8,
-                "other": 2
-            },
-            "highValueSurvivors": 2,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 19
+            "openGaps": 0
         },
         "src/features/eds/services/storeStructureReader.ts": {
             "score": 81.25,
