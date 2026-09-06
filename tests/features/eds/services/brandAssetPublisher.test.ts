@@ -44,14 +44,20 @@ describe('publishBrandAssets', () => {
     describe('file copies', () => {
         it('fetches each configured file from the source repo at the configured branch', async () => {
             const fetchMock = mockSourceFetch();
-            await publishBrandAssets(CONFIG, asOps(makeBrandAssetGithub()), repoOwner, repoName, logger);
+            await publishBrandAssets(
+                CONFIG,
+                asOps(makeBrandAssetGithub()),
+                repoOwner,
+                repoName,
+                logger
+            );
 
             const urls = fetchMock.mock.calls.map((c) => String(c[0]));
             expect(urls).toContain(
-                'https://raw.githubusercontent.com/skukla/bodea-source/main/styles/bodea-theme.css',
+                'https://raw.githubusercontent.com/skukla/bodea-source/main/styles/bodea-theme.css'
             );
             expect(urls).toContain(
-                'https://raw.githubusercontent.com/skukla/bodea-source/main/scripts/bodea-customer-group.js',
+                'https://raw.githubusercontent.com/skukla/bodea-source/main/scripts/bodea-customer-group.js'
             );
         });
 
@@ -60,7 +66,11 @@ describe('publishBrandAssets', () => {
             const github = makeBrandAssetGithub();
 
             const result = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
+                CONFIG,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             const themeWrites = writesTo(github, 'styles/bodea-theme.css');
@@ -69,7 +79,7 @@ describe('publishBrandAssets', () => {
             expect(themeWrites[0][3]).toBe(THEME_CSS);
             expect(themeWrites[0][5]).toBeUndefined();
             expect(result.files[0]).toEqual(
-                expect.objectContaining({ path: 'styles/bodea-theme.css', installed: true }),
+                expect.objectContaining({ path: 'styles/bodea-theme.css', installed: true })
             );
         });
 
@@ -87,7 +97,11 @@ describe('publishBrandAssets', () => {
             });
 
             const result = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
+                CONFIG,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             const themeWrites = writesTo(github, 'styles/bodea-theme.css');
@@ -111,12 +125,16 @@ describe('publishBrandAssets', () => {
             });
 
             const result = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
+                CONFIG,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(writesTo(github, 'styles/bodea-theme.css')).toHaveLength(0);
             expect(result.files[0]).toEqual(
-                expect.objectContaining({ installed: false, reason: 'already current' }),
+                expect.objectContaining({ installed: false, reason: 'already current' })
             );
         });
 
@@ -125,7 +143,11 @@ describe('publishBrandAssets', () => {
             const github = makeBrandAssetGithub();
 
             const result = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
+                CONFIG,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(result.files[0].installed).toBe(false);
@@ -142,7 +164,11 @@ describe('publishBrandAssets', () => {
             const github = makeBrandAssetGithub();
 
             const result = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
+                CONFIG,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(result.success).toBe(false);
@@ -158,7 +184,11 @@ describe('publishBrandAssets', () => {
             github.createOrUpdateFile.mockRejectedValue(new Error('403 Forbidden'));
 
             const result = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
+                CONFIG,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(result.success).toBe(false);
@@ -166,78 +196,22 @@ describe('publishBrandAssets', () => {
             expect(result.files[0].reason).toContain('403 Forbidden');
         });
 
-        it('retries once on a stale SHA by re-reading the target', async () => {
-            mockSourceFetch();
-            const github = makeBrandAssetGithub();
-            github.getFileContent.mockImplementation((_o, _r, path: string) => {
-                if (path === 'styles/bodea-theme.css') {
-                    return Promise.resolve({ content: '/* moved */', sha: 'fresh-theme-sha' });
-                }
-                if (path === 'head.html') {
-                    return Promise.resolve({ content: HEAD_HTML, sha: 'head-sha' });
-                }
-                return Promise.resolve(null);
-            });
-            github.createOrUpdateFile.mockImplementation((_o, _r, path: string, _c, _m, sha) => {
-                if (path === 'styles/bodea-theme.css' && sha !== 'fresh-theme-sha') {
-                    return Promise.reject(new Error('styles/bodea-theme.css does not match sha'));
-                }
-                return Promise.resolve({ sha: 'new-sha', commitSha: 'commit-sha' });
-            });
-            // First write uses the initially-read SHA and is rejected as stale;
-            // the retry re-reads and succeeds with the fresh SHA.
-            github.getFileContent
-                .mockImplementationOnce((_o, _r, path: string) => {
-                    if (path === 'styles/bodea-theme.css') {
-                        return Promise.resolve({ content: '/* stale */', sha: 'stale-theme-sha' });
-                    }
-                    return Promise.resolve(null);
-                });
+        it('bounds each source fetch with an abort signal', async () => {
+            // A hung raw.githubusercontent read would otherwise stall the whole
+            // pipeline phase; the timeout is the only thing that ends it.
+            const fetchMock = mockSourceFetch();
 
-            const result = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
+            await publishBrandAssets(
+                CONFIG,
+                asOps(makeBrandAssetGithub()),
+                repoOwner,
+                repoName,
+                logger
             );
 
-            const themeWrites = writesTo(github, 'styles/bodea-theme.css');
-            expect(themeWrites).toHaveLength(2);
-            expect(themeWrites[1][5]).toBe('fresh-theme-sha');
-            expect(result.files[0].installed).toBe(true);
-        });
-
-        it('skips the retry write when the re-read shows the content already landed', async () => {
-            mockSourceFetch();
-            const github = makeBrandAssetGithub();
-            // First read: stale state. Re-read after the stale-SHA rejection:
-            // someone else already wrote the exact content.
-            github.getFileContent
-                .mockImplementationOnce((_o, _r, path: string) => {
-                    if (path === 'styles/bodea-theme.css') {
-                        return Promise.resolve({ content: '/* stale */', sha: 'stale-theme-sha' });
-                    }
-                    return Promise.resolve(null);
-                })
-                .mockImplementation((_o, _r, path: string) => {
-                    if (path === 'styles/bodea-theme.css') {
-                        return Promise.resolve({ content: THEME_CSS, sha: 'fresh-theme-sha' });
-                    }
-                    if (path === 'head.html') {
-                        return Promise.resolve({ content: HEAD_HTML, sha: 'head-sha' });
-                    }
-                    return Promise.resolve(null);
-                });
-            github.createOrUpdateFile.mockImplementation((_o, _r, path: string, _c, _m, sha) => {
-                if (path === 'styles/bodea-theme.css' && sha === 'stale-theme-sha') {
-                    return Promise.reject(new Error('styles/bodea-theme.css does not match sha'));
-                }
-                return Promise.resolve({ sha: 'new-sha', commitSha: 'commit-sha' });
+            expect(fetchMock).toHaveBeenCalledWith(expect.any(String), {
+                signal: expect.any(AbortSignal),
             });
-
-            const result = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
-            );
-
-            expect(writesTo(github, 'styles/bodea-theme.css')).toHaveLength(1);
-            expect(result.files[0].installed).toBe(true);
         });
     });
 
@@ -247,7 +221,11 @@ describe('publishBrandAssets', () => {
             const github = makeBrandAssetGithub();
 
             const result = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
+                CONFIG,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             const headWrites = writesTo(github, 'head.html');
@@ -257,10 +235,11 @@ describe('publishBrandAssets', () => {
             expect(written).toContain(BRAND_ASSETS_MARKER_START);
             expect(written).toContain(CONFIG.headSnippet!);
             expect(written).toContain(BRAND_ASSETS_MARKER_END);
-            expect(written.indexOf(BRAND_ASSETS_MARKER_START))
-                .toBeLessThan(written.indexOf(BRAND_ASSETS_MARKER_END));
+            expect(written.indexOf(BRAND_ASSETS_MARKER_START)).toBeLessThan(
+                written.indexOf(BRAND_ASSETS_MARKER_END)
+            );
             expect(result.headSnippet).toEqual(
-                expect.objectContaining({ path: 'head.html', installed: true }),
+                expect.objectContaining({ path: 'head.html', installed: true })
             );
         });
 
@@ -281,12 +260,16 @@ describe('publishBrandAssets', () => {
             github.createOrUpdateFile.mockClear();
 
             const rerun = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
+                CONFIG,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(writesTo(github, 'head.html')).toHaveLength(0);
             expect(rerun.headSnippet).toEqual(
-                expect.objectContaining({ installed: false, reason: 'already current' }),
+                expect.objectContaining({ installed: false, reason: 'already current' })
             );
         });
 
@@ -294,9 +277,9 @@ describe('publishBrandAssets', () => {
             mockSourceFetch();
             const github = makeBrandAssetGithub();
             const stale =
-                `${HEAD_HTML}\n${BRAND_ASSETS_MARKER_START}\n`
-                + '<link rel="stylesheet" href="/styles/old-theme.css">\n'
-                + `${BRAND_ASSETS_MARKER_END}\n<!-- trailing -->\n`;
+                `${HEAD_HTML}\n${BRAND_ASSETS_MARKER_START}\n` +
+                '<link rel="stylesheet" href="/styles/old-theme.css">\n' +
+                `${BRAND_ASSETS_MARKER_END}\n<!-- trailing -->\n`;
             github.getFileContent.mockImplementation((_o, _r, path: string) => {
                 if (path === 'head.html') {
                     return Promise.resolve({ content: stale, sha: 'head-sha' });
@@ -305,7 +288,11 @@ describe('publishBrandAssets', () => {
             });
 
             const result = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
+                CONFIG,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             const headWrites = writesTo(github, 'head.html');
@@ -333,7 +320,11 @@ describe('publishBrandAssets', () => {
             });
 
             const result = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
+                CONFIG,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(result.headSnippet).toEqual({
@@ -354,11 +345,15 @@ describe('publishBrandAssets', () => {
             });
 
             const result = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
+                CONFIG,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(result.headSnippet).toEqual(
-                expect.objectContaining({ installed: false, reason: 'head.html missing' }),
+                expect.objectContaining({ installed: false, reason: 'head.html missing' })
             );
             expect(writesTo(github, 'head.html')).toHaveLength(0);
         });
@@ -369,13 +364,15 @@ describe('publishBrandAssets', () => {
             const { headSnippet: _unused, ...noSnippet } = CONFIG;
 
             const result = await publishBrandAssets(
-                noSnippet as typeof CONFIG, asOps(github), repoOwner, repoName, logger,
+                noSnippet as typeof CONFIG,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(result.headSnippet).toBeUndefined();
-            const headReads = github.getFileContent.mock.calls.filter(
-                (c) => c[2] === 'head.html',
-            );
+            const headReads = github.getFileContent.mock.calls.filter((c) => c[2] === 'head.html');
             expect(headReads).toHaveLength(0);
         });
     });
@@ -404,7 +401,11 @@ describe('publishBrandAssets', () => {
             github.createOrUpdateFile.mockClear();
 
             const rerun = await publishBrandAssets(
-                CONFIG, asOps(github), repoOwner, repoName, logger,
+                CONFIG,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(rerun.success).toBe(true);

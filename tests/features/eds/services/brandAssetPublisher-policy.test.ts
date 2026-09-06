@@ -58,17 +58,20 @@ describe('publishBrandAssets policy', () => {
                     { from: 'src/mod.js', to: 'scripts/y.js' },
                     { from: 'src/schema.json', to: 'data/guided-selling/z.json' },
                 ]),
-                asOps(github), repoOwner, repoName, logger,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(result.files[0]).toEqual(
-                expect.objectContaining({ path: 'styles/x.css', installed: true }),
+                expect.objectContaining({ path: 'styles/x.css', installed: true })
             );
             expect(result.files[1]).toEqual(
-                expect.objectContaining({ path: 'scripts/y.js', installed: true }),
+                expect.objectContaining({ path: 'scripts/y.js', installed: true })
             );
             expect(result.files[2]).toEqual(
-                expect.objectContaining({ path: 'data/guided-selling/z.json', installed: true }),
+                expect.objectContaining({ path: 'data/guided-selling/z.json', installed: true })
             );
             expect(result.success).toBe(true);
         });
@@ -91,7 +94,10 @@ describe('publishBrandAssets policy', () => {
 
             const result = await publishBrandAssets(
                 configWithFiles([{ from: 'styles/bodea-theme.css', to }]),
-                asOps(github), repoOwner, repoName, logger,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(result.files[0]).toEqual({
@@ -102,7 +108,27 @@ describe('publishBrandAssets policy', () => {
             expect(github.createOrUpdateFile).not.toHaveBeenCalled();
             expect(result.success).toBe(false);
             expect(logger.warn).toHaveBeenCalledWith(
-                expect.stringContaining(`refused target: ${to}`),
+                expect.stringContaining(`refused target: ${to}`)
+            );
+        });
+
+        // The drive-letter refusal is anchored to the START of the path. A colon
+        // further along is an ordinary character in a filename, and an unanchored
+        // check would refuse a target the allowlist otherwise accepts.
+        it('does not read a colon later in the path as a drive letter', async () => {
+            mockSourceFetch({ 'src/theme.css': THEME_CSS });
+            const github = makeBrandAssetGithub();
+
+            const result = await publishBrandAssets(
+                configWithFiles([{ from: 'src/theme.css', to: 'styles/bodea:dark.css' }]),
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
+            );
+
+            expect(result.files[0]).toEqual(
+                expect.objectContaining({ path: 'styles/bodea:dark.css', installed: true })
             );
         });
 
@@ -113,9 +139,15 @@ describe('publishBrandAssets policy', () => {
             const result = await publishBrandAssets(
                 configWithFiles([
                     { from: 'styles/bodea-theme.css', to: '.github/workflows/x.yml' },
-                    { from: 'scripts/bodea-customer-group.js', to: 'scripts/bodea-customer-group.js' },
+                    {
+                        from: 'scripts/bodea-customer-group.js',
+                        to: 'scripts/bodea-customer-group.js',
+                    },
                 ]),
-                asOps(github), repoOwner, repoName, logger,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(result.files[0].installed).toBe(false);
@@ -135,19 +167,73 @@ describe('publishBrandAssets policy', () => {
 
             const result = await publishBrandAssets(
                 configWithSnippet(CONFIG.headSnippet!),
-                asOps(github), repoOwner, repoName, logger,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(result.headSnippet).toEqual(
-                expect.objectContaining({ path: 'head.html', installed: true }),
+                expect.objectContaining({ path: 'head.html', installed: true })
             );
             expect(writesTo(github, 'head.html')).toHaveLength(1);
+        });
+
+        // Formatting is not content. A snippet authored with indentation or with
+        // blank lines around it is the same two tags, and refusing it would make
+        // demo-packages.json editable only by someone who knew the rule.
+        it.each([
+            ['blank lines around the tags', `\n${CONFIG.headSnippet!}\n`],
+            ['indented tags', `  ${CONFIG.headSnippet!.split('\n').join('\n  ')}  `],
+        ])('accepts a snippet with %s', async (_label, headSnippet) => {
+            mockSourceFetch();
+            const github = makeBrandAssetGithub();
+
+            const result = await publishBrandAssets(
+                configWithSnippet(headSnippet),
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
+            );
+
+            expect(result.headSnippet).toEqual(
+                expect.objectContaining({ path: 'head.html', installed: true })
+            );
+        });
+
+        // EVERY line has to pass, not merely one of them. A snippet that opens
+        // with a legitimate stylesheet link and follows it with anything else is
+        // refused whole.
+        it('refuses a snippet where only SOME lines are allowed', async () => {
+            mockSourceFetch();
+            const github = makeBrandAssetGithub();
+
+            const result = await publishBrandAssets(
+                configWithSnippet(
+                    '<link rel="stylesheet" href="/styles/ok.css">\n<iframe src="/x.html"></iframe>'
+                ),
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
+            );
+
+            expect(result.headSnippet).toEqual({
+                path: 'head.html',
+                installed: false,
+                reason: 'refused headSnippet',
+            });
+            expect(github.createOrUpdateFile).not.toHaveBeenCalled();
         });
 
         it.each([
             ['inline script body', '<script>alert(1)</script>'],
             ['non-link/script tag', '<iframe src="/x.html"></iframe>'],
-            ['embedded end marker', `<link rel="stylesheet" href="/a.css">\n${BRAND_ASSETS_MARKER_END}`],
+            [
+                'embedded end marker',
+                `<link rel="stylesheet" href="/a.css">\n${BRAND_ASSETS_MARKER_END}`,
+            ],
             ['external http script src', '<script src="http://evil.example/x.js"></script>'],
             [
                 'event-handler attribute on a link',
@@ -175,7 +261,10 @@ describe('publishBrandAssets policy', () => {
 
             const result = await publishBrandAssets(
                 configWithSnippet(headSnippet),
-                asOps(github), repoOwner, repoName, logger,
+                asOps(github),
+                repoOwner,
+                repoName,
+                logger
             );
 
             expect(result.headSnippet).toEqual({
@@ -186,35 +275,55 @@ describe('publishBrandAssets policy', () => {
             expect(github.createOrUpdateFile).not.toHaveBeenCalled();
             expect(result.success).toBe(false);
             expect(logger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('refused headSnippet'),
+                expect.stringContaining('refused headSnippet')
             );
         });
     });
 
     describe('failedTargets', () => {
         it('keeps real failures across files and headSnippet, dropping installed and already-current targets', () => {
-            expect(failedTargets({
-                success: false,
-                files: [
-                    { path: 'styles/a.css', installed: true },
-                    { path: 'styles/b.css', installed: false, reason: 'already current' },
-                    { path: 'scripts/c.js', installed: false, reason: 'fetch failed: HTTP 404 Not Found' },
-                ],
-                headSnippet: { path: 'head.html', installed: false, reason: 'malformed brand-assets marker block' },
-            })).toEqual([
-                { path: 'scripts/c.js', installed: false, reason: 'fetch failed: HTTP 404 Not Found' },
-                { path: 'head.html', installed: false, reason: 'malformed brand-assets marker block' },
+            expect(
+                failedTargets({
+                    success: false,
+                    files: [
+                        { path: 'styles/a.css', installed: true },
+                        { path: 'styles/b.css', installed: false, reason: 'already current' },
+                        {
+                            path: 'scripts/c.js',
+                            installed: false,
+                            reason: 'fetch failed: HTTP 404 Not Found',
+                        },
+                    ],
+                    headSnippet: {
+                        path: 'head.html',
+                        installed: false,
+                        reason: 'malformed brand-assets marker block',
+                    },
+                })
+            ).toEqual([
+                {
+                    path: 'scripts/c.js',
+                    installed: false,
+                    reason: 'fetch failed: HTTP 404 Not Found',
+                },
+                {
+                    path: 'head.html',
+                    installed: false,
+                    reason: 'malformed brand-assets marker block',
+                },
             ]);
         });
 
         it('returns an empty list when everything is current (no headSnippet declared)', () => {
-            expect(failedTargets({
-                success: true,
-                files: [
-                    { path: 'styles/a.css', installed: true },
-                    { path: 'styles/b.css', installed: false, reason: 'already current' },
-                ],
-            })).toEqual([]);
+            expect(
+                failedTargets({
+                    success: true,
+                    files: [
+                        { path: 'styles/a.css', installed: true },
+                        { path: 'styles/b.css', installed: false, reason: 'already current' },
+                    ],
+                })
+            ).toEqual([]);
         });
     });
 });
