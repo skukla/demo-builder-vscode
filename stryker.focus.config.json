@@ -8,7 +8,10 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/hooks/useAutoScroll.ts"
+        "src/features/ai/server/edsResetTool.ts",
+        "src/features/ai/server/viewTools.ts",
+        "src/features/ai/sessionMcpDetector.ts",
+        "src/features/components/services/commerceSecretSweep.ts"
     ],
     "reporters": [
         "clear-text",

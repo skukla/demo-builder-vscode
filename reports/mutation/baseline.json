@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "useAutoScroll: removed the provably-dead isVisible guard and drove both scroll branches from each side of their edges",
+    "_note": "MUT-04: edsResetTool/viewTools/sessionMcpDetector/commerceSecretSweep driven to zero open gaps",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -2643,25 +2643,20 @@
             "openGaps": 0
         },
         "src/features/ai/server/edsResetTool.ts": {
-            "score": 67.5,
-            "killed": 54,
-            "survived": 24,
-            "noCoverage": 2,
+            "score": 83.75,
+            "killed": 67,
+            "survived": 13,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "block": 2,
-                "other": 5,
-                "string": 11,
-                "branch": 3,
-                "optionalChain": 3
-            },
-            "uncoveredCategories": {
                 "block": 1,
-                "branch": 1
+                "string": 10,
+                "optionalChain": 2
             },
-            "highValueSurvivors": 5,
-            "equivalent": 0,
-            "openGaps": 15
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 3,
+            "openGaps": 0
         },
         "src/features/ai/server/eventProviderTools.ts": {
             "score": 79.89,
@@ -3021,39 +3016,34 @@
             "openGaps": 12
         },
         "src/features/ai/server/viewTools.ts": {
-            "score": 55.1,
-            "killed": 27,
-            "survived": 22,
+            "score": 85.71,
+            "killed": 42,
+            "survived": 7,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 7,
-                "other": 6,
-                "string": 7,
-                "optionalChain": 2
+                "string": 7
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 7,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 15
+            "openGaps": 0
         },
         "src/features/ai/sessionMcpDetector.ts": {
-            "score": 76.71,
-            "killed": 56,
-            "survived": 16,
-            "noCoverage": 1,
+            "score": 93.15,
+            "killed": 68,
+            "survived": 5,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 12,
-                "string": 2,
-                "block": 2
+                "branch": 2,
+                "block": 2,
+                "string": 1
             },
-            "uncoveredCategories": {
-                "other": 1
-            },
-            "highValueSurvivors": 14,
-            "equivalent": 0,
-            "openGaps": 15
+            "uncoveredCategories": {},
+            "highValueSurvivors": 4,
+            "equivalent": 4,
+            "openGaps": 0
         },
         "src/features/ai/skillInspector.ts": {
             "score": 96.94,
@@ -3966,22 +3956,18 @@
             "openGaps": 0
         },
         "src/features/components/services/commerceSecretSweep.ts": {
-            "score": 42.86,
-            "killed": 12,
-            "survived": 15,
-            "noCoverage": 1,
+            "score": 96.43,
+            "killed": 27,
+            "survived": 1,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 10,
-                "block": 3,
-                "other": 2
-            },
-            "uncoveredCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 13,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 15
+            "openGaps": 0
         },
         "src/features/components/services/componentConfigWrites.ts": {
             "score": 93.02,

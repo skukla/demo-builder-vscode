@@ -15543,6 +15543,81 @@
             "decision": "none \u2014 the false is what makes the fallback typecheck and say what it means; the ObjectLiteral form of it is unobservable",
             "recorded": "2026-09-06",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/ai/server/edsResetTool.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Stryker deletes the catch body's `return false`, so adobeAuthed resolves undefined instead. Its only consumer is the negation `!(await adobeAuthed())` in the mesh pre-flight, where undefined and false are the same falsy value \u2014 the needsAuth handoff, the executeEdsReset call and every field of the response come out byte-identical. A test could only tell the two apart by reading the helper's return value directly, and the helper is not exported.",
+            "decision": "none \u2014 the explicit false is the correct return type for a Promise<boolean> helper",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/edsResetTool.ts",
+            "anchors": [
+                "includeBlockLibrary: args?.includeBlockLibrary ?? false,",
+                "verifyCdn: args?.verifyCdn ?? false,"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Stryker drops the `?.` from both reads. Both sit AFTER the confirm gate, which returns the refusal payload whenever `args?.confirm !== true` \u2014 and that holds for undefined and null args alike. So args is provably a non-null object by the time either line runs, and `args.x` behaves exactly as `args?.x`. Killing them would need a call that omits args AND passes the confirm gate, which cannot exist.",
+            "decision": "none \u2014 the ?. is defensive against an argument shape the confirm gate has already excluded",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/sessionMcpDetector.ts",
+            "anchors": [
+                "if (!parsed || typeof parsed !== 'object') return [];"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Replacing `typeof parsed !== 'object'` with false leaves the guard as `if (!parsed) return []`, which changes behaviour only for a TRUTHY non-object \u2014 a JSON top-level string, number or boolean. For every one of those the next lines read .claudeAiMcpEverConnected off it, get undefined, fail Array.isArray and return the same empty array. The null case, which is the one the guard exists for, is still caught by the !parsed half.",
+            "decision": "none \u2014 the typeof half narrows the type for the cast below it and is correct as written",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/sessionMcpDetector.ts",
+            "anchors": [
+                "if (!parsed || typeof parsed !== 'object') return new Map();"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Replacing `typeof parsed !== 'object'` with false leaves `if (!parsed) return new Map()`, which differs only for a truthy non-object. Object.entries(42) and Object.entries(true) are empty, and Object.entries('abc') yields string values that the `typeof value === 'object'` filter on the next line rejects \u2014 so the map comes back empty either way. Null still returns early through the !parsed half.",
+            "decision": "none \u2014 the typeof half narrows the type for the Object.entries cast below it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/sessionMcpDetector.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 99,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Deleting `return new Map()` from the READ catch leaves raw unassigned, so the next statement runs JSON.parse(undefined) \u2014 which throws and is caught by the PARSE catch six lines below, whose own return is the same empty Map. Every IO failure on the cache file therefore produces an identical result with or without the mutation; the only difference is one wasted parse attempt nothing can observe.",
+            "decision": "none \u2014 returning at the IO failure is clearer than falling through to a parse of nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/sessionMcpDetector.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 107,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Deleting `return new Map()` from the PARSE catch leaves parsed undefined, and the very next line returns an empty Map for exactly that case (`!parsed`). Malformed cache JSON therefore yields the same empty Map with or without the mutation. The early return is a fail-fast the guard below already covers, and no output of detectSessionMcps distinguishes the two paths.",
+            "decision": "none \u2014 the guard below is a type narrowing, not a duplicate of this catch; both are correct",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
