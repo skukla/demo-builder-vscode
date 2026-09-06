@@ -288,3 +288,90 @@ describe('useSingleTimer', () => {
         expect(callback).not.toHaveBeenCalled();
     });
 });
+
+describe('the refs are created once, not per render', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('still hands back exactly `count` timers after a re-render', () => {
+        // The initialisation is guarded on the array being empty. Without that
+        // guard every render appends another `count` refs, so a component that
+        // re-renders while a timer is pending loses track of the ref holding it
+        // and the unmount sweep clears a different slot.
+        const { result, rerender } = renderHook(() => useTimerCleanup(2));
+
+        const before = result.current.map((t) => t.ref);
+        rerender();
+
+        expect(result.current).toHaveLength(2);
+        expect(result.current.map((t) => t.ref)).toStrictEqual(before);
+    });
+});
+
+describe('it only ever clears a timer that is actually running', () => {
+    let clearTimeoutSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+    });
+
+    afterEach(() => {
+        clearTimeoutSpy.mockRestore();
+        jest.useRealTimers();
+    });
+
+    it('does not clear on the FIRST set', () => {
+        const { result } = renderHook(() => useTimerCleanup(1));
+
+        act(() => {
+            result.current[0].set(jest.fn(), 1000);
+        });
+
+        expect(clearTimeoutSpy).not.toHaveBeenCalled();
+    });
+
+    it('clears the PREVIOUS timer, by id, when set is called again', () => {
+        const { result } = renderHook(() => useTimerCleanup(1));
+
+        act(() => {
+            result.current[0].set(jest.fn(), 1000);
+        });
+        const first = result.current[0].ref.current;
+        act(() => {
+            result.current[0].set(jest.fn(), 500);
+        });
+
+        expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
+        expect(clearTimeoutSpy).toHaveBeenCalledWith(first);
+    });
+
+    it('does nothing when clear is called on an idle timer', () => {
+        const { result } = renderHook(() => useTimerCleanup(1));
+
+        act(() => {
+            result.current[0].clear();
+        });
+
+        expect(clearTimeoutSpy).not.toHaveBeenCalled();
+    });
+
+    it('sweeps only the RUNNING timers on unmount', () => {
+        const { result, unmount } = renderHook(() => useTimerCleanup(3));
+
+        act(() => {
+            result.current[1].set(jest.fn(), 1000);
+        });
+        const running = result.current[1].ref.current;
+
+        unmount();
+
+        expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
+        expect(clearTimeoutSpy).toHaveBeenCalledWith(running);
+    });
+});
