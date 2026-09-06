@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "meshDeploymentVerifier: 19 mutants killed by tests asserting both CLI calls' exact arguments, the non-zero-exit guards on poll and describe, the derived maxRetries and real elapsed seconds, the no-meshId short circuit and which text the error summary comes from; 14 recorded as equivalent",
+    "_note": "ResetAllCommand: 23 mutants killed by a new cleanup suite covering the modal confirmation and the cancel path, stopDemo ordering, panel disposal, workspace-folder removal order, the three pieces of state that outlive the directory, and the outer failure report; 9 log-only bodies recorded as equivalent",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -286,28 +286,24 @@
             "openGaps": 0
         },
         "src/commands/ResetAllCommand.ts": {
-            "score": 35.56,
-            "killed": 32,
-            "survived": 39,
-            "noCoverage": 19,
+            "score": 67.78,
+            "killed": 61,
+            "survived": 24,
+            "noCoverage": 5,
             "timeout": 0,
             "survivorCategories": {
-                "string": 8,
-                "other": 5,
-                "branch": 7,
-                "logPresentation": 12,
-                "block": 7
+                "string": 3,
+                "logPresentation": 14,
+                "branch": 4,
+                "block": 3
             },
             "uncoveredCategories": {
-                "block": 6,
-                "logPresentation": 5,
-                "other": 4,
-                "branch": 3,
-                "string": 1
+                "block": 2,
+                "logPresentation": 3
             },
-            "highValueSurvivors": 14,
-            "equivalent": 0,
-            "openGaps": 32
+            "highValueSurvivors": 7,
+            "equivalent": 9,
+            "openGaps": 0
         },
         "src/commands/claudeSessionStore.ts": {
             "score": 91.67,

@@ -13827,6 +13827,69 @@
             "decision": "none \u2014 log-only body over a path whose result is undefined regardless",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/commands/ResetAllCommand.ts",
+            "anchors": [
+                "} catch (err) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The body is a single logger.warn. The recovery that matters on this branch is the catch clause itself, which lets the reset continue when a panel is already disposed, and that is asserted by the surrounding steps still running. Emptying the body changes no call, no value and no control flow, so only the warning's wording could tell the two apart.",
+            "decision": "none \u2014 log-only body; the continue-anyway behaviour belongs to the clause, not its contents",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/commands/ResetAllCommand.ts",
+            "anchors": [
+                "if (indicesToRemove.length > 0) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "This guard wraps one logger.info reporting how many workspace folders were removed. Every mutation of it \u2014 the condition to true or false, the comparison to >= or <=, and the body to empty \u2014 changes only whether that line is written and never which folders are removed, because the removal happened in the forEach above it. The removal itself is pinned by 'removes only the Demo Builder folders, highest index first'.",
+            "decision": "none \u2014 a guard over a log-only body, kept so a no-op reset stays quiet",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/commands/ResetAllCommand.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 84,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Step 5's catch body is a single logger.warn. The reset is deliberately non-fatal here \u2014 a global-state clear that fails must not stop the directory deletion \u2014 and that is the clause, not the body. With the body emptied every later step still runs and every assertion in the three suites still holds, so nothing but the warning's text distinguishes them.",
+            "decision": "none \u2014 log-only body over a deliberately non-fatal step",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/commands/ResetAllCommand.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 94,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Step 5b's catch body is a single logger.warn, and the AI-onboarding reset is non-fatal by design so that a failure there cannot block the directory deletion. Emptying the body leaves the same control flow and the same state; only the warning's wording differs, which is what the ratchet refuses to reward.",
+            "decision": "none \u2014 log-only body over a deliberately non-fatal step",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/commands/ResetAllCommand.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 122,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Step 7's catch body is a single logger.warn. DA.live auth reset is non-fatal for the same reason as the steps around it, and the resetAll call it guards is pinned by 'resets DA.live auth for this context'. With the body emptied the command behaves identically, so no assertion short of the warning's text can separate them.",
+            "decision": "none \u2014 log-only body over a deliberately non-fatal step",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }

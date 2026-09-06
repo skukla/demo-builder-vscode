@@ -41,6 +41,15 @@ export * as vscode from 'vscode';
 
 export { mockValidatePathSafety };
 
+/**
+ * Re-exported for the same reason the imports above moved here: a spec that
+ * reaches for a mocked module through its own `import` loads the real one
+ * before this file's `jest.mock` calls register.
+ */
+export { getDaLiveAuthService } from '@/features/eds/handlers/edsHelpers';
+export { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
+export { LAST_UPDATE_CHECK_VERSION } from '@/core/constants';
+
 /** Everything a ResetAllCommand suite drives, built and wired. */
 export interface ResetAllHarness {
     command: ResetAllCommandClass;
