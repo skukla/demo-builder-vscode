@@ -121,19 +121,21 @@ export async function applyContentPatches(
     // Get patches from external source or local
     const allPatches = await getContentPatches(patchIds, contentPatchSource, logger);
 
-    // Filter to patches matching the current page path
-    const patchesToApply = allPatches.filter((patch) => patch.pagePath === pagePath);
-
-    if (patchesToApply.length === 0) {
-        return { html, results };
-    }
-
-    // Log unknown patch IDs (patches that were requested but not found)
+    // Unknown patch IDs are reported BEFORE the page filter. An id no ledger
+    // defines yields no patches at all, so guarding this on the FILTERED list
+    // swallowed exactly the typo the warning exists to surface: the more of the
+    // requested ids were wrong the quieter it got, and a list where every id was
+    // wrong said nothing whatsoever.
     const foundIds = new Set(allPatches.map((p) => p.id));
     const unknownIds = patchIds.filter((id) => !foundIds.has(id));
     if (unknownIds.length > 0) {
         logger.warn(`[ContentPatch] Unknown content patch IDs: ${unknownIds.join(', ')}`);
     }
+
+    // Filter to patches matching the current page path. No early return on an
+    // empty list: the loop below does not run, and the result is the same
+    // untouched html either way.
+    const patchesToApply = allPatches.filter((patch) => patch.pagePath === pagePath);
 
     let patchedHtml = html;
 

@@ -208,6 +208,88 @@ describe('getContentPatches', () => {
     });
 });
 
+/**
+ * What the local path must NOT do.
+ *
+ * Both early exits here are invisible in the return value — take them away and
+ * the same html and the same empty results come back — so the only way to hold
+ * them is to watch what the module reaches for. A missing source must not send
+ * it to the network, and an empty id list must not either.
+ */
+describe('the local path stays offline and quiet', () => {
+    const originalFetch = global.fetch;
+
+    afterEach(() => {
+        global.fetch = originalFetch;
+    });
+
+    it('never reaches the network when no external source is configured', async () => {
+        const fetchMock = jest.fn();
+        global.fetch = fetchMock;
+
+        const patches = await getContentPatches(
+            ['index-product-teaser-sku'],
+            undefined,
+            mockLogger,
+        );
+
+        expect(patches).toHaveLength(1);
+        expect(fetchMock).not.toHaveBeenCalled();
+        // A fallback warning here would mean the external path ran and failed.
+        expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
+    it('does not fetch for an empty id list, even with a source configured', async () => {
+        const fetchMock = jest.fn();
+        global.fetch = fetchMock;
+        const source: ContentPatchSource = { owner: 'o', repo: 'r', path: 'p' };
+
+        const result = await applyContentPatches('<div>Orchard7</div>', '/', [], mockLogger, source);
+
+        expect(result.html).toBe('<div>Orchard7</div>');
+        expect(result.results).toStrictEqual([]);
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The unknown-id warning has to survive the page filter.
+ *
+ * It used to sit BELOW a guard on the page-filtered list, so an id no ledger
+ * defines — which by definition contributes no patches — silenced the very
+ * warning it should raise. A whole demo package pointing at renamed patches
+ * reported nothing at all.
+ */
+describe('unknown patch IDs are reported wherever they are noticed', () => {
+    it('warns when the only requested id matches no patch at all', async () => {
+        await applyContentPatches('<div>x</div>', '/', ['definitely-not-a-patch'], mockLogger);
+
+        expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('warns on a page that has no patches of its own', async () => {
+        await applyContentPatches(
+            '<div>x</div>',
+            '/a-page-with-no-patches',
+            ['index-product-teaser-sku', 'definitely-not-a-patch'],
+            mockLogger,
+        );
+
+        expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('says nothing when every requested id exists', async () => {
+        await applyContentPatches(
+            '<div>Orchard7</div>',
+            '/',
+            ['index-product-teaser-sku', 'phones-product-teaser-sku'],
+            mockLogger,
+        );
+
+        expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+});
+
 describe('applyContentPatches with external source', () => {
     // Mock fetch for external patches
     const originalFetch = global.fetch;
