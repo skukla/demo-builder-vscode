@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "consoleApiHandlers: edge suite (stack axes, per-integration picks, kept noise rows, baseline ownership, catalog failure, the three no-project answers) + logger-silence pins; 5 equivalence rows",
+    "_note": "FormField: variants suite reading the props each type hands to Spectrum (blur, description fallback, spread props, help label, select items and selection, defaults); 1 equivalence row",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -1612,23 +1612,21 @@
             "openGaps": 0
         },
         "src/core/ui/components/forms/FormField.tsx": {
-            "score": 35.09,
-            "killed": 20,
-            "survived": 31,
-            "noCoverage": 6,
+            "score": 92.98,
+            "killed": 53,
+            "survived": 3,
+            "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 21,
-                "string": 6,
-                "other": 4
+                "string": 2,
+                "branch": 1
             },
             "uncoveredCategories": {
-                "string": 2,
-                "branch": 4
+                "string": 1
             },
-            "highValueSurvivors": 21,
-            "equivalent": 0,
-            "openGaps": 29
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/core/ui/components/forms/descriptionRenderer.tsx": {
             "score": 60.56,

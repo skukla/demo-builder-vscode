@@ -14073,6 +14073,19 @@
             "decision": "none \u2014 a fallback for a shape the success branch it runs under always provides",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/core/ui/components/forms/FormField.tsx",
+            "anchors": [
+                "return null;"
+            ],
+            "line": 176,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Removing this return leaves the default arm empty, so the component falls out of the switch and returns undefined instead of null. React 18 renders both as nothing \u2014 undefined stopped being an error in React 18 \u2014 so the DOM, the container and every query are identical, and no Spectrum primitive is called either way. Planted by replacing the return with a break; both suites stay green, including the one that asserts the container is empty and that neither TextField nor Picker was called for an unhandled type.",
+            "decision": "none \u2014 null and undefined are the same render in React 18, and no other observable differs",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
