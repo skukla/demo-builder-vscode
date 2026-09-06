@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderWithProviders, screen } from "../../../../helpers/react-test-utils";
+import { renderWithProviders, screen } from '../../../../helpers/react-test-utils';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 
 describe('StatusDot', () => {
@@ -22,7 +22,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="success" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-success, #10b981)'
+                backgroundColor: 'var(--db-status-dot-success, #10b981)',
             });
         });
 
@@ -30,7 +30,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="error" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-error, #ef4444)'
+                backgroundColor: 'var(--db-status-dot-error, #ef4444)',
             });
         });
 
@@ -38,7 +38,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="warning" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-warning, #f59e0b)'
+                backgroundColor: 'var(--db-status-dot-warning, #f59e0b)',
             });
         });
 
@@ -46,7 +46,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="info" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-info, #3b82f6)'
+                backgroundColor: 'var(--db-status-dot-info, #3b82f6)',
             });
         });
 
@@ -54,7 +54,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="neutral" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-neutral, #6b7280)'
+                backgroundColor: 'var(--db-status-dot-neutral, #6b7280)',
             });
         });
     });
@@ -65,7 +65,7 @@ describe('StatusDot', () => {
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
                 width: '8px',
-                height: '8px'
+                height: '8px',
             });
         });
 
@@ -74,7 +74,7 @@ describe('StatusDot', () => {
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
                 width: '12px',
-                height: '12px'
+                height: '12px',
             });
         });
 
@@ -83,7 +83,7 @@ describe('StatusDot', () => {
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
                 width: '16px',
-                height: '16px'
+                height: '16px',
             });
         });
     });
@@ -100,6 +100,22 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="success" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveClass('inline-block');
+        });
+
+        // The class list is assembled from entries that are absent most of the time
+        // (the pulse marker, a caller className). Those absences must be DROPPED, not
+        // stringified: `false` and `undefined` joined into the attribute would ship a
+        // literal "false" class and a trailing blank on the majority of dots.
+        it('emits exactly the base classes when there is no pulse and no caller class', () => {
+            renderWithProviders(<StatusDot variant="success" />);
+            const dot = screen.getByRole('presentation');
+            expect(dot.getAttribute('class')).toBe('inline-block rounded-full shrink-0');
+        });
+
+        it('appends the caller class after the base classes, with nothing between', () => {
+            renderWithProviders(<StatusDot variant="neutral" className="tile-dot" />);
+            const dot = screen.getByRole('presentation');
+            expect(dot.getAttribute('class')).toBe('inline-block rounded-full shrink-0 tile-dot');
         });
 
         it('has flex-shrink of 0 via utility class', () => {
@@ -128,18 +144,14 @@ describe('StatusDot', () => {
     describe('Props Combination', () => {
         it('renders with all custom props', () => {
             renderWithProviders(
-                <StatusDot
-                    variant="warning"
-                    size={10}
-                    className="custom-status"
-                />
+                <StatusDot variant="warning" size={10} className="custom-status" />
             );
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveClass('custom-status');
             expect(dot).toHaveStyle({
                 backgroundColor: 'var(--db-status-dot-warning, #f59e0b)',
                 width: '10px',
-                height: '10px'
+                height: '10px',
             });
         });
     });

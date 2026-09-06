@@ -43,8 +43,10 @@ export function StatusDot({ variant, size = 8, className, testId }: StatusDotPro
                 return 'var(--db-status-dot-warning, #f59e0b)';
             case 'info':
                 return 'var(--db-status-dot-info, #3b82f6)';
+            // `neutral` IS the fallback, so it shares the default rather than
+            // restating the same token twice — two copies of one colour is two
+            // things to keep in agreement for no gain.
             case 'neutral':
-                return 'var(--db-status-dot-neutral, #6b7280)';
             default:
                 return 'var(--db-status-dot-neutral, #6b7280)';
         }
