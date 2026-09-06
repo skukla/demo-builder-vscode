@@ -8,8 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/ai/server/discoveryTools.ts",
-        "src/types/errorCodes.ts"
+        "src/core/ui/components/feedback/LoadingDisplay.tsx"
     ],
     "reporters": [
         "clear-text",
