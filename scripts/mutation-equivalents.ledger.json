@@ -13890,6 +13890,79 @@
             "decision": "none \u2014 log-only body over a deliberately non-fatal step",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/ai/server/mcpToolProbe.ts",
+            "anchors": [
+                "if (settled) {",
+                "settled = true;"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Every route into finish() clears the timer and destroys the socket before resolving, so a second call can only happen if two triggers race \u2014 and everything a second call would do is already a no-op: clearTimeout on a fired timer, destroy on a destroyed socket, and resolve on a settled promise, which the language defines as ignored. Planted all three (the guard forced false, its return removed, and settled never set to true) and both suites stay green, because no assertion can read a difference that does not exist.",
+            "decision": "none \u2014 a re-entry guard whose absence is unobservable through a Promise that has already resolved",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/mcpToolProbe.ts",
+            "anchors": [
+                "if (!line.trim()) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "The blank-line skip is redundant with the JSON.parse below it: JSON.parse('') and JSON.parse('   ') both throw, and that catch does the same continue this guard does. So forcing the condition false, weakening line.trim() to line, or emptying the body all reach the identical continue by the other route. Separating them needs a line that is whitespace-only AND parses as JSON, and no such string exists. Planted all three; the suites stay green.",
+            "decision": "none \u2014 a fast path in front of a catch that already handles the same input",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/mcpToolProbe.ts",
+            "anchors": [
+                "if (typeof id === 'number' && pending.has(id)) {"
+            ],
+            "mutants": 3,
+            "category": "branch",
+            "reason": "Entering this branch for a message the probe never asked about does nothing: pending.get returns undefined, res?.() short-circuits, and pending.delete on an absent key is a no-op. So forcing the condition true, or slackening && to ||, produces the same observable conversation for every reply a server can send \u2014 a string id, an id nobody requested, a notification with no id. The suite covers all three shapes and stays green with each mutation planted.",
+            "decision": "none \u2014 a lookup guard in front of operations that are already no-ops for a miss",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/mcpToolProbe.ts",
+            "anchors": [
+                "res?.(msg);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The optional call can never short-circuit: control only reaches it when pending.has(id) is true, and every value ever put into that map is the resolver function of the promise the request returned, so pending.get(id) is always callable here. Dropping the ?. therefore changes nothing for any input; planted as res!(msg) and both suites stay green. It is defensive against a Map whose value type already excludes undefined.",
+            "decision": "none \u2014 an optional call under a has() guard that makes the value non-optional",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/mcpToolProbe.ts",
+            "anchors": [
+                "} catch (err) {"
+            ],
+            "mutants": 3,
+            "category": "block",
+            "reason": "Nothing on the wire reaches this catch. The awaited request() promise only ever resolves \u2014 no code path rejects it \u2014 and a failed write reports through the socket's error event rather than by throwing: measured with a server that destroys the connection right after the initialize reply, the probe settles through the error handler with 'write EPIPE' and this clause never runs. So emptying the body, or mutating the object it builds, is invisible to any conversation a server can produce.",
+            "decision": "none \u2014 a defensive clause no wire behaviour reaches; the socket error handler settles those failures first",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/mcpToolProbe.ts",
+            "anchors": [
+                ".map((t) => (t && typeof t === 'object' ? String((t as { name?: unknown }).name ?? '') : ''))"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Replacing typeof t === 'object' with true leaves t && true, and for every JSON value that is truthy and not an object \u2014 a string, a number, true \u2014 reading .name yields undefined, so ?? '' produces the empty string and the length filter drops it, which is exactly what the false branch produced. Only a function or a boxed primitive could tell the two apart and JSON.parse produces neither. The suite feeds a string entry among the tools and stays green with the mutation planted.",
+            "decision": "none \u2014 a type check whose only distinguishable inputs cannot come out of JSON.parse",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
