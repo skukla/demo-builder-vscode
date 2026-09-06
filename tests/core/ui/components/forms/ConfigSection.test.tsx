@@ -57,24 +57,51 @@ describe('ConfigSection', () => {
     });
 
     describe('Divider', () => {
-        it('does not show divider by default', () => {
-            const { container: _container } = renderWithProviders(
+        // The divider is the section's only visual separator from the section
+        // above it, so both directions matter: a section that always draws one
+        // rules a line above the FIRST section, and one that never draws one
+        // runs every section together.
+        it('draws no divider by default', () => {
+            renderWithProviders(
                 <ConfigSection id="test" label="Test">
                     <div>Content</div>
                 </ConfigSection>
             );
-            // Divider component won't be present if showDivider is false
-            expect(screen.getByText('Test')).toBeInTheDocument();
+            expect(screen.queryByTestId('spectrum-divider')).not.toBeInTheDocument();
         });
 
-        it('shows divider when showDivider is true', () => {
+        it('draws a divider when showDivider is set', () => {
             renderWithProviders(
                 <ConfigSection id="test" label="Test" showDivider={true}>
                     <div>Content</div>
                 </ConfigSection>
             );
-            // Spectrum Divider should be rendered
-            expect(screen.getByText('Test')).toBeInTheDocument();
+            expect(screen.getByTestId('spectrum-divider')).toBeInTheDocument();
+        });
+    });
+
+    describe('Footer', () => {
+        // The footer is optional, and when it is absent its wrapper must be
+        // absent too — an empty `.config-section-footer` still occupies its
+        // padding under every section that has no footer.
+        it('renders no footer wrapper when no footer is given', () => {
+            const { container } = renderWithProviders(
+                <ConfigSection id="test" label="Test">
+                    <div>Content</div>
+                </ConfigSection>
+            );
+            expect(container.querySelector('.config-section-footer')).toBeNull();
+        });
+
+        it('renders the footer INSIDE the footer wrapper', () => {
+            const { container } = renderWithProviders(
+                <ConfigSection id="test" label="Test" footer={<a href="#help">Learn more</a>}>
+                    <div>Content</div>
+                </ConfigSection>
+            );
+            const wrapper = container.querySelector('.config-section-footer');
+            expect(wrapper).not.toBeNull();
+            expect(wrapper).toContainElement(screen.getByText('Learn more'));
         });
     });
 
