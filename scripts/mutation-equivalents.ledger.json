@@ -16377,6 +16377,106 @@
             "decision": "none \u2014 the guard is correct and the fallback path makes every outcome identical",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/mesh/services/meshEndpoint.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 37,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is one debug log. checkApiMeshPlugin returns false on the next line whether or not the block runs, so emptying it changes no return value and no command execution \u2014 the four tests that assert WHICH commands ran all still pass with it planted. The only observable difference is a log line, and asserting log wording is exactly what the ratchet exists to refuse to reward.",
+            "decision": "none \u2014 the catch is correct as written; a failed plugin check means not installed",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/mesh/services/meshEndpoint.ts",
+            "anchors": [
+                "if (!jsonMatch) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Removing this guard converges on the same answer through the surrounding catch. With no JSON object in the describe output, jsonMatch is null, the next line reads jsonMatch[0], that throws a TypeError, and fetchEndpointFromDescribe's own catch returns exactly the undefined the guard returns \u2014 so getEndpoint constructs the same fallback URL either way. Planted both mutants against the suite that now covers this branch: neither changes a return value or a command call, only which of two debug lines is written.",
+            "decision": "none \u2014 the guard earns its place by saying what happened instead of relying on a TypeError",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/mesh/services/meshEndpoint.ts",
+            "anchors": [
+                "if (endpoint) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "When the parsed describe payload carries neither meshEndpoint nor endpoint, the local is undefined, and returning it unconditionally returns the same undefined the guard's fall-through returns. getEndpoint then treats both as no-answer and constructs the fallback URL, so no return value and no command call moves. Verified by planting against the suite; only a debug line differs.",
+            "decision": "none \u2014 the guard names the no-endpoint case rather than leaking an undefined through the happy path",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/mesh/services/meshEndpoint.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 131,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else body is one debug log. Both arms of this branch fall through to the same constructed endpoint on the following lines, so emptying it leaves the return value and every command call identical \u2014 the plugin-not-installed test that asserts execute ran exactly once passes with it planted. Only a log line differs, which the ratchet does not reward pinning.",
+            "decision": "none \u2014 the log is the only record an SC has of why describe was skipped",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/ai/mcpDriftDetector.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 69,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch produces the same answer by a different route. The local raw stays undefined, control falls to parseJSON(raw), and JSON.parse coerces undefined to the string 'undefined', throws, and parseJSON's own catch returns null \u2014 which is exactly what the guard returns. Verified by planting: both drift tests for a missing or unreadable .claude/mcp.json still pass, and nothing observable differs.",
+            "decision": "none \u2014 returning null explicitly says missing-file means AI-not-setup rather than leaning on a coincidence in parseJSON",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/ai/mcpDriftDetector.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 85,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The only statement is return null, and the sole caller reads the result through userConfig?.mcpServers?.[id]. Falling off the end returns undefined instead, which that optional chain treats identically, so an absent, unreadable or malformed ~/.claude.json produces the same not-drifted answer either way. Verified by planting against the three user-scope quiet-path tests.",
+            "decision": "none \u2014 an explicit null matches the declared Promise<McpJsonShape | null> return type",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/ai/mcpDriftDetector.ts",
+            "anchors": [
+                "for (const arg of args ?? []) {"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty default with the array ['Stryker was here']. That value only ever reaches the loop when a server entry declares no args at all, and the first thing the body does is skip anything isPathArg rejects \u2014 a sentence with no js extension and no node_modules segment. So the iteration adds nothing to missing and touches no disk. Verified by planting the exact replacement: the env-only entry test, which asserts fs.access is never called, still passes.",
+            "decision": "none \u2014 the ?? [] is the correct default for an optional args array",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/ai/server/toolTraceRecorder.ts",
+            "anchors": [
+                "this.sink?.(stamped);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the ?. makes a recorder built without a sink throw a TypeError on this line \u2014 inside the try whose catch deliberately swallows every sink failure, and after the entry has already been pushed. So all(), repeats() and the ring eviction answer identically with or without the guard, and the existing test that a throwing sink never fails the record proves the catch handles this exact case. Verified by planting the replacement against the whole suite.",
+            "decision": "none \u2014 the sink is optional in the constructor, so the ?. is what the type requires",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }

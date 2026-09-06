@@ -200,6 +200,22 @@ describe('telling a repeat from a different question', () => {
         expect(fingerprintArgs(undefined)).toBe('none');
     });
 
+    it('says "none" for anything that is not an object, rather than indexing it', () => {
+        // A string is truthy, so only the typeof half of the guard rejects it.
+        // Without that half, Object.keys('deploy') yields '0','1','2'… and a
+        // bare string is fingerprinted as though it were three arguments.
+        expect(fingerprintArgs('deploy')).toBe('none');
+        expect(fingerprintArgs(7)).toBe('none');
+        expect(fingerprintArgs(null)).toBe('none');
+    });
+
+    it('keeps the digest short — the trace holds 500 of these', () => {
+        // sha256 hex is 64 characters. The trace is read in a workbench panel
+        // and held in memory per session; the prefix is what makes a repeat
+        // computable, and the rest buys nothing.
+        expect(fingerprintArgs({ name: 'bodea' })).toHaveLength(16);
+    });
+
     it('counts the second ask, not the first', () => {
         const trace = new ToolTraceRecorder();
         const call = (tool: string, args: unknown, outcome: 'ok' | 'error' = 'ok') =>
@@ -272,5 +288,50 @@ describe('bounded, and honest about size', () => {
     it('reports zero for a result that carries no text', () => {
         expect(resultByteLength(undefined)).toBe(0);
         expect(resultByteLength({ content: [] })).toBe(0);
+    });
+
+    it('skips a block with no text, and a hole in the array, without throwing', () => {
+        // Both were real shapes off the wire. Measuring a block whose `text` is
+        // absent hands undefined to Buffer.byteLength, which throws — and this
+        // runs inside the wrapper around EVERY tool call, so a throw here would
+        // fail the call it was only supposed to observe.
+        expect(resultByteLength({ content: [{ type: 'image' }] })).toBe(0);
+        expect(resultByteLength({ content: [null, { type: 'text', text: 'ab' }] })).toBe(2);
+    });
+
+    it('stamps `at` as an offset from the recorder, not a wall clock', () => {
+        // `at` orders the trace, so it has to be the elapsed time since the
+        // recorder was built. A raw epoch — or a sum of the two — still sorts
+        // correctly, which is why the assertion is on the MAGNITUDE.
+        const trace = new ToolTraceRecorder();
+        trace.record({
+            tool: 'get_project_status',
+            readOnly: true,
+            argumentKeys: [],
+            argumentFingerprint: 'none',
+            resultBytes: 0,
+            durationMs: 0,
+            outcome: 'ok',
+        });
+
+        expect(trace.all()[0].at).toBeLessThan(60_000);
+    });
+
+    it('clear() drops the history — a new evaluation run starts from nothing', () => {
+        const trace = new ToolTraceRecorder();
+        trace.record({
+            tool: 'get_project_status',
+            readOnly: true,
+            argumentKeys: [],
+            argumentFingerprint: 'none',
+            resultBytes: 0,
+            durationMs: 0,
+            outcome: 'ok',
+        });
+
+        trace.clear();
+
+        expect(trace.all()).toStrictEqual([]);
+        expect(trace.repeats()).toStrictEqual([]);
     });
 });
