@@ -1,4 +1,5 @@
 import { RateLimiter } from '@/core/shell/rateLimiter';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 describe('RateLimiter', () => {
     let rateLimiter: RateLimiter;
@@ -98,6 +99,51 @@ describe('RateLimiter', () => {
 
             // Should have processed all 10 operations (5 per window)
             expect(rateLimiter.getOperationCount('resource1')).toBeLessThanOrEqual(5);
+        });
+    });
+
+    describe('wait time', () => {
+        it('should wait only the REMAINDER of the window, not the window plus the elapsed time', async () => {
+            // Two operations at different instants, so `now - recentOps[0]` is non-zero.
+            // Under a frozen clock it is zero, and then `WINDOW - elapsed` and
+            // `WINDOW + elapsed` are the same number and nothing can tell them apart.
+            const elapsed = 400;
+            rateLimiter = new RateLimiter(2);
+
+            await rateLimiter.checkRateLimit('resource1');
+            await jest.advanceTimersByTimeAsync(elapsed);
+            await rateLimiter.checkRateLimit('resource1');
+
+            // Third operation is over the limit and must wait out the rest of the window.
+            let settled = 'pending';
+            const third = rateLimiter.checkRateLimit('resource1');
+            third.then(
+                () => { settled = 'resolved'; },
+                () => { settled = 'rejected'; },
+            );
+
+            await jest.advanceTimersByTimeAsync(TIMEOUTS.RATE_LIMIT_WINDOW - elapsed - 1);
+            expect(settled).toBe('pending');
+
+            await jest.advanceTimersByTimeAsync(1);
+            expect(settled).toBe('resolved');
+
+            await third;
+        });
+    });
+
+    describe('window boundary', () => {
+        it('should drop an operation that is exactly one window old', async () => {
+            rateLimiter = new RateLimiter(10);
+
+            await rateLimiter.checkRateLimit('resource1');
+
+            await jest.advanceTimersByTimeAsync(TIMEOUTS.RATE_LIMIT_WINDOW - 1);
+            expect(rateLimiter.getOperationCount('resource1')).toBe(1);
+
+            // Exactly RATE_LIMIT_WINDOW old is OUTSIDE the window, not on its edge.
+            await jest.advanceTimersByTimeAsync(1);
+            expect(rateLimiter.getOperationCount('resource1')).toBe(0);
         });
     });
 

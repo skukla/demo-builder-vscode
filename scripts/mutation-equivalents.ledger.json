@@ -16704,6 +16704,32 @@
             "decision": "none \u2014 the branch is a fast path, not a behavioural one; the else arm already produces the same value for every string input",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/shell/rateLimiter.ts",
+            "anchors": [
+                "const ops = this.operations.get(resource) || [];"
+            ],
+            "line": 56,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the [] default with ['Stryker was here'], but the very next statement filters the array with 'now - timestamp < RATE_LIMIT_WINDOW'. For a string timestamp that subtraction is NaN and every NaN comparison is false, so the injected element is dropped before anything reads the array and recentOps is [] either way. Verified by planting the literal at both lines and re-running the suite: 22 tests, all still green.",
+            "decision": "none \u2014 any non-empty default is erased by the window filter on the following line, so no input can distinguish it from []",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/shell/rateLimiter.ts",
+            "anchors": [
+                "const ops = this.operations.get(resource) || [];"
+            ],
+            "line": 108,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the [] default with ['Stryker was here'], but the very next statement filters the array with 'now - timestamp < RATE_LIMIT_WINDOW'. For a string timestamp that subtraction is NaN and every NaN comparison is false, so the injected element is dropped before anything reads the array and recentOps is [] either way. Verified by planting the literal at both lines and re-running the suite: 22 tests, all still green.",
+            "decision": "none \u2014 any non-empty default is erased by the window filter on the following line, so no input can distinguish it from []",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }
