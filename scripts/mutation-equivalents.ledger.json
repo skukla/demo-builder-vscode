@@ -16579,6 +16579,105 @@
             "decision": "none \u2014 initializedLine is typed string | undefined and the guard is what narrows it for toServer(line: string); the alternative is a cast, which is a silenced type error",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/eds/services/patches/patchMissTracker.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 100,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the write catch changes nothing a caller can see: the counts for this run are returned either way, the file is not written either way, and the body is one debug line. The catch itself IS tested \u2014 the unwritable-store case resolves with counts of 1 rather than throwing \u2014 so only the diagnostic line is unconstrained, and asserting debug text is what the ratchet refuses to reward.",
+            "decision": "none \u2014 a fail-open path should say in the debug channel why the counts were not persisted",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/core/shell/pollingService.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch around the poll check leaves the error swallowed and the loop retrying exactly as before; the body is one debug line. The catch IS tested \u2014 a rejecting check function is followed by another attempt \u2014 so only the diagnostic line is unconstrained.",
+            "decision": "none \u2014 a swallowed check failure is the one thing a stuck poll's Debug Logs need to show",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/quickEditPublisher.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 423,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The quick-edit.js commit failure is non-fatal by contract: nothing is returned, nothing is retried, and the caller's result comes from the scripts.js half. That contract IS tested (a rejecting createOrUpdateFile for the module still reports installed), so the only content of this catch that a test could reach is the warn line's wording.",
+            "decision": "none \u2014 the warn is how an SC learns Quick Edit will not load in a storefront that otherwise succeeded",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/quickEditPublisher.ts",
+            "anchors": [
+                "const reason = (error as Error).message ?? 'unknown';"
+            ],
+            "line": 424,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This reason never leaves the log line below it \u2014 unlike its twin in installQuickEditScripts, which returns it in the result. Killing the fallback would mean asserting the warn message for an error with no message.",
+            "decision": "none \u2014 the fallback keeps a message-less rejection from printing 'undefined'",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/core/utils/promiseUtils.ts",
+            "anchors": [
+                "if (timeoutTimer) clearTimeout(timeoutTimer);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The guard can never be false. The Promise executor that assigns timeoutTimer runs synchronously inside the Promise constructor, several statements before the race is awaited, so by the time this finally block runs the id is always set. Forcing it undefined would mean replacing the Promise constructor itself. The other side of the same guard IS tested: a fast race leaves no pending timer.",
+            "decision": "none \u2014 the guard matches the declared type and is free",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/core/utils/promiseUtils.ts",
+            "anchors": [
+                "for (let i = 0; i < items.length; i += batchSize) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Relaxing < to <= adds one iteration only when items.length is an exact multiple of batchSize, and that iteration slices an empty batch: fn is never called, Promise.all resolves to [], and nothing is pushed. No result, no call count and no ordering differs, so the difference is one unobservable loop turn.",
+            "decision": "none \u2014 equivalent as written",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/core/ui/components/ErrorBoundary.tsx",
+            "anchors": [
+                "this.state = {"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the initial state changes nothing any render can read. All three fields start falsy and every read treats undefined exactly as the value they were given: hasError gates the fallback, errorInfo gates the stack block, and error is reached through an optional chain. Nothing outside the component reads its state, and the first error overwrites all three anyway.",
+            "decision": "none \u2014 the explicit initial state is what makes the State type honest",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/core/ui/components/ErrorBoundary.tsx",
+            "anchors": [
+                "{this.state.error?.message || 'An unexpected error occurred'}"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the ?. would throw only in a render where hasError is true and error is null, and no such render exists: the only writer of hasError is getDerivedStateFromError, which sets error in the same object. Reaching it would mean calling setState from outside the component. The other side IS tested \u2014 a message-less error shows the fallback copy.",
+            "decision": "none \u2014 the chain matches the declared Error | null and costs nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
