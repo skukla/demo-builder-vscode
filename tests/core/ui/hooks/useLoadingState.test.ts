@@ -347,4 +347,71 @@ describe('useLoadingState', () => {
             expect(funcs1.reset).toBe(funcs2.reset);
         });
     });
+
+    describe('setRefreshing clears the error only when refreshing STARTS', () => {
+        it('keeps the error when refreshing ends', () => {
+            // A refresh that fails calls setError and then setRefreshing(false)
+            // to drop the spinner. If ending the refresh also cleared the error,
+            // the failure would vanish from the screen the moment it appeared.
+            const { result } = renderHook(() => useLoadingState<string>());
+
+            act(() => {
+                result.current.setError('Could not reach the server');
+            });
+            act(() => {
+                result.current.setRefreshing(false);
+            });
+
+            expect(result.current.error).toBe('Could not reach the server');
+        });
+
+        it('clears the error when refreshing starts', () => {
+            const { result } = renderHook(() => useLoadingState<string>());
+
+            act(() => {
+                result.current.setError('Could not reach the server');
+            });
+            act(() => {
+                result.current.setRefreshing(true);
+            });
+
+            expect(result.current.error).toBeNull();
+        });
+    });
+
+    describe('reset follows the CURRENT initial data', () => {
+        it('returns to the CURRENT initial data, not the one from first render', () => {
+            // A list whose seed prop changes (a different project selected)
+            // must reset to that project's data. A stale closure resets it to
+            // the previously selected project's rows.
+            const { result, rerender } = renderHook(
+                (initial: string[] | null) => useLoadingState<string[]>(initial),
+                { initialProps: ['alpha'] as string[] | null },
+            );
+
+            act(() => {
+                result.current.setData(['loaded']);
+            });
+            rerender(['beta']);
+            act(() => {
+                result.current.reset();
+            });
+
+            expect(result.current.data).toStrictEqual(['beta']);
+        });
+
+        it('reports hasLoadedOnce from the CURRENT initial data', () => {
+            const { result, rerender } = renderHook(
+                (initial: string[] | null) => useLoadingState<string[]>(initial),
+                { initialProps: null as string[] | null },
+            );
+
+            rerender(['beta']);
+            act(() => {
+                result.current.reset();
+            });
+
+            expect(result.current.hasLoadedOnce).toBe(true);
+        });
+    });
 });
