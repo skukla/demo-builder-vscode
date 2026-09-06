@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-04. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/features/ai/server/mcpToolProbe.ts  (32 open gaps)
-  - src/core/base/baseCommand.ts  (31 open gaps)
-  - src/features/mesh/utils/meshHelpers.ts  (31 open gaps)
-  - src/features/dashboard/handlers/consoleApiHandlers.ts  (30 open gaps)
-  - src/core/ui/components/forms/FormField.tsx  (29 open gaps)
+  - src/features/ai/server/progressCapture.ts  (21 open gaps)
+  - src/features/dashboard/ui/aiSurface/components/PromptGrid.tsx  (21 open gaps)
+  - src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx  (21 open gaps)
+  - src/core/ui/components/wizard/ConfigurationSummary.tsx  (20 open gaps)
+  - src/features/app-builder/services/appManagementUninstaller.ts  (20 open gaps)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;

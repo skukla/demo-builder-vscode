@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-08. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/features/dashboard/commands/openAi.ts  (25 open gaps)
-  - src/features/data-installer/services/sampleDataInstallDeps.ts  (25 open gaps)
-  - src/features/mesh/commands/deployMesh.ts  (25 open gaps)
-  - src/features/ai/server/diagnosticsTools.ts  (24 open gaps)
-  - src/features/components/services/componentDependencies.ts  (24 open gaps)
+  - src/features/app-builder/services/appManagementClient.ts  (17 open gaps)
+  - src/features/data-installer/services/sampleDataInstall.ts  (17 open gaps)
+  - src/features/eds/handlers/blockLibraryPublish.ts  (17 open gaps)
+  - src/features/eds/services/credentialServiceProbe.ts  (17 open gaps)
+  - src/features/eds/services/daAuthHelperToken.ts  (17 open gaps)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;
