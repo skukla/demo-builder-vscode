@@ -21,19 +21,23 @@
  */
 
 import { registerCommerceEndpointsTool } from '@/features/ai/server/commerceEndpointsTool';
+import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { expectWithinCeiling } from './responseCeilings';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 function fakeServer() {
     const tools = new Map<string, () => Promise<{ content: Array<{ text: string }> }>>();
+    const defs = new Map<string, McpToolSchema>();
     return {
         registerTool(
             name: string,
-            _def: unknown,
+            def: McpToolSchema,
             handler: () => Promise<{ content: Array<{ text: string }> }>,
         ) {
             tools.set(name, handler);
+            defs.set(name, def);
         },
+        definition: (): McpToolSchema => defs.get('get_commerce_endpoints')!,
         raw: async (): Promise<string> =>
             (await tools.get('get_commerce_endpoints')!()).content[0].text,
         call: async (): Promise<Record<string, never>> =>
@@ -288,8 +292,76 @@ describe('get_commerce_endpoints', () => {
             storefrontUses: string;
         };
 
-        expect(result.endpoints).toEqual({});
+        expect(result.endpoints).toStrictEqual({});
         expect(result.storefrontUses).toBe('none');
+    });
+
+    // The declaration, not the answer. Registration is a set of arguments the
+    // server acts on — the consent prompt, the auth gate and the write-arg guard
+    // all read them — and a test that only calls the handler never sees any of
+    // it. This one reads project state and touches nothing, so an agent must not
+    // meet a confirmation prompt it cannot answer.
+    it('registers itself as a read that needs no auth and destroys nothing', () => {
+        const def = serve().definition();
+
+        expect(def.needsAuth).toBe(false);
+        expect(def.annotations).toEqual({ readOnlyHint: true, destructiveHint: false });
+        expect(def.inputSchema).toStrictEqual({});
+    });
+
+    // `componentSelections` is absent on a project that has not chosen a backend
+    // yet, and this is the orientation read an agent makes early. It has to
+    // answer — the default backend is what the resolver falls back to — rather
+    // than throw at the agent.
+    it('answers for a project that has chosen no backend yet', async () => {
+        getCurrentProject.mockResolvedValue({
+            name: 'fresh',
+            path: '/p/fresh',
+            componentConfigs: {},
+        });
+
+        const result = (await serve().call()) as unknown as {
+            backend: string;
+            endpoints: Record<string, string>;
+            storefrontUses: string;
+        };
+
+        expect(result.backend).toBe('paas');
+        expect(result.endpoints).toStrictEqual({});
+        expect(result.storefrontUses).toBe('none');
+    });
+
+    describe('customer group', () => {
+        it('reports the group when the project pins one', async () => {
+            getCurrentProject.mockResolvedValue({
+                ...ACCS_PROJECT,
+                componentConfigs: {
+                    'adobe-commerce-accs': { ...ACCS_CONFIG, ACCS_CUSTOMER_GROUP: 'wholesale' },
+                },
+            });
+
+            const result = (await serve().call()) as unknown as {
+                scope: { customerGroup?: string };
+            };
+
+            expect(result.scope.customerGroup).toBe('wholesale');
+        });
+
+        // Same rule as the endpoints: absent means "not set", which is true and
+        // actionable. An empty string reads as a group whose code is blank.
+        it('omits the group entirely when the project pins none', async () => {
+            getCurrentProject.mockResolvedValue(ACCS_PROJECT);
+
+            const result = (await serve().call()) as unknown as {
+                scope: Record<string, string>;
+            };
+
+            expect(result.scope).toStrictEqual({
+                websiteCode: 'bodea',
+                storeCode: 'bodea_store',
+                storeViewCode: 'bodea_us',
+            });
+        });
     });
 
     it('stays within its recorded response ceiling', async () => {
