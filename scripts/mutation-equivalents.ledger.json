@@ -16996,6 +16996,32 @@
             "decision": "none \u2014 the empty deps array is correct; the focus handler depends on nothing",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useLiveDaLiveUrl.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 40,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty dependency array with a one-element array holding a constant string. React compares dependency arrays element-wise with Object.is, and both length and the single constant element are identical on every render, so the subscribe effect still runs exactly once and the unsubscribe returned from it is still called exactly once. The mutation was planted and both suites stayed green \u2014 including the \"unsubscribes on unmount\" case, which asserts toHaveBeenCalledTimes(1) and would fail if the effect re-ran.",
+            "decision": "none \u2014 the empty deps array is correct; the authoringExperienceUpdate subscription depends on nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useLiveDestination.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 51,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty dependency array with a one-element array holding a constant string. React compares dependency arrays element-wise with Object.is, and both length and the single constant element are identical on every render, so the subscribe effect still runs exactly once and the unsubscribe returned from it is still called exactly once. The mutation was planted and both suites stayed green \u2014 including the \"unsubscribes on unmount\" case, which asserts toHaveBeenCalledTimes(1) and would fail if the effect re-ran.",
+            "decision": "none \u2014 the empty deps array is correct; the projectDestinationUpdate subscription depends on nothing (the re-seed effect above it is the one that takes a dependency)",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
