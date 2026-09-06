@@ -68,7 +68,15 @@ function setupFs(tree: Record<string, 'dir' | string>): void {
     });
 }
 
-function frontmatter(name: string, description: string, body = 'body'): string {
+/**
+ * A skill file as one is actually written: frontmatter, then PROSE.
+ *
+ * The default body carries whitespace on purpose. A one-word body made the
+ * frontmatter regex's `([\s\S]*)` tail indistinguishable from `([\S\S]*)` —
+ * non-whitespace only — across every test in this file, so a regex that could
+ * not parse any real skill would have passed the suite.
+ */
+function frontmatter(name: string, description: string, body = '# Heading\n\nBody prose.\n'): string {
     return `---\nname: ${name}\ndescription: ${description}\n---\n${body}`;
 }
 
@@ -400,5 +408,155 @@ describe('inspectSkills', () => {
 
             await expect(inspectSkills(PROJECT_PATH)).rejects.toThrow('EACCES');
         });
+    });
+});
+
+// ---------------------------------------------------------------------------
+// What the walk asks the filesystem for.
+//
+// Every classification above depends on `isFile()` / `isDirectory()`, which only
+// exist because the readdir call asks for Dirents. Without `withFileTypes` the
+// entries come back as plain strings and every skill falls through to 'unknown' —
+// a mock that returns Dirents whatever it is handed cannot see that, so the CALL
+// is what has to be asserted.
+// ---------------------------------------------------------------------------
+describe('what inspectSkills asks the filesystem for', () => {
+    it('reads the skills directory with file types', async () => {
+        setupFs({ [`${SKILLS_DIR}/add-component.md`]: frontmatter('add-component', 'd') });
+
+        await inspectSkills(PROJECT_PATH);
+
+        expect(readdirMock).toHaveBeenCalledWith(SKILLS_DIR, { withFileTypes: true });
+    });
+
+    it('reads a bundle subdirectory with file types too', async () => {
+        setupFs({ [`${SKILLS_DIR}/aem-block-developer/SKILL.md`]: frontmatter('a', 'd') });
+
+        await inspectSkills(PROJECT_PATH);
+
+        expect(readdirMock).toHaveBeenCalledWith(`${SKILLS_DIR}/aem-block-developer`, {
+            withFileTypes: true,
+        });
+    });
+
+    it('reads each skill file as utf-8 text', async () => {
+        setupFs({ [`${SKILLS_DIR}/add-component.md`]: frontmatter('add-component', 'd') });
+
+        await inspectSkills(PROJECT_PATH);
+
+        expect(readFileMock).toHaveBeenCalledWith(`${SKILLS_DIR}/add-component.md`, 'utf-8');
+    });
+
+    // A non-md file at the top level is not a bundle. Treating it as one lists a
+    // text file's directory, which on a real filesystem is ENOTDIR — an inventory
+    // that throws on a stray README rather than ignoring it.
+    it('does not try to list a top-level file as a directory', async () => {
+        setupFs({
+            [`${SKILLS_DIR}/add-component.md`]: frontmatter('add-component', 'd'),
+            [`${SKILLS_DIR}/notes.txt`]: 'Notes',
+        });
+
+        await inspectSkills(PROJECT_PATH);
+
+        expect(readdirMock).not.toHaveBeenCalledWith(
+            `${SKILLS_DIR}/notes.txt`,
+            expect.anything()
+        );
+    });
+
+    it('does not try to list a NESTED file as a directory', async () => {
+        setupFs({
+            [`${SKILLS_DIR}/aem-block-developer/SKILL.md`]: frontmatter('a', 'd'),
+            [`${SKILLS_DIR}/aem-block-developer/notes.txt`]: 'Notes',
+        });
+
+        await inspectSkills(PROJECT_PATH);
+
+        expect(readdirMock).not.toHaveBeenCalledWith(
+            `${SKILLS_DIR}/aem-block-developer/notes.txt`,
+            expect.anything()
+        );
+    });
+});
+
+describe('what counts as a skill inside a bundle', () => {
+    // Only `.md` files. A bundle ships scripts, assets and references alongside
+    // its skills; listing those as skills fills the catalogue with things nobody
+    // can invoke.
+    it('ignores non-md files nested in a bundle', async () => {
+        setupFs({
+            [`${SKILLS_DIR}/aem-block-developer/SKILL.md`]: frontmatter('a', 'd'),
+            [`${SKILLS_DIR}/aem-block-developer/helper.py`]: 'print()',
+            [`${SKILLS_DIR}/aem-block-developer/refs/notes.txt`]: 'notes',
+        });
+
+        const result = await inspectSkills(PROJECT_PATH);
+
+        expect(result.map((e) => e.name)).toEqual(['a']);
+    });
+});
+
+describe('the bundle prefix', () => {
+    // `<prefix>-<skill>` needs a prefix BEFORE the separator. A name that merely
+    // starts with one has no prefix, and reporting an empty string as the bundle
+    // groups it under a heading with no name.
+    it('reports no bundle for a directory whose name starts with the separator', async () => {
+        setupFs({ [`${SKILLS_DIR}/-orphan/SKILL.md`]: frontmatter('c', 'd') });
+
+        const result = await inspectSkills(PROJECT_PATH);
+
+        expect(result[0].source).toBe('adobe');
+        expect(result[0].bundle).toBeUndefined();
+    });
+});
+
+describe('frontmatter that is present but says nothing usable', () => {
+    // An EMPTY block parses to null, not to an object. Treating null as the
+    // parsed frontmatter reads `.name` off it and takes the whole inventory down
+    // with a TypeError.
+    it('falls back to the basename for an empty frontmatter block', async () => {
+        setupFs({ [`${SKILLS_DIR}/add-component.md`]: '---\n\n---\n# Heading\n\nProse.\n' });
+
+        const result = await inspectSkills(PROJECT_PATH);
+
+        expect(result[0].name).toBe('add-component');
+        expect(result[0].description).toBeNull();
+    });
+
+    // A blank `name:` is not a name. Using it renders an entry with no label.
+    it('falls back to the basename when name is an empty string', async () => {
+        setupFs({
+            [`${SKILLS_DIR}/add-component.md`]: '---\nname: ""\ndescription: d\n---\nProse here.\n',
+        });
+
+        const result = await inspectSkills(PROJECT_PATH);
+
+        expect(result[0].name).toBe('add-component');
+        expect(result[0].description).toBe('d');
+    });
+
+    it('falls back to the DIRECTORY name when a SKILL.md names itself blank', async () => {
+        setupFs({
+            [`${SKILLS_DIR}/diagnose-demo/SKILL.md`]: '---\nname: ""\n---\nProse here.\n',
+        });
+
+        const result = await inspectSkills(PROJECT_PATH);
+
+        expect(result[0].name).toBe('diagnose-demo');
+    });
+
+    // Frontmatter is the block at the TOP of the file. A `---` rule further down
+    // is Markdown, and reading it as frontmatter names the skill after whatever
+    // happens to sit under that rule.
+    it('does not read a --- rule in the body as frontmatter', async () => {
+        setupFs({
+            [`${SKILLS_DIR}/add-component.md`]:
+                '# Heading\n\n---\nname: not-the-name\n---\n\nMore prose.\n',
+        });
+
+        const result = await inspectSkills(PROJECT_PATH);
+
+        expect(result[0].name).toBe('add-component');
+        expect(result[0].description).toBeNull();
     });
 });
