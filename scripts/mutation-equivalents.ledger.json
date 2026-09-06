@@ -14135,6 +14135,70 @@
             "decision": "none \u2014 the JSON is untyped at the import boundary and the guard costs nothing",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/ManageApisModal.tsx",
+            "anchors": [
+                "const [isLoading, setIsLoading] = useState(false);",
+                "const [needsSignIn, setNeedsSignIn] = useState(false);",
+                "const [selected, setSelected] = useState<string[]>([]);",
+                "const [initial, setInitial] = useState<string[]>([]);"
+            ],
+            "mutants": 4,
+            "category": "other",
+            "reason": "Nothing renders while the modal is closed (DialogContainer holds no Modal), and the open effect's first act is to reset all four to exactly these values before any response can arrive. So no initial value these four are given is ever observable: React commits the effect before an assertion can run, and the closed state has no DOM. Each planted individually: all 35 tests pass.",
+            "decision": "none \u2014 useState needs an initial value and these are the ones the effect restores",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/ManageApisModal.tsx",
+            "anchors": [
+                "setApis([]);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The picker is rendered only when renderApiCatalogFeedback returns nothing \u2014 no loading, no error, no sign-in \u2014 and every route to that state passes through the success branch, which sets apis from the response. The reset value is therefore never rendered: while it holds, a feedback view is on screen instead. Planted: all 35 tests pass.",
+            "decision": "none \u2014 it keeps one row's list from flashing under the next row's spinner",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/ManageApisModal.tsx",
+            "anchors": [
+                "[],"
+            ],
+            "line": 174,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The sign-in callback's dependency array is empty and constant. Replacing it with a different constant array changes nothing: React compares the arrays element by element between renders, and two renders both produce the same one, so the callback is memoised identically. Planted: all 35 tests pass.",
+            "decision": "none \u2014 the deps array is required and correct as written",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/ManageApisModal.tsx",
+            "anchors": [
+                "const retry = useCallback(() => setReloadKey((key) => key + 1), []);"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "reloadKey is never read \u2014 it exists only as an effect dependency, so any function returning a value different from the last one re-fires the fetch identically, and counting DOWN works exactly as well as counting up. Its dependency array is empty and constant, so replacing it with another constant array leaves useCallback memoising the same function across every render. Both planted: all 35 tests pass. The third mutant on this line, which makes the updater return undefined, DOES stop the second retry and is killed.",
+            "decision": "none \u2014 counting up is what a reload key means, and the deps array is required",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/ManageApisModal.tsx",
+            "anchors": [
+                "if (!isDirty || isApplying) return;"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "This guard cannot be reached in either state it guards against. Its only caller is the Modal's Apply action, declared isDisabled with the SAME expression, and Modal's FocusableButton fires onPress only when it is not disabled \u2014 so the handler is never entered while undirty or already applying. Killing it would mean calling the handler around the button that owns it. Both planted: all 35 tests pass.",
+            "decision": "none \u2014 a handler that posts to Adobe should not depend on its button being drawn correctly",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }
