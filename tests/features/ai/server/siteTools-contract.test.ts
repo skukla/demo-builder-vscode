@@ -149,6 +149,34 @@ describe('what these tools declare themselves to be', () => {
         });
     });
 
+    /**
+     * `needsAuth` decides whether the server pre-flights a credential and hands the
+     * agent a sign-in step, or lets the call through to fail somewhere inside DA.live
+     * with an error that says nothing about what to do next. Every one of these six
+     * writes or reads a Configuration Service entry, which authorizes as DA.live.
+     */
+    it.each(DECLARED.map(([n]) => [n]))('%s declares it needs DA.live', (name) => {
+        expect(harness().definitionOf(name).needsAuth).toEqual(['dalive']);
+    });
+
+    /**
+     * The input shape is what an agent is told it may send. Emptied, the SDK admits
+     * anything and every guard downstream then runs on arguments the schema never
+     * described — including the confirmations these tools gate on.
+     */
+    const DECLARED_INPUTS: [string, string[]][] = [
+        ['get_site_access', []],
+        ['find_storefront_name_mismatches', []],
+        ['connect_dalive', []],
+        ['set_site_admin', ['email', 'admin', 'confirm']],
+        ['repair_site_configuration', ['confirm']],
+        ['migrate_storefront_name', ['projectPath', 'confirm', 'confirmName']],
+    ];
+
+    it.each(DECLARED_INPUTS)('%s accepts exactly %s', (name, fields) => {
+        expect(Object.keys(harness().definitionOf(name).inputSchema ?? {})).toEqual(fields);
+    });
+
     it('covers every registered tool, so a new one cannot arrive unpinned', () => {
         expect(DECLARED.map(([n]) => n).sort()).toEqual(harness().names().sort());
     });

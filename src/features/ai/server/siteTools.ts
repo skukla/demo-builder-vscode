@@ -96,10 +96,7 @@ function refuseIfNotEds(project: Project, tool: string): { error: string } | und
         : { error: `${tool} applies only to EDS storefront projects` };
 }
 
-export function registerSiteTools(
-    server: McpToolServer,
-    ctxFactory: () => HandlerContext,
-): void {
+export function registerSiteTools(server: McpToolServer, ctxFactory: () => HandlerContext): void {
     server.registerTool(
         'get_site_access',
         {
@@ -344,7 +341,9 @@ export function registerSiteTools(
             // The echo is the project NAME rather than the site name: it is what
             // find_storefront_name_mismatches reports first and what the user
             // recognises. The site names are in `from`/`to` on that same row.
-            if (args?.confirm !== true || args?.confirmName !== candidate.projectName) {
+            // Not `args?.` — the projectPath guard above has already returned for a
+            // call with no arguments at all, so `args` is an object by here.
+            if (args.confirm !== true || args.confirmName !== candidate.projectName) {
                 return asText({
                     error:
                         `migrate_storefront_name deletes the old DA.live site root ` +

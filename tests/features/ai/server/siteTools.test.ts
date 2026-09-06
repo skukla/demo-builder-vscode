@@ -150,6 +150,17 @@ describe('set_site_admin', () => {
         expect(out.siteAdmins).toHaveLength(2);
     });
 
+    // A client may invoke a tool with no arguments at all. `call({})` cannot reach
+    // this: an empty object still answers every `args.x` read with undefined, while
+    // a missing argument object makes the same read throw.
+    it('refuses a call that carries no arguments at all', async () => {
+        const out = await harness().callBare('set_site_admin');
+
+        expect(String(out.error)).toMatch(/confirm:true/);
+        expect(mockAddSiteAdmin).not.toHaveBeenCalled();
+        expect(mockRemoveSiteAdmin).not.toHaveBeenCalled();
+    });
+
     it('refuses with no current project', async () => {
         const out = await harnessWithNoProject().call('set_site_admin', {
             email: 'someone@example.test',
@@ -221,6 +232,13 @@ describe('repair_site_configuration', () => {
         // push a config change under whoever is presenting the demo.
         expect(out.cdnPublished).toBeUndefined();
         expect(out.githubPushed).toBeUndefined();
+    });
+
+    it('refuses a call that carries no arguments at all', async () => {
+        const out = await harness().callBare('repair_site_configuration');
+
+        expect(String(out.error)).toMatch(/confirm:true/);
+        expect(mockRepairSiteConfigForProject).not.toHaveBeenCalled();
     });
 
     it('refuses with no current project', async () => {
@@ -348,6 +366,10 @@ describe('find_storefront_name_mismatches', () => {
         const out = await harness().call('find_storefront_name_mismatches');
 
         expect(out).toEqual({ scanned: 1, total: 0, mismatches: [] });
+        // Silence matters here, not wording: a project with no mismatch must be
+        // passed over, not read as unreadable. Both produce the same empty list,
+        // and the skip warning is the only thing that tells them apart.
+        expect(logger.warn).not.toHaveBeenCalled();
     });
 
     it('one unreadable project does not hide the others', async () => {
@@ -554,6 +576,13 @@ describe('migrate_storefront_name', () => {
         const out = await harness().call('migrate_storefront_name', { confirm: true });
 
         expect(String(out.error)).toMatch(/projectPath is required/);
+    });
+
+    it('requires a projectPath even when no arguments arrive at all', async () => {
+        const out = await harness().callBare('migrate_storefront_name');
+
+        expect(String(out.error)).toMatch(/projectPath is required/);
+        expect(mockMigrateStorefrontNameForProject).not.toHaveBeenCalled();
     });
 });
 

@@ -62,7 +62,7 @@ import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import type { HandlerContext } from '@/types/handlers';
 import { createMockLogger } from '../../../helpers/loggerFake';
 
-type Tool = (args: unknown) => Promise<{ content: Array<{ text: string }> }>;
+type Tool = (args?: unknown) => Promise<{ content: Array<{ text: string }> }>;
 
 // `selectedStack` is load-bearing, not decoration: site configuration is an EDS
 // concept (a Configuration Service entry keyed by the storefront's GitHub
@@ -141,6 +141,15 @@ export function buildHarness(currentProject: unknown) {
         },
         async call(name: string, args: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
             const out = await tools.get(name)!(args);
+            return JSON.parse(out.content[0].text);
+        },
+        /**
+         * Call with NO argument object at all — what a client sends for a tool it
+         * invokes with no arguments. `call({})` cannot reach this: an empty object
+         * is still an object, so every `args?.x` guard behaves as if one arrived.
+         */
+        async callBare(name: string): Promise<Record<string, unknown>> {
+            const out = await tools.get(name)!(undefined);
             return JSON.parse(out.content[0].text);
         },
     };
