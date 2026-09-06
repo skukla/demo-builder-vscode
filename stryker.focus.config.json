@@ -8,9 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/aiSurface/components/PromptEditDialog.tsx",
-        "src/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter.tsx",
-        "src/core/ui/components/selection/SelectionStepContent.tsx"
+        "src/features/ai/server/settingsTools.ts",
+        "src/features/eds/services/brandAssetPublisher.ts"
     ],
     "reporters": [
         "clear-text",

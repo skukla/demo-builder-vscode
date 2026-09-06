@@ -14871,6 +14871,43 @@
             "decision": "Recorded, not killed: the only replacements available are constants, which useCallback cannot tell apart from an empty list.",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/eds/services/brandAssetPublisher.ts",
+            "anchors": [
+                "if (!target || target.startsWith('/') || /^[a-zA-Z]:/.test(target)) return false;"
+            ],
+            "mutants": 6,
+            "category": "branch",
+            "reason": "Every target the allowlist below can ACCEPT starts with styles/, scripts/ or data/ \u2014 so it is non-empty, does not begin with a slash, and has a letter at index 1 rather than a colon. This guard therefore cannot refuse anything the allowlist would otherwise let through, and the six mutants that weaken or reshape it (turning it off, swapping either || for &&, startsWith for endsWith, anchoring the drive-letter class to a non-letter) all leave every input with the same verdict. Verified by planting each one: suite green on all six, against two controls that DO fail \u2014 unanchoring the drive-letter regex, and turning off the traversal guard on the line below, which is genuinely load-bearing because styles/../x.css passes the allowlist.",
+            "decision": "Recorded, not killed: it is deliberate defence-in-depth for a security allowlist, kept so a future ALLOWED_TARGETS rule without a directory prefix is still covered. Deleting it would kill the mutants and remove the protection, which is the wrong trade.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/ai/server/settingsTools.ts",
+            "anchors": [
+                "const suggested = args?.value ? String(args.value) : undefined;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "This line is reached only after String(args?.key ?? '').trim() has produced one of the declared SETTING_KEYS, which no undefined args object can do \u2014 the empty string is not a setting and returns the error above. So args is always a real object here and the optional chain can never be the thing that saves it. Verified by planting args.value: the suite stays green, against the control of planting args.key on the line above, which DOES fail because that one runs before any check.",
+            "decision": "Recorded, not killed: reaching it with args undefined would require an undefined object to carry a valid setting key.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/eds/services/brandAssetPublisher.ts",
+            "anchors": [
+                "snippet.includes(BRAND_ASSETS_MARKER_START)"
+            ],
+            "line": 120,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "A marker string contains spaces and angle brackets, and the two allowed line shapes match a whole trimmed line against a path alphabet of [A-Za-z0-9._/-] with no room for either. So a snippet carrying a marker always has at least one line that fails the every() check below, and this guard cannot change any verdict. Verified by planting all three mutants on it \u2014 the whole guard off, the || swapped for &&, and the return removed \u2014 with the suite green each time, against the control of swapping every() for some(), which fails.",
+            "decision": "Recorded, not killed: no snippet exists that carries a marker and would otherwise pass the line allowlist, so nothing can distinguish the guard from its absence.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }
