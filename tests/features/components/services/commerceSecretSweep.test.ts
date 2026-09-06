@@ -15,7 +15,18 @@
  *   failure converges nothing on the machine where it matters most.
  */
 
+// The REAL migration still runs — this only records that it was called, so the
+// "does nothing at all" guard can be asserted as work not done rather than as an
+// outcome that happens to look the same.
+jest.mock('@/features/components/services/commerceSecretMigration', () => {
+    const actual = jest.requireActual('@/features/components/services/commerceSecretMigration');
+    return { ...actual, migrateDeclaredSecrets: jest.fn(actual.migrateDeclaredSecrets) };
+});
+
 import { sweepCommerceSecrets } from '@/features/components/services/commerceSecretSweep';
+import { migrateDeclaredSecrets } from '@/features/components/services/commerceSecretMigration';
+
+const migrateMock = migrateDeclaredSecrets as jest.Mock;
 
 const FAKE_SECRET = 'fake-test-pw-not-a-secret';
 
@@ -105,14 +116,40 @@ describe('blast radius', () => {
 
     it('does nothing at all without SecretStorage', async () => {
         const saveProject = jest.fn(async () => {});
+        const log = jest.fn();
+        const projects = [withSecret('/p/one')];
 
-        await sweepCommerceSecrets({
-            projects: [withSecret('/p/one')],
+        const result = await sweepCommerceSecrets({
+            projects,
             secrets: undefined,
             saveProject,
+            log,
         });
 
         expect(saveProject).not.toHaveBeenCalled();
+        // Returns the zero counts rather than falling through to the loop with
+        // no store — a project must be left exactly as it was.
+        expect(result).toStrictEqual({ converged: 0, retained: 0 });
+        expect(projects[0].componentConfigs['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(
+            FAKE_SECRET,
+        );
+        expect(log).not.toHaveBeenCalled();
+    });
+
+    it('does not even attempt a migration without SecretStorage', async () => {
+        // The guard is what makes "nothing at all" true. Without it the sweep
+        // walks every project and calls the migration with no store — which
+        // returns the configs untouched, so the only visible difference is the
+        // work itself.
+        migrateMock.mockClear();
+
+        await sweepCommerceSecrets({
+            projects: [withSecret('/p/one'), withSecret('/p/two')],
+            secrets: undefined,
+            saveProject: jest.fn(async () => {}),
+        });
+
+        expect(migrateMock).not.toHaveBeenCalled();
     });
 });
 
@@ -129,7 +166,8 @@ describe('one bad project does not stop the rest', () => {
         });
 
         expect(saveProject).toHaveBeenCalledTimes(2);
-        expect(result.converged).toBe(1);
+        // The failed project is COUNTED as retained, not silently dropped.
+        expect(result).toStrictEqual({ converged: 1, retained: 1 });
     });
 
     it('continues after a store failure, leaving that credential in place', async () => {
@@ -167,5 +205,64 @@ describe('idempotence', () => {
 
         expect(second.converged).toBe(0);
         expect(saveProject).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The summary line is emitted only when the sweep DID something.
+ *
+ * This runs on every activation over every project on disk, so a sweep that
+ * changed nothing must say nothing — otherwise the debug channel carries a line
+ * per launch, forever, that never means anything. Both halves of the condition
+ * matter: either count alone is enough to be worth reporting.
+ */
+describe('reporting', () => {
+    it('reports a sweep that converged a project', async () => {
+        const log = jest.fn();
+
+        const result = await sweepCommerceSecrets({
+            projects: [withSecret('/p/one')],
+            secrets: workingStore(),
+            saveProject: jest.fn(async () => {}),
+            log,
+        });
+
+        expect(result).toStrictEqual({ converged: 1, retained: 0 });
+        expect(log).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports a sweep that converged nothing but retained a value', async () => {
+        const log = jest.fn();
+        const secrets = {
+            store: jest.fn(async () => {
+                throw new Error('keychain locked');
+            }),
+            get: jest.fn(async () => undefined),
+            delete: jest.fn(async () => undefined),
+        };
+
+        const result = await sweepCommerceSecrets({
+            projects: [withSecret('/p/one')],
+            secrets,
+            saveProject: jest.fn(async () => {}),
+            log,
+        });
+
+        expect(result).toStrictEqual({ converged: 0, retained: 1 });
+        expect(log).toHaveBeenCalledTimes(1);
+    });
+
+    it('says nothing when the sweep changed and retained nothing', async () => {
+        const log = jest.fn();
+
+        const result = await sweepCommerceSecrets({
+            projects: [withoutSecret('/p/clean')],
+            secrets: workingStore(),
+            saveProject: jest.fn(async () => {}),
+            log,
+        });
+
+        expect(result).toStrictEqual({ converged: 0, retained: 0 });
+        expect(log).not.toHaveBeenCalled();
     });
 });
