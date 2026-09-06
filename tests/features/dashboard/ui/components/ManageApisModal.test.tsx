@@ -15,24 +15,17 @@
  * Strict TDD: written BEFORE the component exists.
  */
 
-import '../../../../helpers/webviewClientMock';
-import React from 'react';
-import { render, screen, act, fireEvent } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
-import { ManageApisModal } from '@/features/dashboard/ui/components/ManageApisModal';
-import '@testing-library/jest-dom';
+import { screen, fireEvent } from '@testing-library/react';
 
-function getClient() {
-    const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient');
-    return webviewClient;
-}
-
-/** The org list as `listConsoleApis` reports it: `managed` = covered by the reconcile union. */
-const ORG_APIS = [
-    { code: 'GraphQLServiceSDK', name: 'API Mesh', managed: true },
-    { code: 'AssetsSDK', name: 'AEM Assets', managed: false },
-    { code: 'FireflySDK', name: 'Firefly Services', managed: false },
-];
+import {
+    ORG_APIS,
+    applyButton,
+    checkboxFor,
+    flush,
+    getClient,
+    modal,
+    renderModal,
+} from './ManageApisModal.testUtils';
 
 type RequestImpl = (type: string, payload?: unknown) => Promise<unknown>;
 
@@ -47,36 +40,6 @@ function mockRequest(impl?: RequestImpl) {
                 return Promise.resolve({ success: true });
             })
     );
-}
-
-/** Flush the microtask queue inside act so request promises settle into state. */
-async function flush() {
-    await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-    });
-}
-
-function renderModal(props: Partial<React.ComponentProps<typeof ManageApisModal>> = {}) {
-    const onClose = jest.fn();
-    const result = render(
-        <Provider theme={defaultTheme}>
-            <ManageApisModal isOpen componentName="erp-sync" onClose={onClose} {...props} />
-        </Provider>
-    );
-    return { onClose, ...result };
-}
-
-/** The checkbox input rendered for a given API display name (shared-mock shape). */
-function checkboxFor(name: string): HTMLInputElement {
-    const label = screen.getByText(name).closest('label');
-    if (!label) throw new Error(`No checkbox label found for "${name}"`);
-    return label.querySelector('input[type="checkbox"]') as HTMLInputElement;
-}
-
-/** The modal's footer Apply action (Modal renders div[role=button] actions). */
-function applyButton(): HTMLElement {
-    return screen.getByRole('button', { name: /^apply/i });
 }
 
 beforeEach(() => {
@@ -105,11 +68,7 @@ describe('ManageApisModal', () => {
             expect(getClient().request).toHaveBeenCalledTimes(1);
 
             // A re-render while open must NOT refetch.
-            rerender(
-                <Provider theme={defaultTheme}>
-                    <ManageApisModal isOpen componentName="erp-sync" onClose={onClose} />
-                </Provider>
-            );
+            rerender(modal({ onClose }));
             await flush();
             expect(getClient().request).toHaveBeenCalledTimes(1);
         });

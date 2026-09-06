@@ -13,23 +13,17 @@
  * "click the box, press Apply".
  */
 
-import '../../../../helpers/webviewClientMock';
-import React from 'react';
-import { render, screen, act, fireEvent } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
-import { ManageApisModal } from '@/features/dashboard/ui/components/ManageApisModal';
-import '@testing-library/jest-dom';
+import { screen, act, fireEvent } from '@testing-library/react';
 
-function getClient() {
-    const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient');
-    return webviewClient;
-}
-
-const ORG_APIS = [
-    { code: 'GraphQLServiceSDK', name: 'API Mesh', managed: true },
-    { code: 'AssetsSDK', name: 'AEM Assets', managed: false },
-    { code: 'FireflySDK', name: 'Firefly Services', managed: false },
-];
+import {
+    ORG_APIS,
+    applyButton,
+    checkboxFor,
+    flush,
+    getClient,
+    modal,
+    renderModal,
+} from './ManageApisModal.testUtils';
 
 /** The list a SECOND integration answers with — distinguishable by name. */
 const OTHER_APIS = [{ code: 'OtherSDK', name: 'Second Integration API', managed: false }];
@@ -48,41 +42,6 @@ function deferred<T>(): Deferred<T> {
         reject = rej;
     });
     return { promise, resolve, reject };
-}
-
-async function flush() {
-    await act(async () => {
-        await Promise.resolve();
-        await Promise.resolve();
-    });
-}
-
-function modal(componentId: string | undefined, onClose: () => void) {
-    return (
-        <Provider theme={defaultTheme}>
-            <ManageApisModal
-                isOpen
-                componentName="erp-sync"
-                componentId={componentId}
-                onClose={onClose}
-            />
-        </Provider>
-    );
-}
-
-function renderModal(componentId?: string) {
-    const onClose = jest.fn();
-    return { onClose, ...render(modal(componentId, onClose)) };
-}
-
-function checkboxFor(name: string): HTMLInputElement {
-    const label = screen.getByText(name).closest('label');
-    if (!label) throw new Error(`No checkbox label found for "${name}"`);
-    return label.querySelector('input[type="checkbox"]') as HTMLInputElement;
-}
-
-function applyButton(): HTMLElement {
-    return screen.getByRole('button', { name: /^apply/i });
 }
 
 beforeEach(() => {
@@ -112,9 +71,9 @@ describe('a response that arrives after the modal has moved on', () => {
         // re-fires the fetch without a remount. A slow first response landing
         // afterwards would repaint the new row with the old row's entitlements.
         const { first, second } = twoListsInFlight();
-        const { rerender, onClose } = renderModal('erp-sync');
+        const { rerender, onClose } = renderModal({ componentId: 'erp-sync' });
         await flush();
-        rerender(modal('other-app', onClose));
+        rerender(modal({ componentId: 'other-app', onClose }));
         await flush();
 
         await act(async () => {
@@ -132,9 +91,9 @@ describe('a response that arrives after the modal has moved on', () => {
 
     it('ignores a stale REJECTION rather than reporting it against the new row', async () => {
         const { first, second } = twoListsInFlight();
-        const { rerender, onClose } = renderModal('erp-sync');
+        const { rerender, onClose } = renderModal({ componentId: 'erp-sync' });
         await flush();
-        rerender(modal('other-app', onClose));
+        rerender(modal({ componentId: 'other-app', onClose }));
         await flush();
 
         await act(async () => {
@@ -155,9 +114,9 @@ describe('a response that arrives after the modal has moved on', () => {
         // stale request drops the loading view while the real one is still out,
         // and an empty picker reads as "this org has no APIs".
         const { first } = twoListsInFlight();
-        const { rerender, onClose } = renderModal('erp-sync');
+        const { rerender, onClose } = renderModal({ componentId: 'erp-sync' });
         await flush();
-        rerender(modal('other-app', onClose));
+        rerender(modal({ componentId: 'other-app', onClose }));
         await flush();
 
         await act(async () => {
