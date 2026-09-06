@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-02. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/features/dashboard/ui/aiSurface/components/PromptCard.tsx  (11 open gaps)
-  - src/features/dashboard/ui/components/IntegrationsSummaryTile.tsx  (11 open gaps)
-  - src/features/eds/services/patches/contentPatchRegistry.ts  (11 open gaps)
-  - src/features/eds/services/patches/patchTargetPolicy.ts  (11 open gaps)
-  - src/features/eds/services/storefront/servedStorefrontConfig.ts  (11 open gaps)
+  - src/features/eds/services/patches/patchMissTracker.ts  (6 open gaps)
+  - src/features/eds/services/quickEditPublisher.ts  (6 open gaps)
+  - src/core/shell/pollingService.ts  (5 open gaps)
+  - src/core/utils/promiseUtils.ts  (5 open gaps)
+  - src/core/ui/components/ErrorBoundary.tsx  (5 open gaps)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;
