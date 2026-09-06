@@ -85,6 +85,14 @@ describe('isMeshUpdateDeclined (keyed-only read)', () => {
         expect(isMeshUpdateDeclined(project)).toBe(true);
     });
 
+    it('returns false — not a crash — for a project with no keyed mesh entry at all', () => {
+        // The configure command asks this before a mesh has ever been deployed, so
+        // the absent-entry read is a live path, not a defensive one.
+        const project = makeProject();
+
+        expect(isMeshUpdateDeclined(project)).toBe(false);
+    });
+
     it('returns false when the keyed entry lacks the flag', () => {
         // Legacy pre-Step-06 declines are folded into the keyed entry at load
         // (PL-1 phase 2 removed the in-memory fallback).
