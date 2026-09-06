@@ -14,6 +14,7 @@ import { createMockLogger } from '../../helpers/loggerFake';
 import { createMockStateManager } from '../../helpers/stateManagerFake';
 
 import { createMockExtensionContext } from '../../helpers/extensionContextFake';
+import { mockWorkspace } from '../../helpers/vscodeMockViews';
 // Mock vscode API
 jest.mock('vscode', () => ({
     workspace: {
@@ -159,7 +160,77 @@ describe('EnvFileWatcherService', () => {
         });
     });
 
+    describe('Notification flags start armed', () => {
+        it('should let every apply prompt through on a fresh service', () => {
+            // The three "shown" flags start false, so the Configure screen's first
+            // ask for each one answers yes. A flag that started true would mute its
+            // prompt for the whole session with nothing having been shown.
+            new EnvFileWatcherService(
+                mockContext,
+                mockStateManager,
+                mockWatcherManager,
+                mockLogger
+            );
+
+            const callbackFor = (id: string): (() => unknown) =>
+                (vscode.commands.registerCommand as jest.Mock).mock.calls.find(
+                    (call) => call[0] === id
+                )?.[1];
+
+            expect(callbackFor('demoBuilder._internal.shouldShowRestartNotification')()).toBe(true);
+            expect(callbackFor('demoBuilder._internal.shouldShowMeshNotification')()).toBe(true);
+            expect(callbackFor('demoBuilder._internal.shouldShowStorefrontNotification')()).toBe(
+                true
+            );
+        });
+    });
+
     describe('Workspace-Scoped Watchers', () => {
+        it('should watch both env files and ask for every event kind', () => {
+            // The three falses are ignoreCreate/ignoreChange/ignoreDelete. Any of
+            // them flipped to true and the watcher stops reporting that event, which
+            // no assertion on "a watcher was created" can see.
+            const service = new EnvFileWatcherService(
+                mockContext,
+                mockStateManager,
+                mockWatcherManager,
+                mockLogger
+            );
+
+            service.initialize();
+
+            expect(vscode.RelativePattern).toHaveBeenCalledWith(
+                expect.objectContaining({ name: 'project1' }),
+                '{.env,.env.local}'
+            );
+            expect(vscode.workspace.createFileSystemWatcher).toHaveBeenCalledWith(
+                expect.anything(),
+                false,
+                false,
+                false
+            );
+        });
+
+        it('should create no watchers when there is no workspace open', () => {
+            const originalFolders = mockWorkspace.workspaceFolders;
+            mockWorkspace.workspaceFolders = undefined;
+
+            try {
+                const service = new EnvFileWatcherService(
+                    mockContext,
+                    mockStateManager,
+                    mockWatcherManager,
+                    mockLogger
+                );
+
+                service.initialize();
+
+                expect(vscode.workspace.createFileSystemWatcher).not.toHaveBeenCalled();
+            } finally {
+                mockWorkspace.workspaceFolders = originalFolders;
+            }
+        });
+
         it('should create watcher for each workspace folder', () => {
             // Given: Service with workspace folders
             const service = new EnvFileWatcherService(

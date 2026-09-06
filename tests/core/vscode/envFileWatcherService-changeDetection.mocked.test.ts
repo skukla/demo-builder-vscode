@@ -16,6 +16,7 @@ import {
     mockStateManager,
     mockLogger,
     resetMocks,
+    settleFileChange,
 } from './envFileWatcherService.testUtils';
 import { createMockProject } from '../../helpers/projectFake';
 
@@ -110,6 +111,71 @@ describe('EnvFileWatcherService - Change Detection (Mocked)', () => {
                 expect.stringContaining('Environment configuration changed'),
                 'Restart Demo'
             );
+        });
+    });
+
+    // What the hash map holds for a path decides whether the NEXT event is a change
+    // or a first sighting. These drive that map through the states it can reach and
+    // then read it the only way anything can: by whether the next event notifies.
+    describe('First Sighting and Unreadable Files', () => {
+        const filePath = '/project1/.env';
+
+        const changeFires = async (): Promise<void> => {
+            mockWatchers[0]._simulateChange(vscode.Uri.file(filePath));
+            await settleFileChange();
+        };
+
+        beforeEach(() => {
+            mockStateManager.getCurrentProject.mockResolvedValue(
+                createMockProject({ status: 'running' })
+            );
+        });
+
+        it('should record the hash without notifying the first time it sees a file', async () => {
+            mockFileContents.set(filePath, 'API_KEY=first');
+
+            await changeFires();
+
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+
+            // …and the hash really was recorded: the next change is a change.
+            mockFileContents.set(filePath, 'API_KEY=second');
+            await changeFires();
+
+            expect(vscode.window.showInformationMessage).toHaveBeenCalled();
+        });
+
+        it('should not record anything for a file it cannot read', async () => {
+            // No content registered, so the read rejects and the hash is null.
+            await changeFires();
+
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+
+            // The file becomes readable. This is still the FIRST time its content
+            // has been seen, so it must initialise quietly — not read as a change
+            // away from an unreadable file.
+            mockFileContents.set(filePath, 'API_KEY=first');
+            await changeFires();
+
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+
+            // …and the watcher has recovered: the edit after that is a real change.
+            mockFileContents.set(filePath, 'API_KEY=second');
+            await changeFires();
+
+            expect(vscode.window.showInformationMessage).toHaveBeenCalled();
+        });
+
+        it('should not record anything when asked to hash a file it cannot read', async () => {
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', [
+                filePath,
+            ]);
+
+            mockFileContents.set(filePath, 'API_KEY=first');
+            await changeFires();
+
+            // Quiet: the failed hash must not have been stored as a previous value.
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
         });
     });
 
@@ -214,6 +280,15 @@ describe('apply prompts are re-armed by a new config change', () => {
         commandCallbacks['demoBuilder._internal.storefrontActionTaken']();
 
         expect(shouldShow('Storefront')).toBe(true);
+    });
+
+    it('still re-arms the mesh prompt when the mesh action is taken', () => {
+        markShown('Mesh');
+        expect(shouldShow('Mesh')).toBe(false);
+
+        commandCallbacks['demoBuilder._internal.meshActionTaken']();
+
+        expect(shouldShow('Mesh')).toBe(true);
     });
 
     it('does not touch the restart prompt', () => {

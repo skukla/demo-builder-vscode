@@ -110,3 +110,21 @@ export function resetMocks(): void {
 export { EnvFileWatcherService } from '@/core/vscode/envFileWatcherService';
 export { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
 export * as vscode from 'vscode';
+
+/**
+ * Let `handleFileChange`'s promise chain finish before asserting.
+ *
+ * The handler awaits twice — the file read, then the project state — and a single
+ * `process.nextTick` turn resumes the test BETWEEN them. An assertion made there
+ * sees no notification whatever the code did, so a test written that way passes for
+ * the wrong reason. Measured 2026-09-05: a hand-applied mutant reached "Content
+ * actually changed" and every such assertion still passed.
+ *
+ * Microtask turns only, no `nextTick`: the security suite runs on fake timers, which
+ * fake `nextTick` too, and the handler's awaits are all microtasks anyway.
+ */
+export async function settleFileChange(): Promise<void> {
+    for (let i = 0; i < 20; i += 1) {
+        await Promise.resolve();
+    }
+}

@@ -13123,6 +13123,110 @@
             "decision": "none \u2014 the default empty list is correct and callers that omit it want no duplicate check",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/vscode/envFileWatcherService.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "line": 214,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else branch of the running-demo check holds one statement and it is a logger.debug line. Emptying the block removes that log and nothing else: no notification is shown on this path either way, no state is written, and no command runs. The classifier reads the line the mutant sits on, which is the bare 'else {', so it cannot see that the body it guards is entirely logging. Killing this would mean asserting the wording of a debug line, which is what the ratchet exists to refuse to reward.",
+            "decision": "none \u2014 the log says why nothing happened, which is worth keeping",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/vscode/envFileWatcherService.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 217,
+            "mutants": 1,
+            "category": "block",
+            "reason": "handleFileChange's whole body sits in a try whose catch does one thing: log the error. Emptying the catch still swallows the error, still returns normally, and still leaves every piece of state exactly as the failure left it \u2014 the only difference is that nothing is written to the output channel. There is no observable outcome to assert on other than the log line itself, and the handler is a void event callback, so a caller cannot see the difference either.",
+            "decision": "none \u2014 the catch stops a watcher event from becoming an unhandled rejection, and the log is how it is diagnosed",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/vscode/envFileWatcherService.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 233,
+            "mutants": 1,
+            "category": "block",
+            "reason": "getFileHash's catch logs and returns null. Emptying it returns undefined instead, and both call sites test the result for falsiness \u2014 'if (!currentHash)' in handleFileChange and 'if (hash)' in the initializeFileHashes command \u2014 so null and undefined take the identical branch at every place the value is read. The value never leaves the class and is never compared to null directly. The only real difference is the debug line naming the unreadable file.",
+            "decision": "none \u2014 returning null states the intent and the two call sites already treat it as absence",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/vscode/envFileWatcherService.ts",
+            "anchors": [
+                "if (workspaceFolders.length === 0) {"
+            ],
+            "line": 251,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Two mutants sit on this early return \u2014 the guard replaced with false, and its block emptied \u2014 and both let execution fall through to the filter below. With no workspace folders the mapped prefix list is empty, so the .some() inside the filter is false for every path and the filter returns an empty array: exactly the value the early return produces. Nothing downstream can tell the two apart, because validateWorkspacePaths returns only that array. The one difference is that the fall-through logs a rejection warning per path, and the guard exists to avoid that noise rather than to change the answer.",
+            "decision": "none \u2014 the guard is a shortcut past a loop that would reach the same empty result",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/vscode/envFileWatcherService.ts",
+            "anchors": [
+                "if (!isValid) {"
+            ],
+            "line": 265,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This guard wraps a single logger.warn call inside the path filter, and the predicate's return value on the next line is untouched by the mutant. Forcing the condition to true makes the warning print for accepted paths as well as rejected ones; the set of paths the filter returns is identical, so every caller \u2014 registerProgrammaticWrites and initializeFileHashes \u2014 behaves exactly the same. The only assertion that could separate them is one on the warning's presence or wording.",
+            "decision": "none \u2014 the warning belongs to the rejection it reports",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/vscode/envFileWatcherService.ts",
+            "anchors": [
+                "if (!currentHash) {"
+            ],
+            "line": 162,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Two mutants remove this guard \u2014 the condition forced to false and the block emptied \u2014 and both let a null hash carry on down the method. What happens next is the same either way: previousHash is undefined, so the first-sighting branch below writes the hash and then formats it into a debug line with currentHash.substring, which throws on null and is swallowed by handleFileChange's own catch. The map ends up holding the same value the guarded code would have left, no notification is shown on this path in either version, and the next event that carries readable content behaves identically. Verified 2026-09-05 by applying the mutant to the source and running all four env-watcher suites: 42 tests, unchanged. The only difference anything can observe is which log line was written.",
+            "decision": "none \u2014 the guard turns an unreadable file into a quiet skip instead of a swallowed TypeError, which is right even though nothing downstream can tell",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/vscode/envFileWatcherService.ts",
+            "anchors": [
+                "if (previousHash === undefined) {"
+            ],
+            "line": 168,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Two mutants remove the first-sighting guard \u2014 the condition forced to false and the block emptied. Execution then falls through to the content-changed path, which writes the SAME hash the guard would have written, and immediately formats the old hash into a debug line with previousHash.substring; previousHash is undefined at a first sighting, so that throws and handleFileChange's catch swallows it before any notification can be shown. The hash map, the absence of a notification and every later event are therefore identical to the guarded version. Verified 2026-09-05 by applying the mutant to the source and running all four env-watcher suites: 42 tests, unchanged.",
+            "decision": "none \u2014 the guard is what makes a first sighting a deliberate quiet initialisation rather than an accident",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/vscode/envFileWatcherService.ts",
+            "anchors": [
+                "if (hash) {"
+            ],
+            "line": 345,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this condition true makes initializeFileHashes record a null hash for a file it could not read, instead of recording nothing. The two cannot be told apart downstream: on the next change event the null previous hash fails the equality check, reaches the debug line that calls previousHash.substring, throws, and is swallowed by handleFileChange's catch \u2014 so no notification is shown, exactly as the unrecorded case produces a quiet first sighting. Both leave the real hash in the map afterwards and both notify on the change after that. Verified 2026-09-05 by applying the mutant to the source and running all four env-watcher suites: 42 tests, unchanged.",
+            "decision": "none \u2014 storing only real hashes is correct; the equivalence is an accident of where the throw lands",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }
