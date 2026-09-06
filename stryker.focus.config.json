@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/shell/retryStrategyManager.ts"
+        "src/core/ui/hooks/useSearchFilter.ts"
     ],
     "reporters": [
         "clear-text",
