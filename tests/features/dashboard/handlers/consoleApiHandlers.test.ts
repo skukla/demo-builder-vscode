@@ -17,6 +17,7 @@ import {
 import { ErrorCode } from '@/types/errorCodes';
 import { runGuards } from '@/features/dashboard/handlers/appBuilderComponentHandlers';
 import { subscribeRequiredApis } from '@/features/app-builder/services/apiSubscriber';
+import { getAvailableAppBuilderComponents } from '@/features/components/services/appBuilderComponentCatalogLoader';
 import { createApiSubscriberClient } from '@/features/app-builder/services/apiSubscriberClientAdapter';
 import { withOrgContext } from '@/core/shell/orgContextEnv';
 import type { HandlerContext } from '@/types/handlers';
@@ -43,9 +44,6 @@ jest.mock('@/features/app-builder/services/apiSubscriberClientAdapter', () => ({
             { code: 'GraphQLServiceSDK', name: 'API Mesh' },
         ]),
     })),
-}));
-jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', () => ({
-    subscriberTarget: jest.fn(() => ({ orgId: 'org-1', projectId: 'p-1', workspaceId: 'w-1' })),
 }));
 jest.mock('@/features/app-builder/services/allowedDomain', () => ({
     deriveAllowedDomain: jest.fn(() => 'localhost:3000'),
@@ -198,6 +196,9 @@ describe('handleAddConsoleApis', () => {
         // Step 07 retired the flat write; the keyed map carries the union.
         expect(resolveDesiredApis(project)).toEqual(['ExistingSDK', 'FireflyAPISDK']);
         expect(context.stateManager.saveProject).toHaveBeenCalledWith(project);
+        // Reported once, on success only — the counterpart assertion is the failure
+        // case below, which must stay silent. Neither pins the wording.
+        expect(context.logger.info).toHaveBeenCalledTimes(1);
     });
 
     it('does NOT persist when the subscribe fails (no poisoned reconciles)', async () => {
@@ -214,6 +215,7 @@ describe('handleAddConsoleApis', () => {
         expect(result.error).toMatch(/Developer Console/);
         expect(project.additionalConsoleApis).toBeUndefined();
         expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+        expect(context.logger.info).not.toHaveBeenCalled();
     });
 
     it('aborts on a guard failure before subscribing', async () => {
@@ -338,6 +340,7 @@ describe('handleSetConsoleApis', () => {
         expect(result.success).toBe(false);
         expect(project.additionalConsoleApis).toEqual(['OldSDK']); // unchanged
         expect(context.stateManager.saveProject).not.toHaveBeenCalled();
+        expect(context.logger.info).not.toHaveBeenCalled();
     });
 
     it('aborts on a guard failure before subscribing', async () => {
@@ -465,6 +468,144 @@ describe('per-integration attribution (step 04)', () => {
             expect(saved.componentApiPicks['firefly-app']).toBeUndefined();
             // ...and erp-sync's is not.
             expect(saved.componentApiPicks['erp-sync']).toContain('GraphQLServiceSDK');
+        });
+    });
+});
+
+/**
+ * The edges the three handlers reach only when something is missing or broken.
+ *
+ * Every case here was in code no test entered: the stack axes the catalog lookup
+ * is filtered by, an integration with no picks of its own, a project with no
+ * picks at all, a managed code the org catalog would drop as noise, the
+ * always-on rows an integration must see as locked, and the three "there is no
+ * project" answers. They are the difference between a handler that reports what
+ * is wrong and one that throws into a webview.
+ */
+describe('missing inputs and failed reads', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    describe('list', () => {
+        it("filters the catalog by the project's own stack axes", async () => {
+            const context = makeContext(
+                makeProject({ componentSelections: { backend: 'aco', frontend: 'eds' } })
+            );
+
+            await handleListConsoleApis(context, undefined);
+
+            expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith('aco', 'eds');
+        });
+
+        it('falls back to the empty axes when the project has no selections', async () => {
+            await handleListConsoleApis(makeContext(makeProject()), undefined);
+
+            expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith('', '');
+        });
+
+        it("reports no `added` for an integration holding none of the project's picks", async () => {
+            const context = makeContext(
+                makeProject({ componentApiPicks: { 'erp-sync': ['FireflyAPISDK'] } })
+            );
+
+            const result = await handleListConsoleApis(context, { componentId: 'firefly-app' });
+
+            expect((result.data as { added: string[] }).added).toStrictEqual([]);
+        });
+
+        it('answers for an integration on a project that has no picks at all', async () => {
+            const result = await handleListConsoleApis(makeContext(makeProject()), {
+                componentId: 'firefly-app',
+            });
+
+            expect(result.success).toBe(true);
+            expect((result.data as { added: string[] }).added).toStrictEqual([]);
+        });
+
+        it('keeps a held code the org catalog would otherwise drop as noise', async () => {
+            // LegacySDK is deprecated, so the catalog cleaner drops it — but the
+            // project still holds it, and a row the SC cannot see is a row they
+            // cannot remove.
+            (createApiSubscriberClient as jest.Mock).mockReturnValueOnce({
+                getServicesForOrg: jest.fn().mockResolvedValue([
+                    { code: 'FireflyAPISDK', name: 'Firefly' },
+                    { code: 'LegacySDK', name: 'Legacy', enabled: false, disabledReasons: ['DEPRECATED'] },
+                ]),
+            });
+            const context = makeContext(
+                makeProject({ componentApiPicks: { __existing__: ['LegacySDK'] } })
+            );
+
+            const result = await handleListConsoleApis(context, undefined);
+
+            const apis = (result.data as { apis: Array<{ code: string }> }).apis;
+            expect(apis.map((a) => a.code)).toContain('LegacySDK');
+        });
+
+        it('marks the always-on codes as baseline for the asking integration', async () => {
+            const context = makeContext(
+                makeProject({ componentApiPicks: { 'firefly-app': ['FireflyAPISDK'] } })
+            );
+
+            const result = await handleListConsoleApis(context, { componentId: 'firefly-app' });
+
+            const apis = (result.data as { apis: Array<{ code: string; ownership?: string }> }).apis;
+            // Locked because the subscribe union always re-includes it, not because
+            // any integration asked for it.
+            expect(apis.find((a) => a.code === 'AdobeIOManagementAPISDK')?.ownership).toBe(
+                'baseline'
+            );
+        });
+
+        it('reports a failure instead of throwing when the catalog cannot be read', async () => {
+            (getAvailableAppBuilderComponents as jest.Mock).mockImplementationOnce(() => {
+                throw new Error('catalog exploded');
+            });
+
+            const result = await handleListConsoleApis(makeContext(makeProject()), undefined);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('catalog exploded');
+        });
+    });
+
+    describe('add', () => {
+        it('fails without a project, before any Console touch', async () => {
+            const result = await handleAddConsoleApis(makeContext(null), {
+                apis: ['FireflyAPISDK'],
+            });
+
+            expect(result).toEqual({
+                success: false,
+                error: 'No project found',
+                code: ErrorCode.PROJECT_NOT_FOUND,
+            });
+            expect(subscribeRequiredApis).not.toHaveBeenCalled();
+        });
+
+        it('files an add nobody owns under the unattributed key', async () => {
+            const project = makeProject();
+            const context = makeContext(project);
+
+            await handleAddConsoleApis(context, { apis: ['FireflyAPISDK'] });
+
+            const saved = (context.stateManager.saveProject as jest.Mock).mock.calls[0][0];
+            // There is no integration to infer, so it must land in `__existing__` —
+            // NOT under an `undefined` key, which is what happens if the
+            // per-integration branch runs for a project-scoped add.
+            expect(Object.keys(saved.componentApiPicks)).toStrictEqual(['__existing__']);
+        });
+    });
+
+    describe('set', () => {
+        it('fails without a project, before any Console touch', async () => {
+            const result = await handleSetConsoleApis(makeContext(null), { apis: [] });
+
+            expect(result).toEqual({
+                success: false,
+                error: 'No project found',
+                code: ErrorCode.PROJECT_NOT_FOUND,
+            });
+            expect(subscribeRequiredApis).not.toHaveBeenCalled();
         });
     });
 });

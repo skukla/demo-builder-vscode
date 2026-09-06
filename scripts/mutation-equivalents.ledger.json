@@ -14025,6 +14025,54 @@
             "decision": "none \u2014 continuing the scan after a failed parse can only produce longer prefixes that fail too",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/dashboard/handlers/consoleApiHandlers.ts",
+            "anchors": [
+                "const managed = new Set(computeRequiredApis(resolveProjectCatalog(project), []));"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The empty array is the EXTRAS argument, and passing none is the point: managed means always-on only, so a row is locked for the baseline and the catalog's requiredApis and never for an optional pick. Replacing it with a non-empty array injects a code that is not in the org's service catalog, so it produces no row, flags nothing as managed, and only widens a keep-set and a baseline list that no assertion can see it in. Planted with a code of Stryker's own shape; the suite stays green, and the only way to separate the two is to invent an org service named after the mutant.",
+            "decision": "none \u2014 the injected code cannot match a catalog row, so it reaches no output",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/dashboard/handlers/consoleApiHandlers.ts",
+            "anchors": [
+                "const codeError = validateSdkCodes(apis, { allowEmpty: false });"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying this options object leaves allowEmpty undefined, and the only thing the validator does with it is '!allowEmpty' \u2014 which is true for undefined exactly as it is for false. So the add handler still rejects an empty list, by the same route with the same message. The contrast is the set handler's call one screen down, which passes true: emptying THAT object does change behaviour and its mutant is killed by 'accepts an EMPTY list'. Planted as an undefined allowEmpty; the suite stays green.",
+            "decision": "none \u2014 undefined and false are the same input to the one negation that reads it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/dashboard/handlers/consoleApiHandlers.ts",
+            "anchors": [
+                "const result = await reconcileExtras(context, project, desired, payload?.componentId);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The payload cannot be undefined by the time this line runs. The handler's first act is validateSdkCodes(payload?.apis, ...), and an undefined payload yields undefined apis, which is not an array, so it returns the CONFIG_INVALID refusal before reaching here \u2014 pinned by 'rejects a non-array / invalid-code payload'. Dropping the optional therefore changes nothing for any input the handler accepts. Planted as payload!.componentId; the suite stays green.",
+            "decision": "none \u2014 an optional read behind a validation that has already refused every undefined payload",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/dashboard/handlers/consoleApiHandlers.ts",
+            "anchors": [
+                "const confirmed = result.data?.subscribed ?? [];"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both halves of this defence are unreachable on the path that runs it. The line sits inside 'if (result.success)', and reconcileExtras returns success only from the branch that builds { data: { subscribed } } out of the resolved subscribe \u2014 so data is always present and subscribed is always its array. Neither the optional chain nor the ?? fallback can fire. Even if one did, confirmed feeds only the report line and the missing-code filter, and an array of shapes with no code member produces the same missing set as an empty one. Planted both; the suite stays green.",
+            "decision": "none \u2014 a fallback for a shape the success branch it runs under always provides",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-04"
         }
     ]
 }
