@@ -50,8 +50,8 @@ function renderField(props: Partial<Props> = {}): {
     return { onRename, outerClick, outerKeyDown };
 }
 
-function pencil(): HTMLElement {
-    return screen.getByRole('button', { name: 'Rename My Project' });
+function pencil(name = 'My Project'): HTMLElement {
+    return screen.getByRole('button', { name: `Rename ${name}` });
 }
 
 function enterEditMode(): HTMLInputElement {
@@ -95,6 +95,26 @@ describe('InlineRenameField', () => {
             expect(input).toHaveFocus();
             expect(screen.queryByText('My Project')).not.toBeInTheDocument();
         });
+    });
+
+    // The pencil's own label follows `name`, so a stale closure inside
+    // `startEditing` shows up only in what the input is PREFILLED with.
+    it('prefills the name the parent currently shows, not the one it mounted with', () => {
+        const onRename = jest.fn().mockResolvedValue(null);
+        const { rerender } = render(
+            <Provider theme={defaultTheme} colorScheme="light">
+                <InlineRenameField name="First Name" onRename={onRename} />
+            </Provider>
+        );
+        rerender(
+            <Provider theme={defaultTheme} colorScheme="light">
+                <InlineRenameField name="Second Name" onRename={onRename} />
+            </Provider>
+        );
+
+        fireEvent.click(pencil('Second Name'));
+
+        expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('Second Name');
     });
 
     describe('commit and cancel', () => {
@@ -229,6 +249,30 @@ describe('InlineRenameField', () => {
             decoy.remove();
         });
 
+        // The blur handler has its own busy check, so a repeated BLUR never reaches
+        // `commit`. Enter does — nothing guards the keydown path — which makes this
+        // the only route to `commit`'s own re-entry guard.
+        it('a second Enter while a commit is in flight never double-commits', async () => {
+            let resolveRename!: (value: string | null) => void;
+            const onRename = jest.fn(
+                () =>
+                    new Promise<string | null>((res) => {
+                        resolveRename = res;
+                    })
+            );
+            renderField({ onRename });
+            const input = enterEditMode();
+            fireEvent.change(input, { target: { value: 'Pending Name' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+            fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
+
+            resolveRename(null);
+            await waitFor(() => {
+                expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+            });
+            expect(onRename).toHaveBeenCalledTimes(1);
+        });
+
         it('a blur while a commit is in flight never double-commits (busy guard)', async () => {
             let resolveRename!: (value: string | null) => void;
             const onRename = jest.fn(
@@ -286,6 +330,23 @@ describe('InlineRenameField', () => {
             });
             expect(screen.getByRole('textbox')).toBeInTheDocument();
             expect(screen.getByRole('textbox')).not.toBeDisabled();
+        });
+
+        // The message is a live region, not just text: a screen-reader user is told
+        // the rename failed without moving focus. And there is no empty alert
+        // sitting in the editor before anything has gone wrong.
+        it('announces the error through an alert, and renders none before one', async () => {
+            const onRename = jest.fn().mockResolvedValue('taken');
+            renderField({ onRename });
+            const input = enterEditMode();
+            expect(screen.queryByRole('alert')).toBeNull();
+
+            fireEvent.change(input, { target: { value: 'Taken' } });
+            fireEvent.keyDown(input, { key: 'Enter' });
+
+            await waitFor(() => {
+                expect(screen.getByRole('alert')).toHaveTextContent('taken');
+            });
         });
 
         it('a retry after an error can still succeed', async () => {
