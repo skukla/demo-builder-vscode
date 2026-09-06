@@ -15303,6 +15303,43 @@
             "decision": "none \u2014 the catch keeps the documented never-throws contract for future unguarded edits; deleting it would remove the error field's only producer",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts",
+            "anchors": [
+                "if (!project.adobe) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The guard can never fire. selfHealOrgData is called from one place, the reachable branch of run(), which is only entered after expectedOrg = project.adobe?.organization was found truthy \u2014 so project.adobe is defined by construction. The guard exists because the function takes a bare Project and TypeScript needs the narrowing for the three property writes below it, not because a caller can pass a project without adobe. Planted 2026-09-06 as `if (false) return;` with a throw behind it: all 16 tests pass, proving no test reaches it with adobe absent, and none can.",
+            "decision": "none \u2014 the guard is the compiler's narrowing for the writes that follow and reads as the intent",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts",
+            "anchors": [
+                "await stateManager()?.saveProjectConfigOnly(project);",
+                "} catch (error) {"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both mutants change only what is logged. Dropping the optional chain turns a missing state manager from a skipped write into a TypeError thrown inside the try on the very next line, which the catch immediately swallows \u2014 the check returns the same ok outcome with the same data either way, as the 'no state manager yet' test shows. Emptying that catch removes its single logger.debug call and nothing else, since the self-heal write is documented non-fatal and its failure never reaches the result. Both planted 2026-09-06 with the null-state-manager test present: 16 tests pass. Killing either would mean asserting a log line.",
+            "decision": "none \u2014 the write is non-fatal by design and its failure is deliberately invisible to the outcome",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts",
+            "anchors": [
+                "expectedOrgName: project.adobe?.organizationName"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "toMismatch is called from exactly one place, the warning return of run(), reached only after expectedOrg = project.adobe?.organization was truthy \u2014 so project.adobe cannot be undefined there. The optional chain is required because toMismatch declares a bare Project parameter, and dropping it is unobservable for every input the single call site can produce. Planted 2026-09-06 as a non-null assertion: all 16 tests pass, including the two warning cases that read expectedOrgName.",
+            "decision": "none \u2014 the optional chain is what the parameter type requires and the call site guarantees it is never needed",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

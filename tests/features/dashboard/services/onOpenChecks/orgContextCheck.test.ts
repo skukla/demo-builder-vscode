@@ -196,6 +196,83 @@ it('token valid but SDK answers ZERO orgs → warning with the Switch IMS Org re
     expect(auth.loginAndRestoreProjectContext).not.toHaveBeenCalled();
 });
 
+it('no state manager yet → the self-heal write is skipped and the check still resolves ok', async () => {
+    const auth = makeAuth({
+        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
+            { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
+        ]),
+    });
+    // Resolved lazily and may not exist yet; nothing to write to is not an error.
+    const orgContextCheck = createOrgContextCheck({ authManager: auth, stateManager: () => null });
+    const project = projectWithOrg('Org One');
+
+    const outcome = await orgContextCheck.run(makeCtx(project).ctx);
+
+    expect(outcome.status).toBe('ok');
+    expect(saveProjectConfigOnly).not.toHaveBeenCalled();
+    // The in-memory heal still happened; only the persistence was skipped.
+    expect((project.adobe as { organization?: string }).organization).toBe('org1');
+});
+
+it('reachable + org data already correct → no manifest write at all', async () => {
+    const auth = makeAuth({
+        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
+            { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
+        ]),
+    });
+    const orgContextCheck = checkWith(auth);
+    // Both fields already hold what the token reaches — nothing to heal.
+    const project = projectWithOrg('org1', { organizationName: 'Org One' });
+    const { ctx } = makeCtx(project);
+
+    const outcome = await orgContextCheck.run(ctx);
+
+    expect(outcome.status).toBe('ok');
+    expect(saveProjectConfigOnly).not.toHaveBeenCalled();
+});
+
+it('reachable + stale org NAME only → heals the name and writes once', async () => {
+    const auth = makeAuth({
+        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
+            { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
+        ]),
+    });
+    const orgContextCheck = checkWith(auth);
+    // The id is already canonical; only the persisted name is out of date.
+    const project = projectWithOrg('org1', { organizationName: 'Stale Name' });
+    const { ctx } = makeCtx(project);
+
+    const outcome = await orgContextCheck.run(ctx);
+
+    expect(outcome.status).toBe('ok');
+    expect(saveProjectConfigOnly).toHaveBeenCalledTimes(1);
+    expect((project.adobe as { organizationName?: string }).organizationName).toBe('Org One');
+    expect((project.adobe as { organization?: string }).organization).toBe('org1');
+});
+
+it('mismatch with no persisted name → names the org only when the stored value is a human name', async () => {
+    const auth = makeAuth({
+        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([
+            { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' },
+        ]),
+    });
+    const orgContextCheck = checkWith(auth);
+
+    // An id/code never has whitespace, so there is no human name to show.
+    const byId = (await checkWith(auth).run(
+        makeCtx(projectWithOrg('orgX')).ctx,
+    )) as CheckResult<{ orgMismatch?: { expectedOrgName?: string } }>;
+    // A legacy project stored the NAME in the id field — whitespace gives it away.
+    const byName = (await orgContextCheck.run(
+        makeCtx(projectWithOrg('Legacy Org Name')).ctx,
+    )) as CheckResult<{ orgMismatch?: { expectedOrgName?: string } }>;
+
+    expect(byId.status).toBe('warning');
+    expect(byId.data?.orgMismatch?.expectedOrgName).toBeUndefined();
+    expect(byName.status).toBe('warning');
+    expect(byName.data?.orgMismatch?.expectedOrgName).toBe('Legacy Org Name');
+});
+
 it('reachable + legacy/name data → self-heals project org id + name (one manifest write)', async () => {
     saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
     const auth = makeAuth({
