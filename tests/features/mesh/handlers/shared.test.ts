@@ -10,16 +10,23 @@
  */
 
 import * as vscode from 'vscode';
-import { ensureAuthenticated, type AuthGuardResult } from '@/features/mesh/handlers/shared';
+import { ensureAuthenticated, getEndpoint, type AuthGuardResult } from '@/features/mesh/handlers/shared';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { getEndpoint as getEndpointHelper } from '@/features/mesh/services/meshEndpoint';
 import { ErrorCode } from '@/types/errorCodes';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 
 
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getAuthenticationService: jest.fn(),
+        getCommandExecutor: jest.fn(),
     },
+}));
+
+jest.mock('@/features/mesh/services/meshEndpoint', () => ({
+    getEndpoint: jest.fn(),
 }));
 
 describe('ensureAuthenticated', () => {
@@ -218,5 +225,59 @@ describe('ensureAuthenticated', () => {
             expect(panel).toEqual({ authenticated: true });
             expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
         });
+    });
+});
+
+/**
+ * `getEndpoint` is a two-line delegation, and a delegation is exactly the shape a
+ * mock cannot check for itself: the helper answers the same whatever it is handed,
+ * so passing the wrong logger, or the command executor in the cached-endpoint slot,
+ * looks identical from the outside. Assert the ARGUMENTS, in order.
+ */
+describe('getEndpoint', () => {
+    const commandManager = { execute: jest.fn() };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(commandManager);
+    });
+
+    it('hands the mesh service the id, the cached endpoint and BOTH loggers, in order', async () => {
+        (getEndpointHelper as jest.Mock).mockResolvedValue('https://edge/mesh-1/graphql');
+        const context = createMockHandlerContext();
+
+        const endpoint = await getEndpoint(context, 'mesh-1', 'https://cached/graphql');
+
+        expect(getEndpointHelper).toHaveBeenCalledWith(
+            'mesh-1',
+            'https://cached/graphql',
+            commandManager,
+            context.logger,
+            context.debugLogger,
+        );
+        expect(endpoint).toBe('https://edge/mesh-1/graphql');
+    });
+
+    it('passes an absent cached endpoint through as undefined', async () => {
+        (getEndpointHelper as jest.Mock).mockResolvedValue('https://edge/mesh-2/graphql');
+        const context = createMockHandlerContext();
+
+        await getEndpoint(context, 'mesh-2');
+
+        expect(getEndpointHelper).toHaveBeenCalledWith(
+            'mesh-2',
+            undefined,
+            commandManager,
+            context.logger,
+            context.debugLogger,
+        );
+    });
+
+    it('lets the service\'s failure reach the caller rather than swallowing it', async () => {
+        (getEndpointHelper as jest.Mock).mockRejectedValue(new Error('describe failed'));
+
+        await expect(getEndpoint(createMockHandlerContext(), 'mesh-3')).rejects.toThrow(
+            'describe failed',
+        );
     });
 });
