@@ -13548,6 +13548,43 @@
             "decision": "none \u2014 the typeof guard is what stops a non-string error field being interpolated into the channel a user pastes into a ticket",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useAutoStoreDetect.ts",
+            "anchors": [
+                "if (!rawBaseUrl) return;",
+                "if (!accsEndpoint) return;"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both guards are unreachable through the hook's only doors. The PaaS branch is entered only for an autoDetectKey starting anything but 'accs:', which the memo returns only when lookupComponentConfigValue(configs, PAAS_URL) is non-empty; the ACCS branch only for an 'accs:' key, which requires a non-empty ACCS_GRAPHQL_ENDPOINT. handleFetchStores re-reads the SAME configs object the key was derived from, so the value cannot have changed in between. They stay because TypeScript needs the narrowing: without them, string | undefined reaches new URL(). Verified by planting both with the return removed \u2014 all 32 tests pass.",
+            "decision": "none \u2014 deleting the guards would break the type narrowing that new URL() depends on",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useAutoStoreDetect.ts",
+            "anchors": [
+                "return; // Invalid URL \u2014 skip silently (autoDetectKey already requires a valid URL)"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The ACCS catch cannot be entered: the branch runs only for an 'accs:' autoDetectKey, and the memo produces one only after new URL(accsEndpoint) has already succeeded on the same string from the same configs object. Emptying the catch therefore changes nothing, which is what the code comment beside it says. Verified by planting the empty catch \u2014 all 32 tests pass. Kept because it is the only thing standing between a future caller of handleFetchStores and an uncaught TypeError.",
+            "decision": "none \u2014 the guard is defence for a future second caller, not for the one that exists",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/components/ui/hooks/useAutoStoreDetect.ts",
+            "anchors": [
+                "if (accsEndpoint) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this condition true is indistinguishable from the real code: when accsEndpoint is undefined the body's first statement is new URL(accsEndpoint), which throws, and the catch immediately below swallows it and falls through to the PaaS test exactly as the false branch would. No observable difference exists for any input, so no test can constrain it. Verified by planting if (true) \u2014 all 32 tests pass, including the empty-configs and PaaS-only cases.",
+            "decision": "none \u2014 the guard reads as intent and saves a thrown-and-caught TypeError on every PaaS render",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
