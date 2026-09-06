@@ -157,6 +157,22 @@ describe('renewPublishKeys', () => {
         await promise;
 
         expect(registerMock).toHaveBeenCalledTimes(2);
+        // The failure is RECORDED rather than swallowed — an empty catch would
+        // leave a storefront silently unrenewed with nothing to find later.
+        expect(logger.debug).toHaveBeenCalledTimes(1);
+    });
+
+    it('survives a token provider that rejects rather than resolving null', async () => {
+        // Activation runs this fire-and-forget; a rejected session lookup must cost
+        // the renewal and nothing else.
+        const tokenProvider = {
+            getAccessToken: jest.fn().mockRejectedValue(new Error('IMS unreachable')),
+        };
+
+        const { promise } = run([edsProject('a')], { tokenProvider });
+        await expect(promise).resolves.toBeUndefined();
+
+        expect(registerMock).not.toHaveBeenCalled();
     });
 
     it('does nothing at all when there is no DA.live session', async () => {
@@ -169,6 +185,62 @@ describe('renewPublishKeys', () => {
 
         expect(registerMock).not.toHaveBeenCalled();
         expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('renews a storefront whose stamp cannot be parsed', async () => {
+        // A hand-edited or truncated manifest must fail towards renewing, not
+        // towards trusting a date nobody can read.
+        const { promise } = run([edsProject('a', 'the-day-before-yesterday')]);
+        await promise;
+
+        expect(registerMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('renews a storefront stamped EXACTLY one interval ago (the boundary)', async () => {
+        const exactly = new Date(NOW - PUBLISH_KEY_RENEWAL_INTERVAL_MS).toISOString();
+
+        const { promise } = run([edsProject('a', exactly)]);
+        await promise;
+
+        expect(registerMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores a project that records no component instances at all', async () => {
+        // Older manifests predate the field; reading through it must not throw and
+        // take the whole sweep down with it.
+        const bare = createMockProject({ name: 'legacy', componentInstances: undefined });
+
+        const { promise } = run([bare]);
+        await expect(promise).resolves.toBeUndefined();
+
+        expect(registerMock).not.toHaveBeenCalled();
+    });
+
+    it('reports the sweep exactly once when something was renewed', async () => {
+        const { promise } = run([edsProject('a'), edsProject('b')]);
+        await promise;
+
+        expect(logger.info).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays silent when every storefront was already inside the window', async () => {
+        // A summary line on every cold start where nothing happened trains the
+        // reader to ignore the channel that carries the real ones.
+        const fresh = new Date(NOW - 5 * DAY_MS).toISOString();
+
+        const { promise } = run([edsProject('a', fresh)]);
+        await promise;
+
+        expect(logger.info).not.toHaveBeenCalled();
+    });
+
+    it('stays silent when the only due storefront failed to register', async () => {
+        registerMock.mockResolvedValue({ registered: false, reason: 'could not mint' });
+
+        const { promise } = run([edsProject('a')]);
+        await promise;
+
+        expect(logger.info).not.toHaveBeenCalled();
     });
 
     it('does nothing when no token provider could be built', async () => {
