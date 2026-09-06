@@ -5,33 +5,17 @@
  * source mismatch: it read the registry manager (no addons) while its sibling
  * `list_components` read the config file (addons included), so the config file
  * is the thing under test. A fixture would have agreed with either version.
+ *
+ * The malformed-catalog paths — a missing section, a scalar where a list
+ * belongs, an unregistered env-var key — are in the sibling
+ * `componentRequirementsTool-lenientConfig.test.ts`, because the shipped
+ * catalog has none of those shapes.
  */
 
 import componentsConfig from '@/features/components/config/components.json';
-import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
 import { COMPONENT_SECTIONS } from '@/features/ai/server/discoveryTools';
-import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
+import { serve } from './componentRequirementsTool.testUtils';
 import { expectWithinCeiling } from './responseCeilings';
-
-function serve() {
-    const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
-    let definition: McpToolSchema | undefined;
-    registerComponentRequirementsTool({
-        registerTool: (n: string, d: McpToolSchema, h: never) => {
-            definition = d;
-            return tools.set(n, h);
-        },
-    });
-    const handler = tools.get('get_component_requirements')!;
-    const invoke = (componentId?: string) => handler({ componentId });
-    return {
-        definition: definition as McpToolSchema,
-        raw: async (id?: string) => (await invoke(id)).content[0].text,
-        call: async (id?: string) => JSON.parse((await invoke(id)).content[0].text),
-        /** Invoked with NO arguments object at all, the way a bare SDK call arrives. */
-        callWithNoArgs: async () => JSON.parse((await handler(undefined)).content[0].text),
-    };
-}
 
 const CONFIG = componentsConfig as unknown as Record<string, Record<string, unknown>>;
 
@@ -101,8 +85,11 @@ describe('get_component_requirements', () => {
     it('declares itself read-only, unauthenticated, and asking for one component id', async () => {
         // These are the DECLARATIONS, not the answer: they decide whether the
         // server will run the tool without consent and what a client may send.
-        const { definition } = serve();
+        const { name, definition } = serve();
 
+        // The name is the string an agent types; its own description and
+        // list_components both send agents here by it.
+        expect(name).toBe('get_component_requirements');
         expect(definition.needsAuth).toBe(false);
         expect(definition.annotations).toEqual({ readOnlyHint: true, destructiveHint: false });
         expect(Object.keys(definition.inputSchema ?? {})).toStrictEqual(['componentId']);

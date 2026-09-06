@@ -22,6 +22,12 @@
  * Raw config, deliberately: `enhanceComponent`'s transform exists to feed wizard
  * cards, and `configuration` — the part that answers this question — passes
  * through it unchanged anyway.
+ *
+ * The catalog arrives as a PARAMETER defaulting to the bundled file, because the
+ * shipped one has every section, every list is a list and every env-var key is
+ * registered — so the tolerant paths (a section edited to null, a scalar where an
+ * array belongs, an unregistered key) cannot be reached through it at all. Tests
+ * hand in a catalog with those shapes; nothing in production passes the argument.
  */
 
 import { z } from 'zod';
@@ -45,14 +51,17 @@ interface EnvVarDef {
     description?: string;
 }
 
-const CONFIG = componentsConfig as unknown as Record<string, unknown>;
+/** `components.json` as this tool reads it: section id -> entries, plus `envVars`. */
+export type ComponentCatalog = Record<string, unknown>;
+
+const BUNDLED_CATALOG = componentsConfig as unknown as ComponentCatalog;
 
 function stringList(value: unknown): string[] {
     return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
 }
 
-function sectionEntries(section: string): Array<[string, RawComponent]> {
-    const entries = CONFIG[section];
+function sectionEntries(catalog: ComponentCatalog, section: string): Array<[string, RawComponent]> {
+    const entries = catalog[section];
     if (!entries || typeof entries !== 'object') return [];
     return Object.entries(entries as Record<string, RawComponent>);
 }
@@ -69,8 +78,8 @@ function sectionEntries(section: string): Array<[string, RawComponent]> {
  * catalog's 14,931 bytes (measured 2026-08-17), so passing it whole would make a
  * one-component question cost the catalog.
  */
-function describeEnvVars(keys: string[]): unknown[] {
-    const registry = (CONFIG.envVars ?? {}) as Record<string, EnvVarDef>;
+function describeEnvVars(catalog: ComponentCatalog, keys: string[]): unknown[] {
+    const registry = (catalog.envVars ?? {}) as Record<string, EnvVarDef>;
     return keys.map((key) => {
         const def = registry[key];
         // A key with no definition is kept as a bare key. Dropping it would
@@ -82,6 +91,7 @@ function describeEnvVars(keys: string[]): unknown[] {
 
 export function registerComponentRequirementsTool(
     server: McpToolServer,
+    catalog: ComponentCatalog = BUNDLED_CATALOG,
 ): void {
     server.registerTool(
         'get_component_requirements',
@@ -108,7 +118,7 @@ export function registerComponentRequirementsTool(
             const known: string[] = [];
 
             for (const section of COMPONENT_SECTIONS) {
-                for (const [id, def] of sectionEntries(section)) {
+                for (const [id, def] of sectionEntries(catalog, section)) {
                     known.push(id);
                     if (id !== wanted) continue;
 
@@ -118,8 +128,8 @@ export function registerComponentRequirementsTool(
                         category: section,
                         name: def.name,
                         description: def.description,
-                        requiredEnvVars: describeEnvVars(stringList(config.requiredEnvVars)),
-                        optionalEnvVars: describeEnvVars(stringList(config.optionalEnvVars)),
+                        requiredEnvVars: describeEnvVars(catalog, stringList(config.requiredEnvVars)),
+                        optionalEnvVars: describeEnvVars(catalog, stringList(config.optionalEnvVars)),
                         requiredServices: stringList(config.requiredServices),
                         dependencies: def.dependencies,
                     });

@@ -8,11 +8,15 @@
  * key with no definition — are the ones that decide whether one bad edit to the
  * catalog takes the whole tool down or degrades to a partial answer.
  *
- * So this suite mocks the config. It is the only way to hand the tool a shape
- * the repository does not contain.
+ * The catalog is handed in through the tool's own parameter, not mocked: a
+ * `jest.mock` of a bundled config leaf is what the injection seam exists to
+ * replace (docs/development/sop/testing-guide.md → Dependency Mocking).
  */
 
-jest.mock('@/features/components/config/components.json', () => ({
+import { serve } from './componentRequirementsTool.testUtils';
+import type { ComponentCatalog } from '@/features/ai/server/componentRequirementsTool';
+
+const MALFORMED: ComponentCatalog = {
     frontends: {
         'bad-lists': {
             name: 'Bad Lists',
@@ -35,26 +39,13 @@ jest.mock('@/features/components/config/components.json', () => ({
     envVars: {
         GOOD_KEY: { label: 'Good key', type: 'url', description: 'What goes in it' },
     },
-}));
-
-import { registerComponentRequirementsTool } from '@/features/ai/server/componentRequirementsTool';
-
-function serve() {
-    const tools = new Map<string, (a: unknown) => Promise<{ content: Array<{ text: string }> }>>();
-    registerComponentRequirementsTool({
-        registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h),
-    });
-    return async (componentId?: string) =>
-        JSON.parse(
-            (await tools.get('get_component_requirements')!({ componentId })).content[0].text
-        );
-}
+};
 
 describe('get_component_requirements — a malformed catalog', () => {
     it('reports only the string entries of an env-var list', async () => {
         // A number or a null reaching the agent as an env-var key is worse than
         // terse: it names a variable that cannot be set.
-        const out = await serve()('bad-lists');
+        const out = await serve(MALFORMED).call('bad-lists');
 
         expect(out.requiredEnvVars).toStrictEqual([
             {
@@ -67,7 +58,7 @@ describe('get_component_requirements — a malformed catalog', () => {
     });
 
     it('reads a scalar where a list belongs as no entries, not as its characters', async () => {
-        const out = await serve()('bad-lists');
+        const out = await serve(MALFORMED).call('bad-lists');
 
         expect(out.requiredServices).toStrictEqual([]);
     });
@@ -75,16 +66,16 @@ describe('get_component_requirements — a malformed catalog', () => {
     it('keeps an env-var key the registry does not define, as a bare key', async () => {
         // Dropping it would under-report what the component needs; inventing a
         // label for it would be worse.
-        const out = await serve()('bad-lists');
+        const out = await serve(MALFORMED).call('bad-lists');
 
         expect(out.optionalEnvVars).toStrictEqual([{ key: 'UNREGISTERED_KEY' }]);
     });
 
-    it('walks past a section that is missing or null, and lists only real ids', async () => {
-        // `mesh` is absent and `backends` is null. Either one reaching
-        // Object.entries takes every answer down, including the ones the intact
-        // sections could still give.
-        const out = await serve()('no-such-component');
+    it('walks past a section that is missing, null or not a section at all', async () => {
+        // `mesh` is absent, `backends` is null and `integrations` is a string.
+        // Any one of them reaching Object.entries takes every answer down,
+        // including the ones the intact sections could still give.
+        const out = await serve(MALFORMED).call('no-such-component');
 
         expect(out.error).toBe('No component "no-such-component".');
         expect(out.known).toStrictEqual(['bad-lists', 'lonely-addon']);
