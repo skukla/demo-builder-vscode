@@ -5,6 +5,7 @@ area: platform
 needs: []
 value: high
 status: backlog
+parent: PL-11
 ---
 
 # Functional testing that drives the real VS Code, and where to stop
@@ -41,14 +42,28 @@ launches a real VS Code with the extension loaded and asserts inside the extensi
 commands registered, activation completed, state persisted. Its limit is real — webviews
 are isolated frames, so it cannot reach the React UI without help.
 
-**`vscode-extension-tester` (Red Hat, Selenium).** The established tool for this exact job;
-drives the real VS Code window INCLUDING webview contents. Mature, widely used, and
-Selenium-shaped: slower and weaker tooling than the alternative.
+**`vscode-extension-tester` (Red Hat, Selenium) — the recommendation.** PURPOSE-BUILT for
+VS Code extensions: it already understands the activity bar, side bar, notifications,
+editors, the command palette and webview contents, and it manages downloading and launching
+matching VS Code versions. Mature and widely used for this exact job.
 
 **Playwright attached over the Electron debugging port.** VS Code is Electron, so Playwright
-can attach and reach every frame. Far better tooling — auto-waiting, trace viewer, real
-debugging. More assembly, and NOT VERIFIED HERE: nobody has attached it to this extension,
-so treat it as promising rather than proven. Verify before planning around it.
+can attach and reach every frame, with better tooling — auto-waiting, trace viewer, real
+debugging. But it knows nothing about VS Code: finding the right frame, knowing when the
+window is ready, and driving editor chrome are all yours to write. And it is NOT VERIFIED
+HERE — nobody has attached it to this extension.
+
+**The first draft of this item got that comparison wrong** (2026-09-06), rating the two on
+tooling quality and letting the unproven option read as the sophisticated choice. The right
+axis is FIT: a tool that understands the application beats a better general-purpose tool
+that does not, especially for a codebase one person maintains. Playwright's advantages —
+trace viewer, auto-waiting — pay off across many tests; the setup cost dominates for a
+handful of flows. This repo's instinct is the boring proven thing (Jest over newer runners,
+esbuild over a bundler stack), and a bespoke CDP harness cuts against it.
+
+Where Playwright genuinely wins is running the webviews standalone in a browser — which
+`webview-visual-baseline` already does with its own harness, and which [[PL-47]] extends.
+That is a different job from driving VS Code, and it is already solved.
 
 ## The constraint that shapes the design
 
@@ -80,9 +95,21 @@ Add UI driving on top only once that has earned its place.
 1. Is a functional suite that stubs the cloud boundary worth having, given it will never
    catch a real Adobe/GitHub integration break? (The `mcp-live-probe` skill and the live
    journeys are what cover that, and they need a human.)
-2. If yes: Selenium-based `vscode-extension-tester` for maturity, or Playwright over CDP
-   for tooling — accepting that the second needs proving first?
+2. Any reason NOT to use `vscode-extension-tester`? It is the recommendation above; the
+   Playwright alternative is recorded for completeness and would need proving first.
 3. Should the activation step happen on its own merits regardless of the answer to 1 and 2?
+
+## Its sibling
+
+[[PL-47]] deepens the instrument that already exists — accessibility, theme variants and
+widths against the standalone harness. The two are complements, not alternatives: PL-47
+cannot prove a surface OPENS or that the extension sent the right payload, and this item
+cannot cheaply reach the many states a fixture can express. The strongest argument for
+having both is that a functional test is the only thing that could verify PL-47's fixtures
+still match what the extension really sends.
+
+Do PL-47 first. It is cheaper, it closes a stated-but-unenforced standard, and it does not
+need this decision resolved.
 
 ## Shipped so far
 

@@ -13,6 +13,33 @@ parent: PL-30
 Filed 2026-08-28 at the owner's direction: the test-health work kept arriving
 as orphan items and same-day incidents with no shared home or done-condition.
 
+
+## The UI arc — added 2026-09-06
+
+Everything under this epic so far has been about the code's DECISIONS: dedup, run-noise,
+shared fixtures, casts, and the mutation burn-down. Two new children cover what a person
+actually sees, and they are one plan in two halves.
+
+| | Item | Question it answers | Cost |
+|---|---|---|---|
+| 1 | [[PL-47]] | Is it accessible, and does it hold up across themes and widths? | cheap — extends an instrument that exists |
+| 2 | [[PL-46]] | Does it work end to end when a person clicks it? | a decision first, then real work |
+
+**Do PL-47 first.** It reuses `webview-visual-baseline`, which already loads the real
+bundles for all eight surfaces; accessibility, theme variants and widths are further
+readings of that same page rather than new systems. It also closes a standard the root
+CLAUDE.md states and nothing enforces — WCAG 2.1 AA, against a repo with zero accessibility
+tooling.
+
+**PL-46 is a question before it is work**, because clicking the wizard through to a finished
+project creates real Adobe, GitHub and DA.live resources.
+
+They are complements. PL-47 cannot prove a surface opens or that the extension sent the
+right payload; PL-46 cannot cheaply reach the many states a fixture expresses. And PL-47's
+fixtures are the seam that will rot silently — a functional test is the only thing that
+could check they still match what the extension really sends.
+
+
 ## What this epic collects
 
 - `PL-9` — tests-tree dedup census (execution lane; two mechanical clusters
