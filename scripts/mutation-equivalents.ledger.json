@@ -14111,6 +14111,30 @@
             "decision": "none \u2014 `args` is the SDK's untyped `any`, and the guards keep correctness from depending on statement order in the handler",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/components/services/commerceSecretMigration.ts",
+            "anchors": [
+                "log?.(`secret ${varName}: re-key not verified, left at the old key`);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the `?.` changes nothing either way. With a `log` attached the two are the same call. Without one, the mutant throws a TypeError that the enclosing try/catch on the same loop iteration catches, and its catch continues to the next varName exactly as the original's `continue` does \u2014 same rekeyed list, same keychain state, same iteration. Planted and re-run: all 42 tests pass.",
+            "decision": "none \u2014 `log` is optional and most callers omit it, so the `?.` is required",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/components/services/commerceSecretMigration.ts",
+            "anchors": [
+                "if (def?.secret === true) keys.add(key);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The only input is the statically imported components.json bundled in this repo, whose 30 envVars entries are all objects. A null or undefined def cannot arrive from anywhere else, and killing this would mean jest.mocking the catalog into a shape the shipped file cannot hold. Planted and re-run: all 42 tests pass.",
+            "decision": "none \u2014 the JSON is untyped at the import boundary and the guard costs nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

@@ -411,3 +411,215 @@ describe('idempotence', () => {
         expect(second.retained).toEqual([]);
     });
 });
+
+/**
+ * The decisions nothing constrained: the guards that decide whether any work
+ * happens at all, the two catch blocks, and the reporting the caller shows a
+ * user. The report lines are counted, never quoted — the count is the decision
+ * ("did anything happen?"), the wording is not behaviour.
+ */
+describe('re-keying decides whether to do anything at all', () => {
+    it('does nothing when the path has not actually changed', async () => {
+        // Same id both sides is the common case: `configure.ts` reloads and
+        // re-keys on every save, and a rename is the rare one. Copying a secret
+        // onto its own key would be a pointless keychain write per save.
+        const secrets = workingStore();
+
+        const rekeyed = await reKeyProjectSecrets(PROJECT, PROJECT, ['adobe-commerce-accs'], secrets);
+
+        expect(rekeyed).toStrictEqual([]);
+        expect(secrets.get).not.toHaveBeenCalled();
+        expect(secrets.store).not.toHaveBeenCalled();
+        expect(secrets.delete).not.toHaveBeenCalled();
+    });
+
+    it('does nothing without SecretStorage', async () => {
+        expect(await reKeyProjectSecrets(PROJECT, '/p/renamed', ['x'], undefined)).toStrictEqual([]);
+    });
+
+    it('survives a keychain read that throws, with no reporter attached', async () => {
+        // `log` is optional and most callers omit it. A failure path that only
+        // works when someone is listening is not a failure path.
+        const secrets = {
+            store: jest.fn(async () => undefined),
+            get: jest.fn(async () => {
+                throw new Error('keychain locked');
+            }),
+            delete: jest.fn(async () => undefined),
+        };
+
+        const rekeyed = await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-accs'], secrets);
+
+        expect(rekeyed).toStrictEqual([]);
+        expect(secrets.delete).not.toHaveBeenCalled();
+    });
+
+    it('tells the caller when a re-key failed, so a persistent failure is visible', async () => {
+        const lines: string[] = [];
+        const secrets = {
+            store: jest.fn(async () => undefined),
+            get: jest.fn(async () => {
+                throw new Error('keychain locked');
+            }),
+            delete: jest.fn(async () => undefined),
+        };
+
+        await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-accs'], secrets, (l) =>
+            lines.push(l),
+        );
+
+        expect(lines.length).toBeGreaterThan(0);
+    });
+
+    it('says nothing when there was nothing to re-key', async () => {
+        // An empty keychain is the ordinary state of a project that never had a
+        // credential, and a summary line for it is noise on every rename.
+        const lines: string[] = [];
+
+        await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-accs'], workingStore(), (l) =>
+            lines.push(l),
+        );
+
+        expect(lines).toStrictEqual([]);
+    });
+
+    it('reports exactly one summary once a secret has moved', async () => {
+        const lines: string[] = [];
+        const secrets = workingStore();
+        await migrateDeclaredSecrets(configs(), PROJECT, secrets);
+
+        await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-accs'], secrets, (l) =>
+            lines.push(l),
+        );
+
+        expect(lines).toHaveLength(1);
+    });
+});
+
+describe('hydrate decides whether to reach for storage', () => {
+    it('is a no-op without a project id — there is no key to read', async () => {
+        const secrets = workingStore();
+
+        const hydrated = await hydrateDeclaredSecrets(configs(), undefined, secrets);
+
+        expect(secrets.get).not.toHaveBeenCalled();
+        expect(hydrated?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(FAKE_SECRET);
+    });
+
+    it('does not invent a field storage does not hold', async () => {
+        // Writing `undefined` in would put the key back into `.env` generation as
+        // an empty assignment — the exact breakage hydrate exists to prevent.
+        const hydrated = await hydrateDeclaredSecrets(
+            { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_ID: 'public-id' } },
+            PROJECT,
+            workingStore(),
+        );
+
+        expect(Object.keys(hydrated?.['adobe-commerce-accs'] ?? {})).toStrictEqual([
+            'ACCS_OAUTH_CLIENT_ID',
+        ]);
+    });
+});
+
+describe('a value that is not a string', () => {
+    it('is neither stored nor treated as a cleared field', async () => {
+        // `ConfigMap` admits booleans and numbers, and only the empty STRING means
+        // "the user cleared this". Treating a `true` as a clear would delete a
+        // live credential; storing it would put a non-secret into the keychain.
+        const secrets = workingStore();
+
+        const out = await migrateDeclaredSecrets(
+            { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: true } },
+            PROJECT,
+            secrets,
+        );
+
+        expect(secrets.store).not.toHaveBeenCalled();
+        expect(secrets.delete).not.toHaveBeenCalled();
+        expect(out.cleared).toStrictEqual([]);
+        expect(out.sanitizedConfigs?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(true);
+    });
+});
+
+describe('when the clear cannot reach SecretStorage', () => {
+    /** Storage that holds a value but refuses to delete it. */
+    function undeletableStore() {
+        return {
+            store: jest.fn(async () => undefined),
+            get: jest.fn(async () => FAKE_SECRET),
+            delete: jest.fn(async () => {
+                throw new Error('keychain locked');
+            }),
+        };
+    }
+
+    it('keeps the empty field rather than claiming the secret is gone', async () => {
+        // Reporting it cleared while the credential is still in the keychain is
+        // the state a user cannot detect: the box is empty and the extension goes
+        // on authenticating with the old value.
+        const out = await migrateDeclaredSecrets(
+            { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: '' } },
+            PROJECT,
+            undeletableStore(),
+        );
+
+        expect(out.cleared).toStrictEqual([]);
+        expect(out.sanitizedConfigs?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe('');
+    });
+
+    it('tells the caller, so the failure is not silent', async () => {
+        const lines: string[] = [];
+
+        await migrateDeclaredSecrets(
+            { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: '' } },
+            PROJECT,
+            undeletableStore(),
+            (l) => lines.push(l),
+        );
+
+        expect(lines.length).toBeGreaterThan(0);
+    });
+});
+
+describe('what the migration reports', () => {
+    it('reports the move and nothing about clearing', async () => {
+        const lines: string[] = [];
+
+        await migrateDeclaredSecrets(configs(), PROJECT, workingStore(), (l) => lines.push(l));
+
+        expect(lines).toHaveLength(1);
+    });
+
+    it('reports the clear and nothing about moving', async () => {
+        const secrets = workingStore();
+        const migrated = await migrateDeclaredSecrets(configs(), PROJECT, secrets);
+        const lines: string[] = [];
+
+        await migrateDeclaredSecrets(
+            {
+                'adobe-commerce-accs': {
+                    ...migrated.sanitizedConfigs?.['adobe-commerce-accs'],
+                    ACCS_OAUTH_CLIENT_SECRET: '',
+                },
+            },
+            PROJECT,
+            secrets,
+            (l) => lines.push(l),
+        );
+
+        expect(lines).toHaveLength(1);
+    });
+
+    it('says nothing at all when there was nothing to do', async () => {
+        const lines: string[] = [];
+
+        await migrateDeclaredSecrets(
+            { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_ID: 'public-id' } },
+            PROJECT,
+            workingStore(),
+            (l) => lines.push(l),
+        );
+
+        expect(lines).toStrictEqual([]);
+    });
+});
