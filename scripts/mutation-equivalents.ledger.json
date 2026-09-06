@@ -16328,6 +16328,30 @@
             "decision": "none - the guard states that a tool with no authored copy is not asked, rather than leaving it to a thrown TypeError",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/eds/services/helix/helixApiClient.ts",
+            "anchors": [
+                "if (!p) return '/';"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The only falsy string is the empty one, and it already normalises to '/' without the guard: withLead becomes '/' by the template, and the trim arm declines to touch the root. Both paths return '/' for every value the parameter's type admits; only an undefined the type forbids would separate them.",
+            "decision": "Kept as a defensive read for a caller that reaches this untyped, and recorded rather than killed with a cast at the call boundary.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06: with the guard replaced by if(false), normalizeWebPath('') still returns '/' and the whole suite passes."
+        },
+        {
+            "module": "src/features/eds/services/helix/helixApiClient.ts",
+            "anchors": [
+                "if (response.status === 204 || response.status === 404 || response.ok) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "A 204 is inside the 200-299 range that sets Response.ok, so the third arm already answers true for every 204 fetch can produce. Only a fixture with ok:false and status 204 \u2014 a response no server and no fetch can return \u2014 would make this arm the deciding one.",
+            "decision": "The 204 stays named because it is the documented success case the caller reasons about (204/404 ok), and the redundancy is with ok, not with 404 \u2014 a 404 IS not-ok and its arm is killed.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06: with the 204 arm replaced by false, a delete answering {ok:true,status:204} still resolves true and the whole suite passes."
         }
     ]
 }
