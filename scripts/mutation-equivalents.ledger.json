@@ -16909,6 +16909,19 @@
             "decision": "none \u2014 the end anchor states the intent and nothing distinguishes it at runtime",
             "recorded": "2026-09-06",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/ui/hooks/useVSCodeRequest.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 108,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker fills reset's empty useCallback dependency list with a constant string literal. React compares dependency lists element-wise with Object.is, and a literal is the same value on every render, so the memo still hits and reset keeps its identity \u2014 the only thing a dependency list can change. Planted and measured: a reset-identity probe across two rerenders and all 15 suite tests pass unchanged with the mutant in place.",
+            "decision": "none \u2014 reset closes over nothing, so its dependency list is correctly empty",
+            "recorded": "2026-09-06",
+            "source": "MUT-05 batch, PL-22"
         }
     ]
 }

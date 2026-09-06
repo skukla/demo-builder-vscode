@@ -3,6 +3,28 @@ import { renderHook, act, waitFor, cleanup } from '@testing-library/react';
 import { useVSCodeRequest } from '@/core/ui/hooks/useVSCodeRequest';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
+/**
+ * Run `execute` inside act() and hand back what it DID, already settled.
+ *
+ * `await expect(act(...)).rejects.toThrow(...)` lets a rejection travel out of
+ * act(), and when the thrown thing is not the expected one — an execute that
+ * returns instead of throwing, or throws a TypeError from a broken callback — the
+ * assertion error escapes as an unhandled rejection and takes the whole jest
+ * worker down. Settling first turns each of those into a plain failed assertion.
+ */
+async function settle<T>(
+    run: () => Promise<T>
+): Promise<{ ok: boolean; value?: T; error?: Error }> {
+    let outcome: { ok: boolean; value?: T; error?: Error } = { ok: false };
+    await act(async () => {
+        outcome = await run().then(
+            (value) => ({ ok: true, value }),
+            (error: unknown) => ({ ok: false, error: error as Error })
+        );
+    });
+    return outcome;
+}
+
 describe('useVSCodeRequest', () => {
     let requestSpy: jest.Mock;
 
@@ -125,12 +147,10 @@ describe('useVSCodeRequest', () => {
 
             expect(result.current.loading).toBe(false);
 
-            // Execute and catch the error
-            await expect(
-                act(async () => {
-                    await result.current.execute();
-                })
-            ).rejects.toThrow('Request failed');
+            const outcome = await settle(() => result.current.execute());
+
+            expect(outcome.ok).toBe(false);
+            expect(outcome.error).toBe(mockError);
 
             // Verify the mock was called
             expect(requestSpy).toHaveBeenCalled();
@@ -150,12 +170,11 @@ describe('useVSCodeRequest', () => {
 
             const { result } = renderHook(() => useVSCodeRequest('test-request', { onError }));
 
-            // Execute and catch the error
-            await expect(
-                act(async () => {
-                    await result.current.execute();
-                })
-            ).rejects.toThrow('String error');
+            const outcome = await settle(() => result.current.execute());
+
+            expect(outcome.ok).toBe(false);
+            expect(outcome.error).toBeInstanceOf(Error);
+            expect(outcome.error?.message).toBe('String error');
 
             // Check that error callback was called with converted Error
             expect(onError).toHaveBeenCalled();
@@ -177,12 +196,10 @@ describe('useVSCodeRequest', () => {
 
             const { result } = renderHook(() => useVSCodeRequest('test-request', { onError }));
 
-            await expect(
-                act(async () => {
-                    await result.current.execute();
-                })
-            ).rejects.toThrow();
+            const outcome = await settle(() => result.current.execute());
 
+            expect(outcome.ok).toBe(false);
+            expect(outcome.error).toBe(mockError);
             expect(onError).toHaveBeenCalledWith(mockError);
             expect(onError).toHaveBeenCalledTimes(1);
         });
@@ -196,11 +213,8 @@ describe('useVSCodeRequest', () => {
             const { result } = renderHook(() => useVSCodeRequest('test-request'));
 
             // First request fails
-            await expect(
-                act(async () => {
-                    await result.current.execute();
-                })
-            ).rejects.toThrow('First error');
+            const failed = await settle(() => result.current.execute());
+            expect(failed.error).toBe(mockError);
 
             // Wait for error state to update
             await waitFor(() => {
@@ -277,11 +291,8 @@ describe('useVSCodeRequest', () => {
             const { result } = renderHook(() => useVSCodeRequest('test-request'));
 
             // Execute request that fails
-            await expect(
-                act(async () => {
-                    await result.current.execute();
-                })
-            ).rejects.toThrow('Request failed');
+            const failed = await settle(() => result.current.execute());
+            expect(failed.error).toBe(mockError);
 
             // Wait for error state to update
             await waitFor(() => {
@@ -294,6 +305,37 @@ describe('useVSCodeRequest', () => {
             });
 
             expect(result.current.error).toBeNull();
+        });
+    });
+
+    describe('changing the request type', () => {
+        /**
+         * `execute` is memoised, and the memo has to drop when the type changes —
+         * a surface that swaps which message it sends (the same hook reused for a
+         * different request) would otherwise keep sending the FIRST type forever,
+         * silently, with every state assertion still passing.
+         */
+        it('sends the current type, not the one it was mounted with', async () => {
+            requestSpy.mockResolvedValue({ ok: true });
+
+            const { result, rerender } = renderHook(
+                ({ type }: { type: string }) => useVSCodeRequest(type),
+                { initialProps: { type: 'get-projects' } }
+            );
+
+            await act(async () => {
+                await result.current.execute({ page: 1 });
+            });
+
+            expect(requestSpy).toHaveBeenLastCalledWith('get-projects', { page: 1 }, undefined);
+
+            rerender({ type: 'get-components' });
+
+            await act(async () => {
+                await result.current.execute({ page: 2 });
+            });
+
+            expect(requestSpy).toHaveBeenLastCalledWith('get-components', { page: 2 }, undefined);
         });
     });
 
