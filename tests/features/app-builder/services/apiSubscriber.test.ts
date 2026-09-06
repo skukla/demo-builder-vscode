@@ -86,6 +86,20 @@ describe('apiSubscriber', () => {
             expect(result.filter((a) => a === MESH)).toHaveLength(1);
         });
 
+        it('contributes nothing for a component that declares no requiredApis', () => {
+            // `requiredApis` is optional on the catalog entry, so the union has to
+            // treat its absence as an empty list rather than iterating undefined.
+            const noApis: AppBuilderComponentCatalogEntry = {
+                id: 'bare',
+                name: 'Bare',
+                description: '',
+                kind: 'integration',
+                source: { owner: 'o', repo: 'bare', branch: 'main' },
+            };
+
+            expect(computeRequiredApis([noApis])).toEqual([MGMT]);
+        });
+
         it('should union runtime-added extras (additionalConsoleApis) into every reconcile', () => {
             // The subscribe PUTs the FULL union — an extra omitted once would be
             // silently stripped. Extras ride alongside catalog APIs, deduped.
@@ -127,6 +141,19 @@ describe('apiSubscriber', () => {
             // symptom was the kit installer's "403 — Api Key is invalid").
             const [mgmtInfo] = resolveServiceInfos([MGMT], SERVICES_FOR_ORG);
             expect(mgmtInfo.platformList).toEqual(['oauth_server_to_server']);
+        });
+
+        it('the S2S override fills catalog SILENCE only — a DECLARED platform wins', () => {
+            // The override exists because the live catalog declares platforms for
+            // only 25 of 98 services. A row that DOES declare one is authoritative:
+            // rewriting it would put the subscribe on the wrong credential.
+            const declaresApiKey = [
+                { code: MGMT, name: 'I/O Management API', platformList: ['apiKey'] },
+            ];
+
+            const [mgmtInfo] = resolveServiceInfos([MGMT], declaresApiKey);
+
+            expect(mgmtInfo.platformList).toEqual(['apiKey']);
         });
 
         it('an UNKNOWN service with no platformList still resolves empty (no guessing)', () => {
@@ -293,6 +320,41 @@ describe('apiSubscriber', () => {
             expect(client.subscribeAdobeIdIntegrationToServices).toHaveBeenCalled();
         });
 
+        it('subscribes a group the credential carries only PART of', async () => {
+            // EVERY required code, not any of them: the OAuth group here is the
+            // baseline plus SomeOtherSDK and the credential carries only the
+            // baseline, so the PUT must still run and must carry the missing code.
+            (client.getSubscribedServiceCodes as jest.Mock).mockResolvedValue([MGMT]);
+
+            await subscribeRequiredApis(
+                [integrationAppBuilderComponent(['SomeOtherSDK'])],
+                orgTarget,
+                client
+            );
+
+            expect(client.subscribeOAuthServerToServerIntegrationToServices).toHaveBeenCalledWith(
+                'org1',
+                's2s-int-id',
+                expect.arrayContaining([
+                    { sdkCode: 'SomeOtherSDK', licenseConfigs: null, roles: null },
+                ])
+            );
+        });
+
+        it('never touches the OAuth credential when the union is entirely apiKey', async () => {
+            // Ensuring an S2S credential is a live Console write, so an empty group
+            // must stop BEFORE the call rather than PUT an empty subscription.
+            (client.getServicesForOrg as jest.Mock).mockResolvedValue([
+                { code: MESH, name: 'API Mesh', platformList: ['apiKey'], domainMandatory: true },
+                { code: MGMT, name: 'I/O Management API', platformList: ['apiKey'] },
+            ]);
+
+            await subscribeRequiredApis([meshAppBuilderComponent()], orgTarget, client);
+
+            expect(client.ensureOAuthCredentialId).not.toHaveBeenCalled();
+            expect(client.subscribeOAuthServerToServerIntegrationToServices).not.toHaveBeenCalled();
+        });
+
         it('subscribes when the current subscription set is unknown ([] fail-safe)', async () => {
             (client.getSubscribedServiceCodes as jest.Mock).mockResolvedValue([]);
 
@@ -348,6 +410,24 @@ describe('apiSubscriber', () => {
                     { code: MESH, name: 'API Mesh' },
                 ])
             );
+        });
+
+        it('leaves an unmatched service OUT of what it reports as subscribed', async () => {
+            // No PUT ever covered MysterySDK, so reporting it would let the caller
+            // log a subscription that does not exist — the silent success the
+            // unmatched bucket was added to prevent.
+            (client.getServicesForOrg as jest.Mock).mockResolvedValue([
+                ...SERVICES_FOR_ORG,
+                { code: 'MysterySDK', name: 'Mystery' },
+            ]);
+
+            const result = await subscribeRequiredApis(
+                [integrationAppBuilderComponent(['MysterySDK'])],
+                orgTarget,
+                client
+            );
+
+            expect(result.map((api) => api.code)).toEqual([MGMT]);
         });
 
         it('should return name-less entries with name undefined', async () => {
