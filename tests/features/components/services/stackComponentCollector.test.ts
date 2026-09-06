@@ -60,11 +60,48 @@ describe('hasConfigurableEnvVars', () => {
     it('is false for a component that does not resolve', () => {
         expect(hasConfigurableEnvVars(undefined)).toBe(false);
     });
+
+    // A catalog entry may carry no `configuration` block at all — most tools and
+    // add-ons do not. Reading through it must not throw.
+    it('is false for a component with no configuration block', () => {
+        expect(hasConfigurableEnvVars({ id: 'x' })).toBe(false);
+    });
 });
 
 describe('collectStackComponents', () => {
     it('returns nothing without a stack', () => {
         expect(collectStackComponents(undefined, {})).toEqual([]);
+    });
+
+    it.each([
+        ['no registry at all', undefined],
+        ['a registry with neither section', {}],
+    ])('returns nothing when the stack names components and there is %s', (_label, data) => {
+        expect(
+            collectStackComponents({ frontend: 'fe', backend: 'be' }, data)
+        ).toStrictEqual([]);
+    });
+
+    it('leaves out a frontend or backend id the registry does not carry', () => {
+        const data = { frontends: [withoutEnv('fe')], backends: [withoutEnv('be')] };
+
+        expect(
+            ids(collectStackComponents({ frontend: 'nope', backend: 'also-nope' }, data))
+        ).toStrictEqual([]);
+    });
+
+    // Resolution is by ID, not by position: with the wanted entry second, a
+    // predicate that ignores the id returns the wrong component and nothing else
+    // in this suite would notice.
+    it('picks the named frontend and backend out of a section holding several', () => {
+        const data = {
+            frontends: [withoutEnv('fe-other'), withoutEnv('fe')],
+            backends: [withoutEnv('be-other'), withoutEnv('be')],
+        };
+
+        const result = collectStackComponents({ frontend: 'fe', backend: 'be' }, data);
+
+        expect(ids(result)).toEqual(['fe', 'be']);
     });
 
     it('collects the frontend and backend with their types', () => {
@@ -141,6 +178,21 @@ describe('collectStackComponents', () => {
             );
 
             expect(ids(result)).toContain('opt-a');
+        });
+
+        // A selected optional dep is ALSO in stack.dependencies, so the final
+        // stack-level loop would collect it anyway — what the optional pass adds
+        // is its POSITION, beside the component that declares it rather than
+        // after everything else.
+        it('places it with its own component, ahead of the backend', () => {
+            lookup({ 'opt-a': withEnv('opt-a') });
+
+            const result = collectStackComponents(
+                { frontend: 'fe', backend: 'be', dependencies: ['opt-a'] },
+                { ...data, backends: [withoutEnv('be')] }
+            );
+
+            expect(ids(result)).toEqual(['fe', 'opt-a', 'be']);
         });
 
         it('LEAVES an optional dep the stack did not select', () => {
