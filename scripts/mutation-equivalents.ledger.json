@@ -14278,6 +14278,45 @@
             "decision": "Unobservable by construction: no input makes the branches disagree.",
             "recorded": "2026-09-06",
             "source": "Planted 2026-09-06: '<' with the full 57-test mcpInspector family green."
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/hooks/useServiceGroups.ts",
+            "anchors": [
+                "for (const envVarKey of envVarKeys ?? []) {"
+            ],
+            "line": 41,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Any placeholder the fallback array is replaced with is looked up in envVarDefs, misses, and hits the 'if (!envVarDef) continue' on the next line \u2014 so an invented key iterates once and contributes nothing, exactly like the empty array.",
+            "decision": "Unkillable without an env-var definition literally named after Strykers placeholder; the undefined-envVars path itself IS now tested.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06 with the 17-test useServiceGroups family green."
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/hooks/useServiceGroups.ts",
+            "anchors": [
+                "const aOrder = SERVICE_GROUP_DEFINITIONS.find((d) => d.id === a.id)?.order ?? 99;"
+            ],
+            "line": 114,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Every group being sorted was produced by mapping over SERVICE_GROUP_DEFINITIONS itself, so this find can never miss and the optional chain never short-circuits. The '?? 99' default IS reachable (a definition may omit order) and is tested; only the '?.' is unobservable. TypeScript still requires it, since find is typed as possibly undefined.",
+            "decision": "Keep the operator for the type, record the mutant.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06 as plain '.order' with the 17-test useServiceGroups family green."
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/hooks/useServiceGroups.ts",
+            "anchors": [
+                "const bOrder = SERVICE_GROUP_DEFINITIONS.find((d) => d.id === b.id)?.order ?? 99;"
+            ],
+            "line": 115,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The b-side of the same sort comparator: the group ids come from SERVICE_GROUP_DEFINITIONS, so find always matches and the optional chain never short-circuits.",
+            "decision": "Keep the operator for the type, record the mutant.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06 as plain '.order' with the 17-test useServiceGroups family green."
         }
     ]
 }
