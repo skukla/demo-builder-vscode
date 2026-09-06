@@ -10,9 +10,34 @@
 
 import type { AppBuilderComponentState, Project } from '@/types/base';
 
+// ---- the progress notification, RECORDED rather than mocked away -----------
+// `vscode` is walled twice in this suite's import chain: the shared testUtils
+// registers its own factory, but only AFTER the subject has bound the file mock
+// (this suite is on mock-wall-import-order's ledger). So the vscode a test can
+// reach is not the one the handler reports progress to. Recording here — above
+// every import — is what makes the notification observable at all. Plain
+// functions, not jest.fn, so no mock reset can quietly empty them.
+const mockProgressTitles: string[] = [];
+const mockProgressSteps: unknown[] = [];
+jest.mock('vscode', () => {
+    const vscode = jest.requireActual('../../../__mocks__/vscode') as {
+        window: Record<string, unknown>;
+    };
+    vscode.window.withProgress = async (
+        options: { title: string },
+        task: (p: { report: (value: { message?: string }) => void }) => unknown,
+    ) => {
+        mockProgressTitles.push(options.title);
+        return task({ report: (value) => mockProgressSteps.push(value?.message) });
+    };
+    return vscode;
+});
+
 // ---- runner deps + auth resolver (all mocked) ------------------------------
 const mockInstallAppManagement = jest.fn();
-const mockBuildDefaultRunnerDeps = jest.fn(() => ({
+// Declared with its arguments, not as a bare `jest.fn(() => ...)`: the second
+// one is the progress adapter, and a zero-arity signature makes it unreadable.
+const mockBuildDefaultRunnerDeps = jest.fn((..._args: unknown[]) => ({
     installAppManagement: mockInstallAppManagement,
 }));
 const mockBuildRunnerDepsContext = jest.fn(async () => ({}));
@@ -117,6 +142,8 @@ function mockDeveloperPermissions(): void {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockProgressTitles.length = 0;
+    mockProgressSteps.length = 0;
     mockGetAppBuilderComponentEntry.mockReturnValue({
         id: 'kit-app',
         lifecycle: 'app-management',
@@ -311,5 +338,191 @@ describe('handleInstallAppBuilderComponent', () => {
         expect(result.success).toBe(false);
         expect(result.code).toBe(ErrorCode.AUTH_REQUIRED);
         expect(mockInstallAppManagement).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The decisions the first pass left unconstrained: the two entry guards both
+ * handlers share, the failure paths, and the ARGUMENTS the collaborators receive
+ * — the lifecycle resolver's source shape, the runner-deps services, and the
+ * step text the progress notification carries.
+ */
+
+describe('both handlers refuse before they touch anything', () => {
+    it('the status read needs an id, even with no payload at all', async () => {
+        // The MCP surface can call a handler with nothing. Reaching for
+        // `payload.id` there throws before the typed refusal is ever built.
+        const { mockContext } = setupMocks(kitProject());
+
+        const result = await handleGetAppBuilderInstallStatus(mockContext);
+
+        expect(result.success).toBe(false);
+        expect(result.code).toBe(ErrorCode.CONFIG_INVALID);
+        expect(mockClientCtor).not.toHaveBeenCalled();
+    });
+
+    it('the install needs an id, even with no payload at all', async () => {
+        const { mockContext } = setupMocks(kitProject());
+
+        const result = await handleInstallAppBuilderComponent(mockContext);
+
+        expect(result.success).toBe(false);
+        expect(result.code).toBe(ErrorCode.CONFIG_INVALID);
+        expect(mockInstallAppManagement).not.toHaveBeenCalled();
+    });
+
+    it('the status read names an integration the project does not have', async () => {
+        const { mockContext } = setupMocks({ appBuilderComponents: {} });
+
+        const result = await handleGetAppBuilderInstallStatus(mockContext, { id: 'ghost' });
+
+        expect(result.success).toBe(false);
+        expect(result.code).toBe(ErrorCode.PROJECT_NOT_FOUND);
+        expect(mockClientCtor).not.toHaveBeenCalled();
+    });
+
+    it('the install names an integration the project does not have', async () => {
+        const { mockContext } = setupMocks({ appBuilderComponents: {} });
+
+        const result = await handleInstallAppBuilderComponent(mockContext, { id: 'ghost' });
+
+        expect(result.success).toBe(false);
+        expect(result.code).toBe(ErrorCode.PROJECT_NOT_FOUND);
+        expect(mockInstallAppManagement).not.toHaveBeenCalled();
+    });
+
+    it('the install refuses a MESH — this pass is for integrations only', async () => {
+        // The keyed map holds both kinds under one shape, so the kind check is
+        // the only thing standing between a mesh id and the Commerce installer.
+        const { mockContext } = setupMocks({
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    name: 'API Mesh',
+                    source: { owner: 'adobe', repo: 'mesh' },
+                    deployedUrls: APP_URLS,
+                },
+            },
+        });
+
+        const result = await handleInstallAppBuilderComponent(mockContext, { id: 'mesh' });
+
+        expect(result.success).toBe(false);
+        expect(result.code).toBe(ErrorCode.PROJECT_NOT_FOUND);
+        expect(mockInstallAppManagement).not.toHaveBeenCalled();
+    });
+});
+
+describe('the status read when the app itself errors', () => {
+    it('answers with the reason rather than a bare failure', async () => {
+        const { mockContext } = setupMocks(kitProject());
+        mockGetInstallationState.mockRejectedValue(new Error('gateway timeout'));
+
+        const result = await handleGetAppBuilderInstallStatus(mockContext, { id: 'kit-app' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('gateway timeout');
+    });
+
+    it('answers with a non-Error rejection rather than [object Object]', async () => {
+        const { mockContext } = setupMocks(kitProject());
+        mockGetInstallationState.mockRejectedValue('socket closed');
+
+        const result = await handleGetAppBuilderInstallStatus(mockContext, { id: 'kit-app' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('socket closed');
+    });
+});
+
+describe('the install pass and what it hands its collaborators', () => {
+    it('identifies a seeded kit under a custom id from its PERSISTED source', async () => {
+        // A kit installed under a custom id has no catalog row, so the lifecycle
+        // comes from recognising the repo it was seeded from. Handing the
+        // recogniser an empty object, or the slug instead of the display name,
+        // silently makes it a plain integration that cannot install.
+        const { mockContext } = setupMocks(kitProject());
+        mockDeveloperPermissions();
+        mockGetAppBuilderComponentEntry.mockReturnValue(undefined);
+        mockBuildCustomIntegrationEntry.mockReturnValue({
+            id: 'kit-app',
+            lifecycle: 'app-management',
+        });
+
+        const result = await handleInstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(mockBuildCustomIntegrationEntry).toHaveBeenCalledWith(
+            {
+                owner: 'adobe',
+                repo: 'commerce-integration-starter-kit',
+                branch: 'main',
+                name: 'Kit App',
+            },
+            'kit-app',
+        );
+        expect(result.success).toBe(true);
+    });
+
+    it('names the integration the way a user would recognise it, not by its slug', async () => {
+        const { mockContext } = setupMocks(kitProject());
+        mockDeveloperPermissions();
+
+        await handleInstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(mockProgressTitles.join(' ')).toContain('Kit App');
+    });
+
+    it('hands the runner-deps builder the auth and command services', async () => {
+        // ADR-015: these are fetched at the handler boundary and passed down. An
+        // empty context object typechecks and fails at the first deploy step.
+        const { mockContext, mockProject } = setupMocks(kitProject());
+        mockDeveloperPermissions();
+
+        await handleInstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(mockBuildRunnerDepsContext).toHaveBeenCalledWith(
+            expect.anything(),
+            mockProject,
+            expect.objectContaining({
+                authManager: expect.anything(),
+                commandManager: expect.anything(),
+            }),
+        );
+    });
+
+    it('refuses when the install pass is not wired into the deps', async () => {
+        const { mockContext } = setupMocks(kitProject());
+        mockDeveloperPermissions();
+        mockBuildDefaultRunnerDeps.mockReturnValue(
+            {} as unknown as ReturnType<typeof mockBuildDefaultRunnerDeps>,
+        );
+
+        const result = await handleInstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('install pass is not available');
+        expect(mockInstallAppManagement).not.toHaveBeenCalled();
+    });
+
+    it('forwards the runner’s step text, preferring the sub-step when there is one', async () => {
+        // The runner reports a coarse step and a fine one. The notification is
+        // the only surface with room for the fine one, so that is the one it
+        // gets — dropping to the coarse text makes a three-minute install look
+        // frozen on one line.
+        const { mockContext } = setupMocks(kitProject());
+        mockDeveloperPermissions();
+
+        await handleInstallAppBuilderComponent(mockContext, { id: 'kit-app' });
+        const forward = mockBuildDefaultRunnerDeps.mock.calls[0][1] as (
+            message: string,
+            subMessage?: string,
+        ) => void;
+        // The guard's own first step has already been reported by now.
+        mockProgressSteps.length = 0;
+        forward('Registering events', 'provider 2 of 3');
+        forward('Creating providers');
+
+        expect(mockProgressSteps).toStrictEqual(['provider 2 of 3', 'Creating providers']);
     });
 });
