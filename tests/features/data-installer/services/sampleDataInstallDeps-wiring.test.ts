@@ -21,20 +21,17 @@ jest.mock('@/features/data-installer/services/dataInstallerWriteClient', () => (
 jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
 }));
-// Its constructor calls getLogger(), which throws unless the extension has
-// activated. The poller itself is mocked above, so the instance is never used.
-jest.mock('@/core/shell/pollingService', () => ({
-    PollingService: jest.fn().mockImplementation(() => ({})),
-}));
 
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import { resolveDataInstallerAccess } from '@/features/data-installer/handlers/dataInstallerHandlers';
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import { watchImportJob } from '@/features/data-installer/services/importJobRunner';
-import type { HandlerContext } from '@/types/handlers';
 import type { DataTypeStatus } from '@/features/data-installer/types';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import {
+    importHarness,
+    ACCS_PROJECT,
+    NOT_REACHABLE,
+} from './sampleDataInstallDeps.testUtils';
 
 const mockedAccess = resolveDataInstallerAccess as jest.MockedFunction<
     typeof resolveDataInstallerAccess
@@ -42,13 +39,8 @@ const mockedAccess = resolveDataInstallerAccess as jest.MockedFunction<
 const MockedWriteClient = DataInstallerWriteClient as unknown as jest.Mock;
 const mockedWatch = watchImportJob as unknown as jest.Mock;
 
-const PROJECT = { componentSelections: { backend: 'adobe-commerce-accs' } };
+const PROJECT = ACCS_PROJECT;
 const PACK = { name: 'citisignal', version: '1.2.0' };
-const NOT_REACHABLE = 'The Data Installer is not reachable for this project.';
-
-function harness(): HandlerContext {
-    return createMockHandlerContext({ debugLogger: createMockLogger() });
-}
 
 /** The read client, with the two catalog calls `inventory` makes. */
 function readClient(overrides: Record<string, unknown> = {}) {
@@ -77,7 +69,7 @@ function unreachable(): void {
 }
 
 function deps(mode: 'install' | 'remove' = 'install') {
-    return buildSampleDataDeps(harness(), PROJECT, jest.fn(), mode);
+    return buildSampleDataDeps(importHarness(), PROJECT, jest.fn(), mode);
 }
 
 beforeEach(() => {
@@ -208,7 +200,7 @@ describe('watch', () => {
 describe('onProgress counting', () => {
     function reported(perType: Record<string, DataTypeStatus>) {
         const report = jest.fn();
-        buildSampleDataDeps(harness(), PROJECT, report).onProgress?.(perType);
+        buildSampleDataDeps(importHarness(), PROJECT, report).onProgress?.(perType);
         return report.mock.calls[0][0];
     }
 

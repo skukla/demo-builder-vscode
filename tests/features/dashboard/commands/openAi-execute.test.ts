@@ -14,7 +14,7 @@
  */
 
 import * as vscode from 'vscode';
-import { ShowAiCommand } from '@/features/dashboard/commands/openAi';
+import { ShowAiCommand, createAiPanel } from './openAi.testUtils';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { createPanelHandlerContext } from '@/commands/handlerContextFactory';
 import { dispatchHandler } from '@/core/handlers/dispatchHandler';
@@ -25,14 +25,6 @@ import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-
-jest.mock('@/features/dashboard/handlers/aiHandlers', () => ({
-    aiHandlers: {
-        'verify-ai-setup': jest.fn(),
-        'regenerate-ai-files': jest.fn(),
-        openInClaude: jest.fn(),
-    },
-}));
 
 // getRegisteredTypes stays real (it is `Object.keys`); dispatchHandler is the
 // collaborator whose ARGUMENTS are the thing under test.
@@ -79,13 +71,7 @@ describe('ShowAiCommand — execute and wiring', () => {
         mockedCreateContext.mockReturnValue(CONTEXT_SENTINEL);
         mockedDispatch.mockResolvedValue({ success: true });
 
-        mockPanel = {
-            webview: {
-                asWebviewUri: jest.fn((uri: vscode.Uri) => uri),
-                cspSource: 'vscode-webview:',
-            },
-            dispose: jest.fn(),
-        } as unknown as vscode.WebviewPanel;
+        mockPanel = createAiPanel();
 
         mockStateManager = {
             getCurrentProject: jest

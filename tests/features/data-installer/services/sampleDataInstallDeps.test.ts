@@ -24,34 +24,22 @@ jest.mock('@/features/data-installer/services/importJobRunner', () => ({
     watchImportJob: jest.fn(),
     IMPORT_POLL: { maxAttempts: 120, timeout: 600_000 },
 }));
-// Its constructor calls getLogger(), which throws unless the extension has
-// activated. The poller itself is mocked above, so the instance is never used.
-jest.mock('@/core/shell/pollingService', () => ({
-    PollingService: jest.fn().mockImplementation(() => ({})),
-}));
 
 import { buildSampleDataDeps } from '@/features/data-installer/services/sampleDataInstallDeps';
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import type { HandlerContext } from '@/types/handlers';
 import type { DataTypeStatus } from '@/features/data-installer/types';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
+import { importHarness, ACCS_PROJECT } from './sampleDataInstallDeps.testUtils';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 const mockedResolve = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
 >;
 
-const PROJECT = {
-    name: 'demo',
-    adobe: { organization: '285361' },
-    componentSelections: { backend: 'adobe-commerce-accs' },
-    componentConfigs: {},
-};
+const PROJECT = ACCS_PROJECT;
 
 function makeImportHarness(): HandlerContext {
-    return createMockHandlerContext({
-        debugLogger: createMockLogger(),
+    return importHarness({
         authManager: createMockAuthenticationService({
             getTokenManager: jest.fn().mockReturnValue({ inspectToken: jest.fn() }),
         }),
