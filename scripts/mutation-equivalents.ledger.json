@@ -14460,6 +14460,31 @@
             "decision": "It was previously killed by asserting that warning's wording, which tests/sop/no-logger-wording-assertions.test.ts refuses; the assertion was removed and the mutant recorded instead.",
             "recorded": "2026-09-06",
             "source": "Found 2026-09-06 when the ratchet caught the score falling after that assertion was replaced by one on the project's own state."
+        },
+        {
+            "module": "src/features/ai/server/agentOperationNotifier.ts",
+            "anchors": [
+                "const project = await ServiceLocator.getStateManager()?.getCurrentProject();",
+                "return project?.name ? `Project: ${project.name}` : '';"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both optional chains are required by the types (getStateManager returns IStateManager | null, getCurrentProject returns Project | null) and unobservable at runtime, because the whole lookup sits inside a try/catch that returns ''. Dropping either makes the expression throw exactly where the chain would have short-circuited, the catch swallows it, and the caller gets '' by the other route. Verified by planting both: the suite's 29 tests stay green, including the two that read the dialog detail for the present-project and no-project cases.",
+            "decision": "none \u2014 the ?. is required by the type and the catch makes its runtime effect identical",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/ai/server/agentOperationNotifier.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch changes the fallback from '' to an implicit undefined, and buildConsentPrompt coalesces its fallbackTarget with ?? '' before rendering, so both produce a dialog with no project line. Verified by planting it: the suite stays green, including the test that drives getCurrentProject into a rejection and asserts the dialog still opens with no 'Project:' line. Nothing downstream can tell '' from undefined.",
+            "decision": "none \u2014 the explicit '' is the honest return type; its runtime effect is identical to falling off the end",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }

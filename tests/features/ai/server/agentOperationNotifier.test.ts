@@ -5,10 +5,22 @@
  * report may never reach the user.
  */
 
-const mockWithProgress = jest.fn(async (_opts: unknown, task: () => Promise<unknown>) => task());
+/**
+ * The progress handle VS Code hands the task. A mock that omitted `report` made
+ * the reporter unobservable — the wrapper still passed one and no assertion
+ * could see what it did with it.
+ */
+const mockProgressReport = jest.fn();
+const mockWithProgress = jest.fn(
+    async (
+        _opts: unknown,
+        task: (progress: { report: (v: unknown) => void }) => Promise<unknown>
+    ) => task({ report: (v: unknown) => mockProgressReport(v) })
+);
 const mockSetStatusBarMessage = jest.fn();
 const mockShowWarningMessage = jest.fn();
 const mockGetConfiguration = jest.fn();
+const mockGetStateManager = jest.fn();
 
 jest.mock(
     'vscode',
@@ -27,17 +39,31 @@ jest.mock(
     { virtual: true }
 );
 
+// The gate reads the open project's name through the locator. Left real it
+// answers null in this harness, so the "no project" fallback was the only path
+// any test could reach.
+jest.mock('@/core/di/serviceLocator', () => ({
+    ServiceLocator: { getStateManager: (...a: unknown[]) => mockGetStateManager(...a) },
+}));
+
 import {
     createAgentConsentGate,
     createAgentOperationNotifier,
 } from '@/features/ai/server/agentOperationNotifier';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
+import type { StateManager } from '@/types/state';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { createMockProject } from '../../../helpers/projectFake';
+import { createMockStateManager, makeStateManager } from '../../../helpers/stateManagerFake';
 
 const logger = createMockLogger() as unknown as Logger;
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+    jest.clearAllMocks();
+    // No project open — the fallback the rest of this suite reads against.
+    mockGetStateManager.mockReturnValue(null);
+});
 
 describe('createAgentOperationNotifier', () => {
     it('wraps the call in a named progress notification and returns its result', async () => {
@@ -78,6 +104,34 @@ describe('createAgentOperationNotifier', () => {
             expect.stringContaining('Republishing the storefront configuration failed: CDN said no')
         );
         expect(mockSetStatusBarMessage).not.toHaveBeenCalled();
+    });
+
+    it("feeds the operation's own phase strings into the notification", async () => {
+        // The reporter is the whole reason `run` takes an argument. Before it
+        // existed the card could only ever show the tool's title while every
+        // phase the operation reported went nowhere.
+        const notifier = createAgentOperationNotifier(logger);
+
+        await notifier('republish', async (report) => {
+            report('Publishing 12 pages');
+            return 'done';
+        });
+
+        expect(mockProgressReport).toHaveBeenCalledWith({ message: 'Publishing 12 pages' });
+    });
+
+    it('opens a non-cancellable notification, because nothing listens for a cancel', async () => {
+        const notifier = createAgentOperationNotifier(logger);
+
+        await notifier('republish', async () => undefined);
+
+        expect(mockWithProgress).toHaveBeenCalledWith(
+            expect.objectContaining({
+                location: 15, // ProgressLocation.Notification
+                cancellable: false,
+            }),
+            expect.any(Function)
+        );
     });
 });
 
@@ -307,5 +361,85 @@ describe('createAgentConsentGate', () => {
         );
         expect(detail).toContain('chars)');
         expect(detail).not.toContain('x'.repeat(100));
+    });
+
+    it('answers ALLOWED when the user clicks Allow', async () => {
+        // Every other test here reads the dialog and none read the verdict, so
+        // the gate could have refused a plain Allow and the suite stayed green.
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        const verdict = await gate('delete_page', { path: '/x', confirm: true });
+
+        expect(verdict).toEqual({ allowed: true });
+    });
+
+    it('opens the dialog MODAL, so it cannot sit unseen behind the editor', async () => {
+        // A non-modal toast can be missed while the agent's client times out,
+        // and a QuickPick dismisses on focus loss. Modal is answered, or the
+        // refusal is explicit.
+        settingIs(true);
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate('delete_page', { path: '/x', confirm: true });
+
+        expect(mockShowWarningMessage.mock.calls[0][1]).toEqual(
+            expect.objectContaining({ modal: true })
+        );
+    });
+
+    it('requires consent when the setting has never been written', async () => {
+        // The default the extension ships with. A config that answers with the
+        // caller's fallback is what an unset setting really looks like.
+        mockGetConfiguration.mockReturnValue({
+            get: jest.fn((_key: string, dflt: unknown) => dflt),
+        });
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate('delete_page', { path: '/x', confirm: true });
+
+        expect(mockShowWarningMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('names the OPEN project for a tool that declares no target', async () => {
+        // `republish` acts on whatever is open and takes no argument saying
+        // which. Without the lookup the dialog asks someone to approve an
+        // unnamed thing.
+        settingIs(true);
+        mockGetStateManager.mockReturnValue(makeStateManager(createMockProject({ name: 'bodea' })));
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        await gate('republish', { confirm: true });
+
+        const detail = String(
+            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
+        );
+        expect(detail).toContain('Project: bodea');
+    });
+
+    it('still opens the dialog when the project lookup fails', async () => {
+        // Best-effort by design: a missing name costs the reader context, a
+        // thrown error would cost them the gate entirely.
+        settingIs(true);
+        mockGetStateManager.mockReturnValue(
+            createMockStateManager({
+                getCurrentProject: jest.fn().mockRejectedValue(new Error('state unavailable')),
+            } as Partial<jest.Mocked<StateManager>>)
+        );
+        mockShowWarningMessage.mockResolvedValue('Allow');
+        const gate = createAgentConsentGate(logger);
+
+        const verdict = await gate('republish', { confirm: true });
+
+        expect(verdict).toEqual({ allowed: true });
+        expect(mockShowWarningMessage).toHaveBeenCalledTimes(1);
+        const detail = String(
+            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
+        );
+        expect(detail).not.toContain('Project:');
     });
 });
