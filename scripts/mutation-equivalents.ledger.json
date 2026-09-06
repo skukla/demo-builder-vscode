@@ -14510,6 +14510,19 @@
             "decision": "none \u2014 the guard states the case explicitly instead of routing an expected outcome through an exception handler; its result is identical either way",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/dashboard/commands/openAi.ts",
+            "anchors": [
+                "if (panel) {"
+            ],
+            "line": 29,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard TRUE is unobservable because the body it guards is already a bare try/catch: with no active panel, `panel.dispose()` throws a TypeError that the empty catch swallows, so the mutated method and the original both return having done nothing. Verified by planting `if (true)` in the source and re-running both openAi suites \u2014 28 tests, all green.",
+            "decision": "none \u2014 the swallow-everything catch is deliberate (an already-disposed panel is a normal outcome), so no assertion can distinguish the two paths without changing that behaviour",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
         }
     ]
 }
