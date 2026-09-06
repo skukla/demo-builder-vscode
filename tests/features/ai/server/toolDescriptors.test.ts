@@ -6,6 +6,7 @@
  * `confirm` gating — all without touching vscode.
  */
 
+import { z } from 'zod';
 import { STATUS_DESCRIPTORS } from '@/features/ai/server/statusDescriptors';
 import {
     defaultShape,
@@ -17,14 +18,20 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 
 /** Fake McpServer capturing registrations. */
 function fakeServer() {
-    const tools = new Map<string, { inputSchema: any; handler: (args: any) => Promise<any> }>();
+    const tools = new Map<
+        string,
+        { inputSchema: any; def: any; handler: (args: any) => Promise<any> }
+    >();
     return {
         registerTool(
             name: string,
             def: { inputSchema?: unknown },
             handler: (args: any) => Promise<any>
         ) {
-            tools.set(name, { inputSchema: def.inputSchema, handler });
+            // The WHOLE definition is kept: annotations travel to the client in
+            // tools/list and the dry run gates on them, so dropping them here would
+            // leave the declaration unconstrained.
+            tools.set(name, { inputSchema: def.inputSchema, def, handler });
         },
         tools,
     };
@@ -39,6 +46,13 @@ function textOf(result: { content: Array<{ text: string }> }): string {
 describe('defaultShape', () => {
     it('unwraps a lone data field to compact JSON', () => {
         expect(defaultShape({ success: true, data: { a: 1 } } as HandlerResponse)).toBe('{"a":1}');
+    });
+
+    it('unwraps data ONLY when it is the lone field', () => {
+        // The unwrap is a convenience for the common single-payload handler; doing
+        // it whenever `data` is present would silently drop every sibling field.
+        const res = { success: true, data: { a: 1 }, warning: 'partial' } as unknown as HandlerResponse;
+        expect(defaultShape(res)).toBe('{"data":{"a":1},"warning":"partial"}');
     });
 
     it('strips the success flag and keeps remaining fields', () => {
@@ -170,6 +184,156 @@ describe('registerDescriptorTools', () => {
 
         expect(server.tools.get('safe')!.inputSchema.confirm).toBeUndefined();
         expect(server.tools.get('gated')!.inputSchema.confirm).toBeDefined();
+    });
+
+    it('declares each row to the client — annotations mirror readOnly and confirm', async () => {
+        const map: HandlerMap = { t: async () => ({ success: true }) };
+        const server = fakeServer();
+        registerDescriptorTools(
+            server,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'reader',
+                    description: 'reads things',
+                    map,
+                    type: 't',
+                    readOnly: true,
+                },
+                {
+                    needsAuth: ['adobe'],
+                    tool: 'wrecker',
+                    description: 'breaks things',
+                    map,
+                    type: 't',
+                    confirm: true,
+                    readOnly: false,
+                },
+            ],
+            ctxFactory
+        );
+
+        expect(server.tools.get('reader')!.def.annotations).toStrictEqual({
+            readOnlyHint: true,
+            // Only a confirm-gated row is destructive; the two say the same thing
+            // in one vocabulary rather than two that can drift apart.
+            destructiveHint: false,
+        });
+        expect(server.tools.get('reader')!.def.needsAuth).toBe(false);
+        expect(server.tools.get('reader')!.def.description).toBe('reads things');
+
+        expect(server.tools.get('wrecker')!.def.annotations).toStrictEqual({
+            readOnlyHint: false,
+            destructiveHint: true,
+        });
+        expect(server.tools.get('wrecker')!.def.needsAuth).toStrictEqual(['adobe']);
+    });
+
+    it("keeps a row's own input schema fields alongside the confirm flag", async () => {
+        const map: HandlerMap = { t: async () => ({ success: true }) };
+        const server = fakeServer();
+        registerDescriptorTools(
+            server,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'gated_with_args',
+                    description: 'x',
+                    map,
+                    type: 't',
+                    inputSchema: { owner: z.string(), repo: z.string() },
+                    confirm: true,
+                    readOnly: false,
+                },
+            ],
+            ctxFactory
+        );
+
+        const schema = server.tools.get('gated_with_args')!.inputSchema;
+        expect(Object.keys(schema).sort()).toStrictEqual(['confirm', 'owner', 'repo']);
+        expect(schema.owner.parse('skukla')).toBe('skukla');
+    });
+
+    it('refuses a confirm-gated tool called with NO arguments at all', async () => {
+        // An MCP client may send nothing; reading through a missing argument object
+        // would turn the guard into a crash.
+        const handler = jest.fn(async () => ({ success: true }));
+        const server = fakeServer();
+        registerDescriptorTools(
+            server,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'danger',
+                    description: 'x',
+                    map: { 'do-it': handler },
+                    type: 'do-it',
+                    confirm: true,
+                    readOnly: false,
+                },
+            ],
+            ctxFactory
+        );
+
+        const blocked = await server.tools.get('danger')!.handler(undefined);
+        expect(textOf(blocked)).toMatch(/requires confirm:true/);
+        expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('hands the call arguments to the shaper, so a row can vary its projection', async () => {
+        // The inventory: 'counts' | 'full' pattern lives on this — without the
+        // arguments a row could only ever pick one size.
+        const map: HandlerMap = { t: async () => ({ success: true, data: { n: 5 } }) };
+        const server = fakeServer();
+        registerDescriptorTools(
+            server,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'varies',
+                    description: 'x',
+                    map,
+                    type: 't',
+                    shape: (_res, args) => JSON.stringify({ sawArgs: args }),
+                    readOnly: true,
+                },
+            ],
+            ctxFactory
+        );
+
+        const result = await server.tools.get('varies')!.handler({ inventory: 'full' });
+        expect(JSON.parse(textOf(result))).toStrictEqual({ sawArgs: { inventory: 'full' } });
+    });
+
+    it('dispatches with the PLAIN context when no capture is asked for', async () => {
+        // The capturing wrapper replaces sendMessage. A row that did not ask for it
+        // must reach the handler with the context the factory built.
+        const sendMessage = jest.fn(async () => {});
+        const seen: unknown[] = [];
+        const map: HandlerMap = {
+            t: async (ctx: HandlerContext) => {
+                seen.push(ctx.sendMessage);
+                return { success: true, ok: true };
+            },
+        };
+        const server = fakeServer();
+        registerDescriptorTools(
+            server,
+            [
+                {
+                    needsAuth: false,
+                    tool: 'plain',
+                    description: 'x',
+                    map,
+                    type: 't',
+                    readOnly: true,
+                },
+            ],
+            () => createMockHandlerContext({ sendMessage })
+        );
+
+        await server.tools.get('plain')!.handler({});
+        expect(seen[0]).toBe(sendMessage);
     });
 
     it('applies a custom shape when provided', async () => {
