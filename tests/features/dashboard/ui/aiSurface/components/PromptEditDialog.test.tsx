@@ -44,6 +44,41 @@ function getSaveButton(): HTMLElement {
     return screen.getByRole('button', { name: /^save$/i });
 }
 
+/**
+ * Swap `globalThis.crypto` for the duration of one test, then put it back.
+ *
+ * `generateId` reads the crypto GLOBAL, not a Node import — the dialog runs in a
+ * webview. jsdom supplies its own `crypto`, so without this the branch taken is
+ * whichever jsdom happens to satisfy, and neither is chosen by the test.
+ */
+async function withCrypto(value: unknown, run: () => Promise<void>): Promise<void> {
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+    Object.defineProperty(globalThis, 'crypto', { value, configurable: true, writable: true });
+    try {
+        await run();
+    } finally {
+        if (original) {
+            Object.defineProperty(globalThis, 'crypto', original);
+        } else {
+            delete (globalThis as { crypto?: unknown }).crypto;
+        }
+    }
+}
+
+/** Fill both fields and press Save. */
+async function fillAndSave(titleText = 'My title', promptText = 'My prompt'): Promise<void> {
+    fireEvent.change(getTitleInput(), { target: { value: titleText } });
+    fireEvent.change(getPromptInput(), { target: { value: promptText } });
+    await act(async () => {
+        fireEvent.click(getSaveButton());
+    });
+}
+
+/** The prompt `onSave` was handed on its only call. */
+function saved(onSave: jest.Mock): AiPrompt {
+    return onSave.mock.calls[0][0] as AiPrompt;
+}
+
 describe('PromptEditDialog', () => {
     describe('create mode', () => {
         it('renders title and prompt fields empty', () => {
@@ -157,6 +192,156 @@ describe('PromptEditDialog', () => {
             fireEvent.click(closeButtons[0]);
             expect(onClose).toHaveBeenCalledTimes(1);
             expect(onSave).not.toHaveBeenCalled();
+        });
+    });
+
+    /**
+     * Which id a save carries, and where it comes from.
+     *
+     * `generateId` picks between the host's `crypto.randomUUID` and a
+     * time-plus-random string. Both branches are reachable — VS Code webviews on
+     * older hosts have no `randomUUID` — and neither was chosen by a test, so the
+     * dialog could have minted a constant and nothing would have noticed.
+     */
+    describe('the id a save carries', () => {
+        const FALLBACK_ID = /^ai-prompt-\d+-[0-9a-z]+$/;
+
+        const COPY_SOURCE: AiPrompt = {
+            id: 'source-id-999',
+            title: 'Source title',
+            prompt: 'Source body',
+        };
+
+        it('takes the id from the host crypto.randomUUID when it has one', async () => {
+            await withCrypto({ randomUUID: () => 'uuid-from-host' }, async () => {
+                const onSave = jest.fn().mockResolvedValue(undefined);
+                renderDialog({ mode: 'create', onSave });
+
+                await fillAndSave();
+
+                expect(saved(onSave).id).toBe('uuid-from-host');
+            });
+        });
+
+        it('falls back to a time-and-random id when crypto has no randomUUID', async () => {
+            await withCrypto({}, async () => {
+                const onSave = jest.fn().mockResolvedValue(undefined);
+                renderDialog({ mode: 'create', onSave });
+
+                await fillAndSave();
+
+                expect(saved(onSave).id).toMatch(FALLBACK_ID);
+            });
+        });
+
+        it('falls back when the host exposes no crypto at all', async () => {
+            await withCrypto(undefined, async () => {
+                const onSave = jest.fn().mockResolvedValue(undefined);
+                renderDialog({ mode: 'create', onSave });
+
+                await fillAndSave();
+
+                expect(saved(onSave).id).toMatch(FALLBACK_ID);
+            });
+        });
+
+        // The random suffix is what separates two fallback ids minted inside the
+        // same millisecond. Without it the timestamp alone collides and the second
+        // prompt overwrites the first.
+        it('separates two fallback ids minted in the same millisecond', async () => {
+            await withCrypto(undefined, async () => {
+                jest.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+                let call = 0;
+                jest.spyOn(Math, 'random').mockImplementation(() => {
+                    call = (call % 9) + 1;
+                    return call / 10;
+                });
+
+                const first = jest.fn().mockResolvedValue(undefined);
+                const opened = renderDialog({ mode: 'create', onSave: first });
+                await fillAndSave();
+                opened.unmount();
+
+                const second = jest.fn().mockResolvedValue(undefined);
+                renderDialog({ mode: 'create', onSave: second });
+                await fillAndSave();
+
+                expect(saved(first).id).not.toBe(saved(second).id);
+            });
+        });
+
+        // Duplicating a prompt: create mode is handed one to prefill from, and the
+        // copy must NOT come back wearing the original's id.
+        it('mints a new id in create mode even when handed a prompt to prefill from', async () => {
+            await withCrypto({ randomUUID: () => 'fresh-id' }, async () => {
+                const onSave = jest.fn().mockResolvedValue(undefined);
+                renderDialog({ mode: 'create', initialPrompt: COPY_SOURCE, onSave });
+
+                await fillAndSave('Copied title', 'Copied body');
+
+                expect(saved(onSave).id).toBe('fresh-id');
+            });
+        });
+    });
+
+    describe('whitespace is not content', () => {
+        it('leaves Save disabled when the title is only spaces', () => {
+            renderDialog({ mode: 'create' });
+
+            fireEvent.change(getTitleInput(), { target: { value: '   ' } });
+            fireEvent.change(getPromptInput(), { target: { value: 'My prompt' } });
+
+            expect(getSaveButton()).toHaveAttribute('aria-disabled', 'true');
+        });
+
+        it('leaves Save disabled when the prompt is only spaces', () => {
+            renderDialog({ mode: 'create' });
+
+            fireEvent.change(getTitleInput(), { target: { value: 'My title' } });
+            fireEvent.change(getPromptInput(), { target: { value: '   ' } });
+
+            expect(getSaveButton()).toHaveAttribute('aria-disabled', 'true');
+        });
+
+        it('trims the padding off both fields before saving', async () => {
+            const onSave = jest.fn().mockResolvedValue(undefined);
+            renderDialog({ mode: 'create', onSave });
+
+            await fillAndSave('  My title  ', '  My prompt  ');
+
+            expect(saved(onSave).title).toBe('My title');
+            expect(saved(onSave).prompt).toBe('My prompt');
+        });
+    });
+
+    describe('what the mode changes about the chrome', () => {
+        const EXISTING: AiPrompt = { id: 'e1', title: 'T', prompt: 'P' };
+
+        it('titles the dialog "New prompt" in create mode', () => {
+            renderDialog({ mode: 'create' });
+
+            expect(screen.getByRole('heading')).toHaveTextContent('New prompt');
+        });
+
+        it('titles the dialog "Edit prompt" in edit mode', () => {
+            renderDialog({ mode: 'edit', initialPrompt: EXISTING });
+
+            expect(screen.getByRole('heading')).toHaveTextContent('Edit prompt');
+        });
+
+        // The PROP, not the resulting focus: jsdom has no layout and react-aria's
+        // focus-on-mount never fires here, so `toHaveFocus` would fail whatever the
+        // dialog passed. The Spectrum stub surfaces the argument instead.
+        it('asks the title field to take focus in create mode', () => {
+            renderDialog({ mode: 'create' });
+
+            expect(getTitleInput()).toHaveAttribute('data-autofocus', 'true');
+        });
+
+        it('does not claim focus when opening an existing prompt to edit', () => {
+            renderDialog({ mode: 'edit', initialPrompt: EXISTING });
+
+            expect(getTitleInput()).not.toHaveAttribute('data-autofocus');
         });
     });
 });
