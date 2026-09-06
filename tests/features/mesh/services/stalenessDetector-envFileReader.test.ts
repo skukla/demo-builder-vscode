@@ -159,4 +159,69 @@ ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql?key=value&other=123
             });
         });
     });
+    /**
+     * The parser's own decisions, asserted through what it RETURNS.
+     *
+     * Every case below distinguishes the real line-handling from a plausible
+     * mis-handling of it: whitespace that must be stripped before the key is
+     * matched against the watch list, and the paired-quote rule, which strips
+     * only when BOTH ends carry the same quote character.
+     */
+    describe('Line handling decisions', () => {
+        it('strips surrounding whitespace before matching the key against the watch list', async () => {
+            mockFs.readFile.mockResolvedValue('   ADOBE_CATALOG_API_KEY=padded-key   \n');
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: 'padded-key' });
+        });
+
+        it('strips whitespace around the separator on both sides', async () => {
+            mockFs.readFile.mockResolvedValue('ADOBE_CATALOG_API_KEY \t=  spaced-value\n');
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: 'spaced-value' });
+        });
+
+        it('keeps a value that merely ENDS with the comment character', async () => {
+            mockFs.readFile.mockResolvedValue('ADOBE_CATALOG_API_KEY=trailing-hash#\n');
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: 'trailing-hash#' });
+        });
+
+        it('leaves a value with only a TRAILING double quote untouched', async () => {
+            mockFs.readFile.mockResolvedValue('ADOBE_CATALOG_API_KEY=unbalanced"\n');
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: 'unbalanced"' });
+        });
+
+        it('leaves a value with only a LEADING double quote untouched', async () => {
+            mockFs.readFile.mockResolvedValue('ADOBE_CATALOG_API_KEY="unbalanced\n');
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: '"unbalanced' });
+        });
+
+        it('leaves a value with only a TRAILING single quote untouched', async () => {
+            mockFs.readFile.mockResolvedValue("ADOBE_CATALOG_API_KEY=unbalanced'\n");
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: "unbalanced'" });
+        });
+
+        it('leaves a value with only a LEADING single quote untouched', async () => {
+            mockFs.readFile.mockResolvedValue("ADOBE_CATALOG_API_KEY='unbalanced\n");
+
+            const result = await readMeshEnvVarsFromFile('/test/mesh');
+
+            expect(result).toEqual({ ADOBE_CATALOG_API_KEY: "'unbalanced" });
+        });
+    });
 });

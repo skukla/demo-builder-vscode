@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/data-installer/ui/components/importResult.ts"
+        "src/features/mesh/services/stalenessDetector.ts"
     ],
     "reporters": [
         "clear-text",

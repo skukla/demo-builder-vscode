@@ -11938,6 +11938,187 @@
             "decision": "none \u2014 the default keeps describeOutcome total should the outcome union gain a member",
             "recorded": "2026-09-05",
             "source": "PL-22 MUT-02, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "if (key in componentConfig) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The 'in' test is redundant with the guard two lines below it. Deleting it makes the loop read componentConfig[key] for every watched key; an absent key yields undefined, and the very next check (value !== undefined && value !== null) drops exactly those. The result record is identical either way, so no caller and no test can tell the two versions apart.",
+            "decision": "none \u2014 the 'in' test states the intent (read only keys the config declares) and costs nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "const trimmedLine = line.trim();"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "This trim is redundant because both halves of the line are trimmed again after the split: the key at 'substring(0, equalsIndex).trim()' and the value at 'substring(equalsIndex + 1).trim()'. A whitespace-padded line therefore yields the same key and the same value with or without it. A whitespace-only line has no '=' and is dropped by the equalsIndex guard rather than by the emptiness check.",
+            "decision": "none \u2014 trimming once up front is what makes the two guards below readable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "if (!trimmedLine || trimmedLine.startsWith('#')) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Neither half of this skip is observable, because the whitelist at the end of the loop swallows what it would let through. A comment line parses to a key that still carries its leading '#', which is never one of MESH_ENV_VARS; an empty line has no '=' and is dropped by the equalsIndex guard instead. Making the condition never fire, or ANDing it, therefore produces the same record.",
+            "decision": "none \u2014 skipping comments and blanks up front is what the .env format means, whatever the whitelist would do afterwards",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "if (!trimmedLine || trimmedLine.startsWith('#')) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this block removes the 'continue', so comment and blank lines fall through into the parser. Both are then discarded anyway: a comment parses to a key beginning with '#', which is not in MESH_ENV_VARS, and a blank line has no '=' and is dropped by the equalsIndex guard. The returned record is byte-identical, so nothing observable distinguishes the two.",
+            "decision": "none \u2014 the early continue is the cheap and readable way to say what a .env comment is",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "if (equalsIndex <= 0) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both survivors let a malformed line through to the parser, and the whitelist then drops it. With '< 0' the only newly admitted line is one starting with '=', whose key parses to the empty string; with the condition never firing, a line carrying no '=' gives equalsIndex -1, and substring(0, -1) clamps to the empty string too. The empty string is not in MESH_ENV_VARS, so neither line reaches the result.",
+            "decision": "none \u2014 the guard keeps malformed lines out of the parser instead of relying on the whitelist to absorb them",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "if (equalsIndex <= 0) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this block drops the 'continue', so a line with no '=' is parsed instead of skipped. equalsIndex is then -1, substring(0, -1) clamps to the empty string, and the empty key is not in MESH_ENV_VARS \u2014 the line contributes nothing either way. No returned record differs, so no assertion on the result can separate them.",
+            "decision": "none \u2014 skipping a line that is not key=value is the guard's whole job",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "if (!config || typeof config !== 'object') continue;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Only the '!config' half of this guard is observable; the typeof half is not. Making 'typeof config !== object' always false admits truthy primitives \u2014 a string, a number, a boolean \u2014 into Object.entries, which yields index keys for a string and nothing at all for a number or boolean. None of those keys is one of MESH_ENV_VARS, so the flattened record the comparison actually reads is unchanged.",
+            "decision": "none \u2014 the typeof half states that a component config must be an object, which the surrounding contract assumes",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "if (keyedMesh) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Unreachable as a false case. Control only arrives here when currentState is non-null, and currentState is built from getMeshAppBuilderComponent(project) a few lines above: when that returns undefined, envVars, sourceHash and lastDeployed are all absent, getCurrentMeshStateImpl returns null, and the function has already taken the fresh-deployment return. So the same call cannot answer undefined here, and forcing the condition true changes nothing.",
+            "decision": "none \u2014 the check keeps the write honest against a future caller that reaches this line another way",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "if (envVarsChanged) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The whole body of this branch is a single logger.debug call, so flipping the condition either way changes only whether a debug line is printed. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the mutation-burn-down rules forbid. Nothing a caller receives moves: changedEnvVars and envVarsChanged are already computed.",
+            "decision": "none \u2014 the log names the changed vars for debugging and carries no decision",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "if (envVarsChanged) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this block removes one logger.debug call and nothing else \u2014 the values it reports, changedEnvVars and its length, are computed before it and returned to the caller regardless. The only test that could see the difference would assert the logger's arguments, which pins wording rather than behaviour.",
+            "decision": "none \u2014 a debug line, not a decision",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "if (sourceFilesChanged) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The body of this branch is a single logger.debug call reporting the old and new source hashes, so flipping the condition changes only whether that line prints. sourceFilesChanged has already been decided above and is returned to the caller either way, so no observable result moves and the only possible assertion would be on the logger's arguments.",
+            "decision": "none \u2014 the log reports the hashes for debugging and decides nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "if (sourceFilesChanged) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this block removes one logger.debug call. The verdict it narrates, sourceFilesChanged, is computed above and returned to the caller unchanged, so nothing a test can read moves. Separating the two versions would require asserting the logger's arguments, which pins wording rather than behaviour.",
+            "decision": "none \u2014 a debug line, not a decision",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "let sourceFilesChanged = false;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This initialiser is always overwritten before it is read. The if/else immediately below assigns sourceFilesChanged on both arms \u2014 false when the recorded hash is null, the comparison result otherwise \u2014 so the declared value never reaches the return. Seeding it true produces exactly the same verdict for every input.",
+            "decision": "none \u2014 the initialiser keeps the declaration typed and definite-assignment simple",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "if (currentState.sourceHash === null) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this block leaves sourceFilesChanged holding the false its declaration two lines above already gave it, which is the same value the block assigns. Only the pair of mutations together would be observable, and Stryker applies one at a time, so no input distinguishes this version from the original.",
+            "decision": "none \u2014 the explicit assignment states the never-captured-hash rule at the point it applies",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/features/mesh/services/stalenessDetector.ts",
+            "anchors": [
+                "hasChanges: envVarsChanged || sourceFilesChanged,"
+            ],
+            "line": 576,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "This expression is an argument to logger.debug, not the returned verdict \u2014 the identical expression four lines below at the return statement is the one callers read, and it is killed. Changing this copy alters only the text of a debug line, so the only assertion that could see it would be on the logger's arguments, which pins wording rather than behaviour. The classifier reads the enclosing statement and cannot see that these lines sit inside a logger call.",
+            "decision": "none \u2014 a debug summary that mirrors the return value; the return value itself is pinned",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-03, 2026-09-05"
         }
     ]
 }
