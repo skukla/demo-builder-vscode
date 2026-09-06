@@ -57,6 +57,19 @@ describe('useRowStatusOverrides', () => {
         expect(result.current).toEqual({});
     });
 
+    it('survives a status push with no payload at all', () => {
+        // `webviewClient` hands the handler whatever arrived, and a push with no
+        // payload reaches it as undefined. Reading `.id` off that throws inside
+        // the message handler, which takes the whole grid down rather than
+        // dropping one malformed message — the same contract the snapshot half
+        // states one effect above.
+        const { result } = renderHook(() => useRowStatusOverrides());
+
+        pushStatus(undefined as unknown as Record<string, unknown>);
+
+        expect(result.current).toStrictEqual({});
+    });
+
     // Deploy pushes omit `name`; a wholesale replace would wipe a prior rename.
     it('keeps a previously pushed name when a later push omits it', () => {
         const { result } = renderHook(() => useRowStatusOverrides());

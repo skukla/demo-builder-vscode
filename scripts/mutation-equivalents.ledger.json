@@ -16794,6 +16794,45 @@
             "decision": "none \u2014 the guard is required by the type (two handlers are optional props) and the cast from React.Key is unchecked, so removing it would trade a no-op for a throw on an input the compiler never validated",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useRowStatusOverrides.ts",
+            "anchors": [
+                "if (!payload?.id || !payload?.status) {"
+            ],
+            "line": 71,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The mutant drops the optional chain from the SECOND operand only: !payload?.id || !payload.status. That operand is unreachable with a nullish payload, because !payload?.id is then !undefined \u2014 true \u2014 and || short-circuits before the second is evaluated. For every payload that does reach it, payload.status and payload?.status are the same read. Verified by planting the mutation: all nine tests pass, including the one that pushes no payload at all, which is precisely the input that would throw if the operand were reachable.",
+            "decision": "none \u2014 the first operand's own optional chain (killed by the no-payload test) already covers every input that could make this one throw",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useRowStatusOverrides.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 66,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker fills this effect's empty dependency array with a one-element constant, ['Stryker was here']. React compares dependency arrays element by element with Object.is, and a literal built from the same constant string equals itself on every render, so the comparison still succeeds and the effect still runs exactly once on mount and never again. The array's LENGTH differs from the original, but it never differs between two renders of the mutated code, which is the only thing React's comparison would notice. Verified by planting the mutation in both effects at once: the nine tests in this suite and every suite in the integrationsSurface directory still pass, because there is no re-subscription to observe.",
+            "decision": "none \u2014 an array of constants and an empty array both subscribe once on mount; nothing an assertion can reach separates them",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useRowStatusOverrides.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 82,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker fills this effect's empty dependency array with a one-element constant, ['Stryker was here']. React compares dependency arrays element by element with Object.is, and a literal built from the same constant string equals itself on every render, so the comparison still succeeds and the effect still runs exactly once on mount and never again. The array's LENGTH differs from the original, but it never differs between two renders of the mutated code, which is the only thing React's comparison would notice. Verified by planting the mutation in both effects at once: the nine tests in this suite and every suite in the integrationsSurface directory still pass, because there is no re-subscription to observe.",
+            "decision": "none \u2014 an array of constants and an empty array both subscribe once on mount; nothing an assertion can reach separates them",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
         }
     ]
 }
