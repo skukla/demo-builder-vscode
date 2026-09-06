@@ -13084,6 +13084,45 @@
             "decision": "none \u2014 the trim is right here and matches the other validators' blank guard",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/validation/normalizers.ts",
+            "anchors": [
+                ".replace(/[\\s_]+/g, '-')       // Convert spaces and underscores to hyphens"
+            ],
+            "line": 37,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker drops the + from the whitespace/underscore class, so each such character becomes its own hyphen instead of a run becoming one. The very next steps make that unobservable: every run of hyphens is collapsed back to a single hyphen by the .replace(/-+/g, '-') two lines below, and the leading-run strip after it removes any hyphen left at the front. So 'a  b' reaches 'a--b' under the mutant and 'a-b' under the original, and both leave the collapse step as 'a-b'. No input can survive to the return value with a different number of hyphens, because nothing between the two steps can introduce a character that would keep them apart.",
+            "decision": "none \u2014 the + says what is meant and the collapse behind it is the safety net, not the intent",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/validation/normalizers.ts",
+            "anchors": [
+                ".replace(/[\\s_]+/g, '-')       // Convert spaces and underscores to hyphens"
+            ],
+            "line": 83,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker drops the + from the whitespace/underscore class, so each such character becomes its own hyphen instead of a run becoming one. The very next steps make that unobservable: every run of hyphens is collapsed back to a single hyphen by the .replace(/-+/g, '-') two lines below, and the leading-run strip after it removes any hyphen left at the front. So 'a  b' reaches 'a--b' under the mutant and 'a-b' under the original, and both leave the collapse step as 'a-b'. No input can survive to the return value with a different number of hyphens, because nothing between the two steps can introduce a character that would keep them apart.",
+            "decision": "none \u2014 the + says what is meant and the collapse behind it is the safety net, not the intent",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/validation/normalizers.ts",
+            "anchors": [
+                "existingNames: string[] = [],"
+            ],
+            "line": 159,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the default empty list of existing project names with a one-element list holding the constant 'Stryker was here'. That default is read at exactly one place \u2014 existingNames.includes(trimmedName) at the end of the function \u2014 and a name only reaches that line after passing PROJECT_NAME_PATTERN, which admits lowercase letters, digits and hyphens only. 'Stryker was here' contains capitals and spaces, so no name that reaches the includes() call can ever equal it, and the two defaults return the same answer for every possible argument.",
+            "decision": "none \u2014 the default empty list is correct and callers that omit it want no duplicate check",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }
