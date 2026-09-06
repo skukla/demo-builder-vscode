@@ -19,29 +19,33 @@ describe('Spinner', () => {
     describe('Size', () => {
         it('renders with default M size', () => {
             renderWithProviders(<Spinner />);
-            expect(screen.getByRole('progressbar')).toBeInTheDocument();
+            expect(screen.getByRole('progressbar')).toHaveAttribute('data-size', 'M');
         });
 
         it('renders with S size', () => {
             renderWithProviders(<Spinner size="S" />);
-            expect(screen.getByRole('progressbar')).toBeInTheDocument();
+            expect(screen.getByRole('progressbar')).toHaveAttribute('data-size', 'S');
         });
 
         it('renders with L size', () => {
             renderWithProviders(<Spinner size="L" />);
-            expect(screen.getByRole('progressbar')).toBeInTheDocument();
+            expect(screen.getByRole('progressbar')).toHaveAttribute('data-size', 'L');
         });
     });
 
     describe('Indeterminate State', () => {
+        // ProgressCircle draws a spinner or a filled arc from this prop, so it is the
+        // decision Spinner makes on its caller's behalf. Asserting only that a
+        // progressbar rendered leaves "spinning" and "stuck at 0%" indistinguishable —
+        // the default could flip to false and every assertion here would still pass.
         it('is indeterminate by default', () => {
             renderWithProviders(<Spinner />);
-            expect(screen.getByRole('progressbar')).toBeInTheDocument();
+            expect(screen.getByRole('progressbar')).toHaveAttribute('data-indeterminate', 'true');
         });
 
         it('respects isIndeterminate prop', () => {
             renderWithProviders(<Spinner isIndeterminate={false} />);
-            expect(screen.getByRole('progressbar')).toBeInTheDocument();
+            expect(screen.getByRole('progressbar')).toHaveAttribute('data-indeterminate', 'false');
         });
     });
 
