@@ -13,22 +13,29 @@
  * thing that would have caught any of them.
  */
 
-jest.mock('@/features/eds/services/accsDiscoveryConfig', () => ({
-    selectCredentialService: jest.fn(),
-}));
-
+// The resolver double belongs HERE, not in the shared harness: this suite is the
+// only one that wants it, and a jest.mock only hoists above the imports of the
+// module it appears in.
 jest.mock('@/features/data-installer/services/commerceCredentials', () => ({
     resolveCommerceCredentials: jest.fn(),
 }));
 
 import {
+    CLIENT_ID,
+    CLIENT_SECRET,
+    OK_BODY,
+    SERVICE_URL,
     brokerForContext,
     clearSharedCredentialCache,
     resolveProjectCredentials,
+    respondWith,
+    selectCredentialService,
     type CredentialSourceProject,
-} from '@/features/data-installer/services/commerceCredentialBroker';
-import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
-import { selectCredentialService } from '@/features/eds/services/accsDiscoveryConfig';
+} from './commerceCredentialBroker.testUtils';
+import {
+    resolveCommerceCredentials,
+    type CredentialResolution,
+} from '@/features/data-installer/services/commerceCredentials';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import type { HandlerContext } from '@/types/handlers';
 
@@ -37,23 +44,8 @@ const mockedResolve = resolveCommerceCredentials as jest.MockedFunction<
     typeof resolveCommerceCredentials
 >;
 
-const SERVICE_URL =
-    'https://example.adobeioruntime.net/api/v1/web/accs-discovery/get-commerce-credentials';
-const CLIENT_ID = 'shared-client-id';
-const CLIENT_SECRET = 'fake-test-secret-not-a-secret';
-
 /** A fetch stand-in serving the pair. */
-function servingPair(): jest.Mock {
-    return jest.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        text: async () =>
-            JSON.stringify({
-                success: true,
-                data: { clientId: CLIENT_ID, clientSecret: CLIENT_SECRET },
-            }),
-    });
-}
+const servingPair = (): jest.Mock => respondWith(OK_BODY);
 
 /** A HandlerContext whose auth hands back a token. */
 function contextWithAuth(overrides: Partial<HandlerContext> = {}): HandlerContext {
@@ -142,7 +134,7 @@ describe('brokerForContext', () => {
 });
 
 describe('resolveProjectCredentials', () => {
-    const RESOLUTION = { ok: false, reason: 'unsupported-backend' } as never;
+    const RESOLUTION: CredentialResolution = { ok: false, reason: 'unsupported-backend' };
 
     function project(over: Partial<CredentialSourceProject> = {}): CredentialSourceProject {
         return {

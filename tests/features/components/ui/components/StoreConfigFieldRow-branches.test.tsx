@@ -22,53 +22,15 @@ import {
     ACCS_STORE_CODE,
     ACCS_WEBSITE_CODE,
 } from '@/core/config/envVarKeys';
-import { StoreConfigFieldRow } from '@/features/components/ui/components/StoreConfigFieldRow';
-import type { ServiceGroup, UniqueField } from '@/features/components/ui/hooks/useComponentConfig';
+import type { CredentialServiceState } from '@/features/components/ui/hooks/useCredentialService';
+import {
+    StoreConfigFieldRow,
+    makeField as sharedField,
+    type ServiceGroup,
+    type UniqueField,
+} from './StoreConfigFieldRow.testUtils';
 
-jest.mock('@/features/components/ui/components/StoreSelectionRow', () => ({
-    StoreSelectionRow: () => <div data-testid="store-selection-row" />,
-}));
-
-/**
- * Surfaces the field OBJECT the row assembled, not just its key: the stored-secret
- * rule rewrites `placeholder` and `required` and drops the error, and none of that
- * is visible from the key alone.
- */
-jest.mock('@/features/components/ui/components/ConfigFieldRenderer', () => ({
-    ConfigFieldRenderer: ({ field, error }: { field: { key: string; placeholder?: string; required?: boolean }; error?: string }) => (
-        <div
-            data-testid={`config-field-${field.key}`}
-            data-placeholder={field.placeholder ?? ''}
-            data-required={String(field.required)}
-            data-error={error ?? ''}
-        />
-    ),
-}));
-
-/** Surfaces which secret field the row PAIRED with the id it was given. */
-jest.mock('@/features/components/ui/components/BrokeredCredentialFields', () => ({
-    BrokeredCredentialFields: ({
-        idField,
-        secretField,
-    }: {
-        idField: { key: string };
-        secretField?: { key: string };
-    }) => (
-        <div
-            data-testid="brokered-credentials"
-            data-id-field={idField.key}
-            data-secret-field={secretField?.key ?? 'none'}
-        />
-    ),
-}));
-
-const makeField = (key: string): UniqueField => ({
-    key,
-    componentIds: ['test-component'],
-    label: key,
-    type: 'text',
-    required: true,
-});
+const makeField = (key: string): UniqueField => sharedField(key, true);
 
 const DEPENDENT = 'ACCS_CATALOG_API_KEY';
 
@@ -239,7 +201,10 @@ describe('StoreConfigFieldRow — which fields render at all', () => {
 });
 
 describe('StoreConfigFieldRow — the brokered OAuth pair', () => {
-    const withService = { credentialService: { loading: false, status: undefined } as never };
+    // A settled probe that answered nothing — the shape a PaaS-free surface sees
+    // once the request is done. `status` stays absent rather than undefined-typed.
+    const credentialService: CredentialServiceState = { loading: false };
+    const withService = { credentialService };
 
     it('renders the pair as one unit from the id row', () => {
         renderRow({ ...withService, field: makeField(ACCS_OAUTH_CLIENT_ID) });

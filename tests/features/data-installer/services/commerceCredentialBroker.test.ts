@@ -10,45 +10,23 @@
  * Strict TDD: written before the module exists.
  */
 
-jest.mock('@/features/eds/services/accsDiscoveryConfig', () => ({
-    selectCredentialService: jest.fn(),
-}));
-
+// The service-selection mock, the subject import and the shared fixtures live in
+// the harness — see the note at the top of it for what stays out of it and why.
 import {
+    CLIENT_ID,
+    CLIENT_SECRET,
+    OK_BODY,
+    SERVICE_URL,
+    auth,
+    authWith,
     clearSharedCredentialCache,
     createProjectCredentialBroker,
     fetchSharedCommerceCredentials,
-} from '@/features/data-installer/services/commerceCredentialBroker';
-import { selectCredentialService } from '@/features/eds/services/accsDiscoveryConfig';
+    respondWith,
+    selectCredentialService,
+} from './commerceCredentialBroker.testUtils';
 
 const mockedSelect = selectCredentialService as jest.MockedFunction<typeof selectCredentialService>;
-
-const SERVICE_URL = 'https://example.adobeioruntime.net/api/v1/web/accs-discovery/get-commerce-credentials';
-const CLIENT_ID = 'shared-client-id';
-const CLIENT_SECRET = 'fake-test-secret-not-a-secret';
-
-/** A fetch stand-in returning one canned response. */
-function respondWith(body: unknown, status = 200): jest.Mock {
-    return jest.fn().mockResolvedValue({
-        ok: status >= 200 && status < 300,
-        status,
-        text: async () => (typeof body === 'string' ? body : JSON.stringify(body)),
-    });
-}
-
-const OK_BODY = { success: true, data: { clientId: CLIENT_ID, clientSecret: CLIENT_SECRET } };
-
-/**
- * A stand-in for the auth service, at module scope so both describes share one.
- *
- * NO DEFAULT PARAMETER: written as `auth(token = 'ims-token')`, calling it with an
- * explicit `undefined` re-triggers the default and hands back a token — which is
- * exactly how the no-token case first passed while asserting the opposite.
- */
-const authWith = (token?: string) => ({
-    getTokenManager: () => ({ inspectToken: jest.fn().mockResolvedValue({ token }) }),
-});
-const auth = () => authWith('ims-token');
 
 function deps(overrides: Partial<Parameters<typeof fetchSharedCommerceCredentials>[0]> = {}) {
     return {
