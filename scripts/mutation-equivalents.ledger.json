@@ -16896,6 +16896,19 @@
             "decision": "none \u2014 the empty dependency array is correct; the callback closes over nothing",
             "recorded": "2026-09-06",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/data-installer/services/dataInstallerConfig.ts",
+            "anchors": [
+                "return `scheme=\"${parsed.protocol.replace(/:$/, '')}\", host=\"${parsed.hostname}\"`;"
+            ],
+            "line": 150,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker drops the end anchor, so /:$/ becomes /:/. Both are non-global and replace the FIRST colon, and a URL protocol has exactly one: the WHATWG scheme grammar allows no colon inside a scheme. Checked seven shapes (https, data, javascript, a+b-c.d, file, mailto, urn:isbn:...) \u2014 in every case the only colon in .protocol is its last character. Planted the mutation and re-ran the suite (2026-09-06): all 30 tests pass, and no reachable value could separate the two regexes.",
+            "decision": "none \u2014 the end anchor states the intent and nothing distinguishes it at runtime",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
         }
     ]
 }
