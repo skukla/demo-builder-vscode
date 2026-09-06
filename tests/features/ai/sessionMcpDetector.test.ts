@@ -190,8 +190,10 @@ describe('detectSessionMcps', () => {
 
             const result = await detectSessionMcps();
 
-            expect(result[0].needsAuth).toBe(true);
-            expect(result[0].lastSeen).toBeUndefined();
+            // toStrictEqual, not `lastSeen` toBeUndefined: a spread that always
+            // ran would leave the key PRESENT holding undefined, and toBeUndefined
+            // cannot tell that apart from the key being absent.
+            expect(result).toStrictEqual([{ displayName: 'lucid', needsAuth: true }]);
         });
 
         it('ignores needs-auth entries that do not appear in claudeAiMcpEverConnected', async () => {
@@ -208,6 +210,66 @@ describe('detectSessionMcps', () => {
             expect(result).toHaveLength(1);
             expect(result[0].displayName).toBe('claude.ai AEM Content - Prod');
             expect(result[0].needsAuth).toBe(false);
+        });
+    });
+
+    describe('reading decisions', () => {
+        it('returns nothing and never opens the cache when nothing was ever connected', async () => {
+            // The early return is the only thing that keeps a machine with no
+            // session MCPs from touching the second file at all.
+            setupFiles({ claudeJson: { claudeAiMcpEverConnected: [] } });
+
+            const result = await detectSessionMcps();
+
+            expect(result).toStrictEqual([]);
+            expect(readFileMock).toHaveBeenCalledTimes(1);
+            expect(readFileMock).toHaveBeenCalledWith(CLAUDE_JSON, 'utf-8');
+        });
+
+        it('returns empty for a ~/.claude.json that parses to null', async () => {
+            // `typeof null === 'object'`, so the null half of the guard is what
+            // stops the property read below it.
+            setupFiles({ claudeJson: null });
+
+            expect(await detectSessionMcps()).toStrictEqual([]);
+        });
+
+        it('rethrows a read failure that is not ENOENT', async () => {
+            // A missing file is a fact about the machine; a permission error is a
+            // fact about the read, and swallowing it would report "no MCPs".
+            readFileMock.mockImplementation(async () => {
+                const err = new Error('EACCES') as NodeJS.ErrnoException;
+                err.code = 'EACCES';
+                throw err;
+            });
+
+            await expect(detectSessionMcps()).rejects.toThrow('EACCES');
+        });
+
+        it('fails soft when the needs-auth cache parses to null', async () => {
+            setupFiles({
+                claudeJson: { claudeAiMcpEverConnected: ['claude.ai AEM Content - Prod'] },
+                needsAuth: null,
+            });
+
+            const result = await detectSessionMcps();
+
+            expect(result).toStrictEqual([
+                { displayName: 'claude.ai AEM Content - Prod', needsAuth: false },
+            ]);
+        });
+
+        it('ignores a needs-auth entry whose value is not an object', async () => {
+            // The cache is undocumented internal state. A value of the wrong shape
+            // must not be read as "this MCP needs re-auth".
+            setupFiles({
+                claudeJson: { claudeAiMcpEverConnected: ['lucid'] },
+                needsAuth: { lucid: 'not-an-object' },
+            });
+
+            const result = await detectSessionMcps();
+
+            expect(result).toStrictEqual([{ displayName: 'lucid', needsAuth: false }]);
         });
     });
 
