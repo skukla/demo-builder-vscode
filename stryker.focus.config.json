@@ -8,8 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/projects-dashboard/ui/components/DashboardEmptyState.tsx",
-        "src/features/projects-dashboard/ui/components/ProjectsGrid.tsx"
+        "src/core/utils/loadingHTML.ts",
+        "src/core/ui/hooks/useDebouncedLoading.ts",
+        "src/core/ui/hooks/useFocusOnMount.ts",
+        "src/core/ui/hooks/useVSCodeRequest.ts",
+        "src/core/vscode/progressRegister.ts"
     ],
     "reporters": [
         "clear-text",

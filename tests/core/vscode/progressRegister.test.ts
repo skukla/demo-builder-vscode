@@ -15,9 +15,12 @@ import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { cardInFlightLabel, withProgressRegister } from '@/core/vscode/progressRegister';
 
 /** Capture the reporter withProgress hands the task. */
-function stubWithProgress(): { report: jest.Mock; options: () => { title?: string } } {
+function stubWithProgress(): {
+    report: jest.Mock;
+    options: () => { title?: string; location?: unknown; cancellable?: boolean };
+} {
     const report = jest.fn();
-    let seen: { title?: string } = {};
+    let seen: { title?: string; location?: unknown; cancellable?: boolean } = {};
     (vscode.window.withProgress as unknown as jest.Mock).mockImplementation(
         async (options: { title: string }, task: (p: unknown) => Promise<unknown>) => {
             seen = options;
@@ -104,6 +107,20 @@ describe('withProgressRegister', () => {
 
     // Taken from inside the task, not from withProgress's return value, so the
     // caller gets it regardless of what the notification host does with it.
+    /**
+     * The notification is a narration, not a control. Nothing here can honour a
+     * cancel — `run` is already in flight and owns its own teardown — so offering
+     * the button would give the user a cancel that silently does nothing.
+     */
+    it('opens a notification the user cannot cancel', async () => {
+        const { options } = stubWithProgress();
+
+        await withProgressRegister({ title: 'Deploying API Mesh' }, async () => undefined);
+
+        expect(options().cancellable).toBe(false);
+        expect(options().location).toBe(vscode.ProgressLocation.Notification);
+    });
+
     it('returns the work’s result', async () => {
         stubWithProgress();
 
@@ -161,6 +178,26 @@ describe('withProgressRegister — inside an agent tool call', () => {
         );
 
         expect(pushCardStatus).toHaveBeenCalledWith('Deploying Integration');
+    });
+
+    /**
+     * The card half is optional, and the agent path has to honour that too — the
+     * project-scoped operations with no card reach this branch whenever an agent
+     * is the caller. Pushing unconditionally would throw here and nowhere else.
+     */
+    it('runs a card-less operation without reaching for a card channel', async () => {
+        stubWithProgress();
+        const sink = jest.fn();
+
+        const result = await withPhaseSinks([sink], () =>
+            withProgressRegister({ title: 'Changing destination' }, async (step) => {
+                step('Checking requirements…');
+                return 'done';
+            })
+        );
+
+        expect(result).toBe('done');
+        expect(sink).toHaveBeenCalledWith('Checking requirements…');
     });
 
     it('control: OUTSIDE an agent call the notification opens exactly as before', async () => {
