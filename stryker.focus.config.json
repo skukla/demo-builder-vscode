@@ -8,7 +8,10 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/mesh/services/deployMeshHeadless.ts"
+        "src/features/ai/server/siteTools.ts",
+        "src/commands/openInClaude.ts",
+        "src/commands/orphanedSettings.ts",
+        "src/commands/refreshBlockLibrary.ts"
     ],
     "reporters": [
         "clear-text",

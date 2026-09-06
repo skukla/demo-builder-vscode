@@ -192,6 +192,101 @@ describe('RefreshBlockLibraryCommand', () => {
         expect(() => onProgress({ operation: 'block-library', message: 'configuring...' })).not.toThrow();
     });
 
+    /**
+     * The command owns the UX and nothing else — which toast fires, and whether one
+     * fires at all. Every branch below is invisible to the pipeline assertions above:
+     * the rebuild behaves identically and only the user's report differs.
+     */
+    describe('what the user is told', () => {
+        function command(project: Project | null = EDS_PROJECT): RefreshBlockLibraryCommand {
+            const cmd = new RefreshBlockLibraryCommand(
+                makeContext(),
+                makeStateManager(project),
+                makeLogger(),
+            );
+            cmd.helixService = fakeHelix;
+            return cmd;
+        }
+
+        it('confirms a rebuild that landed, and shows no error', async () => {
+            await command().execute();
+
+            expect(vscode.window.setStatusBarMessage).toHaveBeenCalledWith(
+                expect.stringContaining('Block library refreshed'),
+                expect.anything(),
+            );
+            expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+        });
+
+        it('reports the failure the rebuild gave, not a generic one', async () => {
+            executePipelineMock.mockResolvedValue({
+                success: false,
+                error: 'component-definition.json is not valid JSON',
+            });
+
+            await command().execute();
+
+            // The reason IS the fix here — a hand-edited comp-def is why this
+            // command exists, and "it failed" sends the user nowhere.
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('component-definition.json is not valid JSON'),
+                'OK',
+            );
+            expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
+        });
+
+        it('says nothing when the user cancelled the mid-rebuild DA.live re-auth', async () => {
+            executePipelineMock.mockRejectedValue(new DaLiveAuthError('DA.live token expired'));
+            ensureAuthMock.mockResolvedValue({ authenticated: false, cancelled: true });
+
+            await command().execute();
+
+            // The user just dismissed a sign-in. An error toast on top of that
+            // reports their own choice back to them as a fault.
+            expect(vscode.window.showErrorMessage).not.toHaveBeenCalled();
+            expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
+        });
+
+        it('still errors when the re-auth failed rather than being cancelled', async () => {
+            executePipelineMock.mockRejectedValue(new DaLiveAuthError('DA.live token expired'));
+            ensureAuthMock.mockResolvedValue({ authenticated: false, error: 'token rejected' });
+
+            await command().execute();
+
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('token rejected'),
+                'OK',
+            );
+        });
+
+        it('warns and runs nothing when no project is loaded', async () => {
+            await command(null).execute();
+
+            expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+                'No project loaded.',
+                'OK',
+            );
+            expect(executePipelineMock).not.toHaveBeenCalled();
+            expect(vscode.window.withProgress).not.toHaveBeenCalled();
+        });
+
+        it('reports a failure rather than a success when the progress task never ran', async () => {
+            // The result is captured from inside the task, so the initial value is
+            // what survives if the task does not run. It has to read as a failure:
+            // a success toast for a rebuild that never happened is the one outcome
+            // this command must not produce.
+            (vscode.window.withProgress as jest.Mock).mockResolvedValue(undefined);
+
+            await command().execute();
+
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('Unknown error'),
+                'OK',
+            );
+            expect(vscode.window.setStatusBarMessage).not.toHaveBeenCalled();
+        });
+    });
+
     it('retries the pipeline once after DaLiveAuthError (auth recovery)', async () => {
         // First call throws DaLiveAuthError; second succeeds.
         executePipelineMock

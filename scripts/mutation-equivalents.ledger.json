@@ -15519,6 +15519,30 @@
             "decision": "none \u2014 the guard is required for the narrowing, and the catch below is what makes it unobservable",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/commands/orphanedSettings.ts",
+            "anchors": [
+                "if (!configuration) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The guard is redundant with the optional chain three lines below it. Every falsy configuration produces the same answer either way: without the guard, sections becomes [configuration], the loop reads (section)?.properties, gets undefined, and the push is skipped \u2014 an empty array, which is what the guard returns. Planted 2026-09-06 by deleting the guard outright and running the suite plus every eds suite: 3,926 tests pass. Verified again by hand against undefined, null, 0, '', false, 'nonsense' and both valid shapes \u2014 identical output on all eleven.",
+            "decision": "none \u2014 the guard is the fail-fast statement the docstring makes, and the optional chain below is what makes it unobservable",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/commands/refreshBlockLibrary.ts",
+            "anchors": [
+                "let result: RefreshBlockLibraryHeadlessResult = { success: false };"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Emptying the initialiser cannot be observed. The only path that reads it is the one where the progress task never assigns \u2014 and there {} answers every read the same way { success: false } does: result.success is falsy, result.cancelled is falsy, and result.error is undefined so the error toast falls back to 'Unknown error'. Planted 2026-09-06 as {} and the suites pass, including the new test that drives exactly that path. The sibling BooleanLiteral mutant (success: true) is NOT equivalent and is killed by that test.",
+            "decision": "none \u2014 the false is what makes the fallback typecheck and say what it means; the ObjectLiteral form of it is unobservable",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
         }
     ]
 }
