@@ -118,6 +118,74 @@ describe('MeshDeployment - Error Handling', () => {
             expect(result.error).toBeDefined();
         });
 
+        /**
+         * The reason the user is shown comes from stderr, then stdout, then the
+         * exit code — in that order, and each candidate is trimmed first so a
+         * blank one falls through instead of being reported as an empty error.
+         */
+        it('uses stdout when there is no stderr at all', async () => {
+            mockSuccessfulFileRead();
+            mockCommandManager.execute.mockResolvedValue({
+                code: 1,
+                stdout: 'The mesh config references a missing resolver',
+            });
+
+            const result = await deployMeshComponent(
+                '/path/to/mesh',
+                mockCommandManager,
+                mockLogger
+            );
+
+            expect(result.error).toContain('missing resolver');
+        });
+
+        it('falls past a blank stderr to the stdout that has the reason', async () => {
+            mockSuccessfulFileRead();
+            mockCommandManager.execute.mockResolvedValue({
+                code: 1,
+                stderr: '   \n  ',
+                stdout: 'The mesh config references a missing resolver',
+            });
+
+            const result = await deployMeshComponent(
+                '/path/to/mesh',
+                mockCommandManager,
+                mockLogger
+            );
+
+            expect(result.error).toContain('missing resolver');
+        });
+
+        it('falls past blank output entirely to the exit code', async () => {
+            mockSuccessfulFileRead();
+            mockCommandManager.execute.mockResolvedValue({
+                code: 3,
+                stderr: '',
+                stdout: '   ',
+            });
+
+            const result = await deployMeshComponent(
+                '/path/to/mesh',
+                mockCommandManager,
+                mockLogger
+            );
+
+            expect(result.error).toContain('command failed with exit code 3');
+        });
+
+        it('reports the exit code when the command produced no output at all', async () => {
+            mockSuccessfulFileRead();
+            mockCommandManager.execute.mockResolvedValue({ code: 5, stderr: '' });
+
+            const result = await deployMeshComponent(
+                '/path/to/mesh',
+                mockCommandManager,
+                mockLogger
+            );
+
+            expect(result.error).toContain('command failed with exit code 5');
+        });
+
         it('should handle command exception', async () => {
             mockSuccessfulFileRead();
 

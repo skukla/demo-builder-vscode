@@ -13030,6 +13030,34 @@
             "decision": "Recorded as equivalent. Defensive repetition behind a guard that has already established the payload object exists.",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/mesh/services/meshDeployment.ts",
+            "anchors": [
+                "stdoutLength: deployResult.stdout?.length || 0,",
+                "stderrLength: deployResult.stderr?.length || 0,",
+                "stdout: deployResult.stdout?.substring(0, 500),",
+                "stderr: deployResult.stderr?.substring(0, 500),"
+            ],
+            "mutants": 8,
+            "category": "logPresentation",
+            "reason": "These four lines are the object literal handed to logger.debug and nothing else reads it. The eight left here - the two length fallbacks and the substring truncations - change only the text of one debug line (the optional chains on the same lines ARE killed, by the failure tests that pass no stdout or no stderr), and the thrown error the caller sees is built separately below from stderr/stdout/exit code. Killing them would mean asserting a logger call's arguments, which pins wording rather than behaviour and is banned repo-wide.",
+            "decision": "none - the only observable difference is what the debug log prints",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/mesh/services/meshDeployment.ts",
+            "anchors": [
+                "if (existingMeshId) {",
+                "} else {"
+            ],
+            "mutants": 4,
+            "category": "logPresentation",
+            "reason": "Both arms of this if/else contain a single logger.debug call and nothing else - the strategy itself was already decided on the line above (meshCommand = existingMeshId ? 'update' : 'create') and is asserted by the fallback suites. Flipping the condition or emptying either arm changes only which debug line prints, so no assertion on the deploy's behaviour can separate them.",
+            "decision": "none - the decision this guard narrates is made and tested one line earlier",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }
