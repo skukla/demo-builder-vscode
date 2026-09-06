@@ -348,4 +348,86 @@ describe('useSelection', () => {
             expect(result.current.isSelected(items[2])).toBe(false);
         });
     });
+
+    // Every callback this hook hands back is memoised, and a memo is only as
+    // correct as its dependency list: a callback that keeps a stale dependency
+    // goes on answering with the values of the render that built it, which is
+    // invisible until the caller swaps one. Each test here swaps exactly one
+    // dependency and asserts the callback used the NEW value.
+    describe('memoised callbacks track their dependencies', () => {
+        const item = { id: '1', name: 'Item 1' };
+
+        it('select calls the CURRENT onChange, not the one from the first render', () => {
+            const first = jest.fn();
+            const second = jest.fn();
+            const { result, rerender } = renderHook(
+                ({ onChange }) => useSelection<TestItem>({ onChange }),
+                { initialProps: { onChange: first } },
+            );
+
+            rerender({ onChange: second });
+            act(() => {
+                result.current.select(item);
+            });
+
+            expect(second).toHaveBeenCalledWith(item);
+            expect(first).not.toHaveBeenCalled();
+        });
+
+        it('clearSelection calls the CURRENT onChange with null', () => {
+            const first = jest.fn();
+            const second = jest.fn();
+            const { result, rerender } = renderHook(
+                ({ onChange }) => useSelection<TestItem>({ initialSelection: item, onChange }),
+                { initialProps: { onChange: first } },
+            );
+
+            rerender({ onChange: second });
+            act(() => {
+                result.current.clearSelection();
+            });
+
+            expect(second).toHaveBeenCalledWith(null);
+            expect(first).not.toHaveBeenCalled();
+        });
+
+        // toggle reads allowDeselect at call time. A consumer that turns
+        // deselection on after mount — a list that becomes optional once a
+        // later step is reached — would otherwise keep the closed answer.
+        it('toggle honours an allowDeselect flipped on after the first render', () => {
+            const { result, rerender } = renderHook(
+                ({ allowDeselect }) =>
+                    useSelection<TestItem>({
+                        initialSelection: item,
+                        getKey: (i) => i.id,
+                        allowDeselect,
+                    }),
+                { initialProps: { allowDeselect: false } },
+            );
+
+            rerender({ allowDeselect: true });
+            act(() => {
+                result.current.toggle(item);
+            });
+
+            expect(result.current.selectedItem).toBeNull();
+        });
+    });
+
+    // The default is "clicking the selected row keeps it selected". A picker
+    // whose one selection can be cleared by a stray second click leaves the
+    // step with nothing chosen and no visible reason why, so opting into
+    // deselection is the caller's decision to make.
+    it('does not deselect on toggle when allowDeselect was never passed', () => {
+        const item = { id: '1', name: 'Item 1' };
+        const { result } = renderHook(() =>
+            useSelection<TestItem>({ initialSelection: item, getKey: (i) => i.id })
+        );
+
+        act(() => {
+            result.current.toggle(item);
+        });
+
+        expect(result.current.selectedItem).toEqual(item);
+    });
 });
