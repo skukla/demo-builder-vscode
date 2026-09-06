@@ -16833,6 +16833,19 @@
             "decision": "none \u2014 an array of constants and an empty array both subscribe once on mount; nothing an assertion can reach separates them",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/core/ui/utils/spectrumTokens.ts",
+            "anchors": [
+                "if (value === undefined) {"
+            ],
+            "line": 101,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both mutants remove the early return \u2014 one by forcing the condition false, one by emptying its block \u2014 and undefined then falls through the whole function. It is not a number and not a string, so neither typeof branch claims it and it arrives at the trailing 'return undefined' on the last line, which is the same answer by a longer route. Verified by planting each mutation separately: the 25 tests here and all three layout-component suites that consume this function pass either way. The guard is a documented fast path for the optional-prop case, not a branch that decides anything.",
+            "decision": "none \u2014 the function's final statement already returns undefined for every value that reaches it, so the early return cannot change an answer",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
         }
     ]
 }

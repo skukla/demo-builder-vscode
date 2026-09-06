@@ -26,7 +26,7 @@ describe('translateSpectrumToken', () => {
             expect(translateSpectrumToken('size-300')).toBe('24px');
         });
 
-        it('should translate all 13 tokens correctly', () => {
+        it('should translate all 14 tokens correctly', () => {
             // Test all tokens from smallest to largest
             expect(translateSpectrumToken('size-50')).toBe('4px');
             expect(translateSpectrumToken('size-100')).toBe('8px');
@@ -40,6 +40,10 @@ describe('translateSpectrumToken', () => {
             expect(translateSpectrumToken('size-500')).toBe('40px');
             expect(translateSpectrumToken('size-600')).toBe('48px');
             expect(translateSpectrumToken('size-1000')).toBe('80px');
+            // size-4000 is the fixed sidebar width. It was the one token in the
+            // map that no assertion anywhere read, so its pixel value was free to
+            // be anything at all.
+            expect(translateSpectrumToken('size-4000')).toBe('320px');
             expect(translateSpectrumToken('size-6000')).toBe('480px');
         });
     });
@@ -111,6 +115,20 @@ describe('translateSpectrumToken', () => {
             expect(translateSpectrumToken(notAToken('invalid'))).toBe('invalid');
         });
 
+        it('returns undefined for a value that is neither string nor number', () => {
+            // The type forbids it and a webview prop can still carry it — a
+            // boolean from a conditional, an object from a spread. Nothing
+            // exercised the final fallthrough, so the string branch was free to
+            // claim every remaining value and hand it straight back as a CSS
+            // dimension.
+            expect(
+                translateSpectrumToken(true as unknown as DimensionValue),
+            ).toBeUndefined();
+            expect(
+                translateSpectrumToken({} as unknown as DimensionValue),
+            ).toBeUndefined();
+        });
+
         it('should gracefully handle various invalid inputs', () => {
             expect(translateSpectrumToken(notAToken('abc'))).toBe('abc');
             expect(translateSpectrumToken(notAToken('size-'))).toBe('size-');
@@ -155,7 +173,7 @@ describe('DimensionValue Type', () => {
 });
 
 describe('SpectrumSizeToken Type', () => {
-    it('should include all 13 expected tokens', () => {
+    it('should include all 14 expected tokens', () => {
         const allTokens: SpectrumSizeToken[] = [
             'size-50',
             'size-100',
@@ -169,6 +187,7 @@ describe('SpectrumSizeToken Type', () => {
             'size-500',
             'size-600',
             'size-1000',
+            'size-4000',
             'size-6000',
         ];
 
