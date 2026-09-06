@@ -66,7 +66,7 @@ export function projectToRename(overrides?: Partial<Project>): Project {
     });
 }
 
-export function createMockContext(): HandlerContext {
+export function renameHandlerContext(): HandlerContext {
     return createMockHandlerContext({
         stateManager: createMockStateManager({
             saveProject: jest.fn().mockResolvedValue(undefined),

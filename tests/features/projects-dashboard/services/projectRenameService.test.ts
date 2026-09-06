@@ -13,7 +13,7 @@
  */
 
 import {
-    createMockContext,
+    renameHandlerContext,
     mockAccess,
     mockGenerateAIContextFiles,
     mockRename,
@@ -34,7 +34,7 @@ describe('renameProjectCore', () => {
     // guards refuse the same input and only the wording says which one fired.
     it('should reject an empty name', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         const result = await renameProjectCore(context, project, '   ');
 
@@ -49,7 +49,7 @@ describe('renameProjectCore', () => {
     // Padding kept on the title would render on every surface.
     it('trims the requested title before using it', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         await renameProjectCore(context, project, '  Bodea B2B Demo  ');
 
@@ -59,7 +59,7 @@ describe('renameProjectCore', () => {
 
     it('reports a generic message when validation throws something that is not an Error', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
         mockValidateName.mockImplementation(() => {
             throw 'not an Error';
         });
@@ -71,7 +71,7 @@ describe('renameProjectCore', () => {
 
     it('should block rename while the demo is running', async () => {
         const project = projectToRename({ status: 'running' });
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         const result = await renameProjectCore(context, project, 'new-name');
 
@@ -81,7 +81,7 @@ describe('renameProjectCore', () => {
 
     it('should reject an invalid project name', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
         mockValidateName.mockImplementation(() => {
             throw new Error('Invalid name');
         });
@@ -94,7 +94,7 @@ describe('renameProjectCore', () => {
 
     it('should error when the target folder already exists', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
         mockAccess.mockResolvedValue(undefined); // folder exists
 
         const result = await renameProjectCore(context, project, 'new-name');
@@ -105,7 +105,7 @@ describe('renameProjectCore', () => {
 
     it('should rename the folder on disk', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         await renameProjectCore(context, project, 'new-name');
 
@@ -114,7 +114,7 @@ describe('renameProjectCore', () => {
 
     it('should update project path and componentInstances paths', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         await renameProjectCore(context, project, 'new-name');
 
@@ -126,7 +126,7 @@ describe('renameProjectCore', () => {
 
     it('should remove the old path from recent projects', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         await renameProjectCore(context, project, 'new-name');
 
@@ -137,7 +137,7 @@ describe('renameProjectCore', () => {
 
     it('should save the renamed project', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         await renameProjectCore(context, project, 'new-name');
 
@@ -147,7 +147,7 @@ describe('renameProjectCore', () => {
 
     it('should return success with the new name and path', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         const result = await renameProjectCore(context, project, 'new-name');
 
@@ -163,7 +163,7 @@ describe('renameProjectCore', () => {
 
     it('regenerates AI context files for the new path (fixes stale MCP paths)', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         await renameProjectCore(context, project, 'new-name');
 
@@ -177,7 +177,7 @@ describe('renameProjectCore', () => {
 
     it('does not regenerate AI context for a no-op rename (path unchanged)', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         await renameProjectCore(context, project, 'old-name');
 
@@ -189,7 +189,7 @@ describe('renameProjectCore', () => {
     // both real actions with nothing to undo them.
     it('touches neither the folder nor the recent list for a no-op rename', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         const result = await renameProjectCore(context, project, 'old-name');
 
@@ -202,7 +202,7 @@ describe('renameProjectCore', () => {
     describe('rewriting component paths', () => {
         it('renames a project that has no componentInstances at all', async () => {
             const project = projectToRename({ componentInstances: undefined });
-            const context = createMockContext();
+            const context = renameHandlerContext();
 
             const result = await renameProjectCore(context, project, 'new-name');
 
@@ -235,7 +235,7 @@ describe('renameProjectCore', () => {
                     },
                 },
             });
-            const context = createMockContext();
+            const context = renameHandlerContext();
 
             const result = await renameProjectCore(context, project, 'new-name');
 
@@ -250,7 +250,7 @@ describe('renameProjectCore', () => {
 
     it('treats AI context regeneration failure as non-fatal (rename still succeeds)', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
         mockGenerateAIContextFiles.mockRejectedValueOnce(new Error('regen boom'));
 
         const result = await renameProjectCore(context, project, 'new-name');
@@ -264,7 +264,7 @@ describe('renameProjectCore', () => {
     // activation sweep refreshing the bundle on every start, for ever.
     it('still persists what the failed regeneration landed', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
         mockGenerateAIContextFiles.mockRejectedValueOnce(new Error('regen boom'));
 
         await renameProjectCore(context, project, 'new-name');
@@ -276,7 +276,7 @@ describe('renameProjectCore', () => {
 
     it('reports a failure the caller can render when the move itself fails', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
         mockRename.mockRejectedValue(new Error('EPERM'));
 
         const result = await renameProjectCore(context, project, 'new-name');
@@ -296,7 +296,7 @@ describe('renaming by TITLE', () => {
      */
     it('moves the folder to the slug derived from the title', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         await renameProjectCore(context, project, 'Bodea B2B Demo');
 
@@ -305,7 +305,7 @@ describe('renaming by TITLE', () => {
 
     it('stores the title as typed and the slug beside it', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         await renameProjectCore(context, project, 'Bodea B2B Demo');
 
@@ -315,7 +315,7 @@ describe('renaming by TITLE', () => {
 
     it('rewrites component paths onto the new folder', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         await renameProjectCore(context, project, 'Bodea B2B Demo');
 
@@ -329,7 +329,7 @@ describe('renaming by TITLE', () => {
         // `path.join(root, '')` -- the projects ROOT -- and move the project
         // directory onto it.
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
 
         const result = await renameProjectCore(context, project, '!!!');
 

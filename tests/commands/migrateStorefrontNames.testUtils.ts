@@ -79,11 +79,11 @@ const migrateMock = migrateStorefrontNamingIfNeeded as jest.Mock;
 const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
 const registerPublishKeyMock = registerPublishKey as jest.Mock;
 
-export function makeLogger(): Logger {
+export function migrationLogger(): Logger {
     return createMockLogger() as unknown as Logger;
 }
 
-export function makeProject(
+export function mismatchedProject(
     name: string,
     overrides: { daLiveSite?: string; daLiveOrg?: string; githubRepo?: string } = {}
 ): Project {
@@ -105,7 +105,7 @@ export function makeProject(
     });
 }
 
-export function makeStateManager(projectsByPath: Record<string, Project>): StateManager {
+export function projectsOnDisk(projectsByPath: Record<string, Project>): StateManager {
     return createMockStateManager({
         getAllProjects: jest.fn().mockResolvedValue(
             Object.keys(projectsByPath).map((path) => ({
@@ -126,12 +126,12 @@ export { MigrateStorefrontNamesCommand, migrateMock, ensureAuthMock, registerPub
  * The command plus the extension context and logger it was handed — both of
  * which it forwards to `ensureDaLiveAuth`, so a spec has to be able to name them.
  */
-export function makeCommandWith(stateManager: StateManager): {
+export function migrateCommandWith(stateManager: StateManager): {
     command: MigrateStorefrontNamesCommand;
     context: ReturnType<typeof createMockExtensionContext>;
     logger: Logger;
 } {
-    const logger = makeLogger();
+    const logger = migrationLogger();
     const context = createMockExtensionContext();
     return {
         command: new MigrateStorefrontNamesCommand(context, stateManager, logger),
@@ -140,8 +140,8 @@ export function makeCommandWith(stateManager: StateManager): {
     };
 }
 
-export function makeCommand(stateManager: StateManager): MigrateStorefrontNamesCommand {
-    return makeCommandWith(stateManager).command;
+export function migrateCommand(stateManager: StateManager): MigrateStorefrontNamesCommand {
+    return migrateCommandWith(stateManager).command;
 }
 
 /** Every `progress.report(...)` argument the last run produced, in order. */

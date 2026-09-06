@@ -112,7 +112,6 @@
         "tests/features/project-creation/services/meshSetupService.test.ts": 2,
         "tests/features/project-creation/services/projectFinalizationService.test.ts": 6,
         "tests/features/projects-dashboard/handlers/dashboardHandlers.test.ts": 2,
-        "tests/features/projects-dashboard/services/projectRenameService.test.ts": 1,
         "tests/features/sidebar/providers/sidebarProvider.test.ts": 2,
         "tests/features/updates/commands/checkUpdates-upstream-addons.test.ts": 1,
         "tests/features/updates/services/addonUpdateChecker.test.ts": 1,

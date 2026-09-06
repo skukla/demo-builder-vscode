@@ -13,10 +13,10 @@
 import * as vscode from 'vscode';
 import {
     ensureAuthMock,
-    makeCommand,
-    makeCommandWith,
-    makeProject,
-    makeStateManager,
+    migrateCommand,
+    migrateCommandWith,
+    mismatchedProject,
+    projectsOnDisk,
     migrateMock,
     registerPublishKeyMock,
     resetMigrateMocks,
@@ -30,8 +30,8 @@ describe('MigrateStorefrontNamesCommand', () => {
 
     describe('scan phase', () => {
         it('shows an info message and does NOT prompt when no projects need migration', async () => {
-            const sm = makeStateManager({});
-            await makeCommand(sm).execute();
+            const sm = projectsOnDisk({});
+            await migrateCommand(sm).execute();
 
             expect(migrateMock).not.toHaveBeenCalled();
             // The "nothing to do" message is shown via showInformationMessage.
@@ -44,19 +44,19 @@ describe('MigrateStorefrontNamesCommand', () => {
 
         it('ignores projects without an eds-storefront component instance', async () => {
             const noEds = createMockProject({ name: 'no-eds', componentInstances: {} });
-            const sm = makeStateManager({ '/a': noEds });
+            const sm = projectsOnDisk({ '/a': noEds });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(migrateMock).not.toHaveBeenCalled();
         });
 
         it('ignores projects whose daLiveSite already matches the repo name', async () => {
             // daLiveSite === repoName → not a candidate
-            const alreadyMatching = makeProject('b2b', { daLiveSite: 'b2b' });
-            const sm = makeStateManager({ '/a': alreadyMatching });
+            const alreadyMatching = mismatchedProject('b2b', { daLiveSite: 'b2b' });
+            const sm = projectsOnDisk({ '/a': alreadyMatching });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(migrateMock).not.toHaveBeenCalled();
         });
@@ -66,9 +66,9 @@ describe('MigrateStorefrontNamesCommand', () => {
         // and the component callback returning anything but an empty list would
         // reconcile instances against a catalog the scan never asked for.
         it('loads each project read-only, with no component catalog', async () => {
-            const sm = makeStateManager({ '/a': makeProject('b2b') });
+            const sm = projectsOnDisk({ '/a': mismatchedProject('b2b') });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(sm.loadProjectFromPath).toHaveBeenCalledWith('/a', expect.any(Function), {
                 persistAfterLoad: false,
@@ -78,37 +78,37 @@ describe('MigrateStorefrontNamesCommand', () => {
         });
 
         it('keeps scanning after a project fails to load', async () => {
-            const sm = makeStateManager({ '/a': makeProject('a-store'), '/b': makeProject('b-store') });
+            const sm = projectsOnDisk({ '/a': mismatchedProject('a-store'), '/b': mismatchedProject('b-store') });
             (sm.loadProjectFromPath as jest.Mock).mockImplementation(async (path: string) => {
                 if (path === '/a') throw new Error('manifest is not JSON');
-                return makeProject('b-store');
+                return mismatchedProject('b-store');
             });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(migrateMock).toHaveBeenCalledTimes(1);
         });
 
         it('skips a project path that resolves to nothing', async () => {
-            const sm = makeStateManager({ '/a': makeProject('a-store'), '/b': makeProject('b-store') });
+            const sm = projectsOnDisk({ '/a': mismatchedProject('a-store'), '/b': mismatchedProject('b-store') });
             (sm.loadProjectFromPath as jest.Mock).mockImplementation(async (path: string) =>
-                path === '/a' ? null : makeProject('b-store')
+                path === '/a' ? null : mismatchedProject('b-store')
             );
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(migrateMock).toHaveBeenCalledTimes(1);
         });
 
         it('finds mismatched projects (daLiveSite differs from the repo half of githubRepo)', async () => {
             // daLiveSite=b2b-content vs githubRepo=skukla/b2b → repo half is "b2b" → mismatch
-            const mismatched = makeProject('b2b', {
+            const mismatched = mismatchedProject('b2b', {
                 daLiveSite: 'b2b-content',
                 githubRepo: 'skukla/b2b',
             });
-            const sm = makeStateManager({ '/a': mismatched });
+            const sm = projectsOnDisk({ '/a': mismatched });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(migrateMock).toHaveBeenCalledTimes(1);
             const [ctx] = migrateMock.mock.calls[0];
@@ -120,33 +120,33 @@ describe('MigrateStorefrontNamesCommand', () => {
 
     describe('confirmation', () => {
         it('does NOT run migrations when the user cancels', async () => {
-            const mismatched = makeProject('b2b');
-            const sm = makeStateManager({ '/a': mismatched });
+            const mismatched = mismatchedProject('b2b');
+            const sm = projectsOnDisk({ '/a': mismatched });
 
             (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce('Cancel');
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(migrateMock).not.toHaveBeenCalled();
         });
 
         it('does NOT run migrations when the user dismisses the dialog (returns undefined)', async () => {
-            const mismatched = makeProject('b2b');
-            const sm = makeStateManager({ '/a': mismatched });
+            const mismatched = mismatchedProject('b2b');
+            const sm = projectsOnDisk({ '/a': mismatched });
 
             (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce(undefined);
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(migrateMock).not.toHaveBeenCalled();
         });
 
         it('shows every candidate in the confirmation detail', async () => {
-            const a = makeProject('a-store');
-            const b = makeProject('b-store');
-            const sm = makeStateManager({ '/a': a, '/b': b });
+            const a = mismatchedProject('a-store');
+            const b = mismatchedProject('b-store');
+            const sm = projectsOnDisk({ '/a': a, '/b': b });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             // The confirmation goes out as a modal info message; the
             // `detail` field holds the per-project list.
@@ -160,26 +160,26 @@ describe('MigrateStorefrontNamesCommand', () => {
 
     describe('authentication', () => {
         it('aborts when DA.live auth is not granted (user cancelled)', async () => {
-            const mismatched = makeProject('b2b');
-            const sm = makeStateManager({ '/a': mismatched });
+            const mismatched = mismatchedProject('b2b');
+            const sm = projectsOnDisk({ '/a': mismatched });
 
             ensureAuthMock.mockResolvedValueOnce({ authenticated: false, cancelled: true });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(migrateMock).not.toHaveBeenCalled();
         });
 
         it('aborts when DA.live auth fails outright (error response)', async () => {
-            const mismatched = makeProject('b2b');
-            const sm = makeStateManager({ '/a': mismatched });
+            const mismatched = mismatchedProject('b2b');
+            const sm = projectsOnDisk({ '/a': mismatched });
 
             ensureAuthMock.mockResolvedValueOnce({
                 authenticated: false,
                 error: 'token revoked',
             });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(migrateMock).not.toHaveBeenCalled();
             // The reason the SDK gave, not a generic stand-in — it is the only
@@ -191,11 +191,11 @@ describe('MigrateStorefrontNamesCommand', () => {
         });
 
         it('falls back to a generic reason when the failure carries none', async () => {
-            const sm = makeStateManager({ '/a': makeProject('b2b') });
+            const sm = projectsOnDisk({ '/a': mismatchedProject('b2b') });
 
             ensureAuthMock.mockResolvedValueOnce({ authenticated: false });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
                 expect.stringContaining('authentication failed'),
@@ -206,8 +206,8 @@ describe('MigrateStorefrontNamesCommand', () => {
         // ensureDaLiveAuth reads exactly two fields off what it is handed. An
         // empty object typechecks at the call site and fails at run time.
         it('hands the extension context and logger to the DA.live sign-in', async () => {
-            const sm = makeStateManager({ '/a': makeProject('b2b') });
-            const { command, context } = makeCommandWith(sm);
+            const sm = projectsOnDisk({ '/a': mismatchedProject('b2b') });
+            const { command, context } = migrateCommandWith(sm);
 
             await command.execute();
 
@@ -220,22 +220,22 @@ describe('MigrateStorefrontNamesCommand', () => {
 
     describe('happy path', () => {
         it('migrates every confirmed project and persists each manifest', async () => {
-            const a = makeProject('a-store');
-            const b = makeProject('b-store');
-            const c = makeProject('c-store');
-            const sm = makeStateManager({ '/a': a, '/b': b, '/c': c });
+            const a = mismatchedProject('a-store');
+            const b = mismatchedProject('b-store');
+            const c = mismatchedProject('c-store');
+            const sm = projectsOnDisk({ '/a': a, '/b': b, '/c': c });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(migrateMock).toHaveBeenCalledTimes(3);
             expect(sm.saveProject).toHaveBeenCalledTimes(3);
         });
 
         it('reports success when every migration succeeds', async () => {
-            const a = makeProject('a-store');
-            const sm = makeStateManager({ '/a': a });
+            const a = mismatchedProject('a-store');
+            const sm = projectsOnDisk({ '/a': a });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             // First call = confirmation; second = success summary.
             const calls = (vscode.window.showInformationMessage as jest.Mock).mock.calls;
@@ -249,9 +249,9 @@ describe('MigrateStorefrontNamesCommand', () => {
         // step follows and re-mints; this command has no such follow-up, so it
         // must repair what it broke or leave runtime PDP self-heal dead.
         it('re-mints the publish key that the migration write destroyed', async () => {
-            const sm = makeStateManager({ '/a': makeProject('a-store') });
+            const sm = projectsOnDisk({ '/a': mismatchedProject('a-store') });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(registerPublishKeyMock).toHaveBeenCalledTimes(1);
             expect(registerPublishKeyMock).toHaveBeenCalledWith(
@@ -267,9 +267,9 @@ describe('MigrateStorefrontNamesCommand', () => {
                 migrated: false,
                 error: 'Helix re-registration failed',
             });
-            const sm = makeStateManager({ '/a': makeProject('a-store') });
+            const sm = projectsOnDisk({ '/a': mismatchedProject('a-store') });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(registerPublishKeyMock).not.toHaveBeenCalled();
         });
@@ -277,9 +277,9 @@ describe('MigrateStorefrontNamesCommand', () => {
 
     describe('partial failure', () => {
         it('continues to the next project when one migration fails', async () => {
-            const a = makeProject('a-store');
-            const b = makeProject('b-store');
-            const sm = makeStateManager({ '/a': a, '/b': b });
+            const a = mismatchedProject('a-store');
+            const b = mismatchedProject('b-store');
+            const sm = projectsOnDisk({ '/a': a, '/b': b });
 
             // First call fails, second succeeds.
             migrateMock
@@ -290,7 +290,7 @@ describe('MigrateStorefrontNamesCommand', () => {
                 })
                 .mockResolvedValueOnce({ skipped: false, migrated: true });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(migrateMock).toHaveBeenCalledTimes(2);
             // Only the successful one persists its manifest.
@@ -298,8 +298,8 @@ describe('MigrateStorefrontNamesCommand', () => {
         });
 
         it('surfaces a warning summary when any project fails', async () => {
-            const a = makeProject('a-store');
-            const sm = makeStateManager({ '/a': a });
+            const a = mismatchedProject('a-store');
+            const sm = projectsOnDisk({ '/a': a });
 
             migrateMock.mockResolvedValueOnce({
                 skipped: false,
@@ -307,7 +307,7 @@ describe('MigrateStorefrontNamesCommand', () => {
                 error: 'DA copy timeout',
             });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
                 expect.stringContaining('failed'),
@@ -316,15 +316,15 @@ describe('MigrateStorefrontNamesCommand', () => {
         });
 
         it('catches thrown errors and reports them per-project (not as a crash)', async () => {
-            const a = makeProject('a-store');
-            const b = makeProject('b-store');
-            const sm = makeStateManager({ '/a': a, '/b': b });
+            const a = mismatchedProject('a-store');
+            const b = mismatchedProject('b-store');
+            const sm = projectsOnDisk({ '/a': a, '/b': b });
 
             migrateMock
                 .mockRejectedValueOnce(new Error('network blip'))
                 .mockResolvedValueOnce({ skipped: false, migrated: true });
 
-            await makeCommand(sm).execute();
+            await migrateCommand(sm).execute();
 
             // Both attempts happened; only the success persisted.
             expect(migrateMock).toHaveBeenCalledTimes(2);

@@ -1,8 +1,8 @@
-import { extractEnvVars, extractEnvVarsSync } from '@/core/utils/envVarExtraction';
-import * as fs from 'fs/promises';
-
-jest.mock('fs/promises');
-jest.mock('fs');
+import {
+    extractEnvVars,
+    extractEnvVarsSync,
+    readFileMock,
+} from './envVarExtraction.testUtils';
 
 describe('envVarExtraction', () => {
     describe('extractEnvVars', () => {
@@ -12,7 +12,7 @@ KEY1=value1
 KEY2=value2
 KEY3=value3
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -30,7 +30,7 @@ KEY1=value1
 KEY2=value2
 
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -47,7 +47,7 @@ KEY1=value1
 # Another comment
 KEY2=value2
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -62,7 +62,7 @@ KEY2=value2
 KEY1="quoted value"
 KEY2="value with spaces"
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -77,7 +77,7 @@ KEY2="value with spaces"
 KEY1='single quoted'
 KEY2='another value'
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -92,7 +92,7 @@ KEY2='another value'
 CONNECTION_STRING=Server=localhost;Database=test
 BASE64_KEY=abc123==
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -108,7 +108,7 @@ KEY1=
 KEY2=""
 KEY3=''
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -125,7 +125,7 @@ KEY3=''
 KEY2=value2
    KEY3=value3
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -142,7 +142,7 @@ URL=https://example.com/path?param=value&other=123
 PASSWORD=p@ssw0rd!#$%
 JSON_DATA={"key":"value"}
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -154,7 +154,7 @@ JSON_DATA={"key":"value"}
         });
 
         it('should handle file read errors', async () => {
-            (fs.readFile as jest.Mock).mockRejectedValue(new Error('File not found'));
+            readFileMock.mockRejectedValue(new Error('File not found'));
 
             await expect(
                 extractEnvVars('/path/to/missing.env')
@@ -167,7 +167,7 @@ KEY1=value1
 MALFORMED LINE WITHOUT EQUALS
 KEY2=value2
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -194,7 +194,7 @@ SECRET_KEY="very-secret-key"
 ENABLE_FEATURE_X=true
 ENABLE_FEATURE_Y=false
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -300,7 +300,7 @@ KEY3=value3
 MESSAGE=Hello 世界
 EMOJI=🚀
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -313,7 +313,7 @@ EMOJI=🚀
         it('should handle very long values', async () => {
             const longValue = 'a'.repeat(10000);
             const envContent = `LONG_KEY=${longValue}`;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -324,7 +324,7 @@ EMOJI=🚀
             const envContent = `KEY="line1
 line2
 line3"`;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -339,7 +339,7 @@ MY_KEY_1=value1
 MY_KEY_2=value2
 KEY123=value3
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -352,7 +352,7 @@ KEY123=value3
 
         it('should handle Windows line endings', async () => {
             const envContent = 'KEY1=value1\r\nKEY2=value2\r\n';
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -364,7 +364,7 @@ KEY123=value3
 
         it('should handle mixed line endings', async () => {
             const envContent = 'KEY1=value1\nKEY2=value2\r\nKEY3=value3\r';
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/.env');
 
@@ -393,7 +393,7 @@ MESH_ENDPOINT=https://graph.adobe.io/api
 NODE_VERSION=18
 PHP_VERSION=8.1
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/demo/.env');
 
@@ -417,7 +417,7 @@ MYSQL_DATABASE=magento
 MYSQL_USER=magento
 MYSQL_PASSWORD=magento
 `;
-            (fs.readFile as jest.Mock).mockResolvedValue(envContent);
+            readFileMock.mockResolvedValue(envContent);
 
             const result = await extractEnvVars('/path/to/docker/.env');
 

@@ -14365,7 +14365,7 @@
             "line": 114,
             "mutants": 1,
             "category": "block",
-            "reason": "The scan's catch body is a single logger.warn. Emptying it still swallows the error and still moves to the next project.",
+            "reason": "The scan's catch body is a single logger.warn and nothing else. Emptying it still swallows the load error, still leaves the project out of the candidate list, and still moves on to the next path \u2014 the candidate count, the migrations run and both summary toasts are byte-identical either way.",
             "decision": "Killing it would mean asserting the warning's wording.",
             "recorded": "2026-09-06",
             "source": "Planted 2026-09-06 with the 30-test migrateStorefrontNames family green."
@@ -14447,6 +14447,19 @@
             "decision": "Keep the anchor as documentation of intent; no input can distinguish the two.",
             "recorded": "2026-09-06",
             "source": "Planted 2026-09-06 as /^([^=]+)=(.*)/ with the 39-test envVarExtraction family green."
+        },
+        {
+            "module": "src/features/projects-dashboard/services/projectRenameService.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 264,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The remote-sync catch body is a single logger.warn. Emptying it still swallows the Console failure, still leaves the local rename successful and its result unchanged, and still leaves adobe.projectTitle recording the title that was never applied \u2014 the only difference is whether a line reaches the log channel.",
+            "decision": "It was previously killed by asserting that warning's wording, which tests/sop/no-logger-wording-assertions.test.ts refuses; the assertion was removed and the mutant recorded instead.",
+            "recorded": "2026-09-06",
+            "source": "Found 2026-09-06 when the ratchet caught the score falling after that assertion was replaced by one on the project's own state."
         }
     ]
 }

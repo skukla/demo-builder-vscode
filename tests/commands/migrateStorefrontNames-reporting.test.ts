@@ -10,9 +10,9 @@
 
 import * as vscode from 'vscode';
 import {
-    makeCommand,
-    makeProject,
-    makeStateManager,
+    migrateCommand,
+    mismatchedProject,
+    projectsOnDisk,
     migrateMock,
     progressReports,
     resetMigrateMocks,
@@ -39,18 +39,18 @@ beforeEach(() => {
 
 describe('MigrateStorefrontNamesCommand — the confirmation prompt', () => {
     it('counts one storefront in the singular', async () => {
-        await makeCommand(makeStateManager({ '/a': makeProject('a-store') })).execute();
+        await migrateCommand(projectsOnDisk({ '/a': mismatchedProject('a-store') })).execute();
 
         expect(confirmationMessage()).toContain('Found 1 storefront that need');
     });
 
     it('counts several in the plural', async () => {
-        const sm = makeStateManager({
-            '/a': makeProject('a-store'),
-            '/b': makeProject('b-store'),
+        const sm = projectsOnDisk({
+            '/a': mismatchedProject('a-store'),
+            '/b': mismatchedProject('b-store'),
         });
 
-        await makeCommand(sm).execute();
+        await migrateCommand(sm).execute();
 
         expect(confirmationMessage()).toContain('Found 2 storefronts that need');
     });
@@ -60,7 +60,7 @@ describe('MigrateStorefrontNamesCommand — the progress notification', () => {
     // Not cancellable, and deliberately: the migration copies DA content and
     // re-points Helix, so a half-done one is worse than a slow one.
     it('runs inside a non-cancellable notification', async () => {
-        await makeCommand(makeStateManager({ '/a': makeProject('a-store') })).execute();
+        await migrateCommand(projectsOnDisk({ '/a': mismatchedProject('a-store') })).execute();
 
         expect(vscode.window.withProgress).toHaveBeenCalledWith(
             {
@@ -75,12 +75,12 @@ describe('MigrateStorefrontNamesCommand — the progress notification', () => {
     // The increment is a SHARE of the bar, so it divides by the count; the
     // message is a 1-based position, so it adds to the index.
     it('reports an equal share of the bar and a 1-based position for each project', async () => {
-        const sm = makeStateManager({
-            '/a': makeProject('a-store'),
-            '/b': makeProject('b-store'),
+        const sm = projectsOnDisk({
+            '/a': mismatchedProject('a-store'),
+            '/b': mismatchedProject('b-store'),
         });
 
-        await makeCommand(sm).execute();
+        await migrateCommand(sm).execute();
 
         expect(progressReports).toStrictEqual([
             { increment: 50, message: 'a-store (1/2)…' },
@@ -100,7 +100,7 @@ describe('MigrateStorefrontNamesCommand — lost site grants', () => {
             lostGrants: ['someone.else@example.com'],
         });
 
-        await makeCommand(makeStateManager({ '/a': makeProject('a-store') })).execute();
+        await migrateCommand(projectsOnDisk({ '/a': mismatchedProject('a-store') })).execute();
 
         expect(warningMessages().join('\n')).toContain('someone.else@example.com');
     });
@@ -108,7 +108,7 @@ describe('MigrateStorefrontNamesCommand — lost site grants', () => {
     it('says nothing when the re-registration dropped none', async () => {
         migrateMock.mockResolvedValue({ skipped: false, migrated: true, lostGrants: [] });
 
-        await makeCommand(makeStateManager({ '/a': makeProject('a-store') })).execute();
+        await migrateCommand(projectsOnDisk({ '/a': mismatchedProject('a-store') })).execute();
 
         expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
     });
@@ -116,18 +116,18 @@ describe('MigrateStorefrontNamesCommand — lost site grants', () => {
 
 describe('MigrateStorefrontNamesCommand — the summary', () => {
     it('counts one migrated storefront in the singular', async () => {
-        await makeCommand(makeStateManager({ '/a': makeProject('a-store') })).execute();
+        await migrateCommand(projectsOnDisk({ '/a': mismatchedProject('a-store') })).execute();
 
         expect(lastInfoMessage()).toContain('Migrated 1 storefront successfully.');
     });
 
     it('counts several migrated storefronts in the plural', async () => {
-        const sm = makeStateManager({
-            '/a': makeProject('a-store'),
-            '/b': makeProject('b-store'),
+        const sm = projectsOnDisk({
+            '/a': mismatchedProject('a-store'),
+            '/b': mismatchedProject('b-store'),
         });
 
-        await makeCommand(sm).execute();
+        await migrateCommand(sm).execute();
 
         expect(lastInfoMessage()).toContain('Migrated 2 storefronts successfully.');
     });
@@ -138,12 +138,12 @@ describe('MigrateStorefrontNamesCommand — the summary', () => {
         migrateMock
             .mockResolvedValueOnce({ skipped: false, migrated: false, error: 'DA copy timeout' })
             .mockResolvedValueOnce({ skipped: false, migrated: true });
-        const sm = makeStateManager({
-            '/a': makeProject('a-store'),
-            '/b': makeProject('b-store'),
+        const sm = projectsOnDisk({
+            '/a': mismatchedProject('a-store'),
+            '/b': mismatchedProject('b-store'),
         });
 
-        await makeCommand(sm).execute();
+        await migrateCommand(sm).execute();
 
         expect(warningMessages().join('\n')).toContain('Migrated 1 of 2 storefronts.');
     });

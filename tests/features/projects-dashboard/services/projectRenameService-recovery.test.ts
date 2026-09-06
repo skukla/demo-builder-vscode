@@ -14,7 +14,7 @@
 import type { HandlerContext } from '@/types/handlers';
 import type { Project } from '@/types/base';
 import {
-    createMockContext,
+    renameHandlerContext,
     failSave,
     mockAccess,
     mockRename,
@@ -40,7 +40,7 @@ describe('rollback when the save fails after the move', () => {
      */
     it('moves the folder back', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
         failSave(context);
 
         await renameProjectCore(context, project, 'Bodea B2B Demo').catch(() => undefined);
@@ -56,7 +56,7 @@ describe('rollback when the save fails after the move', () => {
     // caller must NOT be told the folder and the manifest disagree.
     it('reports the plain failure once the folder is back', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
         failSave(context);
 
         const result = await renameProjectCore(context, project, 'Bodea B2B Demo');
@@ -68,7 +68,7 @@ describe('rollback when the save fails after the move', () => {
     // rename the folder onto itself on the way out of a failed save.
     it('does not move anything back when the rename was a no-op', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
         failSave(context);
 
         const result = await renameProjectCore(context, project, 'old-name');
@@ -79,7 +79,7 @@ describe('rollback when the save fails after the move', () => {
 
     it('rolls back a project that has no componentInstances', async () => {
         const project = projectToRename({ componentInstances: undefined });
-        const context = createMockContext();
+        const context = renameHandlerContext();
         failSave(context);
 
         const result = await renameProjectCore(context, project, 'Bodea B2B Demo');
@@ -106,7 +106,7 @@ describe('rollback when the save fails after the move', () => {
                 },
             },
         });
-        const context = createMockContext();
+        const context = renameHandlerContext();
         failSave(context);
 
         const result = await renameProjectCore(context, project, 'Bodea B2B Demo');
@@ -121,7 +121,7 @@ describe('rollback when the save fails after the move', () => {
 
     it('restores the project to exactly what it was', async () => {
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
         failSave(context);
 
         await renameProjectCore(context, project, 'Bodea B2B Demo').catch(() => undefined);
@@ -138,7 +138,7 @@ describe('rollback when the save fails after the move', () => {
         // Both directions failed. This is the one state a user cannot infer from
         // the UI, because the folder and the manifest genuinely disagree.
         const project = projectToRename();
-        const context = createMockContext();
+        const context = renameHandlerContext();
         failSave(context);
         mockRename
             .mockResolvedValueOnce(undefined)
@@ -162,7 +162,7 @@ describe('remote Adobe I/O project title sync', () => {
     const remoteRename = jest.fn().mockResolvedValue(true);
 
     function contextWithAuth(): HandlerContext {
-        const ctx = createMockContext();
+        const ctx = renameHandlerContext();
         (ctx as unknown as { authManager: unknown }).authManager = {
             renameRemoteProject: remoteRename,
         };
@@ -207,17 +207,19 @@ describe('remote Adobe I/O project title sync', () => {
     it('treats a remote rename failure as non-fatal (local rename still succeeds)', async () => {
         remoteRename.mockRejectedValue(new Error('403'));
         const project = adobeProject('Old Title');
-        const ctx = contextWithAuth();
 
-        const result = await renameProjectCore(ctx, project, 'New Title');
+        const result = await renameProjectCore(contextWithAuth(), project, 'New Title');
 
+        // The demo is renamed; the Console project is left recorded as it was,
+        // because the title this run tried to push was never applied.
         expect(result.success).toBe(true);
-        expect(ctx.logger.warn).toHaveBeenCalledWith(expect.stringContaining('remote'));
+        expect(project.name).toBe('new-title');
+        expect(project.adobe?.projectTitle).toBe('Old Title');
     });
 
     it('skips silently when the context has no authManager', async () => {
         const project = adobeProject('Old Title');
-        const result = await renameProjectCore(createMockContext(), project, 'New Title');
+        const result = await renameProjectCore(renameHandlerContext(), project, 'New Title');
 
         expect(result.success).toBe(true);
         expect(remoteRename).not.toHaveBeenCalled();
@@ -238,10 +240,8 @@ describe('remote Adobe I/O project title sync', () => {
     // Half an Adobe reference is not a reference. Calling the Console API with
     // an undefined project id is a request against someone else's org.
     it('does not call the Console API when the project id is missing', async () => {
-        const project = projectToRename({
-            title: 'Old Title',
-            adobe: { organization: 'org-1', projectTitle: 'Old Title' },
-        } as Partial<Project>);
+        const project = projectToRename({ title: 'Old Title' });
+        project.adobe = { organization: 'org-1', projectTitle: 'Old Title' };
 
         const result = await renameProjectCore(contextWithAuth(), project, 'New Title');
 
