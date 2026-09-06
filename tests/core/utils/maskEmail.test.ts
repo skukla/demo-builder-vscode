@@ -124,8 +124,11 @@ describe('redactUrlUserParam', () => {
         expect(redactUrlUserParam(text)).toBe(text);
     });
 
-    it('handles an empty user param without throwing', () => {
-        expect(() => redactUrlUserParam('?user=&site=x')).not.toThrow();
+    it('leaves an EMPTY user param exactly as it found it', () => {
+        // There is no address to hide, so the text must come back byte for byte.
+        // Without the empty guard the replacement runs anyway and writes '****'
+        // into a parameter that never carried an address — a link that now reads
+        // as though someone's identity had been redacted out of it.
+        expect(redactUrlUserParam('?user=&site=x')).toBe('?user=&site=x');
     });
 });
-
