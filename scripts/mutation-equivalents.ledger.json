@@ -16743,6 +16743,19 @@
             "decision": "none \u2014 the decision the arm belongs to is already constrained; its body is log-only, and pinning log wording is not allowed",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/ui/components/integrations/IntegrationCard.tsx",
+            "anchors": [
+                "const handleClick = useCallback((): void => onOpen?.(model.id), [model.id, onOpen]);"
+            ],
+            "line": 81,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker drops the ?. and calls onOpen(model.id) unconditionally, but handleClick is only ever wired up inside pressProps, which is {} when onOpen is absent \u2014 no role, no tabIndex, no onClick and no onKeyDown \u2014 so there is no path on which handleClick runs with onOpen undefined. The guard is required by the compiler (onOpen is optional), not by any reachable input. Verified by planting a non-null-asserted call and re-running the suite: 29 tests, all still green.",
+            "decision": "none \u2014 the optional call is a type requirement on an unreachable state; removing the ?. would not compile and no render can exercise it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

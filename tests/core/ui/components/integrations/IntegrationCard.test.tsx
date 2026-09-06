@@ -17,7 +17,7 @@
 
 import '../../../../helpers/integrationCardSpectrumMocks';
 import React from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import { IntegrationCard } from '@/core/ui/components/integrations/IntegrationCard';
 import type { IntegrationCardModel } from '@/core/ui/components/integrations/integrationCardModel.types';
 import '@testing-library/jest-dom';
@@ -215,6 +215,16 @@ describe('IntegrationCard', () => {
         expect(screen.queryByText(over.sourceLine)).not.toBeInTheDocument();
     });
 
+    it('leaves a non-error status label unmodified', () => {
+        // The counterpart to the error case below. Without it nothing stopped the
+        // modifier being applied to EVERY card, which reads as "all five failed".
+        renderCard(makeModel());
+
+        const label = screen.getByText('Deployed');
+        expect(label).toHaveClass('integration-card-status');
+        expect(label).not.toHaveClass('integration-card-status--error');
+    });
+
     it('marks an error status label with the error modifier', () => {
         renderCard(
             makeModel({
@@ -297,6 +307,64 @@ describe('IntegrationCard', () => {
     // nothing — it reaches keyboard and screen-reader users first, who get a
     // focusable control that never responds. The wizard has exactly this case:
     // mesh and catalog rows have no editable detail before the build.
+    // The card is rebuilt on every host render — a memo that never refreshes hands
+    // the press back to whichever callback was current at mount.
+    describe('after a rerender', () => {
+        it('presses the CURRENT onOpen, not the one captured at mount', () => {
+            const first = jest.fn();
+            const second = jest.fn();
+            const model = makeModel();
+            const view = render(
+                <IntegrationCard
+                    model={model}
+                    onOpen={first}
+                    onAction={jest.fn()}
+                    onRename={jest.fn()}
+                />
+            );
+            view.rerender(
+                <IntegrationCard
+                    model={model}
+                    onOpen={second}
+                    onAction={jest.fn()}
+                    onRename={jest.fn()}
+                />
+            );
+
+            fireEvent.click(view.container.querySelector('.integration-card') as HTMLElement);
+
+            expect(second).toHaveBeenCalledWith('erp-sync');
+            expect(first).not.toHaveBeenCalled();
+        });
+    });
+
+    // The card owns the id half of the rename: InlineRenameField knows only the
+    // new name, so a commit that forgets `model.id` renames nothing and looks
+    // exactly like a commit that worked.
+    describe('rename', () => {
+        it('commits through onRename with the card id and the new name', async () => {
+            const onRename = jest.fn().mockResolvedValue(null);
+            render(
+                <IntegrationCard
+                    model={makeModel()}
+                    onOpen={jest.fn()}
+                    onAction={jest.fn()}
+                    onRename={onRename}
+                />
+            );
+
+            fireEvent.click(screen.getByRole('button', { name: 'Rename ERP Sync' }));
+
+            const input = screen.getByLabelText('New integration name');
+            fireEvent.change(input, { target: { value: 'ERP Sync v2' } });
+            await act(async () => {
+                fireEvent.keyDown(input, { key: 'Enter' });
+            });
+
+            expect(onRename).toHaveBeenCalledWith('erp-sync', 'ERP Sync v2');
+        });
+    });
+
     describe('without onOpen', () => {
         function renderInert(model: IntegrationCardModel) {
             const onAction = jest.fn();
