@@ -182,6 +182,57 @@ describe('the handshake is captured once and replayed on reconnect', () => {
         expect(h.toServer).toEqual(['#cwd:/p\n']);
     });
 
+    it('does not RE-capture once the handshake is complete', () => {
+        // A client that sends a second `initialize` (a nested agent, or a
+        // retry) must not overwrite the id the replay is keyed on — the
+        // swallow is armed by that id, so a stale one leaks the duplicate
+        // response to the client.
+        const h = established();
+
+        h.session.fromClient(INIT(99));
+        h.clear();
+        h.session.onDisconnected();
+        h.session.onConnected(true, '/p');
+
+        expect(h.toServer).toEqual(['#cwd:/p\n', INIT(7), INITIALIZED]);
+    });
+
+    it('does not mistake an ordinary call for the `initialized` notification', () => {
+        // Only the notification completes the handshake. Treating any following
+        // line as the completion would replay a tools/call in its place.
+        const h = makeSession();
+        h.session.onConnected(false, '/p');
+
+        h.session.fromClient(INIT(7));
+        h.session.fromClient(CALL(1));
+
+        expect(h.session.inspect().handshakeCaptured).toBe(false);
+
+        h.clear();
+        h.session.onDisconnected();
+        h.session.onConnected(true, '/p');
+
+        expect(h.toServer).toEqual(['#cwd:/p\n']);
+    });
+
+    it('captures an initialize whose line carries a byte-order mark', () => {
+        // The framing hands over whatever the client wrote, terminator and all.
+        // A BOM on the first write is the one form of leading noise JSON.parse
+        // refuses, so the line is trimmed before it is classified — without
+        // that, the handshake is never captured and the reconnect is silent.
+        const h = makeSession();
+        h.session.onConnected(false, '/p');
+        const marked = `\uFEFF${INIT(7)}`;
+
+        h.session.fromClient(marked);
+        h.session.fromClient(INITIALIZED);
+        h.clear();
+        h.session.onDisconnected();
+        h.session.onConnected(true, '/p');
+
+        expect(h.toServer).toEqual(['#cwd:/p\n', marked, INITIALIZED]);
+    });
+
     it('replays the handshake BEFORE the buffered traffic', () => {
         // A tool call arriving before the session is re-established is rejected
         // by the server, and the client never learns why.
@@ -240,6 +291,33 @@ describe('exactly one duplicate init response is swallowed', () => {
         session.fromServer(INIT_RESPONSE(7));
 
         expect(toClient).toEqual([INIT_RESPONSE(7)]);
+    });
+
+    it('forwards an id-less response when no replay is in flight', () => {
+        // The arming check is what stops the id match being consulted at all.
+        // A notification-shaped response carries no id, which equals the
+        // unarmed `undefined` — so without the arming check it matches, and
+        // the client silently loses the message.
+        const { session, toClient } = established();
+        const idless = `${JSON.stringify({ jsonrpc: '2.0', result: { ok: true } })}\n`;
+
+        session.fromServer(idless);
+
+        expect(toClient).toEqual([idless]);
+    });
+
+    it('swallows a duplicate response whose line carries a byte-order mark', () => {
+        // Same trim as the client side, for the same reason: JSON.parse refuses
+        // a BOM, so an untrimmed line never matches the replayed id and the
+        // client sees two answers to one `initialize`.
+        const h = established();
+        h.session.onDisconnected();
+        h.session.onConnected(true, '/p');
+        h.clear();
+
+        h.session.fromServer(`\uFEFF${INIT_RESPONSE(7)}`);
+
+        expect(h.toClient).toEqual([]);
     });
 });
 
