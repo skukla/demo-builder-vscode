@@ -91,6 +91,7 @@ export const window = {
         dispose: jest.fn(),
     })),
     showQuickPick: jest.fn(),
+    showInputBox: jest.fn(),
     showSaveDialog: jest.fn(),
     createQuickPick: jest.fn(),
     terminals: [],

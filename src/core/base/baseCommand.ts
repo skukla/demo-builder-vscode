@@ -71,11 +71,7 @@ export abstract class BaseCommand implements vscode.Disposable {
     protected logger: Logger;
     protected disposables = new DisposableStore();
 
-    constructor(
-        context: vscode.ExtensionContext,
-        stateManager: StateManager,
-        logger: Logger,
-    ) {
+    constructor(context: vscode.ExtensionContext, stateManager: StateManager, logger: Logger) {
         this.context = context;
         this.stateManager = stateManager;
         this.logger = logger;
@@ -100,11 +96,14 @@ export abstract class BaseCommand implements vscode.Disposable {
         title: string,
         task: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<T>,
     ): Promise<T> {
-        return vscode.window.withProgress({
-            location: vscode.ProgressLocation.Notification,
-            title,
-            cancellable: false,
-        }, task);
+        return vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title,
+                cancellable: false,
+            },
+            task,
+        );
     }
 
     protected async showError(message: string, error?: Error): Promise<void> {
@@ -130,7 +129,10 @@ export abstract class BaseCommand implements vscode.Disposable {
      * @param message Success message to display
      * @param timeout Milliseconds to show in status bar (default STATUS_BAR_SUCCESS)
      */
-    protected async showSuccessMessage(message: string, timeout = TIMEOUTS.STATUS_BAR_SUCCESS): Promise<void> {
+    protected async showSuccessMessage(
+        message: string,
+        timeout: number = TIMEOUTS.STATUS_BAR_SUCCESS,
+    ): Promise<void> {
         this.logger.info(message);
         // Show auto-dismissing notification popup
         await this.showProgressNotification(message, TIMEOUTS.UI.NOTIFICATION);
@@ -144,7 +146,10 @@ export abstract class BaseCommand implements vscode.Disposable {
      * @param message Message to display
      * @param duration Duration in milliseconds (default NOTIFICATION_AUTO_DISMISS)
      */
-    protected async showProgressNotification(message: string, duration = TIMEOUTS.UI.NOTIFICATION): Promise<void> {
+    protected async showProgressNotification(
+        message: string,
+        duration: number = TIMEOUTS.UI.NOTIFICATION,
+    ): Promise<void> {
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
@@ -163,7 +168,7 @@ export abstract class BaseCommand implements vscode.Disposable {
      * @param message Info message to display
      * @param timeout Milliseconds to show (default STATUS_BAR_INFO)
      */
-    protected showStatusMessage(message: string, timeout = TIMEOUTS.STATUS_BAR_INFO): void {
+    protected showStatusMessage(message: string, timeout: number = TIMEOUTS.STATUS_BAR_INFO): void {
         this.logger.info(message);
         vscode.window.setStatusBarMessage(`ℹ️  ${message}`, timeout);
     }
