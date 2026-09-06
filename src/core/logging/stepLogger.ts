@@ -208,8 +208,10 @@ export class StepLogger {
         params: Record<string, unknown> = {},
         level: 'info' | 'debug' | 'error' | 'warn' = 'info',
     ) {
-        // Try to find template in both sections
-        const templatePath = templateKey.includes('.') ? templateKey.split('.') : [templateKey];
+        // Try to find template in both sections. The single-key branch reads
+        // `templateKey` directly, so the split's one-element result is never
+        // used — the ternary that built it was dead.
+        const templatePath = templateKey.split('.');
 
         let template: string | undefined;
         if (templatePath.length === 2) {

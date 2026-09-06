@@ -9,6 +9,7 @@
 import * as fs from 'fs';
 import type { Logger } from '@/types/logger';
 import { StepLogger, StepLoggerContext } from '@/core/logging/stepLogger';
+import type { WizardStepDefinition } from '@/types/wizard';
 import { createMockLogger } from '../../helpers/loggerFake';
 
 // Mock fs module
@@ -79,6 +80,30 @@ describe('StepLogger', () => {
             expect(stepLogger.getStepName('welcome')).toBe('Project Setup');
         });
 
+        it('ignores a wizard-steps config that is not an array', () => {
+            // `wizardSteps` is read from wizard-steps.json, so a malformed file
+            // reaches this constructor as whatever JSON.parse returned. Without
+            // the Array.isArray guard the `.forEach` below throws and takes
+            // project creation down with it.
+            const malformed = { steps: [] } as unknown as WizardStepDefinition[];
+
+            stepLogger = new StepLogger(mockLogger as unknown as Logger, malformed);
+
+            expect(stepLogger.getStepName('welcome')).toBe('Project Setup');
+        });
+
+        it('does not let a step with no name erase the default name', () => {
+            // The id/name guard is what protects the defaults: a config entry
+            // carrying an id but an empty name must be skipped, not stored — a
+            // stored empty name reads as "unknown step" and the display name
+            // silently degrades to the id-derived fallback.
+            const wizardSteps = [{ id: 'welcome', name: '', enabled: true }];
+
+            stepLogger = new StepLogger(mockLogger as unknown as Logger, wizardSteps);
+
+            expect(stepLogger.getStepName('welcome')).toBe('Project Setup');
+        });
+
         it('should ignore wizard steps without id or name', () => {
             const wizardSteps = [
                 { id: '', name: 'No ID Step', enabled: true },
@@ -99,6 +124,28 @@ describe('StepLogger', () => {
             // Verify default templates work
             stepLogger.logTemplate('welcome', 'operations.fetching', { item: 'projects' });
             expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Fetching projects...');
+        });
+
+        it('never reads a templates file when no path is given', () => {
+            // Asserting the COLLABORATOR, not the outcome: defaults come back
+            // either way, so only "the file was never opened" distinguishes the
+            // no-path case from a read that failed and fell back.
+            stepLogger = new StepLogger(mockLogger as unknown as Logger);
+
+            expect(fs.readFileSync).not.toHaveBeenCalled();
+        });
+
+        it('does not read a templates path that does not exist', () => {
+            (fs.existsSync as jest.Mock).mockReturnValue(false);
+
+            stepLogger = new StepLogger(
+                mockLogger as unknown as Logger,
+                undefined,
+                '/path/to/missing.json'
+            );
+
+            expect(fs.existsSync).toHaveBeenCalledWith('/path/to/missing.json');
+            expect(fs.readFileSync).not.toHaveBeenCalled();
         });
 
         it('should load templates from file when path exists', () => {
@@ -140,6 +187,8 @@ describe('StepLogger', () => {
             // Should still work with defaults
             stepLogger.logTemplate('welcome', 'operations.checking', { item: 'test' });
             expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Checking test...');
+            // ...and the swallowed read failure is reported rather than silent.
+            expect(mockLogger.debug).toHaveBeenCalledTimes(1);
         });
 
         it('should fall back to defaults on JSON parse error', () => {
@@ -345,6 +394,18 @@ describe('StepLogger', () => {
             expect(mockLogger.debug).toHaveBeenCalledWith(
                 '[StepLogger] Template not found: unknown_template, using fallback'
             );
+        });
+
+        it('falls back when a section.key path names a section that does not exist', () => {
+            stepLogger.logTemplate('welcome', 'bogus.key', { item: 'test' });
+
+            expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Bogus.key: test');
+        });
+
+        it('omits the item suffix from a fallback when no item was given', () => {
+            stepLogger.logTemplate('welcome', 'unknown_template');
+
+            expect(mockLogger.info).toHaveBeenCalledWith('[Project Setup] Unknown template');
         });
 
         it('should clean up unused placeholders', () => {
