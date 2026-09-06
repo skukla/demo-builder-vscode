@@ -13634,6 +13634,31 @@
             "decision": "none \u2014 the line tells an SC that the previous deployments are still in the Console and worth removing; it is the guard, not the message, that is untestable",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appManagementInstaller.ts",
+            "anchors": [
+                "return RETRYABLE_INSTALL_PATTERNS.some((pattern) => pattern.test(text));"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "RETRYABLE_INSTALL_PATTERNS holds exactly one regex, and over a one-element array some() and every() return the same value for every input \u2014 so swapping them cannot change a single answer. Only adding a second pattern would make the two differ, and at that point the mutant becomes killable and this row stale. Verified by planting every(): all 58 tests across the installer, its edges suite and the uninstaller pass.",
+            "decision": "none \u2014 some() is the right operator for a list that will grow; the equivalence is an artefact of the list's current length",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/appManagementInstaller.ts",
+            "anchors": [
+                "return false;"
+            ],
+            "line": 257,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch changes nothing observable: control then falls to the pattern test with the `text` variable still unassigned, and RegExp.test(undefined) coerces to the string 'undefined', which matches no retryable pattern \u2014 so the function returns false either way, exactly as the early return does. The BooleanLiteral mutant on the same line IS killable and is killed by the circular-error test. Verified by planting the empty catch: all 58 tests pass.",
+            "decision": "none \u2014 the explicit return states the intent for a reader; only its runtime effect is duplicated by the fall-through",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
