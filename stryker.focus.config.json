@@ -8,7 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/hooks/useSearchFilter.ts"
+        "src/features/dashboard/commands/openAi.ts",
+        "src/features/data-installer/services/sampleDataInstallDeps.ts",
+        "src/features/mesh/commands/deployMesh.ts",
+        "src/features/ai/server/diagnosticsTools.ts",
+        "src/features/components/services/componentDependencies.ts"
     ],
     "reporters": [
         "clear-text",
