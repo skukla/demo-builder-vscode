@@ -331,5 +331,97 @@ describe('loading vs empty (2026-08-06)', () => {
 
             expect(screen.getByTestId('ai-skills-empty')).toBeInTheDocument();
         });
+
+        it('renders no "Not available" group for an EMPTY gated list', () => {
+            // An empty array is not an absence to report. With a skill present the
+            // early empty return does not fire, so the group guard is the only
+            // thing standing between the reader and a heading over nothing.
+            renderList({ skills: [makeSkill('add-component', 'demo-builder')], gatedSkills: [] });
+
+            expect(screen.queryByTestId('ai-skills-group-gated')).not.toBeInTheDocument();
+        });
+
+        // The two reasons need different remedies, so the row has to say WHICH.
+        // Both once read the same line, which told half of them the wrong fix.
+        it('says the setting is off for a setting-disabled skill', () => {
+            renderList({
+                skills: [],
+                gatedSkills: [
+                    { file: 'playwright.md', toolId: 'playwright', reason: 'setting-disabled' },
+                ],
+                flat: true,
+            });
+
+            const row = screen.getByTestId('ai-skill-gated-row');
+            expect(row).toHaveTextContent('third-party tooling setting');
+            expect(row).not.toHaveTextContent('Regenerate AI Files installs it');
+        });
+
+        it('says the tool is missing, and what installs it, for a tool-missing skill', () => {
+            renderList({
+                skills: [],
+                gatedSkills: [
+                    { file: 'playwright.md', toolId: 'playwright', reason: 'tool-missing' },
+                ],
+                flat: true,
+            });
+
+            const row = screen.getByTestId('ai-skill-gated-row');
+            expect(row).toHaveTextContent('Regenerate AI Files installs it');
+            expect(row).not.toHaveTextContent('third-party tooling setting');
+        });
+    });
+});
+
+describe('grouping keys off the SOURCE, and only Adobe splits per bundle', () => {
+    // The bundle split exists so two Adobe bundles never share a heading. It must
+    // not leak: a stray bundle on a non-Adobe skill would invent a group nothing
+    // has a label for, and an Adobe skill with no bundle must stay under "Adobe".
+
+    it('keeps a non-Adobe skill under its source even when it carries a bundle', () => {
+        renderList({ skills: [makeSkill('local-helper', 'unknown', 'sometool')] });
+
+        expect(screen.getByTestId('ai-skills-group-unknown')).toHaveTextContent(
+            'Custom skills · 1'
+        );
+        expect(screen.queryByTestId('ai-skills-group-unknown-sometool')).not.toBeInTheDocument();
+    });
+
+    it('keeps an Adobe skill with no bundle under a plain Adobe group', () => {
+        renderList({ skills: [makeSkill('loose-skill', 'adobe')] });
+
+        expect(screen.getByTestId('ai-skills-group-adobe')).toHaveTextContent('Adobe skills · 1');
+    });
+});
+
+describe('titles strip the bundle prefix only when the name actually carries it', () => {
+    it('leaves a bundled skill whose name is not prefixed intact', () => {
+        // Slicing `bundle.length + 1` unconditionally would eat four characters
+        // off the front of the title and leave the row reading nonsense.
+        renderList({ skills: [makeSkill('standalone-thing', 'adobe', 'aem')] });
+
+        expect(screen.getByTestId('ai-skill-row')).toHaveTextContent(
+            'Standalone thing · standalone-thing'
+        );
+    });
+});
+
+describe('it re-groups when the skills change', () => {
+    it('renders the new list, not the one it first grouped', () => {
+        const { rerender } = render(
+            <Provider theme={defaultTheme}>
+                <AiSkillsList skills={[makeSkill('alpha', 'demo-builder')]} />
+            </Provider>
+        );
+        expect(screen.getByTestId('ai-skill-row')).toHaveTextContent('Alpha · alpha');
+
+        rerender(
+            <Provider theme={defaultTheme}>
+                <AiSkillsList skills={[makeSkill('aem-tester', 'adobe', 'aem')]} />
+            </Provider>
+        );
+
+        const rows = screen.getAllByTestId('ai-skill-row').map((r) => r.textContent);
+        expect(rows).toEqual(['Tester · aem-tester']);
     });
 });
