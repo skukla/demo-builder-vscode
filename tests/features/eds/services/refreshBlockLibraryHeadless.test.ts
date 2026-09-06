@@ -171,6 +171,67 @@ describe('refreshBlockLibraryHeadless', () => {
         expect(result.success).toBe(true);
     });
 
+    it('returns the re-auth failure reason when the re-auth itself fails', async () => {
+        pipelineMock.mockRejectedValueOnce(new DaLiveAuthError('DA.live authentication expired'));
+        ensureAuthMock.mockResolvedValueOnce({ authenticated: false, error: 'IMS refused' });
+
+        const result = await refreshBlockLibraryHeadless(deps());
+
+        expect(result).toEqual({
+            success: false,
+            error: 'DA.live re-authentication failed: IMS refused',
+        });
+        expect(result.cancelled).toBeUndefined();
+        expect(pipelineMock).toHaveBeenCalledTimes(1);
+    });
+
+    // Only a DA.live token expiry is retryable. Anything else is the caller's
+    // answer straight away — retrying it would run the destructive rebuild a
+    // second time and then prompt for a sign-in that has nothing to do with the
+    // failure.
+    it('does not retry a failure that is not a DA.live token expiry', async () => {
+        pipelineMock.mockRejectedValueOnce(new Error('GitHub rate limit exceeded'));
+
+        const result = await refreshBlockLibraryHeadless(deps());
+
+        expect(result).toEqual({ success: false, error: 'GitHub rate limit exceeded' });
+        expect(pipelineMock).toHaveBeenCalledTimes(1);
+        expect(ensureAuthMock).not.toHaveBeenCalled();
+    });
+
+    it('reports a thrown non-Error as an unknown failure', async () => {
+        pipelineMock.mockRejectedValueOnce('a string, not an Error');
+
+        const result = await refreshBlockLibraryHeadless(deps());
+
+        expect(result).toEqual({ success: false, error: 'Unknown error' });
+    });
+
+    // The retry is bounded at ONE. A second expiry gives up rather than looping
+    // the SC through re-authentication for as long as the token keeps dying.
+    it('gives up after the single retry rather than re-authenticating again', async () => {
+        pipelineMock
+            .mockRejectedValueOnce(new DaLiveAuthError('expired'))
+            .mockRejectedValueOnce(new DaLiveAuthError('expired again'));
+        ensureAuthMock.mockResolvedValue({ authenticated: true });
+
+        const result = await refreshBlockLibraryHeadless(deps());
+
+        expect(result).toEqual({ success: false, error: 'expired again' });
+        expect(pipelineMock).toHaveBeenCalledTimes(2);
+        expect(ensureAuthMock).toHaveBeenCalledTimes(1);
+    });
+
+    // The command passes onProgress; the MCP tool does not. Progress arriving
+    // for a caller that asked for none must pass silently rather than take the
+    // whole refresh into the catch.
+    it('survives pipeline progress when the caller wants none', async () => {
+        await refreshBlockLibraryHeadless(deps({ onProgress: undefined }));
+
+        const reportProgress = pipelineMock.mock.calls[0][2];
+        expect(() => reportProgress({ operation: 'block-library', message: 'configuring...' })).not.toThrow();
+    });
+
     it('returns a cancelled result when the user declines re-auth', async () => {
         pipelineMock.mockRejectedValueOnce(new DaLiveAuthError('DA.live authentication expired'));
         ensureAuthMock.mockResolvedValueOnce({ authenticated: false, cancelled: true });
