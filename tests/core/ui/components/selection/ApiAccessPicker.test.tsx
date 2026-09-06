@@ -11,84 +11,18 @@
  *
  */
 
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
+import { screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ApiAccessPicker } from '@/core/ui/components/selection/ApiAccessPicker';
 import type { ApiAccessOption } from '@/core/ui/components/selection/ApiAccessPicker';
-
-interface ApiOption {
-    code: string;
-    name: string;
-    locked: boolean;
-    requiresProfile?: boolean;
-    requiresReview?: boolean;
-    group?: { code: string; name: string };
-}
-
-/** Seven services (> the search threshold of 5), one locked, unsorted on purpose. */
-const APIS: ApiOption[] = [
-    { code: 'TargetSDK', name: 'Adobe Target', locked: false },
-    { code: 'GraphQLServiceSDK', name: 'API Mesh', locked: true },
-    { code: 'CampaignSDK', name: 'Adobe Campaign', locked: false },
-    { code: 'AssetsSDK', name: 'AEM Assets', locked: false },
-    { code: 'AnalyticsSDK', name: 'Adobe Analytics', locked: false },
-    { code: 'AudienceManagerSDK', name: 'Audience Manager', locked: false },
-    { code: 'CloudManagerSDK', name: 'Cloud Manager', locked: false },
-];
-
-type Props = React.ComponentProps<typeof ApiAccessPicker>;
-
-function renderPicker(props: Partial<Props> = {}): {
-    onToggle: jest.Mock;
-    container: HTMLElement;
-} {
-    const onToggle = jest.fn();
-    const { container } = render(
-        <Provider theme={defaultTheme} colorScheme="light">
-            <ApiAccessPicker
-                apis={props.apis ?? APIS}
-                selected={props.selected ?? []}
-                onToggle={onToggle}
-                helperText={props.helperText}
-            />
-        </Provider>
-    );
-    return { onToggle, container };
-}
-
-/** Like renderPicker, but exposes a typed rerender for interaction tests. */
-function renderPickerRerenderable(props: Partial<Props> = {}): {
-    container: HTMLElement;
-    rerender: (next: Partial<Props>) => void;
-} {
-    const onToggle = jest.fn();
-    const ui = (p: Partial<Props>) => (
-        <Provider theme={defaultTheme} colorScheme="light">
-            <ApiAccessPicker
-                apis={p.apis ?? APIS}
-                selected={p.selected ?? []}
-                onToggle={onToggle}
-                helperText={p.helperText}
-            />
-        </Provider>
-    );
-    const { container, rerender } = render(ui(props));
-    return { container, rerender: (next) => rerender(ui({ ...props, ...next })) };
-}
-
-/** The checkbox input rendered for a given API display name. */
-function checkboxFor(name: string): HTMLInputElement {
-    const label = screen.getByText(name).closest('label');
-    if (!label) throw new Error(`No checkbox label found for "${name}"`);
-    return label.querySelector('input[type="checkbox"]') as HTMLInputElement;
-}
-
-/** Row display names in DOM (render) order — the flat list, checked-first. */
-function listNames(container: HTMLElement): (string | null)[] {
-    return Array.from(container.querySelectorAll('.intflow-api-name')).map((el) => el.textContent);
-}
+import {
+    APIS,
+    checkboxFor,
+    chipLabels,
+    listNames,
+    renderPicker,
+    renderPickerRerenderable,
+    type ApiOption,
+} from './ApiAccessPicker.testUtils';
 
 describe('ApiAccessPicker', () => {
     describe('helper copy', () => {
@@ -268,12 +202,6 @@ describe('ApiAccessPicker', () => {
             { code: 'PhotoshopSDK', name: 'Photoshop', locked: false, group: CC },
             { code: 'LooseSDK', name: 'Ungrouped Thing', locked: false },
         ];
-
-        function chipLabels(container: HTMLElement): (string | null)[] {
-            return Array.from(container.querySelectorAll('.intflow-api-chip')).map(
-                (el) => el.textContent
-            );
-        }
 
         it('renders All, the curated pills, then the remaining cloud families', () => {
             const { container } = renderPicker({ apis: REAL });

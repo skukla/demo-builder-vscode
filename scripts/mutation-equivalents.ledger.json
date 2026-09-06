@@ -13585,6 +13585,19 @@
             "decision": "none \u2014 the guard reads as intent and saves a thrown-and-caught TypeError on every PaaS render",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/core/ui/components/selection/ApiAccessPicker.tsx",
+            "anchors": [
+                "const codes: string[] = [];",
+                "if (curated) codes.push(curated);"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "familiesOf's result is read in exactly one place \u2014 familiesOf(api).includes(family) \u2014 where family is a chip code, and every chip code comes from API_FAMILIES or a cloud group. Seeding the array with an extra string, or pushing undefined when there is no curated family, therefore adds a member that can never equal the value being looked for: both mutants leave every membership answer unchanged. Verified by planting both together and running all six suites that render this picker (148 tests, all pass).",
+            "decision": "none \u2014 the array is local and its only reader compares against a closed set of chip codes",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }

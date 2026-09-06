@@ -5335,11 +5335,6 @@ div[class*="spectrum"] input[type="search"] {
 .intflow-api-row {
     padding: 2px 0;
 }
-/* Profile-bound (unavailable) rows: disabled + dimmed so they read as "exists,
-   but not one-click here" rather than a pickable option. */
-.intflow-api-row[data-unavailable] .intflow-api-name {
-    color: var(--spectrum-global-color-gray-500);
-}
 /* Display name primary, code secondary gray — names first, codes for the curious. */
 .intflow-api-name {
     font-size: 13px;
