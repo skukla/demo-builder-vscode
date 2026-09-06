@@ -68,7 +68,9 @@ const ACCS_PROJECT = {
 const ACCS_PROJECT_NO_CREDS = {
     stackBackend: 'adobe-commerce-accs',
     componentConfigs: {
-        'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://x.api.commerce.adobe.com/t/graphql' },
+        'adobe-commerce-accs': {
+            ACCS_GRAPHQL_ENDPOINT: 'https://x.api.commerce.adobe.com/t/graphql',
+        },
     },
 };
 
@@ -82,7 +84,11 @@ describe('resolveCommerceCredentials', () => {
 
             expect(result).toEqual({
                 ok: true,
-                credentials: { kind: 'paas', username: 'admin', password: 'fake-test-pw-not-a-secret' },
+                credentials: {
+                    kind: 'paas',
+                    username: 'admin',
+                    password: 'fake-test-pw-not-a-secret',
+                },
             });
         });
 
@@ -119,7 +125,9 @@ describe('resolveCommerceCredentials', () => {
         // SecretStorage is the ACCS mechanism. A PaaS project must not silently
         // pick up a stale pair someone stored for a different project.
         it('never consults SecretStorage', async () => {
-            const secrets = makeSecrets({ 'demoBuilder.dataInstaller.accs': '{"clientId":"x","clientSecret":"y"}' });
+            const secrets = makeSecrets({
+                'demoBuilder.dataInstaller.accs': '{"clientId":"x","clientSecret":"y"}',
+            });
 
             const result = await resolveCommerceCredentials({ project: PAAS_PROJECT, secrets });
 
@@ -159,10 +167,15 @@ describe('resolveCommerceCredentials', () => {
         it('refuses half a pair', async () => {
             const half = {
                 stackBackend: 'adobe-commerce-accs',
-                componentConfigs: { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_ID: 'only-the-id' } },
+                componentConfigs: {
+                    'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_ID: 'only-the-id' },
+                },
             };
 
-            const result = await resolveCommerceCredentials({ project: half, secrets: makeSecrets() });
+            const result = await resolveCommerceCredentials({
+                project: half,
+                secrets: makeSecrets(),
+            });
 
             expect(result).toEqual({ ok: false, reason: 'needs-accs-credentials' });
         });
@@ -196,6 +209,37 @@ describe('resolveCommerceCredentials', () => {
 
             expect(secrets.get).not.toHaveBeenCalled();
         });
+
+        // Both halves of the store deps — the reader AND the project segment of
+        // the key — have to reach `resolveAccsOAuthPair`, or the migrated secret
+        // half is simply not found and the pair reads as never supplied.
+        it('assembles the migrated secret half out of SecretStorage', async () => {
+            const secrets = makeSecrets({
+                'demoBuilder.componentSecret./p/demo.adobe-commerce-accs.ACCS_OAUTH_CLIENT_SECRET':
+                    'stored-secret',
+            });
+            const migrated = {
+                stackBackend: 'adobe-commerce-accs',
+                path: '/p/demo',
+                componentConfigs: {
+                    'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_ID: 'client-id-value' },
+                },
+            };
+
+            const result = await resolveCommerceCredentials({ project: migrated, secrets });
+
+            expect(secrets.get).toHaveBeenCalledWith(
+                'demoBuilder.componentSecret./p/demo.adobe-commerce-accs.ACCS_OAUTH_CLIENT_SECRET'
+            );
+            expect(result).toEqual({
+                ok: true,
+                credentials: {
+                    kind: 'accs',
+                    clientId: 'client-id-value',
+                    clientSecret: 'stored-secret',
+                },
+            });
+        });
     });
 
     describe('unknown backend', () => {
@@ -224,7 +268,8 @@ describe('resolveCommerceCredentials', () => {
     describe('ACCS — the shared-credential broker', () => {
         const SHARED = { clientId: 'shared-id', clientSecret: 'fake-shared-secret-not-a-secret' };
         const served = () => jest.fn().mockResolvedValue({ ok: true, credentials: SHARED });
-        const notConfigured = () => jest.fn().mockResolvedValue({ ok: false, reason: 'not-configured' });
+        const notConfigured = () =>
+            jest.fn().mockResolvedValue({ ok: false, reason: 'not-configured' });
         const unavailable = () => jest.fn().mockResolvedValue({ ok: false, reason: 'unavailable' });
 
         it('uses the shared pair when the project declares none', async () => {
@@ -259,7 +304,9 @@ describe('resolveCommerceCredentials', () => {
             const broker = served();
             const half = {
                 stackBackend: 'adobe-commerce-accs',
-                componentConfigs: { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_ID: 'only-the-id' } },
+                componentConfigs: {
+                    'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_ID: 'only-the-id' },
+                },
             };
 
             const result = await resolveCommerceCredentials({ project: half, broker });
