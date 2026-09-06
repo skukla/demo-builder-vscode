@@ -103,7 +103,6 @@ export function Sidebar({
                 onOpenHelp={onOpenHelp}
                 onOpenSettings={onOpenSettings}
                 onOpenLogs={onOpenLogs}
-                compact
             />
         </Flex>
     );

@@ -22,8 +22,6 @@ export interface UtilityBarProps {
     onOpenSettings?: () => void;
     /** Callback when user clicks Logs */
     onOpenLogs?: () => void;
-    /** Reserved for footer-placement variants; currently no-op. */
-    compact?: boolean;
 }
 
 /**
@@ -35,7 +33,6 @@ export function UtilityBar({
     onOpenHelp,
     onOpenSettings,
     onOpenLogs,
-    compact: _compact = false,
 }: UtilityBarProps) {
     return (
         <Flex direction="column" gap="size-100" alignItems="center">
