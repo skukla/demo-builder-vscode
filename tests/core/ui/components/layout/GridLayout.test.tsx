@@ -119,6 +119,29 @@ describe('GridLayout', () => {
   });
 
   describe('Grid Layout Structure', () => {
+    it('should leave no empty class when no className is given', () => {
+      // The class list is filtered before joining. Without the filter an omitted
+      // className joins as an empty segment — 'grid w-full ' — which every
+      // toHaveClass assertion still accepts.
+      const { container } = render(
+        <GridLayout>
+          <div>Item 1</div>
+        </GridLayout>
+      );
+      const gridDiv = container.firstChild as HTMLDivElement;
+      expect(gridDiv.className).toBe('grid w-full');
+    });
+
+    it('should append a caller className after the utility classes', () => {
+      const { container } = render(
+        <GridLayout className="welcome-tiles">
+          <div>Item 1</div>
+        </GridLayout>
+      );
+      const gridDiv = container.firstChild as HTMLDivElement;
+      expect(gridDiv.className).toBe('grid w-full welcome-tiles');
+    });
+
     it('should render grid container with correct structure', () => {
       const { container } = render(
         <GridLayout columns={3}>
