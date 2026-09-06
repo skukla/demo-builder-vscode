@@ -37,16 +37,23 @@
  */
 
 import { registerCommerceQueryTool } from '@/features/ai/server/commerceQueryTool';
+import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
 function fakeServer() {
      
     const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
+    // The DECLARATION is kept, not discarded: `needsAuth`, the read-only
+    // annotations and the endpoint enum are contract an agent's client reads out
+    // of `tools/list`, and nothing else in this repo checks them for this tool.
+    const declarations = new Map<string, McpToolSchema>();
     return {
          
-        registerTool(name: string, _def: unknown, handler: (args: any) => Promise<{ content: Array<{ text: string }> }>) {
+        registerTool(name: string, def: McpToolSchema, handler: (args: any) => Promise<{ content: Array<{ text: string }> }>) {
             tools.set(name, handler);
+            declarations.set(name, def);
         },
+        declaration: (): McpToolSchema => declarations.get('run_commerce_query')!,
         raw: async (args?: unknown): Promise<string> =>
             (await tools.get('run_commerce_query')!(args)).content[0].text,
         json: async (args?: unknown): Promise<any> =>
@@ -90,6 +97,24 @@ const PAAS_PROJECT = {
             ADOBE_COMMERCE_STORE_VIEW_CODE: 'default',
         },
     },
+    componentInstances: {},
+};
+
+/** A project whose storefront queries a deployed MESH, not Commerce directly. */
+const MESH_PROJECT = {
+    ...ACCS_PROJECT,
+    name: 'mesh-demo',
+    appBuilderComponents: {
+        mesh: { kind: 'mesh', endpoint: 'https://graph.adobe.io/api/abc123/graphql' },
+    },
+};
+
+/** A project with no Commerce connection configured at all. */
+const BARE_PROJECT = {
+    name: 'bare',
+    path: '/p/bare',
+    componentSelections: {},
+    componentConfigs: {},
     componentInstances: {},
 };
 
@@ -234,5 +259,247 @@ describe('run_commerce_query', () => {
         const text = await s.raw({ query: '{ products { items { sku } } }' });
         expect(text.length).toBeLessThan(40_000);
         expect(text).toMatch(/truncated/i);
+    });
+});
+
+/**
+ * The decisions the first pass left unconstrained — the declaration an agent's
+ * client reads, the query guard's edges, endpoint selection, and the three
+ * failure paths (network, oversized body, unparseable body).
+ */
+describe('run_commerce_query — the declaration', () => {
+    it('declares itself read-only, non-destructive and needing no sign-in', async () => {
+        // These three reach the client verbatim in `tools/list`, and the dry run
+        // gates on `readOnlyHint`. Nothing else in this repo checks them for this
+        // tool, so a flipped hint would ship silently.
+        const decl = serve().declaration();
+
+        expect(decl.needsAuth).toBe(false);
+        expect(decl.annotations?.readOnlyHint).toBe(true);
+        expect(decl.annotations?.destructiveHint).toBe(false);
+    });
+
+    it('takes a query, optional variables, and an endpoint drawn from the three real ones', async () => {
+        const shape = serve().declaration().inputSchema as Record<
+            string,
+            { safeParse: (v: unknown) => { success: boolean } }
+        >;
+
+        expect(Object.keys(shape).sort()).toStrictEqual(['endpoint', 'query', 'variables']);
+        for (const name of ['commerceGraphQl', 'catalogService', 'mesh']) {
+            expect(shape.endpoint.safeParse(name).success).toBe(true);
+        }
+        expect(shape.endpoint.safeParse('somewhere-else').success).toBe(false);
+        expect(shape.query.safeParse(42).success).toBe(false);
+    });
+});
+
+describe('run_commerce_query — what counts as a query', () => {
+    it('refuses a mutation hidden behind a comment', async () => {
+        // Comments are stripped BEFORE the check for exactly this: `# ...` in
+        // front of `mutation` would otherwise walk straight past a guard that
+        // only looks at the start of the string.
+        const s = serve();
+        const text = await s.raw({ query: '# innocent\nmutation { createCart { id } }' });
+
+        expect(text).toMatch(/read-only/i);
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('sends a read query that merely names a field `subscription`', async () => {
+        // The guard anchors at the START. A field called `subscription` inside a
+        // selection set is a perfectly ordinary read, and refusing it would be a
+        // false positive an agent cannot work around.
+        const s = serve();
+        await s.json({ query: '{subscription{id}}' });
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(JSON.parse(fetchMock.mock.calls[0][1].body).query).toBe('{subscription{id}}');
+    });
+
+    it('sends a read query that quotes the word mutation as a filter value', async () => {
+        const s = serve();
+        await s.json({ query: '{ products(filter: { sku: { eq: "mutation" } }) { total_count } }' });
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks for a query when called with no arguments at all', async () => {
+        const s = serve();
+
+        expect(await s.raw()).toBe('Error: `query` is required.');
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('asks for a query when given only whitespace', async () => {
+        const s = serve();
+
+        expect(await s.raw({ query: '   \n\t ' })).toBe('Error: `query` is required.');
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+});
+
+describe('run_commerce_query — which endpoint', () => {
+    it('defaults to the deployed mesh when that is what the storefront queries', async () => {
+        // `storefrontUses` is the answer to "what does the site do", and an agent
+        // reproducing the site must hit the same endpoint. Defaulting to Commerce
+        // here would answer a different question than the one asked.
+        getCurrentProject.mockResolvedValue(MESH_PROJECT);
+        const s = serve();
+        await s.json({ query: '{ products { total_count } }' });
+
+        expect(fetchMock.mock.calls[0][0]).toBe('https://graph.adobe.io/api/abc123/graphql');
+    });
+
+    it('names Commerce GraphQL — not `none` — when the project has no endpoints', async () => {
+        // `storefrontUses` is the sentinel string 'none' for an unconfigured
+        // project, and it is not an endpoint key. Passing it through would print
+        // "no `none` endpoint", which tells an agent nothing it can act on.
+        getCurrentProject.mockResolvedValue(BARE_PROJECT);
+        const s = serve();
+        const text = await s.raw({ query: '{ x }' });
+
+        expect(text).toMatch(/no `commerceGraphQl` endpoint/);
+        expect(text).toMatch(/no Commerce endpoints configured at all/);
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('leaves the Catalog Service headers off a Commerce Core query when the project has both', async () => {
+        // PaaS has two endpoints, so "which headers" has a real answer here: the
+        // `cs` set belongs to the Catalog Service one only. Sending it everywhere
+        // would be the mirror of the bug that made ACCS fail.
+        getCurrentProject.mockResolvedValue(PAAS_PROJECT);
+        const s = serve();
+        await s.json({ query: '{ products { total_count } }', endpoint: 'commerceGraphQl' });
+
+        const [url, init] = fetchMock.mock.calls[0];
+        expect(url).toBe('https://demo.adobedemo.com/graphql');
+        expect(init.headers['x-api-key']).toBeUndefined();
+        expect(init.headers['Magento-Environment-Id']).toBeUndefined();
+    });
+
+    it('passes GraphQL variables through to the backend', async () => {
+        const s = serve();
+        await s.json({ query: 'query P($sku: String!) { products(sku: $sku) { id } }', variables: { sku: 'ADB123' } });
+
+        expect(JSON.parse(fetchMock.mock.calls[0][1].body).variables).toStrictEqual({ sku: 'ADB123' });
+    });
+
+    it('omits `variables` entirely when the query takes none', async () => {
+        const s = serve();
+        await s.json({ query: '{ products { total_count } }' });
+
+        expect(Object.keys(JSON.parse(fetchMock.mock.calls[0][1].body))).toStrictEqual(['query']);
+    });
+});
+
+describe('run_commerce_query — failure paths', () => {
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    /** Let the handler run up to its `await fetchImpl(...)` under fake timers. */
+    async function reachTheRequest(): Promise<void> {
+        for (let i = 0; i < 10; i++) await Promise.resolve();
+    }
+
+    it('reports a network failure by name instead of returning nothing', async () => {
+        fetchMock.mockRejectedValue(new Error('ECONNREFUSED'));
+        const s = serve();
+
+        expect(await s.raw({ query: '{ x }' })).toBe(
+            'Error: the request to commerceGraphQl failed — ECONNREFUSED',
+        );
+    });
+
+    it('reports a non-Error rejection rather than printing [object Object]', async () => {
+        fetchMock.mockRejectedValue('socket hang up');
+        const s = serve();
+
+        expect(await s.raw({ query: '{ x }' })).toBe(
+            'Error: the request to commerceGraphQl failed — socket hang up',
+        );
+    });
+
+    it('aborts the request once the backend has had its full timeout', async () => {
+        jest.useFakeTimers();
+        let signal: AbortSignal | undefined;
+        let answer: (v: unknown) => void = () => {};
+        fetchMock.mockImplementation((_url: string, init: { signal: AbortSignal }) => {
+            signal = init.signal;
+            return new Promise((resolve) => {
+                answer = resolve;
+            });
+        });
+        const s = serve();
+        // The outcome is HELD before anything is asserted. An assertion that
+        // throws while a promise is still in flight leaves that rejection
+        // unhandled, and an unhandled rejection kills the Stryker worker — which
+        // scores the mutant as a crash instead of a kill.
+        const settled = s.raw({ query: '{ x }' }).then(
+            () => 'answered',
+            () => 'threw',
+        );
+        await reachTheRequest();
+        expect(signal?.aborted).toBe(false);
+
+        jest.advanceTimersByTime(30_000);
+
+        expect(signal?.aborted).toBe(true);
+        answer({ ok: true, status: 200, text: async () => '{}' });
+        expect(await settled).toBe('answered');
+    });
+
+    it('cancels the timeout once the backend has answered', async () => {
+        // Without the `finally`, the abort still fires half a minute later. It
+        // reaches nothing in this handler, but the signal is the caller's and a
+        // stale abort on it is a real leak.
+        jest.useFakeTimers();
+        let signal: AbortSignal | undefined;
+        fetchMock.mockImplementation((_url: string, init: { signal: AbortSignal }) => {
+            signal = init.signal;
+            return Promise.resolve({ ok: true, status: 200, text: async () => '{}' });
+        });
+        const s = serve();
+        await s.json({ query: '{ x }' });
+
+        jest.advanceTimersByTime(30_000);
+
+        expect(signal?.aborted).toBe(false);
+    });
+
+    it('clips a long error body rather than pasting the whole failure page back', async () => {
+        const page = 'E'.repeat(2_000);
+        fetchMock.mockResolvedValue({ ok: false, status: 500, text: async () => page });
+        const s = serve();
+        const text = await s.raw({ query: '{ x }' });
+
+        expect(text).toBe(`Error: commerceGraphQl returned HTTP 500. ${'E'.repeat(500)}`);
+    });
+
+    it('returns a body of exactly the ceiling whole, uncut', async () => {
+        // The cut is at MORE than the ceiling. A body exactly at it is complete,
+        // and announcing a truncation that did not happen would tell an agent to
+        // narrow a query that was already fine.
+        const body = 'x'.repeat(30_000);
+        fetchMock.mockResolvedValue({ ok: true, status: 200, text: async () => body });
+        const s = serve();
+        const text = await s.raw({ query: '{ x }' });
+
+        expect(text).toBe(body);
+        expect(text).not.toMatch(/truncated/i);
+    });
+
+    it('hands back an unparseable body as-is instead of swallowing it', async () => {
+        // A gateway that answers 200 with HTML is the case: the agent can only
+        // diagnose that if it sees what came back.
+        fetchMock.mockResolvedValue({
+            ok: true,
+            status: 200,
+            text: async () => '<html>varnish cache server</html>',
+        });
+        const s = serve();
+
+        expect(await s.raw({ query: '{ x }' })).toBe('<html>varnish cache server</html>');
     });
 });

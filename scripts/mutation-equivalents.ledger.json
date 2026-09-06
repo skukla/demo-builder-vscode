@@ -14086,6 +14086,31 @@
             "decision": "none \u2014 null and undefined are the same render in React 18, and no other observable differs",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-04"
+        },
+        {
+            "module": "src/features/ai/server/commerceQueryTool.ts",
+            "anchors": [
+                "const stripped = query.replace(/#[^\\n]*/g, '').trim();"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker drops the .trim(), and nothing downstream can tell. The only consumer of `stripped` is the very next line's /^\\s*(mutation|subscription)\\b/i, whose `^\\s*` already consumes exactly the leading whitespace trim removes (JS \\s and String.prototype.trim share the same WhiteSpace+LineTerminator set), and trailing whitespace cannot affect a ^-anchored match. Planted and re-run: all 29 tests pass, which is what equivalence looks like.",
+            "decision": "none \u2014 the trim says what the guard means and costs nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/ai/server/commerceQueryTool.ts",
+            "anchors": [
+                "const requested: EndpointKey | undefined = args?.endpoint;",
+                "...(args?.variables ? { variables: args.variables } : {}),"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both `?.` guards sit AFTER the handler's own required-argument check: `String(args?.query ?? '')` yields '' for a nullish `args`, and the next line returns 'Error: `query` is required.' So neither line is reachable with `args` nullish and dropping the `?.` cannot throw. Planted both and re-run: all 29 tests pass.",
+            "decision": "none \u2014 `args` is the SDK's untyped `any`, and the guards keep correctness from depending on statement order in the handler",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }
