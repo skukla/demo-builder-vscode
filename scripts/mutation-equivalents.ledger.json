@@ -16946,6 +16946,18 @@
             "decision": "none \u2014 the `?.` is what the declared type requires. A definite-assignment assertion (`let releaseLock!: () => void`) would delete the mutant, but that is silencing the checker rather than proving anything.",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-08, resourceLocker focus run 2026-09-06"
+        },
+        {
+            "module": "src/core/ui/utils/statusVocabulary.ts",
+            "anchors": [
+                "if (!status) return null;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker takes the guard's condition to false, so an empty or absent status falls through to the two checks below instead of returning early. Both answer the same way: the parameter is typed `string | undefined`, so its only falsy values are '' and undefined; neither equals an alias, and `in` coerces both to a property key that STATUS_DISPLAY does not carry (probed directly: `undefined in T` and `'' in T` are both false). The fall-through therefore returns null for exactly the inputs the guard returns null for, and no caller can supply a third falsy value. Verified by planting the removal in src: all 42 tests still pass.",
+            "decision": "none \u2014 the guard is what lets tsc accept `status in STATUS_DISPLAY`, whose left operand may not be `string | undefined`. Deleting it needs a cast, which trades a checked narrowing for a silenced one.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08, statusVocabulary focus run 2026-09-06"
         }
     ]
 }
