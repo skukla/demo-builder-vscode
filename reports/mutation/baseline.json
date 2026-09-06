@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "runtimeCredentials: half-credential refusal, download options, six partial-shape reads, the third re-check, the re-check pause, oclif marker spacings; dead outer trim deleted; 1 short-circuited optional chain ledgered",
+    "_note": "useFieldSyncWithBackend: timer-count assertions for cancel/replace, changed options after rerender, post-unmount callbacks and flush; 4 unobservable mutants ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -5610,22 +5610,21 @@
             "openGaps": 0
         },
         "src/features/dashboard/ui/hooks/useFieldSyncWithBackend.ts": {
-            "score": 57.41,
-            "killed": 31,
-            "survived": 22,
+            "score": 90.74,
+            "killed": 49,
+            "survived": 4,
             "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 15,
-                "block": 3,
-                "other": 4
+                "branch": 3,
+                "other": 1
             },
             "uncoveredCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 18,
-            "equivalent": 0,
-            "openGaps": 22
+            "highValueSurvivors": 3,
+            "equivalent": 4,
+            "openGaps": 0
         },
         "src/features/dashboard/ui/hooks/useInlineRename.ts": {
             "score": 71.43,

@@ -14664,6 +14664,55 @@
             "decision": "none \u2014 the left operand's short-circuit makes a nullish ns unreachable at the right one",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useFieldSyncWithBackend.ts",
+            "anchors": [
+                "const isMountedRef = useRef(true);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The initial value is masked by the mount effect, which re-arms the flag (isMountedRef.current = true) before anything can read it. React runs that effect before any test or user interaction can call setValue or flush, so the ref is true by the time the only two readers exist. Planted useRef(false) and ran the 25-test suite: all green. The line the effect DOES need is asserted \u2014 flipping it to false kills the suite \u2014 so the flag is constrained; only its initial value is unobservable. Deleting the effect's re-arm instead would break the hook under React StrictMode, whose double-invoked cleanup sets the flag false and would leave it there.",
+            "decision": "none \u2014 the mount effect re-arms the flag before any reader exists",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useFieldSyncWithBackend.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the empty dependency array with a one-element constant array. React compares dependencies element-wise, and that element is the same literal on every render, so the effect still runs exactly once per mount \u2014 the mutation changes nothing that can be observed. Planted it and ran the 25-test suite: all green, including the three tests that turn on unmount cleanup, which is the only thing this effect does.",
+            "decision": "none \u2014 a constant dependency array re-runs an effect exactly as often as an empty one",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useFieldSyncWithBackend.ts",
+            "anchors": [
+                "if (isMountedRef.current) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The guard stops a setIsSyncing call on an unmounted component. React 18.3.1 removed the warning that used to make such a call visible, and a state update on an unmounted hook re-renders nothing, so the mutation has no observable effect: the last rendered value is what result.current keeps either way. Planted it (if (true)) and ran the 25-test suite: all green, including the two tests that unmount with a request still in flight. Killing it would need a test asserting the absence of a React warning that no longer exists.",
+            "decision": "none \u2014 a state update after unmount is unobservable in React 18",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/dashboard/ui/hooks/useFieldSyncWithBackend.ts",
+            "anchors": [
+                "if (pendingValueRef.current !== undefined) {"
+            ],
+            "line": 142,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The debounce timer cannot fire with nothing pending. Only setValue schedules it, and it sets the pending value in the same statement; the two places that clear the pending value \u2014 the timer callback itself and flush \u2014 both cancel or replace the timer as they do so. So control reaches this line only with a value waiting. Planted it (if (true)) and ran the 25-test suite: all green. Killing it would need a fired timer with an empty pending slot, which no sequence of setValue, flush and unmount produces.",
+            "decision": "none \u2014 the only scheduler of this timer sets the pending value with it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }
