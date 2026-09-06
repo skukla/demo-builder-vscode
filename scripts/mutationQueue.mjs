@@ -55,15 +55,12 @@ const BASELINE = 'reports/mutation/baseline.json';
 const QUEUE = 'scripts/overnight/queue';
 const GOALS = 'scripts/overnight/goals';
 const BATCH = 5;
-// The cap on a goal condition. 4,000 was a GUESS and it bound three times on
-// 2026-09-05, each time costing batch size — the module list is what gets squeezed.
-// Measured that day: the runner delivers the text as a shell argument
-// (`claude -p "/goal $(cat …)"`), ARG_MAX here is 1,048,576, and a 4,606-character
-// argument arrives whole. Raised to 4,600 rather than removed, because the /goal
-// mechanism's own handling is not measured — its documentation states no length
-// limit, which is not the same as proving there is none. If a session ever ignores
-// the instructions at the END of the text, suspect this first.
-const CAP = 4600;
+// The cap on a goal condition. 4,000 is ENFORCED BY `/goal` ITSELF, which refuses a
+// longer condition outright: "Goal condition is limited to 4000 characters (got 4402)".
+// Raised to 4,600 on 2026-09-05 on the strength of the DELIVERY path — the runner passes
+// the text as a shell argument and ARG_MAX here is 1,048,576 — which measured the wrong
+// layer and stopped a batch from starting. Do not raise it again; buy room by trimming.
+const CAP = 3900; // 100 under what `/goal` enforces — exactly-4000 is untested
 
 /**
  * The areas whose breakage costs an SC existing work. A module here is worked before any
@@ -110,71 +107,56 @@ function goalText(batchName, mods) {
     const list = mods
         .map((m) => `  - ${m.path}  (${m.openGaps} open gaps)`)
         .join('\n');
-    return `Work backlog item PL-22 — the mutation burn-down, batch ${batchName}. Bring each of
-these modules to ZERO open gaps, in this order:
+    return `Work backlog item PL-22 — the mutation burn-down, batch ${batchName}. Bring each
+of these modules to ZERO open gaps, in this order:
 
 ${list}
 
-WHAT DONE MEANS, per module: its \`openGaps\` row in reports/mutation/baseline.json reads 0.
-Every surviving or uncovered behavioural mutant is either KILLED by a test asserting the
-decision (assert the ARGUMENTS a collaborator receives, not the mock's answer — a mock
-cannot see a malformed call) or RECORDED in scripts/mutation-equivalents.ledger.json with
-why no test can kill it. The score is not the target: a module can be done at 60% and
-neglected at 90%. Never ledger a mutant to reach zero faster — the ledger is for what
-CANNOT be killed, not what you did not get to.
+READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
+what each has cost when skipped, and the traps that have burned real time. Read it once;
+it does not change between batches.
 
-FIRST, PER MODULE: sibling suites named for a FUNCTION, not the file, are invisible to
-\`suitesFor\` — their kills count for nothing. Check imports, rename to
-\`<module>-<topic>.test.ts\`. Took importHandlers.ts 151 gaps to 62. See PL-45.
+DONE, per module: its \`openGaps\` row in reports/mutation/baseline.json reads 0. Every
+surviving or uncovered behavioural mutant is KILLED by a test asserting the decision
+(assert the ARGUMENTS a collaborator receives — a mock cannot see a malformed call) or
+RECORDED in scripts/mutation-equivalents.ledger.json with why none can. The score is not
+the target. Never ledger to reach zero faster.
 
-SMALL MODULES SHARE A MEASUREMENT: \`node scripts/focusModule.mjs <a> <b> <c>\` focuses
-several at once, so a group pays one measure and one re-measure instead of one each.
-Worth it below ~20 gaps apiece — that fixed toll is most of a small module's cost (1.0
-gaps/min at 1-5 gaps against 13.7 at 100+). The report is per-module and the ratchet
-writes a row for each, so nothing downstream changes. Still ONE COMMIT PER MODULE.
+FIRST, PER MODULE: rename sibling suites named for a FUNCTION rather than the file —
+\`suitesFor\` matches filenames, so their kills count for nothing. Confirm by imports, and
+that the suite DRIVES the module rather than reading its text. Reject cross-cutting ones.
 
-THE CYCLE — never two measurements at once (the focus configs are single generated
-files and collide):
-  1. node scripts/focusModule.mjs <module>
+SMALL MODULES SHARE ONE MEASUREMENT: \`focusModule.mjs <a> <b> <c>\` focuses several, so a
+group pays one measure, not one each. Worth it below ~20 gaps apiece. One commit each.
+
+THE CYCLE — never two measurements at once (the focus configs are single files):
+  1. node scripts/focusModule.mjs <module(s)>
   2. npx stryker run stryker.focus.config.json > /tmp/focus.txt 2>&1
-     Start it in the BACKGROUND and read the module while it runs — nothing blocks on
-     it. Wait on \`Done in\`, never \`mutation score\`: Stryker capitalises it, so a
-     case-sensitive match never fires (16 minutes lost, 2026-09-04).
-  3. node scripts/mutationWorklist.mjs         — the decisions nothing constrains, ranked
-  4. write the tests (or the ledger entries), run them
-  5. re-measure (1–2), then \`node scripts/checkMutationBaseline.mjs --report
-     reports/mutation/focus.json\` — the ratchet must hold; padding means a log-string test
-  6. the same command with \`--write "<what changed>"\` once it holds
-  7. PASTE the module's new row: score, survived, noCoverage, equivalent, openGaps —
-     the evaluator reads only what you surface.
+     Background it and read the module meanwhile. Wait on \`Done in\`, never
+     \`mutation score\`. Delete reports/mutation/focus-incremental.json after any edit.
+  3. node scripts/mutationWorklist.mjs      — the decisions nothing constrains, ranked
+  4. write the tests (or ledger rows with \`node scripts/mutationLedger.mjs add ...\`)
+  5. re-measure, then \`node scripts/checkMutationBaseline.mjs --report
+     reports/mutation/focus.json\`; add \`--write "<what changed>"\` once the ratchet holds
+  6. PASTE the module's row: score, survived, noCoverage, equivalent, openGaps.
 
-A mutant revealing a REAL defect or dead code may be fixed in src/ — say so, with the
-reason, in the commit. Any other src/ change is out of scope.
+A mutant revealing a REAL defect or dead code may be fixed in src/ — say so in the commit.
+NEVER kill a mutant by asserting a logger call's arguments; that pins wording, and an
+enforcer refuses any file whose count rises.
 
-NEVER kill a mutant by asserting a logger call's arguments — that pins wording, not
-behaviour, and an enforcer refuses any file whose count rises. If the only observable
-difference is which log line prints, it belongs in the ledger. Add rows with
-\`node scripts/mutationLedger.mjs add ...\`; it refuses an anchor that does not resolve.
-
-RULES. Stay on the current work branch; never checkout or merge develop. One commit per
-module, \`Backlog: PL-22\` trailer, committed with an EXPLICIT pathspec
-(\`git commit -- <your paths>\`), never bare \`git commit\` or \`-a\`: \`git mv\` self-stages
-and swept work into two unrelated commits on 2026-09-05. No cloud writes. No
+RULES. Stay on the work branch; never checkout or merge develop. One commit per module,
+\`Backlog: PL-22\` trailer, committed with an EXPLICIT pathspec
+(\`git commit -- <your paths>\`), never bare \`git commit\` or \`-a\`. No cloud writes. No
 attribution trailers.
 
-CHECK PER MODULE, SCOPED: this module's suites, both typecheckers, eslint on changed
-files, and \`npm run validate:test-file-sizes\` — 750 lines blocks CI, and a suite hit
-779 on 2026-09-05. Exit codes in variables, never a pipe. Commit only on green.
+CHECK PER MODULE, SCOPED: its suites, both typecheckers, eslint on changed files, and
+\`npm run validate:test-file-sizes\`. Exit codes in variables, never a pipe. Commit on green.
 
-PUSH ONCE, WHEN THE BATCH IS DONE — the pre-push hook then runs the full gate, which a
-scoped run cannot replace. If it refuses, fix and push again; nothing has left the
-machine. NEVER \`--no-verify\`. Gating every module the heavy way cost 95 minutes of one
-run on 2026-09-05.
+PUSH ONCE, WHEN THE BATCH IS DONE — the pre-push hook then runs the full gate. If it
+refuses, fix and push again; nothing has left the machine. NEVER \`--no-verify\`.
 
-WORK THE BATCH TO THE END — no turn budget; a turn count fired in four batches on
-2026-09-04 and was right in none. Stop early only on evidence: two consecutive checks
-failing the same way (say which), or openGaps not moving across two measure cycles —
-commit what it gained and go to the NEXT module.
+WORK THE BATCH TO THE END — no turn budget. Stop early only on evidence: two consecutive
+checks failing the same way, or openGaps not moving across two measure cycles.
 
 FINISH with the batch table ONCE: module, openGaps before/after, tests, ledger rows.
 `;
