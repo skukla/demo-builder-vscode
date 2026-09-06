@@ -55,15 +55,26 @@ const getDaLiveAuthServiceMock = getDaLiveAuthService as jest.Mock;
 const isEdsProjectMock = isEdsProject as unknown as jest.Mock;
 const getMeshComponentInstanceMock = getMeshComponentInstance as unknown as jest.Mock;
 
+interface CapturedDef {
+    needsAuth?: unknown;
+    annotations?: Record<string, boolean>;
+    inputSchema?: Record<string, unknown>;
+}
+
 function fakeServer() {
     const tools = new Map<string, (args: any) => Promise<{ content: Array<{ text: string }> }>>();
+    const defs = new Map<string, CapturedDef>();
     return {
         registerTool(
             name: string,
-            _def: unknown,
+            def: unknown,
             handler: (args: any) => Promise<{ content: Array<{ text: string }> }>
         ) {
             tools.set(name, handler);
+            defs.set(name, def as CapturedDef);
+        },
+        def(): CapturedDef {
+            return defs.get('reset_eds_project')!;
         },
         async call(args?: unknown): Promise<any> {
             return JSON.parse((await tools.get('reset_eds_project')!(args)).content[0].text);
@@ -207,6 +218,93 @@ describe('reset_eds_project', () => {
         registerEdsResetTool(s, ctxFactory);
         expect(await s.call({ confirm: true })).toMatchObject({ needsAuth: 'adobe' });
         expect(executeEdsResetMock).not.toHaveBeenCalled();
+    });
+
+    it('declares itself DA.live-authenticated and destructive', async () => {
+        // The descriptor is what the consent layer and the auth pre-flight read.
+        // A tool that rewrites a repo and its content must not be annotated as a
+        // read, and must not be reachable without DA.live.
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+
+        const def = s.def();
+        expect(def.needsAuth).toEqual(['dalive']);
+        expect(def.annotations).toEqual({ readOnlyHint: false, destructiveHint: true });
+        expect(Object.keys(def.inputSchema!)).toEqual([
+            'includeBlockLibrary',
+            'verifyCdn',
+            'confirm',
+        ]);
+    });
+
+    it('refuses a call with no arguments at all rather than throwing', async () => {
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+        const res = await s.call();
+        expect(res).toMatchObject({ destructive: true, project: 'eds-proj' });
+        expect(executeEdsResetMock).not.toHaveBeenCalled();
+    });
+
+    it('proceeds and redeploys when the project has a mesh and Adobe IS signed in', async () => {
+        // The mesh handoff must be a REFUSAL, not the normal path: a valid token
+        // has to let the reset through, and turn the redeploy on.
+        getMeshComponentInstanceMock.mockReturnValue({ path: '/p/mesh' });
+        mockInspectToken.mockResolvedValue({ valid: true });
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+
+        const res = await s.call({ confirm: true });
+
+        expect(res).toMatchObject({ reset: true });
+        expect(executeEdsResetMock).toHaveBeenCalledWith(
+            expect.objectContaining({ redeployMesh: true }),
+            expect.anything(),
+            expect.anything(),
+            expect.anything(),
+            expect.any(Function)
+        );
+    });
+
+    it('treats an Adobe token inspection that throws as not signed in', async () => {
+        // The pre-flight is best-effort; a thrown inspection must hand off rather
+        // than fall through into a reset whose mesh redeploy will fail late.
+        getMeshComponentInstanceMock.mockReturnValue({ path: '/p/mesh' });
+        mockInspectToken.mockRejectedValue(new Error('IMS unreachable'));
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+
+        expect(await s.call({ confirm: true })).toMatchObject({ needsAuth: 'adobe' });
+        expect(executeEdsResetMock).not.toHaveBeenCalled();
+    });
+
+    it('defaults both optional flags OFF when the caller omits them', async () => {
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+
+        await s.call({ confirm: true });
+
+        expect(executeEdsResetMock).toHaveBeenCalledWith(
+            expect.objectContaining({ includeBlockLibrary: false, verifyCdn: false }),
+            expect.anything(),
+            expect.anything(),
+            expect.anything(),
+            expect.any(Function)
+        );
+    });
+
+    it('hands the reset the command executor and auth manager it redeploys with', async () => {
+        // ADR-015: these arrive as a parameter. Passing an empty object instead
+        // typechecks nowhere and fails only once a mesh redeploy is attempted.
+        const s = fakeServer();
+        registerEdsResetTool(s, ctxFactory);
+
+        await s.call({ confirm: true });
+
+        const deps = executeEdsResetMock.mock.calls[0][3];
+        expect(deps).toEqual({
+            commandManager: expect.anything(),
+            authManager: expect.anything(),
+        });
     });
 
     it('resets and returns the captured timeline + result fields on success', async () => {
