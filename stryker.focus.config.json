@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/shell/processCleanup.ts"
+        "src/utils/autoUpdater.ts"
     ],
     "reporters": [
         "clear-text",
