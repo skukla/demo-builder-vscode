@@ -16,6 +16,7 @@ describe('createApiSubscriberClient', () => {
         Pick<
             AuthenticationService,
             | 'getServicesForOrg'
+            | 'getSubscribedServiceCodes'
             | 'createAdobeIdCredential'
             | 'subscribeAdobeIdIntegrationToServices'
             | 'subscribeOAuthServerToServerIntegrationToServices'
@@ -27,6 +28,7 @@ describe('createApiSubscriberClient', () => {
     beforeEach(() => {
         service = {
             getServicesForOrg: jest.fn().mockResolvedValue([{ code: 'X' }]),
+            getSubscribedServiceCodes: jest.fn().mockResolvedValue(['AdobeAnalytics']),
             createAdobeIdCredential: jest.fn().mockResolvedValue('int-apikey'),
             subscribeAdobeIdIntegrationToServices: jest.fn().mockResolvedValue(undefined),
             subscribeOAuthServerToServerIntegrationToServices: jest
@@ -48,6 +50,16 @@ describe('createApiSubscriberClient', () => {
         const result = await adapter.getServicesForOrg('org1');
         expect(service.getServicesForOrg).toHaveBeenCalledWith('org1');
         expect(result).toEqual([{ code: 'X' }]);
+    });
+
+    it('should forward getSubscribedServiceCodes with both arguments', async () => {
+        // The skip-if-subscribed check reads this. An adapter that dropped
+        // idIntegration, or answered nothing, would make every credential look
+        // unsubscribed and re-PUT the whole union on each deploy.
+        const codes = await adapter.getSubscribedServiceCodes('org1', 'int-1');
+
+        expect(service.getSubscribedServiceCodes).toHaveBeenCalledWith('org1', 'int-1');
+        expect(codes).toStrictEqual(['AdobeAnalytics']);
     });
 
     it('should forward subscribeAdobeIdIntegrationToServices one-to-one', async () => {
