@@ -18,80 +18,17 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
-import './DatapackActivityView.testUtils';
+import {
+    activityCallCount,
+    lastActivityRequest,
+    makeEntry,
+    mockRequest,
+    resolveSequence,
+    resolveWith,
+} from './DatapackActivityView.testUtils';
 
 // Below the mock on purpose (see useDataInstallerRequest's suite).
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { DatapackActivityView } from '@/features/data-installer/ui/views/DatapackActivityView';
-import type { ActivityEntry } from '@/features/data-installer/types';
-
-const mockRequest = webviewClient.request as jest.Mock;
-
-function makeEntry(overrides: Partial<ActivityEntry> = {}): ActivityEntry {
-    return {
-        id: { name: 'bodea', version: 'main' },
-        dataTypes: ['categories', 'products'],
-        commerceInstance: 'aBcDeFgHiJkLmNoPqRsTu',
-        mode: 'import',
-        scenario: 'DATAPACK_SPECIFIC_ITEMS',
-        at: '2026-08-06T18:12:13.115Z',
-        ...overrides,
-    };
-}
-
-/**
- * `total` drives whether more can be loaded, so it is explicit.
- *
- * Two request types now: the view asks for the project's target FIRST, because
- * the log is scoped to that instance. `instance: null` stands for "no project
- * open", which is a real state on this panel — the catalog browses fine without
- * one.
- */
-function resolveWith(
-    items: ActivityEntry[],
-    total = items.length,
-    instance: string | null = 'TENANT123'
-) {
-    mockRequest.mockImplementation(async (type: string) => {
-        if (type === 'get-datapack-import-target') {
-            return { success: true, data: instance ? { instance, projectName: 'demo-1' } : {} };
-        }
-        return { success: true, data: { items, count: items.length, total } };
-    });
-}
-
-/**
- * Answer the target once, then each activity page in order.
- *
- * A bare `mockResolvedValueOnce` queue no longer works: the TARGET request now
- * consumes the first entry, so page one went to the wrong caller and the view
- * read "no project open".
- */
-function resolveSequence(pages: Array<{ items: ActivityEntry[]; total: number }>) {
-    let next = 0;
-    mockRequest.mockImplementation(async (type: string) => {
-        if (type === 'get-datapack-import-target') {
-            return { success: true, data: { instance: 'TENANT123', projectName: 'demo-1' } };
-        }
-        const page = pages[Math.min(next++, pages.length - 1)];
-        return {
-            success: true,
-            data: { items: page.items, count: page.items.length, total: page.total },
-        };
-    });
-}
-
-/** How many ACTIVITY requests were made — the target lookup is not one. */
-function activityCallCount(): number {
-    return mockRequest.mock.calls.filter((c) => c[0] === 'get-datapack-activity').length;
-}
-
-/** The most recent ACTIVITY request, ignoring the target lookup. */
-function lastActivityRequest(): { type: unknown; payload: unknown } {
-    const call =
-        [...mockRequest.mock.calls].reverse().find((c) => c[0] === 'get-datapack-activity') ?? [];
-    return { type: call[0], payload: call[1] };
-}
 
 describe('DatapackActivityView', () => {
     beforeEach(() => {

@@ -14713,6 +14713,42 @@
             "decision": "none \u2014 the only scheduler of this timer sets the pending value with it",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/data-installer/ui/views/DatapackActivityView.tsx",
+            "anchors": [
+                "const [entries, setEntries] = useState<ActivityEntry[]>([]);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The initial value is overwritten before any frame can show it. The query effect runs on mount and its first statement is setEntries([]), and the only frame that renders before that effect is the full-block loading gate, which renders no rows and no count. Planted the mutation (a one-element initial array) and ran all three suites: 29 tests green, including the empty-log state and the row-count header. Killing it would need a frame between the first render and the mount effect, which React does not give a test.",
+            "decision": "none \u2014 the mount effect empties the list before the first frame that could show it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/data-installer/ui/views/DatapackActivityView.tsx",
+            "anchors": [
+                "}, [loadTarget]);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "loadTarget is a useCallback from useDataInstallerRequest keyed on the request type, and this view passes a constant type, so its identity never changes for the life of the component. The effect therefore runs exactly once whether it depends on it or on nothing. Planted the empty dependency array and ran all three suites: 29 tests green, including the two that assert the target lookup happens and the one that retries it. Killing it would need loadTarget to change identity, which nothing in this view can make happen.",
+            "decision": "none \u2014 the dependency is constant, so listing it changes no run count",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/data-installer/ui/views/DatapackActivityView.tsx",
+            "anchors": [
+                "return `${index}:${entry.id.name}:${entry.id.version}:${entry.at ?? ''}`;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This builds a React key, and the mutation changes what the key CONTAINS without changing either property a key has to have: the index prefix keeps it unique within the list, and the value is the same on every render of the same row, so React reconciles identically. Planted it (entry.at && '') and ran all three suites: 29 tests green, including the append test where two pages of identically-named entries share a list. Killing it would need a test asserting the key's text, which is not a thing the DOM exposes.",
+            "decision": "none \u2014 both forms give a key that is unique per row and stable across renders",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }
