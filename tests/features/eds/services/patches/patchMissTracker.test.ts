@@ -18,7 +18,12 @@ import {
     OBSOLETE_MISS_THRESHOLD,
     _missFilePathForTests,
 } from '@/features/eds/services/patches/patchMissTracker';
-import { createPatchReport, addContentResult } from '@/features/eds/services/patches/patchReportHelper';
+import {
+    createPatchReport,
+    addContentResult,
+    addReferenceResult,
+} from '@/features/eds/services/patches/patchReportHelper';
+import type { PatchReport } from '@/features/eds/services/patches/patchReportHelper';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
@@ -83,6 +88,51 @@ describe('trackPatchMisses', () => {
         const miss = reportWith([{ id: 'p3', applied: false }]);
 
         await expect(trackPatchMisses(miss, logger)).resolves.toEqual({ p3: 1 });
+    });
+
+    it('an unapplied reference result is not counted as a miss', async () => {
+        // A `reference` entry is a content-completeness gap — a page the copy
+        // could not find — not a patch whose precondition stopped matching.
+        // Counting it would escalate an unrelated failure to "retire this
+        // patch from the ledger".
+        const report = createPatchReport();
+        addReferenceResult(report, '/customer/nav', 'not in source');
+
+        await expect(trackPatchMisses(report, logger)).resolves.toStrictEqual({});
+    });
+
+    it('an APPLIED reference result does not reset a patch id\'s miss count', async () => {
+        // The reset loop skips `reference` entries before it looks at
+        // `applied`, so a reference that shares an id with a real patch cannot
+        // zero that patch's count.
+        const miss = reportWith([{ id: 'p4', applied: false }]);
+        await trackPatchMisses(miss, logger);
+        await trackPatchMisses(miss, logger);
+
+        const mixed: PatchReport = createPatchReport();
+        mixed.results.push({ kind: 'reference', patchId: 'p4', target: 'p4', applied: true });
+        addContentResult(mixed, {
+            patchId: 'p4',
+            pagePath: '/page',
+            applied: false,
+            reason: 'precondition not found',
+        });
+
+        await expect(trackPatchMisses(mixed, logger)).resolves.toStrictEqual({ p4: 3 });
+    });
+
+    it.each([
+        ['null', 'null'],
+        ['a bare JSON string', '"not-an-object"'],
+    ])('a store holding %s counts from zero instead of throwing', async (_label, raw) => {
+        // The store is whatever is on disk; a hand-edited or truncated file can
+        // parse to something that is not a Record. Anything but an object is
+        // discarded — indexing it would throw out of a fail-open path.
+        await fsPromises.mkdir(path.dirname(_missFilePathForTests()), { recursive: true });
+        await fsPromises.writeFile(_missFilePathForTests(), raw);
+
+        const miss = reportWith([{ id: 'p5', applied: false }]);
+        await expect(trackPatchMisses(miss, logger)).resolves.toStrictEqual({ p5: 1 });
     });
 
     it('exposes the threshold the toast escalates at', () => {
