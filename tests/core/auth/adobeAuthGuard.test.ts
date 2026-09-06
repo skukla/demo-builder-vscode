@@ -165,6 +165,22 @@ describe('ensureAdobeIOAuth', () => {
         expect(result).toEqual({ authenticated: false, cancelled: true });
     });
 
+    it('does not also report an ANSWERED Cancel as unanswered', async () => {
+        // `timedOut` is what separates "the SC clicked Cancel" from "nobody was
+        // at the window", and the two are told apart only in the log an SC reads
+        // when a headless deploy stalls. An answered Cancel warns ONCE — about
+        // the expired token — never a second time claiming silence.
+        const authManager = createMockAuthManager({
+            isAuthenticated: jest.fn().mockResolvedValue(false),
+        });
+        (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Cancel');
+
+        const result = await ensureAdobeIOAuth({ authManager, logger: mockLogger });
+
+        expect(result).toEqual({ authenticated: false, cancelled: true });
+        expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    });
+
     it('times out an UNANSWERED sign-in prompt into cancelled — never hangs (2026-08-27)', async () => {
         // The measured failure: a headless deploy sat 9+ minutes on this prompt
         // in a window nobody was watching. Unanswered must resolve on its own.
