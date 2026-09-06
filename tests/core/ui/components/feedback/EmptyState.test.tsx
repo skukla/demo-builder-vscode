@@ -59,23 +59,26 @@ describe('EmptyState', () => {
     });
 
     describe('Layout', () => {
+        // The centering wrapper is a fixed-height Flex around the content. Both cases
+        // assert on THAT element: without the negative half, `centered` could be
+        // ignored entirely and every other assertion in this file would still pass,
+        // because the content renders identically either way.
         it('centers content by default', () => {
             const { container } = renderWithProviders(
                 <EmptyState title="Empty" description="No data" />
             );
-            // Check for centered container
-            const flexContainer = container.querySelector('[style*="justify-content"]');
-            expect(flexContainer).toBeInTheDocument();
+            expect(container.querySelector('[style*="height: 350px"]')).toBeInTheDocument();
         });
 
         it('does not center when centered is false', () => {
-            renderWithProviders(
+            const { container } = renderWithProviders(
                 <EmptyState
                     title="Empty"
                     description="No data"
                     centered={false}
                 />
             );
+            expect(container.querySelector('[style*="height: 350px"]')).not.toBeInTheDocument();
             expect(screen.getByText('Empty')).toBeInTheDocument();
         });
     });
