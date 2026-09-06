@@ -14,13 +14,10 @@
  */
 
 import { matchesSearchFields } from '@/core/ui/hooks/useSearchFilter';
+import { rowWithNoTitle, testItems } from './useSearchFilter.testUtils';
 
-interface Row extends Record<string, unknown> {
-    title: string | null | undefined;
-    owner?: string | null;
-}
-
-const react: Row = { title: 'React Hooks', owner: 'Meta' };
+/** The same "React Hooks" row the hook suite searches, plus an owner to search across. */
+const react = { ...testItems[0], owner: 'Meta' };
 
 describe('matchesSearchFields', () => {
     describe('the query', () => {
@@ -52,11 +49,11 @@ describe('matchesSearchFields', () => {
         // that would match nothing, which is what separates the short-circuit
         // from letting an empty needle fall through to includes('').
         it('matches a row whose searched field is empty', () => {
-            expect(matchesSearchFields({ title: null }, ['title'], '')).toBe(true);
+            expect(matchesSearchFields(rowWithNoTitle, ['title'], '')).toBe(true);
         });
 
         it('matches a row whose searched field is empty, for whitespace too', () => {
-            expect(matchesSearchFields({ title: null }, ['title'], '   ')).toBe(true);
+            expect(matchesSearchFields(rowWithNoTitle, ['title'], '   ')).toBe(true);
         });
     });
 
@@ -79,7 +76,7 @@ describe('matchesSearchFields', () => {
         // "null", so a person searching for it would be handed every row that
         // is MISSING the field they searched.
         it('never lets a null field match the text "null"', () => {
-            expect(matchesSearchFields({ title: null }, ['title'], 'null')).toBe(false);
+            expect(matchesSearchFields(rowWithNoTitle, ['title'], 'null')).toBe(false);
         });
 
         it('never lets an undefined field match the text "undefined"', () => {

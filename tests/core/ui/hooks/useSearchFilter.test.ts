@@ -1,20 +1,8 @@
 import { renderHook, act } from '@testing-library/react';
 import { useSearchFilter } from '@/core/ui/hooks/useSearchFilter';
+import { rowWithNoTitle, testItems, type TestItem } from './useSearchFilter.testUtils';
 
 describe('useSearchFilter', () => {
-    interface TestItem extends Record<string, unknown> {
-        id: string;
-        title: string;
-        description: string;
-        tags?: string[];
-    }
-
-    const testItems: TestItem[] = [
-        { id: '1', title: 'React Hooks', description: 'Learn about React Hooks' },
-        { id: '2', title: 'TypeScript Guide', description: 'Master TypeScript' },
-        { id: '3', title: 'Testing React', description: 'Test your React applications' },
-        { id: '4', title: 'Node.js Basics', description: 'Introduction to Node.js' },
-    ];
 
     describe('initial state', () => {
         it('returns all items when query is empty', () => {
@@ -225,7 +213,7 @@ describe('useSearchFilter', () => {
         // they searched — the exact opposite of what they asked for.
         it('never lets a null field match the text "null"', () => {
             const { result } = renderHook(() =>
-                useSearchFilter([{ id: '1', title: null }], { searchFields: ['title'] })
+                useSearchFilter([rowWithNoTitle], { searchFields: ['title'] })
             );
 
             act(() => {

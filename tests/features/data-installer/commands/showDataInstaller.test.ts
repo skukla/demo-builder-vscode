@@ -211,9 +211,7 @@ describe('ShowDataInstallerCommand', () => {
 
         it('gives the context a sendMessage that reaches this command', async () => {
             const command = makeCommand();
-            const send = jest
-                .spyOn(command, 'sendMessage' as never)
-                .mockResolvedValue(undefined as never);
+            const send = jest.spyOn(command, 'sendMessage').mockResolvedValue(undefined);
             const comm = { onStreaming: jest.fn() };
             command.initializeMessageHandlers(comm);
             await comm.onStreaming.mock.calls[0][1](undefined);
@@ -267,11 +265,11 @@ describe('ShowDataInstallerCommand', () => {
         it('opens the panel and wires communication the first time', async () => {
             const command = makeCommand();
             const createOrReveal = jest
-                .spyOn(command, 'createOrRevealPanel' as never)
-                .mockResolvedValue(undefined as never);
+                .spyOn(command, 'createOrRevealPanel')
+                .mockResolvedValue(undefined);
             const initComm = jest
-                .spyOn(command, 'initializeCommunication' as never)
-                .mockResolvedValue(undefined as never);
+                .spyOn(command, 'initializeCommunication')
+                .mockResolvedValue(undefined);
 
             await command.execute();
 
@@ -283,12 +281,10 @@ describe('ShowDataInstallerCommand', () => {
             // Re-initialising would replace the channel under a webview that is
             // still holding the old one, so every in-flight request would hang.
             const command = makeCommand();
-            jest.spyOn(command, 'createOrRevealPanel' as never).mockResolvedValue(
-                undefined as never
-            );
+            jest.spyOn(command, 'createOrRevealPanel').mockResolvedValue(undefined);
             const initComm = jest
-                .spyOn(command, 'initializeCommunication' as never)
-                .mockResolvedValue(undefined as never);
+                .spyOn(command, 'initializeCommunication')
+                .mockResolvedValue(undefined);
             // The automocked class — a real instance of the type execute() reads,
             // not a literal cast into its shape.
             command.communicationManager = new WebviewCommunicationManager(

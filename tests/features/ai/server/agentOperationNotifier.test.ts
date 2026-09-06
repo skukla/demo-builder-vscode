@@ -54,6 +54,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { consentDetail, consentTitle } from './agentOperationNotifier.testUtils';
 import { createMockProject } from '../../../helpers/projectFake';
 import { createMockStateManager, makeStateManager } from '../../../helpers/stateManagerFake';
 
@@ -165,7 +166,7 @@ describe('createAgentConsentGate', () => {
 
         await gate('delete_project', { confirm: true });
 
-        expect(String(mockShowWarningMessage.mock.calls[0][0])).toBe(
+        expect(consentTitle(mockShowWarningMessage.mock.calls[0])).toBe(
             'Demo Builder: Delete this project?'
         );
     });
@@ -184,9 +185,7 @@ describe('createAgentConsentGate', () => {
             'Permanently delete a GitHub repository (irreversible). Requires confirm:true.'
         );
 
-        const detail = String(
-            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
-        );
+        const detail = consentDetail(mockShowWarningMessage.mock.calls[0]);
         expect(detail).toContain('Deletes the repository and its history on GitHub.');
         expect(detail).toContain("can't be undone");
         expect(detail).not.toContain('confirm:true');
@@ -202,9 +201,7 @@ describe('createAgentConsentGate', () => {
 
         await gate('cleanup_dalive_site', { confirm: true });
 
-        const detail = String(
-            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
-        );
+        const detail = consentDetail(mockShowWarningMessage.mock.calls[0]);
         expect(detail).toContain("can't be undone");
         expect(detail).not.toContain('(irreversible)');
     });
@@ -226,7 +223,7 @@ describe('createAgentConsentGate', () => {
 
         await gate('some_unwritten_tool', { confirm: true });
 
-        expect(String(mockShowWarningMessage.mock.calls[0][0])).toBe(
+        expect(consentTitle(mockShowWarningMessage.mock.calls[0])).toBe(
             'Demo Builder: some_unwritten_tool?'
         );
     });
@@ -246,9 +243,7 @@ describe('createAgentConsentGate', () => {
             projectName: 'bodea',
         });
 
-        const detail = String(
-            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
-        );
+        const detail = consentDetail(mockShowWarningMessage.mock.calls[0]);
         expect(detail).toContain('Project: bodea');
         expect(detail).not.toContain('4566206088344572345');
     });
@@ -267,9 +262,7 @@ describe('createAgentConsentGate', () => {
         // than wrong — the gate must still appear. That fallback is the
         // behaviour under test as much as the happy path is.
         expect(mockShowWarningMessage).toHaveBeenCalledTimes(1);
-        const detail = String(
-            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
-        );
+        const detail = consentDetail(mockShowWarningMessage.mock.calls[0]);
         expect(detail).toContain('Pushes the current configuration live');
     });
 
@@ -335,9 +328,7 @@ describe('createAgentConsentGate', () => {
             nested: { not: 'shown' },
         });
 
-        const detail = String(
-            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
-        );
+        const detail = consentDetail(mockShowWarningMessage.mock.calls[0]);
         // Labels, not schema field names — a producer approving this should not
         // have to decode `blockId`.
         expect(detail).toContain('Block id: hero');
@@ -356,9 +347,7 @@ describe('createAgentConsentGate', () => {
 
         await gate('delete_page', { confirm: true, path: `/products/${'x'.repeat(200)}` });
 
-        const detail = String(
-            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
-        );
+        const detail = consentDetail(mockShowWarningMessage.mock.calls[0]);
         expect(detail).toContain('chars)');
         expect(detail).not.toContain('x'.repeat(100));
     });
@@ -415,9 +404,7 @@ describe('createAgentConsentGate', () => {
 
         await gate('republish', { confirm: true });
 
-        const detail = String(
-            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
-        );
+        const detail = consentDetail(mockShowWarningMessage.mock.calls[0]);
         expect(detail).toContain('Project: bodea');
     });
 
@@ -437,9 +424,7 @@ describe('createAgentConsentGate', () => {
 
         expect(verdict).toEqual({ allowed: true });
         expect(mockShowWarningMessage).toHaveBeenCalledTimes(1);
-        const detail = String(
-            (mockShowWarningMessage.mock.calls[0][1] as { detail?: string }).detail
-        );
+        const detail = consentDetail(mockShowWarningMessage.mock.calls[0]);
         expect(detail).not.toContain('Project:');
     });
 });

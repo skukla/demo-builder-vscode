@@ -27,6 +27,7 @@ import {
 import { AGENT_ALERT_COPY } from '@/features/ai/server/agentAlertCopy';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
+import { consentButtons } from './agentOperationNotifier.testUtils';
 
 
 const mockShow = vscode.window.showWarningMessage as unknown as jest.Mock;
@@ -54,7 +55,7 @@ describe('session grants', () => {
 
         await gate('republish', { confirm: true });
 
-        const buttons = mockShow.mock.calls[0].slice(2);
+        const buttons = consentButtons(mockShow.mock.calls[0]);
         expect(buttons).toContain('Allow for the rest of this session');
     });
 
@@ -64,7 +65,7 @@ describe('session grants', () => {
 
         await gate('delete_github_repo', { confirm: true });
 
-        const buttons = mockShow.mock.calls[0].slice(2);
+        const buttons = consentButtons(mockShow.mock.calls[0]);
         expect(buttons).toEqual(['Allow']);
     });
 
