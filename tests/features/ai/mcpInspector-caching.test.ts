@@ -1,7 +1,8 @@
 /**
- * mcpInspector tests - caching, env allowlist & stderr diagnostics
+ * mcpInspector tests - caching & the extended env allowlist
  *
- * Split from mcpInspector.test.ts to stay under the max-lines limit. The
+ * Split from mcpInspector.test.ts to stay under the max-lines limit; the
+ * stderr-capture half split again into `mcpInspector-stderr.test.ts`. The
  * SDK/fs harness lives in `mcpInspector.testUtils.ts` and is imported from
  * there — including the subject itself, which is what makes the hoisting work
  * (the factories lift above the subject import inside testUtils, not here).
@@ -11,10 +12,9 @@ import {
     clearMcpCache,
     clientInstances,
     inspectAllServers,
-    MCP_INSPECT_TIMEOUT_MS,
-    queueStderr,
     resetMcpInspectorMocks,
     restoreEnv,
+    scriptClientOnce,
     setMcpJson,
     transportInstances,
     PROJECT_PATH,
@@ -23,6 +23,28 @@ import {
 beforeEach(() => {
     resetMcpInspectorMocks();
 });
+
+/**
+ * Spawn one third-party server with `overrides` applied to `process.env`
+ * (an `undefined` value deletes the var), and hand back the env the transport
+ * was constructed with. Every allowlist spec is that same set-restore dance.
+ */
+async function spawnWithEnv(
+    overrides: Record<string, string | undefined>
+): Promise<Record<string, string> | undefined> {
+    const originals = Object.keys(overrides).map((k) => [k, process.env[k]] as const);
+    for (const [key, value] of Object.entries(overrides)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+    }
+    try {
+        setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
+        await inspectAllServers(PROJECT_PATH);
+        return transportInstances[0].env;
+    } finally {
+        for (const [key, value] of originals) restoreEnv(key, value);
+    }
+}
 
 describe('inspectAllServers', () => {
     describe('caching', () => {
@@ -64,16 +86,9 @@ describe('inspectAllServers', () => {
         it('does not cache timeout or error results (always retried next call)', async () => {
             setMcpJson({ mcpServers: { bad: { command: 'node', args: [] } } });
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
-            ClientModule.Client.mockImplementation(() => {
-                const instance = {
-                    connect: jest.fn().mockRejectedValue(new Error('crash')),
-                    listTools: jest.fn(),
-                    close: jest.fn().mockResolvedValue(undefined),
-                };
-                clientInstances.push(instance);
-                return instance;
-            });
+            // Both attempts crash: a cached failure would spawn only once.
+            scriptClientOnce({ connect: jest.fn().mockRejectedValue(new Error('crash')) });
+            scriptClientOnce({ connect: jest.fn().mockRejectedValue(new Error('crash')) });
 
             await inspectAllServers(PROJECT_PATH);
             await inspectAllServers(PROJECT_PATH);
@@ -84,181 +99,65 @@ describe('inspectAllServers', () => {
 
     describe('extended env allowlist (third-party MCPs)', () => {
         it('forwards PLAYWRIGHT_BROWSERS_PATH when set on process.env', async () => {
-            const ORIGINAL = process.env.PLAYWRIGHT_BROWSERS_PATH;
-            process.env.PLAYWRIGHT_BROWSERS_PATH = '/Users/test/Library/Caches/ms-playwright';
-            try {
-                setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
+            const env = await spawnWithEnv({
+                PLAYWRIGHT_BROWSERS_PATH: '/Users/test/Library/Caches/ms-playwright',
+            });
 
-                await inspectAllServers(PROJECT_PATH);
-
-                expect(transportInstances[0].env?.PLAYWRIGHT_BROWSERS_PATH).toBe(
-                    '/Users/test/Library/Caches/ms-playwright'
-                );
-            } finally {
-                restoreEnv('PLAYWRIGHT_BROWSERS_PATH', ORIGINAL);
-            }
+            expect(env?.PLAYWRIGHT_BROWSERS_PATH).toBe(
+                '/Users/test/Library/Caches/ms-playwright'
+            );
         });
 
         it('forwards NODE_OPTIONS when set on process.env', async () => {
-            const ORIGINAL = process.env.NODE_OPTIONS;
-            process.env.NODE_OPTIONS = '--max-old-space-size=4096';
-            try {
-                setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
+            const env = await spawnWithEnv({ NODE_OPTIONS: '--max-old-space-size=4096' });
 
-                await inspectAllServers(PROJECT_PATH);
-
-                expect(transportInstances[0].env?.NODE_OPTIONS).toBe('--max-old-space-size=4096');
-            } finally {
-                restoreEnv('NODE_OPTIONS', ORIGINAL);
-            }
+            expect(env?.NODE_OPTIONS).toBe('--max-old-space-size=4096');
         });
 
         it('forwards XDG_CACHE_HOME when set on process.env', async () => {
-            const ORIGINAL = process.env.XDG_CACHE_HOME;
-            process.env.XDG_CACHE_HOME = '/home/test/.cache';
-            try {
-                setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
+            const env = await spawnWithEnv({ XDG_CACHE_HOME: '/home/test/.cache' });
 
-                await inspectAllServers(PROJECT_PATH);
-
-                expect(transportInstances[0].env?.XDG_CACHE_HOME).toBe('/home/test/.cache');
-            } finally {
-                restoreEnv('XDG_CACHE_HOME', ORIGINAL);
-            }
+            expect(env?.XDG_CACHE_HOME).toBe('/home/test/.cache');
         });
 
+        // The other three entries of EXTRA_ALLOWED_ENV_VARS. Each is here on its
+        // own merits (a Playwright MCP behind a mirror needs the download host;
+        // XDG_DATA_HOME resolves caches on Linux), and each was forwarded by
+        // nothing anyone had tested.
+        it('forwards the remaining allowlisted config vars', async () => {
+            const env = await spawnWithEnv({
+                PLAYWRIGHT_DOWNLOAD_HOST: 'https://mirror.internal',
+                PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
+                XDG_DATA_HOME: '/home/test/.local/share',
+            });
+
+            expect(env?.PLAYWRIGHT_DOWNLOAD_HOST).toBe('https://mirror.internal');
+            expect(env?.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD).toBe('1');
+            expect(env?.XDG_DATA_HOME).toBe('/home/test/.local/share');
+        });
+
+        // Absent, not present-and-undefined: an explicit `undefined` value in the
+        // child env is not the same as leaving the variable unset, and only the
+        // key list can tell the two apart.
         it('omits an allowlisted var entirely when it is undefined on process.env', async () => {
-            const ORIGINAL = process.env.PLAYWRIGHT_BROWSERS_PATH;
-            delete process.env.PLAYWRIGHT_BROWSERS_PATH;
-            try {
-                setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
+            const env = await spawnWithEnv({ PLAYWRIGHT_BROWSERS_PATH: undefined });
 
-                await inspectAllServers(PROJECT_PATH);
-
-                expect(transportInstances[0].env?.PLAYWRIGHT_BROWSERS_PATH).toBeUndefined();
-            } finally {
-                restoreEnv('PLAYWRIGHT_BROWSERS_PATH', ORIGINAL);
-            }
+            expect(Object.keys(env ?? {})).not.toContain('PLAYWRIGHT_BROWSERS_PATH');
         });
 
         it('does NOT forward arbitrary env vars outside the extended allowlist', async () => {
-            const ORIGINAL = process.env.SOME_RANDOM_VAR;
-            process.env.SOME_RANDOM_VAR = 'should not leak';
-            try {
-                setMcpJson({ mcpServers: { srv: { command: 'node', args: [] } } });
+            const env = await spawnWithEnv({ SOME_RANDOM_VAR: 'should not leak' });
 
-                await inspectAllServers(PROJECT_PATH);
-
-                expect(transportInstances[0].env?.SOME_RANDOM_VAR).toBeUndefined();
-            } finally {
-                restoreEnv('SOME_RANDOM_VAR', ORIGINAL);
-            }
-        });
-    });
-
-    describe('stderr diagnostics on failure', () => {
-        it('appends captured stderr tail to error message when child wrote stderr before failing', async () => {
-            setMcpJson({ mcpServers: { crashed: { command: 'node', args: [] } } });
-            queueStderr(0, ['Error: cannot find module @playwright/mcp\n']);
-
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
-            ClientModule.Client.mockImplementationOnce(() => {
-                const instance = {
-                    connect: jest
-                        .fn()
-                        .mockRejectedValue(new Error('MCP error -32000: Connection closed')),
-                    listTools: jest.fn(),
-                    close: jest.fn().mockResolvedValue(undefined),
-                };
-                clientInstances.push(instance);
-                return instance;
-            });
-
-            const result = await inspectAllServers(PROJECT_PATH);
-
-            expect(result[0]).toMatchObject({ id: 'crashed', status: 'error' });
-            expect(result[0].error).toMatch(/Connection closed/);
-            expect(result[0].error).toMatch(/stderr \(tail\):/);
-            expect(result[0].error).toMatch(/cannot find module @playwright\/mcp/);
+            expect(env?.SOME_RANDOM_VAR).toBeUndefined();
         });
 
-        it('omits the stderr tail section entirely when child wrote no stderr', async () => {
-            setMcpJson({ mcpServers: { silent: { command: 'node', args: [] } } });
-            // No queueStderr — empty queue means read() returns null immediately.
+        // serverConfig.env wins last, so a server may set a key the allowlist
+        // also carries. Passing no env at all must still leave the allowlist intact.
+        it('keeps the allowlisted env when the server declares none of its own', async () => {
+            const env = await spawnWithEnv({ NODE_OPTIONS: '--trace-warnings' });
 
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
-            ClientModule.Client.mockImplementationOnce(() => {
-                const instance = {
-                    connect: jest.fn().mockRejectedValue(new Error('Connection closed')),
-                    listTools: jest.fn(),
-                    close: jest.fn().mockResolvedValue(undefined),
-                };
-                clientInstances.push(instance);
-                return instance;
-            });
-
-            const result = await inspectAllServers(PROJECT_PATH);
-
-            expect(result[0]).toMatchObject({ id: 'silent', status: 'error' });
-            expect(result[0].error).toBe('Connection closed');
-            expect(result[0].error).not.toMatch(/stderr/);
-        });
-
-        it('truncates stderr to roughly the last 4 KB when child wrote a long error', async () => {
-            setMcpJson({ mcpServers: { verbose: { command: 'node', args: [] } } });
-            // 8 KB of filler followed by a tail marker. After truncation the marker
-            // must survive but the bulk of the filler must be gone.
-            const filler = 'A'.repeat(8 * 1024);
-            queueStderr(0, [`${filler}TAIL_MARKER\n`]);
-
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
-            ClientModule.Client.mockImplementationOnce(() => {
-                const instance = {
-                    connect: jest.fn().mockRejectedValue(new Error('Connection closed')),
-                    listTools: jest.fn(),
-                    close: jest.fn().mockResolvedValue(undefined),
-                };
-                clientInstances.push(instance);
-                return instance;
-            });
-
-            const result = await inspectAllServers(PROJECT_PATH);
-
-            expect(result[0].error).toMatch(/TAIL_MARKER/);
-            const aRunMatch = result[0].error?.match(/A+/);
-            const aRunLength = aRunMatch ? aRunMatch[0].length : 0;
-            expect(aRunLength).toBeLessThanOrEqual(4096);
-        });
-
-        it('appends stderr tail on the timeout path too', async () => {
-            jest.useFakeTimers();
-            setMcpJson({ mcpServers: { hung: { command: 'node', args: [] } } });
-            queueStderr(0, ['waiting for browser binary…\n']);
-
-            const ClientModule = jest.requireMock('@modelcontextprotocol/sdk/client/index.js');
-            ClientModule.Client.mockImplementationOnce(() => {
-                const instance = {
-                    connect: jest.fn().mockImplementation(
-                        () =>
-                            new Promise(() => {
-                                /* never */
-                            })
-                    ),
-                    listTools: jest.fn(),
-                    close: jest.fn().mockResolvedValue(undefined),
-                };
-                clientInstances.push(instance);
-                return instance;
-            });
-
-            const promise = inspectAllServers(PROJECT_PATH);
-            await jest.advanceTimersByTimeAsync(MCP_INSPECT_TIMEOUT_MS + 100);
-            const result = await promise;
-
-            expect(result[0].status).toBe('timeout');
-            expect(result[0].error).toMatch(/stderr \(tail\):/);
-            expect(result[0].error).toMatch(/waiting for browser binary/);
-            jest.useRealTimers();
+            expect(env?.NODE_OPTIONS).toBe('--trace-warnings');
+            expect(env?.PATH).toBe('/usr/bin:/bin');
         });
     });
 });

@@ -14252,6 +14252,32 @@
             "decision": "none \u2014 the parameter is optional in the type and the fallback is the safe direction for a checkmark",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/ai/mcpInspector.ts",
+            "anchors": [
+                "if (serverEnv) {"
+            ],
+            "line": 246,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The guard's only false case is serverEnv === undefined, and Object.assign(env, undefined) is a no-op \u2014 the mutated branch produces a byte-identical env.",
+            "decision": "No test can distinguish the two; the guard is a readability guard, not a behavioural one.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06: 'if (true)' with the full 57-test mcpInspector family green."
+        },
+        {
+            "module": "src/features/ai/mcpInspector.ts",
+            "anchors": [
+                "if (combined.length <= maxBytes) return combined;"
+            ],
+            "line": 301,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The two operators differ only at combined.length === maxBytes exactly, where the else branch is combined.slice(0).trim() \u2014 and combined was already trimmed one line above, so both return the same string.",
+            "decision": "Unobservable by construction: no input makes the branches disagree.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06: '<' with the full 57-test mcpInspector family green."
         }
     ]
 }

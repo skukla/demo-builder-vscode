@@ -50,7 +50,28 @@ export const transportInstances: Array<{
  * invoking inspectAllServers; the mocked transport's stderr.read() drains
  * from the corresponding queue, mirroring Node's paused-Readable semantics.
  */
-export const pendingStderrQueues: Buffer[][] = [];
+export const pendingStderrQueues: unknown[][] = [];
+
+/**
+ * What `stderr.read()` returns once its queue is drained, per transport index.
+ * Node's paused Readable answers `null`, which is the default; a test can set
+ * `undefined` here to exercise the second half of the drain guard
+ * (`chunk !== null && chunk !== undefined`).
+ */
+export const stderrTerminators: unknown[] = [];
+
+/** True for the NEXT transport only: report no `stderr` stream at all. */
+let suppressNextStderrPipe = false;
+
+/**
+ * Make the next transport expose `stderr: undefined` even though the inspector
+ * asked for `stderr: 'pipe'`. The SDK does this when the child died before the
+ * pipe was established, and it is the only way into `readBufferedStderr`'s
+ * missing-stream branch.
+ */
+export function withoutStderrPipe(): void {
+    suppressNextStderrPipe = true;
+}
 
 jest.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
     Client: jest.fn().mockImplementation(() => {
@@ -77,16 +98,23 @@ jest.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
             }) => {
                 const idx = transportInstances.length;
                 transportInstances.push(opts);
-                const stderrPipe =
-                    opts.stderr === 'pipe'
-                        ? {
-                              on: jest.fn(),
-                              read: jest.fn(() => {
-                                  const queue = pendingStderrQueues[idx];
-                                  return queue ? (queue.shift() ?? null) : null;
-                              }),
-                          }
-                        : undefined;
+                const piped = opts.stderr === 'pipe' && !suppressNextStderrPipe;
+                suppressNextStderrPipe = false;
+                const stderrPipe = piped
+                    ? {
+                          on: jest.fn(),
+                          read: jest.fn(() => {
+                              const queue = pendingStderrQueues[idx];
+                              // `?? null` would erase a deliberately queued
+                              // `undefined`, which is exactly what the drain
+                              // guard's second half is about.
+                              if (queue && queue.length > 0) return queue.shift();
+                              return Object.prototype.hasOwnProperty.call(stderrTerminators, idx)
+                                  ? stderrTerminators[idx]
+                                  : null;
+                          }),
+                      }
+                    : undefined;
                 return { stderr: stderrPipe };
             }
         ),
@@ -111,6 +139,7 @@ jest.mock('@/features/ai/server/mcpToolProbe', () => ({
 // Below the factories on purpose: they hoist above it, so the subject binds to
 // the mocked modules. `import/first` is NOT a registered rule in
 // eslint.config.mjs — do not add a disable comment for it, that itself errors.
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import {
     inspectAllServers,
     clearMcpCache,
@@ -121,6 +150,33 @@ export { resolveProxyTarget } from '@/features/ai/server/mcpSocketDiscovery';
 export { inspectAllServers, clearMcpCache, MCP_INSPECT_TIMEOUT_MS };
 
 export const readFileMock = fsPromises.readFile as jest.Mock;
+
+/** The mocked SDK `Client` constructor — for asserting the identity it announces. */
+export const ClientMock = Client as unknown as jest.Mock;
+
+interface ScriptedClient {
+    connect: jest.Mock;
+    listTools: jest.Mock;
+    close: jest.Mock;
+}
+
+/**
+ * Script the NEXT `new Client(...)` only. Defaults connect/close to resolving
+ * and `listTools` to an empty tool list; a spec overrides just the method it is
+ * about. Nine specs hand-rolled this same eight-line block before it existed.
+ */
+export function scriptClientOnce(overrides: Partial<ScriptedClient> = {}): void {
+    ClientMock.mockImplementationOnce(() => {
+        const instance: ScriptedClient = {
+            connect: jest.fn().mockResolvedValue(undefined),
+            listTools: jest.fn().mockResolvedValue({ tools: [] }),
+            close: jest.fn().mockResolvedValue(undefined),
+            ...overrides,
+        };
+        clientInstances.push(instance);
+        return instance;
+    });
+}
 
 export const PROJECT_PATH = '/projects/demo';
 export const MCP_JSON_PATH = `${PROJECT_PATH}/.claude/mcp.json`;
@@ -138,6 +194,15 @@ export function setMcpJson(config: unknown): void {
 /** Queue stderr chunks for the transport that will be constructed at `idx`. */
 export function queueStderr(idx: number, chunks: string[]): void {
     pendingStderrQueues[idx] = chunks.map((s) => Buffer.from(s, 'utf-8'));
+}
+
+/**
+ * Queue chunks EXACTLY as given — a raw string, an object, `undefined`. A
+ * Readable in object mode can emit any of these, and `toUtf8` decides what to
+ * do with each; `queueStderr` would hide that decision behind Buffers.
+ */
+export function queueStderrRaw(idx: number, chunks: unknown[]): void {
+    pendingStderrQueues[idx] = [...chunks];
 }
 
 /** Restore a single env var to its original value (undefined → delete). */
@@ -174,5 +239,8 @@ export function resetMcpInspectorMocks(): void {
     clientInstances.length = 0;
     transportInstances.length = 0;
     pendingStderrQueues.length = 0;
+    // Same indexed-by-construction-order hazard as the queues above.
+    stderrTerminators.length = 0;
+    suppressNextStderrPipe = false;
     clearMcpCache();
 }
