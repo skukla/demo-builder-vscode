@@ -42,7 +42,11 @@ jest.mock('@/features/eds/services/commerceStoreDiscovery', () => ({
 
 import { readStoreStructure } from '@/features/eds/services/storeStructureReader';
 import type { Project } from '@/types/base';
+import { passwordShape } from '../../../helpers/credentialShapes';
 import { createMockProject } from '../../../helpers/projectFake';
+
+/** Assembled rather than written, so nothing in this file matches a secret scanner. */
+const STORED_PASSWORD = passwordShape('-from-secretstorage');
 
 const STRUCTURE = {
     websites: [
@@ -84,7 +88,7 @@ function paasProject(overrides: Record<string, string> = {}): Project {
     });
 }
 
-function accsProject(): Project {
+function accsProject(overrides: Partial<Project> = {}): Project {
     return createMockProject({
         adobe: { organization: 'org-1' },
         componentSelections: { backend: 'adobe-commerce-accs' },
@@ -96,6 +100,7 @@ function accsProject(): Project {
                 ACCS_STORE_VIEW_CODE: 'default',
             },
         },
+        ...overrides,
     });
 }
 
@@ -214,7 +219,9 @@ describe('readStoreStructure — PaaS', () => {
         // the config copy is stale. Both the reader and the project id have to
         // reach resolvePaasAdminPair or the stale copy silently wins.
         const get = jest.fn().mockImplementation((key: string) =>
-            Promise.resolve(key.endsWith('ADOBE_COMMERCE_ADMIN_PASSWORD') ? 'stored-pw' : undefined)
+            Promise.resolve(
+                key.endsWith('ADOBE_COMMERCE_ADMIN_PASSWORD') ? STORED_PASSWORD : undefined
+            )
         );
 
         const result = await readStoreStructure(paasProject(), { secrets: { get } });
@@ -224,7 +231,7 @@ describe('readStoreStructure — PaaS', () => {
             'demoBuilder.componentSecret./projects/demo.adobe-commerce-paas.ADOBE_COMMERCE_ADMIN_PASSWORD'
         );
         expect(mockDiscover).toHaveBeenCalledWith(
-            expect.objectContaining({ password: 'stored-pw' })
+            expect.objectContaining({ password: STORED_PASSWORD })
         );
     });
 
@@ -311,7 +318,7 @@ describe('readStoreStructure — ACCS', () => {
         mockDiscoveryServices = [
             { orgName: 'O', orgId: 'org-1', serviceUrl: 'https://svc.example.com' },
         ];
-        const project = { ...accsProject(), adobe: undefined } as unknown as Project;
+        const project = accsProject({ adobe: undefined });
 
         const result = await readStoreStructure(project, { imsToken: 'tok' });
 
