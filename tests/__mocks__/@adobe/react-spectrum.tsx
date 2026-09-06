@@ -361,6 +361,7 @@ export const TextField: React.FC<any> = ({
     errorMessage,
     placeholder,
     validationState,
+    autoFocus,
     ...props
 }) => (
     <label data-testid="spectrum-textfield">
@@ -376,6 +377,13 @@ export const TextField: React.FC<any> = ({
             // stub surfaces it as a data attribute so a test can assert the argument
             // the component actually handed the field.
             data-validation-state={validationState}
+            // Same reason, measured 2026-09-06: `autoFocus` was on the filter list, so
+            // real Spectrum's focus-on-mount is inert here AND the prop vanished before
+            // any test could see it — a component deciding WHICH field opens focused had
+            // no way to be constrained at all. Surfaced, not enacted: jsdom has no layout
+            // and react-aria's focusSafely never fires, so asserting `toHaveFocus` would
+            // fail whatever the component passed.
+            data-autofocus={autoFocus ? 'true' : undefined}
             {...filterSpectrumProps(props)}
         />
         {description && <span data-testid="spectrum-textfield-description">{description}</span>}
@@ -463,12 +471,17 @@ export const Link: React.FC<any> = ({ children, onPress, ...props }) => (
 );
 
 // SearchField mock
-export const SearchField: React.FC<any> = ({ value, onChange, ...props }) => (
+export const SearchField: React.FC<any> = ({ value, onChange, autoFocus, ...props }) => (
     <input
         data-testid="spectrum-searchfield"
         type="search"
         value={value || ''}
         onChange={(e) => onChange?.(e.target.value)}
+        // Surfaced, not enacted — same reason as TextField's. Whether the search
+        // field opens focused is a real decision (SearchableList suppresses it once
+        // a row is selected), and `autoFocus` was on the filter list, so no test
+        // could see what the component decided.
+        data-autofocus={autoFocus ? 'true' : undefined}
         {...filterSpectrumProps(props)}
     />
 );
@@ -706,6 +719,26 @@ export const Avatar: React.FC<any> = ({ src, alt, ...props }) => (
 // Spectrum ListView actually uses role="grid" (not listbox)
 // disabledKeys is surfaced faithfully: disabled rows carry aria-disabled="true"
 // and ignore clicks (real Spectrum rows don't fire selection when disabled).
+/**
+ * The `textValue` an Item declares, surfaced so a test can read it.
+ *
+ * Real Spectrum uses it for typeahead and for the row's accessible text, and the
+ * `Item` stub renders a bare fragment — so a component choosing between
+ * `item.title` and `item.name` for it was making a decision no test could see.
+ * One level of unwrapping because `SearchableList` wraps a custom `renderItem`
+ * result in a keyed Fragment before handing it to ListView.
+ */
+function itemTextValue(child: React.ReactElement): string | undefined {
+    const own = (child.props as { textValue?: unknown }).textValue;
+    if (typeof own === 'string') return own;
+    const inner = React.Children.toArray(
+        (child.props as { children?: React.ReactNode }).children
+    )[0];
+    if (!React.isValidElement(inner)) return undefined;
+    const nested = (inner.props as { textValue?: unknown }).textValue;
+    return typeof nested === 'string' ? nested : undefined;
+}
+
 export const ListView: React.FC<any> = ({
     children,
     items,
@@ -746,7 +779,7 @@ export const ListView: React.FC<any> = ({
             if (!React.isValidElement(child)) return child;
             const key = child.key || items?.[index]?.id || index;
             return (
-                <li key={key} {...rowProps(key)}>
+                <li key={key} {...rowProps(key)} data-text-value={itemTextValue(child)}>
                     {child}
                 </li>
             );
