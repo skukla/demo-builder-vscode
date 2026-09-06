@@ -217,7 +217,67 @@ describe('useFocusOnMount', () => {
         });
     });
 
+    describe('re-running when the options change', () => {
+        /**
+         * A step that starts locked and then becomes active passes `disabled` from
+         * true to false with nothing else changing. The effect has to re-run on that,
+         * which is what the dependency list is for — with an empty list the hook
+         * would focus only what happened to be active at mount.
+         */
+        it('focuses once a disabled hook is enabled on a later render', () => {
+            const focusSpy = jest.fn();
+            const container = document.createElement('div');
+            const button = document.createElement('button');
+            button.focus = focusSpy;
+            container.appendChild(button);
+
+            const { rerender } = renderHook(
+                ({ disabled }: { disabled: boolean }) => {
+                    const ref = useRef<HTMLDivElement>(container);
+                    useFocusOnMount(ref, { selector: 'button', disabled });
+                    return ref;
+                },
+                { initialProps: { disabled: true } }
+            );
+
+            expect(focusSpy).not.toHaveBeenCalled();
+
+            rerender({ disabled: false });
+
+            expect(focusSpy).toHaveBeenCalledTimes(1);
+        });
+    });
+
     describe('null ref handling', () => {
+        /**
+         * A null container is NOT a focused container: the hook has to treat the
+         * immediate attempt as a miss and arm the later tiers, or a container that
+         * mounts a frame or two after the hook never gets focus at all.
+         */
+        it('arms the fallback tiers when the container is not there yet', () => {
+            const focusSpy = jest.fn();
+            const ref: { current: HTMLDivElement | null } = { current: null };
+
+            renderHook(() => {
+                useFocusOnMount(ref, { selector: 'button' });
+            });
+
+            // Tier 1 and tier 2 both ran against a null container and found nothing.
+            expect(mockRAF).toHaveBeenCalledTimes(1);
+            expect(focusSpy).not.toHaveBeenCalled();
+
+            // The container arrives late; tier 3 is what still finds it.
+            const container = document.createElement('div');
+            const button = document.createElement('button');
+            button.focus = focusSpy;
+            container.appendChild(button);
+            ref.current = container;
+
+            jest.advanceTimersByTime(TIMEOUTS.UI.FOCUS_FALLBACK);
+
+            expect(focusSpy).toHaveBeenCalledTimes(1);
+        });
+
         it('should handle null ref gracefully', () => {
             expect(() => {
                 renderHook(() => {
