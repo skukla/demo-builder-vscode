@@ -16691,6 +16691,19 @@
             "decision": "none \u2014 deleting it would fail noImplicitReturns, and no caller can reach it",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/core/handlers/errorHandling.ts",
+            "anchors": [
+                "} else if (typeof errorOrMessage === 'string') {"
+            ],
+            "line": 36,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Removing this branch (ConditionalExpression -> false on the whole condition) sends string inputs down the else arm, which computes String(errorOrMessage). For a primitive string String(s) is s, so the two arms produce the identical errorMessage and no input can tell them apart. Verified by planting 'else if (false)' and re-running the suite: 13 tests, all still green.",
+            "decision": "none \u2014 the branch is a fast path, not a behavioural one; the else arm already produces the same value for every string input",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

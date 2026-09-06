@@ -30,7 +30,9 @@ describe('errorHandling', () => {
         it('should create error response with message only', () => {
             const response = createErrorResponse('Something went wrong');
 
-            expect(response).toEqual({
+            // toStrictEqual, not toEqual: `code` must be ABSENT, and toEqual accepts a
+            // key whose value is undefined.
+            expect(response).toStrictEqual({
                 success: false,
                 error: 'Something went wrong',
             });
@@ -50,7 +52,7 @@ describe('errorHandling', () => {
             const error = new Error('Test error message');
             const response = createErrorResponse(error);
 
-            expect(response).toEqual({
+            expect(response).toStrictEqual({
                 success: false,
                 error: 'Test error message',
             });
@@ -67,11 +69,26 @@ describe('errorHandling', () => {
             });
         });
 
-        it('should handle unknown error types', () => {
+        it('should stringify a non-Error, non-string value rather than passing it through', () => {
             const response = createErrorResponse({ random: 'object' });
 
+            // The message must be a STRING. Passing the value straight through would
+            // still satisfy `toBeDefined`, and callers serialise this into a response.
+            expect(response.error).toBe('[object Object]');
+            expect(typeof response.error).toBe('string');
             expect(response.success).toBe(false);
-            expect(response.error).toBeDefined();
+        });
+
+        it('should stringify a numeric error value', () => {
+            const response = createErrorResponse(42);
+
+            expect(response.error).toBe('42');
+            expect(typeof response.error).toBe('string');
+        });
+
+        it('should stringify null and undefined error values', () => {
+            expect(createErrorResponse(null).error).toBe('null');
+            expect(createErrorResponse(undefined).error).toBe('undefined');
         });
     });
 
