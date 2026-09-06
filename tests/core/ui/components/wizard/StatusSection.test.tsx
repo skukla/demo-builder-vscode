@@ -13,22 +13,14 @@ import { StatusSection } from '@/core/ui/components/wizard/StatusSection';
 
 // Helper to render with Spectrum Provider
 const renderWithProvider = (ui: React.ReactElement) => {
-    return render(
-        <Provider theme={defaultTheme}>
-            {ui}
-        </Provider>
-    );
+    return render(<Provider theme={defaultTheme}>{ui}</Provider>);
 };
 
 describe('StatusSection', () => {
     describe('label rendering', () => {
         it('renders the label text', () => {
             renderWithProvider(
-                <StatusSection
-                    label="Test Label"
-                    value="Test Value"
-                    status="completed"
-                />
+                <StatusSection label="Test Label" value="Test Value" status="completed" />
             );
 
             expect(screen.getByText('Test Label')).toBeInTheDocument();
@@ -36,11 +28,7 @@ describe('StatusSection', () => {
 
         it('applies uppercase styling to label', () => {
             renderWithProvider(
-                <StatusSection
-                    label="Test Label"
-                    value="Test Value"
-                    status="completed"
-                />
+                <StatusSection label="Test Label" value="Test Value" status="completed" />
             );
 
             const labelElement = screen.getByText('Test Label');
@@ -49,33 +37,30 @@ describe('StatusSection', () => {
     });
 
     describe('completed status', () => {
-        it('renders value text when completed', () => {
+        it('renders value text when completed, in the neutral (non-error) style', () => {
             renderWithProvider(
-                <StatusSection
-                    label="Organization"
-                    value="Adobe Inc"
-                    status="completed"
-                />
+                <StatusSection label="Organization" value="Adobe Inc" status="completed" />
             );
 
-            expect(screen.getByText('Adobe Inc')).toBeInTheDocument();
+            // The red styling is reserved for status="error". Every other status
+            // reads neutral, so the value must NOT carry the error colour.
+            const value = screen.getByText('Adobe Inc');
+            expect(value).toHaveClass('text-sm');
+            expect(value).not.toHaveClass('text-red-600');
         });
 
-        it('renders checkmark icon when completed', () => {
+        it('renders the checkmark icon, not the clock or the alert, when completed', () => {
             const { container } = renderWithProvider(
-                <StatusSection
-                    label="Organization"
-                    value="Adobe Inc"
-                    status="completed"
-                />
+                <StatusSection label="Organization" value="Adobe Inc" status="completed" />
             );
 
-            // CheckmarkCircle icon should be present
-            const svg = container.querySelector('svg');
-            expect(svg).toBeInTheDocument();
+            // WHICH icon, not merely that one rendered: the three icons differ only
+            // by their colour class in the DOM, and asserting "an svg exists" let a
+            // completed row render the pending clock with nothing failing.
+            expect(container.querySelector('svg')).toHaveClass('text-green-600');
         });
 
-        it('renders description when provided', () => {
+        it('renders description in its own small muted line beneath the value', () => {
             renderWithProvider(
                 <StatusSection
                     label="Project"
@@ -86,29 +71,22 @@ describe('StatusSection', () => {
             );
 
             expect(screen.getByText('My Project')).toBeInTheDocument();
-            expect(screen.getByText('A test project')).toBeInTheDocument();
+            // The styled element is what proves the guarded <Text> rendered it —
+            // a bare string in the same place still reads as present.
+            expect(screen.getByText('A test project')).toHaveClass('text-xs', 'text-gray-600');
         });
     });
 
     describe('empty status', () => {
         it('renders default empty text when no value', () => {
-            renderWithProvider(
-                <StatusSection
-                    label="Organization"
-                    status="empty"
-                />
-            );
+            renderWithProvider(<StatusSection label="Organization" status="empty" />);
 
             expect(screen.getByText('Not selected')).toBeInTheDocument();
         });
 
         it('renders custom empty text when provided', () => {
             renderWithProvider(
-                <StatusSection
-                    label="Organization"
-                    status="empty"
-                    emptyText="Not authenticated"
-                />
+                <StatusSection label="Organization" status="empty" emptyText="Not authenticated" />
             );
 
             expect(screen.getByText('Not authenticated')).toBeInTheDocument();
@@ -116,10 +94,7 @@ describe('StatusSection', () => {
 
         it('does not render icon when empty', () => {
             const { container } = renderWithProvider(
-                <StatusSection
-                    label="Organization"
-                    status="empty"
-                />
+                <StatusSection label="Organization" status="empty" />
             );
 
             // No icon should be present
@@ -129,11 +104,7 @@ describe('StatusSection', () => {
 
         it('does not render value when empty', () => {
             renderWithProvider(
-                <StatusSection
-                    label="Organization"
-                    value="Should not appear"
-                    status="empty"
-                />
+                <StatusSection label="Organization" value="Should not appear" status="empty" />
             );
 
             expect(screen.queryByText('Should not appear')).not.toBeInTheDocument();
@@ -142,64 +113,42 @@ describe('StatusSection', () => {
 
     describe('checking status', () => {
         it('renders default checking text', () => {
-            renderWithProvider(
-                <StatusSection
-                    label="Organization"
-                    status="checking"
-                />
-            );
+            renderWithProvider(<StatusSection label="Organization" status="checking" />);
 
             expect(screen.getByText('Checking...')).toBeInTheDocument();
         });
 
         it('renders custom status text when provided', () => {
             renderWithProvider(
-                <StatusSection
-                    label="Organization"
-                    status="checking"
-                    statusText="Switching..."
-                />
+                <StatusSection label="Organization" status="checking" statusText="Switching..." />
             );
 
             expect(screen.getByText('Switching...')).toBeInTheDocument();
         });
 
-        it('renders clock icon when checking', () => {
+        it('renders the clock icon when checking', () => {
             const { container } = renderWithProvider(
-                <StatusSection
-                    label="Organization"
-                    status="checking"
-                />
+                <StatusSection label="Organization" status="checking" />
             );
 
-            // Clock icon should be present
-            const svg = container.querySelector('svg');
-            expect(svg).toBeInTheDocument();
+            expect(container.querySelector('svg')).toHaveClass('text-blue-600');
         });
     });
 
     describe('pending status', () => {
-        it('renders clock icon when pending', () => {
+        it('renders the clock icon when pending — the same one checking shows', () => {
             const { container } = renderWithProvider(
-                <StatusSection
-                    label="Project"
-                    value="Pending Project"
-                    status="pending"
-                />
+                <StatusSection label="Project" value="Pending Project" status="pending" />
             );
 
-            // Clock icon should be present
-            const svg = container.querySelector('svg');
-            expect(svg).toBeInTheDocument();
+            // pending shares the checking case's clock. If that shared return goes
+            // missing, both fall through to the error alert and read red.
+            expect(container.querySelector('svg')).toHaveClass('text-blue-600');
         });
 
         it('renders value when pending', () => {
             renderWithProvider(
-                <StatusSection
-                    label="Project"
-                    value="Pending Project"
-                    status="pending"
-                />
+                <StatusSection label="Project" value="Pending Project" status="pending" />
             );
 
             expect(screen.getByText('Pending Project')).toBeInTheDocument();
@@ -207,27 +156,17 @@ describe('StatusSection', () => {
     });
 
     describe('error status', () => {
-        it('renders alert icon when error', () => {
+        it('renders the alert icon when error', () => {
             const { container } = renderWithProvider(
-                <StatusSection
-                    label="Connection"
-                    value="Failed to connect"
-                    status="error"
-                />
+                <StatusSection label="Connection" value="Failed to connect" status="error" />
             );
 
-            // AlertCircle icon should be present
-            const svg = container.querySelector('svg');
-            expect(svg).toBeInTheDocument();
+            expect(container.querySelector('svg')).toHaveClass('text-red-600');
         });
 
         it('renders status text when provided', () => {
             renderWithProvider(
-                <StatusSection
-                    label="Connection"
-                    status="error"
-                    statusText="Connection failed"
-                />
+                <StatusSection label="Connection" status="error" statusText="Connection failed" />
             );
 
             expect(screen.getByText('Connection failed')).toBeInTheDocument();
@@ -235,11 +174,7 @@ describe('StatusSection', () => {
 
         it('applies error text styling', () => {
             renderWithProvider(
-                <StatusSection
-                    label="Connection"
-                    value="Error message"
-                    status="error"
-                />
+                <StatusSection label="Connection" value="Error message" status="error" />
             );
 
             const errorText = screen.getByText('Error message');
@@ -280,11 +215,7 @@ describe('StatusSection', () => {
     describe('accessibility', () => {
         it('renders semantic HTML structure with text content', () => {
             renderWithProvider(
-                <StatusSection
-                    label="Organization"
-                    value="Adobe Inc"
-                    status="completed"
-                />
+                <StatusSection label="Organization" value="Adobe Inc" status="completed" />
             );
 
             // Should render both label and value text accessibly
@@ -295,13 +226,7 @@ describe('StatusSection', () => {
 
     describe('edge cases', () => {
         it('handles empty string value', () => {
-            renderWithProvider(
-                <StatusSection
-                    label="Organization"
-                    value=""
-                    status="completed"
-                />
-            );
+            renderWithProvider(<StatusSection label="Organization" value="" status="completed" />);
 
             // Should render the empty string (not fall back to empty state)
             const label = screen.getByText('Organization');
@@ -309,12 +234,7 @@ describe('StatusSection', () => {
         });
 
         it('handles undefined value with non-empty status', () => {
-            renderWithProvider(
-                <StatusSection
-                    label="Organization"
-                    status="completed"
-                />
-            );
+            renderWithProvider(<StatusSection label="Organization" status="completed" />);
 
             // Should not crash, should render something
             expect(screen.getByText('Organization')).toBeInTheDocument();
@@ -323,11 +243,7 @@ describe('StatusSection', () => {
         it('handles long values gracefully', () => {
             const longValue = 'A'.repeat(200);
             renderWithProvider(
-                <StatusSection
-                    label="Organization"
-                    value={longValue}
-                    status="completed"
-                />
+                <StatusSection label="Organization" value={longValue} status="completed" />
             );
 
             expect(screen.getByText(longValue)).toBeInTheDocument();
