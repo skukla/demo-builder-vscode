@@ -15970,6 +15970,31 @@
             "decision": "none \u2014 defence in depth behind a guard that a test now drives",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/eds/services/storefront/storefrontSyncService.ts",
+            "anchors": [
+                "return undefined;"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Stryker empties readHeadSha's catch block. The block's only statement IS `return undefined`, so an emptied catch falls out of the function and returns undefined by the other route \u2014 byte-identical behaviour on every input. Verified by planting: with the body removed all 41 suite tests pass, while a planted control (swapping the pushed/push-skipped summary clauses) fails, so the suite is live rather than blind.",
+            "decision": "none \u2014 the explicit return says what the swallow means and the compiler infers the same type either way",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-07, planted 2026-09-06"
+        },
+        {
+            "module": "src/features/eds/services/storefront/storefrontSyncService.ts",
+            "anchors": [
+                "return [injectTokenIntoUrl(remoteRaw.trim(), githubToken), 'HEAD'];",
+                "const tokenizedUrl = injectTokenIntoUrl(remoteRaw.trim(), githubToken);"
+            ],
+            "mutants": 2,
+            "category": "other",
+            "reason": "Stryker drops the .trim() from the remote URL before injectTokenIntoUrl sees it. That helper parses with `new URL`, and the WHATWG parser strips leading/trailing ASCII whitespace and removes every tab/CR/LF inside, so 'https://github.com/owner/repo.git\\n' and its trimmed form produce the same tokenized string character for character. No input git can produce distinguishes them. Verified by planting the removal at BOTH sites: the suite passes, while a planted control fails.",
+            "decision": "none \u2014 the trim guards against injectTokenIntoUrl ever parsing more loosely, and asserting the exact argv (which these tests now do) cannot separate the two forms",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-07, planted 2026-09-06"
         }
     ]
 }
