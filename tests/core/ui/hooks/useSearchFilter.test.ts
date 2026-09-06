@@ -220,6 +220,33 @@ describe('useSearchFilter', () => {
             expect(result.current.filteredItems[0].id).toBe('2');
         });
 
+        // String(null) is the four-letter word "null", so without the guard a
+        // person searching for it is handed every row that is MISSING the field
+        // they searched — the exact opposite of what they asked for.
+        it('never lets a null field match the text "null"', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter([{ id: '1', title: null }], { searchFields: ['title'] })
+            );
+
+            act(() => {
+                result.current.setQuery('null');
+            });
+
+            expect(result.current.filteredItems).toStrictEqual([]);
+        });
+
+        it('never lets an undefined field match the text "undefined"', () => {
+            const { result } = renderHook(() =>
+                useSearchFilter([{ id: '1', title: undefined }], { searchFields: ['title'] })
+            );
+
+            act(() => {
+                result.current.setQuery('undefined');
+            });
+
+            expect(result.current.filteredItems).toStrictEqual([]);
+        });
+
         it('handles whitespace-only query', () => {
             const { result } = renderHook(() =>
                 useSearchFilter(testItems, { searchFields: ['title'] })
