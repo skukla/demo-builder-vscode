@@ -95,6 +95,34 @@ const CREDENTIAL_CEILINGS: Record<string, number> = {
     'tests/features/projects-dashboard/services/exportProjectSettingsToFile.test.ts': 1,
 };
 
+/**
+ * The fifth shape, added 2026-09-06. `USERINFO_URL` above matches only `http`/`https`, so
+ * three `postgresql://`, `postgres://` and `mongodb+srv://` userinfo URLs have sat in the
+ * suite since August without the rule seeing them — and a GitGuardian "basic auth string"
+ * alert the same morning was exactly this shape (a token-injected git remote, caught and
+ * rewritten by the session four minutes later, but not by this guard).
+ *
+ * A userinfo URL IS basic auth, whatever the scheme: user and password in the authority,
+ * which is what a scanner matches.
+ *
+ * The http/https rule above stays at ZERO — it is the shape this repo actually produces,
+ * and the one the 2026-09-03 alert fired on. This is the wider net, ledgered because the
+ * three that predate it are fixtures proving the code REDACTS or REFUSES such a URL, and
+ * they need the shape to prove it. Rewrite one with
+ * `credentialShapes.credentialedUrlShape` and lower its ceiling in the same change.
+ */
+const USERINFO_URL_ANY_SCHEME = /[a-z][a-z0-9+.-]*:\/\/[^/\s:@"'`]+:[^@\s"'`]{3,}@/;
+
+const USERINFO_CEILINGS: Record<string, number> = {
+    'tests/core/validation/securityValidation-network.test.ts': 1,
+    'tests/features/ai/mcpServer-config.test.ts': 1,
+    'tests/hooks/router.test.ts': 1,
+};
+
+function userinfoUrlCount(body: string): number {
+    return body.split('\n').filter((l) => USERINFO_URL_ANY_SCHEME.test(l)).length;
+}
+
 function credentialShapeCount(body: string): number {
     let n = 0;
     for (const line of body.split('\n')) {
@@ -196,6 +224,54 @@ describe('no credential-shaped string under tests/', () => {
         // A new token-shaped literal is the thing this rule exists to stop. Build it with
         // tests/helpers/jwtFake.ts instead — the same shape, assembled at run time.
         expect(over).toEqual([]);
+    });
+
+    it('CONTROL: the any-scheme pattern catches what http/https misses', () => {
+        // The three the narrow rule has been blind to since August.
+        expect(userinfoUrlCount("'postgresql://user:pass@host/db'")).toBe(1);
+        expect(userinfoUrlCount("'mongodb+srv://svc-user:hunter2pass@cluster0.example.net/db'")).toBe(1);
+        // The shape GitGuardian flagged on 2026-09-06 — a token-injected git remote.
+        expect(userinfoUrlCount("'https://gh-token-abc:x-oauth-basic@github.com/o/r.git'")).toBe(1);
+        // Not userinfo: a port, and a plain URL.
+        expect(userinfoUrlCount("'https://host:5432/db'")).toBe(0);
+        expect(userinfoUrlCount("'https://example.com/docs#install'")).toBe(0);
+        // Built by parts — nothing for a scanner to match.
+        expect(userinfoUrlCount('credentialedUrlShape(base, user, pass)')).toBe(0);
+    });
+
+    it('no file carries MORE userinfo URLs than its recorded ceiling', () => {
+        const over: string[] = [];
+        for (const f of corpus) {
+            let body: string;
+            try {
+                body = readFileSync(f, 'utf8');
+            } catch {
+                continue;
+            }
+            const rel = relative(ROOT, f);
+            const n = userinfoUrlCount(body);
+            const ceiling = USERINFO_CEILINGS[rel] ?? 0;
+            if (n > ceiling) over.push(`${rel}: ${n} (ceiling ${ceiling})`);
+        }
+        // Build it with credentialShapes.credentialedUrlShape instead.
+        expect(over).toEqual([]);
+    });
+
+    it('the userinfo ledger only shrinks: no ceiling stands above the count on disk', () => {
+        const stale: string[] = [];
+        for (const [file, ceiling] of Object.entries(USERINFO_CEILINGS)) {
+            let body: string;
+            try {
+                body = readFileSync(join(ROOT, file), 'utf8');
+            } catch {
+                stale.push(`${file}: listed, but the file is gone`);
+                continue;
+            }
+            if (userinfoUrlCount(body) < ceiling) {
+                stale.push(`${file}: ceiling ${ceiling}, on disk ${userinfoUrlCount(body)}`);
+            }
+        }
+        expect(stale).toEqual([]);
     });
 
     it('CONTROL: the credential pattern catches what fired, and clears the agreed marker', () => {
