@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "retryStrategyManager: decisions suite (21 tests) and 5 ledger rows",
+    "_note": "adobeResourceTools: descriptor assertions, workspace failure/auth/no-org paths, delete confirm+org+auth gates, phase reporter",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -2393,27 +2393,23 @@
             "openGaps": 0
         },
         "src/features/ai/server/adobeResourceTools.ts": {
-            "score": 59.28,
-            "killed": 99,
-            "survived": 57,
-            "noCoverage": 11,
+            "score": 87.43,
+            "killed": 146,
+            "survived": 20,
+            "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 13,
-                "optionalChain": 9,
-                "other": 15,
-                "string": 18,
+                "branch": 1,
+                "string": 15,
+                "optionalChain": 2,
                 "logPresentation": 2
             },
             "uncoveredCategories": {
-                "block": 3,
-                "other": 2,
-                "string": 5,
-                "branch": 1
+                "block": 1
             },
-            "highValueSurvivors": 13,
-            "equivalent": 0,
-            "openGaps": 43
+            "highValueSurvivors": 1,
+            "equivalent": 4,
+            "openGaps": 0
         },
         "src/features/ai/server/adobeTargetStore.ts": {
             "score": 100,

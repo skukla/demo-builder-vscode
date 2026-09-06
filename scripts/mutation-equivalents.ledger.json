@@ -12977,6 +12977,45 @@
             "decision": "none - the trailing throw re-raises the same error object this arm would have thrown",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/features/ai/server/adobeResourceTools.ts",
+            "anchors": [
+                "if (!mgr) return null;"
+            ],
+            "line": 55,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard false changes nothing the caller can see. With no manager the very next statement calls mgr.isAuthenticated() inside the try, which throws a TypeError, and the catch arm converts it to the same null this line returns. Both paths hand back null for the same input, so no assertion on any tool's output can separate them.",
+            "decision": "none - the try/catch below already collapses the absent-manager case to the same null",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/ai/server/adobeResourceTools.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 58,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch makes authedManager return undefined where it returned null. Every caller tests only falsiness - create/workspace do 'if (!mgr)' and delete does 'if (!(await authedManager(ctx)))' - so undefined and null take the identical branch and produce the identical NEEDS_ADOBE handoff. The declared return type already admits null, so nothing downstream distinguishes them either.",
+            "decision": "none - null and undefined are indistinguishable to every caller's falsiness test",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/ai/server/adobeResourceTools.ts",
+            "anchors": [
+                "if (args?.confirm !== true || args?.confirmName !== projectName) {"
+            ],
+            "line": 203,
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both optional chains on this line are unreachable-nullish. Lines 194-198 read args?.projectId and args?.projectName and return early unless BOTH trim to a non-empty string, which is only possible when args is an object. So by the time control reaches this line args can never be null or undefined, and dropping the '?.' cannot throw or yield a different value for any input the handler can be given.",
+            "decision": "none - the required-identifier guard above makes a nullish args impossible here",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

@@ -24,7 +24,9 @@ jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: { getAuthenticationService: jest.fn(() => ({})) },
 }));
 
+import { z } from 'zod';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
+import { withPhaseSinks } from '@/core/utils/agentPhaseChannel';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
@@ -52,9 +54,80 @@ function serve(opts: { authed?: boolean; noManager?: boolean } = {}) {
         { registerTool: (n: string, _d: unknown, h: never) => tools.set(n, h) },
         ctxFactory
     );
-    return async (name: string, args: unknown = {}) =>
+    return async (name: string, args: unknown) =>
         JSON.parse((await tools.get(name)!(args)).content[0].text);
 }
+
+/**
+ * The descriptor the SDK is handed — dropped by the fake server above, and by
+ * every fake like it. That is exactly how `get_component_requirements` shipped a
+ * schema the SDK refuses (see realSdkRegistration.test.ts): the argument nothing
+ * looked at. `needsAuth` gates the call, `annotations.destructiveHint` is what a
+ * client gates a confirmation prompt on, and `inputSchema` is the contract.
+ */
+type ToolDescriptor = {
+    needsAuth: string[];
+    annotations: { readOnlyHint: boolean; destructiveHint: boolean };
+    description: string;
+    inputSchema: Record<string, z.ZodTypeAny>;
+};
+
+function descriptorFor(name: string): ToolDescriptor {
+    const seen = new Map<string, ToolDescriptor>();
+    registerAdobeResourceTools(
+        { registerTool: (n: string, d: unknown) => seen.set(n, d as ToolDescriptor) },
+        () => createMockHandlerContext({ logger: createMockLogger() })
+    );
+    return seen.get(name)!;
+}
+
+describe('tool descriptors', () => {
+    it('gates create_adobe_project behind Adobe sign-in, non-destructively', () => {
+        const d = descriptorFor('create_adobe_project');
+
+        expect(d.needsAuth).toEqual(['adobe']);
+        expect(d.annotations).toEqual({ readOnlyHint: false, destructiveHint: false });
+    });
+
+    it('requires a project name and leaves the description optional', () => {
+        const schema = z.object(descriptorFor('create_adobe_project').inputSchema);
+
+        expect(schema.safeParse({}).success).toBe(false);
+        expect(schema.safeParse({ name: 'New Project' }).success).toBe(true);
+    });
+
+    it('gates create_adobe_workspace behind Adobe sign-in, non-destructively', () => {
+        const d = descriptorFor('create_adobe_workspace');
+
+        expect(d.needsAuth).toEqual(['adobe']);
+        expect(d.annotations).toEqual({ readOnlyHint: false, destructiveHint: false });
+    });
+
+    it('requires a workspace name and leaves the description optional', () => {
+        const schema = z.object(descriptorFor('create_adobe_workspace').inputSchema);
+
+        expect(schema.safeParse({}).success).toBe(false);
+        expect(schema.safeParse({ name: 'dev' }).success).toBe(true);
+    });
+
+    // The one annotation in this file that differs, and the one a client reads
+    // before deciding whether to ask the user first.
+    it('declares delete_adobe_project DESTRUCTIVE', () => {
+        const d = descriptorFor('delete_adobe_project');
+
+        expect(d.needsAuth).toEqual(['adobe']);
+        expect(d.annotations).toEqual({ readOnlyHint: false, destructiveHint: true });
+    });
+
+    it('takes the id and the name, with both confirmations optional in the schema', () => {
+        const schema = z.object(descriptorFor('delete_adobe_project').inputSchema);
+
+        // confirm/confirmName are optional HERE and enforced by the handler, so a
+        // caller that omits them gets the refusal text rather than a schema error.
+        expect(schema.safeParse({}).success).toBe(false);
+        expect(schema.safeParse({ projectId: 'p', projectName: 'Doomed' }).success).toBe(true);
+    });
+});
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -118,6 +191,14 @@ describe('create_adobe_project', () => {
             project: { id: 'p9', name: 'New Project' },
         });
     });
+
+    // The `args?.` guards are not decoration: the handler is called by the SDK
+    // with whatever the agent sent, and a tool that throws on absent arguments
+    // fails the whole call instead of answering.
+    it('sends empty strings, not a crash, when called with no arguments at all', async () => {
+        await serve()('create_adobe_project', undefined);
+        expect(createProject).toHaveBeenCalledWith('', '', { orgId: 'org-1' });
+    });
 });
 
 describe('create_adobe_workspace', () => {
@@ -143,6 +224,41 @@ describe('create_adobe_workspace', () => {
         expect(await serve()('create_adobe_workspace', { name: 'dev' })).toEqual({
             created: true,
             workspace: { id: 'w9', name: 'dev' },
+            projectId: 'proj-1',
+        });
+    });
+
+    // Nothing selected at all — the org guard runs before the project one, and
+    // must answer rather than read `projectId` off an absent target.
+    it('refuses when no org is selected either', async () => {
+        mockGetAdobeTarget.mockReturnValue(undefined);
+        const out = await serve()('create_adobe_workspace', { name: 'dev' });
+
+        expect(out.error).toMatch(/select_org/);
+        expect(createWorkspace).not.toHaveBeenCalled();
+    });
+
+    it('hands off when not signed in, without calling Console', async () => {
+        const out = await serve({ authed: false })('create_adobe_workspace', { name: 'dev' });
+
+        expect(out).toMatchObject({ needsAuth: 'adobe' });
+        expect(createWorkspace).not.toHaveBeenCalled();
+    });
+
+    it('surfaces the service failure REASON verbatim when Console rejects it', async () => {
+        createWorkspace.mockResolvedValue({
+            error: '400 - Bad Request ("Workspace name already in use")',
+        });
+        const out = await serve()('create_adobe_workspace', { name: 'dev' });
+
+        expect(out.created).toBe(false);
+        expect(out.error).toContain('already in use');
+    });
+
+    it('sends empty strings, not a crash, when called with no arguments at all', async () => {
+        await serve()('create_adobe_workspace', undefined);
+        expect(createWorkspace).toHaveBeenCalledWith('', '', {
+            orgId: 'org-1',
             projectId: 'proj-1',
         });
     });
@@ -205,5 +321,77 @@ describe('delete_adobe_project', () => {
         expect(await serve()('delete_adobe_project', { projectId: 'p' })).toMatchObject({
             error: expect.stringMatching(/projectId and projectName are required/),
         });
+    });
+
+    it('handles being called with no arguments at all', async () => {
+        expect(await serve()('delete_adobe_project', undefined)).toMatchObject({
+            error: expect.stringMatching(/projectId and projectName are required/),
+        });
+    });
+
+    // Both identifiers are trimmed before the emptiness check, so a value that
+    // is only whitespace is missing rather than present-and-blank.
+    it('treats a whitespace-only projectId as missing', async () => {
+        expect(
+            await serve()('delete_adobe_project', { projectId: '   ', projectName: 'Doomed' })
+        ).toMatchObject({ error: expect.stringMatching(/projectId and projectName are required/) });
+    });
+
+    it('treats a whitespace-only projectName as missing', async () => {
+        expect(
+            await serve()('delete_adobe_project', { projectId: 'proj-1', projectName: '  ' })
+        ).toMatchObject({ error: expect.stringMatching(/projectId and projectName are required/) });
+    });
+
+    // The gate is confirm AND the echo — an exact echo on its own is not consent.
+    it('still refuses when confirmName matches but confirm is absent', async () => {
+        const out = await serve()('delete_adobe_project', { ...ARGS, confirmName: 'Doomed' });
+
+        expect(out.irreversible).toBe(true);
+        expect(mockTeardown).not.toHaveBeenCalled();
+    });
+
+    it('refuses a fully confirmed delete when no org is selected', async () => {
+        mockGetAdobeTarget.mockReturnValue(undefined);
+        const out = await serve()('delete_adobe_project', {
+            ...ARGS,
+            confirm: true,
+            confirmName: 'Doomed',
+        });
+
+        expect(out.error).toMatch(/select_org/);
+        expect(mockTeardown).not.toHaveBeenCalled();
+    });
+
+    it('hands off a fully confirmed delete when not signed in', async () => {
+        const out = await serve({ authed: false })('delete_adobe_project', {
+            ...ARGS,
+            confirm: true,
+            confirmName: 'Doomed',
+        });
+
+        expect(out).toMatchObject({ needsAuth: 'adobe' });
+        expect(mockTeardown).not.toHaveBeenCalled();
+    });
+
+    // Teardown runs long enough that a silent wait reads as a hang, so the
+    // reporter it is handed must actually reach the phase channel — and carry
+    // the step count, which is how the agent knows it is progressing.
+    it('narrates teardown progress onto the phase channel, step count included', async () => {
+        mockTeardown.mockImplementation(async (...a: unknown[]) => {
+            (a[2] as (p: { message: string; step: number; totalSteps: number }) => void)({
+                message: 'Removing event providers',
+                step: 2,
+                totalSteps: 5,
+            });
+            return { success: true, projectDeleted: true, items: [], shouldClearConsoleSelection: true };
+        });
+        const seen: string[] = [];
+
+        await withPhaseSinks([(m) => seen.push(m)], () =>
+            serve()('delete_adobe_project', { ...ARGS, confirm: true, confirmName: 'Doomed' })
+        );
+
+        expect(seen).toEqual(['Removing event providers (2/5)']);
     });
 });
