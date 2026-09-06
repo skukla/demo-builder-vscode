@@ -107,7 +107,7 @@ async function buildMesh(
 
     const installResult = await commandManager.execute(INSTALL_COMMAND, execOptions);
     if (installResult.code !== 0) {
-        logger.warn(`${prefix} npm install had warnings:`, installResult.stderr?.substring(0, 300));
+        logger.warn(`${prefix} npm install had warnings:`, installResult.stderr.substring(0, 300));
     }
 
     onProgress?.('Building...', 'Compiling');
@@ -126,10 +126,10 @@ async function buildMesh(
         // so a build failure was the one mesh failure nobody could read.
         logger.debug(`${prefix} Build failed`, {
             code: buildResult.code,
-            stdout: buildResult.stdout?.substring(0, BUILD_OUTPUT_LOG_LIMIT),
-            stderr: buildResult.stderr?.substring(0, BUILD_OUTPUT_LOG_LIMIT),
+            stdout: buildResult.stdout.substring(0, BUILD_OUTPUT_LOG_LIMIT),
+            stderr: buildResult.stderr.substring(0, BUILD_OUTPUT_LOG_LIMIT),
         });
-        const errorMsg = buildResult.stderr?.trim() || buildResult.stdout?.trim() || 'Build failed';
+        const errorMsg = buildResult.stderr.trim() || buildResult.stdout.trim() || 'Build failed';
         // The exit code is carried in the message because it is the one detail
         // redaction cannot erase — `Build failed: <path>/` told the user nothing.
         throw new Error(`Build failed (exit ${buildResult.code}): ${errorMsg}`);
@@ -164,7 +164,7 @@ async function buildIntegration(
         buildExecOptions(componentPath, opts.nodeVersion),
     );
     if (installResult.code !== 0) {
-        logger.warn(`${prefix} npm install had warnings:`, installResult.stderr?.substring(0, 300));
+        logger.warn(`${prefix} npm install had warnings:`, installResult.stderr.substring(0, 300));
     }
 
     logger.debug(`${prefix} Integration dependencies installed`);
