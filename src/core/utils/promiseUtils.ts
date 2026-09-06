@@ -131,10 +131,17 @@ export async function tryWithTimeout<T>(
     } catch (error) {
         const appError = toAppError(error);
 
-        // Use typed error detection instead of string matching
+        // Use typed error detection instead of string matching.
+        //
+        // Cancellation is read off the RAW error, not off `appError`. The
+        // `appError.code === CANCELLED` half this line used to lead with could
+        // never decide the answer on its own: `toAppError` only ever returns a
+        // CANCELLED-coded error by handing back an AppError it was given, and
+        // such an error is itself an Error carrying the same code — so the
+        // second half was already true whenever the first was.
         const timedOut = isTimeout(appError);
-        const cancelled = appError.code === ErrorCode.CANCELLED ||
-            (error instanceof Error && (error as Error & { code?: string }).code === ErrorCode.CANCELLED);
+        const cancelled = error instanceof Error &&
+            (error as Error & { code?: string }).code === ErrorCode.CANCELLED;
 
         return {
             timedOut,

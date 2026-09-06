@@ -1,5 +1,22 @@
 import { withTimeout, tryWithTimeout, runInBatches } from '@/core/utils/promiseUtils';
 
+/**
+ * A rejected promise whose rejection is ALREADY observed.
+ *
+ * A bare `Promise.reject(...)` handed to code under test is only "handled"
+ * because that code awaits it. Under mutation testing that is exactly what
+ * stops being true: a mutant that drops the promise from the race leaves the
+ * rejection unobserved, node tears the worker down with exit code 1, and the
+ * whole run dies instead of scoring one mutant (measured 2026-09-06). The
+ * no-op handler attached here marks the rejection handled whatever the code
+ * under test does with it, and does not change what the test observes.
+ */
+function rejectedWith(reason: unknown): Promise<never> {
+    const rejected = Promise.reject(reason);
+    rejected.catch(() => undefined);
+    return rejected as Promise<never>;
+}
+
 describe('promiseUtils', () => {
     beforeEach(() => {
         jest.useFakeTimers();
@@ -48,7 +65,7 @@ describe('promiseUtils', () => {
         });
 
         it('should handle promise rejection', async () => {
-            const promise = Promise.reject(new Error('Operation failed'));
+            const promise = rejectedWith(new Error('Operation failed'));
 
             await expect(
                 withTimeout(promise, { timeoutMs: 1000 })
@@ -124,6 +141,19 @@ describe('promiseUtils', () => {
             expect(result).toBe('async result');
         });
 
+        it.each([
+            ['resolves', () => Promise.resolve('fast')],
+            ['rejects', () => rejectedWith(new Error('fast failure'))],
+        ])('clears the pending timeout once the race %s', async (_label, make) => {
+            // A fast promise used to leave the timeout armed for the full
+            // timeoutMs, keeping the event loop alive (and tripping Jest's
+            // "failed to exit gracefully" teardown). The timer is cleared in a
+            // `finally`, so it happens on every exit from the race.
+            await withTimeout(make(), { timeoutMs: 30000 }).catch(() => undefined);
+
+            expect(jest.getTimerCount()).toBe(0);
+        });
+
         it('should handle different result types', async () => {
             const numberPromise = Promise.resolve(42);
             const objectPromise = Promise.resolve({ key: 'value' });
@@ -196,7 +226,7 @@ describe('promiseUtils', () => {
         });
 
         it('should return error result when operation fails', async () => {
-            const promise = Promise.reject(new Error('Operation error'));
+            const promise = rejectedWith(new Error('Operation error'));
 
             const result = await tryWithTimeout(promise, { timeoutMs: 1000 });
 
@@ -208,7 +238,7 @@ describe('promiseUtils', () => {
         });
 
         it('should handle string errors', async () => {
-            const promise = Promise.reject('String error');
+            const promise = rejectedWith('String error');
 
             const result = await tryWithTimeout(promise, { timeoutMs: 1000 });
 
@@ -389,7 +419,7 @@ describe('promiseUtils', () => {
         });
 
         it('should handle immediate rejection', async () => {
-            const immediate = Promise.reject(new Error('instant error'));
+            const immediate = rejectedWith(new Error('instant error'));
 
             await expect(
                 withTimeout(immediate, { timeoutMs: 1000 })
