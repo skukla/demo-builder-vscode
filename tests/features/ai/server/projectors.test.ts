@@ -79,6 +79,18 @@ describe('indexDetail', () => {
         expect(out.more).toMatch(/200 more/);
     });
 
+    // `more` is a claim that rows were withheld. Emitted when none were, an
+    // agent pages again for nothing; emitted at the boundary (limit exactly
+    // equal to the count) it says "0 more — narrow your query", which reads as
+    // an instruction to keep going and there is nowhere to go.
+    it('says nothing about more rows when the page holds every one', () => {
+        const out = indexDetail(items, { ...opts, wanted: false, limit: 2 });
+        expect(out.count).toBe(2);
+        expect(out.total).toBe(2);
+        expect(out.more).toBeUndefined();
+        expect('more' in out).toBe(false);
+    });
+
     it('reports not-found rather than an empty success', () => {
         const out = indexDetail(items, {
             ...opts,
@@ -135,6 +147,37 @@ describe('legend', () => {
     it('leaves a row untouched when the field is missing', () => {
         const out = legend([{ code: 'A' }], 'group', () => undefined, () => undefined);
         expect(out.rows[0]).toEqual({ code: 'A' });
-        expect(out.legend).toEqual({});
+        // toStrictEqual, not toEqual: toEqual ignores a property whose value is
+        // undefined, so { undefined: undefined } would pass as {}.
+        expect(out.legend).toStrictEqual({});
+        expect(Object.keys(out.legend)).toStrictEqual([]);
+    });
+
+    // The legend is the ONLY place the removed value can be recovered from, so a
+    // half-known entry is worse than none: `{ g1: undefined }` serialises as a
+    // key with no label and the row it keys can no longer be read back at all.
+    // Both halves are required, which is what makes this an AND.
+    it('records nothing for a value it can key but cannot label', () => {
+        const out = legend(
+            [{ code: 'A', group: { code: 'g1' } }],
+            'group',
+            (v) => (v as { code?: string })?.code,
+            () => undefined,
+        );
+
+        expect(Object.keys(out.legend)).toStrictEqual([]);
+    });
+
+    it('records nothing for a value it can label but cannot key', () => {
+        const out = legend(
+            [{ code: 'A', group: { name: 'Group One' } }],
+            'group',
+            () => undefined,
+            (v) => (v as { name?: string })?.name,
+        );
+
+        expect(Object.keys(out.legend)).toStrictEqual([]);
+        // No key means no substitution — the row keeps the value it had.
+        expect(out.rows[0].group).toEqual({ name: 'Group One' });
     });
 });
