@@ -14536,6 +14536,84 @@
             "decision": "none \u2014 the guard is compiler-mandated and correct as written",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/configureHelpers.tsx",
+            "anchors": [
+                "const instanceType = instance?.type;"
+            ],
+            "line": 56,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the `?.`, which throws only if an entry of `componentInstances` is null. The parameter is typed `Record<string, ComponentInstance>`, so no compliant caller can produce that \u2014 the only caller hands over `project.componentInstances` straight from persisted state, and the guard is there for a corrupt file rather than for anything the types allow. Killing it would mean casting a null past the parameter's own type, which ADR-016 rule 2 refuses. Planted the mutation and ran the suite (2026-09-06): 22 tests, all green.",
+            "decision": "none \u2014 a defensive guard over state read from disk; the type already forbids what would kill it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/build/buildInfo.ts",
+            "anchors": [
+                "if (!value || typeof value !== 'object') return false;"
+            ],
+            "line": 37,
+            "mutants": 3,
+            "category": "branch",
+            "reason": "isBuildInfo is file-local and its only input is JSON.parse's output, so the guard's outcome is unobservable for every value JSON can produce. A non-object passes the field checks with undefined properties and is rejected there; null throws on the first property access and readBuildInfo's catch answers undefined \u2014 which is exactly what the guard answers. Planted all three (|| to &&, the whole condition to false, and the typeof operand to false): 23 tests green each time. The guard is kept because isBuildInfo is a type predicate whose contract is 'never throw', not because any caller can tell.",
+            "decision": "none \u2014 a type guard defending against input its only caller has already narrowed",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/build/buildInfo.ts",
+            "anchors": [
+                "if (newestSourceMtimeMs === undefined) return false;"
+            ],
+            "line": 82,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Removing the unknown-mtime guard leaves `undefined > Date.parse(builtAt)`, which JavaScript evaluates to false \u2014 the value the guard returns. Planted (2026-09-06): 23 tests green. Written out because 'unknown mtime is not stale' is a decision this module documents, not a coercion anyone should have to know.",
+            "decision": "none \u2014 an explicit guard agreeing with the comparison it precedes",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/build/buildInfo.ts",
+            "anchors": [
+                "if (candidate !== undefined && (newest === undefined || candidate > newest)) {"
+            ],
+            "line": 113,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Two mutants, unobservable for the same reason \u2014 the assignment they guard writes the value that is already there. Dropping `candidate !== undefined` only ever re-assigns undefined over undefined (when newest is set, `undefined > newest` is false and nothing happens). Turning `>` into `>=` only decides which of two EQUAL numbers is kept, and the function answers a number, not a choice between them. Planted both (2026-09-06): 23 tests green.",
+            "decision": "none \u2014 both mutants write the value the variable already holds",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/build/buildInfo.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 64,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Deleting this catch body leaves `catch {}`, and a function that falls out of its try/catch returns undefined \u2014 the same value its explicit `return undefined` produces. Planted (2026-09-06): 23 tests green. The explicit return stays because it says the degradation is deliberate, which is this module's whole contract.",
+            "decision": "none \u2014 an explicit return of the value the implicit path already produces",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/core/build/buildInfo.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 109,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The body is `candidate = undefined;`, and `candidate` is declared fresh inside each loop iteration, so it is still unassigned when stat throws \u2014 clearing it cannot change anything. Planted (2026-09-06): 23 tests green, including the new case where one file cannot be stat-ed and the walk continues past it.",
+            "decision": "none \u2014 an assignment restating the declaration's own initial value",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

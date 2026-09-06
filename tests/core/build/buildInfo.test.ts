@@ -75,6 +75,40 @@ describe('readBuildInfo', () => {
 
         expect(await readBuildInfo(EXT_PATH)).toBeUndefined();
     });
+
+    it.each(['checkoutPath', 'branch', 'commit', 'builtAt'] as const)(
+        'rejects a stamp missing only %s — every field is required on its own',
+        async (missing) => {
+            // Each field is load-bearing: the commit and branch ARE the identity,
+            // builtAt is what the staleness check compares against, and the
+            // checkout path is the thing the two-dist-trees defect needed named.
+            const partial = { ...STAMP };
+            delete (partial as Record<string, unknown>)[missing];
+            readFileMock.mockResolvedValue(JSON.stringify(partial));
+
+            expect(await readBuildInfo(EXT_PATH)).toBeUndefined();
+        }
+    );
+
+    it('rejects a stamp that is not an object at all', async () => {
+        // `dist/build-info.json` holding a bare number parses cleanly, and
+        // spreading it would answer a stamp-shaped object with no identity in it.
+        readFileMock.mockResolvedValue('42');
+
+        expect(await readBuildInfo(EXT_PATH)).toBeUndefined();
+    });
+
+    it('carries a dirty flag through, so an uncommitted build says so', async () => {
+        readFileMock.mockResolvedValue(JSON.stringify({ ...STAMP, dirty: true }));
+
+        expect(await readBuildInfo(EXT_PATH)).toEqual({ ...STAMP, dirty: true });
+    });
+
+    it('normalises a non-boolean dirty flag to false rather than passing it on', async () => {
+        readFileMock.mockResolvedValue(JSON.stringify({ ...STAMP, dirty: 'yes' }));
+
+        expect(await readBuildInfo(EXT_PATH)).toEqual({ ...STAMP, dirty: false });
+    });
 });
 
 describe('describeBuildInfo', () => {
@@ -100,6 +134,12 @@ describe('isDistStale', () => {
 
     it('is fresh when the build is newer than every source file', () => {
         expect(isDistStale(STAMP, builtAtMs - 1000)).toBe(false);
+    });
+
+    it('is not stale when the source is exactly as old as the build', () => {
+        // Equal means the build already includes it. Reporting stale here would
+        // send someone rebuilding on every check that landed in the same ms.
+        expect(isDistStale(STAMP, builtAtMs)).toBe(false);
     });
 
     it('is not stale when the source mtime is unknown', () => {
@@ -135,6 +175,43 @@ describe('newestMtimeUnder', () => {
         });
 
         expect(await newestMtimeUnder('/src')).toBe(900);
+    });
+
+    it('asks for dirents, which is what tells a directory from a file', async () => {
+        // Without `withFileTypes` readdir answers plain strings, the walk never
+        // recurses, and a stale nested source reads as fresh.
+        tree({ '/src/a.ts': 100 });
+
+        await newestMtimeUnder('/src');
+
+        expect(readdirMock).toHaveBeenCalledWith('/src', { withFileTypes: true });
+    });
+
+    it('ignores an entry that is neither a file nor a directory', async () => {
+        // A socket or a dangling symlink has no mtime worth reporting, and
+        // stat-ing it would answer 0 rather than nothing.
+        readdirMock.mockResolvedValue([
+            { name: 'a.ts', isFile: () => true, isDirectory: () => false },
+            { name: 'weird.sock', isFile: () => false, isDirectory: () => false },
+        ]);
+        statMock.mockImplementation(async (p: string) => ({
+            mtimeMs: p.endsWith('weird.sock') ? 5000 : 100,
+        }));
+
+        expect(await newestMtimeUnder('/src')).toBe(100);
+    });
+
+    it('keeps walking when one file cannot be stat-ed', async () => {
+        readdirMock.mockResolvedValue([
+            { name: 'gone.ts', isFile: () => true, isDirectory: () => false },
+            { name: 'b.ts', isFile: () => true, isDirectory: () => false },
+        ]);
+        statMock.mockImplementation(async (p: string) => {
+            if (p.endsWith('gone.ts')) throw new Error('ENOENT');
+            return { mtimeMs: 700 };
+        });
+
+        expect(await newestMtimeUnder('/src')).toBe(700);
     });
 
     it('returns undefined for a directory it cannot read', async () => {
