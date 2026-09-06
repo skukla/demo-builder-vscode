@@ -70,6 +70,9 @@ describe('DatapackDetailPanel', () => {
         const dialog = screen.getByRole('dialog', { hidden: true });
         expect(dialog).toBeInTheDocument();
         expect(dialog).not.toHaveClass('open');
+        // Nothing selected and no detail: the drawer still needs a name, and the
+        // fallback is what it gets.
+        expect(dialog).toHaveAttribute('aria-label', 'Datapack details');
     });
 
     it('opens when a datapack is selected', () => {
@@ -144,6 +147,66 @@ describe('DatapackDetailPanel', () => {
 
             expect(screen.queryByText('Description')).not.toBeInTheDocument();
         });
+
+        // The count on the Data row counts what the service HOLDS. The pack here
+        // declares three types and the service stores two, so a count of three
+        // would be the same lie the flyout exists to avoid.
+        it('counts the stored types, not the declared ones', () => {
+            renderPanel();
+
+            expect(screen.getByText('Data (2)')).toBeInTheDocument();
+            expect(screen.queryByText('Data (3)')).not.toBeInTheDocument();
+        });
+
+        it('says whether the pack is shared or community', () => {
+            renderPanel();
+
+            expect(screen.getByText('Shared')).toBeInTheDocument();
+        });
+
+        it('calls an unshared pack Community', () => {
+            renderPanel({ detail: makeDetail({ shared: false }) });
+
+            expect(screen.getByText('Community')).toBeInTheDocument();
+            expect(screen.queryByText('Shared')).not.toBeInTheDocument();
+        });
+
+        // These cross the webview boundary as ISO strings, and a raw one on screen
+        // is both unreadable and a UTC date that is wrong by a day for anyone west
+        // of Greenwich in the evening.
+        it('shows the update date formatted, never the raw ISO string', () => {
+            renderPanel();
+
+            const formatted = new Date('2026-08-06T18:12:13.115Z').toLocaleDateString();
+            expect(screen.getByText(formatted)).toBeInTheDocument();
+            expect(screen.queryByText('2026-08-06T18:12:13.115Z')).not.toBeInTheDocument();
+        });
+
+        it('shows an unparseable timestamp as it arrived rather than as Invalid Date', () => {
+            renderPanel({ detail: makeDetail({ updatedAt: 'whenever' }) });
+
+            expect(screen.getByText('whenever')).toBeInTheDocument();
+        });
+
+        it('omits the update row when the pack carries no timestamp', () => {
+            renderPanel({ detail: makeDetail({ updatedAt: undefined }) });
+
+            expect(screen.queryByText('Updated')).not.toBeInTheDocument();
+        });
+
+        /**
+         * The inventory is a SECOND request paired with the detail, so the detail
+         * can land first. Everything the rows read off it has to survive that gap:
+         * the declared types stand in for the stored ones, and nothing is reported
+         * missing until something has actually looked.
+         */
+        it('falls back to the declared types when no inventory has arrived', () => {
+            renderPanel({ inventory: null });
+
+            expect(screen.getByText('Data (3)')).toBeInTheDocument();
+            expect(screen.getByText('Giftcards')).toBeInTheDocument();
+            expect(screen.queryByTestId('datapack-detail-missing')).not.toBeInTheDocument();
+        });
     });
 
     /**
@@ -173,6 +236,14 @@ describe('DatapackDetailPanel', () => {
                     requestedCount: 1,
                 },
             });
+
+            expect(screen.queryByRole('button', { name: /import/i })).not.toBeInTheDocument();
+        });
+
+        // Declared is not stored. Until the inventory lands nothing is KNOWN to be
+        // there, and offering Import would start a job with an empty type list.
+        it('withholds Import until the inventory says what is stored', () => {
+            renderPanel({ inventory: null });
 
             expect(screen.queryByRole('button', { name: /import/i })).not.toBeInTheDocument();
         });
@@ -246,6 +317,20 @@ describe('DatapackDetailPanel', () => {
             renderPanel({ detail: null, inventory: null, loading: true });
 
             expect(screen.getByText(/loading/i)).toBeInTheDocument();
+        });
+
+        /**
+         * Same stale-data window as the withheld Import button, read from the body
+         * side. `useVSCodeRequest.execute` leaves the previous pack's `data` in
+         * place, so a panel loading its second pack still has the FIRST pack's
+         * detail on its props — and showing those rows would attribute one pack's
+         * contents to another.
+         */
+        it('shows the spinner over a stale detail, not the stale rows', () => {
+            renderPanel({ loading: true });
+
+            expect(screen.getByText(/loading/i)).toBeInTheDocument();
+            expect(screen.queryByText('Version')).not.toBeInTheDocument();
         });
 
         it('shows the failure treatment with a retry', () => {

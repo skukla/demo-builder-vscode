@@ -93,7 +93,7 @@ export function DatapackDetailPanel({
                     </div>
                     <div className="db-drawer-body">
                         {renderPanelBody({ detail, inventory, loading, failure, onRetry })}
-                        {canImport({ detail, importable, loading, failure }) && detail ? (
+                        {canImport({ importable, loading, failure }) && detail ? (
                             <div className="db-drawer-actions">
                                 <Button variant="accent" onPress={() => onImport(detail.id)}>
                                     Import
@@ -120,15 +120,18 @@ export function DatapackDetailPanel({
  *
  * `importable` stays the third term: what the service HOLDS, never what the
  * pack declares.
+ *
+ * It does NOT check `detail`. The caller pairs it with `&& detail`, which is
+ * what narrows the type for `detail.id`, so a fourth term here would say the
+ * same thing twice and nothing could tell the two apart.
  */
 function canImport(args: {
-    detail: DatapackDetail | null;
     importable: string[];
     loading: boolean;
     failure: DataInstallerFailure | null;
 }): boolean {
-    const { detail, importable, loading, failure } = args;
-    return !loading && !failure && detail !== null && importable.length > 0;
+    const { importable, loading, failure } = args;
+    return !loading && !failure && importable.length > 0;
 }
 
 /** Pick the one body state to show. */
