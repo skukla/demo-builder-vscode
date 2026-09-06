@@ -16934,6 +16934,18 @@
             "decision": "none \u2014 the guard narrows string | undefined to string and is the alternative to a silenced type error",
             "recorded": "2026-09-06",
             "source": "MUT-06 batch, verified by planting the mutation (suite green) and by tsc --noEmit (TS2345)"
+        },
+        {
+            "module": "src/core/shell/resourceLocker.ts",
+            "anchors": [
+                "releaseLock?.();"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the `?.`, which would throw only if `releaseLock` were still undefined when the finally callback runs. It never is: the Promise executor one line above assigns it SYNCHRONOUSLY, before the constructor returns, and the finally can only run after the lock chain has been built from that same constructed promise. The `?.` exists because the variable is declared `(() => void) | undefined` and TypeScript cannot narrow an assignment made inside a callback. Verified by planting the mutation in src: all 17 tests still pass, and no input to executeExclusive can order the callback before the assignment.",
+            "decision": "none \u2014 the `?.` is what the declared type requires. A definite-assignment assertion (`let releaseLock!: () => void`) would delete the mutant, but that is silencing the checker rather than proving anything.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08, resourceLocker focus run 2026-09-06"
         }
     ]
 }
