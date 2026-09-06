@@ -8,9 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/hooks/useRowStatusOverrides.ts",
-        "src/core/ui/utils/spectrumTokens.ts",
-        "src/core/ui/utils/stepCompletion.ts"
+        "src/core/utils/githubUrlParser.ts",
+        "src/core/utils/timeoutConfig.ts",
+        "src/core/ui/components/layout/PageHeader.tsx",
+        "src/core/ui/components/ui/StatusDot.tsx",
+        "src/features/app-builder/services/allowedDomain.ts"
     ],
     "reporters": [
         "clear-text",
