@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-06. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/features/eds/services/github/githubOAuthService.ts  (19 open gaps)
-  - src/features/eds/services/pdp/pdp404HandlerPublisher.ts  (19 open gaps)
-  - src/features/eds/services/runtimeSurfaceResolver.ts  (19 open gaps)
-  - src/features/ai/server/agentTraceSink.ts  (18 open gaps)
-  - src/features/ai/server/componentRequirementsTool.ts  (18 open gaps)
+  - src/core/shell/commandSequencer.ts  (14 open gaps)
+  - src/features/ai/server/deleteProjectTool.ts  (14 open gaps)
+  - src/features/components/services/stackComponentCollector.ts  (14 open gaps)
+  - src/core/ui/components/forms/InlineRenameField.tsx  (14 open gaps)
+  - src/features/data-installer/ui/components/DatapackCard.tsx  (14 open gaps)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;
