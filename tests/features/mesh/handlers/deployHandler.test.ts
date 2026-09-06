@@ -31,6 +31,7 @@ import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake'
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockExtensionContext } from '../../../helpers/extensionContextFake';
 import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockSecretStorage } from '../../../helpers/secretStorageFake';
 
 /**
  * ADR-015 (2026-08-28): the handler resolves the auth manager and executor at
@@ -93,6 +94,30 @@ describe('handleDeployApiMesh', () => {
         const result = await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
         expect(result.success).toBe(false);
         expect(result.error).toContain('boom');
+    });
+
+    it('still says something when the core fails with neither an error nor a block', async () => {
+        // The blocked branch and the plain-failure branch return the SAME shape,
+        // so every failure with an `error` set reads identically through either.
+        // A bare `{ success: false }` is the only input that tells them apart.
+        mockDeployMeshHeadless.mockResolvedValue({ success: false });
+
+        const result = await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
+
+        expect(result).toEqual({ success: false, error: 'Mesh deployment failed' });
+    });
+
+    it('hands the registered SecretStorage to the core, not undefined', async () => {
+        // Asserted on the ARGUMENT: the handler resolves secrets at the boundary
+        // and the core is mocked, so a call that drops the storage returns the
+        // same result as one that passes it.
+        const { secrets } = createMockSecretStorage();
+        ServiceLocator.setSecretStorage(secrets);
+        mockDeployMeshHeadless.mockResolvedValue({ success: true });
+
+        await handleDeployApiMesh(ctx({ name: 'p', path: '/p' }));
+
+        expect(mockDeployMeshHeadless.mock.calls[0][0].secrets).toBe(secrets);
     });
 });
 
