@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "ResetAllCommand: 23 mutants killed by a new cleanup suite covering the modal confirmation and the cancel path, stopDemo ordering, panel disposal, workspace-folder removal order, the three pieces of state that outlive the directory, and the outer failure report; 9 log-only bodies recorded as equivalent",
+    "_note": "Modal: every behavioural mutant killed — size mapping made visible by surfacing Dialog's size in the Spectrum mock, plus the keyboard handler, disabled-button behaviour, memo dependency lists and the exact override classes",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -1902,25 +1902,18 @@
             "openGaps": 16
         },
         "src/core/ui/components/ui/Modal.tsx": {
-            "score": 32.81,
-            "killed": 21,
-            "survived": 26,
-            "noCoverage": 17,
+            "score": 96.88,
+            "killed": 62,
+            "survived": 2,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 3,
-                "branch": 16,
-                "string": 7
+                "string": 2
             },
-            "uncoveredCategories": {
-                "block": 3,
-                "string": 4,
-                "branch": 9,
-                "other": 1
-            },
-            "highValueSurvivors": 16,
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 32
+            "openGaps": 0
         },
         "src/core/ui/components/ui/Spinner.tsx": {
             "score": 50,

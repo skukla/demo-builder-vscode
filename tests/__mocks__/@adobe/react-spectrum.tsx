@@ -557,13 +557,19 @@ export const DialogTrigger: React.FC<any> = ({
 };
 
 // Dialog mock
-export const Dialog: React.FC<any> = ({ children, UNSAFE_className, ...props }) => (
+export const Dialog: React.FC<any> = ({ children, UNSAFE_className, size, ...props }) => (
     // UNSAFE_className -> className, as the View mock does: Modal's `fitContent`
     // rides on it, so a test cannot see the behaviour otherwise.
+    //
+    // `size` is surfaced as data-size for the same reason. Modal maps its own
+    // `fullscreen`/`fullscreenTakeover` down to Spectrum's `L`, and dropping the
+    // prop here left that mapping invisible to every test — seven mutations of
+    // it survived with the whole suite green (2026-09-06).
     <div
         data-testid="spectrum-dialog"
         role="dialog"
         className={UNSAFE_className}
+        data-size={size}
         {...filterSpectrumProps(props)}
     >
         {children}

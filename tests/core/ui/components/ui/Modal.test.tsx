@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
@@ -268,6 +268,174 @@ describe('Modal', () => {
             renderWithProvider(<Modal {...defaultProps} fitContent />);
 
             expect(screen.getByRole('dialog')).toHaveClass('modal-fit-content');
+        });
+    });
+    // Spectrum's Dialog has no `fullscreen` size — Modal's own vocabulary maps
+    // both of its fullscreen names down to the widest one Spectrum has.
+    describe('size mapping', () => {
+        it('passes a Spectrum size straight through, defaulting to M', () => {
+            renderWithProvider(<Modal {...defaultProps} />);
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'M');
+        });
+
+        it.each(['S', 'M', 'L'] as const)('passes %s through unchanged', (size) => {
+            renderWithProvider(<Modal {...defaultProps} size={size} />);
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', size);
+        });
+
+        it.each(['fullscreen', 'fullscreenTakeover'] as const)('maps %s to L', (size) => {
+            renderWithProvider(<Modal {...defaultProps} size={size} />);
+            expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'L');
+        });
+    });
+
+    // The two opt-ins ride on UNSAFE_className, so what lands on the dialog IS
+    // the behaviour — including the absence of a class when neither is asked for.
+    describe('the size overrides', () => {
+        it('gives the dialog no class at all when neither is opted into', () => {
+            renderWithProvider(<Modal {...defaultProps} />);
+
+            expect(screen.getByRole('dialog')).not.toHaveAttribute('class');
+        });
+
+        it('marks the dialog wide when only wide is opted into', () => {
+            renderWithProvider(<Modal {...defaultProps} wide />);
+
+            expect(screen.getByRole('dialog')).toHaveAttribute('class', 'modal-wide');
+        });
+
+        it('carries both, in order, when both are opted into', () => {
+            renderWithProvider(<Modal {...defaultProps} fitContent wide />);
+
+            expect(screen.getByRole('dialog')).toHaveAttribute(
+                'class',
+                'modal-fit-content modal-wide',
+            );
+        });
+    });
+
+    // The buttons are divs with role="button", so the keyboard behaviour a real
+    // <button> gives for free has to be written — and therefore tested.
+    describe('keyboard activation', () => {
+        function renderWithAction(onPress: jest.Mock, isDisabled = false) {
+            const actionButtons: ActionButton[] = [
+                { label: 'Confirm', variant: 'primary', onPress, isDisabled },
+            ];
+            renderWithProvider(<Modal {...defaultProps} actionButtons={actionButtons} />);
+            return screen.getByRole('button', { name: 'Confirm' });
+        }
+
+        it('activates on Enter', () => {
+            const onPress = jest.fn();
+
+            fireEvent.keyDown(renderWithAction(onPress), { key: 'Enter' });
+
+            expect(onPress).toHaveBeenCalledTimes(1);
+        });
+
+        it('activates on Space', () => {
+            const onPress = jest.fn();
+
+            fireEvent.keyDown(renderWithAction(onPress), { key: ' ' });
+
+            expect(onPress).toHaveBeenCalledTimes(1);
+        });
+
+        // Typing inside the modal must not fire its buttons.
+        it('ignores every other key', () => {
+            const onPress = jest.fn();
+            const button = renderWithAction(onPress);
+
+            fireEvent.keyDown(button, { key: 'a' });
+            fireEvent.keyDown(button, { key: 'Escape' });
+            fireEvent.keyDown(button, { key: 'Tab' });
+
+            expect(onPress).not.toHaveBeenCalled();
+        });
+
+        it('does nothing on Enter when the button is disabled', () => {
+            const onPress = jest.fn();
+
+            fireEvent.keyDown(renderWithAction(onPress, true), { key: 'Enter' });
+
+            expect(onPress).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('a disabled action button', () => {
+        function disabledButton(onPress: jest.Mock) {
+            const actionButtons: ActionButton[] = [
+                { label: 'Confirm', variant: 'primary', onPress, isDisabled: true },
+            ];
+            renderWithProvider(<Modal {...defaultProps} actionButtons={actionButtons} />);
+            return screen.getByRole('button', { name: 'Confirm' });
+        }
+
+        it('does not fire when clicked', () => {
+            const onPress = jest.fn();
+
+            fireEvent.click(disabledButton(onPress));
+
+            expect(onPress).not.toHaveBeenCalled();
+        });
+
+        // A div with role="button" is not skipped by the browser's tab order on
+        // its own — the negative tabIndex is what does it.
+        it('is out of the tab order, marked disabled, and styled disabled', () => {
+            const button = disabledButton(jest.fn());
+
+            expect(button).toHaveAttribute('tabindex', '-1');
+            expect(button).toHaveAttribute('aria-disabled', 'true');
+            expect(button).toHaveClass('modal-button-disabled');
+        });
+
+        it('an enabled button keeps its tab stop and the disabled styling off', () => {
+            const actionButtons: ActionButton[] = [
+                { label: 'Confirm', variant: 'primary', onPress: jest.fn() },
+            ];
+            renderWithProvider(<Modal {...defaultProps} actionButtons={actionButtons} />);
+
+            const button = screen.getByRole('button', { name: 'Confirm' });
+            expect(button).toHaveAttribute('tabindex', '0');
+            expect(button).not.toHaveClass('modal-button-disabled');
+        });
+    });
+
+    // The handlers are memoised. A memo whose dependency list forgets the
+    // handler keeps calling the one it closed over on the first render.
+    describe('after a re-render with a new handler', () => {
+        function renderTwice() {
+            const first = jest.fn();
+            const second = jest.fn();
+            const withPress = (onPress: jest.Mock) => (
+                <Provider theme={defaultTheme}>
+                    <Modal
+                        {...defaultProps}
+                        actionButtons={[{ label: 'Go', variant: 'primary', onPress }]}
+                    />
+                </Provider>
+            );
+            const { rerender } = render(withPress(first));
+            rerender(withPress(second));
+            return { first, second, button: screen.getByRole('button', { name: 'Go' }) };
+        }
+
+        it('clicks the new handler, not the old one', () => {
+            const { first, second, button } = renderTwice();
+
+            fireEvent.click(button);
+
+            expect(second).toHaveBeenCalledTimes(1);
+            expect(first).not.toHaveBeenCalled();
+        });
+
+        it('sends Enter to the new handler, not the old one', () => {
+            const { first, second, button } = renderTwice();
+
+            fireEvent.keyDown(button, { key: 'Enter' });
+
+            expect(second).toHaveBeenCalledTimes(1);
+            expect(first).not.toHaveBeenCalled();
         });
     });
 });
