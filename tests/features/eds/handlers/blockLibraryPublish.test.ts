@@ -76,6 +76,22 @@ describe('publishLibraryPaths', () => {
         );
     });
 
+    /**
+     * Pages go out in batches of five because the admin API is rate-sensitive —
+     * so a run longer than one batch must still publish each path EXACTLY once.
+     * Dropping the slice republishes the whole list per batch, which reads as a
+     * clean run and quietly doubles the call volume the batching exists to cap.
+     */
+    it('publishes each path once across several batches, not once per batch', async () => {
+        const helix = makeHelix();
+        const paths = Array.from({ length: 7 }, (_, i) => `/.da/library/blocks/b${i}`);
+
+        const result = await publishLibraryPaths(helix, 'owner', 'repo', paths, logger);
+
+        expect(helix.previewAndPublishPage).toHaveBeenCalledTimes(7);
+        expect(result).toStrictEqual({ published: 7, failed: 0 });
+    });
+
     it('one failing page does not abandon the rest', async () => {
         // A single missing doc page must not cost the other 77 blocks their
         // preview — the palette degrades block by block.
@@ -104,9 +120,24 @@ describe('publishLibraryPaths', () => {
     it('does not call the admin API at all for an empty list', async () => {
         const helix = makeHelix();
 
-        await publishLibraryPaths(helix, 'owner', 'repo', [], logger);
+        const result = await publishLibraryPaths(helix, 'owner', 'repo', [], logger);
 
         expect(helix.previewAndPublishPage).not.toHaveBeenCalled();
+        // Zero of zero, not an empty object: the caller reports these counts.
+        expect(result).toStrictEqual({ published: 0, failed: 0 });
+        // And it returns before it says anything. A project with no block
+        // library should leave no trace of a publish in the log at all.
+        expect(logger.debug).not.toHaveBeenCalled();
+    });
+
+    // A clean run says nothing. The failure warning is the signal, and a warning
+    // on every run is the same as no warning at all.
+    it('warns about nothing when every path published', async () => {
+        const helix = makeHelix();
+
+        await publishLibraryPaths(helix, 'owner', 'repo', ['/a', '/b'], logger);
+
+        expect(logger.warn).not.toHaveBeenCalled();
     });
 });
 
@@ -155,6 +186,53 @@ describe('verifyLibraryPreviewed', () => {
 
         await expect(verifyLibraryPreviewed('o', 'r', logger)).resolves.toBe(false);
         expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('not previewed'));
+    });
+
+    /**
+     * When the CDN says the sheet is missing, Helix knows WHY — and the reason
+     * belongs in the log the user pastes rather than in a session nobody kept.
+     * The status call is the whole point of handing this a helix service.
+     */
+    it('asks Helix why, for the same path the CDN could not serve', async () => {
+        fetchMock.mockResolvedValue({ ok: false, status: 404 });
+        const getResourceStatus = jest.fn().mockResolvedValue({
+            httpStatus: 404,
+            previewStatus: 404,
+            liveStatus: 404,
+            error: 'not found',
+        });
+
+        await verifyLibraryPreviewed('o', 'r', logger, {
+            previewAndPublishPage: jest.fn(),
+            getResourceStatus,
+        });
+
+        expect(getResourceStatus).toHaveBeenCalledWith('o', 'r', '/.da/library/blocks.json');
+    });
+
+    it('does not ask Helix anything when the sheet IS previewed', async () => {
+        fetchMock.mockResolvedValue({ ok: true, status: 200 });
+        const getResourceStatus = jest.fn();
+
+        await verifyLibraryPreviewed('o', 'r', logger, {
+            previewAndPublishPage: jest.fn(),
+            getResourceStatus,
+        });
+
+        expect(getResourceStatus).not.toHaveBeenCalled();
+    });
+
+    /**
+     * A headless caller hands in no helix service at all. Skipping the admin
+     * lookup must be a skip — not an exception that lands in the outer catch and
+     * reports the check itself as broken.
+     */
+    it('skips the admin lookup, quietly, when no helix service was handed in', async () => {
+        fetchMock.mockResolvedValue({ ok: false, status: 404 });
+
+        await expect(verifyLibraryPreviewed('o', 'r', logger)).resolves.toBe(false);
+        // Exactly one warning: "not previewed". A second one means the skip threw.
+        expect(logger.warn).toHaveBeenCalledTimes(1);
     });
 
     it('reports unverified rather than throwing when the CDN is unreachable', async () => {
