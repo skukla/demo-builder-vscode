@@ -13307,6 +13307,82 @@
             "decision": "none \u2014 the ?. is required by the type and correct as written",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/ConfigureScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 132,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useEffect/useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The subscription and the two handlers close over nothing, so identity is the only thing the array can affect and it does not move. Verified by planting all three at once: the sixteen configure suites pass unchanged.",
+            "decision": "none \u2014 [] is the correct dependency list",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/ConfigureScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 152,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useEffect/useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The subscription and the two handlers close over nothing, so identity is the only thing the array can affect and it does not move. Verified by planting all three at once: the sixteen configure suites pass unchanged.",
+            "decision": "none \u2014 [] is the correct dependency list",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/ConfigureScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 278,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useEffect/useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The subscription and the two handlers close over nothing, so identity is the only thing the array can affect and it does not move. Verified by planting all three at once: the sixteen configure suites pass unchanged.",
+            "decision": "none \u2014 [] is the correct dependency list",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/ConfigureScreen.tsx",
+            "anchors": [
+                "const EMPTY_CATALOG: AppBuilderComponentCatalogEntry[] = [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The default catalog reaches two places and neither can see a junk entry. buildAppBuilderComponentFieldGroups reads entry.envSchema, defaults it to [], finds no user or connected fields and skips the entry \u2014 so no section is built either way. ConfigureSectionBody filters the same list by entry.id against a real component id, which a placeholder string never matches. Verified by planting a one-element array: the rail is identical.",
+            "decision": "none \u2014 a shared empty default is what keeps the prop reference stable across renders",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/ConfigureScreen.tsx",
+            "anchors": [
+                "existingProjectNames = [],"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The list is only ever compared against normalizeProjectName(projectName) \u2014 a lowercase, hyphenated slug. A placeholder string carrying spaces and capitals cannot equal one, so a project can never collide with it and getProjectNameError returns the same answer for both defaults. Verified by planting.",
+            "decision": "none \u2014 the empty default is the correct 'no other projects known' value",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/ConfigureScreen.tsx",
+            "anchors": [
+                "if (!result.success) {",
+                "throw new Error(result.error || 'Failed to save configuration');"
+            ],
+            "mutants": 7,
+            "category": "branch",
+            "reason": "The throw is the last statement in the try, and the catch immediately below it does nothing. So throwing, not throwing, and throwing a different message all end in the same finally with the same state: isSaving false and nothing rendered about the failure. Verified by planting the INVERSE (throw when the save succeeded) \u2014 all sixteen configure suites still pass, which is the strongest form of the claim: no test can distinguish the branch because the component's own behaviour does not.",
+            "decision": "OPEN \u2014 a failed save is invisible on this surface, and the message built here reaches nobody. Either surface it in the footer or drop the check; do not paper over it with a test.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

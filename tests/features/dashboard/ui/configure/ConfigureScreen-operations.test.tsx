@@ -1,11 +1,12 @@
 import './ConfigureScreen.mocks';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ConfigureScreen } from '@/features/dashboard/ui/configure/ConfigureScreen';
 import '@testing-library/jest-dom';
 import { mockProject, mockComponentsData, selectSection } from './ConfigureScreen.testUtils';
+import { webviewClientHandlers } from '../../../../helpers/webviewClientMock';
 
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
     useSelectableDefault: jest.fn(() => ({})),
@@ -217,6 +218,56 @@ describe('ConfigureScreen - Operations', () => {
             await waitFor(() => {
                 expect(screen.getByText('Save Changes')).toBeInTheDocument();
             });
+        });
+    });
+
+    /**
+     * The extension pushes `deployment-status` while a mesh or storefront deploy
+     * is running, and Configure has to hold BOTH buttons until it clears — a save
+     * landing mid-deploy is what the push exists to prevent.
+     */
+    describe('Deployment status', () => {
+        function pushDeploying(isDeploying: boolean): void {
+            act(() => {
+                webviewClientHandlers.get('deployment-status')?.({ isDeploying });
+            });
+        }
+
+        it('renames Save to Deploying and disables it', () => {
+            renderWithProvider(
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
+            );
+
+            pushDeploying(true);
+
+            const button = screen.getByText('Deploying...').closest('button');
+            expect(button).toBeDisabled();
+        });
+
+        // Close too: leaving the panel mid-deploy is the other way to lose the
+        // operation. Saving is NOT in flight here, so a rule needing both would
+        // leave this button live.
+        it('disables Close while a deploy is running', () => {
+            renderWithProvider(
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
+            );
+            expect(screen.getByText('Close').closest('button')).not.toBeDisabled();
+
+            pushDeploying(true);
+
+            expect(screen.getByText('Close').closest('button')).toBeDisabled();
+        });
+
+        it('hands both back when the deploy finishes', () => {
+            renderWithProvider(
+                <ConfigureScreen project={mockProject} componentsData={mockComponentsData} />
+            );
+            pushDeploying(true);
+
+            pushDeploying(false);
+
+            expect(screen.getByText('Save Changes')).toBeInTheDocument();
+            expect(screen.getByText('Close').closest('button')).not.toBeDisabled();
         });
     });
 
