@@ -41,7 +41,9 @@ jest.mock('@/core/build/buildInfo', () => ({
     newestMtimeUnder: jest.fn(async () => 0),
 }));
 
+import * as path from 'path';
 import * as vscode from 'vscode';
+import { isDistStale, newestMtimeUnder } from '@/core/build/buildInfo';
 import { registerBuildStamp } from '@/core/build/buildStampUi';
 import { createMockLogger } from '../../helpers/loggerFake';
 import { createMockExtensionContext } from '../../helpers/extensionContextFake';
@@ -111,6 +113,47 @@ describe('registerBuildStamp', () => {
             expect.any(Function)
         );
         expect(mockStatusBarItem.command).toBe('demoBuilder.showBuildInfo');
+    });
+
+    describe('the detail command behind the badge', () => {
+        /** Register, then run the callback vscode was handed. */
+        async function clickTheBadge(): Promise<void> {
+            await registerBuildStamp(ctx(2), logger);
+            const [, handler] = (vscode.commands.registerCommand as jest.Mock).mock.calls[0];
+            await handler();
+        }
+
+        it('walks src/ under the CHECKOUT it stamped, not the running directory', async () => {
+            // The point of the whole file is telling several checkouts apart, so
+            // reading the mtimes of whichever one happens to be cwd would answer
+            // about the wrong tree.
+            await clickTheBadge();
+
+            expect(newestMtimeUnder).toHaveBeenCalledWith(path.join('/checkout/main', 'src'));
+        });
+
+        it('reports the checkout in a MODAL, which is what makes it readable', async () => {
+            await clickTheBadge();
+
+            expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
+                'Demo Builder build',
+                { modal: true, detail: expect.stringContaining('/checkout/main') }
+            );
+        });
+
+        it('says dist/ is behind when it is, and up to date when it is not', async () => {
+            await clickTheBadge();
+            const fresh = (vscode.window.showInformationMessage as jest.Mock).mock.calls[0][1]
+                .detail as string;
+
+            (isDistStale as jest.Mock).mockReturnValueOnce(true);
+            await clickTheBadge();
+            const stale = (vscode.window.showInformationMessage as jest.Mock).mock.calls[1][1]
+                .detail as string;
+
+            expect(stale).not.toBe(fresh);
+            expect(stale).toEqual(expect.stringMatching(/behind/i));
+        });
     });
 
     it('disposes the status item with the extension', async () => {
