@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL-22 MUT-03: webviewCommunicationManager — reply/acknowledge rules, dispose, retry loop edges and config budgets; two dead handshake flags removed; 26 equivalents ledgered",
+    "_note": "processCleanup: new decisions suite (26 tests) + 10 equivalent-mutant ledger rows",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -870,26 +870,25 @@
             "openGaps": 5
         },
         "src/core/shell/processCleanup.ts": {
-            "score": 50,
-            "killed": 47,
-            "survived": 62,
-            "noCoverage": 19,
-            "timeout": 34,
+            "score": 81.48,
+            "killed": 93,
+            "survived": 25,
+            "noCoverage": 5,
+            "timeout": 39,
             "survivorCategories": {
-                "logPresentation": 7,
-                "branch": 39,
-                "string": 7,
-                "block": 9
+                "logPresentation": 13,
+                "string": 2,
+                "branch": 9,
+                "block": 1
             },
             "uncoveredCategories": {
-                "block": 7,
-                "branch": 4,
-                "logPresentation": 4,
-                "string": 4
+                "block": 3,
+                "branch": 1,
+                "logPresentation": 1
             },
-            "highValueSurvivors": 48,
-            "equivalent": 0,
-            "openGaps": 59
+            "highValueSurvivors": 10,
+            "equivalent": 14,
+            "openGaps": 0
         },
         "src/core/shell/rateLimiter.ts": {
             "score": 76.92,

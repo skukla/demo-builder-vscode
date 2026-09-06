@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/communication/webviewCommunicationManager.ts"
+        "src/core/shell/processCleanup.ts"
     ],
     "reporters": [
         "clear-text",

@@ -12405,6 +12405,136 @@
             "decision": "none \u2014 the empty-looking catch IS the behaviour; the warning inside it is narration",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-03, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/processCleanup.ts",
+            "anchors": [
+                "if (resolved) { return; }"
+            ],
+            "line": 183,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both survivors (the condition forced false, and the guarded return deleted) let finish() run its body a second time, and every statement in that body is idempotent: clearInterval and clearTimeout on an already-cleared handle do nothing, and a second resolve() on a settled promise is a no-op. The guard also cannot be re-entered in practice, because the first call clears the polling interval that is the only repeating caller, so no test can arrange a second entry whose effect differs.",
+            "decision": "none \u2014 the guard states single-settlement; nothing downstream can observe it being enforced",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/processCleanup.ts",
+            "anchors": [
+                "resolved = true;"
+            ],
+            "line": 184,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Setting the latch to false instead of true makes every later finish() fall through its guard, which is the same state as having no guard at all \u2014 and that costs nothing observable, because the body only clears two timer handles that are already cleared and calls resolve() on a promise that has already settled. The interval that is the sole repeating caller is stopped by the first pass, so there is no second pass to distinguish.",
+            "decision": "none \u2014 the latch and the guard it feeds are one site, and the site has no observable effect to assert",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/processCleanup.ts",
+            "anchors": [
+                "if (pollInterval) { clearInterval(pollInterval); }"
+            ],
+            "line": 185,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The surviving mutant forces the guard true, so clearInterval runs with pollInterval still undefined on the one path that reaches finish() before any interval is started \u2014 tree-kill answering ESRCH in its own callback. Node's clearInterval(undefined) is a defined no-op, so the mutant adds one call that changes no timer, no signal sent to any pid, and no promise state.",
+            "decision": "none \u2014 the guard narrows the optional handle for the reader; it is not a decision the process can feel",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/processCleanup.ts",
+            "anchors": [
+                "if (forceKillTimeout) { clearTimeout(forceKillTimeout); }"
+            ],
+            "line": 186,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Only the forced-true mutant survives here; forcing it false is killed by the test that proves a graceful exit cancels the force-kill deadline. Forced true, clearTimeout runs with forceKillTimeout still undefined on the path that finishes before the deadline is scheduled, and clearTimeout(undefined) is a defined no-op in Node \u2014 no timer is cancelled that was not already absent, and nothing else in the call changes.",
+            "decision": "none \u2014 the guard narrows the optional handle; the extra no-op call has no observable consequence",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/processCleanup.ts",
+            "anchors": [
+                "if (pollInterval) {"
+            ],
+            "line": 257,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard false, and emptying its block, are both killed by the test that lets the process die mid-poll and then proves no further existence probes are made. What survives is the forced-true mutant, which calls clearInterval(undefined) and assigns undefined over undefined on the paths where cleanup() runs before any interval exists \u2014 the initial-signal failure and the immediate-exit shortcut. Neither call changes a timer or a value anything reads.",
+            "decision": "none \u2014 the guard is a type narrowing over an optional handle, not a branch the process can feel",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/processCleanup.ts",
+            "anchors": [
+                "if (forceKillTimeout) {"
+            ],
+            "line": 261,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "As with its sibling guard over the polling handle, only the forced-true mutant survives: forcing it false is killed by the test that advances twenty seconds past a graceful exit and finds no SIGKILL. Forced true, clearTimeout(undefined) runs on the paths where cleanup() happens before any deadline was scheduled, which Node defines as a no-op, so no timer is cancelled and no signal is sent that would not have been.",
+            "decision": "none \u2014 the guard narrows the optional handle; the extra no-op call cannot be observed",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/processCleanup.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 154,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch arm can only be observed by making require.resolve('tree-kill') throw, and no test can arrange that. tree-kill is a real installed dependency, and jest resolves it through its own resolver rather than Node's, so neither a module-factory mock nor a Module._resolveFilename spy makes the resolution fail \u2014 the mock replaces what is returned, not whether it resolves. The behaviour BEHIND a false answer is covered: every fallback test spies isTreeKillAvailable to false and drives killWithTimeout for real.",
+            "decision": "none \u2014 the fallback path it selects is fully tested; only the resolution failure that would select it is unreachable from a test",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/processCleanup.ts",
+            "anchors": [
+                "return false;"
+            ],
+            "line": 155,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Flipping this to return true is only reachable when require.resolve('tree-kill') throws, and jest's resolver always resolves the package: it is a real dependency of this repo and the suites mock what it RETURNS, not whether it can be found. So no test can enter this arm to observe the flip. The consequence of a true answer \u2014 taking the tree-kill path \u2014 is covered directly by every test that asserts tree-kill received the pid and signal.",
+            "decision": "none \u2014 both answers this probe can give are tested; the failure that produces the false answer cannot be simulated under jest",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/processCleanup.ts",
+            "anchors": [
+                "} catch (killError: unknown) {"
+            ],
+            "line": 225,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch body leaves the catch itself in place, so a force-kill that throws is still swallowed and the poll still continues to resolution \u2014 which is the documented behaviour, since SIGKILL is not ignorable and the process will go either way. The only statement inside the body is a guarded logger.error, so the sole difference the mutant makes is whether a line prints, and pinning that would mean asserting a logger call's arguments.",
+            "decision": "none \u2014 swallowing the force-kill error IS the behaviour; the warning inside it is narration",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/processCleanup.ts",
+            "anchors": [
+                "if (getErrorCode(killError) !== 'ESRCH') {"
+            ],
+            "line": 226,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "Every behavioural mutant on this guard \u2014 the condition forced either way, the equality inverted, and the block emptied \u2014 changes only whether an error line is written. Both arms return to the same place: the catch swallows the failure and the polling interval continues until the process is observed gone, so no signal is sent or withheld, no promise settles differently, and no state changes. Distinguishing the arms would require asserting the logger's arguments, which pins wording rather than behaviour.",
+            "decision": "none \u2014 the guard chooses a log line, not an action; the surrounding swallow-and-keep-polling is tested directly",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
         }
     ]
 }
