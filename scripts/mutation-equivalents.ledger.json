@@ -14523,6 +14523,19 @@
             "decision": "none \u2014 the swallow-everything catch is deliberate (an already-disposed panel is a normal outcome), so no assertion can distinguish the two paths without changing that behaviour",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/dashboard/handlers/eventingHandlers.ts",
+            "anchors": [
+                "const display = payload?.label || id;"
+            ],
+            "line": 91,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the `?.`, which would throw only if `payload` were undefined at this line. It cannot be: `kind` and `id` are read off `payload` six lines earlier and the handler returns 'kind (provider|registration) and id are required' unless kind is 'provider' or 'registration' and id is truthy, both of which require a payload object. Planted the mutation and ran the suite (2026-09-06): 18 tests, all green, no throw. The `?.` is required by the handler's optional-payload type, not by any reachable state.",
+            "decision": "none \u2014 the guard is compiler-mandated and correct as written",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

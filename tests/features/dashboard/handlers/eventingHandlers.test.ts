@@ -44,6 +44,8 @@ import { createMockHandlerContext } from '../../../helpers/handlerContextTestHel
 
 const ADOBE = { organization: 'org-1', projectId: 'proj-1', workspace: 'ws-1' };
 
+const NO_CONTEXT = 'This project has no Adobe Console context yet.';
+
 function makeContext(adobe: unknown = ADOBE): HandlerContext {
     return createMockHandlerContext({
         stateManager: createMockStateManager({
@@ -52,13 +54,30 @@ function makeContext(adobe: unknown = ADOBE): HandlerContext {
     });
 }
 
+/** No project at all — `getCurrentProject` answers undefined. */
+function makeProjectlessContext(): HandlerContext {
+    return createMockHandlerContext({
+        stateManager: createMockStateManager({
+            getCurrentProject: jest.fn().mockResolvedValue(undefined),
+        }),
+    });
+}
+
 describe('handleGetEventEntities', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    it('answers unavailable-as-data when the project has no Console context', async () => {
-        const result = await handleGetEventEntities(makeContext({}), {});
+    it.each([
+        ['no project at all', makeProjectlessContext],
+        ['an empty adobe block', () => makeContext({})],
+        ['a project whose adobe block is absent', () => makeContext(null)],
+        ['organization missing', () => makeContext({ projectId: 'proj-1', workspace: 'ws-1' })],
+        ['projectId missing', () => makeContext({ organization: 'org-1', workspace: 'ws-1' })],
+        ['workspace missing', () => makeContext({ organization: 'org-1', projectId: 'proj-1' })],
+    ])('answers unavailable-as-data with the reason when %s', async (_label, build) => {
+        const result = await handleGetEventEntities(build(), {});
+
         expect(result.success).toBe(true);
-        expect(result.data).toMatchObject({ available: false });
+        expect(result.data).toEqual({ available: false, reason: NO_CONTEXT });
         expect(mockLifecycle.listEventEntities).not.toHaveBeenCalled();
     });
 
@@ -75,6 +94,7 @@ describe('handleGetEventEntities', () => {
             projectId: 'proj-1',
             workspaceId: 'ws-1',
         });
+        expect(result.success).toBe(true);
         expect(result.data).toMatchObject({ available: true, providers: [{ id: 'p1' }] });
     });
 
@@ -84,7 +104,10 @@ describe('handleGetEventEntities', () => {
         const result = await handleGetEventEntities(makeContext(), {});
 
         expect(result.success).toBe(true);
-        expect(result.data).toMatchObject({ available: false });
+        expect(result.data).toEqual({
+            available: false,
+            reason: 'Could not reach Adobe I/O Events — check your Adobe sign-in.',
+        });
     });
 });
 
@@ -100,7 +123,51 @@ describe('handleDeleteEventEntity', () => {
             label: 'ERP',
         });
 
+        expect(result.success).toBe(true);
         expect(result.data).toMatchObject({ deleted: false, cancelled: true });
+        expect(mockLifecycle.deleteEventEntities).not.toHaveBeenCalled();
+    });
+
+    it('the provider confirm names the LABEL and says types can no longer publish', async () => {
+        mockShowWarningMessage.mockResolvedValue(undefined);
+
+        await handleDeleteEventEntity(makeContext(), {
+            kind: 'provider',
+            id: 'p1',
+            label: 'ERP',
+        });
+
+        expect(mockShowWarningMessage).toHaveBeenCalledWith(
+            'Delete event provider "ERP"?',
+            {
+                modal: true,
+                detail: 'Events of its types can no longer be published in this workspace.',
+            },
+            'Delete'
+        );
+    });
+
+    it('the registration confirm falls back to the ID and names delivery stopping', async () => {
+        mockShowWarningMessage.mockResolvedValue(undefined);
+
+        await handleDeleteEventEntity(makeContext(), { kind: 'registration', id: 'r1' });
+
+        expect(mockShowWarningMessage).toHaveBeenCalledWith(
+            'Delete event registration "r1"?',
+            { modal: true, detail: 'Event delivery for this registration stops.' },
+            'Delete'
+        );
+    });
+
+    it('refuses without a Console context, before prompting', async () => {
+        const result = await handleDeleteEventEntity(makeContext({}), {
+            kind: 'provider',
+            id: 'p1',
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe(NO_CONTEXT);
+        expect(mockShowWarningMessage).not.toHaveBeenCalled();
         expect(mockLifecycle.deleteEventEntities).not.toHaveBeenCalled();
     });
 
@@ -120,6 +187,7 @@ describe('handleDeleteEventEntity', () => {
             expect.anything(),
             { registrationIds: [], providerId: 'p1' }
         );
+        expect(result.success).toBe(true);
         expect(result.data).toMatchObject({ deleted: true });
     });
 
@@ -153,9 +221,32 @@ describe('handleDeleteEventEntity', () => {
         expect(result.error).toBe('HTTP 409');
     });
 
+    it('a failure with no message falls back to naming the kind', async () => {
+        mockShowWarningMessage.mockResolvedValue('Delete');
+        mockLifecycle.deleteEventEntities.mockResolvedValue([
+            { kind: 'registration', id: 'r1', outcome: 'failed' },
+        ]);
+
+        const result = await handleDeleteEventEntity(makeContext(), {
+            kind: 'registration',
+            id: 'r1',
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Failed to delete the registration.');
+    });
+
     it('rejects a missing kind or id without prompting', async () => {
         const result = await handleDeleteEventEntity(makeContext(), { id: 'p1' });
         expect(result.success).toBe(false);
+        expect(mockShowWarningMessage).not.toHaveBeenCalled();
+    });
+
+    it('rejects an entirely absent payload without touching the project', async () => {
+        const result = await handleDeleteEventEntity(makeContext(), undefined);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('kind (provider|registration) and id are required');
         expect(mockShowWarningMessage).not.toHaveBeenCalled();
     });
 });
