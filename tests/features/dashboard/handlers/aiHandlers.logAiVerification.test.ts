@@ -13,6 +13,7 @@
 import { logAiVerification } from '@/features/dashboard/handlers/aiHandlers';
 import { createAiHandlerContext } from './aiHandlers.testUtils';
 import type { AiVerificationResult } from '@/features/ai/aiSetupVerifier';
+import { githubTokenShape } from '../../../helpers/credentialShapes';
 
 function resultWithMcpError(error: string): AiVerificationResult {
     return {
@@ -33,7 +34,10 @@ function mcpWarnText(warn: jest.Mock): string {
 
 it('redacts a credential-bearing env in the MCP stderr tail', () => {
     const ctx = createAiHandlerContext();
-    const secret = 'ghp_0123456789abcdef0123456789abcdef';
+    // BUILT, not written: `ghp_` followed by hex is GitHub's real token format and a
+    // scanner matches it whatever the hex spells. The subject must still be handed
+    // something that LOOKS like a token, or the redaction it proves is untested.
+    const secret = githubTokenShape();
     const stderr = [
         'Error: connect ECONNREFUSED /var/folders/ab/xyz/demo-builder-mcp.sock',
         '    at TCPConnectWrap.afterConnect',

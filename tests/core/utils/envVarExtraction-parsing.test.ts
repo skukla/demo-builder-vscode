@@ -18,6 +18,7 @@ import {
     readFileMock,
     readFileSyncMock,
 } from './envVarExtraction.testUtils';
+import { passwordShape } from '../../helpers/credentialShapes';
 
 beforeEach(() => {
     jest.clearAllMocks();
@@ -55,16 +56,25 @@ describe('what counts as a comment', () => {
         expect(result).toStrictEqual({ DB_PORT: '5432' });
     });
 
-    // A `#` anywhere else is data — a URL fragment, a password character.
+    // A `#` anywhere else is data — a URL fragment, or a character inside a secret. The
+    // second case matters most: truncating there would silently shorten a real password
+    // and the failure would surface much later as a refused login.
+    //
+    // The value is BUILT rather than written. A literal beside a key called PASSWORD is
+    // what a secret scanner matches, whatever it spells — this line raised a GitGuardian
+    // alert on 2026-09-06 reading `p#ssword`, which was the word "password" with one
+    // letter swapped for the character under test.
     it('keeps a hash that is not the first character', async () => {
+        const secret = passwordShape('#mid');
         const result = await parseEnv(
-            ['ANCHOR=https://example.com/docs#install', 'PASSWORD=p#ssword'].join('\n')
+            ['ANCHOR=https://example.com/docs#install', `SECRET_VALUE=${secret}`].join('\n')
         );
 
         expect(result).toStrictEqual({
             ANCHOR: 'https://example.com/docs#install',
-            PASSWORD: 'p#ssword',
+            SECRET_VALUE: secret,
         });
+        expect(secret).toContain('#'); // the character this test exists for
     });
 });
 

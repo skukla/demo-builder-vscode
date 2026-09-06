@@ -48,6 +48,62 @@ const JWT_CEILINGS: Record<string, number> = {
 };
 
 
+/**
+ * The fourth shape, added 2026-09-06 after GitGuardian flagged `PASSWORD=p#ssword` in a
+ * .env parser test — the word "password" with one letter swapped for the character the
+ * test was about. Inert, and still an alert somebody had to chase at six in the morning.
+ *
+ * What a "generic password" detector matches is a KEY that reads like a credential beside
+ * a literal VALUE. It cannot tell a fixture from the real thing, which is the point: this
+ * repository is public, so the bar is that the shape never enters.
+ *
+ * The repo's agreed marker (`fake-test-pw-not-a-secret` and its siblings) is exempt — that
+ * convention exists precisely so a test can name a password without looking like one.
+ *
+ * SHRINK-ONLY: 34 such literals in 19 files predate this rule and rewriting
+ * them is not this change. A file may lower its count or vanish; it may never raise it,
+ * and a file not listed must have none. Build the shape instead —
+ * `tests/helpers/credentialShapes.ts` assembles GitHub-token and password shapes at run
+ * time, so nothing in the source matches a scanner.
+ */
+const CREDENTIAL_ASSIGNMENT =
+    /\b(?:pass(?:word|wd)?|secret|api[_-]?key|credential)\b\s*[:=]\s*["']([^"'\n]{4,})["']/i;
+
+/** The convention that exists so a fixture can say "password" without being one. */
+const AGREED_MARKER =
+    /fake[-_]?(?:test|live)|not[-_]?a[-_]?secret|your-api-key|x-oauth-basic|placeholder/i;
+
+const CREDENTIAL_CEILINGS: Record<string, number> = {
+    'tests/core/logging/debugLogger-commandDetail.test.ts': 1,
+    'tests/core/utils/envVarExtraction.test.ts': 2,
+    'tests/core/validation/fieldValidation-commerceUrl.test.ts': 1,
+    'tests/core/validation/securityValidation-githubUrl.test.ts': 1,
+    'tests/features/ai/server/agentTraceSink.test.ts': 1,
+    'tests/features/authentication/services/adobeEntityFetcher-apiServices.test.ts': 2,
+    'tests/features/authentication/services/adobeEntityFetcher.credentials.test.ts': 2,
+    'tests/features/authentication/services/adobeEntityFetcher.teardown.test.ts': 3,
+    'tests/features/authentication/services/adobeWorkspaceCredentials.s2s.test.ts': 1,
+    'tests/features/authentication/services/adobeWorkspaceCredentials.testUtils.ts': 2,
+    'tests/features/authentication/services/consoleProjectTeardown.test.ts': 2,
+    'tests/features/components/services/commerceCredentialStore.test.ts': 1,
+    'tests/features/data-installer/handlers/dataInstallerHandlers.test.ts': 1,
+    'tests/features/eds/services/commerceStoreDiscovery.test.ts': 6,
+    'tests/features/eds/services/toolManager.test.ts': 1,
+    'tests/features/eds/services/toolManager.testUtils.ts': 1,
+    'tests/features/project-creation/helpers/envFileGenerator-values.test.ts': 1,
+    'tests/features/project-creation/ui/helpers/stackHelpers.test.ts': 4,
+    'tests/features/projects-dashboard/services/exportProjectSettingsToFile.test.ts': 1,
+};
+
+function credentialShapeCount(body: string): number {
+    let n = 0;
+    for (const line of body.split('\n')) {
+        const m = CREDENTIAL_ASSIGNMENT.exec(line);
+        if (m && !AGREED_MARKER.test(m[1])) n += 1;
+    }
+    return n;
+}
+
 function files(dir: string): string[] {
     const out: string[] = [];
     // `withFileTypes` answers directory-or-file from the SAME syscall as the listing.
@@ -140,6 +196,60 @@ describe('no credential-shaped string under tests/', () => {
         // A new token-shaped literal is the thing this rule exists to stop. Build it with
         // tests/helpers/jwtFake.ts instead — the same shape, assembled at run time.
         expect(over).toEqual([]);
+    });
+
+    it('CONTROL: the credential pattern catches what fired, and clears the agreed marker', () => {
+        // The exact line GitGuardian flagged on 2026-09-06.
+        expect(credentialShapeCount("            PASSWORD: 'p#ssword',")).toBe(1);
+        // `const secret = '<literal>'` IS the shape — a credential-named binding assigned a
+        // literal — and the pattern is right to count it. My first version of this control
+        // asserted 0 here and the control caught me, not the rule.
+        expect(credentialShapeCount('const secret = ' + JSON.stringify('ghp_0123456789abcdef'))).toBe(1);
+        // A token literal NOT bound to a credential name is a different rule's problem.
+        expect(credentialShapeCount('const url = ' + JSON.stringify('ghp_0123456789abcdef'))).toBe(0);
+        expect(credentialShapeCount("apiKey: 'super-secret-value-123',")).toBe(1);
+        // The convention that exists so a fixture can name a password safely.
+        expect(credentialShapeCount("password: 'fake-test-pw-not-a-secret',")).toBe(0);
+        // A key that merely CONTAINS the word is not an assignment of one.
+        expect(credentialShapeCount('const passwordFieldLabel = getLabel();')).toBe(0);
+        // Built at run time — nothing for a scanner to match.
+        expect(credentialShapeCount('password: passwordShape(),')).toBe(0);
+    });
+
+    it('no file carries MORE credential-shaped assignments than its recorded ceiling', () => {
+        const over: string[] = [];
+        for (const f of corpus) {
+            let body: string;
+            try {
+                body = readFileSync(f, 'utf8');
+            } catch {
+                continue;
+            }
+            const n = credentialShapeCount(body);
+            const rel = relative(ROOT, f);
+            const ceiling = CREDENTIAL_CEILINGS[rel] ?? 0;
+            if (n > ceiling) over.push(`${rel}: ${n} (ceiling ${ceiling})`);
+        }
+        // A new one is what this rule exists to stop. Build it with
+        // tests/helpers/credentialShapes.ts instead.
+        expect(over).toEqual([]);
+    });
+
+    it('the credential ledger only shrinks: no ceiling stands above the count on disk', () => {
+        const stale: string[] = [];
+        for (const [file, ceiling] of Object.entries(CREDENTIAL_CEILINGS)) {
+            let body: string;
+            try {
+                body = readFileSync(join(ROOT, file), 'utf8');
+            } catch {
+                stale.push(`${file}: listed, but the file is gone`);
+                continue;
+            }
+            const n = credentialShapeCount(body);
+            if (n < ceiling) stale.push(`${file}: ceiling ${ceiling}, on disk ${n}`);
+        }
+        // Rewriting one means lowering its ceiling in the same change.
+        expect(stale).toEqual([]);
     });
 
     it('the token ledger only shrinks: no ceiling stands above the count on disk', () => {
