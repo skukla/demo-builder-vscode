@@ -13383,6 +13383,93 @@
             "decision": "OPEN \u2014 a failed save is invisible on this surface, and the message built here reaches nobody. Either surface it in the footer or drop the check; do not paper over it with a test.",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "anchors": [
+                "const [dismissed, setDismissed] = useState(false);"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "dismissed only ever masks an outcome, and no outcome can exist before the first export. start() sets it false as its first statement, so by the time run.value or run.failure is non-null the flag has already been cleared \u2014 the initial value is read only while both are null, where masking them changes nothing. Verified by planting true: all fifteen data-installer component suites pass.",
+            "decision": "none \u2014 false is the honest initial state; nothing has been dismissed yet",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "anchors": [
+                "}, [loadTypes]);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "loadTypes is types.load, a useCallback over [execute] from useVSCodeRequest, and execute does not change identity for a fixed request type. So the dependency never invalidates and an empty array schedules the effect exactly as often \u2014 once. Verified by planting.",
+            "decision": "none \u2014 naming the dependency is what keeps the effect honest if load ever stops being stable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "anchors": [
+                "}, [loadTarget]);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same as the type-list effect above: loadTarget is target.load, a useCallback over a stable execute, so the dependency never invalidates and an empty array runs the effect the same single time. Verified by planting.",
+            "decision": "none \u2014 naming the dependency is what keeps the effect honest if load ever stops being stable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 116,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The toggle callback closes over nothing \u2014 it updates selection through the functional form of setSelected \u2014 so a dependency array of constants invalidates the memo exactly as often as an empty one does, which is never. Verified by planting.",
+            "decision": "none \u2014 [] is the correct dependency list",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "anchors": [
+                "const goBack = useCallback((): void => setDismissed(true), []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Same shape as toggle: the callback closes over nothing but a setState, so no dependency array content can change when the memo is invalidated. Verified by planting.",
+            "decision": "none \u2014 [] is the correct dependency list",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "anchors": [
+                "const allSelected = available.length > 0 && selected.length === available.length;"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The length guard only changes the answer when there are NO types, and with no types nothing reads it: allSelected reaches the Select all / Clear all label and the toggleAll handler, and both live inside the head block that renders only when available.length > 0. So an empty list has no reader to tell the difference. Verified by planting true in its place.",
+            "decision": "none \u2014 the guard is what stops an empty list reading as fully selected if the label ever moves outside that block",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/ui/components/ExportDatapackModal.tsx",
+            "anchors": [
+                "const perType = outcome?.perType ?? [];",
+                "variant={outcome?.success ? 'success' : 'error'}",
+                "outcome?.success"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "outcome is never null at these three reads. useDataInstallerRequest makes value and failure mutually exclusive \u2014 value is null exactly when the envelope reports failure, and failure then carries a message that is never empty (data.error ?? UNSTATED_FAILURE). ExportResult returns on that message before reaching any of these lines, and the view renders at all only when one of the two is truthy. So the ?. is required by the type and unreachable in fact. Verified by planting a non-null assertion at all three.",
+            "decision": "none \u2014 the type makes outcome nullable and the compiler requires the chain",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }
