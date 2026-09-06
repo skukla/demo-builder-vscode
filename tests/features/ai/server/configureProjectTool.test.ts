@@ -30,18 +30,31 @@ function serve() {
 }
 
 /**
- * The tool's SCHEMA, for asserting what a real caller can send.
+ * What the tool DECLARES at registration: its guard flags and its schema.
  *
- * It is a strict `z.object`, not a raw shape — see the tool's comment. That is
- * why fields are reached through `.shape`.
+ * The schema is a strict `z.object`, not a raw shape — see the tool's comment.
+ * That is why fields are reached through `.shape`.
  */
-function schema() {
-    let def: { inputSchema: { shape: Record<string, { parse: (v: unknown) => unknown }>; safeParse: (v: unknown) => { success: boolean; error?: { message: string } } } } | undefined;
+interface ToolDefinition {
+    needsAuth: boolean;
+    annotations: { readOnlyHint: boolean; destructiveHint: boolean };
+    inputSchema: {
+        shape: Record<string, { parse: (v: unknown) => unknown }>;
+        safeParse: (v: unknown) => { success: boolean; error?: { message: string } };
+    };
+}
+
+function definition(): ToolDefinition {
+    let def: ToolDefinition | undefined;
     registerConfigureProjectTool(
         { registerTool: (_n: string, d: never) => { def = d; } },
         stateManager,
     );
-    return def!.inputSchema;
+    return def!;
+}
+
+function schema() {
+    return definition().inputSchema;
 }
 
 /**
@@ -278,5 +291,207 @@ describe('configure_project — mesh staleness', () => {
     it('persists exactly once per call', async () => {
         await serve()({ addons: ['a'], blockLibraries: ['b'] });
         expect(saveProject).toHaveBeenCalledTimes(1);
+    });
+});
+
+/**
+ * A project with every field this tool can set already filled in — the state
+ * `stillUnset` must report as empty.
+ */
+function configuredProject(): Project {
+    return createMockProject({
+        ...freshProject(),
+        datapack: { name: 'citisignal', version: '1.0' },
+        selectedBlockLibraries: ['commerce'],
+        componentConfigs: {
+            'adobe-commerce-accs': {
+                ACCS_WEBSITE_CODE: 'base',
+                ACCS_STORE_CODE: 'main',
+                ACCS_STORE_VIEW_CODE: 'default',
+            },
+        },
+    });
+}
+
+// What the tool declares at registration is part of its contract: the MCP client
+// reads these before it ever calls the handler.
+describe('configure_project — how it is declared', () => {
+    it('is a write tool that needs no auth and destroys nothing', () => {
+        const def = definition();
+
+        expect(def.needsAuth).toBe(false);
+        expect(def.annotations).toStrictEqual({ readOnlyHint: false, destructiveHint: false });
+    });
+
+    // A datapack is a name AND a version. Half of one identifies nothing.
+    it('the datapack schema requires both name and version', () => {
+        const datapack = schema().shape.datapack;
+
+        expect(() => datapack.parse({ name: 'citisignal', version: '1.0' })).not.toThrow();
+        expect(() => datapack.parse({ name: 'citisignal' })).toThrow();
+        expect(() => datapack.parse({ version: '1.0' })).toThrow();
+    });
+
+    // Env values arrive from JSON, where a flag is a boolean and a port is a
+    // number — accepting only strings would force the agent to stringify them.
+    it('env values accept a string, a boolean or a number, and nothing else', () => {
+        const env = schema().shape.env;
+
+        expect(() => env.parse({ 'eds-storefront': { A: 'x', B: true, C: 3 } })).not.toThrow();
+        expect(() => env.parse({ 'eds-storefront': { A: { nested: 'no' } } })).toThrow();
+    });
+});
+
+describe('configure_project — what is still unset', () => {
+    it('reports NOTHING unset once every field is set', async () => {
+        getCurrentProject.mockResolvedValue(configuredProject());
+
+        const out = await serve()({ addons: ['adobe-commerce-aco'] });
+
+        expect(out.stillUnset).toStrictEqual([]);
+    });
+
+    // Two of three codes is a broken scope, not a narrower one — so a partial
+    // scope still counts as unset.
+    it('still reports storeScope unset when only one of the three codes is set', async () => {
+        getCurrentProject.mockResolvedValue(createMockProject({
+            ...configuredProject(),
+            componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'base' } },
+        }));
+
+        const out = await serve()({ addons: ['adobe-commerce-aco'] });
+
+        expect(out.stillUnset).toStrictEqual(['storeScope']);
+    });
+
+    it('reports blockLibraries unset when the project has no such field at all', async () => {
+        getCurrentProject.mockResolvedValue(createMockProject({
+            ...freshProject(),
+            selectedBlockLibraries: undefined,
+        }));
+
+        const out = await serve()({ addons: ['adobe-commerce-aco'] });
+
+        expect(out.stillUnset).toContain('blockLibraries');
+    });
+
+    it('survives a project with no componentSelections at all', async () => {
+        getCurrentProject.mockResolvedValue(createMockProject({
+            ...freshProject(),
+            componentSelections: undefined,
+        }));
+
+        const out = await serve()({ addons: ['adobe-commerce-aco'] });
+
+        expect(out.applied).toEqual({ addons: ['adobe-commerce-aco'] });
+        expect(out.stillUnset).toContain('storeScope');
+    });
+
+    it('survives a project with no componentConfigs at all', async () => {
+        getCurrentProject.mockResolvedValue(createMockProject({
+            ...freshProject(),
+            componentConfigs: undefined,
+        }));
+
+        const out = await serve()({ addons: ['adobe-commerce-aco'] });
+
+        expect(out.stillUnset).toContain('storeScope');
+    });
+});
+
+describe('configure_project — a partial payload touches only what it names', () => {
+    it('leaves datapack, addons and block libraries alone when none are passed', async () => {
+        getCurrentProject.mockResolvedValue(createMockProject({
+            ...freshProject(),
+            datapack: { name: 'citisignal', version: '1.0' },
+            selectedAddons: ['adobe-commerce-aco'],
+            selectedBlockLibraries: ['commerce'],
+        }));
+
+        await serve()({ env: { 'eds-storefront': { AEM_ASSETS_ENABLED: 'true' } } });
+
+        const saved = saveProject.mock.calls[0][0] as Project;
+        expect(saved.datapack).toEqual({ name: 'citisignal', version: '1.0' });
+        expect(saved.selectedAddons).toEqual(['adobe-commerce-aco']);
+        expect(saved.selectedBlockLibraries).toEqual(['commerce']);
+    });
+
+    it('applies block libraries and reports them back', async () => {
+        const out = await serve()({ blockLibraries: ['commerce', 'bodea'] });
+
+        expect(out.applied.blockLibraries).toEqual(['commerce', 'bodea']);
+        expect((saveProject.mock.calls[0][0] as Project).selectedBlockLibraries).toEqual([
+            'commerce',
+            'bodea',
+        ]);
+    });
+
+    // Replacing the component's config instead of merging into it would wipe
+    // every var the wizard wrote.
+    it('merges env vars into the existing component config', async () => {
+        getCurrentProject.mockResolvedValue(createMockProject({
+            ...freshProject(),
+            componentConfigs: { 'adobe-commerce-accs': { ACCS_WEBSITE_CODE: 'base' } },
+        }));
+
+        await serve()({
+            env: { 'adobe-commerce-accs': { ACCS_STORE_CODE: 'main' } },
+        });
+
+        const saved = saveProject.mock.calls[0][0] as Project;
+        expect(saved.componentConfigs?.['adobe-commerce-accs']).toStrictEqual({
+            ACCS_WEBSITE_CODE: 'base',
+            ACCS_STORE_CODE: 'main',
+        });
+    });
+});
+
+describe('configure_project — the secret handoff', () => {
+    it('sends the user to the Configure Project command', async () => {
+        const out = await serve()({
+            env: { 'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret' } },
+        });
+
+        expect(out.needsUser.where).toStrictEqual({ command: 'demoBuilder.configureProject' });
+        expect(out.needsUser.tellUser).toMatch(/^ACCS_OAUTH_CLIENT_SECRET is a secret and/);
+    });
+
+    it('says "are secrets" when more than one is offered', async () => {
+        const out = await serve()({
+            env: {
+                'adobe-commerce-accs': { ACCS_OAUTH_CLIENT_SECRET: 'fake-test-pw-not-a-secret' },
+                'adobe-commerce': { ADOBE_COMMERCE_ADMIN_PASSWORD: 'fake-test-pw-not-a-secret' },
+            },
+        });
+
+        expect(out.needsUser.tellUser).toMatch(
+            /^ACCS_OAUTH_CLIENT_SECRET, ADOBE_COMMERCE_ADMIN_PASSWORD are secrets and/,
+        );
+    });
+});
+
+// The mesh id on the project is looked up in the component registry. A project
+// carrying a mesh the registry does not know must not blow up the whole call.
+describe('configure_project — a mesh the registry does not know', () => {
+    it('applies the change and marks nothing stale', async () => {
+        getCurrentProject.mockResolvedValue(createMockProject({
+            ...freshProject(),
+            componentInstances: {
+                'unknown-mesh': {
+                    name: 'unknown-mesh',
+                    id: 'unknown-mesh',
+                    type: 'dependency',
+                    subType: 'mesh',
+                    status: 'deployed',
+                },
+            },
+        }));
+
+        const out = await serve()({
+            storeScope: { website: 'base', store: 'main', storeView: 'default' },
+        });
+
+        expect(out.meshMarkedStale).toBeUndefined();
+        expect((saveProject.mock.calls[0][0] as Project).meshStatusSummary).toBe('deployed');
     });
 });

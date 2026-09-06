@@ -13659,6 +13659,54 @@
             "decision": "none \u2014 the explicit return states the intent for a reader; only its runtime effect is duplicated by the fall-through",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/ai/server/configureProjectTool.ts",
+            "anchors": [
+                ".filter(([, def]) => def?.type === 'password')"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The registry read here is the BUNDLED components.json, imported statically as CONFIG \u2014 there is no injection seam and no caller supplies it. All 30 entries under envVars are objects, so dropping the ?. changes nothing: def is never null or undefined. Killing it would mean jest.mock-ing the bundled JSON to plant a null entry, which tests the mock rather than the tool and contradicts how the code is actually reached.",
+            "decision": "none \u2014 the ?. costs nothing and guards a registry the module does not own",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/ai/server/configureProjectTool.ts",
+            "anchors": [
+                "if (!meshId) return new Set();"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Deleting the early return leaves the very next line indexing CONFIG.mesh with an undefined id, which yields undefined, which the ?. and ?? [] on the following line turn into the same empty Set the guard returns. Planted 2026-09-06 and the suite stayed green because there is nothing observable to differ: no registry key is the string 'undefined'. The guard exists for the type narrowing, not for a behaviour a test could see.",
+            "decision": "none \u2014 the guard is what lets the index expression typecheck",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/ai/server/configureProjectTool.ts",
+            "anchors": [
+                "return new Set(mesh?.configuration?.requiredEnvVars ?? []);"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Dropping the ?. after configuration would throw only for a registry mesh entry that exists but declares no configuration block. All three entries under mesh in the bundled components.json carry one, and the registry is imported statically with no seam to substitute. The ?. is required by the declared type, where configuration is optional, so it cannot be removed either. The ArrayDeclaration mutant on the same line is unkillable for a different reason: the returned Set is consulted only through .has(changedKey), so swapping the empty default for Stryker's sentinel array changes the answer only for an env var literally named 'Stryker was here'. Both planted 2026-09-06 with the suite green.",
+            "decision": "none \u2014 required by the type, unreachable in the bundled registry",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/ai/server/configureProjectTool.ts",
+            "anchors": [
+                "if (project.componentConfigs?.[componentId]?.[key] !== value) changedKeys.add(key);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "noteChange is called from two places and both assign project.componentConfigs = project.componentConfigs ?? {} before the loop that calls it, so componentConfigs is always an object by the time this line runs. The ?. after it is therefore unreachable-defensive; the compiler still demands it because the field is optional on Project and the assignment happens in a different scope from this closure.",
+            "decision": "none \u2014 the ?. is required by the type and the undefined case cannot be reached",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }
