@@ -76,7 +76,9 @@ export async function resolveProjectStatus(project: Project): Promise<unknown> {
     try {
         authenticated = await ServiceLocator.getAuthenticationService().isAuthenticated();
     } catch {
-        authenticated = false;
+        // Deliberately empty: `authenticated` is already false, and the catch
+        // used to re-assign it — two statements holding one fact, so neither
+        // could be shown to matter. The initialiser is the one that decides.
     }
 
     const mesh = deriveMeshStatus(project, authenticated);
@@ -88,10 +90,7 @@ export async function resolveProjectStatus(project: Project): Promise<unknown> {
 }
 
 /** Registers `get_project_status` on the MCP server. */
-export function registerProjectStatusTool(
-    server: McpToolServer,
-    stateManager: StateManager,
-): void {
+export function registerProjectStatusTool(server: McpToolServer, stateManager: StateManager): void {
     server.registerTool(
         'get_project_status',
         {

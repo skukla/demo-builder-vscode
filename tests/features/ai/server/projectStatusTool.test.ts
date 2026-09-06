@@ -6,6 +6,7 @@
  */
 
 import { registerProjectStatusTool } from '@/features/ai/server/projectStatusTool';
+import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { expectWithinCeiling } from './responseCeilings';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 
@@ -21,10 +22,13 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 
 function fakeServer() {
     const tools = new Map<string, () => Promise<{ content: Array<{ text: string }> }>>();
+    const defs = new Map<string, McpToolSchema>();
     return {
-        registerTool(name: string, _def: unknown, handler: () => Promise<{ content: Array<{ text: string }> }>) {
+        registerTool(name: string, def: McpToolSchema, handler: () => Promise<{ content: Array<{ text: string }> }>) {
             tools.set(name, handler);
+            defs.set(name, def);
         },
+        definition: (): McpToolSchema => defs.get('get_project_status')!,
         raw: async (): Promise<string> =>
             (await tools.get('get_project_status')!()).content[0].text,
         call: async (): Promise<Record<string, unknown>> =>
@@ -122,6 +126,28 @@ describe('get_project_status', () => {
 
         expect((await serve().call()).frontendConfigChanged).toBe(true);
         expect(detectFrontendChanges).toHaveBeenCalledTimes(1);
+    });
+
+    // The declaration, not the answer. Registration is a set of arguments the
+    // server acts on — the consent prompt, the auth gate and the write-arg guard
+    // all read them — and a test that only calls the handler never sees any of
+    // it. `readOnlyHint: true` with `destructiveHint: false` is what keeps this
+    // tool out of the confirmation path an agent cannot answer.
+    it('registers itself as a read that needs no auth and destroys nothing', () => {
+        const def = serve().definition();
+
+        expect(def.needsAuth).toBe(false);
+        expect(def.annotations).toEqual({ readOnlyHint: true, destructiveHint: false });
+        expect(def.inputSchema).toStrictEqual({});
+    });
+
+    // The ServiceLocator may not be built yet — this is the read an agent uses
+    // to find its feet, so the honest answer is `needs-auth`, not a throw.
+    it('reports needs-auth when the auth service itself blows up', async () => {
+        isAuthenticated.mockRejectedValue(new Error('ServiceLocator not initialized'));
+        getCurrentProject.mockResolvedValue(WITH_MESH);
+
+        expect((await serve().call()).mesh).toMatchObject({ status: 'needs-auth' });
     });
 
     it('stays within its recorded ceiling', async () => {
