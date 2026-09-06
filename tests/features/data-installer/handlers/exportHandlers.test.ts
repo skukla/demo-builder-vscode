@@ -19,6 +19,7 @@ import { importHandlers } from '@/features/data-installer/handlers/importHandler
 import { resolveCommerceCredentials } from '@/features/data-installer/services/commerceCredentials';
 import { DataInstallerWriteClient } from '@/features/data-installer/services/dataInstallerWriteClient';
 import type { Project } from '@/types/base';
+import { ErrorCode } from '@/types/errorCodes';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
@@ -51,6 +52,17 @@ function accsProject(): Partial<Project> {
         name: 'demo-accs',
         componentSelections: { backend: 'adobe-commerce-accs' },
         componentConfigs: { 'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: ACCS_ENDPOINT } },
+    };
+}
+
+/** A PaaS project: no ACCS endpoint, so the REST root is the Commerce URL. */
+function paasProject(url?: string): Partial<Project> {
+    return {
+        name: 'demo-paas',
+        componentSelections: { backend: 'adobe-commerce-paas' },
+        componentConfigs: {
+            'adobe-commerce-paas': url === undefined ? {} : { ADOBE_COMMERCE_URL: url },
+        },
     };
 }
 
@@ -237,5 +249,259 @@ describe('start-datapack-export', () => {
         const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
 
         expect(JSON.stringify(result)).not.toContain('fake-test-secret-not-a-secret');
+    });
+});
+
+describe('prepareExport guards', () => {
+    it('refuses a payload that is missing entirely', async () => {
+        const list = await importHandlers['list-datapack-export-items'](
+            makeImportHarness(),
+            undefined
+        );
+        const start = await importHandlers['start-datapack-export'](makeImportHarness(), undefined);
+
+        expect(list.success).toBe(false);
+        expect(start.success).toBe(false);
+        expect(listExportItems).not.toHaveBeenCalled();
+        expect(startExport).not.toHaveBeenCalled();
+    });
+
+    // Both export handlers share prepareExport, so the LIST call must refuse a
+    // half-named target too — not fall through to a request it cannot build.
+    it('refuses a half-named target on the list call, with the naming reason', async () => {
+        const result = await importHandlers['list-datapack-export-items'](makeImportHarness(), {
+            ...PAYLOAD,
+            datapackName: '',
+            dataType: 'attribute_sets',
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/datapack name and a version/);
+        expect(listExportItems).not.toHaveBeenCalled();
+    });
+
+    it('refuses without a Commerce instance to export from', async () => {
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), {
+            ...PAYLOAD,
+            commerceInstance: '',
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/Commerce instance is required/);
+        expect(startExport).not.toHaveBeenCalled();
+    });
+
+    // An ABSENT dataTypes is the same refusal as an empty one: the default is
+    // nothing, never everything, because the request writes to a shared catalog.
+    it('refuses when dataTypes is absent, not just when it is empty', async () => {
+        const { dataTypes: _dropped, ...withoutTypes } = PAYLOAD;
+        const result = await importHandlers['start-datapack-export'](
+            makeImportHarness(),
+            withoutTypes
+        );
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/at least one data type/);
+        expect(startExport).not.toHaveBeenCalled();
+    });
+
+    it('returns the access refusal when the Data Installer is not configured', async () => {
+        (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+            get: jest.fn(() => undefined),
+        });
+
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
+
+        expect(result.success).toBe(false);
+        // The access refusal is returned AS IT CAME, code included: the UI
+        // branches on INVALID_OPERATION to offer the settings fix, so it must
+        // not be flattened into a generic failure on the way out.
+        expect(result.code).toBe(ErrorCode.INVALID_OPERATION);
+        expect(MockedClient).not.toHaveBeenCalled();
+        expect(startExport).not.toHaveBeenCalled();
+    });
+
+    it('refuses when no project is open', async () => {
+        const result = await importHandlers['start-datapack-export'](
+            makeImportHarness(null),
+            PAYLOAD
+        );
+
+        expect(result.success).toBe(false);
+        expect(result.error).toMatch(/Open a project before exporting/);
+        expect(startExport).not.toHaveBeenCalled();
+    });
+
+    it('builds the write client against the configured API base URL', async () => {
+        await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
+
+        expect(MockedClient).toHaveBeenCalledWith(
+            expect.objectContaining({
+                baseUrl: 'https://example-namespace.adobeioruntime.net/api/v1/web/data-installer-api',
+            })
+        );
+    });
+
+    // Omitted means "everything allowed" — a selections key must only appear
+    // when the caller chose one, and must carry what they chose.
+    it('passes selections through only when the caller sent them', async () => {
+        const selections = { attribute_sets: { attribute_set_id: [10, 11] } };
+
+        await importHandlers['start-datapack-export'](makeImportHarness(), {
+            ...PAYLOAD,
+            selections,
+        });
+        expect(startExport).toHaveBeenCalledWith(expect.objectContaining({ selections }));
+
+        startExport.mockClear();
+        await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
+        expect(startExport.mock.calls[0][0]).not.toHaveProperty('selections');
+    });
+});
+
+describe('credential refusals', () => {
+    it('names the specific gap rather than a generic one', async () => {
+        mockedCredentials.mockResolvedValue({ ok: false, reason: 'missing-paas-admin' });
+
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
+
+        expect(result.error).toMatch(/no Commerce admin username and password saved/);
+        expect(startExport).not.toHaveBeenCalled();
+    });
+
+    it('falls back to a generic message for a gap it has no wording for', async () => {
+        mockedCredentials.mockResolvedValue({
+            ok: false,
+            reason: 'something-new' as 'missing-paas-admin',
+        });
+
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
+
+        expect(result.error).toBe('Commerce credentials are missing.');
+    });
+
+    /**
+     * The provisioning offer is gated on the Adobe binding for the same reason
+     * the import spine's is: an offer that leads nowhere is worse than none.
+     */
+    it('offers ACCS provisioning when the reason is ACCS and the project is bound', async () => {
+        mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' });
+
+        const result = await importHandlers['start-datapack-export'](
+            makeImportHarness({
+                ...accsProject(),
+                adobe: { organization: 'org', projectId: 'proj', workspace: 'stage' },
+            }),
+            PAYLOAD
+        );
+
+        expect(result.data).toEqual({ needsAccsCredentials: true });
+    });
+
+    it('withholds the offer when the project has no Adobe workspace to provision into', async () => {
+        mockedCredentials.mockResolvedValue({ ok: false, reason: 'needs-accs-credentials' });
+
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
+
+        expect(result.data).toEqual({ needsAccsCredentials: false });
+    });
+
+    it('withholds the offer for a non-ACCS gap even on a bound project', async () => {
+        mockedCredentials.mockResolvedValue({ ok: false, reason: 'missing-paas-admin' });
+
+        const result = await importHandlers['start-datapack-export'](
+            makeImportHarness({
+                ...accsProject(),
+                adobe: { organization: 'org', projectId: 'proj', workspace: 'stage' },
+            }),
+            PAYLOAD
+        );
+
+        expect(result.data).toEqual({ needsAccsCredentials: false });
+    });
+});
+
+describe('the REST base URL', () => {
+    it('uses the Commerce URL as-is for a PaaS project', async () => {
+        await importHandlers['start-datapack-export'](
+            makeImportHarness(paasProject('https://paas.example.com')),
+            PAYLOAD
+        );
+
+        expect(startExport).toHaveBeenCalledWith(
+            expect.objectContaining({ restBaseUrl: 'https://paas.example.com' })
+        );
+    });
+
+    it('sends an empty base URL when the project configures neither', async () => {
+        await importHandlers['start-datapack-export'](makeImportHarness(paasProject()), PAYLOAD);
+
+        expect(startExport).toHaveBeenCalledWith(expect.objectContaining({ restBaseUrl: '' }));
+    });
+
+    // Only a TRAILING /graphql is the suffix — one earlier in the path is part
+    // of the tenant's own route and must survive.
+    it('strips only the trailing /graphql, not an earlier one', async () => {
+        await importHandlers['start-datapack-export'](
+            makeImportHarness({
+                ...accsProject(),
+                componentConfigs: {
+                    'adobe-commerce-accs': {
+                        ACCS_GRAPHQL_ENDPOINT: 'https://na1.commerce.adobe.com/graphql-eu/t1/graphql',
+                    },
+                },
+            }),
+            PAYLOAD
+        );
+
+        expect(startExport).toHaveBeenCalledWith(
+            expect.objectContaining({
+                restBaseUrl: 'https://na1.commerce.adobe.com/graphql-eu/t1',
+            })
+        );
+    });
+});
+
+describe('when the service call itself fails', () => {
+    it('reports why the list could not be fetched', async () => {
+        listExportItems.mockRejectedValue(new Error('502 from get-export-items'));
+
+        const result = await importHandlers['list-datapack-export-items'](makeImportHarness(), {
+            ...PAYLOAD,
+            dataType: 'attribute_sets',
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('502 from get-export-items');
+    });
+
+    it('falls back to a readable reason when the list throws a non-Error', async () => {
+        listExportItems.mockRejectedValue('socket hang up');
+
+        const result = await importHandlers['list-datapack-export-items'](makeImportHarness(), {
+            ...PAYLOAD,
+            dataType: 'attribute_sets',
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Could not list what is available.');
+    });
+
+    it('reports why the export could not be started', async () => {
+        startExport.mockRejectedValue(new Error('process-datapack refused the tenant id'));
+
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('process-datapack refused the tenant id');
+    });
+
+    it('falls back to a readable reason when the export throws a non-Error', async () => {
+        startExport.mockRejectedValue({ statusCode: 500 });
+
+        const result = await importHandlers['start-datapack-export'](makeImportHarness(), PAYLOAD);
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('The export could not be started.');
     });
 });

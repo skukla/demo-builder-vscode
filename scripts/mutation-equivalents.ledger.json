@@ -13016,6 +13016,20 @@
             "decision": "none - the required-identifier guard above makes a nullish args impossible here",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/data-installer/handlers/exportHandlers.ts",
+            "anchors": [
+                "const commerceInstance = payload?.commerceInstance;",
+                "const dataTypes = payload?.dataTypes ?? [];",
+                "...(payload?.selections ? { selections: payload.selections } : {}),"
+            ],
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "All three sit AFTER prepareExport's first guard, which reads payload?.datapackName and payload?.version and returns the naming refusal unless both are non-empty strings. Reaching any of these lines therefore proves payload is an object, so dropping the optional chain cannot throw or change a value. The same chains on the guard's OWN two reads are killed, by the test that calls both handlers with no payload at all.",
+            "decision": "Recorded as equivalent. Defensive repetition behind a guard that has already established the payload object exists.",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }
