@@ -267,6 +267,7 @@ export function ConfigureSectionBody({
     onProjectNameChange,
     projectNameError,
     projectNameTouched,
+    projectFolder,
     appBuilderComponentCatalog,
     componentConfigs,
     providedEnvVars,
@@ -283,6 +284,7 @@ export function ConfigureSectionBody({
                 onProjectNameChange={onProjectNameChange}
                 projectNameError={projectNameError}
                 projectNameTouched={projectNameTouched}
+                projectFolder={projectFolder}
                 hasServiceGroups={serviceGroups.length > 0}
             />
         );
