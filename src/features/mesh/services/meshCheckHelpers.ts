@@ -85,18 +85,14 @@ export async function checkMeshExistence(
     error?: string;
 }> {
     try {
-        const { stdout, stderr, code } = await commandExecutor.execute('aio api-mesh get', { useNodeVersion: getMeshNodeVersion() });
+        const { stdout, code } = await commandExecutor.execute('aio api-mesh get', { useNodeVersion: getMeshNodeVersion() });
 
         if (code !== 0) {
-            // Command failed - check if it's because no mesh exists
-            const combined = `${stdout}\n${stderr}`;
-            const noMeshFound = /no mesh found|unable to get mesh config/i.test(combined);
-
-            if (noMeshFound) {
-                return { meshExists: false };
-            }
-
-            // Other error - treat as no mesh
+            // A failed command is "no mesh", whatever it said. This used to sort
+            // the output into "no mesh found"/"unable to get mesh config" and
+            // everything else, then answer both the same way — the branch could
+            // not change the result. `fallbackMeshCheck` is where those messages
+            // are actually told apart, because there they mean different things.
             return { meshExists: false };
         }
 
@@ -139,9 +135,6 @@ export async function checkMeshExistence(
                     endpoint: undefined,
                 };
         }
-
-        // Fallback - shouldn't reach here
-        return { meshExists: false };
     } catch {
         // Command execution failed - treat as no mesh
         return { meshExists: false };

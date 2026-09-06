@@ -14498,6 +14498,18 @@
             "decision": "none \u2014 the explicit reset states the intent where the declaration alone would leave a reader checking; its runtime effect is identical",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/mesh/services/meshCheckHelpers.ts",
+            "anchors": [
+                "if (!meshData) {"
+            ],
+            "mutants": 2,
+            "category": "block",
+            "reason": "extractAndParseJSON returns null and nothing else falsy \u2014 it scans for the first '[' or '{' and returns null when there is none \u2014 and the whole body sits inside a try/catch that answers { meshExists: false }. Removing the guard, or making it never fire, lets the next line read .meshStatus off null, which throws into that same catch and produces the identical result. Verified by planting: the three suites' 49 tests stay green, including the one that feeds it unparseable stdout.",
+            "decision": "none \u2014 the guard states the case explicitly instead of routing an expected outcome through an exception handler; its result is identical either way",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }

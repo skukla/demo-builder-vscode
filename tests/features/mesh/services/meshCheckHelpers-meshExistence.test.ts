@@ -20,11 +20,7 @@ describe('checkMeshExistence', () => {
         mockCommandExecutor = createMockCommandExecutor();
     });
 
-    const mockResult = (
-        code: number,
-        stdout: string | object,
-        stderr: string = ''
-    ) => ({
+    const mockResult = (code: number, stdout: string | object, stderr: string = '') => ({
         code,
         stdout: typeof stdout === 'string' ? stdout : JSON.stringify(stdout),
         stderr,
@@ -42,22 +38,33 @@ describe('checkMeshExistence', () => {
             expect(result).toEqual({
                 meshExists: false,
             });
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                'aio api-mesh get',
-                { useNodeVersion: '20' }
-            );
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith('aio api-mesh get', {
+                useNodeVersion: '20',
+            });
         });
 
         it('should return meshExists false when CLI fails with error code', async () => {
-            mockCommandExecutor.execute.mockResolvedValue(
-                mockResult(1, '', 'no mesh found')
-            );
+            mockCommandExecutor.execute.mockResolvedValue(mockResult(1, '', 'no mesh found'));
 
             const result = await checkMeshExistence(mockCommandExecutor);
 
             expect(result).toEqual({
                 meshExists: false,
             });
+        });
+
+        // A non-zero exit is the answer, whatever came back on stdout. The CLI
+        // has printed a stale mesh document alongside a failure before, and
+        // reading it would report a mesh that the command just said it could
+        // not get.
+        it('ignores mesh JSON printed alongside a failed exit code', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(
+                mockResult(1, { meshId: 'stale-123', meshStatus: 'success' })
+            );
+
+            const result = await checkMeshExistence(mockCommandExecutor);
+
+            expect(result).toEqual({ meshExists: false });
         });
     });
 
@@ -197,9 +204,7 @@ describe('checkMeshExistence', () => {
         });
 
         it('should handle unparseable JSON gracefully', async () => {
-            mockCommandExecutor.execute.mockResolvedValue(
-                mockResult(0, 'This is not valid JSON')
-            );
+            mockCommandExecutor.execute.mockResolvedValue(mockResult(0, 'This is not valid JSON'));
 
             const result = await checkMeshExistence(mockCommandExecutor);
 
@@ -209,9 +214,7 @@ describe('checkMeshExistence', () => {
         });
 
         it('should handle command execution errors', async () => {
-            mockCommandExecutor.execute.mockRejectedValue(
-                new Error('Network timeout')
-            );
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Network timeout'));
 
             const result = await checkMeshExistence(mockCommandExecutor);
 

@@ -20,11 +20,7 @@ describe('fallbackMeshCheck', () => {
         mockCommandExecutor = createMockCommandExecutor();
     });
 
-    const mockResult = (
-        code: number,
-        stdout: string | object,
-        stderr: string = ''
-    ) => ({
+    const mockResult = (code: number, stdout: string | object, stderr: string = '') => ({
         code,
         stdout: typeof stdout === 'string' ? stdout : JSON.stringify(stdout),
         stderr,
@@ -43,10 +39,9 @@ describe('fallbackMeshCheck', () => {
                 apiEnabled: false,
                 meshExists: false,
             });
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                'aio api-mesh get --active',
-                { useNodeVersion: '20' }
-            );
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith('aio api-mesh get --active', {
+                useNodeVersion: '20',
+            });
         });
 
         it('should detect API not enabled from "unable to get mesh config" in stderr', async () => {
@@ -118,9 +113,7 @@ describe('fallbackMeshCheck', () => {
         });
 
         it('should handle mesh_id format with underscore', async () => {
-            mockCommandExecutor.execute.mockResolvedValue(
-                mockResult(0, 'mesh_id: xyz-789-abc')
-            );
+            mockCommandExecutor.execute.mockResolvedValue(mockResult(0, 'mesh_id: xyz-789-abc'));
 
             const result = await fallbackMeshCheck(mockCommandExecutor);
 
@@ -128,13 +121,27 @@ describe('fallbackMeshCheck', () => {
         });
 
         it('should handle mesh-id format with hyphen separator', async () => {
-            mockCommandExecutor.execute.mockResolvedValue(
-                mockResult(0, 'mesh-id:123-456')
-            );
+            mockCommandExecutor.execute.mockResolvedValue(mockResult(0, 'mesh-id:123-456'));
 
             const result = await fallbackMeshCheck(mockCommandExecutor);
 
             expect(result.meshId).toBe('123-456');
+        });
+
+        // The separator between "mesh" and "id" is optional, and the space
+        // before the colon is allowed. Both are spellings the CLI has printed,
+        // and a missed match answers "mesh exists, id unknown" — which reads as
+        // a mesh nothing can then be done to.
+        it('should handle MeshID with no separator at all', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(mockResult(0, 'MeshID: abc-123'));
+
+            expect((await fallbackMeshCheck(mockCommandExecutor)).meshId).toBe('abc-123');
+        });
+
+        it('should handle a space before the colon', async () => {
+            mockCommandExecutor.execute.mockResolvedValue(mockResult(0, 'Mesh ID : abc-123'));
+
+            expect((await fallbackMeshCheck(mockCommandExecutor)).meshId).toBe('abc-123');
         });
 
         it('should return mesh exists without meshId if pattern not found', async () => {
@@ -155,9 +162,7 @@ describe('fallbackMeshCheck', () => {
 
     describe('handles command execution errors', () => {
         it('should detect permission denied (403) as API not enabled', async () => {
-            mockCommandExecutor.execute.mockRejectedValue(
-                new Error('403 Forbidden')
-            );
+            mockCommandExecutor.execute.mockRejectedValue(new Error('403 Forbidden'));
 
             const result = await fallbackMeshCheck(mockCommandExecutor);
 
@@ -168,9 +173,7 @@ describe('fallbackMeshCheck', () => {
         });
 
         it('should detect "forbidden" keyword as API not enabled', async () => {
-            mockCommandExecutor.execute.mockRejectedValue(
-                new Error('Access forbidden')
-            );
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Access forbidden'));
 
             const result = await fallbackMeshCheck(mockCommandExecutor);
 
@@ -178,9 +181,7 @@ describe('fallbackMeshCheck', () => {
         });
 
         it('should detect "not authorized" as API not enabled', async () => {
-            mockCommandExecutor.execute.mockRejectedValue(
-                new Error('User not authorized')
-            );
+            mockCommandExecutor.execute.mockRejectedValue(new Error('User not authorized'));
 
             const result = await fallbackMeshCheck(mockCommandExecutor);
 
@@ -200,9 +201,7 @@ describe('fallbackMeshCheck', () => {
         });
 
         it('should handle "no mesh found" in thrown error', async () => {
-            mockCommandExecutor.execute.mockRejectedValue(
-                new Error('No mesh found')
-            );
+            mockCommandExecutor.execute.mockRejectedValue(new Error('No mesh found'));
 
             const result = await fallbackMeshCheck(mockCommandExecutor);
 
@@ -212,13 +211,35 @@ describe('fallbackMeshCheck', () => {
             });
         });
 
+        // The thrown thing is not always an Error. `commandExecutor` rejects
+        // with an object carrying the child process's own streams, and the
+        // message can be empty — reading only `message` would drop the answer
+        // and rethrow into the caller as an unknown failure.
+        it('reads the pattern out of a rejection that carries only stderr', async () => {
+            mockCommandExecutor.execute.mockRejectedValue({
+                stderr: '403 Forbidden: mesh access denied',
+            });
+
+            const result = await fallbackMeshCheck(mockCommandExecutor);
+
+            expect(result).toEqual({ apiEnabled: false, meshExists: false });
+        });
+
+        it('reads the pattern out of a rejection that carries only stdout', async () => {
+            mockCommandExecutor.execute.mockRejectedValue({
+                stdout: 'No mesh found for this workspace',
+            });
+
+            const result = await fallbackMeshCheck(mockCommandExecutor);
+
+            expect(result).toEqual({ apiEnabled: true, meshExists: false });
+        });
+
         it('should rethrow unknown errors', async () => {
             const unknownError = new Error('Network timeout');
             mockCommandExecutor.execute.mockRejectedValue(unknownError);
 
-            await expect(fallbackMeshCheck(mockCommandExecutor)).rejects.toThrow(
-                'Network timeout'
-            );
+            await expect(fallbackMeshCheck(mockCommandExecutor)).rejects.toThrow('Network timeout');
         });
     });
 });
