@@ -5,7 +5,7 @@
  * the combined file sat over the 750-line limit.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import {
@@ -127,6 +127,46 @@ describe('IntegrationsScreen — destination control', () => {
         render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
         settleStatus(handlers);
 
+        expect(screen.queryByText(/no integrations match/i)).not.toBeInTheDocument();
+    });
+
+    /**
+     * The two conditions the message needs BESIDES a query.
+     *
+     * The control above types nothing, so it only ever proves the first operand.
+     * Each of these holds a query and falsifies one of the other two: a query
+     * that MATCHES (visible cards are not zero), and a query left standing while
+     * the list empties out (there are no cards to have filtered).
+     */
+    it('stays quiet while the typed query still matches a card', () => {
+        const handlers = captureHandlers();
+        render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
+        settleStatus(handlers);
+
+        fireEvent.change(screen.getByLabelText('Filter integrations'), {
+            target: { value: 'erp' },
+        });
+
+        expect(screen.getByTestId('card-a')).toBeInTheDocument();
+        expect(screen.queryByText(/no integrations match/i)).not.toBeInTheDocument();
+    });
+
+    it('says nothing matched only when there was something to match', () => {
+        const handlers = captureHandlers();
+        render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
+        settleStatus(handlers);
+        fireEvent.change(screen.getByLabelText('Filter integrations'), {
+            target: { value: 'zzzz-no-match' },
+        });
+
+        // The last integration is removed while the search box still holds a
+        // query. "Nothing matched" would be a lie about an empty project — the
+        // empty state is the answer, and it is already on screen.
+        act(() => {
+            handlers.get('appBuilderComponentsSnapshot')?.({ components: {} });
+        });
+
+        expect(screen.getByTestId('empty-state')).toBeInTheDocument();
         expect(screen.queryByText(/no integrations match/i)).not.toBeInTheDocument();
     });
 

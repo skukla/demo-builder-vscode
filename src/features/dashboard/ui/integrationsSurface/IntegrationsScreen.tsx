@@ -35,7 +35,6 @@ import { AddIntegrationFlowAdapter } from './AddIntegrationFlowAdapter';
 import { EventingSection } from './EventingSection';
 import {
     getIdentifiedMeshAppBuilderComponent,
-    getMeshAppBuilderComponent,
     listAppBuilderComponents,
 } from '@/core/state/appBuilderComponentState';
 import { CtaEmptyState } from '@/core/ui/components/feedback/CtaEmptyState';
@@ -84,11 +83,12 @@ const CARD_SEARCH_FIELDS = ['name', 'kindLabel', 'sourceLine'] as const;
  * ProjectsDashboard had each hand-rolled it while `useSearchFilter` sat unused —
  * architecture-duplication scan, 2026-07-31). Kept as a named export because the
  * screen owns its query state and the suite tests this directly.
+ *
+ * No empty-query short-circuit: `matchesSearchFields` trims the query itself and
+ * returns true for an empty needle (core/ui/hooks/useSearchFilter.ts), so the
+ * guard that used to sit here returned the same cards the filter already did.
  */
 export function filterCards(cards: IntegrationCardModel[], query: string): IntegrationCardModel[] {
-    if (!query.trim()) {
-        return cards;
-    }
     return cards.filter((card) => matchesSearchFields(card, CARD_SEARCH_FIELDS, query));
 }
 
@@ -103,9 +103,10 @@ export function IntegrationsScreen({
     adobeOrgId,
     commerceStoreStructure,
 }: IntegrationsScreenProps): React.ReactElement {
-    const { meshStatusDisplay, meshStatus, isTransitioning, projectStatus } = useDashboardStatus({
-        hasAdobeContext,
-    });
+    // No props: the four values read here depend on the status pushes alone.
+    // `hasAdobeContext` reaches only the hook's org-check state, which this
+    // screen does not render — the screen's own gate below reads the prop.
+    const { meshStatusDisplay, meshStatus, isTransitioning, projectStatus } = useDashboardStatus();
     const components = useLiveAppBuilderComponents(appBuilderComponents);
     // Live, not the raw prop: the init payload seeds the header once, so without
     // this a destination change left the crumb naming the OLD target all session.
@@ -145,7 +146,11 @@ export function IntegrationsScreen({
         const meshCard = deriveMeshCard(
             meshStatusDisplay,
             meshStatus,
-            mesh?.state ?? getMeshAppBuilderComponent(project),
+            // No `?? getMeshAppBuilderComponent(project)` fallback: that function
+            // IS `getIdentifiedMeshAppBuilderComponent(project)?.state`
+            // (core/state/appBuilderComponentState.ts), so it could only ever
+            // return the value already in hand.
+            mesh?.state,
             isMeshBusy(meshStatus) || isTransitioning,
             mesh?.id,
             // Names the deployed codes. A pure by-code lookup, so it cannot

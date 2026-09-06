@@ -13,12 +13,15 @@ import {
     DEPLOYED,
     IntegrationsScreen,
     asDisplayName,
+    filterCards,
     formatDestination,
     captureHandlers,
     getClient,
     resetIntegrationsScreenMocks,
     settleStatus,
 } from './IntegrationsScreen.testUtils';
+import type { AppBuilderComponentCatalogEntry } from '@/types/appBuilderComponents';
+import type { IntegrationCardModel } from '@/features/dashboard/ui/components/integrations/integrationCardModel';
 
 beforeEach(() => {
     resetIntegrationsScreenMocks();
@@ -288,15 +291,41 @@ describe('IntegrationsScreen', () => {
             expect(getClient().postMessage).toHaveBeenCalledWith('showProjectDashboard');
         });
 
+        // Cleared BEFORE the click on purpose: useDashboardStatus posts
+        // 'requestStatus' itself on mount, so the bare assertion passed even with
+        // this handler's body emptied.
         it('refresh re-requests status', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             const handlers = captureHandlers();
             render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
             settleStatus(handlers);
+            getClient().postMessage.mockClear();
 
             await user.click(screen.getByRole('button', { name: 'refresh' }));
 
             expect(getClient().postMessage).toHaveBeenCalledWith('requestStatus');
+        });
+
+        it('asks the extension to deploy the mesh when the grid says so', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const handlers = captureHandlers();
+            render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
+            settleStatus(handlers);
+
+            await user.click(screen.getByRole('button', { name: 'grid-deploy-mesh' }));
+
+            expect(getClient().postMessage).toHaveBeenCalledWith('deployMesh');
+        });
+
+        it('asks the extension to re-authenticate when the grid says so', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const handlers = captureHandlers();
+            render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
+            settleStatus(handlers);
+
+            await user.click(screen.getByRole('button', { name: 'grid-reauth' }));
+
+            expect(getClient().postMessage).toHaveBeenCalledWith('reAuthenticate');
         });
     });
 
@@ -420,6 +449,119 @@ describe('IntegrationsScreen', () => {
             });
 
             expect(screen.getByTestId('card-a')).toBeInTheDocument();
+        });
+    });
+    describe('filterCards', () => {
+        const CARDS = [
+            { id: 'a', name: 'ERP Sync', kindLabel: 'Integration', sourceLine: 'acme/erp-sync' },
+            { id: 'b', name: 'Order Flow', kindLabel: 'Integration', sourceLine: 'acme/order' },
+        ] as unknown as IntegrationCardModel[];
+
+        it('matches a query against the card fields', () => {
+            expect(filterCards(CARDS, 'order').map((c) => c.id)).toStrictEqual(['b']);
+        });
+
+        // TRIMMED, not merely truthy: a query of spaces is an empty query. Handing
+        // it to the contains-walk instead would match nothing and blank the grid.
+        it('treats a whitespace-only query as no query at all', () => {
+            expect(filterCards(CARDS, '   ').map((c) => c.id)).toStrictEqual(['a', 'b']);
+        });
+    });
+
+    describe('the add flow modal', () => {
+        it('is closed until something opens it', () => {
+            const handlers = captureHandlers();
+            render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
+            settleStatus(handlers);
+
+            expect(screen.queryByTestId('add-modal')).not.toBeInTheDocument();
+        });
+
+        // The band's Add is withheld while the list is empty (the empty state
+        // carries the CTA), so this is the only test that sees it at all.
+        it('opens from the band button once there are cards', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const handlers = captureHandlers();
+            render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
+            settleStatus(handlers);
+
+            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+
+            expect(screen.getByTestId('add-modal')).toHaveAttribute('data-mode', 'add');
+        });
+
+        it('closes again on the modal\u2019s own dismiss', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const handlers = captureHandlers();
+            render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
+            settleStatus(handlers);
+            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+
+            await user.click(screen.getByRole('button', { name: 'close-modal' }));
+
+            expect(screen.queryByTestId('add-modal')).not.toBeInTheDocument();
+        });
+
+        it('closes the destination journey too', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const handlers = captureHandlers();
+            render(
+                <IntegrationsScreen
+                    hasAdobeContext
+                    appBuilderComponents={{ a: DEPLOYED }}
+                    destination={{ projectTitle: 'Kukla Mesh', workspaceTitle: 'Stage' }}
+                />
+            );
+            settleStatus(handlers);
+            await user.click(screen.getByRole('button', { name: 'Change' }));
+
+            await user.click(screen.getByRole('button', { name: 'close-modal' }));
+
+            expect(screen.queryByTestId('add-modal')).not.toBeInTheDocument();
+        });
+
+        /**
+         * The CATALOG the flow is handed.
+         *
+         * Nothing else on this screen shows the catalog, so both halves of
+         * `appBuilderComponentCatalog ?? EMPTY_CATALOG` are asserted through the
+         * argument the adapter receives: the caller's list when there is one, and
+         * a genuinely EMPTY module-level array when there is not.
+         */
+        it('hands the flow the catalog it was given', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const catalog = [
+                {
+                    id: 'erp',
+                    name: 'ERP',
+                    description: 'd',
+                    kind: 'integration',
+                },
+            ] as AppBuilderComponentCatalogEntry[];
+            const handlers = captureHandlers();
+            render(
+                <IntegrationsScreen
+                    hasAdobeContext
+                    appBuilderComponents={{ a: DEPLOYED }}
+                    appBuilderComponentCatalog={catalog}
+                />
+            );
+            settleStatus(handlers);
+
+            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+
+            expect(screen.getByTestId('add-modal')).toHaveAttribute('data-catalog-size', '1');
+        });
+
+        it('falls back to an EMPTY catalog, not a populated one', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            const handlers = captureHandlers();
+            render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
+            settleStatus(handlers);
+
+            await user.click(screen.getByRole('button', { name: 'Add integration' }));
+
+            expect(screen.getByTestId('add-modal')).toHaveAttribute('data-catalog-size', '0');
         });
     });
 });

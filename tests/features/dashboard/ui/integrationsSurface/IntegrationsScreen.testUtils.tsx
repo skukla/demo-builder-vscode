@@ -116,14 +116,25 @@ jest.mock('@adobe/react-spectrum', () => ({
 // The grid and add modal have their own suites; stub to keep this focused on
 // WHAT the screen hands down.
 jest.mock('@/features/dashboard/ui/components/integrations/IntegrationsGrid', () => ({
-    IntegrationsGrid: ({ cards, onAddRequest }: any) => (
+    // `data-actions` surfaces each card's menuActions so the suite can assert the
+    // BUSY argument the screen computes for deriveMeshCard — an in-flight mesh is
+    // handed isActionDisabled, and the only visible consequence is an empty menu.
+    // The two mesh callbacks get real buttons for the same reason: without them
+    // nothing in the suite ever invoked handleDeployMesh/handleReAuthenticate.
+    IntegrationsGrid: ({ cards, onAddRequest, onDeployMesh, onReAuthenticate }: any) => (
         <div data-testid="grid">
             {cards.map((c: any) => (
-                <div key={c.id} data-testid={`card-${c.id}`}>
+                <div
+                    key={c.id}
+                    data-testid={`card-${c.id}`}
+                    data-actions={(c.menuActions ?? []).join(',')}
+                >
                     {c.name} · {c.statusLabel}
                 </div>
             ))}
             <button onClick={onAddRequest}>grid-add</button>
+            <button onClick={onDeployMesh}>grid-deploy-mesh</button>
+            <button onClick={onReAuthenticate}>grid-reauth</button>
         </div>
     ),
 }));
@@ -142,8 +153,20 @@ jest.mock('@/features/dashboard/ui/integrationsSurface/EventingSection', () => (
 jest.mock('@/features/dashboard/ui/integrationsSurface/AddIntegrationFlowAdapter', () => ({
     // `mode` is surfaced so the destination-control suite can assert WHICH
     // journey opened — add vs destination is the whole point of that control.
-    AddIntegrationFlowAdapter: ({ isOpen, mode }: any) =>
-        isOpen ? <div data-testid="add-modal" data-mode={mode ?? 'add'} /> : null,
+    // `data-catalog-size` is the ARGUMENT check for the catalog fallback: the
+    // screen passes its own EMPTY_CATALOG when the prop is absent, and nothing
+    // else on screen would show a wrong-sized catalog arriving here. The close
+    // button is what lets a test drive `onClose`.
+    AddIntegrationFlowAdapter: ({ isOpen, mode, catalog, onClose }: any) =>
+        isOpen ? (
+            <div
+                data-testid="add-modal"
+                data-mode={mode ?? 'add'}
+                data-catalog-size={String(catalog?.length)}
+            >
+                <button onClick={onClose}>close-modal</button>
+            </div>
+        ) : null,
 }));
 
 // Deliberately below the jest.mock calls: babel-plugin-jest-hoist lifts them
@@ -153,6 +176,7 @@ import { asDisplayName } from '@/core/utils/projectDisplayName';
 // Re-exported so specs never import the subject directly: a spec's own import
 // could execute before this module and bind to UNMOCKED collaborators.
 export {
+    filterCards,
     formatDestination,
     IntegrationsScreen,
 } from '@/features/dashboard/ui/integrationsSurface/IntegrationsScreen';
@@ -188,10 +212,19 @@ export function captureHandlers(): Map<string, (data: unknown) => void> {
     } as unknown as Map<string, (data: unknown) => void>;
 }
 
-/** Resolve the status gate so the screen leaves its loading state. */
-export function settleStatus(handlers: Map<string, (data: unknown) => void>) {
+/**
+ * Resolve the status gate so the screen leaves its loading state.
+ *
+ * `mesh` rides the SAME payload because that is how the real push carries it —
+ * `useDashboardStatus` derives meshStatusDisplay from `projectStatus.mesh`, and
+ * without it the screen's whole mesh-card branch is unreachable.
+ */
+export function settleStatus(
+    handlers: Map<string, (data: unknown) => void>,
+    mesh?: { status: string; message?: string },
+) {
     act(() => {
-        handlers.get('statusUpdate')?.({ name: 'p', path: '/p', status: 'ready' });
+        handlers.get('statusUpdate')?.({ name: 'p', path: '/p', status: 'ready', mesh });
     });
 }
 
@@ -199,6 +232,13 @@ export const DEPLOYED: AppBuilderComponentState = {
     kind: 'integration',
     status: 'deployed',
     source: { owner: 'acme', repo: 'erp-sync' },
+};
+
+/** A keyed mesh component, so the identified-mesh lookup finds one. */
+export const MESH: AppBuilderComponentState = {
+    kind: 'mesh',
+    status: 'deployed',
+    source: { owner: 'acme', repo: 'mesh' },
 };
 
 export function resetIntegrationsScreenMocks(): void {

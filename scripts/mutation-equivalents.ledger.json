@@ -13227,6 +13227,86 @@
             "decision": "none \u2014 storing only real hashes is correct; the equivalence is an accident of where the throw lands",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 179,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
+            "decision": "none \u2014 [] is the correct dependency list; these callbacks close over nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 183,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
+            "decision": "none \u2014 [] is the correct dependency list; these callbacks close over nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 187,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
+            "decision": "none \u2014 [] is the correct dependency list; these callbacks close over nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 191,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
+            "decision": "none \u2014 [] is the correct dependency list; these callbacks close over nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx",
+            "anchors": [
+                "const openAdd = useCallback((): void => setAddOpen(true), []);",
+                "const closeAdd = useCallback((): void => setAddOpen(false), []);",
+                "const openDestination = useCallback((): void => setDestOpen(true), []);",
+                "const closeDestination = useCallback((): void => setDestOpen(false), []);"
+            ],
+            "mutants": 4,
+            "category": "other",
+            "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does \u2014 never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
+            "decision": "none \u2014 [] is the correct dependency list; these callbacks close over nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/ui/integrationsSurface/IntegrationsScreen.tsx",
+            "anchors": [
+                "project={destination?.projectTitle}",
+                "workspace={destination?.workspaceTitle}"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both sit inside the destinationLabel ternary, and destinationLabel is formatDestination(destination), which returns a string only when destination carries a projectTitle or a workspaceTitle. So destination is provably an object wherever these render, and dropping the ?. cannot throw. The ?. is there because the compiler cannot follow that chain \u2014 destination is typed as possibly undefined, so removing it is a type error rather than a behaviour change. Verified by planting both with a non-null assertion: the suites pass, and no input reaches this JSX with destination undefined.",
+            "decision": "none \u2014 the ?. is required by the type and correct as written",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }
