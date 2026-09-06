@@ -7,6 +7,7 @@
  */
 
 import { deriveAllowedDomain } from '@/features/app-builder/services/allowedDomain';
+import type { MeshSubscribeTarget } from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
 
@@ -38,7 +39,37 @@ describe('deriveAllowedDomain', () => {
         expect(deriveAllowedDomain(project)).toBe('localhost:3000');
     });
 
+    // The parameter type makes every field optional, and the caller is a project
+    // mid-creation: each of the three hops below is genuinely absent at some point
+    // in the flow. A missing hop must fall back to the default port, not throw and
+    // abort the mesh subscribe — so each is driven separately here.
+    describe('partially-populated projects', () => {
+        it('should default when the project has no componentSelections at all', () => {
+            const target: MeshSubscribeTarget = {};
+            expect(deriveAllowedDomain(target)).toBe('localhost:3000');
+        });
+
+        it('should default when a frontend is selected but no instances exist yet', () => {
+            const target: MeshSubscribeTarget = {
+                componentSelections: { frontend: 'eds-storefront' },
+            };
+            expect(deriveAllowedDomain(target)).toBe('localhost:3000');
+        });
+
+        it('should default when the selected frontend has no instance of its own', () => {
+            const target: MeshSubscribeTarget = {
+                componentSelections: { frontend: 'eds-storefront' },
+                componentInstances: {
+                    'api-mesh': { id: 'api-mesh', name: 'API Mesh', status: 'ready' },
+                },
+            };
+            expect(deriveAllowedDomain(target)).toBe('localhost:3000');
+        });
+    });
+
     it('should never return example.com', () => {
-        expect(deriveAllowedDomain(projectWithFrontend('headless', 8080))).not.toContain('example.com');
+        expect(deriveAllowedDomain(projectWithFrontend('headless', 8080))).not.toContain(
+            'example.com'
+        );
     });
 });
