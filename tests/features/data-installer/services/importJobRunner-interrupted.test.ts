@@ -134,7 +134,7 @@ describe('the grace window without an injected clock', () => {
     // has to be a REAL one: with a clock that answers nothing, the first empty
     // map lands outside the window and a job that is merely slow to register is
     // written off as never registered.
-    it('treats a first empty map as still starting, not as never registered', async () => {
+    it('treats a first empty map as still starting rather than unregistered', async () => {
         const { promise, getJobFailureReason } = runWith({
             poller: pollingThatRuns(4),
             sequence: [snap({}), snap({ categories: 'success', products: 'success' })],
