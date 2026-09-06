@@ -102,7 +102,11 @@ describe('DeployMeshCommand - Unification (delegates to deployMeshComponent)', (
     let mockContext: vscode.ExtensionContext;
     let mockStateManager: jest.Mocked<StateManager>;
     let mockLogger: jest.Mocked<Logger>;
-    let mockAuthManager: { getOrganizations: jest.Mock; loginAndRestoreProjectContext: jest.Mock };
+    let mockAuthManager: {
+        getOrganizations: jest.Mock;
+        loginAndRestoreProjectContext: jest.Mock;
+        getCachedOrganization: jest.Mock;
+    };
     let mockCommandExecutor: { execute: jest.Mock };
 
     beforeEach(() => {
@@ -117,6 +121,10 @@ describe('DeployMeshCommand - Unification (delegates to deployMeshComponent)', (
         mockAuthManager = {
             getOrganizations: jest.fn().mockResolvedValue([{ id: 'org-123', name: 'Org 123' }]),
             loginAndRestoreProjectContext: jest.fn().mockResolvedValue(true),
+            // The deploy core reads it to enrich the org target. The real service
+            // always has it; a fake that omits it throws inside the core's try and
+            // the whole deploy reads as a failed one.
+            getCachedOrganization: jest.fn().mockReturnValue(null),
         };
         mockCommandExecutor = {
             execute: jest.fn().mockResolvedValue({ code: 0, stdout: '', stderr: '' }),

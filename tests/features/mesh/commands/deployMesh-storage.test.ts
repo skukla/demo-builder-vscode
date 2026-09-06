@@ -103,6 +103,7 @@ describe('DeployMeshCommand - Storage Behavior', () => {
         isAuthenticated: jest.Mock;
         getOrganizations: jest.Mock;
         getCurrentOrganization: jest.Mock;
+        getCachedOrganization: jest.Mock;
     };
     let mockCommandExecutor: { execute: jest.Mock };
 
@@ -174,6 +175,9 @@ describe('DeployMeshCommand - Storage Behavior', () => {
                 .fn()
                 .mockResolvedValue([{ id: 'org-123', code: 'ORG123@AdobeOrg', name: 'Org 123' }]),
             getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org-123', name: 'Org 123' }),
+            // Read by the deploy core to enrich the org target. Omitted, it throws
+            // inside the core's try and every assertion below sees a failed deploy.
+            getCachedOrganization: jest.fn().mockReturnValue({ id: 'org-123', name: 'Org 123' }),
         };
 
         // Setup mock CommandExecutor

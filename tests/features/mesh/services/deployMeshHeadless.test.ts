@@ -42,6 +42,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 
 import { getActiveOrgContext, type OrgContextTarget } from '@/core/shell/orgContextEnv';
 import { ensureProjectAdobeContext } from '@/features/authentication/services/ensureProjectAdobeContext';
+import { projectRequiresAppBuilder } from '@/features/components/services/projectAppBuilderPredicate';
 import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
 import { listAppBuilderComponents } from '@/core/state/appBuilderComponentState';
 import { deployMeshComponent } from '@/features/mesh/services/meshDeployment';
@@ -56,6 +57,9 @@ import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import type { DeployMeshHeadlessDeps } from '@/features/mesh/services/deployMeshHeadless';
 import { createMockProject } from '../../../helpers/projectFake';
 
+const mockRequiresAppBuilder = projectRequiresAppBuilder as jest.MockedFunction<
+    typeof projectRequiresAppBuilder
+>;
 const mockPreflight = ensureProjectAdobeContext as jest.Mock;
 const mockDeploy = deployMeshComponent as jest.MockedFunction<typeof deployMeshComponent>;
 const mockFetchInfo = fetchMeshInfoFromAdobeIO as jest.MockedFunction<
@@ -84,6 +88,13 @@ function project(withMesh = true): Project {
             : {},
         componentConfigs: {},
     });
+}
+
+/** The fixture's mesh instance, resolved once so a fixture drift fails loudly. */
+function meshInstanceOf(p: Project): ComponentInstance {
+    const instance = p.componentInstances?.['commerce-mesh'];
+    if (!instance) throw new Error('fixture has no commerce-mesh instance');
+    return instance;
 }
 
 /**
@@ -119,6 +130,9 @@ describe('deployMeshHeadless', () => {
         // The registry manager is a SESSION singleton now; without this the first
         // test's instance (and its memoised registry) leaks into every later one.
         resetComponentRegistryManager();
+        // `mockReturnValue` outlives clearAllMocks, so the one test that turns the
+        // App Builder gate ON left it on for every test declared after it.
+        mockRequiresAppBuilder.mockReturnValue(false);
         mockRegenerateComponentEnvFile.mockResolvedValue(undefined);
         currentAuthManager = createMockAuthenticationService({
             testDeveloperPermissions: jest.fn().mockResolvedValue({ hasPermissions: true }),
@@ -289,6 +303,23 @@ describe('deployMeshHeadless', () => {
         expect(onStatus).toHaveBeenLastCalledWith('deployed', undefined, 'https://new/graphql');
     });
 
+    // ADR-015: the gate is handed THIS deploy's collaborators. A call that drops
+    // them typechecks (the argument is an object literal either way) and the gate,
+    // being mocked, answers the same — so only the arguments show the difference.
+    it('hands the preflight gate this project, its auth manager and its logger', async () => {
+        const d = deps();
+
+        await deployMeshHeadless(d);
+
+        expect(mockPreflight).toHaveBeenCalledWith(
+            expect.objectContaining({
+                authManager: d.authManager,
+                project: d.project,
+                logger: d.logger,
+            })
+        );
+    });
+
     it('blocks on preflight failure without deploying (auth/org)', async () => {
         mockPreflight.mockResolvedValue({ ready: false, blockedBy: 'auth', cancelled: true });
         const result = await deployMeshHeadless(deps());
@@ -298,11 +329,25 @@ describe('deployMeshHeadless', () => {
         expect(mockDeploy).not.toHaveBeenCalled();
     });
 
+    // 'org' and 'auth' send the caller down different recoveries — one offers
+    // "Switch IMS Org", the other a sign-in — so collapsing them to 'auth' leaves
+    // an org-mismatched project pressing a button that cannot help it.
+    it('reports an org mismatch as an org block, carrying the org it found', async () => {
+        mockPreflight.mockResolvedValue({
+            ready: false,
+            blockedBy: 'org',
+            currentOrg: 'Some Other Org',
+        });
+
+        const result = await deployMeshHeadless(deps());
+
+        expect(result.blockedBy).toBe('org');
+        expect(result.currentOrg).toBe('Some Other Org');
+        expect(mockDeploy).not.toHaveBeenCalled();
+    });
+
     it('blocks on missing Developer permission when the project needs App Builder', async () => {
-        const {
-            projectRequiresAppBuilder,
-        } = require('@/features/components/services/projectAppBuilderPredicate');
-        projectRequiresAppBuilder.mockReturnValue(true);
+        mockRequiresAppBuilder.mockReturnValue(true);
         currentAuthManager = createMockAuthenticationService({
             testDeveloperPermissions: jest
                 .fn()
@@ -312,7 +357,35 @@ describe('deployMeshHeadless', () => {
         const result = await deployMeshHeadless(deps());
         expect(result.success).toBe(false);
         expect(result.blockedBy).toBe('permission');
+        // The probe's OWN reason, not the generic fallback — the fallback names a
+        // role the user may already hold, which sends them looking in the wrong place.
+        expect(result.error).toBe('no role');
         expect(mockDeploy).not.toHaveBeenCalled();
+    });
+
+    it('deploys when the App Builder project HOLDS the Developer role', async () => {
+        mockRequiresAppBuilder.mockReturnValue(true);
+
+        const result = await deployMeshHeadless(deps());
+
+        expect(currentAuthManager.testDeveloperPermissions).toHaveBeenCalled();
+        expect(result.success).toBe(true);
+        expect(mockDeploy).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips the Developer-permission probe when the project needs no App Builder', async () => {
+        // projectRequiresAppBuilder is mocked false by default: a mesh-only project
+        // must not pay an IMS round-trip, and must not be blocked when it fails.
+        currentAuthManager = createMockAuthenticationService({
+            testDeveloperPermissions: jest
+                .fn()
+                .mockResolvedValue({ hasPermissions: false, error: 'no role' }),
+        });
+
+        const result = await deployMeshHeadless(deps());
+
+        expect(currentAuthManager.testDeveloperPermissions).not.toHaveBeenCalled();
+        expect(result.success).toBe(true);
     });
 
     it('blocks when the project has no mesh component', async () => {
@@ -511,6 +584,43 @@ describe('deployMeshHeadless', () => {
         });
     });
 
+    // The instance metadata is the OTHER record of the deploy — the dashboard card
+    // reads it. It is written as a spread, so a write that drops the spread or the
+    // new fields leaves the card showing the previous mesh id with no error anywhere.
+    describe('mesh instance metadata', () => {
+        it('stamps the deployed mesh id and status, keeping the metadata already there', async () => {
+            const p = project();
+            meshInstanceOf(p).metadata = { installedFrom: 'catalog' };
+            const d = deps({ project: p });
+
+            await deployMeshHeadless(d);
+
+            expect(meshInstanceOf(p).metadata).toEqual({
+                installedFrom: 'catalog',
+                meshId: 'mesh-1',
+                meshStatus: 'deployed',
+            });
+        });
+
+        // `aio api-mesh` has reported success with no payload. The ids are read off
+        // an optional `data`, so reaching through it unguarded turns a succeeded
+        // deploy into a persisted error — the state the mesh card cannot recover from.
+        it('succeeds with empty ids when the deploy reports no payload', async () => {
+            mockDeploy.mockResolvedValue({ success: true });
+            const p = project();
+            const d = deps({ project: p });
+
+            const result = await deployMeshHeadless(d);
+
+            expect(result).toEqual({ success: true, meshId: undefined, endpoint: undefined });
+            expect(mockUpdateMeshState).toHaveBeenCalledWith(expect.any(Object), undefined);
+            expect(meshInstanceOf(p).metadata).toEqual({
+                meshId: '',
+                meshStatus: 'deployed',
+            });
+        });
+    });
+
     // This core backs DeployMeshCommand, the projects-dashboard deploy handler,
     // AND the deploy_mesh MCP tool — every mesh redeploy in the extension. It
     // reused whatever .env creation wrote, so a redeploy after a credential
@@ -530,6 +640,21 @@ describe('deployMeshHeadless', () => {
                 '/p/mesh',
                 expect.anything()
             );
+        });
+
+        // The regenerator resolves the component's registry definition BY ID, so
+        // calling it without one cannot do anything useful. A mesh instance with no
+        // id still has a path and still deploys — the refresh is what gets skipped.
+        it('skips the refresh, and still deploys, when the mesh instance has no id', async () => {
+            const p = project();
+            meshInstanceOf(p).id = '';
+            const d = deps({ project: p });
+
+            const result = await deployMeshHeadless(d);
+
+            expect(mockRegenerateComponentEnvFile).not.toHaveBeenCalled();
+            expect(result.success).toBe(true);
+            expect(mockDeploy).toHaveBeenCalledTimes(1);
         });
 
         it('writes the .env BEFORE the deploy tail runs', async () => {

@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts"
+        "src/features/mesh/services/deployMeshHeadless.ts"
     ],
     "reporters": [
         "clear-text",
