@@ -12,6 +12,7 @@
 
 import * as childProcess from 'child_process';
 import { previewAndPublishPage } from '@/features/eds/services/helix/helixApiClient';
+import { credentialedUrlShape } from '../../../../helpers/credentialShapes';
 
 jest.mock('child_process', () => ({
     execFile: jest.fn(),
@@ -38,8 +39,18 @@ export const STOREFRONT = '/projects/demo/components/eds-storefront';
 /** The remote `git remote get-url origin` reports in these fakes. */
 export const REMOTE_URL = 'https://github.com/owner/repo.git\n';
 
-/** Exactly what `injectTokenIntoUrl` produces for that remote. */
-export const TOKENIZED_REMOTE = 'https://gh-token-abc:x-oauth-basic@github.com/owner/repo.git';
+/**
+ * Exactly what `injectTokenIntoUrl` produces for that remote — assembled by parts.
+ *
+ * Written as a literal this is a userinfo URL, which GitGuardian reads as a credential
+ * whatever it spells; `tests/sop/no-credential-shaped-fixtures.test.ts` bans the shape and
+ * names this builder as the way through. Same string, nothing for a scanner to match.
+ */
+export const TOKENIZED_REMOTE = credentialedUrlShape(
+    REMOTE_URL.trim(),
+    'gh-token-abc',
+    'x-oauth-basic'
+);
 
 /** The callback shape `promisify` expects back from the mocked execFile. */
 type ExecCallback = (err: Error | null, result?: { stdout: string; stderr: string }) => void;

@@ -36,3 +36,23 @@ export function githubTokenShape(body = '0123456789abcdef0123456789abcdef'): str
 export function passwordShape(chars = ''): string {
     return ['not', 'a', 'real', 'one'].join('-') + chars;
 }
+
+/**
+ * A URL carrying userinfo — the form `injectTokenIntoUrl` produces for a token-authenticated
+ * `git push`.
+ *
+ * Built with `new URL` and read back, which is the form the ban names as the way through:
+ * the assembled string is exactly what the subject produces, and nothing in this file
+ * matches a scanner. Writing the literal is what raised the 2026-09-03 alert, on a fixture
+ * whose "token" was the word gh-token.
+ *
+ * @param base     the plain remote, e.g. a https GitHub clone URL
+ * @param user     the userinfo user — for GitHub token auth, the token itself
+ * @param password the userinfo password — GitHub's is a fixed marker string
+ */
+export function credentialedUrlShape(base: string, user: string, password: string): string {
+    const url = new URL(base);
+    url.username = user;
+    url.password = password;
+    return url.toString();
+}
