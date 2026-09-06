@@ -128,7 +128,7 @@ async function refuseLifecycleOnEds(
     context: HandlerContext,
     verb: string,
 ): Promise<HandlerResponse | undefined> {
-    const project = await context.stateManager?.getCurrentProject();
+    const project = await context.stateManager.getCurrentProject();
     if (!project || !isEdsProject(project)) return undefined;
     return {
         success: false,

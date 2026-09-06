@@ -48,12 +48,13 @@ describe('openDataInstaller', () => {
         expect(dashboardHandlers.openDataInstaller).toBeInstanceOf(Function);
     });
 
-    it('dispatches the Data Installer command', async () => {
-        await dashboardHandlers.openDataInstaller(makeContext(), undefined);
+    it('dispatches the Data Installer command and reports success', async () => {
+        const result = await dashboardHandlers.openDataInstaller(makeContext(), undefined);
 
         expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
             'demoBuilder.showDataInstaller'
         );
+        expect(result).toEqual({ success: true });
     });
 
     /** The rule this handler exists to keep. */
@@ -83,8 +84,11 @@ describe('openDataInstaller', () => {
         );
         const context = makeContext();
 
-        await expect(
-            dashboardHandlers.openDataInstaller(context, undefined)
-        ).resolves.not.toThrow();
+        // The REASON has to survive: the dashboard shows what it was told, and a
+        // bare `undefined` from an emptied catch reads as a silent success.
+        await expect(dashboardHandlers.openDataInstaller(context, undefined)).resolves.toEqual({
+            success: false,
+            error: 'command missing',
+        });
     });
 });

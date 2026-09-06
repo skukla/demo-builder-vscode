@@ -44,7 +44,7 @@
         "tests/features/dashboard/handlers/aiHandlers-regenerate.test.ts": 1,
         "tests/features/dashboard/handlers/aiHandlers-setup.test.ts": 4,
         "tests/features/dashboard/handlers/dashboardHandlers-openDevConsole.test.ts": 1,
-        "tests/features/dashboard/handlers/navigateBack.test.ts": 1,
+        "tests/features/dashboard/handlers/dashboardHandlers-navigateBack.test.ts": 1,
         "tests/features/dashboard/services/onOpenChecks/orchestrator.test.ts": 1,
         "tests/features/eds/handlers/blockLibraryPublish.test.ts": 2,
         "tests/features/eds/handlers/byomOverlay.test.ts": 1,

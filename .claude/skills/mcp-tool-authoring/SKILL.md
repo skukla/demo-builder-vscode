@@ -241,7 +241,7 @@ esbuild renames identifiers, so `grep registerContentAuthoringTools dist/extensi
 
 ## What else moves (the checklist)
 
-- `dashboardHandlersMap.test.ts` pins the EXACT handler count — bump it with the
+- `dashboardHandlers-map.test.ts` pins the EXACT handler count — bump it with the
   arithmetic comment.
 - `inExtensionMcpServer.test.ts` pins the `registerProjectTools` tool list BY NAME
   ("serves the N project tools over the socket") — add yours and update the count word.

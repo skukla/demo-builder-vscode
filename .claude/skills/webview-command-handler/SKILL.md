@@ -81,7 +81,7 @@ gates read, and for the fields its JSX renders. Three different lists.
     longer an early `return` from the handler — it becomes a result, and the failure path
     (error row status + snapshot push) will fire for an operation that never ran. Mark it
     (`blocked: true`) and short-circuit before that path.
-- **The handler-map count test is PINNED.** `tests/features/dashboard/handlers/dashboardHandlersMap.test.ts`
+- **The handler-map count test is PINNED.** `tests/features/dashboard/handlers/dashboardHandlers-map.test.ts`
   asserts an exact handler count with a comment deriving it. Adding a handler fails it by design —
   bump the number AND extend the derivation comment so the next reader can still reconstruct it.
 - An unawaited/unreturned inner promise makes the UI receive a Promise object or `undefined`. `WebviewCommunicationManager` awaits the handler you register, but only what the handler *returns* travels back — always `return await service(...)` results, never fire-and-forget inside a request handler. (Root `CLAUDE.md` gotcha; `src/core/communication/webviewCommunicationManager.ts`.)
