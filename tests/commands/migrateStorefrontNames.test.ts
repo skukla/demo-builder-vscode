@@ -1,144 +1,31 @@
 /**
- * MigrateStorefrontNamesCommand tests
+ * MigrateStorefrontNamesCommand tests — scanning, confirming, authenticating
  *
  * Covers the "Demo Builder: Migrate Storefront Names" palette command —
  * the one-shot, no-reset path that heals pre-`164fd251` storefronts.
+ *
+ * Progress reporting and the result summary are in
+ * `migrateStorefrontNames-reporting.test.ts`. The mock wall both specs need —
+ * and the subject import that makes its hoisting work — is in
+ * `migrateStorefrontNames.testUtils.ts`.
  */
 
 import * as vscode from 'vscode';
-
-// ---------------------------------------------------------------------------
-// Mocks — must precede imports.
-// ---------------------------------------------------------------------------
-
-jest.mock('@/features/eds/services/storefront/storefrontNameMigration', () => ({
-    migrateStorefrontNamingIfNeeded: jest.fn(),
-}));
-
-jest.mock('@/features/eds/services/pdp/publishKeyRegistrar', () => ({
-    registerPublishKey: jest.fn().mockResolvedValue({ registered: true }),
-}));
-
-jest.mock('@/features/eds/handlers/edsHelpers', () => ({
-    ensureDaLiveAuth: jest.fn().mockResolvedValue({ authenticated: true }),
-    getDaLiveAuthService: jest.fn(() => ({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        getAccessToken: jest.fn().mockResolvedValue('mock-token'),
-    })),
-    resolveByomOverlayConfig: jest.fn((fromConfig?: string) => fromConfig),
-}));
-
-jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
-    DaLiveContentOperations: jest.fn().mockImplementation(() => ({})),
-    createDaLiveServiceTokenProvider: jest.fn(() => ({ getAccessToken: jest.fn() })),
-}));
-
-// ConfigurationService is NOT mocked, and does not need to be. Its constructor is
-// two field assignments, the migration function this command calls is mocked, so the
-// instance is never touched — the mock silenced nothing and cost the suite its ability
-// to see what was constructed.
-
-jest.mock('@/features/eds/services/reset/edsResetParams', () => ({
-    resolveStorefrontConfig: jest.fn(() => ({
-        templateOwner: 'template-org',
-        templateRepo: 'template-repo',
-        byomOverlayUrl: 'https://overlay.example.com/render-pdp',
-    })),
-}));
-
-// Note: demo-packages.json is intentionally NOT mocked here.
-// The command imports it for the `packages` array, but the array is passed
-// straight into the mocked `resolveStorefrontConfig` above — so the real JSON
-// loads and is never read by the test path. Mocking the JSON directly would
-// violate the no-config-leaf-mocks SOP (tests/sop/no-config-leaf-mocks.test.ts).
-
-// ---------------------------------------------------------------------------
-// Imports.
-// ---------------------------------------------------------------------------
-
-import { MigrateStorefrontNamesCommand } from '@/commands/migrateStorefrontNames';
-import { migrateStorefrontNamingIfNeeded } from '@/features/eds/services/storefront/storefrontNameMigration';
-import { ensureDaLiveAuth } from '@/features/eds/handlers/edsHelpers';
-import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
-import type { StateManager } from '@/types/state';
-import type { Logger } from '@/types/logger';
-import type { Project } from '@/types/base';
-import { COMPONENT_IDS } from '@/core/constants';
-import { createMockLogger } from '../helpers/loggerFake';
-import { createMockStateManager } from '../helpers/stateManagerFake';
-import { createMockExtensionContext } from '../helpers/extensionContextFake';
+import {
+    ensureAuthMock,
+    makeCommand,
+    makeCommandWith,
+    makeProject,
+    makeStateManager,
+    migrateMock,
+    registerPublishKeyMock,
+    resetMigrateMocks,
+} from './migrateStorefrontNames.testUtils';
 import { createMockProject } from '../helpers/projectFake';
-
-const migrateMock = migrateStorefrontNamingIfNeeded as jest.Mock;
-const ensureAuthMock = ensureDaLiveAuth as jest.Mock;
-const registerPublishKeyMock = registerPublishKey as jest.Mock;
-
-function makeLogger(): Logger {
-    return createMockLogger() as unknown as Logger;
-}
-
-function makeProject(
-    name: string,
-    overrides: { daLiveSite?: string; daLiveOrg?: string; githubRepo?: string } = {}
-): Project {
-    const {
-        daLiveSite = `${name}-content`, // legacy mismatched default
-        daLiveOrg = 'skukla',
-        githubRepo = `skukla/${name}`,
-    } = overrides;
-    return createMockProject({
-        name,
-        componentInstances: {
-            [COMPONENT_IDS.EDS_STOREFRONT]: {
-                id: COMPONENT_IDS.EDS_STOREFRONT,
-                name: 'EDS Storefront',
-                status: 'ready',
-                metadata: { daLiveOrg, daLiveSite, githubRepo },
-            },
-        },
-    });
-}
-
-function makeStateManager(projectsByPath: Record<string, Project>): StateManager {
-    return createMockStateManager({
-        getAllProjects: jest.fn().mockResolvedValue(
-            Object.keys(projectsByPath).map((path) => ({
-                name: projectsByPath[path].name,
-                path,
-                lastModified: new Date(),
-            }))
-        ),
-        loadProjectFromPath: jest.fn((path: string) =>
-            Promise.resolve(projectsByPath[path] ?? null)
-        ),
-    });
-}
-
-function makeCommand(stateManager: StateManager) {
-    const logger = makeLogger();
-    const context = createMockExtensionContext();
-    return new MigrateStorefrontNamesCommand(context, stateManager, logger);
-}
 
 describe('MigrateStorefrontNamesCommand', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
-
-        // Most tests need showInformationMessage to return "Migrate" so the
-        // happy path is reachable; tests that exercise the cancel branch
-        // override per-test.
-        (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Migrate');
-
-        // Default: each migrate call succeeds.
-        migrateMock.mockResolvedValue({ skipped: false, migrated: true });
-
-        // withProgress: run the callback with a stub progress reporter.
-        (vscode.window.withProgress as jest.Mock).mockImplementation(
-            async (_opts: unknown, task: (progress: { report: jest.Mock }) => Promise<unknown>) =>
-                task({ report: jest.fn() })
-        );
-
-        ensureAuthMock.mockResolvedValue({ authenticated: true });
+        resetMigrateMocks();
     });
 
     describe('scan phase', () => {
@@ -172,6 +59,45 @@ describe('MigrateStorefrontNamesCommand', () => {
             await makeCommand(sm).execute();
 
             expect(migrateMock).not.toHaveBeenCalled();
+        });
+
+        // Scanning is an inspection. `persistAfterLoad: true` would rewrite the
+        // manifest of every project on disk just for opening the palette command,
+        // and the component callback returning anything but an empty list would
+        // reconcile instances against a catalog the scan never asked for.
+        it('loads each project read-only, with no component catalog', async () => {
+            const sm = makeStateManager({ '/a': makeProject('b2b') });
+
+            await makeCommand(sm).execute();
+
+            expect(sm.loadProjectFromPath).toHaveBeenCalledWith('/a', expect.any(Function), {
+                persistAfterLoad: false,
+            });
+            const componentsCallback = (sm.loadProjectFromPath as jest.Mock).mock.calls[0][1];
+            expect(componentsCallback()).toStrictEqual([]);
+        });
+
+        it('keeps scanning after a project fails to load', async () => {
+            const sm = makeStateManager({ '/a': makeProject('a-store'), '/b': makeProject('b-store') });
+            (sm.loadProjectFromPath as jest.Mock).mockImplementation(async (path: string) => {
+                if (path === '/a') throw new Error('manifest is not JSON');
+                return makeProject('b-store');
+            });
+
+            await makeCommand(sm).execute();
+
+            expect(migrateMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('skips a project path that resolves to nothing', async () => {
+            const sm = makeStateManager({ '/a': makeProject('a-store'), '/b': makeProject('b-store') });
+            (sm.loadProjectFromPath as jest.Mock).mockImplementation(async (path: string) =>
+                path === '/a' ? null : makeProject('b-store')
+            );
+
+            await makeCommand(sm).execute();
+
+            expect(migrateMock).toHaveBeenCalledTimes(1);
         });
 
         it('finds mismatched projects (daLiveSite differs from the repo half of githubRepo)', async () => {
@@ -256,6 +182,39 @@ describe('MigrateStorefrontNamesCommand', () => {
             await makeCommand(sm).execute();
 
             expect(migrateMock).not.toHaveBeenCalled();
+            // The reason the SDK gave, not a generic stand-in — it is the only
+            // thing telling the SC whether to sign in again or fix something.
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('token revoked'),
+                'OK'
+            );
+        });
+
+        it('falls back to a generic reason when the failure carries none', async () => {
+            const sm = makeStateManager({ '/a': makeProject('b2b') });
+
+            ensureAuthMock.mockResolvedValueOnce({ authenticated: false });
+
+            await makeCommand(sm).execute();
+
+            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+                expect.stringContaining('authentication failed'),
+                'OK'
+            );
+        });
+
+        // ensureDaLiveAuth reads exactly two fields off what it is handed. An
+        // empty object typechecks at the call site and fails at run time.
+        it('hands the extension context and logger to the DA.live sign-in', async () => {
+            const sm = makeStateManager({ '/a': makeProject('b2b') });
+            const { command, context } = makeCommandWith(sm);
+
+            await command.execute();
+
+            expect(ensureAuthMock).toHaveBeenCalledWith(
+                { context, logger: expect.objectContaining({ info: expect.any(Function) }) },
+                '[MigrateStorefrontNames]'
+            );
         });
     });
 

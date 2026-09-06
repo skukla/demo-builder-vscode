@@ -14343,6 +14343,97 @@
             "decision": "The only remaining difference is the log line, which cannot be asserted.",
             "recorded": "2026-09-06",
             "source": "Planted 2026-09-06 with the 37-test projectRenameService family green."
+        },
+        {
+            "module": "src/commands/migrateStorefrontNames.ts",
+            "anchors": [
+                "if (!project) continue;"
+            ],
+            "line": 110,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Without the guard a null project reaches findStorefrontNameMismatch, which dereferences project.componentInstances and throws straight into the enclosing try/catch \u2014 which logs and continues to the next project. Same candidates, same migrations, same summary.",
+            "decision": "The guard is the readable form of what the catch would do anyway; only the log line differs.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06 as 'if (false)' with the 30-test migrateStorefrontNames family green."
+        },
+        {
+            "module": "src/commands/migrateStorefrontNames.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "line": 114,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The scan's catch body is a single logger.warn. Emptying it still swallows the error and still moves to the next project.",
+            "decision": "Killing it would mean asserting the warning's wording.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06 with the 30-test migrateStorefrontNames family green."
+        },
+        {
+            "module": "src/commands/migrateStorefrontNames.ts",
+            "anchors": [
+                "outcomes.push({"
+            ],
+            "line": 197,
+            "mutants": 1,
+            "category": "other",
+            "reason": "MigrationOutcome's projectName and error are read ONLY by reportResults' logger. An empty object still lands in outcomes, still fails the o.success filter, and still produces the same counts in both toasts.",
+            "decision": "Only the per-project log line changes.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06 as 'outcomes.push({})' with the 30-test family green."
+        },
+        {
+            "module": "src/commands/migrateStorefrontNames.ts",
+            "anchors": [
+                "const message = (error as Error).message ?? 'unknown error';"
+            ],
+            "line": 213,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The message is stored on the outcome and logged; no toast carries it, so swapping the nullish fallback for && changes only what the log says.",
+            "decision": "Unobservable outside the logger.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06 with the 30-test family green."
+        },
+        {
+            "module": "src/commands/migrateStorefrontNames.ts",
+            "anchors": [
+                "outcomes.push({"
+            ],
+            "line": 214,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The throw path's outcome record, same as line 197: counted by length and by the success filter, its fields read only by the logger.",
+            "decision": "Only the per-project log line changes.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06 as 'outcomes.push({})' with the 30-test family green."
+        },
+        {
+            "module": "src/commands/migrateStorefrontNames.ts",
+            "anchors": [
+                "for (const o of failed) {"
+            ],
+            "line": 241,
+            "mutants": 1,
+            "category": "block",
+            "reason": "The loop body is one logger.error per failed project. Emptying it leaves both summary toasts and every collaborator call identical.",
+            "decision": "Killing it would mean asserting logged wording.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06 with the 30-test family green."
+        },
+        {
+            "module": "src/commands/migrateStorefrontNames.ts",
+            "anchors": [
+                "logger.error(`${LOG_PREFIX} FAILED ${o.projectName}: ${o.error ?? 'unknown error'}`);"
+            ],
+            "line": 242,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The nullish fallback sits entirely inside an argument to logger.error, in the loop whose whole body is already recorded as unobservable one line above. Nothing outside the log channel reads o.error: the failure toast reports counts only, and the outcome objects are consumed by two length filters.",
+            "decision": "Subsumed by the line-241 row \u2014 if emptying the entire body changes nothing, neither can an expression inside it.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06 (as part of emptying the loop body) with the 30-test migrateStorefrontNames family green."
         }
     ]
 }
