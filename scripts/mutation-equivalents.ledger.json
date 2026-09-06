@@ -16477,6 +16477,18 @@
             "decision": "none \u2014 the sink is optional in the constructor, so the ?. is what the type requires",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/components/services/appBuilderComponentCatalogLoader.ts",
+            "anchors": [
+                "if (id !== undefined) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard true calls assertInstanceId(undefined), and that does not throw: the check is GITHUB_NAME.test(value), so undefined is coerced to the string 'undefined', which matches [A-Za-z0-9._-]+ and is neither '.' nor '..'. The entry is then built with id ?? owner-repo exactly as before, so the omitted-id and explicit-id calls both answer identically. Verified by planting the replacement: all 54 suite tests pass with the guard removed.",
+            "decision": "none \u2014 the guard is what narrows string | undefined for assertInstanceId, and the only alternative (asserting inside the helper) would move the same unreachable branch rather than remove it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }

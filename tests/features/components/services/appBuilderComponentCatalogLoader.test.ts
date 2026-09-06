@@ -124,6 +124,21 @@ describe('appBuilderComponentCatalogLoader', () => {
             expect(entry.lifecycle).toBeUndefined();
         });
 
+        // Wrong repo under the RIGHT owner. Matching on owner alone would seed
+        // every repo in Adobe's namespace with the kit's layout and lifecycle —
+        // an entry the deploy path would treat as a starter-kit app.
+        it('another repo under the seed owner inherits NOTHING', () => {
+            const entry = buildCustomIntegrationEntry({
+                owner: 'adobe',
+                repo: 'some-other-repo',
+            });
+
+            expect(entry.layout).toBeUndefined();
+            expect(entry.lifecycle).toBeUndefined();
+            expect(entry.nodeVersion).toBeUndefined();
+            expect(entry.requiredApis).toBeUndefined();
+        });
+
         it('an unknown source synthesizes a plain entry with no capability fields', () => {
             const entry = buildCustomIntegrationEntry({ owner: 'acme', repo: 'erp-bridge' });
             expect(entry.layout).toBeUndefined();
@@ -156,6 +171,25 @@ describe('appBuilderComponentCatalogLoader', () => {
             expect(entryFitsProjectAxes(shell!, '', '')).toBe(true);
             expect(entryFitsProjectAxes(shell!, 'unknown-backend', 'unknown-frontend')).toBe(true);
         });
+
+        // An axis authored as an EMPTY array means unconstrained, exactly like
+        // omitting it. Reading it the other way — lists nothing, so matches
+        // nothing — would hide the entry on every stack, with no error anywhere
+        // and no way to tell it apart from a deliberately narrow entry.
+        it('treats an empty axis list as unconstrained, not as matching nothing', () => {
+            const entry = {
+                id: 'empty-axes',
+                name: 'Empty axes',
+                description: '',
+                kind: 'integration' as const,
+                source: { owner: 'acme', repo: 'app', branch: 'main' },
+                compatibleBackends: [],
+                compatibleFrontends: [],
+            };
+
+            expect(entryFitsProjectAxes(entry, 'adobe-commerce-paas', 'eds-storefront')).toBe(true);
+            expect(entryFitsProjectAxes(entry, '', '')).toBe(true);
+        });
     });
 
     describe('getAppBuilderComponentEntry', () => {
@@ -181,6 +215,21 @@ describe('appBuilderComponentCatalogLoader', () => {
 
         it('rejects an unrelated repo', () => {
             expect(isBlankSource({ owner: 'acme', repo: 'erp-sync' })).toBe(false);
+        });
+
+        // Right owner, wrong repo. Matching on owner alone would call every
+        // repo in the shell owner's namespace AI-built.
+        it('rejects another repo under the shell owner', () => {
+            expect(isBlankSource({ owner: 'skukla', repo: 'commerce-eds-mesh' })).toBe(false);
+        });
+
+        // The starter kit IS an authored catalog entry, so an entry-match alone
+        // would recognize it — but it is a seed, not the blank shell, and the
+        // dashboard card model uses this to say "built with AI".
+        it('rejects an authored entry that is not the blank shell', () => {
+            expect(
+                isBlankSource({ owner: 'adobe', repo: 'commerce-integration-starter-kit' })
+            ).toBe(false);
         });
     });
 
@@ -249,6 +298,16 @@ describe('appBuilderComponentCatalogLoader', () => {
             expect(() => buildCustomIntegrationEntry({ owner: 'acme', repo: '..' })).toThrow(
                 /invalid/i
             );
+        });
+
+        // The charset gates are ANCHORED at both ends. Unanchored, a name is
+        // accepted whenever it merely ENDS in safe characters, so an injection
+        // at the front — the useful position, since the value is interpolated
+        // into a `git clone` — passes the gate.
+        it('rejects a branch whose metacharacters are at the front', () => {
+            expect(() =>
+                buildCustomIntegrationEntry({ owner: 'acme', repo: 'app', branch: '$(id)-main' })
+            ).toThrow(/invalid/i);
         });
 
         it('rejects a branch carrying shell metacharacters or dot-dot', () => {
@@ -536,6 +595,13 @@ describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () =
                 'commerce-integration-starter-kit',
             ]);
         }
+    });
+
+    // A seed is scaffolding for the Build-custom flow, which builds an
+    // integration. A mesh is derived from the registry and has its own card, so
+    // a kind-blind reading would offer "start a custom app from this mesh".
+    it('never calls a mesh a seed, whatever the entry declares', () => {
+        expect(isSeedIntegration({ ...mesh, seed: true })).toBe(false);
     });
 
     it('a seed is never blank, and the blank shell is never a seed', () => {
