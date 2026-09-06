@@ -680,6 +680,7 @@ export const ProgressCircle: React.FC<any> = ({
     'aria-label': ariaLabel,
     className,
     UNSAFE_className,
+    isIndeterminate,
     ...props
 }) => (
     <div
@@ -687,6 +688,10 @@ export const ProgressCircle: React.FC<any> = ({
         role="progressbar"
         aria-label={ariaLabel}
         data-size={size}
+        // Surfaced, because it is a DECISION its callers make: real Spectrum draws a
+        // spinner or a filled arc from it, and a mock that swallows the prop leaves
+        // "indeterminate" and "0%" indistinguishable to every test.
+        data-indeterminate={isIndeterminate ? 'true' : 'false'}
         className={UNSAFE_className || className}
         {...filterSpectrumProps(props)}
     />

@@ -14749,6 +14749,18 @@
             "decision": "none \u2014 both forms give a key that is unique per row and stable across renders",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/core/ui/components/feedback/LoadingDisplay.tsx",
+            "anchors": [
+                "const hasDeterminateProgress = progress !== undefined && progress >= 0;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Replacing the left operand with true leaves 'progress >= 0', and that comparison already answers false for undefined: undefined >= 0 is false in JavaScript, so the guard it removes was never the one deciding the undefined case. Every other input reaches the same answer through the same comparison. Planted it (true && progress >= 0) and ran the 33-test suite: green, including the four progress cases \u2014 none, 42, 0 and -5. Killing it would need an input where 'progress is missing' and 'progress is negative' give different answers, and there is none.",
+            "decision": "none \u2014 undefined >= 0 is already false, so the explicit check changes no outcome",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }
