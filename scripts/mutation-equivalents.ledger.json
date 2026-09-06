@@ -14639,6 +14639,19 @@
             "decision": "none \u2014 null and undefined are the same value to every consumer this component has",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/ai/server/storefrontTools.ts",
+            "anchors": [
+                "daLiveOrg: meta?.daLiveOrg || repoOwner,",
+                "daLiveSite: meta?.daLiveSite || repoName,"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both optional chains are unreachable with a nullish `meta`. The function reads `meta?.githubRepo ?? ''` five lines earlier; a nullish meta therefore yields an empty string, whose split gives an empty repoOwner, and the guard above returns null. So control only arrives at these two lines when meta is an object. Planted both mutations (`meta.daLiveOrg`, `meta.daLiveSite`) and ran storefrontTools.test.ts: 36 tests green, no throw, because no input can reach them with meta unset. Killing them would need a project whose metadata is nullish AND whose githubRepo parses, which is not a state the shape admits.",
+            "decision": "none \u2014 the guard above makes a nullish meta unreachable here; the chains are defensive syntax, not a decision",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }

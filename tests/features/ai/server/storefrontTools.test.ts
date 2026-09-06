@@ -21,6 +21,7 @@ jest.mock('@/features/ai/server/adobeTargetStore', () => ({
 }));
 
 import { registerStorefrontTools } from '@/features/ai/server/storefrontTools';
+import type { McpToolSchema } from '@/features/ai/server/mcpToolServer';
 import { runWithAdobeTarget } from '@/features/ai/server/adobeTargetStore';
 import { COMPONENT_IDS } from '@/core/constants';
 import {
@@ -52,25 +53,48 @@ function fakeServer() {
         content: Array<{ text: string }>;
     }>;
     const tools = new Map<string, ToolHandler>();
+    // The DEFINITION is kept, not discarded: `needsAuth`, the annotations and the
+    // input schema are what the consent layer and the dry run read, and a stub that
+    // throws them away leaves all three asserted by nothing.
+    const defs = new Map<string, McpToolSchema>();
     return {
-        registerTool(name: string, _def: unknown, handler: ToolHandler) {
+        registerTool(name: string, def: McpToolSchema, handler: ToolHandler) {
             tools.set(name, handler);
+            defs.set(name, def);
+        },
+        def(name: string): McpToolSchema {
+            return defs.get(name)!;
         },
         async call(name: string, args: Record<string, unknown> = {}): Promise<any> {
             return JSON.parse((await tools.get(name)!(args)).content[0].text);
+        },
+        /** Invoke with NO arguments at all — what an agent sends for a no-field call. */
+        async callWithNoArgs(name: string): Promise<any> {
+            return JSON.parse((await tools.get(name)!()).content[0].text);
         },
     };
 }
 
 const getCurrentProject = jest.fn();
+const saveProject = jest.fn();
 const ctxFactory = () =>
     createMockHandlerContext({
-        stateManager: createMockStateManager({ getCurrentProject }),
+        stateManager: createMockStateManager({ getCurrentProject, saveProject }),
         context: createMockExtensionContext({ secrets: createMockSecretStorage().secrets }),
         logger: createMockLogger(),
     });
 
 const EDS_PROJECT = { name: 'eds-proj', path: '/p/eds-proj' };
+
+const EDS_PROJECT_WITH_REPO = {
+    name: 'eds-proj',
+    path: '/p/eds-proj',
+    componentInstances: {
+        [COMPONENT_IDS.EDS_STOREFRONT]: {
+            metadata: { githubRepo: 'me/shop', daLiveOrg: 'acme', daLiveSite: 'shop' },
+        },
+    },
+};
 
 describe('republish', () => {
     beforeEach(() => {
@@ -178,18 +202,30 @@ describe('republish', () => {
         const res = await s.call('republish', { confirm: true });
         expect(res).toMatchObject({ error_type: 'ORG_MISMATCH', non_retryable: true });
     });
+
+    it('lets any other failure out, rather than reporting it as the wrong org', async () => {
+        republishMock.mockRejectedValueOnce(new Error('CDN unreachable'));
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        await expect(s.call('republish', { confirm: true })).rejects.toThrow('CDN unreachable');
+    });
+
+    it('saves an updated project through the state manager it was handed', async () => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        await s.call('republish', { confirm: true });
+
+        // The service reports progress by handing the project back; the tool's job is
+        // to route that to THIS invocation's state manager, not to drop it.
+        const updated = { ...EDS_PROJECT, name: 'eds-proj-renamed' };
+        await republishMock.mock.calls[0][0].persist(updated);
+
+        expect(saveProject).toHaveBeenCalledWith(updated);
+    });
 });
 
 describe('sync_content', () => {
-    const PROJECT = {
-        name: 'eds-proj',
-        path: '/p/eds-proj',
-        componentInstances: {
-            [COMPONENT_IDS.EDS_STOREFRONT]: {
-                metadata: { githubRepo: 'me/shop', daLiveOrg: 'acme', daLiveSite: 'shop' },
-            },
-        },
-    };
+    const PROJECT = EDS_PROJECT_WITH_REPO;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -228,7 +264,9 @@ describe('sync_content', () => {
         });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content', { confirm: true })).toMatchObject({ needsAuth: 'github' });
+        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
+            needsAuth: 'github',
+        });
         expect(republishContentMock).not.toHaveBeenCalled();
     });
 
@@ -238,7 +276,9 @@ describe('sync_content', () => {
         });
         const s = fakeServer();
         registerStorefrontTools(s, ctxFactory);
-        expect(await s.call('sync_content', { confirm: true })).toMatchObject({ needsAuth: 'dalive' });
+        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
+            needsAuth: 'dalive',
+        });
         expect(republishContentMock).not.toHaveBeenCalled();
     });
 
@@ -302,6 +342,56 @@ describe('sync_content', () => {
             non_retryable: true,
         });
     });
+
+    it('lets any other failure out, rather than reporting it as the wrong org', async () => {
+        republishContentMock.mockRejectedValueOnce(new Error('DA.live timed out'));
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        await expect(s.call('sync_content', { confirm: true })).rejects.toThrow(
+            'DA.live timed out'
+        );
+    });
+
+    it('errors when the repo metadata names an owner but no repository', async () => {
+        getCurrentProject.mockResolvedValueOnce({
+            ...PROJECT,
+            componentInstances: {
+                [COMPONENT_IDS.EDS_STOREFRONT]: { metadata: { githubRepo: 'me' } },
+            },
+        });
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(await s.call('sync_content', { confirm: true })).toMatchObject({
+            error: expect.stringMatching(/missing GitHub repo/),
+        });
+        expect(republishContentMock).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the GitHub owner and repo when no DA.live target is recorded', async () => {
+        getCurrentProject.mockResolvedValueOnce({
+            ...PROJECT,
+            componentInstances: {
+                [COMPONENT_IDS.EDS_STOREFRONT]: { metadata: { githubRepo: 'me/shop' } },
+            },
+        });
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        await s.call('sync_content', { confirm: true });
+        expect(republishContentMock).toHaveBeenCalledWith(
+            expect.objectContaining({ daLiveOrg: 'me', daLiveSite: 'shop' })
+        );
+    });
+
+    it('saves an updated project through the state manager it was handed', async () => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        await s.call('sync_content', { confirm: true });
+
+        const updated = { ...PROJECT, name: 'eds-proj-renamed' };
+        await republishContentMock.mock.calls[0][0].persist(updated);
+
+        expect(saveProject).toHaveBeenCalledWith(updated);
+    });
 });
 
 // ─── response-size ceilings (phase 2 audit) ──────────────────────────────────
@@ -359,6 +449,57 @@ describe('the confirm gate on the two publishing tools', () => {
         const res = await s.call('republish');
 
         expect(res.needsAuth).toBeUndefined();
+        expect(String(res.error)).toMatch(/confirm:true/);
+    });
+});
+
+/**
+ * WHAT EACH TOOL DECLARES AT REGISTRATION. None of this is reachable from the handler:
+ * `needsAuth` is what the agent surface reads to offer a sign-in, `annotations` is what
+ * the dry run and `tools/list` gate on, and `inputSchema` is what the SDK validates a
+ * call against before the handler ever sees it. A stub that discards the definition
+ * leaves all three asserted by nothing.
+ */
+describe('what the two publishing tools declare', () => {
+    const TOOLS = ['republish', 'sync_content'];
+
+    it.each(TOOLS)('%s declares both sign-ins it needs, not just one', (tool) => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(s.def(tool).needsAuth).toStrictEqual(['github', 'dalive']);
+    });
+
+    it.each(TOOLS)('%s declares itself a destructive write, not a read', (tool) => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(s.def(tool).annotations).toStrictEqual({
+            readOnlyHint: false,
+            destructiveHint: true,
+        });
+    });
+
+    it.each(TOOLS)('%s takes the confirm field its gate reads', (tool) => {
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+        expect(Object.keys(s.def(tool).inputSchema ?? {})).toStrictEqual(['confirm']);
+    });
+});
+
+describe('a call that carries no arguments at all', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        getCurrentProject.mockResolvedValue(EDS_PROJECT_WITH_REPO);
+        isEdsProjectMock.mockReturnValue(true);
+    });
+
+    it.each(['republish', 'sync_content'])('%s refuses, rather than throwing', async (tool) => {
+        // An agent calling a tool it believes takes no arguments sends none, so the
+        // handler is invoked with `undefined` — not with an empty object.
+        const s = fakeServer();
+        registerStorefrontTools(s, ctxFactory);
+
+        const res = await s.callWithNoArgs(tool);
+
         expect(String(res.error)).toMatch(/confirm:true/);
     });
 });
