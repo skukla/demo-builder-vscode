@@ -11,7 +11,10 @@
  * skip when the project has no mesh catalog row.
  */
 
-import { ensureMeshApiSubscribed } from '@/features/app-builder/services/ensureMeshApiSubscribed';
+import {
+    ensureMeshApiSubscribed,
+    subscriberTarget,
+} from '@/features/app-builder/services/ensureMeshApiSubscribed';
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 
@@ -235,6 +238,19 @@ describe('ensureMeshApiSubscribed', () => {
         expect(events).toContainEqual({ code: MESH, done: true });
     });
 
+    it('reads the catalog with empty axes when the project has no component selections', async () => {
+        // The wizard builds a MeshSubscribeTarget from a payload, so both
+        // selections can be absent. Reaching through them must not throw, and the
+        // catalog must be asked with the empty axes rather than with undefined —
+        // the axis filter treats the two differently.
+        const authService = createAuthService();
+        const { componentSelections: _dropped, ...noSelections } = createProject();
+
+        await ensureMeshApiSubscribed({ project: noSelections, authService, logger });
+
+        expect(getAvailableAppBuilderComponents).toHaveBeenCalledWith('', '');
+    });
+
     it('skips when only non-mesh entries match the axes (e.g. the unrestricted blank shell)', async () => {
         // This is the MESH pre-deploy subscribe: an axis-unrestricted
         // kind:'integration' entry (app-builder-shell) matching the selection
@@ -253,5 +269,26 @@ describe('ensureMeshApiSubscribed', () => {
         expect(result).toEqual([]);
         expect(authService.getServicesForOrg).not.toHaveBeenCalled();
         expect(withOrgContext).not.toHaveBeenCalled();
+    });
+});
+
+describe('subscriberTarget', () => {
+    it('maps the project identity onto the three ids the subscriber takes', () => {
+        expect(subscriberTarget(createProject())).toStrictEqual({
+            orgId: 'org-1',
+            projectId: 'proj-1',
+            workspaceId: 'ws-1',
+        });
+    });
+
+    it('answers empty ids — never throws — for a target with no adobe block', () => {
+        // The wizard handler builds this shape from a payload, so `adobe` is
+        // genuinely absent there. The subscriber wants three strings; an
+        // exception here would abort the deploy before it reported anything.
+        expect(subscriberTarget({})).toStrictEqual({
+            orgId: '',
+            projectId: '',
+            workspaceId: '',
+        });
     });
 });
