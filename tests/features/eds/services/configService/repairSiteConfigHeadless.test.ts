@@ -185,7 +185,109 @@ describe('repairSiteConfig', () => {
         const result = await run({ project: createMockProject({ name: 'bare' }) });
 
         expect(result.status).toBe('invalid');
+        // `verified` is a claim about a live overlay. Nothing was written and
+        // nothing was read back, so the only honest value is false — an
+        // 'invalid' that reports verified would tell a caller the site is fine.
+        expect(result.verified).toBe(false);
         expect(mockRegisterSiteConfig).not.toHaveBeenCalled();
+    });
+
+    /**
+     * `lostGrants` is only ever present when grants were actually lost — nothing
+     * in the app can restore them, so a key that is always there (holding
+     * `undefined`) would train a caller to stop reading it. Every exit that can
+     * carry them is pinned in BOTH directions: present when there are some,
+     * absent as a key when there are not.
+     */
+    describe('lost grants ride out on every exit that can carry them', () => {
+        it('carries them out on a dead DA.live session', async () => {
+            const authError = new DaLiveAuthError('session expired');
+            authError.lostGrants = ['a****@x.test'];
+            mockRegisterSiteConfig.mockRejectedValue(authError);
+
+            const result = await run();
+
+            expect(result.status).toBe('failed');
+            expect(result.lostGrants).toEqual(['a****@x.test']);
+        });
+
+        it('omits the key entirely when a dead session lost none', async () => {
+            mockRegisterSiteConfig.mockRejectedValue(new DaLiveAuthError('session expired'));
+
+            const result = await run();
+
+            expect(result).not.toHaveProperty('lostGrants');
+            expect(result.verified).toBe(false);
+        });
+
+        it('carries them out on a REPAIRED result', async () => {
+            // The registration succeeded and the admin list still did not survive
+            // it. Reporting a clean repair here is the silent half of the worst
+            // outcome in this feature.
+            mockRegisterSiteConfig.mockResolvedValue({
+                registered: true,
+                lostGrants: ['a****@x.test'],
+            });
+
+            const result = await run();
+
+            expect(result.status).toBe('repaired');
+            expect(result.lostGrants).toEqual(['a****@x.test']);
+        });
+
+        it('omits the key entirely on an ordinary repair', async () => {
+            const result = await run();
+
+            expect(result.status).toBe('repaired');
+            expect(result).not.toHaveProperty('lostGrants');
+        });
+    });
+
+    it('rethrows anything that is not a dead DA.live session', async () => {
+        // Only an auth failure is turned into a `failed` result. A programming
+        // error or a transport fault swallowed here would be reported to the SC
+        // as "the Configuration Service refused the write" — the wrong remedy,
+        // and the stack lost.
+        mockRegisterSiteConfig.mockRejectedValue(new Error('socket hang up'));
+
+        await expect(run()).rejects.toThrow('socket hang up');
+    });
+
+    it('synthesizes a message naming the status when the service gave none', async () => {
+        // The fallback is the only thing a caller has to go on when the service
+        // answers with a bare status, so the status has to reach it.
+        mockRegisterSiteConfig.mockResolvedValue({ registered: false, statusCode: 500 });
+
+        const result = await run();
+
+        expect(result.error).toBe('Configuration Service refused the write (500)');
+    });
+
+    it('says "unknown" rather than nothing when there is no status either', async () => {
+        mockRegisterSiteConfig.mockResolvedValue({ registered: false });
+
+        const result = await run();
+
+        expect(result.error).toBe('Configuration Service refused the write (unknown)');
+    });
+
+    /**
+     * The unverified warning is the ONLY signal that a 2xx write left the
+     * overlay absent — the status still reads 'repaired'. Asserted on whether it
+     * fired, not on what it said.
+     */
+    describe('an unverified repair says so out loud', () => {
+        it('warns when the write succeeded but nothing read back', async () => {
+            await run({ configurationService: makeService(undefined) });
+
+            expect(logger.warn).toHaveBeenCalledTimes(1);
+        });
+
+        it('stays quiet when the overlay read back', async () => {
+            await run();
+
+            expect(logger.warn).not.toHaveBeenCalled();
+        });
     });
 
     it('pins the admin role only after a successful write', async () => {
