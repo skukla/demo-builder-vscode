@@ -134,3 +134,111 @@ describe('SERVICE_GROUP_DEFINITIONS', () => {
         expect(otherGroup?.order).toBeGreaterThan(maxNonOtherOrder);
     });
 });
+
+/**
+ * The field ORDER inside each group, pinned against literal key names.
+ *
+ * `fieldOrder` is the only thing deciding what an SC reads first in a service
+ * group, and every group that has one has it for a reason: the endpoint before
+ * the codes that address it, the URL before the credentials that open it. An
+ * empty fieldOrder is not a neutral state — every field falls to the same
+ * position and the group renders in whatever order the fields happened to
+ * arrive in, which is the catalog's order, not a chosen one.
+ *
+ * The expected lists are written out as literal key strings rather than read
+ * back off the definition: comparing a definition against itself would agree
+ * with any order at all, including none.
+ */
+describe('SERVICE_GROUP_DEFINITIONS field order', () => {
+    const defFor = (id: string): ServiceGroupDef => {
+        const def = SERVICE_GROUP_DEFINITIONS.find((d) => d.id === id);
+        if (!def) throw new Error(`No service group definition for ${id}`);
+        return def;
+    };
+
+    /** Sort the group's fields having handed them in REVERSED, so the input
+     *  order can never be mistaken for the intended one. */
+    const orderOf = (id: string, expected: string[]): string[] => {
+        const fields = [...expected].reverse().map((key) => ({ key }));
+        return toServiceGroupWithSortedFields(defFor(id), { [id]: fields }).fields.map(
+            (f) => f.key,
+        );
+    };
+
+    it('puts the ACCS endpoint before the codes that address it', () => {
+        expect(orderOf('accs', [
+            'ACCS_GRAPHQL_ENDPOINT',
+            'ACCS_WEBSITE_CODE',
+            'ACCS_STORE_CODE',
+            'ACCS_STORE_VIEW_CODE',
+        ])).toEqual([
+            'ACCS_GRAPHQL_ENDPOINT',
+            'ACCS_WEBSITE_CODE',
+            'ACCS_STORE_CODE',
+            'ACCS_STORE_VIEW_CODE',
+        ]);
+    });
+
+    it('puts the PaaS URLs before the credentials and then the codes', () => {
+        expect(orderOf('adobe-commerce', [
+            'ADOBE_COMMERCE_URL',
+            'ADOBE_COMMERCE_ADMIN_URL',
+            'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
+            'ADOBE_COMMERCE_ADMIN_USERNAME',
+            'ADOBE_COMMERCE_ADMIN_PASSWORD',
+            'ADOBE_COMMERCE_WEBSITE_CODE',
+            'ADOBE_COMMERCE_STORE_CODE',
+            'ADOBE_COMMERCE_STORE_VIEW_CODE',
+        ])).toEqual([
+            'ADOBE_COMMERCE_URL',
+            'ADOBE_COMMERCE_ADMIN_URL',
+            'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
+            'ADOBE_COMMERCE_ADMIN_USERNAME',
+            'ADOBE_COMMERCE_ADMIN_PASSWORD',
+            'ADOBE_COMMERCE_WEBSITE_CODE',
+            'ADOBE_COMMERCE_STORE_CODE',
+            'ADOBE_COMMERCE_STORE_VIEW_CODE',
+        ]);
+    });
+
+    // CATALOG_SERVICE_ENDPOINT is deliberately absent from this group: it is
+    // derived from the PaaS/ACCS endpoints and useServiceGroups no longer
+    // renders it.
+    it('puts the Catalog Service endpoint before the dataspace and key', () => {
+        expect(orderOf('catalog-service', [
+            'PAAS_CATALOG_SERVICE_ENDPOINT',
+            'ADOBE_COMMERCE_ENVIRONMENT_ID',
+            'ADOBE_CATALOG_API_KEY',
+        ])).toEqual([
+            'PAAS_CATALOG_SERVICE_ENDPOINT',
+            'ADOBE_COMMERCE_ENVIRONMENT_ID',
+            'ADOBE_CATALOG_API_KEY',
+        ]);
+    });
+
+    it('puts the ACO URL and key before the tenant and environment ids', () => {
+        expect(orderOf('adobe-commerce-aco', [
+            'ACO_API_URL',
+            'ACO_API_KEY',
+            'ACO_TENANT_ID',
+            'ACO_ENVIRONMENT_ID',
+        ])).toEqual([
+            'ACO_API_URL',
+            'ACO_API_KEY',
+            'ACO_TENANT_ID',
+            'ACO_ENVIRONMENT_ID',
+        ]);
+    });
+
+    // The groups with no fieldOrder render in catalog order on purpose — there
+    // is no editorial sequence to keep, so pinning one here would invent a rule
+    // the module does not hold.
+    it('leaves a group with no fieldOrder in the order its fields arrived', () => {
+        const fields = [{ key: 'z' }, { key: 'a' }, { key: 'm' }];
+        expect(
+            toServiceGroupWithSortedFields(defFor('mesh'), { mesh: fields }).fields.map(
+                (f) => f.key,
+            ),
+        ).toEqual(['z', 'a', 'm']);
+    });
+});
