@@ -20,6 +20,18 @@ describe('Cache Utilities', () => {
             expect(getCacheTTLWithJitter(300000, 0)).toBe(300000);
         });
 
+        /**
+         * The zero-jitter guard hands back the caller's number UNTOUCHED. Without
+         * it the jitter arithmetic still lands on the base for a whole number of
+         * milliseconds — `min` and `max` both collapse to it — but it gets there
+         * through `Math.floor`, so a TTL carrying a fraction is silently rounded
+         * down. Asking for no jitter has to mean no arithmetic, not arithmetic
+         * that usually cancels out.
+         */
+        it('returns the base TTL exactly, without flooring it, when jitter is 0', () => {
+            expect(getCacheTTLWithJitter(1000.5, 0)).toBe(1000.5);
+        });
+
         it('should add jitter within expected range', () => {
             const baseTTL = 300000; // 5 minutes
             const jitterPercent = 10;
