@@ -134,6 +134,27 @@ describe('aiHandlers — setup & verification', () => {
             );
         });
 
+        it('returns the verifier inventory with gatedSkills merged onto it', async () => {
+            const skills = [
+                { name: 'add-component', description: null, path: '/p', source: 'demo-builder' },
+            ];
+            (verifyAiSetup as jest.Mock).mockResolvedValue({
+                status: 'ok',
+                checks: [],
+                inventory: { skills, mcps: [], sessionMcps: [] },
+            });
+
+            const context = createAiHandlerContext();
+            const result = await handleVerifyAiSetup(context);
+
+            // The verifier's own fields survive the merge...
+            expect(result.inventory).toMatchObject({ skills, mcps: [], sessionMcps: [] });
+            // ...and the gate's answer is added beside them, so the modal can say
+            // WHY a tool-driving skill is absent instead of omitting it silently.
+            expect(Array.isArray((result.inventory as { gatedSkills?: unknown }).gatedSkills))
+                .toBe(true);
+        });
+
         it('returns error when stateManager has no current project', async () => {
             const context = createAiHandlerContext({
                 stateManager: createMockStateManager({

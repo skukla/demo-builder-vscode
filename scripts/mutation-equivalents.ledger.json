@@ -15340,6 +15340,34 @@
             "decision": "none \u2014 the optional chain is what the parameter type requires and the call site guarantees it is never needed",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/handlers/aiHandlers.ts",
+            "anchors": [
+                "const checksSummary = result.checks.map((c) => `${c.name}=${c.status}`).join(', ');",
+                "if (entry.status === 'ok') {",
+                "if (inventory.mcpsError) {"
+            ],
+            "mutants": 3,
+            "category": "logPresentation",
+            "reason": "logAiVerification returns void and touches nothing but the two log channels \u2014 its docstring says so and the handler ignores it. Each of these three mutants changes only what a line says: the map builds a string used solely by the next line's debugLogger.debug, the ok branch's whole body is one debug call, and the mcpsError branch's whole body is one warn. The classifier reads only the enclosing STATEMENT, so it cannot see that the value or the block feeds a logger. Killing any of them means asserting log wording, which the ratchet exists to refuse. Planted all three together 2026-09-06: 91 tests pass.",
+            "decision": "none \u2014 observability-only code; the enforcer bans the only assertion that would kill these",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/dashboard/handlers/aiHandlers.ts",
+            "anchors": [
+                "} catch (saveErr) {",
+                "const skills = generated?.skills ?? [];",
+                "if (skippedFiles.length > 0) {"
+            ],
+            "mutants": 4,
+            "category": "logPresentation",
+            "reason": "All four sit in handleRegenerateAiFiles and none reaches the response. The save-failure catch body is one logger.warn and emptying it still swallows the error exactly as before, so the throw still propagates unchanged. The skills default feeds only the info line that counts and names them \u2014 the response carries skippedFiles and removedFiles, never skills. And the skipped-files guard wraps a single info call, so widening it to >= 0 or to true adds a log line and nothing the caller can see, since skippedFiles is returned either way. Planted together 2026-09-06 with the catch emptied, the default replaced and the guard widened: 91 tests pass.",
+            "decision": "none \u2014 the values and blocks are observability; the response shape they sit beside is asserted separately",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

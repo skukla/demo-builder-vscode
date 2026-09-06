@@ -8,11 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/app-builder/services/appManagementClient.ts",
-        "src/features/data-installer/services/sampleDataInstall.ts",
-        "src/features/eds/handlers/blockLibraryPublish.ts",
-        "src/features/eds/services/credentialServiceProbe.ts",
-        "src/features/eds/services/daAuthHelperToken.ts"
+        "src/commands/claudeCodeFootprint.ts",
+        "src/features/dashboard/handlers/aiHandlers.ts",
+        "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts"
     ],
     "reporters": [
         "clear-text",
