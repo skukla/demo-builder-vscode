@@ -15507,6 +15507,18 @@
             "decision": "none \u2014 the initializer is the compiler's requirement, and it states the value an exhausted loop would report",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/storeStructureReader.ts",
+            "anchors": [
+                "if (!rawUrl) return undefined;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Removing the guard produces the same answer for every input that can reach it. rawUrl is typed string | undefined, so the only falsy values possible are undefined and the empty string, and `new URL()` throws on both \u2014 landing in the catch two lines down, which returns undefined as well. The guard is what lets the compiler accept `new URL(rawUrl)` at all, so it cannot be deleted. Planted 2026-09-06 as `if (false as boolean)`: all 19 tests pass, including the ones that drive an absent Commerce URL and an absent ACCS endpoint.",
+            "decision": "none \u2014 the guard is required for the narrowing, and the catch below is what makes it unobservable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }

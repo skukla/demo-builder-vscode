@@ -176,6 +176,58 @@ describe('readStoreStructure — PaaS', () => {
         expect(mockDiscover).not.toHaveBeenCalled();
     });
 
+    it('accepts a plain http Commerce URL — a local instance is not an error', async () => {
+        // Both schemes are allowed on purpose; SC demo instances are not always
+        // behind TLS. Rejecting http here would fail them with "no usable
+        // Commerce URL" and no way to tell why.
+        const result = await readStoreStructure(
+            paasProject({ ADOBE_COMMERCE_URL: 'http://shop.example.com/path' })
+        );
+
+        expect(result.success).toBe(true);
+        expect(mockDiscover).toHaveBeenCalledWith(
+            expect.objectContaining({ baseUrl: 'http://shop.example.com' })
+        );
+    });
+
+    it('rejects a URL that does not parse at all', async () => {
+        const result = await readStoreStructure(paasProject({ ADOBE_COMMERCE_URL: 'not a url' }));
+
+        expect(result.success).toBe(false);
+        expect(mockDiscover).not.toHaveBeenCalled();
+    });
+
+    it('refuses to point discovery at localhost', async () => {
+        // The SSRF guard is the second half of the check — an https localhost URL
+        // clears the protocol test and must still be refused, because this
+        // request is issued by the extension on the SC's machine.
+        const result = await readStoreStructure(
+            paasProject({ ADOBE_COMMERCE_URL: 'https://localhost:8080/graphql' })
+        );
+
+        expect(result.success).toBe(false);
+        expect(mockDiscover).not.toHaveBeenCalled();
+    });
+
+    it('prefers a stored secret over the value sitting in componentConfigs', async () => {
+        // The steady state after a save: the password lives in SecretStorage and
+        // the config copy is stale. Both the reader and the project id have to
+        // reach resolvePaasAdminPair or the stale copy silently wins.
+        const get = jest.fn().mockImplementation((key: string) =>
+            Promise.resolve(key.endsWith('ADOBE_COMMERCE_ADMIN_PASSWORD') ? 'stored-pw' : undefined)
+        );
+
+        const result = await readStoreStructure(paasProject(), { secrets: { get } });
+
+        expect(result.success).toBe(true);
+        expect(get).toHaveBeenCalledWith(
+            'demoBuilder.componentSecret./projects/demo.adobe-commerce-paas.ADOBE_COMMERCE_ADMIN_PASSWORD'
+        );
+        expect(mockDiscover).toHaveBeenCalledWith(
+            expect.objectContaining({ password: 'stored-pw' })
+        );
+    });
+
     it('surfaces a discovery failure verbatim', async () => {
         mockDiscover.mockResolvedValue({ success: false, error: 'Connection timed out.' });
 
@@ -216,6 +268,73 @@ describe('readStoreStructure — ACCS', () => {
             imsToken: 'tok',
             discoveryServiceUrl: 'https://mine.example.com',
         });
+    });
+
+    it('refuses an endpoint that is not a usable URL', async () => {
+        // Only the ORIGIN is unusable here — the raw endpoint string is present,
+        // so a guard that required both to be missing would forward an undefined
+        // baseUrl to discovery and fail somewhere far from the cause.
+        mockDiscoveryServices = [
+            { orgName: 'O', orgId: 'org-1', serviceUrl: 'https://svc.example.com' },
+        ];
+        const project = accsProject();
+        (project.componentConfigs as Record<string, Record<string, string>>)[
+            'adobe-commerce-accs'
+        ].ACCS_GRAPHQL_ENDPOINT = 'not a url';
+
+        const result = await readStoreStructure(project, { imsToken: 'tok' });
+
+        expect(result.success).toBe(false);
+        if (result.success) return;
+        expect(result.error).toMatch(/accs graphql endpoint/i);
+        expect(mockDiscover).not.toHaveBeenCalled();
+    });
+
+    it('refuses when no endpoint is configured at all', async () => {
+        mockDiscoveryServices = [
+            { orgName: 'O', orgId: 'org-1', serviceUrl: 'https://svc.example.com' },
+        ];
+        const project = accsProject();
+        (project.componentConfigs as Record<string, Record<string, string>>)[
+            'adobe-commerce-accs'
+        ].ACCS_GRAPHQL_ENDPOINT = '';
+
+        const result = await readStoreStructure(project, { imsToken: 'tok' });
+
+        expect(result.success).toBe(false);
+        expect(mockDiscover).not.toHaveBeenCalled();
+    });
+
+    it('reads the org off a project that has no Adobe block at all', async () => {
+        // An unauthenticated project has no `adobe`. Reaching through it
+        // unguarded throws a TypeError out of an MCP tool instead of answering.
+        mockDiscoveryServices = [
+            { orgName: 'O', orgId: 'org-1', serviceUrl: 'https://svc.example.com' },
+        ];
+        const project = { ...accsProject(), adobe: undefined } as unknown as Project;
+
+        const result = await readStoreStructure(project, { imsToken: 'tok' });
+
+        // No org to match on, so the first configured service is used.
+        expect(result.success).toBe(true);
+        expect(mockDiscover).toHaveBeenCalledWith(
+            expect.objectContaining({ discoveryServiceUrl: 'https://svc.example.com' })
+        );
+    });
+
+    it('names the URL as the problem when the configured service is not HTTPS', async () => {
+        // Distinct from "none configured": the SC HAS set one, and telling them
+        // none exists sends them to add a second bad entry.
+        mockDiscoveryServices = [
+            { orgName: 'O', orgId: 'org-1', serviceUrl: 'http://svc.example.com' },
+        ];
+
+        const result = await readStoreStructure(accsProject(), { imsToken: 'tok' });
+
+        expect(result.success).toBe(false);
+        if (result.success) return;
+        expect(result.error).toMatch(/not a valid HTTPS URL/i);
+        expect(mockDiscover).not.toHaveBeenCalled();
     });
 
     it('explains the gap when no discovery service is configured', async () => {

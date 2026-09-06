@@ -74,8 +74,10 @@ function toSafeOrigin(rawUrl: string | undefined): string | undefined {
     } catch {
         return undefined;
     }
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return undefined;
-
+    // The protocol check lives in validateURL below and nowhere else. A second
+    // copy here read the same allowlist off a different value, and could only
+    // ever agree with it: the origin is built from `parsed.protocol`, so a
+    // scheme this line rejected was a scheme validateURL rejected too.
     const origin = `${parsed.protocol}//${parsed.host}`;
     try {
         validateURL(origin, ['http', 'https']);
