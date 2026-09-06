@@ -65,15 +65,32 @@ describe('sleep', () => {
         spy.mockRestore();
     });
 
-    it('survives an environment whose timers have no unref (the webview)', () => {
+    it('survives an environment whose timers have no unref (the webview)', async () => {
         // sleep.ts is bundled into webviews too, where setTimeout returns a number.
         // Calling .unref() unguarded there is a TypeError on every delay.
+        //
+        // The failure is a REJECTION, not a throw: the TypeError happens inside the
+        // Promise executor, so `expect(() => sleep(1)).not.toThrow()` cannot see it.
+        // The timer must also not fire synchronously — a promise already resolved
+        // swallows the executor's error, which hides the same thing a second way.
         jest.useRealTimers();
-        const spy = jest.spyOn(global, 'setTimeout').mockImplementation(((fn: () => void) => {
-            fn();
-            return 1 as unknown as NodeJS.Timeout;
-        }));
-        expect(() => sleep(1)).not.toThrow();
+        const spy = jest
+            .spyOn(global, 'setTimeout')
+            .mockImplementation(() => 1 as unknown as NodeJS.Timeout);
+
+        // Handlers attached before the assertion: an unhandled rejection takes the
+        // whole worker down instead of failing this test.
+        let failure: unknown = null;
+        void sleep(1).then(
+            () => undefined,
+            (error: unknown) => {
+                failure = error;
+            }
+        );
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(failure).toBeNull();
         spy.mockRestore();
     });
 });
