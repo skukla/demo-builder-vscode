@@ -12821,6 +12821,97 @@
             "decision": "none - defensive against an id the composed UI cannot emit; the guard's other arm is tested",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/environmentSetup.ts",
+            "anchors": [
+                "return componentsData?.infrastructure?.[component]?.nodeVersion;"
+            ],
+            "line": 31,
+            "mutants": 3,
+            "category": "optionalChain",
+            "reason": "Each surviving mutant drops one link of the chain, so a missing intermediate throws a TypeError instead of short-circuiting to undefined. The only caller wraps this in a try/catch that answers null, and undefined here also becomes null two lines later, so every shape of components.json - null, no infrastructure section, no entry for the component - produces the same null from getInfrastructureNodeVersion whether the chain is guarded or not. Three specs cover those shapes; none can separate the two versions.",
+            "decision": "none - the caller's catch turns the TypeError the mutant causes into the same null the guard produces",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/environmentSetup.ts",
+            "anchors": [
+                "if (!extension) {"
+            ],
+            "line": 219,
+            "mutants": 2,
+            "category": "block",
+            "reason": "Both survivors let a missing extension through. The next statement then reads extensionPath off undefined, which throws a TypeError that this method's own catch answers null to - the same null the guard returns. A spec proves the filesystem is never touched in this case, and that holds for the mutant too, because the throw happens before any fs call. What is left is which of two debug lines is written.",
+            "decision": "none - the guard and the swallowed TypeError produce the same null and the same absence of filesystem work",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/environmentSetup.ts",
+            "anchors": [
+                "if (nvmVersion) {"
+            ],
+            "line": 284,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forced true, the guard caches and returns nvmVersion when it is null - which assigns null to the cache and returns null, exactly what the three statements below it do when the guard is false. The scan either found a version, in which case both spellings return it, or it did not, in which case both cache null and answer null. Only a debug line separates them.",
+            "decision": "none - the fall-through path assigns and returns the same null the mutant returns directly",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/environmentSetup.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 365,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch body removes `return false`, so the method answers undefined instead. Its single caller uses the result as an if-condition, where undefined and false are the same falsy value, and the declared return type is Promise<boolean> so nothing downstream reads it any other way. A spec proves that when fnm is missing no further fnm command is run, and it passes identically for both.",
+            "decision": "none - the caller treats the mutant's undefined and the original's false the same way",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/environmentSetup.ts",
+            "anchors": [
+                "return result.stdout?.trim() || null;"
+            ],
+            "line": 379,
+            "mutants": 2,
+            "category": "other",
+            "reason": "Two survivors here. Dropping the optional chain makes an absent stdout throw, which the catch on the next line answers null to - the same null the expression produces. Dropping trim leaves surrounding whitespace on the value, and the only consumer is a substring test against the required major version: whitespace cannot change whether \"20\" appears, and a whitespace-only stdout is falsy after trim and fails the substring test without it, so both spellings decide to switch. Specs cover a matching version, a mismatching one, and a failed lookup.",
+            "decision": "none - both mutants funnel into the same substring decision the caller makes",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/environmentSetup.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "line": 380,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch removes `return null`, so a failed `fnm current` answers undefined instead. The single caller writes `!currentVersion?.includes(required)`, and undefined and null short-circuit that chain identically to undefined, so both make the negation true and both switch versions. A spec drives exactly that failure and asserts the switch happens.",
+            "decision": "none - null and undefined take the same branch through the optional chain that reads this value",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/core/shell/environmentSetup.ts",
+            "anchors": [
+                "if (options.useNodeVersion !== null && options.useNodeVersion !== undefined) {"
+            ],
+            "line": 441,
+            "mutants": 4,
+            "category": "branch",
+            "reason": "This outer guard is redundant, which is why nothing can kill its mutants. Forcing it true - by either operand or as a whole - lets null or undefined into the body, where the first test is `nodeVersion === 'current'` (false) and the second is `nodeVersion && nodeVersion !== 'auto'` (false because the value is falsy). Neither branch runs, the command is returned unmodified, and that is precisely what the guard achieves by skipping the body. Specs pin the unmodified command for undefined, for null, and for an empty string.",
+            "decision": "none - the inner falsy check already covers every value this guard excludes",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
         }
     ]
 }

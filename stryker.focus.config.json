@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx"
+        "src/core/shell/environmentSetup.ts"
     ],
     "reporters": [
         "clear-text",
