@@ -135,3 +135,191 @@ describe('deriveMeshCatalogEntries', () => {
         });
     });
 });
+
+// ---------------------------------------------------------------------------
+// The derivation against configs the shipped ones do not contain.
+//
+// Every branch below is a rule about a config we could WRITE, not one we ship:
+// a registry mesh with no source, a non-GitHub url, a mesh with no pinned ref, a
+// stack listing an id the registry does not define. The shipped pair is uniform
+// enough that none of these are reachable through it, and the rules exist so that
+// editing either file cannot produce a catalog entry that clones nothing.
+//
+// Re-imports the module inside `jest.isolateModules` because both configs are
+// read ONCE at module load, so a mocked config only lands on a fresh instance.
+// ---------------------------------------------------------------------------
+describe('deriveMeshCatalogEntries — against synthetic configs', () => {
+    type Stack = {
+        frontend?: string;
+        backend?: string;
+        dependencies?: string[];
+        optionalDependencies?: string[];
+    };
+    type Mesh = {
+        name: string;
+        description?: string;
+        source?: { url?: string; gitOptions?: { tag?: string; branch?: string } };
+        configuration?: { providesEnvVars?: string[] };
+    };
+
+    /** Derive from the given configs instead of the shipped ones. */
+    function deriveWith(stacks: Stack[], mesh: Record<string, Mesh>) {
+        let derived: ReturnType<typeof deriveMeshCatalogEntries> = [];
+        jest.isolateModules(() => {
+            jest.doMock('@/features/components/config/stacks.json', () => ({ stacks }));
+            jest.doMock('@/features/components/config/components.json', () => ({ mesh }));
+            derived = (require('@/features/components/services/meshCatalogDerivation') as {
+                deriveMeshCatalogEntries: typeof deriveMeshCatalogEntries;
+            }).deriveMeshCatalogEntries();
+        });
+        return derived;
+    }
+
+    const EDS_STACK: Stack = {
+        frontend: 'eds-storefront',
+        backend: 'adobe-commerce-paas',
+        optionalDependencies: ['a-mesh'],
+    };
+    const GITHUB_MESH: Mesh = {
+        name: 'A Mesh',
+        description: 'A described mesh',
+        source: { url: 'https://github.com/acme/a-mesh', gitOptions: { tag: 'stable' } },
+        configuration: { providesEnvVars: ['MESH_ENDPOINT'] },
+    };
+
+    afterEach(() => {
+        jest.dontMock('@/features/components/config/stacks.json');
+        jest.dontMock('@/features/components/config/components.json');
+    });
+
+    it('derives the entry when the config pair is well formed (the control)', () => {
+        const derived = deriveWith([EDS_STACK], { 'a-mesh': GITHUB_MESH });
+
+        expect(derived.map((e) => e.id)).toEqual(['a-mesh']);
+        expect(derived[0].source).toEqual({ owner: 'acme', repo: 'a-mesh', branch: 'stable' });
+        // The registry's own description, not the name standing in for it.
+        expect(derived[0].description).toBe('A described mesh');
+    });
+
+    // A mesh offered by a stack that carries it as a REQUIRED dependency is
+    // derived just the same. Both lists are read; today every shipped stack keeps
+    // its mesh in `optionalDependencies`, so only this proves the other half runs.
+    it('reads required dependencies as well as optional ones', () => {
+        const derived = deriveWith(
+            [{ frontend: 'headless', backend: 'adobe-commerce-paas', dependencies: ['a-mesh'] }],
+            { 'a-mesh': GITHUB_MESH }
+        );
+
+        expect(derived.map((e) => e.id)).toEqual(['a-mesh']);
+    });
+
+    // Reachability through stacks.json is the definition of "the extension ships
+    // this mesh" — and the reverse: a stack naming an id the registry does not
+    // define derives nothing rather than a half-built entry.
+    it('skips a stack dependency that is not a registry mesh', () => {
+        const derived = deriveWith(
+            [{ ...EDS_STACK, optionalDependencies: ['a-mesh', 'not-a-mesh'] }],
+            { 'a-mesh': GITHUB_MESH }
+        );
+
+        expect(derived.map((e) => e.id)).toEqual(['a-mesh']);
+    });
+
+    it('does not derive a registry mesh no stack offers', () => {
+        const derived = deriveWith([EDS_STACK], {
+            'a-mesh': GITHUB_MESH,
+            'unused-mesh': GITHUB_MESH,
+        });
+
+        expect(derived.map((e) => e.id)).toEqual(['a-mesh']);
+    });
+
+    // Nothing is derived without a clone source: an entry with no repo would put
+    // a card in the Add picker that fails the moment it is used.
+    it.each([
+        ['no source at all', { name: 'B' } as Mesh],
+        ['a source with no url', { name: 'B', source: {} } as Mesh],
+        [
+            'a url that is not GitHub',
+            { name: 'B', source: { url: 'https://gitlab.com/acme/b-mesh' } } as Mesh,
+        ],
+    ])('does not derive a mesh with %s', (_label, mesh) => {
+        const derived = deriveWith([{ ...EDS_STACK, optionalDependencies: ['b-mesh'] }], {
+            'b-mesh': mesh,
+        });
+
+        expect(derived).toStrictEqual([]);
+    });
+
+    describe('the git ref a derived entry clones', () => {
+        function branchOf(gitOptions: { tag?: string; branch?: string } | undefined) {
+            const derived = deriveWith([EDS_STACK], {
+                'a-mesh': { name: 'A', source: { url: 'https://github.com/acme/a-mesh', gitOptions } },
+            });
+            return derived[0]?.source.branch;
+        }
+
+        it('prefers the pinned tag over a branch', () => {
+            expect(branchOf({ tag: 'stable', branch: 'main' })).toBe('stable');
+        });
+
+        it('takes the branch when there is no tag', () => {
+            expect(branchOf({ branch: 'develop' })).toBe('develop');
+        });
+
+        it('falls back to main when the registry pins neither', () => {
+            expect(branchOf({})).toBe('main');
+            expect(branchOf(undefined)).toBe('main');
+        });
+    });
+
+    describe('the compatibility axes', () => {
+        it('unions the axes of every stack offering the same mesh', () => {
+            const derived = deriveWith(
+                [
+                    EDS_STACK,
+                    {
+                        frontend: 'headless',
+                        backend: 'adobe-commerce-accs',
+                        optionalDependencies: ['a-mesh'],
+                    },
+                ],
+                { 'a-mesh': GITHUB_MESH }
+            );
+
+            expect(derived[0].compatibleFrontends?.sort()).toEqual(['eds-storefront', 'headless']);
+            expect(derived[0].compatibleBackends?.sort()).toEqual([
+                'adobe-commerce-accs',
+                'adobe-commerce-paas',
+            ]);
+        });
+
+        // A stack that names no frontend contributes no frontend. Adding one
+        // anyway puts an `undefined` in the list the Add picker filters on, which
+        // matches nothing and reads as a compatible axis that does not exist.
+        it('contributes nothing for an axis the stack leaves out', () => {
+            const derived = deriveWith([{ optionalDependencies: ['a-mesh'] }], {
+                'a-mesh': GITHUB_MESH,
+            });
+
+            expect(derived[0].compatibleFrontends).toStrictEqual([]);
+            expect(derived[0].compatibleBackends).toStrictEqual([]);
+        });
+    });
+
+    it('falls back to the name when the registry gives no description', () => {
+        const derived = deriveWith([EDS_STACK], {
+            'a-mesh': { ...GITHUB_MESH, description: undefined },
+        });
+
+        expect(derived[0].description).toBe('A Mesh');
+    });
+
+    it('provides nothing when the registry declares no env contract', () => {
+        const derived = deriveWith([EDS_STACK], {
+            'a-mesh': { name: 'A', source: { url: 'https://github.com/acme/a-mesh' } },
+        });
+
+        expect(derived[0].providesEnvVars).toStrictEqual([]);
+    });
+});
