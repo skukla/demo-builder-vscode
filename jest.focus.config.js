@@ -47,10 +47,10 @@ module.exports = {
     moduleNameMapper: { ...node.moduleNameMapper, ...react.moduleNameMapper },
     transformIgnorePatterns: node.transformIgnorePatterns,
     testMatch: [
-        '**/tests/features/ai/server/currentProjectTool.test.ts',
-        '**/tests/features/app-builder/services/ensureMeshApiSubscribed.test.ts',
-        '**/tests/features/dashboard/services/dashboardStatusService.test.ts',
-        '**/tests/core/ui/components/wizard/StatusSection.test.tsx',
-        '**/tests/features/components/ui/components/StoreStructureSelector.test.tsx',
+        '**/tests/core/build/buildStampUi.test.ts',
+        '**/tests/features/dashboard/ui/hooks/aiStatusDerivations.test.ts',
+        '**/tests/features/eds/handlers/storefrontSetup/storefrontSetupConfigRehydration.test.ts',
+        '**/tests/features/eds/services/daLive/daLiveContentHelpers.test.ts',
+        '**/tests/core/ui/hooks/useElapsedStage.test.ts',
     ],
 };
