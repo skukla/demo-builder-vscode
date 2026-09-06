@@ -130,14 +130,7 @@ export class ShowDataInstallerCommand extends BaseWebviewCommand<DataInstallerIn
 
     /** Dispose any active Data Installer panel (used by sibling surfaces on swap). */
     public static disposeActivePanel(): void {
-        const panel = BaseWebviewCommand.getActivePanel(WEBVIEW_ID);
-        if (panel) {
-            try {
-                panel.dispose();
-            } catch {
-                // Already disposed — fine.
-            }
-        }
+        BaseWebviewCommand.disposePanel(WEBVIEW_ID);
     }
 
     public async execute(): Promise<void> {
