@@ -58,6 +58,18 @@ describe('routeCheckOutcome', () => {
             expect(actions.setOrgMismatch).toHaveBeenCalledWith(orgMismatch);
             expect(actions.setOrgCurrentName).toHaveBeenCalledWith('Org B');
         });
+
+        it('should clear mismatch and org name when the resolved outcome carries no data', () => {
+            const actions = createActions();
+            // An `ok` org-context outcome ships no data at all — the routing has
+            // to read THROUGH the absent `data`, not into it.
+            routeCheckOutcome({ checkId: CHECK_IDS.ORG_CONTEXT, status: 'ok' }, actions);
+
+            expect(actions.setOrgChecked).toHaveBeenCalledWith(true);
+            expect(actions.setOrgStatus).toHaveBeenCalledWith('ok');
+            expect(actions.setOrgMismatch).toHaveBeenCalledWith(undefined);
+            expect(actions.setOrgCurrentName).toHaveBeenCalledWith(undefined);
+        });
     });
 
     describe('mcp-health', () => {
@@ -116,6 +128,39 @@ describe('routeCheckOutcome', () => {
                 },
             });
             expect(updater(null)).toBeNull();
+        });
+
+        it('should carry an absent endpoint through as undefined', () => {
+            const actions = createActions();
+            routeCheckOutcome(
+                {
+                    checkId: CHECK_IDS.MESH_VERIFY,
+                    status: 'warning',
+                    message: 'API Mesh is no longer deployed',
+                },
+                actions
+            );
+
+            const updater = actions.setProjectStatus.mock.calls[0][0] as (
+                prev: DashboardStatusUpdatePayload | null
+            ) => DashboardStatusUpdatePayload | null;
+
+            // A project that never had a mesh badge has no `mesh` slice at all;
+            // the endpoint carry-over has to read through its absence.
+            const prev: DashboardStatusUpdatePayload = {
+                name: asDisplayName('demo'),
+                path: '/p',
+                status: 'running',
+                frontendConfigChanged: false,
+            };
+            expect(updater(prev)).toEqual({
+                ...prev,
+                mesh: {
+                    status: 'not-deployed',
+                    message: 'API Mesh is no longer deployed',
+                    endpoint: undefined,
+                },
+            });
         });
 
         it('should leave the persisted badge alone on unknown', () => {
