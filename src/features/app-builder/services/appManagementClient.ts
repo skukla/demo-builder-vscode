@@ -333,7 +333,9 @@ export class AppManagementClient {
                     noOpMessage = body.message.slice(0, 200);
                 }
             } catch {
-                reason = undefined;
+                // A 409 with no JSON body: the status alone is the whole answer.
+                // Nothing to unset — `reason` cannot have been assigned yet, since
+                // the only statement that can throw here is `response.json()`.
             }
         }
         return new AppManagementApiError(
