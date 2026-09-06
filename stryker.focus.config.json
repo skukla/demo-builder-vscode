@@ -8,9 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/projects-dashboard/services/settingsSerializer.ts",
-        "src/core/auth/adobeAuthGuard.ts",
-        "src/core/config/backendOwnedScope.ts"
+        "src/features/projects-dashboard/ui/components/DashboardEmptyState.tsx",
+        "src/features/projects-dashboard/ui/components/ProjectsGrid.tsx"
     ],
     "reporters": [
         "clear-text",

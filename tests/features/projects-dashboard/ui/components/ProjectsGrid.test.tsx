@@ -98,6 +98,56 @@ describe('ProjectsGrid', () => {
         });
     });
 
+    describe('running project', () => {
+        // The grid's one decision: which card is told it is the RUNNING one.
+        // Observed through the rename pencil, which ProjectCard hides while a
+        // project runs because the backend rejects a rename mid-run.
+        function renderGridWithRunning(runningProjectPath: string | undefined) {
+            return renderWithProvider(
+                <ProjectsGrid
+                    projects={createMockProjects(3)}
+                    runningProjectPath={runningProjectPath}
+                    onSelectProject={jest.fn()}
+                    actions={{ onRenameSubmit: jest.fn() }}
+                />
+            );
+        }
+
+        it('marks the project whose path MATCHES, and only that one', () => {
+            const projects = createMockProjects(3);
+            renderWithProvider(
+                <ProjectsGrid
+                    projects={projects}
+                    runningProjectPath={projects[1].path}
+                    onSelectProject={jest.fn()}
+                    actions={{ onRenameSubmit: jest.fn() }}
+                />
+            );
+
+            expect(
+                screen.queryByRole('button', { name: 'Rename Project 2' })
+            ).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Rename Project 1' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Rename Project 3' })).toBeInTheDocument();
+        });
+
+        it('marks nothing when no project is running', () => {
+            renderGridWithRunning(undefined);
+
+            expect(screen.getByRole('button', { name: 'Rename Project 1' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Rename Project 2' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Rename Project 3' })).toBeInTheDocument();
+        });
+
+        it('marks nothing when the running path matches no card', () => {
+            // A stale path — the running project was deleted or renamed out from
+            // under the grid — must not mark an arbitrary card instead.
+            renderGridWithRunning('/projects/gone');
+
+            expect(screen.getByRole('button', { name: 'Rename Project 2' })).toBeInTheDocument();
+        });
+    });
+
     describe('responsiveness', () => {
         it('should use responsive grid class for auto-fit columns', () => {
             const projects = createMockProjects(4);
