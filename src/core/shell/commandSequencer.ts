@@ -5,10 +5,11 @@ import { slowCommandThreshold } from '@/core/utils/timeoutConfig';
 /**
  * Extract error code from NodeJS.ErrnoException (SOP §3 compliance)
  *
- * Handles cases where err.code may be string (ENOENT) or number.
+ * `err.code` is a string (ENOENT) on most Node errors and a number on a few, so
+ * anything that is not a number — including absent and null — becomes the generic
+ * failure code 1.
  */
 export function getNumericErrorCode(err: NodeJS.ErrnoException): number {
-    if (err.code === undefined || err.code === null) return 1;
     if (typeof err.code === 'number') return err.code;
     return 1;
 }

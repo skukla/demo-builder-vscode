@@ -180,6 +180,21 @@ describe('CommandSequencer', () => {
             expect(results[2].stdout).toBe('result3');
         });
 
+        // `duration` on the error result is the ONLY place the parallel path's
+        // elapsed measure is observable — every other use of it is a log line.
+        // Adding the two clocks instead of subtracting gives ~2 x Date.now().
+        it('reports the failed command\u2019s own elapsed time, not a clock sum', async () => {
+            const mockExecute = jest.fn().mockRejectedValue(new Error('nope'));
+
+            const results = await commandSequencer.executeParallel(
+                [{ command: 'boom' }],
+                mockExecute
+            );
+
+            expect(results[0].duration).toBeGreaterThanOrEqual(0);
+            expect(results[0].duration).toBeLessThan(60_000);
+        });
+
         it('should use command names for logging', async () => {
             const mockExecute = jest.fn().mockResolvedValue({
                 stdout: '',
