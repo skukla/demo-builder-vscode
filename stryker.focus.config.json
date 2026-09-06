@@ -8,11 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/logging/stepLogger.ts",
-        "src/features/ai/server/mcpSocketDiscovery.ts",
-        "src/features/dashboard/handlers/dashboardHandlers.ts",
-        "src/features/eds/handlers/storeStructureHandler.ts",
-        "src/features/eds/services/patches/externalPatchFetcher.ts"
+        "src/features/projects-dashboard/ui/components/ProjectRow.tsx"
     ],
     "reporters": [
         "clear-text",

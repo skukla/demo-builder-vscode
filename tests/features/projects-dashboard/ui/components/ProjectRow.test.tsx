@@ -104,3 +104,87 @@ describe('ProjectRow — inline rename', () => {
         expect(onSelect).toHaveBeenCalledWith(project);
     });
 });
+
+/**
+ * The parts of the row that are not the rename field.
+ *
+ * Every one of these is a conditional that renders SOMETHING either way —
+ * a pin that is always there, a summary that renders unwrapped, a memo
+ * that never recomputes — so a test that only asked "is the text on
+ * screen" passed with the condition inverted.
+ */
+describe('ProjectRow — pin, summary and aria-label', () => {
+    /** The slot the summary must land in; the class is what styles it. */
+    const summarySlot = (container: HTMLElement) =>
+        container.querySelector('.project-row-components');
+
+    it('shows the pin indicator, laid out inline, only for a pinned project', () => {
+        const project = createProjectsDashboardProject({ name: 'Pinned Row', pinned: true });
+        renderWithProvider(<ProjectRow project={project} onSelect={jest.fn()} />);
+
+        const pin = screen.getByTestId('project-row-pin-indicator');
+        expect(pin).toHaveAttribute('aria-label', 'Pinned');
+        // Without the inline style the icon breaks the row's baseline, which
+        // no text assertion would notice.
+        expect(pin).toHaveStyle({ display: 'inline-flex', alignItems: 'center' });
+    });
+
+    it('shows no pin indicator for a project that is not pinned', () => {
+        const project = createProjectsDashboardProject({ name: 'Plain Row' });
+        renderWithProvider(<ProjectRow project={project} onSelect={jest.fn()} />);
+
+        expect(screen.queryByTestId('project-row-pin-indicator')).not.toBeInTheDocument();
+    });
+
+    it('renders the component summary inside its own slot, and in the aria-label', () => {
+        const project = createProjectsDashboardProject({ name: 'Summarised Row' });
+        const { container } = renderWithProvider(
+            <ProjectRow project={project} onSelect={jest.fn()} />
+        );
+
+        // The slot, not merely the text: rendered unwrapped the words are
+        // still on screen and the row loses the class that styles them.
+        expect(summarySlot(container)).toHaveTextContent('Headless · API Mesh');
+        expect(screen.getByRole('button', { name: /^Summarised Row, / })).toHaveAttribute(
+            'aria-label',
+            'Summarised Row, Stopped, Headless · API Mesh'
+        );
+    });
+
+    it('renders no summary slot at all for a project with no components', () => {
+        const project = createProjectsDashboardProject({
+            name: 'Bare Row',
+            componentInstances: {},
+        });
+        const { container } = renderWithProvider(
+            <ProjectRow project={project} onSelect={jest.fn()} />
+        );
+
+        expect(summarySlot(container)).toBeNull();
+        expect(screen.getByRole('button', { name: 'Bare Row, Stopped' })).toBeInTheDocument();
+    });
+
+    it('re-derives the summary when the row is handed a different project', () => {
+        // The grid reuses rows across renders. A summary memoised against
+        // nothing keeps the first project's components under the second
+        // project's name, and nothing else on the row would disagree.
+        const first = createProjectsDashboardProject({ name: 'First Row' });
+        const second = createProjectsDashboardProject({
+            name: 'Second Row',
+            componentInstances: {},
+        });
+
+        const { container, rerender } = renderWithProvider(
+            <ProjectRow project={first} onSelect={jest.fn()} />
+        );
+        expect(summarySlot(container)).toHaveTextContent('Headless · API Mesh');
+
+        rerender(
+            <Provider theme={defaultTheme} colorScheme="light">
+                <ProjectRow project={second} onSelect={jest.fn()} />
+            </Provider>
+        );
+
+        expect(summarySlot(container)).toBeNull();
+    });
+});
