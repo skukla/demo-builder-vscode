@@ -177,3 +177,136 @@ describe('failure data passthrough', () => {
         );
     });
 });
+
+/**
+ * `settled` answers "did anything come back yet", which no other field can:
+ * a handler that returns no data on success leaves `value` null and `failure`
+ * null, which is indistinguishable from "never ran".
+ */
+describe('settled', () => {
+    function SettledProbe(): React.JSX.Element {
+        const { load, settled } = useDataInstallerRequest('find-datapacks');
+        return (
+            <div>
+                <button type="button" onClick={() => load()}>
+                    Load
+                </button>
+                <span data-testid="settled">{String(settled)}</span>
+            </div>
+        );
+    }
+
+    beforeEach(() => {
+        mockRequest.mockReset();
+    });
+
+    it('is false before anything has been asked for', () => {
+        mockRequest.mockResolvedValue({ success: true });
+
+        render(<SettledProbe />);
+
+        expect(screen.getByTestId('settled')).toHaveTextContent('false');
+    });
+
+    it('is true once a response arrives, even one carrying no data', async () => {
+        mockRequest.mockResolvedValue({ success: true });
+
+        render(<SettledProbe />);
+        fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+
+        await waitFor(() => expect(screen.getByTestId('settled')).toHaveTextContent('true'));
+    });
+
+    it('is true once a THROWN transport error arrives', async () => {
+        mockRequest.mockRejectedValue(new Error('Request timeout: find-datapacks'));
+
+        render(<SettledProbe />);
+        fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+
+        await waitFor(() => expect(screen.getByTestId('settled')).toHaveTextContent('true'));
+    });
+});
+
+/**
+ * The optional halves of a failure are OMITTED, not set to undefined. A caller
+ * asking `'code' in failure` — the reason the field exists, so the UI branches on
+ * facts rather than message strings — must not be told yes for a refusal that
+ * carried neither. Rendering `failure.code` cannot see the difference; the KEYS
+ * can.
+ */
+describe('failure keys', () => {
+    function KeysProbe(): React.JSX.Element {
+        const { load, failure } = useDataInstallerRequest('validate-datapack-import');
+        React.useEffect(() => {
+            load({});
+        }, [load]);
+        return (
+            <span data-testid="failure-keys">
+                {failure ? Object.keys(failure).sort().join(',') : 'none'}
+            </span>
+        );
+    }
+
+    beforeEach(() => {
+        mockRequest.mockReset();
+    });
+
+    it('carries message alone when the refusal states nothing else', async () => {
+        mockRequest.mockResolvedValue({ success: false, error: 'Not configured.' });
+
+        render(<KeysProbe />);
+
+        await waitFor(() =>
+            expect(screen.getByTestId('failure-keys')).toHaveTextContent('message')
+        );
+        expect(screen.getByTestId('failure-keys').textContent).toBe('message');
+    });
+
+    it('drops a code that is not a string rather than passing it through', async () => {
+        // `HandlerResponse` is index-signed, so `code` arrives as `unknown` — a
+        // handler answering with a number would otherwise reach the UI as one.
+        mockRequest.mockResolvedValue({ success: false, error: 'Not configured.', code: 42 });
+
+        render(<KeysProbe />);
+
+        await waitFor(() =>
+            expect(screen.getByTestId('failure-keys')).toHaveTextContent('message')
+        );
+        expect(screen.getByTestId('failure-keys').textContent).toBe('message');
+    });
+});
+
+/**
+ * `load` is rebuilt when `execute` is — and `useVSCodeRequest` rebuilds `execute`
+ * on a change of `type`. Freezing it would send every later request to the
+ * handler named on the first render.
+ */
+describe('the handler it sends to', () => {
+    function TypeProbe({ type }: { type: string }): React.JSX.Element {
+        const { load } = useDataInstallerRequest(type);
+        return (
+            <button type="button" onClick={() => load({ id: 'bodea' })}>
+                Load
+            </button>
+        );
+    }
+
+    beforeEach(() => {
+        mockRequest.mockReset();
+        mockRequest.mockResolvedValue({ success: true, data: null });
+    });
+
+    it('follows the type it is currently given, not the first one', async () => {
+        const { rerender } = render(<TypeProbe type="find-datapacks" />);
+
+        rerender(<TypeProbe type="validate-datapack-import" />);
+        fireEvent.click(screen.getByRole('button', { name: 'Load' }));
+
+        await waitFor(() =>
+            expect(lastRequest()).toEqual({
+                type: 'validate-datapack-import',
+                payload: { id: 'bodea' },
+            })
+        );
+    });
+});
