@@ -11,7 +11,10 @@
 
 import { createMcpHealthCheck } from '@/features/dashboard/services/onOpenChecks/mcpHealthCheck';
 import { CHECK_IDS } from '@/types/messages';
-import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks/types';
+import type {
+    CheckResult,
+    OnOpenCheckContext,
+} from '@/features/dashboard/services/onOpenChecks/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 import { createMockProject } from '../../../../helpers/projectFake';
@@ -20,7 +23,10 @@ const mockLogger: Logger = createMockLogger();
 
 function makeCtx(): { ctx: OnOpenCheckContext; post: jest.Mock } {
     const post = jest.fn();
-    return { ctx: { project: createMockProject({ path: '/proj' }), logger: mockLogger, post }, post };
+    return {
+        ctx: { project: createMockProject({ path: '/proj' }), logger: mockLogger, post },
+        post,
+    };
 }
 
 it('is the mcp-health check: edsOnly, guarded (not reRunnable)', () => {
@@ -44,21 +50,43 @@ it('healthy (no drift) → ok, no warning posted, heal not run', async () => {
 });
 
 it('drift → posts a visible warning, heals once, then resolves ok', async () => {
-    const detectDrift = jest.fn().mockResolvedValue({ drifted: true, missing: ['/proj/.demo-builder-mcp/x.js'] });
+    const detectDrift = jest
+        .fn()
+        .mockResolvedValue({ drifted: true, missing: ['/proj/.demo-builder-mcp/x.js'] });
     const heal = jest.fn().mockResolvedValue({ success: true });
     const check = createMcpHealthCheck({ detectDrift, heal });
     const { ctx, post } = makeCtx();
 
-    const outcome = await check.run(ctx) as CheckResult;
+    const outcome = (await check.run(ctx)) as CheckResult;
 
     // Telegraphs the heal BEFORE doing the work (P2: visible, not silent). The
     // check posts a bare result; the orchestrator stamps checkId (so it's absent here).
-    expect(post).toHaveBeenCalledWith(expect.objectContaining({
-        status: 'warning',
-        message: expect.stringMatching(/updating ai configuration/i),
-    }));
+    expect(post).toHaveBeenCalledWith(
+        expect.objectContaining({
+            status: 'warning',
+            message: expect.stringMatching(/updating ai configuration/i),
+        })
+    );
     expect(heal).toHaveBeenCalledTimes(1);
     expect(outcome.status).toBe('ok');
+});
+
+it('drift → the warning carries the missing paths the probe reported', async () => {
+    // The drift detail is what the webview routes into McpHealthCheckData; a post
+    // whose `data` is empty tells the user something is being fixed and not what.
+    const missing = ['/proj/.demo-builder-mcp/a.js', '/proj/.demo-builder-mcp/b.js'];
+    const detectDrift = jest.fn().mockResolvedValue({ drifted: true, missing });
+    const check = createMcpHealthCheck({
+        detectDrift,
+        heal: jest.fn().mockResolvedValue({ success: true }),
+    });
+    const { ctx, post } = makeCtx();
+
+    await check.run(ctx);
+
+    expect(detectDrift).toHaveBeenCalledWith('/proj');
+    const posted = post.mock.calls[0][0] as CheckResult<{ missing?: string[] }>;
+    expect(posted.data).toStrictEqual({ missing });
 });
 
 it('heal returns failure → error outcome (with a retry hint)', async () => {
@@ -67,7 +95,7 @@ it('heal returns failure → error outcome (with a retry hint)', async () => {
     const check = createMcpHealthCheck({ detectDrift, heal });
     const { ctx } = makeCtx();
 
-    const outcome = await check.run(ctx) as CheckResult;
+    const outcome = (await check.run(ctx)) as CheckResult;
 
     expect(outcome.status).toBe('error');
     expect(outcome.message).toBeTruthy();
@@ -79,7 +107,7 @@ it('heal throws → error outcome (no rejection escapes)', async () => {
     const check = createMcpHealthCheck({ detectDrift, heal });
     const { ctx } = makeCtx();
 
-    const outcome = await check.run(ctx) as CheckResult;
+    const outcome = (await check.run(ctx)) as CheckResult;
 
     expect(outcome.status).toBe('error');
     expect(outcome.message).toMatch(/boom/);
