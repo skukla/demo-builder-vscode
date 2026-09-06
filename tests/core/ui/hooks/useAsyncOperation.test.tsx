@@ -285,5 +285,111 @@ describe('useAsyncOperation', () => {
             // onSuccess should not have been called
             expect(onSuccess).not.toHaveBeenCalled();
         });
+
+        it('does not START an operation once the component has unmounted', async () => {
+            // The guard on the way IN, not the one after the await: a click
+            // handler that fires as its panel closes must not launch the work
+            // at all, rather than launch it and discard the answer.
+            const operation = jest.fn(async () => 'value');
+            const { result, unmount } = renderHook(() => useAsyncOperation<string>());
+
+            unmount();
+
+            let returned: string | undefined;
+            await act(async () => {
+                returned = await result.current.execute(operation);
+            });
+
+            expect(operation).not.toHaveBeenCalled();
+            expect(returned).toBeUndefined();
+        });
+
+        it('does not report a FAILURE that lands after unmount', async () => {
+            const onError = jest.fn();
+            const { result, unmount } = renderHook(() =>
+                useAsyncOperation<string>({ onError })
+            );
+
+            let rejectPromise: (reason: Error) => void;
+            const promise = new Promise<string>((_resolve, reject) => {
+                rejectPromise = reject;
+            });
+
+            act(() => {
+                void result.current.execute(() => promise);
+            });
+
+            unmount();
+
+            await act(async () => {
+                rejectPromise!(new Error('late failure'));
+                await promise.catch(() => {});
+                await Promise.resolve();
+            });
+
+            expect(onError).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('initial state', () => {
+        it('starts idle', () => {
+            const { result } = renderHook(() => useAsyncOperation<string>());
+
+            expect(result.current.isExecuting).toBe(false);
+        });
+    });
+
+    describe('reset', () => {
+        it('leaves the hook idle', async () => {
+            const { result } = renderHook(() => useAsyncOperation<string>());
+
+            act(() => {
+                result.current.reset();
+            });
+
+            expect(result.current.isExecuting).toBe(false);
+        });
+
+        it('restores the CURRENT initial message, not the one from first render', () => {
+            // `reset` closes over initialMessage. A stale closure sends the
+            // panel back to the message it showed when it first mounted, which
+            // for a re-used panel is the previous component's copy.
+            const { result, rerender } = renderHook(
+                (props: { initialMessage: string }) => useAsyncOperation<string>(props),
+                { initialProps: { initialMessage: 'Checking prerequisites...' } },
+            );
+
+            rerender({ initialMessage: 'Checking credentials...' });
+
+            act(() => {
+                result.current.reset();
+            });
+
+            expect(result.current.message).toBe('Checking credentials...');
+        });
+    });
+
+    describe('callback freshness', () => {
+        it('calls the LATEST onSuccess, not the one captured on first render', async () => {
+            // A parent that re-renders with a new handler (a closure over new
+            // props) must get that handler; a stale one writes the result into
+            // the previous render's state.
+            const first = jest.fn();
+            const second = jest.fn();
+            const { result, rerender } = renderHook(
+                (props: { onSuccess: (data: string) => void }) =>
+                    useAsyncOperation<string>(props),
+                { initialProps: { onSuccess: first } },
+            );
+
+            rerender({ onSuccess: second });
+
+            await act(async () => {
+                await result.current.execute(async () => 'fresh');
+            });
+
+            expect(first).not.toHaveBeenCalled();
+            expect(second).toHaveBeenCalledWith('fresh');
+        });
     });
 });
