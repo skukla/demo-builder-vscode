@@ -33,6 +33,24 @@ describe('clearCompletedFrom', () => {
         expect(clearCompletedFrom(['a', 'b', 'c'], order, 'a', 0)).toEqual([]);
     });
 
+    it('clears ids that are no longer in the order at all, not just the known ones', () => {
+        // `order` is the STACK-FILTERED step list, so switching stack shrinks it
+        // while completedSteps still holds ids from the old one. Those ids have
+        // no index, and `indexOf` answers -1 for them — which is less than every
+        // targetIndex, so without the early return they would survive a
+        // navigation back to the very first step and stay "complete" forever.
+        expect(clearCompletedFrom(['a', 'gone'], order, 'a', 0)).toStrictEqual([]);
+    });
+
+    it('drops the target on its identity and later steps on their index', () => {
+        // Two independent arguments doing two independent jobs: `target` names
+        // the step to un-complete, `targetIndex` defines what counts as "after".
+        // With target 'b' and an index of 2, the target is still dropped (by
+        // name) and 'c' — which sits AT index 2 — is dropped too, because
+        // "after" starts at the index, not past it.
+        expect(clearCompletedFrom(['a', 'b', 'c'], order, 'b', 2)).toStrictEqual(['a']);
+    });
+
     it('preserves steps before the target even when later ones are absent', () => {
         expect(clearCompletedFrom(['a', 'c'], order, 'c', 2)).toEqual(['a']);
     });
