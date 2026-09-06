@@ -8,10 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/ai/server/siteTools.ts",
-        "src/commands/openInClaude.ts",
-        "src/commands/orphanedSettings.ts",
-        "src/commands/refreshBlockLibrary.ts"
+        "src/core/ui/hooks/useAutoScroll.ts"
     ],
     "reporters": [
         "clear-text",

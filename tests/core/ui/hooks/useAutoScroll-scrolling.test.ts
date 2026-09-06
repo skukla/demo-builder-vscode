@@ -161,6 +161,128 @@ describe('useAutoScroll - Scrolling Operations', () => {
         });
     });
 
+    /**
+     * The scroll decision, driven from both sides of each edge.
+     *
+     * `scrollToItem` has exactly two branches — below the fold, above the fold — and
+     * an item that is already visible falls through both. These drive the boundary of
+     * each comparison and assert the resulting scroll TARGET, not merely that a scroll
+     * happened, so an off-by-one in either comparison changes the assertion.
+     */
+    describe('visibility decisions', () => {
+        const scrollFor = (
+            container: ReturnType<typeof createMockContainer>,
+            item: ReturnType<typeof createMockElement>,
+            options: Parameters<typeof useAutoScroll>[0] = { delay: 100 }
+        ) => {
+            const { result } = renderHook(() => useAutoScroll(options));
+
+            // @ts-expect-error - mocking container
+            result.current.containerRef.current = container;
+
+            const refSetter = result.current.createItemRef(0);
+            act(() => {
+                // @ts-expect-error - mocking element
+                refSetter(item);
+            });
+
+            result.current.scrollToItem(0);
+            act(() => {
+                jest.advanceTimersByTime(100);
+            });
+        };
+
+        it('does not scroll an item whose bottom sits exactly on the fold', () => {
+            const container = createMockContainer({ clientHeight: 100, scrollTop: 0 });
+
+            scrollFor(container, createMockElement({ offsetTop: 80, offsetHeight: 20 }));
+
+            expect(container.scrollTo).not.toHaveBeenCalled();
+        });
+
+        it('scrolls down only as far as the overflow plus padding', () => {
+            const container = createMockContainer({ clientHeight: 100, scrollTop: 0 });
+
+            scrollFor(container, createMockElement({ offsetTop: 95, offsetHeight: 20 }));
+
+            // 95 + 20 - 100 + 10 (default padding)
+            expect(container.scrollTo).toHaveBeenCalledWith({ top: 25, behavior: 'smooth' });
+        });
+
+        it('scrolls up to the item less padding when it is above the visible area', () => {
+            const container = createMockContainer({ clientHeight: 100, scrollTop: 50 });
+
+            scrollFor(container, createMockElement({ offsetTop: 30, offsetHeight: 10 }));
+
+            // 30 - 10 (default padding) — NOT the below-the-fold calculation
+            expect(container.scrollTo).toHaveBeenCalledWith({ top: 20, behavior: 'smooth' });
+        });
+
+        it('does not scroll an item whose top sits exactly at the scroll position', () => {
+            const container = createMockContainer({ clientHeight: 100, scrollTop: 50 });
+
+            scrollFor(container, createMockElement({ offsetTop: 50, offsetHeight: 10 }));
+
+            expect(container.scrollTo).not.toHaveBeenCalled();
+        });
+
+        it('abandons the scroll when the item ref is cleared before the delay elapses', () => {
+            const container = createMockContainer({ clientHeight: 100, scrollTop: 0 });
+            const { result } = renderHook(() => useAutoScroll({ delay: 100 }));
+
+            // @ts-expect-error - mocking container
+            result.current.containerRef.current = container;
+
+            const refSetter = result.current.createItemRef(0);
+            act(() => {
+                // @ts-expect-error - mocking element
+                refSetter(createMockElement());
+            });
+
+            result.current.scrollToItem(0);
+
+            // The item unmounts while the scroll is still pending.
+            act(() => {
+                refSetter(null);
+            });
+
+            expect(() => {
+                act(() => {
+                    jest.advanceTimersByTime(100);
+                });
+            }).not.toThrow();
+            expect(container.scrollTo).not.toHaveBeenCalled();
+        });
+
+        it('abandons the scroll when the container ref is cleared before the delay elapses', () => {
+            const container = createMockContainer({ clientHeight: 100, scrollTop: 0 });
+            const { result } = renderHook(() => useAutoScroll({ delay: 100 }));
+
+            // @ts-expect-error - mocking container
+            result.current.containerRef.current = container;
+
+            const refSetter = result.current.createItemRef(0);
+            act(() => {
+                // @ts-expect-error - mocking element
+                refSetter(createMockElement());
+            });
+
+            result.current.scrollToItem(0);
+
+            act(() => {
+                // @ts-expect-error - detaching the container
+                result.current.containerRef.current = null;
+            });
+
+            expect(() => {
+                act(() => {
+                    jest.advanceTimersByTime(100);
+                });
+            }).not.toThrow();
+            expect(container.scrollTo).not.toHaveBeenCalled();
+        });
+    });
+
     describe('scrollToTop', () => {
         it('scrolls container to top', () => {
             const { result } = renderHook(() => useAutoScroll());

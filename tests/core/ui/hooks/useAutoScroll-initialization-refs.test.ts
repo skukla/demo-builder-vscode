@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { useAutoScroll } from '@/core/ui/hooks/useAutoScroll';
+import { createMockContainer } from './useAutoScroll.testUtils';
 
 describe('useAutoScroll - Initialization and Refs', () => {
     beforeEach(() => {
@@ -66,6 +67,25 @@ describe('useAutoScroll - Initialization and Refs', () => {
                 result.current.scrollToItem(0);
                 result.current.scrollToItem(1);
             }).not.toThrow();
+        });
+
+        it('schedules nothing for an index that was never registered', () => {
+            const { result } = renderHook(() => useAutoScroll());
+            const container = createMockContainer();
+
+            // @ts-expect-error - mocking container
+            result.current.containerRef.current = container;
+
+            const pendingBefore = jest.getTimerCount();
+            result.current.scrollToItem(0);
+
+            // The guard returns before the setTimeout, so no work is queued at all.
+            expect(jest.getTimerCount()).toBe(pendingBefore);
+
+            act(() => {
+                jest.runAllTimers();
+            });
+            expect(container.scrollTo).not.toHaveBeenCalled();
         });
 
         it('handles null element (cleanup)', () => {
