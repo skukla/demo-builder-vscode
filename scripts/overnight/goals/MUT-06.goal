@@ -1,11 +1,11 @@
 Work backlog item PL-22 — the mutation burn-down, batch MUT-06. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/core/ui/components/layout/TwoColumnLayout.tsx  (4 open gaps)
-  - src/core/ui/hooks/useSelection.ts  (4 open gaps)
-  - src/features/ai/server/projectors.ts  (4 open gaps)
-  - src/features/components/services/envVarHelpers.ts  (4 open gaps)
-  - src/features/components/services/serviceGroupTransforms.ts  (4 open gaps)
+  - src/features/ai/server/mcpProxyRetry.ts  (2 open gaps)
+  - src/features/components/services/projectAppBuilderPredicate.ts  (2 open gaps)
+  - src/features/dashboard/commands/configureEnvLoader.ts  (2 open gaps)
+  - src/features/dashboard/services/defaultPromptsSeeder.ts  (2 open gaps)
+  - src/features/dashboard/ui/components/AiMcpsList.tsx  (2 open gaps)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;
