@@ -14434,6 +14434,19 @@
             "decision": "Subsumed by the line-241 row \u2014 if emptying the entire body changes nothing, neither can an expression inside it.",
             "recorded": "2026-09-06",
             "source": "Planted 2026-09-06 (as part of emptying the loop body) with the 30-test migrateStorefrontNames family green."
+        },
+        {
+            "module": "src/core/utils/envVarExtraction.ts",
+            "anchors": [
+                "const match = trimmed.match(/^([^=]+)=(.*)$/);"
+            ],
+            "line": 38,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The subject is one trimmed line, so it holds no newline and no trailing whitespace: '.' already runs to the end of the string and '$' can only match there. Greedy (.*) therefore captures the same text with the anchor as without it, for every possible input this parser sees.",
+            "decision": "Keep the anchor as documentation of intent; no input can distinguish the two.",
+            "recorded": "2026-09-06",
+            "source": "Planted 2026-09-06 as /^([^=]+)=(.*)/ with the 39-test envVarExtraction family green."
         }
     ]
 }
