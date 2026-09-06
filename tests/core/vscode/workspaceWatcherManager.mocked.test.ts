@@ -9,6 +9,7 @@
  */
 
 import * as vscode from 'vscode';
+import { getLogger } from '@/core/logging/debugLogger';
 import { WorkspaceWatcherManager } from '@/core/vscode/workspaceWatcherManager';
 
 // Mock vscode.workspace.createFileSystemWatcher
@@ -26,8 +27,6 @@ jest.mock('vscode', () => {
         }
     };
 });
-
-// Mock logger
 
 describe('WorkspaceWatcherManager', () => {
     let manager: WorkspaceWatcherManager;
@@ -146,6 +145,50 @@ describe('WorkspaceWatcherManager', () => {
             expect(mockWatchers).toHaveLength(0);
         });
 
+        it('drops removed watchers from the manager, not only from the OS', () => {
+            // The map is what getWatcherCount/getWatchersForFolder answer from, so a
+            // watcher disposed but left in it reports as live for the rest of the session.
+            const folder1 = {
+                uri: vscode.Uri.file('/workspace1'),
+                name: 'workspace1',
+                index: 0
+            };
+            const folder2 = {
+                uri: vscode.Uri.file('/workspace2'),
+                name: 'workspace2',
+                index: 1
+            };
+
+            manager.createWatcher(folder1, '**/.env');
+            manager.createWatcher(folder1, '**/*.json');
+            manager.createWatcher(folder2, '**/.env');
+
+            manager.removeWatchersForFolder(folder1);
+
+            expect(manager.getWatcherCount()).toBe(1);
+            expect(manager.getWatchersForFolder(folder1)).toStrictEqual([]);
+        });
+
+        it('is idempotent — a second dispose does no work at all', () => {
+            const folder = {
+                uri: vscode.Uri.file('/workspace'),
+                name: 'test-workspace',
+                index: 0
+            };
+            manager.createWatcher(folder, '**/.env');
+            manager.dispose();
+
+            const logger = getLogger();
+            (logger.info as jest.Mock).mockClear();
+            (logger.debug as jest.Mock).mockClear();
+
+            manager.dispose();
+
+            // Silence, not wording: a second pass would re-run the whole teardown.
+            expect(logger.info).not.toHaveBeenCalled();
+            expect(logger.debug).not.toHaveBeenCalled();
+        });
+
         it('should prevent creating watchers after disposal', () => {
             // Given: Disposed manager
             manager.dispose();
@@ -204,6 +247,90 @@ describe('WorkspaceWatcherManager', () => {
             // Then: Only onCreate listener triggered
             expect(createListener).toHaveBeenCalledWith(mockUri);
             expect(changeListener).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Registering a pre-created watcher', () => {
+        const folder = {
+            uri: vscode.Uri.file('/workspace'),
+            name: 'test-workspace',
+            index: 0
+        };
+
+        /** A watcher the CALLER built and configured before handing it over. */
+        function preBuilt(pattern: string) {
+            return vscode.workspace.createFileSystemWatcher(pattern);
+        }
+
+        it('tracks a pre-created watcher against the folder it belongs to', () => {
+            const watcher = preBuilt('**/.env');
+
+            manager.registerWatcher(folder, watcher, 'env-watcher');
+
+            expect(manager.getWatcherCount()).toBe(1);
+            expect(manager.getWatchersForFolder(folder)).toStrictEqual([watcher]);
+            // Silence, not wording: a first registration is not a collision, and
+            // warning about one would make the real duplicates unfindable.
+            expect(getLogger().warn).not.toHaveBeenCalled();
+        });
+
+        it('replaces a duplicate identifier and disposes the watcher it displaces', () => {
+            const first = preBuilt('**/first');
+            const second = preBuilt('**/second');
+
+            manager.registerWatcher(folder, first, 'env-watcher');
+            manager.registerWatcher(folder, second, 'env-watcher');
+
+            // Leaving the displaced watcher running would leak a live OS handle that
+            // nothing can reach any more.
+            expect(first.dispose).toHaveBeenCalledTimes(1);
+            expect(manager.getWatcherCount()).toBe(1);
+            expect(manager.getWatchersForFolder(folder)).toStrictEqual([second]);
+        });
+
+        it('keys an identifier-less registration by time, so two do not collide', () => {
+            const clock = jest.spyOn(Date, 'now')
+                .mockReturnValueOnce(1_000)
+                .mockReturnValueOnce(2_000);
+            const a = preBuilt('**/a');
+            const b = preBuilt('**/b');
+
+            manager.registerWatcher(folder, a);
+            manager.registerWatcher(folder, b);
+
+            expect(manager.getWatcherCount()).toBe(2);
+            expect(manager.getWatchersForFolder(folder)).toStrictEqual([a, b]);
+            clock.mockRestore();
+        });
+
+        it('refuses to register once the manager is disposed', () => {
+            manager.dispose();
+            const watcher = preBuilt('**/.env');
+
+            expect(() => manager.registerWatcher(folder, watcher, 'env-watcher')).toThrow(
+                /disposed/i
+            );
+            expect(manager.getWatcherCount()).toBe(0);
+        });
+    });
+
+    describe('Logger resolution', () => {
+        it('resolves the shared logger once, not on every call', () => {
+            // getLoggerLazy exists because getLogger() throws before
+            // initializeLogger() has run; re-reading it per call brings that back.
+            const folder = {
+                uri: vscode.Uri.file('/workspace'),
+                name: 'test-workspace',
+                index: 0
+            };
+            manager.createWatcher(folder, '**/warm');
+            (getLogger as jest.Mock).mockClear();
+
+            manager.createWatcher(folder, '**/again');
+            manager.removeWatchersForFolder(folder);
+            manager.dispose();
+
+            expect(getLogger).not.toHaveBeenCalled();
         });
     });
 

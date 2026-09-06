@@ -16032,6 +16032,71 @@
             "decision": "none \u2014 the ref target always exists by the time the effect runs; the ?. is defensive only",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-08, planted 2026-09-06"
+        },
+        {
+            "module": "src/features/eds/services/pdp/publishKeyRenewalSweep.ts",
+            "anchors": [
+                "if (!stamp) return true;"
+            ],
+            "line": 64,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker removes the missing-stamp early return. The very next statement is Date.parse(stamp), and Date.parse of undefined (or of an empty string) is NaN, which the line below already turns into the same 'due' verdict \u2014 so the guard is a shortcut past a computation that reaches the identical answer. Verified by planting the removal: all 17 tests pass, while a planted control weakening the renewal boundary from >= to > fails.",
+            "decision": "none \u2014 the guard and the NaN branch below produce the same verdict for every falsy stamp",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-08, planted 2026-09-06"
+        },
+        {
+            "module": "src/features/eds/services/pdp/publishKeyRenewalSweep.ts",
+            "anchors": [
+                "const token = await tokenProvider.getAccessToken().catch(() => null);"
+            ],
+            "line": 86,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the catch handler's null with undefined. The recovered value is never passed anywhere \u2014 its only use is the !token check on the next line, which treats null and undefined identically \u2014 so the two forms cannot be told apart from outside. A test covers the rejecting provider and asserts the sweep resolves and registers nothing, which is all the behaviour there is. Verified by planting undefined: all 17 tests pass, while a planted control weakening the renewal boundary from >= to > fails.",
+            "decision": "none \u2014 the caught value is only tested for falsiness, so null and undefined are the same answer",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-08, planted 2026-09-06"
+        },
+        {
+            "module": "src/core/vscode/workspaceWatcherManager.ts",
+            "anchors": [
+                "existingWatcher?.dispose();"
+            ],
+            "line": 179,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the optional call on the displaced watcher. The line above has already established this.watchers.has(key), and the map is typed Map<string, FileSystemWatcher> with no undefined values, so get(key) on the very next line cannot return undefined \u2014 the guarded and unguarded forms run the same dispose. Verified by planting the removal: all 18 tests pass, while a planted control swapping startsWith for endsWith in the folder scan fails.",
+            "decision": "none \u2014 the get follows a has on the same key, so the ?. can never short-circuit",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-08, planted 2026-09-06"
+        },
+        {
+            "module": "src/core/vscode/workspaceWatcherManager.ts",
+            "anchors": [
+                "const keysToRemove: string[] = [];"
+            ],
+            "line": 202,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker seeds the accumulator with a sentinel key. The array has exactly two uses: a forEach that deletes each key from the map, where deleting a key that was never present is a no-op, and its .length inside the summary log line. So the only difference a test could observe is the number in that message, and killing it would mean asserting a logger call's wording, which no-logger-wording-assertions bans. Verified by planting the sentinel: all 18 tests pass, while a planted control swapping startsWith for endsWith in the folder scan fails.",
+            "decision": "none \u2014 the extra entry deletes nothing and shows up only in a log message",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-08, planted 2026-09-06"
+        },
+        {
+            "module": "src/features/ai/server/toolDescriptors.ts",
+            "anchors": [
+                "const events: CapturedEvent[] = [];"
+            ],
+            "line": 195,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker seeds the capture sink with a sentinel string. The sink has two readers: withCapturedProgress, which only appends, and payloadOfEvent, which walks backwards comparing each entry's .type to the requested event name \u2014 a string has no .type, so the sentinel can never match and never be returned. Any real event pushed by the handler sits after it and is found first. Verified by planting the sentinel: all 36 tests pass, while a planted control inverting destructiveHint's confirm test fails.",
+            "decision": "none \u2014 the sink is append-only and matched by .type, which a sentinel string cannot carry",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-08, planted 2026-09-06"
         }
     ]
 }
