@@ -15995,6 +15995,30 @@
             "decision": "none \u2014 the trim guards against injectTokenIntoUrl ever parsing more loosely, and asserting the exact argv (which these tests now do) cannot separate the two forms",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-07, planted 2026-09-06"
+        },
+        {
+            "module": "src/features/projects-dashboard/ui/components/ProjectActionsMenu.tsx",
+            "anchors": [
+                "actionMap[actionKey]?.(project);"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the optional call. The map is typed Record<string, ((p: Project) => void) | undefined>, so the compiler requires the ?. \u2014 and no key the menu renders can be missing from it: every item in both groups is pushed only inside a guard on its own callback, and the lone Delete item is inside the onDelete guard. Spectrum Sections do not fire onAction, so no other key reaches the dispatcher. Verified by planting the removal: all 38 tests pass, while a planted control (emptying the groups memo dependency list) fails.",
+            "decision": "none \u2014 the ?. is required by the type and there is no reachable key without an entry",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-07, planted 2026-09-06"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/AiSkillsList.tsx",
+            "anchors": [
+                "{isEditedSkill(skill, editedFiles ?? []) && ("
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker fills the nullish-coalescing fallback array with a sentinel string. The fallback is only reached when editedFiles is undefined, and isEditedSkill then asks whether the skill's on-disk path ends with a separator plus that entry \u2014 which no real path does for a sentinel, so the flag stays off exactly as it does for a genuinely empty list. A test could only kill this by naming a skill file after Stryker's own string rather than asserting the component's behaviour. Verified by planting the sentinel: all 32 tests pass, while a planted control swapping the two gated-reason labels fails.",
+            "decision": "none \u2014 the empty fallback is the correct absence and renders the same as any list matching nothing",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-07, planted 2026-09-06"
         }
     ]
 }

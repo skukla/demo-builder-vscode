@@ -8,8 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/storefront/storefrontSyncService.ts",
-        "src/features/ai/server/lifecycleTools.ts"
+        "src/features/projects-dashboard/ui/components/ProjectActionsMenu.tsx",
+        "src/features/dashboard/ui/components/AiSkillsList.tsx",
+        "src/features/dashboard/ui/components/integrations/IntegrationDetailPanel.tsx"
     ],
     "reporters": [
         "clear-text",
