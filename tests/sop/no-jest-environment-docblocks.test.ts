@@ -20,7 +20,7 @@
  * suite matched by the node project fails at run time on `document is not defined`,
  * which is loud; this suite exists for the failure that is quiet.
  */
-import { readdirSync, readFileSync, statSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { join, relative } from 'path';
 
 const ROOT = join(__dirname, '..', '..');
@@ -31,10 +31,20 @@ const DOCBLOCK = /^\s*\*\s*@jest-environment\s+\S+/m;
 
 function testFiles(dir: string): string[] {
     const out: string[] = [];
-    for (const name of readdirSync(dir)) {
-        const p = join(dir, name);
-        if (statSync(p).isDirectory()) out.push(...testFiles(p));
-        else if (/\.test\.tsx?$/.test(name)) out.push(p);
+    // See the note in no-credential-shaped-fixtures: one syscall instead of two, so a
+    // probe directory another suite deletes mid-walk cannot fail this run. It did fail
+    // one, on 2026-09-06 — a concurrent session's tests/tmp-probe went between the
+    // readdir and the stat, and the pre-push gate refused a push for it.
+    let entries;
+    try {
+        entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+        return out;
+    }
+    for (const entry of entries) {
+        const p = join(dir, entry.name);
+        if (entry.isDirectory()) out.push(...testFiles(p));
+        else if (/\.test\.tsx?$/.test(entry.name)) out.push(p);
     }
     return out;
 }
