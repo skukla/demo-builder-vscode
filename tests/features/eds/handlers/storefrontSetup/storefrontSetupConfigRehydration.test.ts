@@ -110,14 +110,40 @@ describe('rehydratePackageDerivedConfig', () => {
         // deliberate choice with the package default.
         const supplied = { ...EDIT_MODE_CONFIG, codePatches: ['only-this-one'] };
 
-        const result = await rehydratePackageDerivedConfig(
-            supplied,
+        const result = await rehydratePackageDerivedConfig(supplied, 'custom', 'eds-accs', logger);
+
+        expect(result.codePatches).toEqual(['only-this-one']);
+    });
+
+    it('does not INVENT a key the package never defined', async () => {
+        // toEqual would let this through — it ignores properties whose value is
+        // undefined — so the check is on the key set. A field written as
+        // undefined is not the same as a field absent: every consumer guards on
+        // presence, and `brandAssets: undefined` reads as configured-but-empty.
+        mockLookup.mockResolvedValue({ codePatches: ['only-the-one-defined'] });
+
+        const result = (await rehydratePackageDerivedConfig(
+            EDIT_MODE_CONFIG,
             'custom',
             'eds-accs',
             logger
-        );
+        )) as Record<string, unknown>;
 
-        expect(result.codePatches).toEqual(['only-this-one']);
+        expect(result.codePatches).toEqual(['only-the-one-defined']);
+        expect(Object.keys(result).sort()).toStrictEqual(
+            [...Object.keys(EDIT_MODE_CONFIG), 'codePatches'].sort()
+        );
+    });
+
+    it('stays silent when there was nothing to restore', async () => {
+        // The info line is the record that a republish picked its patches back
+        // up. Printing it on a config that arrived complete makes it worthless —
+        // it would appear on every creation run, which restores nothing.
+        const complete = { ...EDIT_MODE_CONFIG, ...STOREFRONT };
+
+        await rehydratePackageDerivedConfig(complete, 'custom', 'eds-accs', logger);
+
+        expect(logger.info).not.toHaveBeenCalled();
     });
 
     it('returns the config untouched when the package is unknown', async () => {
@@ -171,12 +197,7 @@ describe('rehydratePackageDerivedConfig', () => {
     });
 
     it('reports what it restored, so a silent skip can never recur unlogged', async () => {
-        await rehydratePackageDerivedConfig(
-            EDIT_MODE_CONFIG,
-            'custom',
-            'eds-accs',
-            logger
-        );
+        await rehydratePackageDerivedConfig(EDIT_MODE_CONFIG, 'custom', 'eds-accs', logger);
 
         const said = logger.info.mock.calls.flat().join(' ');
         expect(said).toContain('codePatches');
