@@ -26,10 +26,9 @@ function deferredHandler() {
 }
 
 function render(orgCheckState: OrgCheckState, handler: () => Promise<void>) {
-    return renderHook(
-        ({ state }: { state: OrgCheckState }) => useOrgSwitchFlow(state, handler),
-        { initialProps: { state: orgCheckState } },
-    );
+    return renderHook(({ state }: { state: OrgCheckState }) => useOrgSwitchFlow(state, handler), {
+        initialProps: { state: orgCheckState },
+    });
 }
 
 describe('useOrgSwitchFlow', () => {
@@ -76,6 +75,71 @@ describe('useOrgSwitchFlow', () => {
         await act(async () => {
             resolve();
             await first;
+        });
+    });
+
+    it('releases the re-entry guard once the switch settles, so a second press works', async () => {
+        // The guard is a ref, not state, so nothing re-renders when it is left set.
+        // A guard that never releases strands the banner's button for the rest of
+        // the session: it looks pressable and does nothing.
+        const first = deferredHandler();
+        const second = deferredHandler();
+        const handler = jest
+            .fn()
+            .mockImplementationOnce(first.handler)
+            .mockImplementationOnce(second.handler);
+        const { result } = render('mismatch', handler);
+
+        let pending!: Promise<void>;
+        act(() => {
+            pending = result.current.onSwitchOrg();
+        });
+        await act(async () => {
+            first.resolve();
+            await pending;
+        });
+
+        act(() => {
+            pending = result.current.onSwitchOrg();
+        });
+
+        expect(handler).toHaveBeenCalledTimes(2);
+        expect(result.current.isSwitchingOrg).toBe(true);
+
+        await act(async () => {
+            second.resolve();
+            await pending;
+        });
+    });
+
+    it('releases the re-entry guard even when the switch rejects', async () => {
+        // A cancelled browser login rejects; the button must still work afterwards.
+        const first = deferredHandler();
+        const second = deferredHandler();
+        const handler = jest
+            .fn()
+            .mockImplementationOnce(first.handler)
+            .mockImplementationOnce(second.handler);
+        const { result } = render('mismatch', handler);
+
+        let pending!: Promise<void>;
+        act(() => {
+            pending = result.current.onSwitchOrg().catch(() => undefined);
+        });
+        await act(async () => {
+            first.reject(new Error('cancelled'));
+            await pending;
+        });
+
+        act(() => {
+            pending = result.current.onSwitchOrg();
+        });
+
+        expect(handler).toHaveBeenCalledTimes(2);
+
+        await act(async () => {
+            second.resolve();
+            await pending;
         });
     });
 
