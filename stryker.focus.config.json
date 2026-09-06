@@ -8,7 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/projects-dashboard/ui/components/ProjectRow.tsx"
+        "src/core/ui/components/wizard/StatusSection.tsx",
+        "src/features/ai/server/currentProjectTool.ts",
+        "src/features/app-builder/services/ensureMeshApiSubscribed.ts",
+        "src/features/components/ui/components/StoreStructureSelector.tsx",
+        "src/features/dashboard/services/dashboardStatusService.ts"
     ],
     "reporters": [
         "clear-text",

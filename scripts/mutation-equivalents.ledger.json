@@ -16678,6 +16678,19 @@
             "decision": "none \u2014 the chain matches the declared Error | null and costs nothing",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/core/ui/components/wizard/StatusSection.tsx",
+            "anchors": [
+                "default:"
+            ],
+            "line": 40,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "renderIcon's default clause is unreachable. Its only two call sites are inside renderStatusContent: one in the status === 'checking' branch, one in the tail branch that 'empty' has already returned before. So renderIcon is only ever entered with 'checking', 'completed', 'pending' or 'error', and each has its own case. The clause exists to satisfy noImplicitReturns. Verified by planting it \u2014 the statements removed, the suite's 24 tests still pass \u2014 and React renders the resulting undefined exactly as it renders null.",
+            "decision": "none \u2014 deleting it would fail noImplicitReturns, and no caller can reach it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }
