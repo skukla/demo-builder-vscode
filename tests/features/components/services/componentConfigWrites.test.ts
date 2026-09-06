@@ -39,6 +39,13 @@ describe('findFieldValue', () => {
         expect(findFieldValue(configs, field)).toBeUndefined();
     });
 
+    it('skips a declaring component that holds no value for the field at all', () => {
+        // Absent is not the same case as empty: the loop has to step over BOTH, or a
+        // component that simply never had the key answers for the ones that do.
+        const configs = { headless: {}, backend: { ADOBE_COMMERCE_URL: 'https://b.test' } };
+        expect(findFieldValue(configs, sharedField)).toBe('https://b.test');
+    });
+
     it('treats an empty string as absent', () => {
         expect(findFieldValue({ headless: { ADOBE_COMMERCE_URL: '' } }, field)).toBeUndefined();
     });
@@ -163,6 +170,27 @@ describe('removeKeysFromComponents', () => {
             backend: { COMMERCE_URL: 'https://a.test' },
             headless: {},
         });
+    });
+
+    it('strips a key a component holds even when it holds none of the others', () => {
+        // Package switching passes the outgoing AND incoming packages' keys together,
+        // so most components hold only some of them. Requiring all of them would
+        // leave the stale value in place and let the fill skip it.
+        const configs = { backend: { ACCS_WEBSITE_CODE: 'citisignal' } };
+
+        expect(removeKeysFromComponents(configs, ['ACCS_WEBSITE_CODE', 'ACCS_STORE_CODE'])).toEqual({
+            backend: {},
+        });
+    });
+
+    it('carries forward the components it did not have to strip', () => {
+        // The copy is of the WHOLE configs object; building a fresh one from the
+        // stripped components alone would silently drop everything else.
+        const configs = { backend: { ACCS_WEBSITE_CODE: 'citisignal' }, untouched: { A: '1' } };
+
+        const next = removeKeysFromComponents(configs, ['ACCS_WEBSITE_CODE']);
+
+        expect(next.untouched).toBe(configs.untouched);
     });
 
     it('returns the SAME object when nothing matches (no spurious re-renders)', () => {
