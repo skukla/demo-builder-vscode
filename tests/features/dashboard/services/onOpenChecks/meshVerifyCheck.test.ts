@@ -78,3 +78,36 @@ it('verify error → unknown (transient); does NOT flip persisted state', async 
     expect(deps.syncMeshStatus).not.toHaveBeenCalled();
     expect(deps.markDirty).not.toHaveBeenCalled();
 });
+
+it('a verifier that answers with nothing at all → unknown, not a crash', async () => {
+    // The verifier is injected, and its own failure paths have resolved undefined
+    // before. Reading `.success` off it directly turns a transient miss into a thrown
+    // check, which the orchestrator reports as an error rather than as "cannot say".
+    const deps = makeDeps(undefined);
+    const check = createMeshVerifyCheck(deps);
+    const { ctx } = makeCtx();
+
+    const outcome = await check.run(ctx) as CheckResult;
+
+    expect(outcome.status).toBe('unknown');
+    expect(deps.syncMeshStatus).not.toHaveBeenCalled();
+    expect(deps.markDirty).not.toHaveBeenCalled();
+});
+
+it('a successful verify carrying no data block → mesh gone, state still synced', async () => {
+    // `data` is optional on the verifier result, so "succeeded but said nothing about
+    // the mesh" is the same answer as "succeeded and it is not there".
+    const result = { success: true };
+    const deps = makeDeps(result);
+    const check = createMeshVerifyCheck(deps);
+    const { ctx } = makeCtx();
+
+    const outcome = await check.run(ctx) as CheckResult;
+
+    expect(outcome.status).toBe('warning');
+    expect(outcome.message).toMatch(/no longer deployed/i);
+    // The ARGUMENTS, not just the call: the sync has to be handed this project and
+    // this verifier result, or it persists the wrong mesh's status.
+    expect(deps.syncMeshStatus).toHaveBeenCalledWith(ctx.project, result);
+    expect(deps.markDirty).toHaveBeenCalledWith('appBuilderComponents');
+});
