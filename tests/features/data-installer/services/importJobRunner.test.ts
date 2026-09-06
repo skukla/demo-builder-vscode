@@ -32,27 +32,10 @@ jest.mock('@/core/utils/sleep');
 // (`private logger = getLogger()`), which throws in a bare node test. Same stub
 // shape `fileWatcher`'s suite uses.
 
+import { pollingStub, snap } from './importJobRunner.testUtils';
 import { watchImportJob, IMPORT_POLL } from '@/features/data-installer/services/importJobRunner';
 import type { JobStatusSnapshot } from '@/features/data-installer/types';
 import { PollingService } from '@/core/shell/pollingService';
-
-/** A status snapshot with the given per-type map. */
-function snap(
-    perType: Record<string, string>,
-    extra: Partial<JobStatusSnapshot> = {}
-): JobStatusSnapshot {
-    return {
-        activationId: 'act-1',
-        perType: perType as JobStatusSnapshot['perType'],
-        hasRecord: Object.keys(perType).length > 0,
-        ...extra,
-    };
-}
-
-/** A poller stub — the real class holds a logger and a rate limiter no literal can supply. */
-function pollingStub(pollUntilCondition: jest.Mock): PollingService {
-    return { pollUntilCondition } as unknown as PollingService;
-}
 
 /** Runner with a scripted sequence of status responses. */
 function runWith(
@@ -306,6 +289,17 @@ describe('watchImportJob', () => {
             const { promise } = runWith([snap({})], { graceMs: 60_000 });
 
             expect((await promise).outcome).toBe('never-registered');
+        });
+
+        // The window is CLOSED at its own length, not one poll later. Each poll
+        // here advances the clock 40s, so a 40s window is spent exactly when the
+        // first status comes back — and the runner must not buy itself another
+        // round by treating the boundary as still open.
+        it('closes the window at the boundary, not one poll past it', async () => {
+            const { promise, getJobStatus } = runWith([snap({})], { graceMs: 40_000 });
+
+            expect((await promise).outcome).toBe('never-registered');
+            expect(getJobStatus).toHaveBeenCalledTimes(1);
         });
 
         // The echo explains why nothing happened. It is NOT polled: it lies about
