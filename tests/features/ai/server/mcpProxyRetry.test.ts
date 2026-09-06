@@ -71,4 +71,13 @@ describe('isRetryableToolResult', () => {
         expect(isRetryableToolResult(undefined)).toBe(true);
         expect(isRetryableToolResult('done')).toBe(true);
     });
+
+    it('returns true for a null result without throwing (typeof null === object)', () => {
+        // `null` is the one non-object that `typeof` calls an object, so it slips
+        // past the second half of the guard. Without the explicit `result === null`
+        // check the property read throws, and the proxy's retry path turns a
+        // missing result into a crash instead of one more attempt.
+        expect(() => isRetryableToolResult(null)).not.toThrow();
+        expect(isRetryableToolResult(null)).toBe(true);
+    });
 });

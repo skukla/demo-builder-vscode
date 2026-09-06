@@ -16922,6 +16922,18 @@
             "decision": "none \u2014 reset closes over nothing, so its dependency list is correctly empty",
             "recorded": "2026-09-06",
             "source": "MUT-05 batch, PL-22"
+        },
+        {
+            "module": "src/features/ai/server/mcpProxyRetry.ts",
+            "anchors": [
+                "if (!code) return false;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Removing the falsy guard is behaviourally identical: the fall-through is RETRYABLE_CODES.has(code), and Set.has returns false for both undefined and the empty string, so every input answers the same either way. Planted the mutation and all 11 tests passed. The guard is required by the COMPILER, not by behaviour \u2014 with it neutralised, tsc reports 'Argument of type string | undefined is not assignable to parameter of type string' at the has() call, and passing it would need a cast at an argument boundary.",
+            "decision": "none \u2014 the guard narrows string | undefined to string and is the alternative to a silenced type error",
+            "recorded": "2026-09-06",
+            "source": "MUT-06 batch, verified by planting the mutation (suite green) and by tsc --noEmit (TS2345)"
         }
     ]
 }
