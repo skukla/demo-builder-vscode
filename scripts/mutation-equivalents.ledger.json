@@ -13707,6 +13707,126 @@
             "decision": "none \u2014 the ?. is required by the type and the undefined case cannot be reached",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/mesh/services/meshDeploymentVerifier.ts",
+            "anchors": [
+                "if (!jsonMatch) return undefined;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Deleting the guard makes the next line index a null match and throw. That throw happens inside extractMeshData, which waitForMeshDeployment calls inside the poll loop's try, and the catch there swallows it and polls again \u2014 which is exactly what returning undefined does. Planted 2026-09-06 against all four suites: nothing observable differs, because the only trace of the throw is one extra logger.warn line.",
+            "decision": "none \u2014 the guard says what it means and reaches the same continue-polling path",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/mesh/services/meshDeploymentVerifier.ts",
+            "anchors": [
+                "if (!meshData) {"
+            ],
+            "mutants": 2,
+            "category": "block",
+            "reason": "Both the guard and its body are unobservable for the same reason. parseJSON returns null when the extracted text is not JSON, so deleting the body (or the condition) simply returns that null to the caller, whose own truthiness check then takes the identical continue-polling branch. The only difference is one logger.warn. Planted 2026-09-06 with all four suites green.",
+            "decision": "none \u2014 the early return keeps processMeshStatus's contract of only being called with data",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/mesh/services/meshDeploymentVerifier.ts",
+            "anchors": [
+                "const meshStatus = meshData.meshStatus?.toLowerCase();"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the ?. throws for a mesh response with no meshStatus field, and that throw is caught by the poll loop's own try/catch and polls again. Leaving meshStatus undefined reaches the same place: neither the deployed/success branch nor the error/failed branch matches, so the function returns undefined and the loop continues. Planted 2026-09-06; the suites cannot tell the two apart.",
+            "decision": "none \u2014 the ?. is required by the optional field and the failure mode is identical",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/mesh/services/meshDeploymentVerifier.ts",
+            "anchors": [
+                "const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);"
+            ],
+            "mutants": 4,
+            "category": "other",
+            "reason": "totalTime has exactly one consumer, the logger.info line immediately below it, and it is never returned or compared. Every arithmetic mutation here therefore changes only the number inside a log message, and killing one would mean asserting log wording \u2014 which the ratchet exists to refuse to reward and which an enforcer blocks outright.",
+            "decision": "none \u2014 the value is presentation, computed where it is read",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/mesh/services/meshDeploymentVerifier.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The else body is a single logger.warn saying no meshId was found. Emptying it changes no value, no call and no return; the behaviour that matters on this branch \u2014 that describe is NOT run without a mesh id \u2014 is asserted by 'does not run describe when the deployed response carries no meshId'. The classifier reads only the '} else {' line, which carries no logger text, so it lands in the block bucket rather than the log bucket.",
+            "decision": "none \u2014 log-only body, and the branch it belongs to is under test",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/mesh/services/meshDeploymentVerifier.ts",
+            "anchors": [
+                "} catch (verifyError) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The catch body is a single logger.warn; the swallow-and-continue is the catch clause itself, not its contents. Emptying the body leaves the loop doing exactly what the comment below it says it should \u2014 continue polling, because transient errors are common \u2014 so no test can see the difference without asserting the warning's wording.",
+            "decision": "none \u2014 log-only body; the recovery behaviour is asserted by the command-error test",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/mesh/services/meshDeploymentVerifier.ts",
+            "anchors": [
+                "return endpointMatch[1].trim();"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The captured group comes from /endpoint[:\\s]+([^\\s\\n]+)/, whose character class excludes every whitespace character, so the match can never have leading or trailing whitespace and .trim() cannot change it. Constructing input that would differ is impossible through this regex. Planted 2026-09-06 with the suites green.",
+            "decision": "none \u2014 defensive trim over a match the pattern already guarantees is trimmed",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/mesh/services/meshDeploymentVerifier.ts",
+            "anchors": [
+                "if (meshData?.endpoint) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the ?. throws when parseJSON returned null for non-JSON describe output, and that throw is caught by the enclosing 'catch { // Not JSON, continue to fallback }' three lines below, which is the very path the falsy check takes. Both roads end at the constructed fallback endpoint, which 'ignores the output of a describe that exited non-zero' already pins. Planted 2026-09-06.",
+            "decision": "none \u2014 the ?. and the catch guard the same case, so neither is observable alone",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/mesh/services/meshDeploymentVerifier.ts",
+            "anchors": [
+                "if (meshId) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "getEndpoint is only ever called from the one branch that has already established a truthy deployedMeshId, and validateMeshId rejects an empty id before this line, so meshId is always truthy here and the guard can never take its other side. Reaching it falsely would need a caller that does not exist. Planted 2026-09-06.",
+            "decision": "none \u2014 the guard restates a precondition the single call site already enforces",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/mesh/services/meshDeploymentVerifier.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "This catch body is a single logger.warn and the function returns undefined immediately after it either way. Emptying the body changes nothing a caller can see: the endpoint is undefined whether the warn ran or not, and asserting the warning's text is what the ratchet refuses to reward.",
+            "decision": "none \u2014 log-only body over a path whose result is undefined regardless",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }

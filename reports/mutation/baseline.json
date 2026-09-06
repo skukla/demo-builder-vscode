@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "configureProjectTool: 28 mutants killed by tests for the declared descriptor, the schema shapes, exact stillUnset, missing-field projects, partial payloads and the secret handoff; 5 recorded as equivalent",
+    "_note": "meshDeploymentVerifier: 19 mutants killed by tests asserting both CLI calls' exact arguments, the non-zero-exit guards on poll and describe, the derived maxRetries and real elapsed seconds, the no-meshId short circuit and which text the error summary comes from; 14 recorded as equivalent",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -8287,28 +8287,26 @@
             "openGaps": 0
         },
         "src/features/mesh/services/meshDeploymentVerifier.ts": {
-            "score": 64.67,
-            "killed": 68,
-            "survived": 39,
-            "noCoverage": 14,
+            "score": 78.67,
+            "killed": 89,
+            "survived": 20,
+            "noCoverage": 12,
             "timeout": 29,
             "survivorCategories": {
-                "branch": 17,
+                "branch": 3,
                 "optionalChain": 2,
                 "logPresentation": 8,
-                "other": 8,
-                "block": 2,
-                "string": 2
+                "other": 5,
+                "block": 2
             },
             "uncoveredCategories": {
                 "block": 2,
                 "logPresentation": 9,
-                "string": 1,
-                "other": 2
+                "string": 1
             },
-            "highValueSurvivors": 19,
-            "equivalent": 0,
-            "openGaps": 33
+            "highValueSurvivors": 5,
+            "equivalent": 14,
+            "openGaps": 0
         },
         "src/features/mesh/services/meshEndpoint.ts": {
             "score": 67.12,
