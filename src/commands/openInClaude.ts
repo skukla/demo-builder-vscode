@@ -190,9 +190,9 @@ export class OpenInClaudeCommand extends BaseCommand {
      */
     private async launchTerminal(
         cwd: string,
-        prompt?: string,
-        currentProjectName?: string,
-        fresh = false,
+        prompt: string | undefined,
+        currentProjectName: string | undefined,
+        fresh: boolean,
     ): Promise<void> {
         if (!cwd) {
             this.logger.error('[Open in Claude] cannot launch terminal: cwd missing');
@@ -365,24 +365,19 @@ export async function resetAiOnboardingState(context: vscode.ExtensionContext): 
 }
 
 /**
- * Normalize the polymorphic execute argument into `{ project, prompt }`.
+ * Read the two fields `execute` acts on out of the polymorphic argument.
  *
- * Accepts:
- *   - `undefined` → both undefined
- *   - A `Project` (legacy positional form, identified by a `path` property)
- *   - A `{ project?, prompt? }` payload
+ * Accepts `undefined`, a `{ prompt?, fresh? }` payload, or a `Project` passed
+ * positionally (the legacy form). The legacy case needs no branch of its own: a
+ * `Project` carries neither `prompt` nor `fresh`, so reading them off one yields
+ * exactly what the separate branch used to return. It also used to return the
+ * `project`, which no caller has read since the home Chat stopped anchoring to a
+ * project — four mutants sat on that branch and none of them changed anything.
  */
 function normalizeArg(arg: OpenInClaudeArg | undefined): {
-    project: Project | undefined;
     prompt: string | undefined;
     fresh: boolean;
 } {
-    if (arg === undefined || arg === null) {
-        return { project: undefined, prompt: undefined, fresh: false };
-    }
-    if (typeof arg === 'object' && 'path' in arg) {
-        return { project: arg as Project, prompt: undefined, fresh: false };
-    }
-    const payload = arg as { project?: Project; prompt?: string; fresh?: boolean };
-    return { project: payload.project, prompt: payload.prompt, fresh: payload.fresh === true };
+    const payload = arg as { prompt?: string; fresh?: boolean } | undefined;
+    return { prompt: payload?.prompt, fresh: payload?.fresh === true };
 }

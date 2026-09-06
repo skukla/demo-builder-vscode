@@ -124,6 +124,8 @@ export function setupVscodeMocks(opts: {
     showWarningMessageMock: jest.Mock;
     clipboardWriteMock: jest.Mock;
     existingTerminalShowMocks: jest.Mock[];
+    /** `dispose` per existing terminal — the New Chat path retires the live one. */
+    existingTerminalDisposeMocks: jest.Mock[];
     hasClaudeConversationMock: jest.Mock;
 } {
     // Default workspace = project.path so existing tests still pass.
@@ -159,15 +161,18 @@ export function setupVscodeMocks(opts: {
 
     // Mock existing terminals (for find-or-spawn behavior)
     const existingTerminalShowMocks: jest.Mock[] = [];
+    const existingTerminalDisposeMocks: jest.Mock[] = [];
     const terminalsList = (opts.existingTerminals ?? []).map(t => {
         const showMock = jest.fn();
+        const disposeMock = jest.fn();
         existingTerminalShowMocks.push(showMock);
+        existingTerminalDisposeMocks.push(disposeMock);
         return {
             name: t.name,
             exitStatus: t.exitStatus,
             show: showMock,
             sendText: jest.fn(),
-            dispose: jest.fn(),
+            dispose: disposeMock,
         };
     });
     (vscode.window as unknown as { terminals: unknown[] }).terminals = terminalsList;
@@ -207,6 +212,7 @@ export function setupVscodeMocks(opts: {
         showWarningMessageMock,
         clipboardWriteMock,
         existingTerminalShowMocks,
+        existingTerminalDisposeMocks,
         hasClaudeConversationMock,
     };
 }
