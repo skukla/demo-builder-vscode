@@ -8,11 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/utils/quickPickUtils.ts",
-        "src/features/ai/server/consentViaChat.ts",
-        "src/features/app-builder/services/owPackageName.ts",
-        "src/features/dashboard/ui/configure/configureFieldValidation.ts",
-        "src/features/data-installer/services/accsCredentialProvisioner.ts"
+        "src/features/eds/services/helix/helixApiClient.ts",
+        "src/features/eds/services/refreshBlockLibraryHeadless.ts",
+        "src/core/logging/errorLogger.ts"
     ],
     "reporters": [
         "clear-text",
