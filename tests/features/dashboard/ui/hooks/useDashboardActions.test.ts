@@ -34,7 +34,10 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     },
 }));
 
-import { useDashboardActions } from '@/features/dashboard/ui/hooks/useDashboardActions';
+import {
+    useDashboardActions,
+    UseDashboardActionsProps,
+} from '@/features/dashboard/ui/hooks/useDashboardActions';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 describe('useDashboardActions', () => {
@@ -66,6 +69,24 @@ describe('useDashboardActions', () => {
             })
         );
     };
+
+    /**
+     * Render with the props held as `initialProps`, so a test can hand the hook a
+     * CHANGED prop and call the handler afterwards. That is the only way to observe a
+     * handler's dependency list: a callback memoised on a stale dependency keeps the
+     * value it captured on the first render, and every assertion below is about which
+     * value the handler actually used.
+     */
+    const renderWithProps = (initialProps: UseDashboardActionsProps) =>
+        renderHook((props: UseDashboardActionsProps) => useDashboardActions(props), {
+            initialProps,
+        });
+
+    const baseProps = (): UseDashboardActionsProps => ({
+        isOpeningBrowser: false,
+        setIsTransitioning: mockSetIsTransitioning,
+        setIsOpeningBrowser: mockSetIsOpeningBrowser,
+    });
 
     describe('Action Handler Existence', () => {
         it('should return all action handlers', () => {
@@ -301,6 +322,220 @@ describe('useDashboardActions', () => {
             expect(
                 (result.current as unknown as Record<string, unknown>).handleSetAuthoringExperience
             ).toBeUndefined();
+        });
+    });
+
+    describe('Restart Action', () => {
+        it('should set transitioning state and send restartDemo message', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleRestartDemo();
+            });
+
+            // One message, not a stop/start pair: the extension owns the sequencing
+            // and its settle delay.
+            expect(mockSetIsTransitioning).toHaveBeenCalledWith(true);
+            expect(mockPostMessage).toHaveBeenCalledTimes(1);
+            expect(mockPostMessage).toHaveBeenCalledWith('restartDemo');
+        });
+    });
+
+    describe('Storefront Actions', () => {
+        it('should send syncStorefront without entering the transitioning state', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleSyncStorefront();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('syncStorefront');
+            expect(mockSetIsTransitioning).not.toHaveBeenCalled();
+        });
+
+        it('should send refreshBlockLibrary without entering the transitioning state', () => {
+            const { result } = renderActionsHook();
+
+            act(() => {
+                result.current.handleRefreshBlockLibrary();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('refreshBlockLibrary');
+            expect(mockSetIsTransitioning).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('Open Live Site Action', () => {
+        const LIVE_URL = 'https://main--demo--acme.aem.live/';
+
+        it('should send openLiveSite carrying the live URL', () => {
+            const { result } = renderActionsHook(false, { edsLiveUrl: LIVE_URL });
+
+            act(() => {
+                result.current.handleOpenLiveSite();
+            });
+
+            expect(mockSetIsOpeningBrowser).toHaveBeenCalledWith(true);
+            expect(mockPostMessage).toHaveBeenCalledWith('openLiveSite', { url: LIVE_URL });
+        });
+
+        it('should do nothing when there is no live URL', () => {
+            const { result } = renderActionsHook(false);
+
+            act(() => {
+                result.current.handleOpenLiveSite();
+            });
+
+            expect(mockPostMessage).not.toHaveBeenCalled();
+            expect(mockSetIsOpeningBrowser).not.toHaveBeenCalled();
+        });
+
+        it('should prevent double-click when already opening', () => {
+            const { result } = renderActionsHook(true, { edsLiveUrl: LIVE_URL });
+
+            act(() => {
+                result.current.handleOpenLiveSite();
+            });
+
+            expect(mockPostMessage).not.toHaveBeenCalled();
+            expect(mockSetIsOpeningBrowser).not.toHaveBeenCalled();
+        });
+
+        it('should re-enable opening after the double-click delay', () => {
+            const { result } = renderActionsHook(false, { edsLiveUrl: LIVE_URL });
+
+            act(() => {
+                result.current.handleOpenLiveSite();
+            });
+            act(() => {
+                jest.advanceTimersByTime(1000);
+            });
+
+            expect(mockSetIsOpeningBrowser).toHaveBeenLastCalledWith(false);
+        });
+    });
+
+    describe('Open DA.live Action', () => {
+        const DA_URL = 'https://da.live/#/acme/demo';
+
+        it('should send openDaLive carrying the authoring URL', () => {
+            const { result } = renderActionsHook(false, { edsDaLiveUrl: DA_URL });
+
+            act(() => {
+                result.current.handleOpenDaLive();
+            });
+
+            expect(mockSetIsOpeningBrowser).toHaveBeenCalledWith(true);
+            expect(mockPostMessage).toHaveBeenCalledWith('openDaLive', { url: DA_URL });
+        });
+
+        it('should do nothing when there is no DA.live URL', () => {
+            const { result } = renderActionsHook(false);
+
+            act(() => {
+                result.current.handleOpenDaLive();
+            });
+
+            expect(mockPostMessage).not.toHaveBeenCalled();
+            expect(mockSetIsOpeningBrowser).not.toHaveBeenCalled();
+        });
+
+        it('should prevent double-click when already opening', () => {
+            const { result } = renderActionsHook(true, { edsDaLiveUrl: DA_URL });
+
+            act(() => {
+                result.current.handleOpenDaLive();
+            });
+
+            expect(mockPostMessage).not.toHaveBeenCalled();
+            expect(mockSetIsOpeningBrowser).not.toHaveBeenCalled();
+        });
+
+        it('should re-enable opening after the double-click delay', () => {
+            const { result } = renderActionsHook(false, { edsDaLiveUrl: DA_URL });
+
+            act(() => {
+                result.current.handleOpenDaLive();
+            });
+            act(() => {
+                jest.advanceTimersByTime(1000);
+            });
+
+            expect(mockSetIsOpeningBrowser).toHaveBeenLastCalledWith(false);
+        });
+    });
+
+    // A handler is stable ACROSS renders (above) but must still act on the props of
+    // the LATEST render. These are the same question from the other side: a handler
+    // memoised on too few dependencies keeps the value it captured first, and the
+    // dashboard then starts a demo through a setter the screen has replaced, or opens
+    // a URL the project no longer has.
+    describe('Handlers act on the latest props', () => {
+        it('should call the current setIsTransitioning after the setter prop changes', () => {
+            const firstSetter = jest.fn();
+            const secondSetter = jest.fn();
+            const { result, rerender } = renderWithProps({
+                ...baseProps(),
+                setIsTransitioning: firstSetter,
+            });
+
+            rerender({ ...baseProps(), setIsTransitioning: secondSetter });
+
+            act(() => {
+                result.current.handleStartDemo();
+                result.current.handleStopDemo();
+                result.current.handleRestartDemo();
+                result.current.handleDeployMesh();
+            });
+
+            expect(secondSetter).toHaveBeenCalledTimes(4);
+            expect(firstSetter).not.toHaveBeenCalled();
+        });
+
+        it('should block openBrowser once isOpeningBrowser flips to true', () => {
+            const { result, rerender } = renderWithProps(baseProps());
+
+            rerender({ ...baseProps(), isOpeningBrowser: true });
+
+            act(() => {
+                result.current.handleOpenBrowser();
+            });
+
+            expect(mockPostMessage).not.toHaveBeenCalled();
+        });
+
+        it('should send the live URL from the latest render', () => {
+            const { result, rerender } = renderWithProps({
+                ...baseProps(),
+                edsLiveUrl: 'https://old--demo--acme.aem.live/',
+            });
+
+            rerender({ ...baseProps(), edsLiveUrl: 'https://new--demo--acme.aem.live/' });
+
+            act(() => {
+                result.current.handleOpenLiveSite();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('openLiveSite', {
+                url: 'https://new--demo--acme.aem.live/',
+            });
+        });
+
+        it('should send the DA.live URL from the latest render', () => {
+            const { result, rerender } = renderWithProps({
+                ...baseProps(),
+                edsDaLiveUrl: 'https://da.live/#/acme/old',
+            });
+
+            rerender({ ...baseProps(), edsDaLiveUrl: 'https://da.live/#/acme/new' });
+
+            act(() => {
+                result.current.handleOpenDaLive();
+            });
+
+            expect(mockPostMessage).toHaveBeenCalledWith('openDaLive', {
+                url: 'https://da.live/#/acme/new',
+            });
         });
     });
 
