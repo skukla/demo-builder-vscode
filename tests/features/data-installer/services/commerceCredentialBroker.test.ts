@@ -144,6 +144,75 @@ describe('fetchSharedCommerceCredentials', () => {
         await expect(fetchSharedCommerceCredentials(deps({ getToken }))).resolves.toBeUndefined();
     });
 
+    /**
+     * `log` is optional, and every one of the four status lines is written
+     * through `log?.()`. A caller that supplies none must still get a verdict
+     * rather than a TypeError — this runs in front of a modal and inside project
+     * creation, where a throw is the one outcome the module promises never to
+     * produce.
+     */
+    describe('with no log at all', () => {
+        const noLog = (over: Record<string, unknown> = {}) => ({
+            serviceUrl: SERVICE_URL,
+            getToken: jest.fn().mockResolvedValue('ims-token'),
+            fetchImpl: respondWith(OK_BODY),
+            ...over,
+        });
+
+        it('still serves the pair', async () => {
+            await expect(fetchSharedCommerceCredentials(noLog())).resolves.toEqual({
+                clientId: CLIENT_ID,
+                clientSecret: CLIENT_SECRET,
+            });
+        });
+
+        it('still says no when there is no session', async () => {
+            const call = fetchSharedCommerceCredentials(
+                noLog({ getToken: jest.fn().mockResolvedValue(undefined) }),
+            );
+
+            await expect(call).resolves.toBeUndefined();
+        });
+
+        it('still says no when the service refuses', async () => {
+            const call = fetchSharedCommerceCredentials(
+                noLog({ fetchImpl: respondWith({ success: false, error: 'nope' }, 403) }),
+            );
+
+            await expect(call).resolves.toBeUndefined();
+        });
+
+        it('still says no when the answer carries no usable pair', async () => {
+            const call = fetchSharedCommerceCredentials(
+                noLog({ fetchImpl: respondWith({ success: true, data: {} }) }),
+            );
+
+            await expect(call).resolves.toBeUndefined();
+        });
+
+        it('still says no when the request itself fails', async () => {
+            const call = fetchSharedCommerceCredentials(
+                noLog({ fetchImpl: jest.fn().mockRejectedValue(new TypeError('fetch failed')) }),
+            );
+
+            await expect(call).resolves.toBeUndefined();
+        });
+    });
+
+    // The envelope's own verdict is read BEFORE its payload. A body that carries
+    // a complete pair under `success: false` is the service saying "do not use
+    // this", and reading the pair anyway would hand out a credential it refused.
+    it('refuses a full pair the envelope reports as a failure', async () => {
+        const fetchImpl = respondWith({
+            success: false,
+            data: { clientId: CLIENT_ID, clientSecret: CLIENT_SECRET },
+        });
+
+        const result = await fetchSharedCommerceCredentials(deps({ fetchImpl }));
+
+        expect(result).toBeUndefined();
+    });
+
     describe('what reaches the log', () => {
         it('records the status so a 403 is diagnosable from Debug Logs alone', async () => {
             const log = jest.fn();
@@ -263,6 +332,23 @@ describe('createProjectCredentialBroker', () => {
         await expect(broker()).resolves.toEqual({ ok: false, reason: 'unavailable' });
     });
 
+    // The log is FORWARDED to the request, not kept for the broker's own lines.
+    // On the success path the broker itself says nothing, so a channel that goes
+    // quiet here is the whole HTTP exchange going undiagnosable. Asserted as
+    // reached, never on its wording.
+    it('forwards the caller log to the request it makes', async () => {
+        const log = jest.fn();
+        const broker = createProjectCredentialBroker({
+            auth: auth(),
+            log,
+            fetchImpl: respondWith(OK_BODY) as unknown as typeof fetch,
+        });
+
+        await broker();
+
+        expect(log).toHaveBeenCalled();
+    });
+
     it('reports unavailable when the service refuses', async () => {
         const broker = createProjectCredentialBroker({
             auth: auth(),
@@ -320,6 +406,47 @@ describe('the shared credential cache', () => {
         const second = await broker();
 
         expect(second).toEqual(first);
+    });
+
+    // The window is a HALF HOUR, not a moment: the burst it exists to collapse
+    // was measured eight seconds apart, but a user works across a session and a
+    // window of milliseconds would put the round trip back in front of the modal.
+    it('is still serving five minutes later', async () => {
+        jest.useFakeTimers();
+        const fetchImpl = respondWith(OK_BODY);
+        const broker = createProjectCredentialBroker({
+            auth: auth(),
+            fetchImpl: fetchImpl as unknown as typeof fetch,
+        });
+
+        await broker();
+        jest.setSystemTime(Date.now() + 5 * 60 * 1000);
+        await broker();
+
+        expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    /**
+     * A caller with no authentication service must not inherit a pair.
+     *
+     * The cached pair was fetched under ONE user's authorization — the service
+     * validates their IMS token and checks their email domain — so the guard has
+     * to come BEFORE the cache is consulted, not after. Priming the cache is the
+     * only way to tell the two orders apart: both answer "unavailable" when the
+     * cache is empty.
+     */
+    it('does not serve a cached pair to a caller with no authentication', async () => {
+        const primed = createProjectCredentialBroker({
+            auth: auth(),
+            fetchImpl: respondWith(OK_BODY) as unknown as typeof fetch,
+        });
+        await primed();
+
+        const anonymous = createProjectCredentialBroker({
+            fetchImpl: respondWith(OK_BODY) as unknown as typeof fetch,
+        });
+
+        await expect(anonymous()).resolves.toEqual({ ok: false, reason: 'unavailable' });
     });
 
     // A rotated credential must not be served indefinitely.

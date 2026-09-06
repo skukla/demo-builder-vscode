@@ -13470,6 +13470,84 @@
             "decision": "none \u2014 the type makes outcome nullable and the compiler requires the chain",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/services/commerceCredentialBroker.ts",
+            "anchors": [
+                "log?.('shared credential: no Adobe session, not asking');",
+                "log?.(`shared credential: ${response.status}${describe(body) ? ` \u2014 ${describe(body)}` : ''}`);",
+                "log?.('shared credential: the service answered without a usable pair');",
+                "if (body?.success !== true) {",
+                "const clientId = body.data?.clientId;",
+                "const clientSecret = body.data?.clientSecret;"
+            ],
+            "mutants": 6,
+            "category": "optionalChain",
+            "reason": "This module's contract is that it NEVER throws: it runs in front of a modal and inside project creation, and every failure comes back as undefined meaning 'no credential from here'. All six of these reads sit inside the one try block that implements that promise, so dropping the ?. turns a value that was already going to yield undefined into a TypeError the same catch converts into undefined. The returned verdict is identical; only a log line differs, and pinning log wording is what the ratchet exists to refuse. The ?. itself is required by the types \u2014 body is undefined for an unparseable gateway page, data is optional, and log is an optional dep. Verified by planting non-null assertions at all six.",
+            "decision": "none \u2014 each chain is required by its type, and the surrounding contract makes the difference unobservable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/services/commerceCredentialBroker.ts",
+            "anchors": [
+                "if (!pair) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Removing the guard changes no answer. pair is already undefined here, so falling through returns undefined by the other route \u2014 the same verdict the caller acts on. What changes is the log line: without the guard a failed lookup would report 'obtained from the discovery service'. That is a real diagnostic difference and the only one, and asserting it would pin wording. Verified by deleting the whole guard: all sixty tests pass.",
+            "decision": "OPEN \u2014 the guard earns its place only through the log line it writes; if that line ever stops mattering, delete the guard rather than keeping it as decoration",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/services/commerceCredentialBroker.ts",
+            "anchors": [
+                "} catch (error) {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch leaves the function returning undefined implicitly, which is exactly what the body returns explicitly. The only loss is the one status line naming AbortError or TypeError, and asserting that is a wording assertion. Verified by planting an empty catch.",
+            "decision": "none \u2014 the explicit return says what the contract is, and the log line is the diagnostic",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/services/commerceCredentialBroker.ts",
+            "anchors": [
+                "getToken: async () => (await deps.auth?.getTokenManager().inspectToken())?.token,"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both chains are unreachable as written. deps.auth is proven non-null eight lines above, where the broker returns 'unavailable' without it, and inspectToken is typed to resolve with an object whose token alone is optional. The compiler cannot follow either fact, so it requires the chains. Verified by planting non-null assertions on both.",
+            "decision": "none \u2014 required by the types, guarded in fact",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/services/commerceCredentialBroker.ts",
+            "anchors": [
+                "} catch {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "safeParse's catch returns undefined explicitly; emptying it returns undefined implicitly. There is no third thing the function does. Verified by planting an empty catch.",
+            "decision": "none \u2014 the explicit return is what makes 'a gateway HTML page is not a pair' readable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/data-installer/services/commerceCredentialBroker.ts",
+            "anchors": [
+                "function describe(body: CredentialResponse | undefined): string | undefined {",
+                "return typeof body?.error === 'string' ? body.error : undefined;"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "describe has exactly one consumer: the status line written when the response is not ok. Nothing it returns reaches a caller, a return value or any state, so every test that could kill these mutants would have to assert that log line's text \u2014 the one thing the ratchet refuses to reward and the enforcer in tests/sop/no-logger-wording-assertions.test.ts bans. Verified by planting a version that returns body?.error unguarded: all sixty tests pass.",
+            "decision": "none \u2014 the typeof guard is what stops a non-string error field being interpolated into the channel a user pastes into a ticket",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }
