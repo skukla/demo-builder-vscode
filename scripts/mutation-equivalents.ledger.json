@@ -16756,6 +16756,19 @@
             "decision": "none \u2014 the optional call is a type requirement on an unreachable state; removing the ?. would not compile and no render can exercise it",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/ui/components/layout/TwoColumnLayout.tsx",
+            "anchors": [
+                "maxWidth: maxWidth === 'none' ? 'none' : translateSpectrumToken(maxWidth),"
+            ],
+            "line": 163,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker forces the false arm, so maxWidth='none' becomes translateSpectrumToken('none'). That function passes any string it does not recognise through unchanged \u2014 verified by planting a probe suite that asserts translateSpectrumToken('none') === 'none', which passed \u2014 so both arms produce the identical style value for every input the prop type allows. The ternary exists for the COMPILER: maxWidth is typed DimensionValue | 'none' and translateSpectrumToken takes DimensionValue | undefined, so the equality check is what narrows 'none' away before the call. No render can tell the two arms apart.",
+            "decision": "none \u2014 both arms yield the same computed style; the check is a type narrowing, not a behavioural branch",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }

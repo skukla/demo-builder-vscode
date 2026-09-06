@@ -438,4 +438,82 @@ describe('TwoColumnLayout', () => {
       expect(rightColumn.style.minWidth).toBe('48px');
     });
   });
+
+  describe('Column separator', () => {
+    // The border is the only thing dividing the two columns; with no
+    // background contrast between them it is what makes the pair read as two
+    // columns rather than one run of content. It is on unless asked otherwise.
+    it('draws the left border on the right column by default', () => {
+      const { container } = render(
+        <TwoColumnLayout
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
+      expect(rightColumn.style.borderLeft).toBe(
+        '1px solid var(--spectrum-global-color-gray-200)'
+      );
+    });
+
+    it('omits the border when showBorder is false', () => {
+      const { container } = render(
+        <TwoColumnLayout
+          showBorder={false}
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
+      expect(rightColumn.style.borderLeft).toBe('');
+    });
+  });
+
+  describe('Class list assembly', () => {
+    // Both class lists are built from arrays that carry an ABSENT entry: the
+    // container's optional `className`, and the right column's `flex-1` which
+    // is null in fixed-width mode. Dropping those entries is what keeps the
+    // rendered attribute a clean token list — an empty token is a class name
+    // of "" that no stylesheet can ever match and that mangles the attribute
+    // for anything reading it back.
+    const tokens = (el: HTMLDivElement) => el.className.split(' ');
+
+    it('leaves no empty class token when className is omitted', () => {
+      const { container } = render(
+        <TwoColumnLayout
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(tokens(flexContainer).filter((c) => c === '')).toStrictEqual([]);
+      expect(tokens(flexContainer)).toContain('two-column-layout');
+    });
+
+    it('appends a supplied className as its own token', () => {
+      const { container } = render(
+        <TwoColumnLayout
+          className="custom-surface"
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const flexContainer = container.firstChild as HTMLDivElement;
+      expect(tokens(flexContainer).filter((c) => c === '')).toStrictEqual([]);
+      expect(tokens(flexContainer)).toContain('custom-surface');
+    });
+
+    it('leaves no empty class token on the right column in fixed-width mode', () => {
+      const { container } = render(
+        <TwoColumnLayout
+          rightWidth="320px"
+          leftContent={<div>Left</div>}
+          rightContent={<div>Right</div>}
+        />
+      );
+      const rightColumn = container.firstChild?.childNodes[1] as HTMLDivElement;
+      expect(tokens(rightColumn).filter((c) => c === '')).toStrictEqual([]);
+      expect(tokens(rightColumn)[0]).toBe('flex');
+    });
+  });
 });
