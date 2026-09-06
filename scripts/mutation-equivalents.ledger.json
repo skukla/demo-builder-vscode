@@ -15789,6 +15789,187 @@
             "decision": "none \u2014 the guard is honest about buildIntegrationSections' declared return, and unreachable behind the length checks above it",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/core/shell/commandSequencer.ts",
+            "anchors": [
+                "commands.forEach((cmd, index) => {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The arrow body is one logger.debug line and nothing else, so emptying the block changes no observable: no command runs here, no value is computed, and the loop's only effect is the per-command debug line. The classifier reads it as a block because enclosingStatement stops at the arrow's own opening brace and never sees the logger call inside. Planted the empty body with four siblings: 20 tests green.",
+            "decision": "none \u2014 killing it would mean asserting a logger call's arguments",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/shell/commandSequencer.ts",
+            "anchors": [
+                "const duration = Date.now() - cmdStartTime;"
+            ],
+            "line": 75,
+            "mutants": 1,
+            "category": "other",
+            "reason": "This is the SUCCESS branch's elapsed measure, and it reaches only two logger.debug calls and the slow-command guard whose body is also a logger.debug. The value returned to the caller is executeCommand's own result object, which this never touches \u2014 so - and + agree on every observable. Its sibling on the error path (line 87) IS returned, and a test now pins it. Planted + with four siblings: 20 tests green.",
+            "decision": "none \u2014 the value is log-only on this branch",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/shell/commandSequencer.ts",
+            "anchors": [
+                "if (duration > slowCommandThreshold(config.command)) {"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "The whole guard exists to emit one debug line about a slow command. Its body is a single logger.debug, nothing downstream reads whether it ran, and the returned result is unchanged either way \u2014 so all five mutants here (>=, <=, the condition forced true, forced false, and the emptied body) are observable only as log wording. Planted true with four siblings and then false with the body emptied: 20 tests green both times.",
+            "decision": "none \u2014 killing any of them would mean asserting a logger call",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/shell/commandSequencer.ts",
+            "anchors": [
+                "const totalDuration = Date.now() - startTime;"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "totalDuration is interpolated into the one debug line on the next statement and read nowhere else; executeParallel returns Promise.all's results untouched. Planted + with four siblings: 20 tests green.",
+            "decision": "none \u2014 the value is log-only",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/shell/commandSequencer.ts",
+            "anchors": [
+                "for (let i = 0; i < commands.length; i += batchSize) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "i <= commands.length adds one extra iteration whose slice(i, i + batchSize) is always empty. executeParallel of an empty list resolves to an empty array, results.push(...[]) is a no-op, and executeCommand is not called \u2014 so the returned batches, their order and their contents are identical for every input including the empty list. The only difference is one more batch debug line. Planted <= with four siblings: 20 tests green.",
+            "decision": "none \u2014 the extra iteration does no work",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/ai/server/deleteProjectTool.ts",
+            "anchors": [
+                "if (args?.confirm !== true || args?.confirmName !== name) {"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Both optional chains on this line are unreachable as guards. The line runs only after the block above returned for an empty name, and `name` can be non-empty only when `args?.name` produced a non-empty string \u2014 which requires args to be an object. So args is never null or undefined here, and `args.confirm` / `args.confirmName` behave identically to the chained reads on every input the handler can be called with (including `call()` with no arguments, which returns at the name check and is now pinned by its own test). Planted both: 14 tests green.",
+            "decision": "none \u2014 args is proven non-null by the guard above",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/components/services/stackComponentCollector.ts",
+            "anchors": [
+                "if (stack.frontend) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the guard true costs nothing: the body's very next line is componentsData?.frontends?.find((entry) => entry.id === stack.frontend), and with no frontend named that predicate compares every entry's id against undefined. A catalog entry's id is a required non-empty string, so find returns undefined, the if (frontend) below is false, and nothing is collected \u2014 the same result the guard produces by skipping. The guard is a readability short-circuit, not a correctness one. Planted true alongside its backend twin: 24 tests green.",
+            "decision": "none \u2014 the search below already yields nothing for an unnamed frontend",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/components/services/stackComponentCollector.ts",
+            "anchors": [
+                "if (stack.backend) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Same as the frontend guard directly above it: with no backend named, componentsData?.backends?.find((entry) => entry.id === stack.backend) compares each id against undefined and returns undefined, so if (backend) is false and nothing is collected either way. Planted true alongside the frontend twin: 24 tests green.",
+            "decision": "none \u2014 the search below already yields nothing for an unnamed backend",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/ui/components/forms/InlineRenameField.tsx",
+            "anchors": [
+                "if (!editing) return;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The two statements it guards are already null-safe, and the input exists only while editing, so with the guard forced off the effect calls focus/select on a null ref and does nothing. The guard is not dead all the same: it is what makes editing a READ value inside the effect, and therefore a legitimate entry in the dependency array. Delete it and react-hooks/exhaustive-deps reports editing as an unnecessary dependency. Planted false: 26 tests green.",
+            "decision": "none \u2014 it is the effect's stated precondition and keeps its dependency honest",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/ui/components/forms/InlineRenameField.tsx",
+            "anchors": [
+                "inputRef.current?.focus();"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Reached only past if (!editing) return, and the input is mounted whenever editing is true, so inputRef.current is never null here. Planted the unchained form together with its select() sibling: 26 tests green.",
+            "decision": "none \u2014 the ref cannot be null on this path",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/ui/components/forms/InlineRenameField.tsx",
+            "anchors": [
+                "inputRef.current?.select();"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Same line pair as the focus() call above it: past the editing guard the input is mounted, so the ref is never null. Planted the unchained form with its sibling: 26 tests green.",
+            "decision": "none \u2014 the ref cannot be null on this path",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/ui/components/forms/InlineRenameField.tsx",
+            "anchors": [
+                "if (editing && !busy && error) inputRef.current?.focus();"
+            ],
+            "mutants": 5,
+            "category": "branch",
+            "reason": "All five mutants here (the condition forced true twice, editing || !busy, (editing && !busy) || error, and the optional chain removed) only make this refocus fire MORE often, and every extra firing is a no-op. The effect's dependencies change at four moments: entering edit mode, where the effect above has just focused the same input; busy going true, where the input is disabled and neither jsdom nor a browser will focus a disabled input; busy going false, which either exits edit mode or sets the error the real condition already wants; and leaving edit mode, where the input is unmounted and the ref is null. That last case is also why the optional chain cannot be killed: whenever the condition is true the input is mounted. Planted all four condition forms and the unchained call, one at a time: 26 tests green each.",
+            "decision": "none \u2014 a redundant focus() is unobservable, and the precision here is intent rather than behaviour",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/ui/components/forms/InlineRenameField.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "exitEdit's empty dependency list mutated to a one-element array of a constant string. React compares dependencies element-wise and that literal is equal to itself on every render, so the callback is memoised exactly as before \u2014 no consumer sees a new function and no effect re-runs. Planted: 26 tests green.",
+            "decision": "none \u2014 a constant dependency is indistinguishable from none",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/ui/components/forms/InlineRenameField.tsx",
+            "anchors": [
+                "[],"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "stopPropagation's empty dependency list, mutated the same way as exitEdit's above: a constant string dependency never changes, so the memoised handler is identical across renders. Planted: 26 tests green.",
+            "decision": "none \u2014 a constant dependency is indistinguishable from none",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/ui/components/forms/InlineRenameField.tsx",
+            "anchors": [
+                "if (!busyRef.current) void commit();"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "This is the OUTER half of a two-layer re-entry guard, and commit's own first line is the inner half. With the blur check forced true, a blur during a pending rename does call commit \u2014 which returns immediately on busyRef.current, so onRename is still invoked once and nothing else differs. The inner guard is the load-bearing one and is now driven directly by a second Enter during flight, the one path that reaches commit without passing this line. Planted true: 26 tests green.",
+            "decision": "none \u2014 defence in depth behind a guard that a test now drives",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }

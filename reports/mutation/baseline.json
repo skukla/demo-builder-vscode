@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-05: AiCapabilitiesModal to zero open gaps",
+    "_note": "MUT-06 react group: InlineRenameField name-freshness/re-entry/alert pinned; DatapackCard is-selected border, art chain edges and letter tile pinned",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -731,26 +731,26 @@
             "openGaps": 0
         },
         "src/core/shell/commandSequencer.ts": {
-            "score": 44.12,
-            "killed": 29,
-            "survived": 32,
+            "score": 45.9,
+            "killed": 27,
+            "survived": 27,
             "noCoverage": 6,
             "timeout": 1,
             "survivorCategories": {
-                "branch": 9,
                 "string": 1,
-                "logPresentation": 18,
                 "block": 1,
-                "other": 3
+                "logPresentation": 18,
+                "other": 2,
+                "branch": 5
             },
             "uncoveredCategories": {
                 "string": 1,
                 "block": 1,
                 "logPresentation": 4
             },
-            "highValueSurvivors": 10,
-            "equivalent": 0,
-            "openGaps": 14
+            "highValueSurvivors": 6,
+            "equivalent": 9,
+            "openGaps": 0
         },
         "src/core/shell/ensureNodeVersion.ts": {
             "score": 63.64,
@@ -2592,25 +2592,19 @@
             "openGaps": 0
         },
         "src/features/ai/server/deleteProjectTool.ts": {
-            "score": 67.74,
-            "killed": 42,
-            "survived": 16,
-            "noCoverage": 4,
+            "score": 91.94,
+            "killed": 57,
+            "survived": 5,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 5,
-                "other": 4,
-                "string": 4,
-                "optionalChain": 3
+                "string": 3,
+                "optionalChain": 2
             },
-            "uncoveredCategories": {
-                "string": 2,
-                "block": 1,
-                "other": 1
-            },
-            "highValueSurvivors": 5,
-            "equivalent": 0,
-            "openGaps": 14
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 2,
+            "openGaps": 0
         },
         "src/features/ai/server/diagnosticsTools.ts": {
             "score": 91.01,
@@ -4117,20 +4111,18 @@
             "openGaps": 4
         },
         "src/features/components/services/stackComponentCollector.ts": {
-            "score": 80.28,
-            "killed": 57,
-            "survived": 14,
+            "score": 97.18,
+            "killed": 69,
+            "survived": 2,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "optionalChain": 6,
-                "branch": 7,
-                "block": 1
+                "branch": 2
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 8,
-            "equivalent": 0,
-            "openGaps": 14
+            "highValueSurvivors": 2,
+            "equivalent": 2,
+            "openGaps": 0
         },
         "src/features/components/ui/components/BrokeredCredentialFields.tsx": {
             "score": 83.33,
@@ -5246,21 +5238,21 @@
             "openGaps": 4
         },
         "src/core/ui/components/forms/InlineRenameField.tsx": {
-            "score": 80.95,
-            "killed": 68,
-            "survived": 16,
+            "score": 84.52,
+            "killed": 71,
+            "survived": 13,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
                 "string": 2,
-                "branch": 8,
                 "optionalChain": 3,
-                "other": 3
+                "branch": 6,
+                "other": 2
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 8,
-            "equivalent": 0,
-            "openGaps": 14
+            "highValueSurvivors": 6,
+            "equivalent": 11,
+            "openGaps": 0
         },
         "src/core/ui/components/layout/StepAreaShell.tsx": {
             "score": 100,
@@ -5671,23 +5663,20 @@
             "openGaps": 0
         },
         "src/features/data-installer/ui/components/DatapackCard.tsx": {
-            "score": 70.31,
-            "killed": 45,
-            "survived": 18,
+            "score": 93.75,
+            "killed": 60,
+            "survived": 3,
             "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "optionalChain": 4,
-                "other": 5,
-                "string": 4,
-                "branch": 5
+                "string": 3
             },
             "uncoveredCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 5,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 14
+            "openGaps": 0
         },
         "src/features/data-installer/ui/components/DatapackDetailPanel.tsx": {
             "score": 80,

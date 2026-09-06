@@ -8,7 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/components/AiCapabilitiesModal.tsx"
+        "src/core/ui/components/forms/InlineRenameField.tsx",
+        "src/features/data-installer/ui/components/DatapackCard.tsx"
     ],
     "reporters": [
         "clear-text",
