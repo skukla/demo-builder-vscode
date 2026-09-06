@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "appBuilderComponentCatalogLoader: empty axis lists, owner-vs-repo matching, the front-anchored charset gate",
+    "_note": "disposableStore: reset() driven at last, re-entrant dispose pinned",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -1145,23 +1145,18 @@
             "openGaps": 0
         },
         "src/core/utils/disposableStore.ts": {
-            "score": 76.92,
-            "killed": 17,
-            "survived": 3,
-            "noCoverage": 3,
+            "score": 96.15,
+            "killed": 22,
+            "survived": 1,
+            "noCoverage": 0,
             "timeout": 3,
             "survivorCategories": {
-                "block": 1,
-                "branch": 2
+                "branch": 1
             },
-            "uncoveredCategories": {
-                "block": 1,
-                "branch": 1,
-                "other": 1
-            },
-            "highValueSurvivors": 3,
-            "equivalent": 0,
-            "openGaps": 6
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/core/utils/envVarExtraction.ts": {
             "score": 97.92,

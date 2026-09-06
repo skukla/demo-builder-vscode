@@ -101,6 +101,95 @@ describe('DisposableStore - Basic Operations', () => {
         });
     });
 
+    /**
+     * A disposable that tears down its OWNER — a child command disposing the
+     * store it lives in — re-enters dispose() while the outer LIFO walk is still
+     * on the stack. The disposed guard is what makes that re-entry a no-op; take
+     * it away and the inner call drains the remaining items, so a sibling is
+     * disposed underneath an item that has not finished disposing yet. That is
+     * the ordering LIFO exists to provide.
+     */
+    describe('Re-entrant Disposal', () => {
+        it('should treat dispose() called during disposal as a no-op', () => {
+            const store = new DisposableStore();
+            const order: string[] = [];
+
+            const parent: vscode.Disposable = {
+                dispose: () => order.push('parent')
+            };
+            const child: vscode.Disposable = {
+                dispose: () => {
+                    order.push('child-start');
+                    store.dispose();
+                    order.push('child-end');
+                }
+            };
+
+            store.add(parent);
+            store.add(child);
+            store.dispose();
+
+            expect(order).toStrictEqual(['child-start', 'child-end', 'parent']);
+        });
+    });
+
+    /**
+     * reset() exists for singleton commands that run more than once: the same
+     * store is disposed at the end of one execution and has to accept new
+     * disposables at the start of the next. It deliberately does NOT dispose
+     * what it drops.
+     */
+    describe('Reset for reuse', () => {
+        it('should clear the disposed flag so the store accepts additions again', () => {
+            const store = new DisposableStore();
+            store.dispose();
+
+            store.reset();
+
+            expect(store.disposed).toBe(false);
+        });
+
+        it('should not dispose an item added after reset', () => {
+            const store = new DisposableStore();
+            store.dispose();
+            store.reset();
+
+            const afterReset: vscode.Disposable = { dispose: jest.fn() };
+            store.add(afterReset);
+
+            // Without the reset the store is still disposed and add() would
+            // dispose it on the spot — the second execution would tear down the
+            // resources it had just created.
+            expect(afterReset.dispose).not.toHaveBeenCalled();
+            expect(store.count).toBe(1);
+        });
+
+        it('should start from an empty list, not from the previous run', () => {
+            const store = new DisposableStore();
+            store.add({ dispose: jest.fn() });
+
+            store.reset();
+
+            expect(store.count).toBe(0);
+        });
+
+        it('should dispose only what the current run added', () => {
+            const store = new DisposableStore();
+            const firstRun: vscode.Disposable = { dispose: jest.fn() };
+            store.add(firstRun);
+            store.dispose();
+            expect(firstRun.dispose).toHaveBeenCalledTimes(1);
+
+            store.reset();
+            const secondRun: vscode.Disposable = { dispose: jest.fn() };
+            store.add(secondRun);
+            store.dispose();
+
+            expect(secondRun.dispose).toHaveBeenCalledTimes(1);
+            expect(firstRun.dispose).toHaveBeenCalledTimes(1);
+        });
+    });
+
     describe('State Getters', () => {
         it('should expose disposed state via getter', () => {
             const store = new DisposableStore();

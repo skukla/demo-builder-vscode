@@ -16489,6 +16489,18 @@
             "decision": "none \u2014 the guard is what narrows string | undefined for assertInstanceId, and the only alternative (asserting inside the helper) would move the same unreachable branch rather than remove it",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/core/utils/disposableStore.ts",
+            "anchors": [
+                "if (disposable) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The pop() happens inside while (this.disposables.length > 0), so it always yields an element; the guard exists only to satisfy the Disposable | undefined that pop() returns on a non-nullable array. Forcing it true changes nothing for any typed caller, and even a caller violating the type would only produce a TypeError inside the try whose catch already swallows a failing dispose. Verified by planting the replacement against both disposableStore suites and the two base-command disposal suites: 39 tests pass.",
+            "decision": "none \u2014 pop() is typed T | undefined and the guard is what satisfies it; the alternative is a cast, which is a silenced type error",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }
