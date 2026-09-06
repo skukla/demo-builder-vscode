@@ -18,38 +18,21 @@
  */
 
 import { detectProjectOrgMismatch } from '@/features/authentication/services/detectProjectOrgMismatch';
-import { createOrgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
-import type { OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks/types';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import type { Project } from '@/types/base';
-import { createMockAuthenticationService } from '../../../../helpers/authenticationServiceFake';
-import { createMockLogger } from '../../../../helpers/loggerFake';
-import { createMockProject } from '../../../../helpers/projectFake';
+import { makeAuth, makeCheck, makeCtx, projectWithOrg } from './orgContextCheck.testUtils';
 
+// The one thing the shared setup cannot carry: a jest.mock only hoists above
+// the imports of the module it is written in, and the sibling suite needs the
+// REAL detector.
 jest.mock('@/features/authentication/services/detectProjectOrgMismatch');
 
 const detect = detectProjectOrgMismatch as jest.MockedFunction<typeof detectProjectOrgMismatch>;
 
-function makeAuth(overrides: Partial<jest.Mocked<AuthenticationService>>) {
-    return createMockAuthenticationService({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        ...overrides,
-    });
-}
-
-function makeCtx(project: Project): OnOpenCheckContext {
-    return { project, logger: createMockLogger(), post: jest.fn() };
-}
-
 function checkWith(auth: jest.Mocked<AuthenticationService>) {
-    return createOrgContextCheck({
-        authManager: auth,
-        stateManager: () => ({ saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined) }),
-    });
+    return makeCheck(auth, () => ({ saveProjectConfigOnly: jest.fn().mockResolvedValue(undefined) }));
 }
 
-const project = (): Project =>
-    createMockProject({ path: '/tmp/proj', adobe: { organization: 'org1' } });
+const project = () => projectWithOrg('org1');
 
 // The module mock is created once at import time; reset it per test so a call
 // recorded by a previous one cannot be read as this one's.
@@ -58,7 +41,7 @@ beforeEach(() => detect.mockReset());
 it('an SDK read that cannot answer resolves to unknown without running the detector', async () => {
     const auth = makeAuth({ getOrganizationsSdkOnly: jest.fn().mockResolvedValue(undefined) });
 
-    const outcome = await checkWith(auth).run(makeCtx(project()));
+    const outcome = await checkWith(auth).run(makeCtx(project()).ctx);
 
     expect(outcome.status).toBe('unknown');
     expect(detect).not.toHaveBeenCalled();
@@ -68,7 +51,7 @@ it('a detector that cannot resolve a mismatch resolves to unknown', async () => 
     const auth = makeAuth({ getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]) });
     detect.mockResolvedValue(undefined);
 
-    const outcome = await checkWith(auth).run(makeCtx(project()));
+    const outcome = await checkWith(auth).run(makeCtx(project()).ctx);
 
     expect(outcome.status).toBe('unknown');
     expect(detect).toHaveBeenCalledTimes(1);
@@ -78,7 +61,7 @@ it('hands the detector an org source that returns the SDK-only list', async () =
     const orgs = [{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Org One' }];
     const auth = makeAuth({ getOrganizationsSdkOnly: jest.fn().mockResolvedValue(orgs) });
     detect.mockResolvedValue({ reachable: true, expectedOrg: 'org1', currentOrg: 'Org One' });
-    const ctx = makeCtx(project());
+    const { ctx } = makeCtx(project());
 
     await checkWith(auth).run(ctx);
 

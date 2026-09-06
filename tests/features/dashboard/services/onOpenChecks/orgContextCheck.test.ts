@@ -16,56 +16,17 @@
  * service registry NOT AT ALL. The auth manager and state manager are plain
  * fakes handed in. Every assertion below is unchanged.
  */
-import { createOrgContextCheck } from '@/features/dashboard/services/onOpenChecks/orgContextCheck';
 import { CHECK_IDS } from '@/types/messages';
-import type { CheckResult, OnOpenCheckContext } from '@/features/dashboard/services/onOpenChecks/types';
-import type { AdobeConfig, Project } from '@/types/base';
-import type { Logger } from '@/types/logger';
-import { createMockLogger } from '../../../../helpers/loggerFake';
-
+import type { CheckResult } from '@/features/dashboard/services/onOpenChecks/types';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
-import { createMockAuthenticationService } from '../../../../helpers/authenticationServiceFake';
-import { createMockProject } from '../../../../helpers/projectFake';
-const mockLogger: Logger = createMockLogger();
-
-/** Build a run context with a captured `post` spy. */
-function makeCtx(project: Project): { ctx: OnOpenCheckContext; post: jest.Mock } {
-    const post = jest.fn();
-    return { ctx: { project, logger: mockLogger, post }, post };
-}
-
-/** Auth manager whose interactive / CLI surfaces THROW if touched (P1 tripwire). */
-function makeAuth(overrides: Partial<jest.Mocked<AuthenticationService>> = {}) {
-    // Built on the canonical fake so the members this suite does NOT name are
-    // present too — the literal it replaces had four, and the check under test
-    // reaches for more than four.
-    return createMockAuthenticationService({
-        isAuthenticated: jest.fn().mockResolvedValue(true),
-        getOrganizationsSdkOnly: jest.fn().mockResolvedValue([]),
-        // These MUST NOT be called on open — fail loudly if they are.
-        getOrganizations: jest.fn().mockImplementation(() => {
-            throw new Error('CLI fallback path used on open (P1 violation)');
-        }),
-        loginAndRestoreProjectContext: jest.fn().mockImplementation(() => {
-            throw new Error('interactive login used on open (P1 violation)');
-        }),
-        ...overrides,
-    });
-}
-
-function projectWithOrg(organization?: string, extra: Partial<AdobeConfig> = {}): Project {
-    return createMockProject({ path: '/tmp/proj', adobe: organization ? { organization, ...extra } : undefined });
-}
+import { makeAuth, makeCheck, makeCtx, projectWithOrg } from './orgContextCheck.testUtils';
 
 /** The default self-heal sink; a test that asserts on it installs its own. */
 let saveProjectConfigOnly = jest.fn().mockResolvedValue(undefined);
 
 /** Build the check with a handed-in auth manager (and the current save sink). */
 function checkWith(auth: jest.Mocked<AuthenticationService>) {
-    return createOrgContextCheck({
-        authManager: auth,
-        stateManager: () => ({ saveProjectConfigOnly }),
-    });
+    return makeCheck(auth, () => ({ saveProjectConfigOnly }));
 }
 
 beforeEach(() => {
@@ -203,7 +164,7 @@ it('no state manager yet → the self-heal write is skipped and the check still 
         ]),
     });
     // Resolved lazily and may not exist yet; nothing to write to is not an error.
-    const orgContextCheck = createOrgContextCheck({ authManager: auth, stateManager: () => null });
+    const orgContextCheck = makeCheck(auth, () => null);
     const project = projectWithOrg('Org One');
 
     const outcome = await orgContextCheck.run(makeCtx(project).ctx);

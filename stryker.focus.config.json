@@ -8,8 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/components/ui/Drawer.tsx",
-        "src/core/ui/hooks/usePollingWithTimeout.ts"
+        "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts"
     ],
     "reporters": [
         "clear-text",
