@@ -74,6 +74,34 @@ describe('deriveAiReadyState', () => {
         });
     });
 
+    it('should treat a response with NO checks array as nothing-failed, not everything-failed', () => {
+        // A pre-checks verify response (or one that only carried inventory) must
+        // degrade to "no check failed". Defaulting to a non-empty list instead
+        // would paint the badge red on a project with nothing wrong with it.
+        expect(deriveAiReadyState({ ...idleInputs, verifyResult: {} })).toEqual({
+            label: 'AI',
+            color: 'green',
+            text: 'Ready',
+        });
+    });
+
+    it('should show Broken when SOME check failed, not only when every one did', () => {
+        // `.some` is the decision: one bad file is a broken bundle. `.every`
+        // would keep the badge green until the last check also failed, which is
+        // the state nobody is ever in.
+        const verifyResult = {
+            checks: [
+                { name: 'claude-md', status: 'ok' as const },
+                { name: 'mcp-json', status: 'error' as const },
+            ],
+        };
+        expect(deriveAiReadyState({ ...idleInputs, verifyResult })).toEqual({
+            label: 'AI',
+            color: 'red',
+            text: 'Broken',
+        });
+    });
+
     it('should show AI tooling missing when files are healthy but tooling is missing', () => {
         expect(
             deriveAiReadyState({
@@ -152,11 +180,30 @@ describe('deriveAiInventoryView', () => {
         expect(view.aiMcpsError).toBe(false);
     });
 
+    it('should pass gated skills straight through', () => {
+        const gatedSkills = [
+            { file: 'commerce.md', toolId: 'mesh', reason: 'tool-missing' as const },
+        ];
+        const view = deriveAiInventoryView({ inventory: { gatedSkills } }, false);
+        expect(view.aiGatedSkills).toBe(gatedSkills);
+    });
+
     it('should return identity-stable empty lists across calls', () => {
         const first = deriveAiInventoryView({ inventory: {} }, false);
         const second = deriveAiInventoryView({}, false);
         expect(first.aiSkills).toBe(second.aiSkills);
         expect(first.aiMcps).toBe(second.aiMcps);
         expect(first.aiEditedFiles).toBe(second.aiEditedFiles);
+        expect(first.aiGatedSkills).toBe(second.aiGatedSkills);
+    });
+
+    it('should degrade every absent list to an EMPTY one, not a populated one', () => {
+        // toStrictEqual, not toEqual: `expect([undefined]).toEqual([])` passes, so
+        // toEqual would let a one-element default through as "empty".
+        const view = deriveAiInventoryView({ inventory: {} }, false);
+        expect(view.aiSkills).toStrictEqual([]);
+        expect(view.aiMcps).toStrictEqual([]);
+        expect(view.aiEditedFiles).toStrictEqual([]);
+        expect(view.aiGatedSkills).toStrictEqual([]);
     });
 });
