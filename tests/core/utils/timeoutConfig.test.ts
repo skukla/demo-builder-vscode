@@ -10,7 +10,7 @@
  * Previous tests (Step 1: Quick Wins) are retained for backward compatibility.
  */
 
-import { TIMEOUTS, CACHE_TTL } from '@/core/utils/timeoutConfig';
+import { TIMEOUTS, CACHE_TTL, slowCommandThreshold } from '@/core/utils/timeoutConfig';
 
 describe('Timeout Configuration', () => {
     describe('PREREQUISITE_CHECK timeout', () => {
@@ -529,4 +529,42 @@ describe('Timeout Configuration', () => {
             expect(typeof TIMEOUTS.AUTH.OAUTH).toBe('number');
         });
     });
+
+    // The DECISION "is this command slow enough to mention?" — one definition, because
+    // three call sites holding their own copy is how they drift apart. `aio` gets a
+    // higher bar: it carries a ~1.7s startup floor no caller can avoid, so the generic
+    // 3s bar sat inside aio's healthy range and warned about working commands.
+    describe('slowCommandThreshold', () => {
+        it('should give an aio command the raised 12s budget', () => {
+            expect(slowCommandThreshold('aio app deploy')).toBe(
+                TIMEOUTS.SLOW_COMMAND_THRESHOLD_AIO
+            );
+        });
+
+        it('should give a non-aio command the generic 3s budget', () => {
+            expect(slowCommandThreshold('npm install')).toBe(TIMEOUTS.SLOW_COMMAND_THRESHOLD);
+        });
+
+        it('should still recognise aio behind leading whitespace', () => {
+            // The command line is trimmed at the START only, so an indented invocation
+            // is still aio.
+            expect(slowCommandThreshold('   aio config get ims.contexts.cli.access_token')).toBe(
+                TIMEOUTS.SLOW_COMMAND_THRESHOLD_AIO
+            );
+        });
+
+        it('should not treat a command that merely ENDS with aio as aio', () => {
+            // The match is a prefix, not a suffix: it is about which binary runs.
+            expect(slowCommandThreshold('npx some-wrapper aio ')).toBe(
+                TIMEOUTS.SLOW_COMMAND_THRESHOLD
+            );
+        });
+
+        it('should require the space after aio, so aiofoo is not aio', () => {
+            expect(slowCommandThreshold('aiofoo --version')).toBe(
+                TIMEOUTS.SLOW_COMMAND_THRESHOLD
+            );
+        });
+    });
+
 });
