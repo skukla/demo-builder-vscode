@@ -213,5 +213,7 @@ export function extractAioErrorDetail(stderr: string | undefined): string {
         .split('\n')
         .map((line) => line.replace(/^\s*›\s*/, '').trim())
         .filter((line) => /error/i.test(line));
-    return errorLines.join(' ').trim();
+    // Every line is already trimmed and non-empty, so the join has no edge whitespace
+    // for a second trim to remove.
+    return errorLines.join(' ');
 }

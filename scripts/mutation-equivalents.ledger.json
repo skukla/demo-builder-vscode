@@ -14652,6 +14652,18 @@
             "decision": "none \u2014 the guard above makes a nullish meta unreachable here; the chains are defensive syntax, not a decision",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/app-builder/services/runtimeCredentials.ts",
+            "anchors": [
+                "if (!ns?.name || !ns?.auth) {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The second optional chain cannot be reached with a nullish ns. The left operand is !ns?.name, which is TRUE whenever ns is nullish, so the || short-circuits and never evaluates !ns?.auth; when it does evaluate, ns is an object. Planted the mutation (!ns.auth) and ran runtimeCredentials.test.ts: 28 tests green, including the empty-namespaces case that makes ns undefined. Killing it would need an input that reaches the right operand with ns unset, which the short-circuit forbids.",
+            "decision": "none \u2014 the left operand's short-circuit makes a nullish ns unreachable at the right one",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }

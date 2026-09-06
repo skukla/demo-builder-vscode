@@ -15,6 +15,7 @@ import {
     fetchRuntimeCredentials,
     workspaceHasRuntime,
 } from '@/features/app-builder/services/runtimeCredentials';
+import { sleep } from '@/core/utils/sleep';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
@@ -24,6 +25,10 @@ jest.mock('fs/promises', () => ({
     readFile: jest.fn(),
     rm: jest.fn().mockResolvedValue(undefined),
 }));
+
+// The re-check pause is the only observable difference between "waited between
+// attempts" and "hammered the API three times in a row", so it is asserted, not slept.
+jest.mock('@/core/utils/sleep', () => ({ sleep: jest.fn().mockResolvedValue(undefined) }));
 
 const executeMock = jest.fn();
 const commandManager = createMockCommandExecutor({ execute: executeMock });
@@ -58,7 +63,9 @@ describe('fetchRuntimeCredentials', () => {
 
         expect(executeMock).toHaveBeenCalledWith(
             expect.stringMatching(/^aio console workspace download "/),
-            expect.objectContaining({ useNodeVersion: 'auto', enhancePath: true })
+            // `shell: true` is what makes the quoted path survive the call; without it
+            // the aio CLI is handed a path it cannot write to.
+            expect.objectContaining({ shell: true, useNodeVersion: 'auto', enhancePath: true })
         );
         expect(creds).toEqual({
             namespace: '12345-myproject-stage',
@@ -102,6 +109,32 @@ describe('fetchRuntimeCredentials', () => {
         );
     });
 
+    it.each([
+        ['a namespace with no auth key', { name: '12345-myproject-stage' }],
+        ['an auth key with no namespace name', { auth: 'fake-test-pw-not-a-secret' }],
+    ])('refuses half a credential — %s', async (_label, namespace) => {
+        // Half a credential deploys nothing; it fails later, in `aio app deploy`,
+        // where the message says nothing about the workspace.
+        executeMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' });
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(
+            JSON.stringify({
+                project: { workspace: { details: { runtime: { namespaces: [namespace] } } } },
+            })
+        );
+
+        await expect(fetchRuntimeCredentials(commandManager, logger, 'auto')).rejects.toThrow(
+            /no Adobe I\/O Runtime namespace/
+        );
+    });
+
+    it('reports the exit code when the failing command wrote no error line', async () => {
+        executeMock.mockResolvedValue({ code: 7, stdout: '', stderr: '- spinner only\n' });
+
+        await expect(fetchRuntimeCredentials(commandManager, logger, 'auto')).rejects.toThrow(
+            /exit code 7/
+        );
+    });
+
     it('surfaces the aio error line when the download command fails', async () => {
         executeMock.mockResolvedValue({
             code: 2,
@@ -133,6 +166,25 @@ describe('workspaceHasRuntime', () => {
 
     it('is false when the workspace has none', async () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValue(NO_NS_JSON);
+        await expect(workspaceHasRuntime(commandManager, 'auto')).resolves.toBe(false);
+    });
+
+    // The download JSON is read defensively at six levels, and every one of them is a
+    // shape the CLI really returns: an un-provisioned workspace stops at `details`, a
+    // Runtime-less one at `runtime`. A workspace that answers a partial shape must come
+    // back "no namespace" — never a crash, which the deploy path would report as a bug.
+    it.each([
+        ['unparseable output', 'not json at all {'],
+        ['no project', '{}'],
+        ['no workspace', JSON.stringify({ project: {} })],
+        ['no details', JSON.stringify({ project: { workspace: {} } })],
+        ['no runtime block', JSON.stringify({ project: { workspace: { details: {} } } })],
+        [
+            'no namespaces list',
+            JSON.stringify({ project: { workspace: { details: { runtime: {} } } } }),
+        ],
+    ])('is false, not a crash, when the download has %s', async (_label, raw) => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(raw);
         await expect(workspaceHasRuntime(commandManager, 'auto')).resolves.toBe(false);
     });
 });
@@ -174,6 +226,33 @@ describe('ensureWorkspaceRuntime (provision-if-missing)', () => {
         ).rejects.toThrow(/Could not provision an Adobe I\/O Runtime namespace/);
         expect(provision).toHaveBeenCalledTimes(1);
     });
+
+    it('waits for the THIRD re-check — provisioning lags, and giving up early is a lie', async () => {
+        (fsPromises.readFile as jest.Mock)
+            .mockResolvedValueOnce(NO_NS_JSON) // the pre-provision check
+            .mockResolvedValueOnce(NO_NS_JSON) // re-check 1
+            .mockResolvedValueOnce(NO_NS_JSON) // re-check 2
+            .mockResolvedValue(WORKSPACE_JSON); // re-check 3 — it landed
+        const provision = jest.fn().mockResolvedValue(undefined);
+
+        await expect(
+            ensureWorkspaceRuntime(commandManager, logger, 'auto', provision, 0)
+        ).resolves.toBeUndefined();
+    });
+
+    it('pauses between re-checks, but not after the last one', async () => {
+        (fsPromises.readFile as jest.Mock).mockResolvedValue(NO_NS_JSON);
+        const provision = jest.fn().mockResolvedValue(undefined);
+
+        await expect(
+            ensureWorkspaceRuntime(commandManager, logger, 'auto', provision, 250)
+        ).rejects.toThrow();
+
+        // Three attempts, two gaps. A pause after the final attempt delays the failure
+        // for nothing; no pause at all re-reads the same stale answer three times.
+        expect(sleep).toHaveBeenCalledTimes(2);
+        expect(sleep).toHaveBeenCalledWith(250);
+    });
 });
 
 describe('extractAioErrorDetail', () => {
@@ -194,5 +273,27 @@ describe('extractAioErrorDetail', () => {
     it('returns empty string for undefined or error-free stderr', () => {
         expect(extractAioErrorDetail(undefined)).toBe('');
         expect(extractAioErrorDetail('- spinner only\n✔ done')).toBe('');
+    });
+
+    // oclif's marker is written several ways depending on terminal width and the
+    // command that emitted it. Each row below is a real spacing the extractor must
+    // strip — and the last is a › that is part of the MESSAGE, which it must not touch.
+    it.each([
+        ['no space before the marker', '›   Error: 404 - Not Found', 'Error: 404 - Not Found'],
+        ['no space after the marker', ' ›Error: 404 - Not Found', 'Error: 404 - Not Found'],
+        ['space on both sides', ' ›   Error: 404 - Not Found', 'Error: 404 - Not Found'],
+        [
+            'a marker inside the message',
+            'Error: open Console › Runtime to enable it',
+            'Error: open Console › Runtime to enable it',
+        ],
+    ])('strips the oclif marker with %s', (_label, stderr, expected) => {
+        expect(extractAioErrorDetail(stderr)).toBe(expected);
+    });
+
+    it('joins several error lines with exactly one space', () => {
+        const stderr = ' ›   Error: first thing  \n ›   Error: second thing ';
+
+        expect(extractAioErrorDetail(stderr)).toBe('Error: first thing Error: second thing');
     });
 });
