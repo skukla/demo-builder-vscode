@@ -14485,6 +14485,19 @@
             "decision": "none \u2014 the explicit '' is the honest return type; its runtime effect is identical to falling off the end",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/features/ai/server/authTools.ts",
+            "anchors": [
+                "orgs = undefined;",
+                "session = undefined;"
+            ],
+            "mutants": 2,
+            "category": "block",
+            "reason": "Both catch bodies re-assign undefined to a variable that is already undefined: each is declared with no initialiser above its try, and the only statement inside the try is the assignment that threw, so the binding cannot hold a value when the catch runs. Emptying either changes nothing any caller can read. Verified by planting both \u2014 the suite's 26 tests stay green, including the one that drives getUserOrgs into a throw and the one that drives getSession into a rejection.",
+            "decision": "none \u2014 the explicit reset states the intent where the declaration alone would leave a reader checking; its runtime effect is identical",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-07"
         }
     ]
 }
