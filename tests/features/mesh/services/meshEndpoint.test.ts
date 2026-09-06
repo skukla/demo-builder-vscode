@@ -374,5 +374,121 @@ describe('meshEndpoint', () => {
 
             expect(result).toBe(`https://edge-sandbox-graph.adobe.io/api/${meshId}/graphql`);
         });
+
+        // The four below assert WHICH commands ran, not what was logged. Every
+        // one of these branches ends at the same constructed URL, so a test that
+        // only checked the return value passes with the guard removed.
+        const constructed = `https://edge-sandbox-graph.adobe.io/api/${meshId}/graphql`;
+
+        it('trusts the plugin check exit code, not its output', async () => {
+            // A non-zero `aio plugins` is not evidence the plugin is there,
+            // whatever it printed. Reading the output anyway would send
+            // describe to a CLI that has just said it cannot answer.
+            (mockCommandManager.execute as jest.Mock).mockResolvedValue({
+                code: 1,
+                stdout: '@adobe/aio-cli-plugin-api-mesh',
+                stderr: '',
+            });
+
+            const result = await getEndpoint(
+                meshId,
+                undefined,
+                mockCommandManager,
+                mockLogger,
+                mockDebugLogger,
+            );
+
+            expect(mockCommandManager.execute).toHaveBeenCalledTimes(1);
+            expect(result).toBe(constructed);
+        });
+
+        it('does not run describe when the plugin is not installed', async () => {
+            // The second answer is deliberately a usable endpoint: if describe
+            // were called anyway, the result would be that URL instead of the
+            // constructed one, and the assertion below would say so.
+            (mockCommandManager.execute as jest.Mock)
+                .mockResolvedValueOnce({ code: 0, stdout: 'some-other-plugin', stderr: '' })
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: JSON.stringify({ meshEndpoint: 'https://never-asked.adobe.io/graphql' }),
+                    stderr: '',
+                });
+
+            const result = await getEndpoint(
+                meshId,
+                undefined,
+                mockCommandManager,
+                mockLogger,
+                mockDebugLogger,
+            );
+
+            expect(mockCommandManager.execute).toHaveBeenCalledTimes(1);
+            expect(result).toBe(constructed);
+        });
+
+        it('does not run describe when the plugin check itself crashes', async () => {
+            (mockCommandManager.execute as jest.Mock).mockRejectedValue(new Error('aio missing'));
+
+            const result = await getEndpoint(
+                meshId,
+                undefined,
+                mockCommandManager,
+                mockLogger,
+                mockDebugLogger,
+            );
+
+            expect(mockCommandManager.execute).toHaveBeenCalledTimes(1);
+            expect(result).toBe(constructed);
+        });
+
+        it('discards describe output when describe itself failed', async () => {
+            // A non-zero describe can still print a JSON body. Parsing it would
+            // hand back an endpoint the CLI has just failed to produce.
+            (mockCommandManager.execute as jest.Mock)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: '@adobe/aio-cli-plugin-api-mesh',
+                    stderr: '',
+                })
+                .mockResolvedValueOnce({
+                    code: 7,
+                    stdout: JSON.stringify({ meshEndpoint: 'https://stale.adobe.io/graphql' }),
+                    stderr: 'describe failed',
+                });
+
+            const result = await getEndpoint(
+                meshId,
+                undefined,
+                mockCommandManager,
+                mockLogger,
+                mockDebugLogger,
+            );
+
+            expect(result).toBe(constructed);
+        });
+
+        it('falls back when describe prints no JSON object at all', async () => {
+            // Reaches the no-match branch, which nothing entered before: the
+            // older cases mock ONE answer for both commands, so the plugin
+            // check reads the same output and describe never runs.
+            (mockCommandManager.execute as jest.Mock)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: '@adobe/aio-cli-plugin-api-mesh',
+                    stderr: '',
+                })
+                .mockResolvedValueOnce({ code: 0, stdout: 'mesh not found', stderr: '' });
+
+            const result = await getEndpoint(
+                meshId,
+                undefined,
+                mockCommandManager,
+                mockLogger,
+                mockDebugLogger,
+            );
+
+            expect(mockCommandManager.execute).toHaveBeenCalledTimes(2);
+            expect(result).toBe(constructed);
+        });
     });
 });
