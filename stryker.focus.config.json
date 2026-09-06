@@ -8,9 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/data-installer/services/commerceCredentials.ts",
-        "src/features/data-installer/services/dataInstallerConfig.ts",
-        "src/features/mesh/services/deployMeshWithFeedback.ts"
+        "src/features/projects-dashboard/services/settingsSerializer.ts",
+        "src/core/auth/adobeAuthGuard.ts",
+        "src/core/config/backendOwnedScope.ts"
     ],
     "reporters": [
         "clear-text",

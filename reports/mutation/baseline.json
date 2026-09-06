@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "commerceCredentials: the migrated-secret path that carries both store deps; dataInstallerConfig: inclusive length boundaries on the cap and the fingerprint, protocol regex ledgered; deployMeshWithFeedback: the in-flight status label and the no-endpoint arity",
+    "_note": "MUT-04 node group: settingsSerializer edsConfig extraction, adobeAuthGuard timedOut, backendOwnedScope ownership + missing-config guard",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -448,19 +448,18 @@
             "openGaps": 0
         },
         "src/core/auth/adobeAuthGuard.ts": {
-            "score": 91.11,
-            "killed": 39,
-            "survived": 4,
+            "score": 95.56,
+            "killed": 41,
+            "survived": 2,
             "noCoverage": 0,
             "timeout": 2,
             "survivorCategories": {
-                "logPresentation": 2,
-                "branch": 2
+                "logPresentation": 2
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 2,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 2
+            "openGaps": 0
         },
         "src/core/base/baseCommand.ts": {
             "score": 89.09,
@@ -559,18 +558,16 @@
             "openGaps": 0
         },
         "src/core/config/backendOwnedScope.ts": {
-            "score": 95,
-            "killed": 38,
-            "survived": 2,
+            "score": 100,
+            "killed": 40,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 2
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 2,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 2
+            "openGaps": 0
         },
         "src/core/constants.ts": {
             "score": 100,
@@ -9123,23 +9120,16 @@
             "openGaps": 0
         },
         "src/features/projects-dashboard/services/settingsSerializer.ts": {
-            "score": 94.57,
-            "killed": 87,
-            "survived": 4,
-            "noCoverage": 1,
+            "score": 100,
+            "killed": 92,
+            "survived": 0,
+            "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "string": 1,
-                "branch": 1,
-                "block": 1,
-                "other": 1
-            },
-            "uncoveredCategories": {
-                "string": 1
-            },
-            "highValueSurvivors": 2,
+            "survivorCategories": {},
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 3
+            "openGaps": 0
         },
         "src/features/projects-dashboard/ui/ProjectsDashboard.tsx": {
             "score": 92.71,

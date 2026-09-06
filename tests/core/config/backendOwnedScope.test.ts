@@ -30,6 +30,16 @@ describe('resolveBackendOwnedScopeValue', () => {
         expect(resolveBackendOwnedScopeValue('MESH_ENDPOINT', BACKEND_CONFIG)).toBeUndefined();
     });
 
+    it('returns undefined for a key the backend DEFINES but does not own', () => {
+        // The sharper control. MESH_ENDPOINT above is absent from the backend
+        // config, so "backend always wins" would still answer undefined for it
+        // and look right. ACCS_GRAPHQL_ENDPOINT is present and not backend-owned:
+        // only an ownership check returns undefined here.
+        expect(
+            resolveBackendOwnedScopeValue('ACCS_GRAPHQL_ENDPOINT', BACKEND_CONFIG)
+        ).toBeUndefined();
+    });
+
     it('returns undefined when the backend does not define the scope key', () => {
         expect(resolveBackendOwnedScopeValue('ACCS_STORE_CODE', BACKEND_CONFIG)).toBeUndefined();
     });
@@ -156,6 +166,19 @@ describe('stripDuplicateBackendOwnedScope', () => {
         // Not backend-owned — a separate audit item, deliberately untouched here.
         expect(changed).toBe(false);
         expect(configs['eds-accs-mesh'].ACCS_GRAPHQL_ENDPOINT).toBe('https://a');
+    });
+
+    it('skips a component whose config entry is missing entirely', () => {
+        // projectFileLoader hands this straight off a parsed manifest, where a
+        // component key can carry null — the type says otherwise and the disk
+        // does not read the type. Without the guard `key in null` throws and the
+        // whole project fails to load, rather than one stale copy surviving.
+        const configs = JSON.parse(
+            '{"adobe-commerce-accs":{"ACCS_WEBSITE_CODE":"citisignal"},"eds-accs-mesh":null}'
+        ) as Record<string, Record<string, unknown>>;
+
+        expect(stripDuplicateBackendOwnedScope(configs, 'adobe-commerce-accs')).toBe(false);
+        expect(configs['adobe-commerce-accs'].ACCS_WEBSITE_CODE).toBe('citisignal');
     });
 
     it('is a no-op with no backend id, no backend config, or no configs', () => {
