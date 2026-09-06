@@ -114,12 +114,11 @@ export async function applyDaLiveOrgConfigSettings(
             removeKeys.push('editor.path');
         }
 
+        // No "nothing to do" early return: there cannot be one. `aemAuthorUrl`
+        // either has a value (an update) or does not (a removal), so one of the
+        // two lists is always non-empty and the guard that used to sit here was
+        // unreachable by construction.
         const appliedKeys = Object.keys(updates);
-        if (appliedKeys.length === 0 && removeKeys.length === 0) {
-            // Truly nothing to do. Logged (not silent) so a no-op flip is diagnosable.
-            logger.debug('[EDS Config] No DA.live config to apply or clear; skipping.');
-            return;
-        }
 
         const result = await daLiveContentOps.applySiteConfig(
             daLiveOrg,

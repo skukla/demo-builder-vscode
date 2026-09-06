@@ -15483,6 +15483,18 @@
             "decision": "none \u2014 the flag is the honest record of mount state even where nothing can currently observe it",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/eds/handlers/daLive/daLiveSiteConfig.ts",
+            "anchors": [
+                ".filter(Boolean)"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Dropping .filter(Boolean) from the summary chain changes only the TEXT of the single info/warn line it feeds \u2014 the empty slots become '; ' separators. `summary` is built for the log and read nowhere else; it reaches no return value, no collaborator argument and no control flow. Killing it would mean asserting a logger call's wording, which the ratchet exists to refuse. Planted 2026-09-06 with the filter removed: all 23 tests pass.",
+            "decision": "none \u2014 the filter is correct formatting for a message that is by design the only observer of this expression",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }

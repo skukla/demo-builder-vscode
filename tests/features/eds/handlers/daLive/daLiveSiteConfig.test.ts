@@ -56,8 +56,15 @@ jest.mock('@/features/eds/services/daLive/daLiveOrgOperations', () => ({
 jest.mock('@/features/eds/services/daLive/daLiveContentOperations', () => ({
     DaLiveContentOperations: jest.fn(),
 }));
+jest.mock('@/features/eds/services/daLive/daLiveConfigService', () => ({
+    DaLiveConfigService: jest.fn(),
+}));
 
-import { applyDaLiveOrgConfigSettings } from '@/features/eds/handlers/daLive/daLiveSiteConfig';
+import {
+    applyDaLiveOrgConfigSettings,
+    configureDaLivePermissions,
+} from '@/features/eds/handlers/daLive/daLiveSiteConfig';
+import { DaLiveConfigService } from '@/features/eds/services/daLive/daLiveConfigService';
 import type { DaLiveContentOperations } from '@/features/eds/services/daLive/daLiveContentOperations';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
@@ -344,6 +351,57 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
     });
 
+    /**
+     * Everything in this module is non-fatal by design: a demo whose Assets panel
+     * is missing is worse than a demo that failed to build. That promise is only
+     * kept if the failure and throw paths actually report — and neither was
+     * driven at all, so the whole `else` and `catch` could be deleted with the
+     * suite green. The assertions are on WHETHER something was reported, never on
+     * its wording.
+     */
+    describe('a failed or thrown write is reported, never swallowed', () => {
+        it('warns instead of claiming success when applySiteConfig fails', async () => {
+            mockAemAuthorUrl = AEM_AUTHOR_URL;
+            mockApplySiteConfig.mockResolvedValue({ success: false, error: 'da.live said no' });
+
+            await applyDaLiveOrgConfigSettings(
+                mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
+            );
+
+            expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+            expect(mockLogger.info).not.toHaveBeenCalled();
+        });
+
+        it('reports a thrown write and still resolves', async () => {
+            mockAemAuthorUrl = AEM_AUTHOR_URL;
+            mockApplySiteConfig.mockRejectedValue(new Error('socket hang up'));
+
+            await expect(
+                applyDaLiveOrgConfigSettings(
+                    mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
+                ),
+            ).resolves.toBeUndefined();
+
+            expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+        });
+
+        it('survives a result that carries no `removed` list at all', async () => {
+            // The real applySiteConfig omits `removed` when it removed nothing.
+            // Reading it unguarded throws into the catch above, which turns a
+            // perfectly good write into a warning — invisible, because the outer
+            // catch swallows it and the function still resolves.
+            mockAemAuthorUrl = AEM_AUTHOR_URL;
+            mockApplySiteConfig.mockResolvedValue({ success: true });
+
+            await applyDaLiveOrgConfigSettings(
+                mockContentOps, DA_LIVE_ORG, DA_LIVE_SITE, mockLogger, 'da-live-classic',
+            );
+
+            expect(mockLogger.warn).not.toHaveBeenCalled();
+            expect(mockLogger.info).toHaveBeenCalledTimes(1);
+        });
+    });
+
     it('clears a stale editor.path for Universal Editor when no IMSOrgId is configured', async () => {
         // UE's editor.path embeds the IMS org id, so with no IMSOrgId there is
         // nothing to WRITE — but da.live may still hold a stale Experience
@@ -364,5 +422,90 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         // Neither setting has a value here, so BOTH rows are cleared.
         expect([...removeKeys].sort()).toEqual(['aem.repositoryId', 'editor.path']);
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * configureDaLivePermissions — grant the SC write access to their own site.
+ *
+ * Same non-fatal contract as the config write above: it must never throw at its
+ * callers (creation, reset and republish all call it mid-flow), and it must
+ * report what happened in its return value rather than only in a log line. None
+ * of that was driven — the entire function could have been deleted with the
+ * suite green.
+ */
+describe('configureDaLivePermissions', () => {
+    let mockGrantUserAccess: jest.Mock;
+    let mockLogger: Logger;
+    const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('da-live-token') };
+    const USER_EMAIL = 'someone@adobe.com';
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGrantUserAccess = jest.fn().mockResolvedValue({ success: true });
+        (DaLiveConfigService as unknown as jest.Mock).mockImplementation(() => ({
+            grantUserAccess: mockGrantUserAccess,
+        }));
+        mockLogger = createMockLogger() as unknown as Logger;
+    });
+
+    it('grants access for the org/site/user it was given, and reports success', async () => {
+        const result = await configureDaLivePermissions(
+            tokenProvider, DA_LIVE_ORG, DA_LIVE_SITE, USER_EMAIL, mockLogger,
+        );
+
+        // The arguments are the whole behaviour here — a grant against the wrong
+        // site is indistinguishable from a correct one at the call site.
+        expect(mockGrantUserAccess).toHaveBeenCalledWith(DA_LIVE_ORG, DA_LIVE_SITE, USER_EMAIL);
+        expect(result).toEqual({ success: true });
+        expect(mockLogger.info).toHaveBeenCalledTimes(1);
+        expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
+    it('constructs the config service with the caller’s token source and logger', async () => {
+        await configureDaLivePermissions(
+            tokenProvider, DA_LIVE_ORG, DA_LIVE_SITE, USER_EMAIL, mockLogger,
+        );
+
+        expect(DaLiveConfigService as unknown as jest.Mock).toHaveBeenCalledWith(
+            tokenProvider,
+            mockLogger,
+        );
+    });
+
+    it('passes a refusal straight back to the caller and warns', async () => {
+        mockGrantUserAccess.mockResolvedValue({ success: false, error: 'not an org admin' });
+
+        const result = await configureDaLivePermissions(
+            tokenProvider, DA_LIVE_ORG, DA_LIVE_SITE, USER_EMAIL, mockLogger,
+        );
+
+        expect(result).toEqual({ success: false, error: 'not an org admin' });
+        expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+        expect(mockLogger.info).not.toHaveBeenCalled();
+    });
+
+    it('turns a thrown error into a failed result rather than throwing at its caller', async () => {
+        // Creation, reset and republish all call this mid-flow; a throw here
+        // would abort a build over a permissions row.
+        mockGrantUserAccess.mockRejectedValue(new Error('DA.live session expired'));
+
+        const result = await configureDaLivePermissions(
+            tokenProvider, DA_LIVE_ORG, DA_LIVE_SITE, USER_EMAIL, mockLogger,
+        );
+
+        expect(result).toEqual({ success: false, error: 'DA.live session expired' });
+        expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not put the raw address in the success log', async () => {
+        // `info` IS buffered into the debug export, so an unmasked address ships
+        // to whoever the SC sends their logs to.
+        await configureDaLivePermissions(
+            tokenProvider, DA_LIVE_ORG, DA_LIVE_SITE, USER_EMAIL, mockLogger,
+        );
+
+        const logged = JSON.stringify((mockLogger.info as jest.Mock).mock.calls);
+        expect(logged).not.toContain(USER_EMAIL);
     });
 });
