@@ -146,6 +146,18 @@ describe('ConfigurationSummary', () => {
             expect(screen.getByText('Switching...')).toBeInTheDocument();
         });
 
+        it('reports no organization when signed out, even with one still in state', () => {
+            const state = createBaseState({
+                adobeAuth: { isAuthenticated: false, isChecking: false },
+                adobeOrg: { id: 'org-123', code: 'ORG123', name: 'Test Organization' },
+            });
+
+            renderWithProvider(<ConfigurationSummary state={state} />);
+
+            expect(screen.getByText('Not authenticated')).toBeInTheDocument();
+            expect(screen.queryByText('Test Organization')).not.toBeInTheDocument();
+        });
+
         it('renders organization name when authenticated with org', () => {
             renderWithProvider(
                 <ConfigurationSummary state={authenticatedState} />
@@ -200,17 +212,28 @@ describe('ConfigurationSummary', () => {
             expect(screen.getByText('project-name-only')).toBeInTheDocument();
         });
 
-        it('shows completed icon when project step is completed', () => {
+        // Counts include the Organization section, which is completed (green)
+        // whenever the state is authenticated with an org. Workspace is absent
+        // here, so it is 'empty' and contributes no icon at all.
+        it('marks the project completed — a green check, not the pending clock', () => {
             const { container } = renderWithProvider(
                 <ConfigurationSummary
                     state={stateWithProject}
                     completedSteps={['adobe-project']}
-                    currentStep="adobe-workspace"
                 />
             );
 
-            // CheckmarkCircle icon should be present for completed project
-            expect(container.querySelector('svg')).toBeInTheDocument();
+            expect(container.querySelectorAll('.text-green-600')).toHaveLength(2);
+            expect(container.querySelectorAll('.text-blue-600')).toHaveLength(0);
+        });
+
+        it('marks a selected but uncompleted project pending — the clock, no check', () => {
+            const { container } = renderWithProvider(
+                <ConfigurationSummary state={stateWithProject} completedSteps={[]} />
+            );
+
+            expect(container.querySelectorAll('.text-blue-600')).toHaveLength(1);
+            expect(container.querySelectorAll('.text-green-600')).toHaveLength(1);
         });
     });
 
@@ -251,32 +274,27 @@ describe('ConfigurationSummary', () => {
     // Note: API Mesh section removed - mesh is now deployed automatically during project creation
 
     describe('step completion tracking', () => {
-        it('uses completedSteps to determine completion icons', () => {
+        it('completes exactly the sections named in completedSteps', () => {
             const { container } = renderWithProvider(
                 <ConfigurationSummary
                     state={stateWithWorkspace}
-                    completedSteps={['adobe-project', 'adobe-workspace']}
-                    currentStep="build-your-project"
+                    completedSteps={['adobe-project']}
                 />
             );
 
-            // Multiple checkmark icons should be present for completed steps
-            const svgs = container.querySelectorAll('svg');
-            expect(svgs.length).toBeGreaterThan(0);
+            // Organization + Project completed, Workspace still pending.
+            expect(container.querySelectorAll('.text-green-600')).toHaveLength(2);
+            expect(container.querySelectorAll('.text-blue-600')).toHaveLength(1);
         });
 
-        it('shows pending state for steps ahead of current step', () => {
-            renderWithProvider(
-                <ConfigurationSummary
-                    state={authenticatedState}
-                    completedSteps={[]}
-                    currentStep="adobe-auth"
-                />
+        it('completes nothing when completedSteps is omitted', () => {
+            const { container } = renderWithProvider(
+                <ConfigurationSummary state={stateWithWorkspace} />
             );
 
-            // Project and Workspace should show "Not selected" since we're before those steps
-            const notSelectedElements = screen.getAllByText('Not selected');
-            expect(notSelectedElements.length).toBeGreaterThanOrEqual(2);
+            // Only the Organization stays green; both wizard steps read pending.
+            expect(container.querySelectorAll('.text-green-600')).toHaveLength(1);
+            expect(container.querySelectorAll('.text-blue-600')).toHaveLength(2);
         });
     });
 

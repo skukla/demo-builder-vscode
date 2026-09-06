@@ -7,38 +7,11 @@ import { WizardState, WizardStep } from '@/types/webview';
 interface ConfigurationSummaryProps {
     state: WizardState;
     completedSteps?: WizardStep[];
-    currentStep?: WizardStep;
 }
 
-export function ConfigurationSummary({ state, completedSteps = [], currentStep }: ConfigurationSummaryProps) {
-    // Define step order for determining if a step is "ahead" of current step
-    // Note: 'api-mesh' removed - mesh deployment now happens in Project Creation Phase 3
-    const stepOrder: WizardStep[] = [
-        'welcome',
-        'prerequisites',
-        'adobe-auth',
-        'build-your-project',
-        'review',
-        'create-project',
-    ];
+export function ConfigurationSummary({ state, completedSteps = [] }: ConfigurationSummaryProps) {
+    const isStepCompleted = (step: WizardStep) => completedSteps.includes(step);
 
-    const getCurrentStepIndex = () => {
-        if (!currentStep) return -1;
-        return stepOrder.indexOf(currentStep);
-    };
-
-    const isStepCompleted = (step: WizardStep) => {
-        const currentIndex = getCurrentStepIndex();
-        const stepIndex = stepOrder.indexOf(step);
-
-        // If we're before this step, it's pending (not completed)
-        if (currentIndex >= 0 && stepIndex > currentIndex) {
-            return false;
-        }
-
-        // Otherwise, check completedSteps array
-        return completedSteps.includes(step);
-    };
     // Helper to determine organization status
     const getOrgStatus = (): StatusSectionProps['status'] => {
         if (!state.adobeAuth.isAuthenticated) return 'empty';

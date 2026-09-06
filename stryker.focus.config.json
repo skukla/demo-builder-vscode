@@ -8,7 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/components/feedback/LoadingDisplay.tsx"
+        "src/features/dashboard/ui/aiSurface/components/PromptGrid.tsx",
+        "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+        "src/core/ui/components/wizard/ConfigurationSummary.tsx"
     ],
     "reporters": [
         "clear-text",

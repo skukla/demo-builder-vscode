@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "progressCapture: covered payloadOfEvent, the errorMessage fallbacks and the reverse scans; appManagementUninstaller: covered the derive-error exits, the default client factory, both budget exhaustions and the non-409 error paths",
+    "_note": "PromptGrid: constrained the sort, the query normalisation and the current-handler wiring; IntegrationsGrid: constrained the rename failure answers, the stale-selection drop, the optional mesh callbacks and the dispatch guards; ConfigurationSummary: deleted an unreachable step-order branch and constrained the completed/pending icons",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -1918,24 +1918,19 @@
             "openGaps": 3
         },
         "src/core/ui/components/wizard/ConfigurationSummary.tsx": {
-            "score": 51.56,
-            "killed": 33,
-            "survived": 29,
-            "noCoverage": 2,
+            "score": 90.24,
+            "killed": 37,
+            "survived": 4,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 11,
-                "other": 3,
-                "block": 2,
-                "branch": 13
+                "other": 1,
+                "string": 3
             },
-            "uncoveredCategories": {
-                "block": 1,
-                "branch": 1
-            },
-            "highValueSurvivors": 15,
-            "equivalent": 0,
-            "openGaps": 20
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/core/ui/components/wizard/StatusSection.tsx": {
             "score": 76.74,
@@ -4729,19 +4724,18 @@
             "openGaps": 20
         },
         "src/features/dashboard/ui/aiSurface/components/PromptGrid.tsx": {
-            "score": 53.33,
-            "killed": 24,
-            "survived": 21,
+            "score": 97.78,
+            "killed": 44,
+            "survived": 1,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 5,
-                "other": 16
+                "branch": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 5,
-            "equivalent": 0,
-            "openGaps": 21
+            "highValueSurvivors": 1,
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/features/dashboard/ui/components/ActionGrid.tsx": {
             "score": 91.01,
@@ -4902,25 +4896,22 @@
             "openGaps": 13
         },
         "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx": {
-            "score": 78.26,
-            "killed": 90,
-            "survived": 21,
-            "noCoverage": 4,
+            "score": 94.78,
+            "killed": 109,
+            "survived": 5,
+            "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "optionalChain": 4,
-                "block": 1,
-                "branch": 9,
-                "other": 5,
+                "branch": 2,
+                "other": 1,
                 "string": 2
             },
             "uncoveredCategories": {
-                "string": 2,
-                "block": 2
+                "string": 1
             },
-            "highValueSurvivors": 10,
-            "equivalent": 0,
-            "openGaps": 21
+            "highValueSurvivors": 2,
+            "equivalent": 3,
+            "openGaps": 0
         },
         "src/features/dashboard/ui/configure/ConfigureScreen.tsx": {
             "score": 86.36,

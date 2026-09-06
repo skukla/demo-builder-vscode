@@ -14761,6 +14761,66 @@
             "decision": "none \u2014 undefined >= 0 is already false, so the explicit check changes no outcome",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/dashboard/ui/aiSurface/components/PromptGrid.tsx",
+            "anchors": [
+                "if (!query) return userPrompts;"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "Removing the early return leaves filter() with an empty query, and every string .includes('') \u2014 so the filter keeps every prompt and the rendered set is identical. The early return only preserves the array's IDENTITY, which nothing downstream observes: sortPinnedFirst copies it anyway and filteredPrompts.length is unchanged. Verified by planting 'if (false)' (suite green) against the control 'if (query)' (suite red).",
+            "decision": "Recorded, not killed: constraining it would mean asserting an array reference, which is an implementation detail rather than a decision the component makes.",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+            "anchors": [
+                "if (selectedId !== null && !cards.some((card) => card.id === selectedId)) {"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "Forcing the left half true leaves 'drop the selection when no card owns it'. With nothing selected, selectedId is already null and the effect's setSelectedId(null) is a React state bail-out \u2014 no re-render, nothing observable. Verified by planting 'if (true && !cards.some(...))' (suite green) against the control 'if (selectedId !== null && cards.some(...))' (suite red).",
+            "decision": "Recorded, not killed: the only difference is a redundant set to the value the state already holds.",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+            "anchors": [
+                "const closeRemoveDialog = useCallback((): void => setPendingRemoveId(null), []);"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "Replacing the empty dependency list with a non-empty one makes useCallback hand back a fresh function each render instead of a memoised one. The dialog receives a new onClose prop and behaves identically; memoisation is not observable from any surface. Verified by planting '[Math.random()]' (suite green) against a control on the same file (suite red).",
+            "decision": "Recorded, not killed: constraining it would mean asserting function identity across renders, which is not a decision this component makes.",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/dashboard/ui/components/integrations/IntegrationsGrid.tsx",
+            "anchors": [
+                "if (pendingRemoveId) {"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "confirmRemove only runs from the dialog's Remove button, and the dialog renders solely while isOpen={pendingRemoveId !== null}. So the guard cannot be reached with a null id, and forcing it true changes nothing. Verified by planting 'if (true)' (suite green) against a control on the same file (suite red).",
+            "decision": "Recorded, not killed: reaching it would mean calling onConfirm on a dialog that is not open, which no surface can do.",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/ui/components/wizard/ConfigurationSummary.tsx",
+            "anchors": [
+                "export function ConfigurationSummary({ state, completedSteps = [] }: ConfigurationSummaryProps) {"
+            ],
+            "mutants": 1,
+            "category": "equivalent",
+            "reason": "The completedSteps default only matters when the caller omits the prop, and it is asked exactly two questions \u2014 'adobe-project' and 'adobe-workspace'. Any default that is not one of those two ids gives the same two answers, so a non-empty replacement is indistinguishable from the empty one. Verified by planting a default of ['welcome'] (suite green) against the control of negating the includes (suite red).",
+            "decision": "Recorded, not killed: killing it would need a default containing one of the two step ids, which would be a wrong default rather than a test.",
+            "recorded": "2026-09-06",
+            "source": "mutationLedger add"
         }
     ]
 }
