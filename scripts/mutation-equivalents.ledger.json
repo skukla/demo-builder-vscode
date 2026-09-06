@@ -16769,6 +16769,19 @@
             "decision": "none \u2014 both arms yield the same computed style; the check is a type narrowing, not a behavioural branch",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/features/components/services/envVarHelpers.ts",
+            "anchors": [
+                "if (!accsEndpoint) return undefined;"
+            ],
+            "line": 95,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker forces the guard false, so parseAccsEndpoint falls through to ACCS_ENDPOINT_PATTERN.exec(accsEndpoint) with a falsy value. RegExp.prototype.exec coerces its argument to a string first, so undefined becomes the literal 'undefined' and '' stays empty; neither matches an anchored https:// host, and the function returns undefined by the very next line. Verified by planting the mutation as a standalone probe: exec(undefined), exec(null) and exec('') all returned null. The guard is what lets the call typecheck \u2014 accsEndpoint is string | undefined and exec takes string \u2014 so it cannot be deleted without a cast at the call boundary, which this repo bans.",
+            "decision": "none \u2014 every falsy input reaches the same undefined by a longer route; the guard is a type requirement, not a behavioural branch",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }
