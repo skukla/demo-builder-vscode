@@ -16870,6 +16870,19 @@
             "decision": "none \u2014 the check states the requirement instead of relying on a thrown TypeError, which is worth keeping even though the two agree",
             "recorded": "2026-09-06",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/components/services/backendCommerce.ts",
+            "anchors": [
+                "if (!backendId) return undefined;"
+            ],
+            "line": 45,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker replaces the guard's condition with false, so the falsy-id fast path never fires. Nothing observable changes: the very next statement is an optional chain, and every value that makes `!backendId` true is a key the registry does not hold \u2014 `backends[undefined]` reads the property named 'undefined' and `backends['']` the empty-string one, neither of which components.json declares (checked: zero backend keys are '' or 'undefined'). Verified by planting the mutation, which the six tests here pass either way, and by diffing both versions over undefined, '', both real backend ids, an unknown id, 'undefined', 'null' and '0' \u2014 zero differences on any input, against a control showing the accessor does discriminate between a real id and an unknown one. The function has no side effects and logs nothing, so there is no other channel to observe.",
+            "decision": "none \u2014 the guard states the string|undefined parameter's falsy case instead of leaning on a property lookup that happens to miss, and the optional chain behind it already returns undefined",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
