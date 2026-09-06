@@ -16501,6 +16501,84 @@
             "decision": "none \u2014 pop() is typed T | undefined and the guard is what satisfies it; the alternative is a cast, which is a silenced type error",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-07"
+        },
+        {
+            "module": "src/core/ui/hooks/useLoadingState.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 82,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback dependency array of CONSTANTS cannot invalidate the memo: React compares each element with Object.is against the previous render's array, and \"Stryker was here\" is the same string primitive at the same length on every render, so the callback is created once and kept \u2014 exactly as the empty array does. Nothing downstream can observe a difference, which is why the suite's existing referential-stability tests (setData/setLoading/setError/setRefreshing are asserted identical across a rerender) do not move. Verified by planting all four replacements at once: 116 tests pass.",
+            "decision": "none \u2014 the empty array is correct and load-bearing (these setters are handed to consumers' effect dependency lists); the mutant is only unkillable because a constant array is equal to itself",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/core/ui/hooks/useLoadingState.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 89,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback dependency array of CONSTANTS cannot invalidate the memo: React compares each element with Object.is against the previous render's array, and \"Stryker was here\" is the same string primitive at the same length on every render, so the callback is created once and kept \u2014 exactly as the empty array does. Nothing downstream can observe a difference, which is why the suite's existing referential-stability tests (setData/setLoading/setError/setRefreshing are asserted identical across a rerender) do not move. Verified by planting all four replacements at once: 116 tests pass.",
+            "decision": "none \u2014 the empty array is correct and load-bearing (these setters are handed to consumers' effect dependency lists); the mutant is only unkillable because a constant array is equal to itself",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/core/ui/hooks/useLoadingState.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 95,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback dependency array of CONSTANTS cannot invalidate the memo: React compares each element with Object.is against the previous render's array, and \"Stryker was here\" is the same string primitive at the same length on every render, so the callback is created once and kept \u2014 exactly as the empty array does. Nothing downstream can observe a difference, which is why the suite's existing referential-stability tests (setData/setLoading/setError/setRefreshing are asserted identical across a rerender) do not move. Verified by planting all four replacements at once: 116 tests pass.",
+            "decision": "none \u2014 the empty array is correct and load-bearing (these setters are handed to consumers' effect dependency lists); the mutant is only unkillable because a constant array is equal to itself",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/core/ui/hooks/useLoadingState.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 102,
+            "mutants": 1,
+            "category": "other",
+            "reason": "A useCallback dependency array of CONSTANTS cannot invalidate the memo: React compares each element with Object.is against the previous render's array, and \"Stryker was here\" is the same string primitive at the same length on every render, so the callback is created once and kept \u2014 exactly as the empty array does. Nothing downstream can observe a difference, which is why the suite's existing referential-stability tests (setData/setLoading/setError/setRefreshing are asserted identical across a rerender) do not move. Verified by planting all four replacements at once: 116 tests pass.",
+            "decision": "none \u2014 the empty array is correct and load-bearing (these setters are handed to consumers' effect dependency lists); the mutant is only unkillable because a constant array is equal to itself",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/core/ui/hooks/useTimerCleanup.ts",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 64,
+            "mutants": 1,
+            "category": "other",
+            "reason": "The unmount sweep's useEffect dependency array. A dependency array of CONSTANTS cannot make the effect re-run: React compares each element with Object.is against the previous render's array, and \"Stryker was here\" is the same string primitive at the same length every render, so the effect mounts once and its cleanup runs once at unmount \u2014 exactly as the empty array does. Verified by planting the replacement: 116 tests pass, including the ones that set a timer, re-render, and still see it fire.",
+            "decision": "none \u2014 the empty array is correct; the mutant is unkillable because a constant array is equal to itself, not because the cleanup is untested (the sweep's guard and the ids it clears are both asserted)",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/ai/server/mcpProxySession.ts",
+            "anchors": [
+                "if (initializedLine) sinks.toServer(initializedLine);"
+            ],
+            "line": 133,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The guard is unreachable-false. Reaching this line requires handshakeCaptured on the line above, and handshakeCaptured is set true in exactly one place \u2014 the same branch that assigns initializedLine \u2014 so whenever this runs, initializedLine holds a line from LineBuffer, which always carries its trailing newline and is therefore never the empty string. Forcing the condition true changes nothing for any input. Verified by planting the replacement: 116 tests pass.",
+            "decision": "none \u2014 initializedLine is typed string | undefined and the guard is what narrows it for toServer(line: string); the alternative is a cast, which is a silenced type error",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
         }
     ]
 }
