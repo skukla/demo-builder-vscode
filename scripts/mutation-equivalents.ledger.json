@@ -13071,6 +13071,19 @@
             "decision": "none \u2014 an empty dependency list is correct for a handler that closes over nothing",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-06"
+        },
+        {
+            "module": "src/core/validation/Validator.ts",
+            "anchors": [
+                "if (!value || value.trim() === '') return valid();"
+            ],
+            "line": 175,
+            "mutants": 2,
+            "category": "other",
+            "reason": "Two mutants land on the trim half of the lowercase validator's blank guard: Stryker drops the .trim() (leaving value === \"\") and, separately, replaces the whole value.trim() === '' comparison with false. Both leave only the !value half doing any guarding, and both are unobservable for the same reason: they can differ only for a value that is non-empty but whitespace only, and for exactly those values the rest of the function reaches the same answer anyway \u2014 whitespace has no case, so value !== value.toLowerCase() is false and the validator returns valid either way. Every other input takes an identical path, because an empty or missing value is caught by !value first. There is no string, and no sequence of calls, for which the guarded and unguarded forms produce different results.",
+            "decision": "none \u2014 the trim is right here and matches the other validators' blank guard",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-06"
         }
     ]
 }
