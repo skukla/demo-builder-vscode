@@ -100,6 +100,27 @@ describe('resolveInstallTarget', () => {
     it('reports no target for a project with no Commerce backend', () => {
         expect(resolveInstallTarget(project({ componentSelections: {} }))).toBeNull();
     });
+
+    /**
+     * Three shapes a real manifest can be in before the wizard has written
+     * anything. Each must answer "no target", not throw — this runs inside a
+     * build phase that is not allowed to fail.
+     */
+    it('reports no target for a project with no selections recorded at all', () => {
+        expect(resolveInstallTarget({})).toBeNull();
+    });
+
+    it('reports no target for a backend this module has no scope keys for', () => {
+        // Only the two Commerce backends spell website/store codes. Anything
+        // else has no pair to read, and reading one would throw.
+        expect(
+            resolveInstallTarget(project({ componentSelections: { backend: 'some-other-backend' } })),
+        ).toBeNull();
+    });
+
+    it('reports no target for a Commerce backend with no config written yet', () => {
+        expect(resolveInstallTarget(project({ componentConfigs: undefined }))).toBeNull();
+    });
 });
 
 describe('typesToInstall', () => {
@@ -178,7 +199,9 @@ describe('installSampleData', () => {
 
         const result = await installSampleData(noInstance, d);
 
-        expect(result).toMatchObject({ skipped: true });
+            // `ran: false` is the field the build reports on. A skip that claimed
+            // to have run would put a phantom import in the creation summary.
+            expect(result).toMatchObject({ ran: false, skipped: true });
         expect(d.startImport).not.toHaveBeenCalled();
     });
 
@@ -232,12 +255,21 @@ describe('installSampleData', () => {
         it('skips when the Business Structure scope was never recorded', async () => {
             const d = deps();
 
+            // The instance IS derivable here — only the website/store pair is
+            // missing — so nothing downstream can stand in for the target check.
             const result = await installSampleData(
-                project({ componentConfigs: { [ACCS]: {} } }),
+                project({
+                    componentConfigs: {
+                        [ACCS]: {
+                            ACCS_GRAPHQL_ENDPOINT:
+                                'https://na1-sandbox.api.commerce.adobe.com/TENANT123/graphql',
+                        },
+                    },
+                }),
                 d,
             );
 
-            expect(result).toMatchObject({ skipped: true });
+            expect(result).toMatchObject({ ran: false, skipped: true });
             expect(d.startImport).not.toHaveBeenCalled();
         });
 
@@ -248,7 +280,14 @@ describe('installSampleData', () => {
 
             const result = await installSampleData(project(), d);
 
-            expect(result).toMatchObject({ skipped: true });
+            // The resolver's OWN refusal is forwarded, not replaced by the
+            // generic fallback — it is the only thing that says which credential
+            // is missing.
+            expect(result).toMatchObject({
+                ran: false,
+                skipped: true,
+                reason: 'needs-accs-credentials',
+            });
             expect(d.startImport).not.toHaveBeenCalled();
         });
 
@@ -258,7 +297,7 @@ describe('installSampleData', () => {
 
             const result = await installSampleData(project(), d);
 
-            expect(result).toMatchObject({ skipped: true });
+            expect(result).toMatchObject({ ran: false, skipped: true });
             expect(d.startImport).not.toHaveBeenCalled();
         });
     });
@@ -281,6 +320,21 @@ describe('installSampleData', () => {
         const result = await installSampleData(project(), deps());
 
         expect(JSON.stringify(result)).not.toContain('fake-test-secret-not-a-secret');
+    });
+
+    /**
+     * The label the poller logs is chosen per PHASE. Pinning it to either verb
+     * mislabels the other, which is exactly what happened for a few hours the day
+     * a fix for "a removal logged as an import" hardcoded 'reset'.
+     */
+    it('tells the poller it is watching an import', async () => {
+        const d = deps();
+
+        await installSampleData(project(), d);
+
+        expect(d.watch).toHaveBeenCalledWith(
+            expect.objectContaining({ operation: 'import' }),
+        );
     });
 });
 
@@ -367,7 +421,7 @@ describe('removeSampleData', () => {
 
         const result = await removeSampleData(project({ datapack: undefined }), d);
 
-        expect(result).toMatchObject({ skipped: true });
+        expect(result).toMatchObject({ ran: false, skipped: true });
         expect(d.startDelete).not.toHaveBeenCalled();
     });
 
@@ -375,5 +429,36 @@ describe('removeSampleData', () => {
         const result = await removeSampleData(project(), deps());
 
         expect(JSON.stringify(result)).not.toContain('fake-test-secret-not-a-secret');
+    });
+
+    it('tells the poller it is watching a reset', async () => {
+        const d = deps();
+
+        await removeSampleData(project(), d);
+
+        expect(d.watch).toHaveBeenCalledWith(
+            expect.objectContaining({ operation: 'reset' }),
+        );
+    });
+
+    /**
+     * `startDelete` is optional on the deps, so a caller wired only for install
+     * can reach here. It must refuse rather than fall through to `startImport`
+     * and IMPORT the pack it was asked to remove.
+     */
+    it('refuses, and imports nothing, when the caller cannot delete', async () => {
+        const d = deps({ startDelete: undefined });
+
+        const result = await removeSampleData(project(), d);
+
+        // It refuses BEFORE the call, and says so. Falling through would hand
+        // `undefined` to `start(...)` and report the TypeError as the reason —
+        // still ran:false, but no longer telling anyone what is actually wrong.
+        expect(result).toMatchObject({
+            ran: false,
+            reason: 'This caller cannot remove sample data.',
+        });
+        expect(d.startImport).not.toHaveBeenCalled();
+        expect(d.watch).not.toHaveBeenCalled();
     });
 });
