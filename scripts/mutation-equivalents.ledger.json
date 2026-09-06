@@ -16365,6 +16365,18 @@
             "decision": "none \u2014 the explicit `return false` is right for the declared Promise<boolean>, and nothing observable depends on it",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-05"
+        },
+        {
+            "module": "src/features/eds/services/patches/externalPatchFetcher.ts",
+            "anchors": [
+                "if (data?.tag_name) return data.tag_name;"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Both mutants on this line end in the same place. Forcing the condition true returns `data.tag_name` \u2014 undefined when the release body has no tag \u2014 and the caller treats a falsy tag exactly as the `return ''` below does: warn, fall back to main. Dropping the `?.` throws only when the parsed body is null, and that throw is caught by this function's own try, which also returns '' and falls back to main. Planted both and ran the whole patches directory: unchanged.",
+            "decision": "none \u2014 the guard is correct and the fallback path makes every outcome identical",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-05"
         }
     ]
 }

@@ -132,6 +132,42 @@ describe('fetchExternalPatches — release pinning', () => {
         expect(contentUrls(recovered)[0]).toContain('/v2.0.0/');
     });
 
+    it('does not read a tag out of a failed release response', async () => {
+        // GitHub answers a rate-limited or erroring request with a body of its
+        // own. Only an OK response is a release; anything else is unpinned, and
+        // trusting a field off an error body would pin the channel to a tag
+        // nobody published.
+        const mock = jest.fn().mockImplementation((url: string) =>
+            url.includes('api.github.com')
+                ? Promise.resolve({
+                      ok: false,
+                      status: 403,
+                      json: () => Promise.resolve({ tag_name: 'v9.9.9' }),
+                  })
+                : Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(LEDGER) })
+        );
+        global.fetch = mock;
+
+        await fetchExternalPatches(SOURCE, 'code-patches.json', makeLogger());
+
+        expect(contentUrls(mock)[0]).toContain('/main/');
+    });
+
+    it('bounds both requests with an abort signal', async () => {
+        // Asserting the ARGUMENT: fetch is mocked, so it resolves at once
+        // whatever it is handed, and a request with no signal only shows itself
+        // as a storefront build hanging on an unresponsive github.
+        const mock = routeFetch({ releaseTag: 'v1.0.0' });
+        global.fetch = mock;
+
+        await fetchExternalPatches(SOURCE, 'code-patches.json', makeLogger());
+
+        expect(mock.mock.calls).toHaveLength(2);
+        for (const call of mock.mock.calls) {
+            expect(call[1]).toEqual(expect.objectContaining({ signal: expect.anything() }));
+        }
+    });
+
     it('caches per ledger file so concurrent callers share one content fetch', async () => {
         const mock = routeFetch({ releaseTag: 'v1.0.0' });
         global.fetch = mock;
@@ -143,5 +179,58 @@ describe('fetchExternalPatches — release pinning', () => {
         ]);
 
         expect(contentUrls(mock)).toHaveLength(1);
+    });
+});
+
+describe('fetchExternalPatches — ledger responses', () => {
+    it('returns an empty list when the ledger carries no patches field', async () => {
+        global.fetch = jest.fn().mockImplementation((url: string) =>
+            url.includes('api.github.com')
+                ? Promise.resolve({
+                      ok: true,
+                      status: 200,
+                      json: () => Promise.resolve({ tag_name: 'v1.0.0' }),
+                  })
+                : Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) })
+        );
+
+        const patches = await fetchExternalPatches(SOURCE, 'code-patches.json', makeLogger());
+
+        // toStrictEqual, not toEqual: `expect([undefined]).toEqual([])` passes.
+        expect(patches).toStrictEqual([]);
+    });
+
+    it('throws on a failed ledger fetch, and lets the next call retry', async () => {
+        // The failure has to REACH the caller — the registries translate it into
+        // a not-applied result and a warning — and it must not be remembered: a
+        // cached rejection would make one 503 permanent for the whole session.
+        let recovered = false;
+        const mock = jest.fn().mockImplementation((url: string) => {
+            if (url.includes('api.github.com')) {
+                return Promise.resolve({
+                    ok: true,
+                    status: 200,
+                    json: () => Promise.resolve({ tag_name: 'v1.0.0' }),
+                });
+            }
+            return recovered
+                ? Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(LEDGER) })
+                : Promise.resolve({
+                      ok: false,
+                      status: 503,
+                      statusText: 'Service Unavailable',
+                      json: () => Promise.resolve({}),
+                  });
+        });
+        global.fetch = mock;
+
+        await expect(
+            fetchExternalPatches(SOURCE, 'code-patches.json', makeLogger())
+        ).rejects.toThrow(/503/);
+
+        recovered = true;
+        await expect(
+            fetchExternalPatches(SOURCE, 'code-patches.json', makeLogger())
+        ).resolves.toStrictEqual(LEDGER.patches);
     });
 });

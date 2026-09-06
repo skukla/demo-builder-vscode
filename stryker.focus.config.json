@@ -8,9 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/helix/helixApiClient.ts",
-        "src/features/eds/services/refreshBlockLibraryHeadless.ts",
-        "src/core/logging/errorLogger.ts"
+        "src/core/logging/stepLogger.ts",
+        "src/features/ai/server/mcpSocketDiscovery.ts",
+        "src/features/dashboard/handlers/dashboardHandlers.ts",
+        "src/features/eds/handlers/storeStructureHandler.ts",
+        "src/features/eds/services/patches/externalPatchFetcher.ts"
     ],
     "reporters": [
         "clear-text",
