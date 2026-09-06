@@ -263,6 +263,96 @@ describe('ProjectCard', () => {
         });
     });
 
+    /**
+     * The pin is a leading marker, not a status line: it appears only for a
+     * pinned project, and its inline flex rule is what keeps it from being
+     * squeezed out by a long project name (the name beside it truncates).
+     */
+    describe('pin indicator', () => {
+        it('marks a pinned project', () => {
+            const project = createProjectsDashboardProject({ name: 'Pinned Demo', pinned: true });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+
+            const pin = screen.getByTestId('project-card-pin-indicator');
+            expect(pin).toHaveAttribute('aria-label', 'Pinned');
+        });
+
+        it('renders no pin for an unpinned project', () => {
+            const project = createProjectsDashboardProject({ name: 'Plain Demo' });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+
+            expect(screen.queryByTestId('project-card-pin-indicator')).not.toBeInTheDocument();
+        });
+
+        it('holds the pin at its own size beside the name', () => {
+            // `flex: 0 0 auto` is the decision: the name is the flexible half of
+            // the header row, so without it the pin is the element that gives way.
+            const project = createProjectsDashboardProject({ name: 'Pinned Demo', pinned: true });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+
+            expect(screen.getByTestId('project-card-pin-indicator')).toHaveStyle({
+                display: 'inline-flex',
+                flex: '0 0 auto',
+            });
+        });
+    });
+
+    /**
+     * The brand/stack line — package name and stack name, in that order. It has
+     * its own slot on the card, and a project that has selected no package has
+     * no slot at all rather than an empty one.
+     */
+    describe('brand and stack summary', () => {
+        function summarySlot(container: HTMLElement): Element | null {
+            return container.querySelector('.project-card-spectrum-components');
+        }
+
+        it('renders the package and stack names in the summary slot', () => {
+            const project = createProjectsDashboardProject({
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-paas',
+            });
+            const { container } = renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
+
+            expect(summarySlot(container)).toHaveTextContent(
+                'CitiSignal \u00b7 Edge Delivery + PaaS'
+            );
+        });
+
+        it('renders no summary slot when the project has selected no package', () => {
+            const project = createProjectsDashboardProject({ selectedPackage: undefined });
+            const { container } = renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
+
+            expect(summarySlot(container)).toBeNull();
+        });
+
+        it('follows the project it is given rather than the first one', () => {
+            const first = createProjectsDashboardProject({
+                selectedPackage: 'citisignal',
+                selectedStack: 'eds-paas',
+            });
+            const second = createProjectsDashboardProject({
+                selectedPackage: 'buildright',
+                selectedStack: 'headless-paas',
+            });
+            const { container, rerender } = renderWithProvider(
+                <ProjectCard project={first} onSelect={jest.fn()} />
+            );
+
+            rerender(
+                <Provider theme={defaultTheme} colorScheme="light">
+                    <ProjectCard project={second} onSelect={jest.fn()} />
+                </Provider>
+            );
+
+            expect(summarySlot(container)).toHaveTextContent('BuildRight \u00b7 Headless + PaaS');
+        });
+    });
+
     describe('interactions', () => {
         it('should call onSelect when clicked', () => {
             const project = createProjectsDashboardProject({ name: 'Clickable Demo' });
@@ -347,6 +437,26 @@ describe('ProjectCard', () => {
 
             const card = screen.getByRole('button');
             expect(card).toHaveAttribute('aria-label', expect.stringContaining('Accessible Demo'));
+        });
+
+        it('names only the lines the card actually renders', () => {
+            // An EDS project at rest has no runtime line and, with nothing
+            // deployed, no deployment line either. Without the filter the label
+            // would carry their empty slots as ", , ".
+            const project = createProjectsDashboardProject({
+                name: 'Quiet Demo',
+                selectedStack: 'eds-paas',
+                selectedPackage: 'citisignal',
+                meshStatusSummary: undefined,
+                edsStorefrontStatusSummary: undefined,
+                appBuilderComponents: {},
+            });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+
+            expect(screen.getByRole('button')).toHaveAttribute(
+                'aria-label',
+                'Quiet Demo, CitiSignal \u00b7 Edge Delivery + PaaS'
+            );
         });
 
         it('should be focusable', () => {
