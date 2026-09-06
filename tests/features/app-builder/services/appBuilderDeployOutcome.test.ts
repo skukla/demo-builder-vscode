@@ -11,7 +11,10 @@
  * suites (deployMeshHeadless, appBuilderComponentRunner-keyed-state).
  */
 
-import { recordDeployOutcome } from '@/features/app-builder/services/appBuilderDeployOutcome';
+import {
+    recordDeployOutcome,
+    resolveKeyedComponentId,
+} from '@/features/app-builder/services/appBuilderDeployOutcome';
 import type { Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
 
@@ -235,6 +238,261 @@ describe('recordDeployOutcome also advances the component instance', () => {
 
         expect(() =>
             recordDeployOutcome(project, 'mesh', 'eds-accs-mesh', { status: 'deployed' })
+        ).not.toThrow();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// resolveKeyedComponentId — which entry an operation lands on.
+//
+// Two rules in sequence: the instance id wins whenever it is already keyed, and
+// only an UNKEYED id falls through to the legacy-migration branch (reuse the one
+// same-kind entry's key). Both the deploy write above and the per-id remove share
+// this, so a wrong answer here either overwrites a sibling or clears the wrong
+// card.
+// ---------------------------------------------------------------------------
+describe('resolveKeyedComponentId', () => {
+    it('answers the instance id when that id is already keyed', () => {
+        const p = project();
+
+        expect(resolveKeyedComponentId(p, 'mesh', 'mesh')).toBe('mesh');
+    });
+
+    // The two rules DISAGREE only here, which is the only way to show the id-first
+    // guard is load-bearing: a keyed entry is targeted by its own id even when a
+    // lone entry of the asked-for kind sits under a different key. Drop the guard
+    // and this call lands on 'mesh' — a write meant for the integration.
+    it('prefers the keyed id over the lone same-kind entry under another key', () => {
+        const p = createMockProject({
+            appBuilderComponents: {
+                mesh: { kind: 'mesh', status: 'deployed', source: { owner: '', repo: '' } },
+                'erp-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                },
+            },
+        });
+
+        expect(resolveKeyedComponentId(p, 'mesh', 'erp-sync')).toBe('erp-sync');
+    });
+
+    // The migration branch counts entries OF THE ASKED KIND, not entries. A
+    // project with one mesh and one integration has exactly one mesh, so an
+    // unkeyed mesh id resolves onto the migrated singleton; counting all entries
+    // would see two, decline the reuse, and strand the write under a fresh key
+    // beside the entry it was meant to update.
+    it('reuses the ONE same-kind entry, ignoring entries of other kinds', () => {
+        const p = createMockProject({
+            appBuilderComponents: {
+                mesh: { kind: 'mesh', status: 'deployed', source: { owner: '', repo: '' } },
+                'erp-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                },
+            },
+        });
+
+        expect(resolveKeyedComponentId(p, 'mesh', 'eds-accs-mesh')).toBe('mesh');
+        expect(resolveKeyedComponentId(p, 'integration', 'wms-sync')).toBe('erp-sync');
+    });
+
+    it('keeps the given id when SEVERAL same-kind entries exist (the N-integration model)', () => {
+        const p = createMockProject({
+            appBuilderComponents: {
+                'erp-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                },
+                'crm-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                },
+            },
+        });
+
+        expect(resolveKeyedComponentId(p, 'integration', 'wms-sync')).toBe('wms-sync');
+    });
+
+    // A project that has never keyed anything carries no record at all, not an
+    // empty one. Reading it unguarded throws before any of the above runs.
+    it('answers the given id on a project with no appBuilderComponents record', () => {
+        const p = createMockProject();
+
+        expect(p.appBuilderComponents).toBeUndefined();
+        expect(resolveKeyedComponentId(p, 'mesh', 'eds-accs-mesh')).toBe('eds-accs-mesh');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// providesEnvVars — the mesh endpoint the storefront is published against.
+//
+// The keyed entry's `providesEnvVars.MESH_ENDPOINT` is what `republishIfProvided`
+// reads. Leaving the previous deploy's endpoint there points the storefront at
+// the namespace the deploy just left.
+// ---------------------------------------------------------------------------
+describe('recordDeployOutcome — provided env vars', () => {
+    function meshProviding(provided: Record<string, string> | undefined): Project {
+        return createMockProject({
+            appBuilderComponents: {
+                mesh: {
+                    kind: 'mesh',
+                    status: 'deployed',
+                    source: { owner: 'skukla', repo: 'commerce-mesh' },
+                    providesEnvVars: provided,
+                },
+            },
+        });
+    }
+
+    it('refreshes MESH_ENDPOINT with the freshly deployed endpoint', () => {
+        const p = meshProviding({ MESH_ENDPOINT: 'https://graph.adobe.io/api/OLD/graphql' });
+
+        recordDeployOutcome(p, 'mesh', 'mesh', {
+            status: 'deployed',
+            endpoint: 'https://graph.adobe.io/api/NEW/graphql',
+        });
+
+        expect(p.appBuilderComponents?.mesh.providesEnvVars).toStrictEqual({
+            MESH_ENDPOINT: 'https://graph.adobe.io/api/NEW/graphql',
+        });
+    });
+
+    it('keeps the recorded endpoint when the outcome carries none', () => {
+        const p = meshProviding({ MESH_ENDPOINT: 'https://graph.adobe.io/api/OLD/graphql' });
+
+        recordDeployOutcome(p, 'mesh', 'mesh', { status: 'error', error: 'boom' });
+
+        expect(p.appBuilderComponents?.mesh.providesEnvVars).toStrictEqual({
+            MESH_ENDPOINT: 'https://graph.adobe.io/api/OLD/graphql',
+        });
+    });
+
+    // Nothing is fabricated: the catalog decides what a component provides. An
+    // integration that provides some OTHER var does not gain a MESH_ENDPOINT just
+    // because its deploy returned an endpoint.
+    it('does not add MESH_ENDPOINT to an entry that does not provide it', () => {
+        const p = createMockProject({
+            appBuilderComponents: {
+                'erp-sync': {
+                    kind: 'integration',
+                    status: 'deployed',
+                    source: { owner: '', repo: '' },
+                    providesEnvVars: { ERP_URL: 'https://erp/old' },
+                },
+            },
+        });
+
+        recordDeployOutcome(p, 'integration', 'erp-sync', {
+            status: 'deployed',
+            endpoint: 'https://runtime/erp-sync',
+        });
+
+        expect(p.appBuilderComponents?.['erp-sync'].providesEnvVars).toStrictEqual({
+            ERP_URL: 'https://erp/old',
+        });
+    });
+
+    it('leaves an entry that provides nothing providing nothing', () => {
+        const p = meshProviding(undefined);
+
+        recordDeployOutcome(p, 'mesh', 'mesh', {
+            status: 'deployed',
+            endpoint: 'https://graph.adobe.io/api/NEW/graphql',
+        });
+
+        expect(p.appBuilderComponents?.mesh.providesEnvVars).toBeUndefined();
+    });
+
+    // A CREATE has no existing entry, so the outcome carries what the catalog says
+    // this component provides — and that map is refreshed the same way.
+    it('takes the provided map from the outcome on a create, endpoint refreshed', () => {
+        const p = createMockProject();
+
+        recordDeployOutcome(
+            p,
+            'mesh',
+            'eds-accs-mesh',
+            {
+                status: 'deployed',
+                endpoint: 'https://graph.adobe.io/api/NEW/graphql',
+                providesEnvVars: { MESH_ENDPOINT: '' },
+            },
+            { create: true }
+        );
+
+        expect(p.appBuilderComponents?.['eds-accs-mesh'].providesEnvVars).toStrictEqual({
+            MESH_ENDPOINT: 'https://graph.adobe.io/api/NEW/graphql',
+        });
+    });
+});
+
+describe('recordDeployOutcome — identity defaults', () => {
+    // The legacy migration's own placeholder. A never-keyed component has no
+    // source to inherit and the outcome may not carry one, and `source` is not
+    // optional on the entry — an empty owner/repo is the shape the rest of the
+    // code already handles.
+    it('gives a never-keyed component the empty source the migration uses', () => {
+        const p = createMockProject();
+
+        recordDeployOutcome(p, 'mesh', 'eds-accs-mesh', { status: 'deployed' }, { create: true });
+
+        expect(p.appBuilderComponents?.['eds-accs-mesh'].source).toStrictEqual({
+            owner: '',
+            repo: '',
+        });
+    });
+
+    it('records a failure with no reason on a component that has no entry yet', () => {
+        const p = createMockProject();
+
+        recordDeployOutcome(p, 'mesh', 'eds-accs-mesh', { status: 'error' }, { create: true });
+
+        expect(p.appBuilderComponents?.['eds-accs-mesh'].error).toBeUndefined();
+    });
+});
+
+describe('recordDeployOutcome — which statuses reach the component instance', () => {
+    function projectWithReadyInstance(): Project {
+        return createMockProject({
+            appBuilderComponents: {},
+            componentInstances: {
+                'eds-accs-mesh': {
+                    id: 'eds-accs-mesh',
+                    name: 'Mesh',
+                    path: '/p/components/eds-accs-mesh',
+                    status: 'ready',
+                },
+            },
+        });
+    }
+
+    // Only the two TERMINAL statuses mirror. An in-progress or stale outcome must
+    // not overwrite the instance, or the dashboard reads a transient as settled.
+    it('leaves the instance alone for a non-terminal status', () => {
+        const p = projectWithReadyInstance();
+
+        recordDeployOutcome(p, 'mesh', 'eds-accs-mesh', { status: 'stale' });
+
+        expect(p.componentInstances?.['eds-accs-mesh'].status).toBe('ready');
+    });
+
+    it('stamps lastUpdated when it does mirror', () => {
+        const p = projectWithReadyInstance();
+
+        recordDeployOutcome(p, 'mesh', 'eds-accs-mesh', { status: 'deployed' });
+
+        expect(p.componentInstances?.['eds-accs-mesh'].lastUpdated).toBeInstanceOf(Date);
+    });
+
+    it('is a no-op on a project carrying no componentInstances record at all', () => {
+        const p = createMockProject({ componentInstances: undefined });
+
+        expect(() =>
+            recordDeployOutcome(p, 'mesh', 'eds-accs-mesh', { status: 'deployed' })
         ).not.toThrow();
     });
 });
