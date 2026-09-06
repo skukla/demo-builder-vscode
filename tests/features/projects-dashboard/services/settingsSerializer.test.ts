@@ -18,7 +18,7 @@ import type { Project } from '@/types/base';
 import { SETTINGS_FILE_VERSION } from '@/types/settingsFile';
 import type { SettingsFile } from '@/types/settingsFile';
 import type { CustomBlockLibrary } from '@/types/blockLibraries';
-import { createMockProject } from '../../../helpers/projectFake';
+import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
 
 describe('settingsSerializer', () => {
     describe('parseSettingsFile', () => {
@@ -534,6 +534,83 @@ describe('settingsSerializer', () => {
             const result = extractSettingsFromProject(project, false);
 
             expect(result.selectedPackage).toBeUndefined();
+        });
+    });
+
+    describe('extractSettingsFromProject - edsConfig extraction', () => {
+        const edsMetadata = {
+            daLiveOrg: 'acme',
+            daLiveSite: 'demo-storefront',
+            githubRepo: 'acme-org/demo-storefront',
+            repoUrl: 'https://github.com/acme-org/demo-storefront',
+            // Derived from brand+stack on import, so deliberately NOT exported.
+            templateOwner: 'demo-system-stores',
+            templateRepo: 'accs-citisignal',
+        };
+
+        function projectWithEdsMetadata(metadata: Record<string, unknown>): Project {
+            return createMockProject({
+                componentInstances: {
+                    'eds-storefront': { ...edsStorefrontInstance(), metadata },
+                },
+            });
+        }
+
+        it('maps the eds-storefront metadata into edsConfig', () => {
+            // The whole object, not a field: this is the shape an import reads
+            // back, and the derived template fields must not ride along.
+            const result = extractSettingsFromProject(
+                projectWithEdsMetadata(edsMetadata),
+                false
+            );
+
+            expect(result.edsConfig).toEqual({
+                daLiveOrg: 'acme',
+                daLiveSite: 'demo-storefront',
+                githubOwner: 'acme-org',
+                repoName: 'demo-storefront',
+                repoUrl: 'https://github.com/acme-org/demo-storefront',
+            });
+        });
+
+        it('splits githubRepo on the slash — owner first, repo second', () => {
+            const result = extractSettingsFromProject(
+                projectWithEdsMetadata({ githubRepo: 'owner-side/repo-side' }),
+                false
+            );
+
+            expect(result.edsConfig?.githubOwner).toBe('owner-side');
+            expect(result.edsConfig?.repoName).toBe('repo-side');
+        });
+
+        it('leaves owner and repo undefined when there is no githubRepo', () => {
+            const result = extractSettingsFromProject(
+                projectWithEdsMetadata({ daLiveOrg: 'acme' }),
+                false
+            );
+
+            expect(result.edsConfig?.githubOwner).toBeUndefined();
+            expect(result.edsConfig?.repoName).toBeUndefined();
+        });
+
+        it('omits edsConfig when the instance carries no metadata', () => {
+            const noMetadata = createMockProject({
+                componentInstances: { 'eds-storefront': edsStorefrontInstance() },
+            });
+
+            expect(extractSettingsFromProject(noMetadata, false).edsConfig).toBeUndefined();
+        });
+
+        it('reads the eds-storefront instance BY ID and no other', () => {
+            // The control. A same-shaped instance under a different id must not
+            // be mistaken for the storefront.
+            const otherComponent = createMockProject({
+                componentInstances: {
+                    'adobe-commerce-accs': { ...edsStorefrontInstance(), metadata: edsMetadata },
+                },
+            });
+
+            expect(extractSettingsFromProject(otherComponent, false).edsConfig).toBeUndefined();
         });
     });
 

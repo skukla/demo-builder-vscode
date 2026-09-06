@@ -39,7 +39,7 @@ import {
     resolveProjectAuthoringExperience,
 } from './authoringExperience.testUtils';
 import { createMockProject, edsStorefrontInstance } from '../../../helpers/projectFake';
-import type { ComponentInstance, Project } from '@/types/base';
+import type { Project } from '@/types/base';
 
 /** A project whose EDS storefront carries the given authoringExperience metadata. */
 function projectWithEdsMetadata(metadata: Record<string, unknown> | undefined): Project {
@@ -48,7 +48,7 @@ function projectWithEdsMetadata(metadata: Record<string, unknown> | undefined): 
             'eds-storefront': {
                 ...edsStorefrontInstance(),
                 ...(metadata === undefined ? {} : { metadata }),
-            } as unknown as ComponentInstance,
+            },
         },
     });
 }

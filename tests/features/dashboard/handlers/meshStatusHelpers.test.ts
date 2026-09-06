@@ -157,7 +157,7 @@ describe('sendDemoStatusUpdate', () => {
             status,
             componentInstances: {
                 'eds-storefront': edsStorefrontInstance(),
-            } as unknown as Project['componentInstances'],
+            },
             componentConfigs: { 'eds-storefront': { MESH_ENDPOINT: 'https://new.mesh/graphql' } },
             frontendEnvState: {
                 envVars: { MESH_ENDPOINT: 'https://old.mesh/graphql' },

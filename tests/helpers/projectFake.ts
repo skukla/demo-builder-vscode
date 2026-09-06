@@ -40,7 +40,7 @@
  * reason, and only removing this function's own cast revealed it.
  */
 
-import type { Project } from '@/types/base';
+import type { ComponentInstance, Project } from '@/types/base';
 
 /**
  * A ready EDS-storefront instance, shaped as the real manifest stores it.
@@ -51,7 +51,12 @@ import type { Project } from '@/types/base';
  * fixture had no frontend suddenly did. A canonical fixture supplies the real
  * SHAPE; it must not pick a product configuration on the caller's behalf.
  */
-export function edsStorefrontInstance() {
+export function edsStorefrontInstance(): ComponentInstance {
+    // ANNOTATED, not inferred. Unannotated, `type` widened to `string` and
+    // `lastUpdated` was the manifest's ISO STRING where `ComponentInstance`
+    // declares a Date — so the shape did not fit the field it is written into,
+    // and both callers reached for `as unknown as` to hand it over. The
+    // annotation is what makes tsc read the literal against the real type.
     return {
         id: 'eds-storefront',
         name: 'EDS Storefront',
@@ -61,7 +66,7 @@ export function edsStorefrontInstance() {
         path: '/projects/demo/components/eds-storefront',
         repoUrl: 'https://github.com/acme/demo-storefront',
         branch: 'main',
-        lastUpdated: '2026-01-01T00:00:00.000Z',
+        lastUpdated: new Date('2026-01-01T00:00:00.000Z'),
     };
 }
 
