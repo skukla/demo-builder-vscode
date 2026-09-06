@@ -16019,6 +16019,19 @@
             "decision": "none \u2014 the empty fallback is the correct absence and renders the same as any list matching nothing",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-07, planted 2026-09-06"
+        },
+        {
+            "module": "src/core/ui/components/navigation/StepRail.tsx",
+            "anchors": [
+                "const active = listRef.current?.querySelector<HTMLElement>(`[data-step=\"${activeId}\"]`);"
+            ],
+            "line": 156,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Stryker drops the optional chain on listRef.current. The ol carrying the ref is rendered unconditionally on every path, including the empty-steps one, and React attaches refs before it runs effects \u2014 so current is never null when this effect body executes, and the guarded and unguarded forms are indistinguishable. Verified by planting the removal: all 28 tests pass, while a planted control emptying the effect's dependency list fails.",
+            "decision": "none \u2014 the ref target always exists by the time the effect runs; the ?. is defensive only",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-08, planted 2026-09-06"
         }
     ]
 }

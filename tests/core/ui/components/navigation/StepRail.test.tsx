@@ -114,6 +114,21 @@ describe('StepRail', () => {
         });
     });
 
+    describe('class composition (the highlight the CSS keys off)', () => {
+        // Exact strings, not `toContain`: the active accent, the status class and the
+        // error class are all appended by one `cn(...)` call, so only exact equality
+        // says an extra class was NOT added as well as that the right one was.
+        it('appends the accent class to the active tab and to no other', () => {
+            renderWithProvider(
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+            );
+            expect(tab('connection').className).toBe('vsteplist-step current active');
+            expect(tab('backend').className).toBe('vsteplist-step done');
+            expect(tab('business-structure').className).toBe('vsteplist-step upcoming');
+            expect(tab('catalog').className).toBe('vsteplist-step locked');
+        });
+    });
+
     describe('locked steps', () => {
         it('marks a locked step aria-disabled and does not call onSelect when clicked', () => {
             const onSelect = jest.fn();
@@ -131,6 +146,35 @@ describe('StepRail', () => {
             );
             expect(tab('catalog')).toHaveAttribute('title', 'Choose a store view first');
             expect(screen.getByText('Choose a store view first')).toBeInTheDocument();
+        });
+
+        it('renders no visually-hidden reason for a locked step that declares none', () => {
+            const steps: StepTab[] = [
+                { id: 'backend', title: 'Backend', status: 'done' },
+                { id: 'catalog', title: 'Catalog', status: 'locked' },
+            ];
+            renderWithProvider(
+                <StepRail steps={steps} activeId="backend" onSelect={jest.fn()} />,
+            );
+            expect(tab('catalog')).not.toHaveAttribute('title');
+            expect(document.querySelectorAll('.vsteplist-sr')).toHaveLength(0);
+        });
+
+        it('ignores a reason on a step that is NOT locked — lock status decides, not the reason', () => {
+            const steps: StepTab[] = [
+                {
+                    id: 'backend',
+                    title: 'Backend',
+                    status: 'done',
+                    lockReason: 'Choose a store view first',
+                },
+                { id: 'connection', title: 'Connection', status: 'current' },
+            ];
+            renderWithProvider(
+                <StepRail steps={steps} activeId="connection" onSelect={jest.fn()} />,
+            );
+            expect(tab('backend')).not.toHaveAttribute('title');
+            expect(document.querySelectorAll('.vsteplist-sr')).toHaveLength(0);
         });
     });
 
@@ -198,6 +242,14 @@ describe('StepRail', () => {
             expect(tab('connection')).not.toHaveAttribute('data-has-error');
         });
 
+        it('appends the error class only to the tab that declares one', () => {
+            renderWithProvider(
+                <StepRail steps={WITH_ERROR} activeId="connection" onSelect={jest.fn()} />,
+            );
+            expect(tab('backend').className).toBe('vsteplist-step done has-error');
+            expect(tab('connection').className).toBe('vsteplist-step current active');
+        });
+
         it('announces the error to screen readers rather than relying on the dot alone', () => {
             renderWithProvider(
                 <StepRail steps={WITH_ERROR} activeId="connection" onSelect={jest.fn()} />,
@@ -229,6 +281,57 @@ describe('StepRail', () => {
                 <StepRail steps={[]} activeId="" onSelect={jest.fn()} />,
             );
             expect(document.querySelectorAll('.vsteplist-step')).toHaveLength(0);
+        });
+    });
+
+    describe('keeping the active tab in view', () => {
+        // jsdom does not implement scrollIntoView at all, so the component's optional
+        // call short-circuits and the arguments are never evaluated unless we supply it.
+        let scrollIntoView: jest.Mock;
+
+        beforeEach(() => {
+            scrollIntoView = jest.fn();
+            (Element.prototype as unknown as Record<string, unknown>).scrollIntoView =
+                scrollIntoView;
+        });
+
+        afterEach(() => {
+            delete (Element.prototype as unknown as Record<string, unknown>).scrollIntoView;
+        });
+
+        it('scrolls the ACTIVE tab into view, nearest on both axes (no vertical nudge)', () => {
+            renderWithProvider(
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+            );
+            expect(scrollIntoView).toHaveBeenCalledTimes(1);
+            expect(scrollIntoView.mock.instances[0]).toBe(tab('connection'));
+            expect(scrollIntoView).toHaveBeenCalledWith({
+                block: 'nearest',
+                inline: 'nearest',
+            });
+        });
+
+        it('re-scrolls when the active step changes — not only on first render', () => {
+            const { rerender } = renderWithProvider(
+                <StepRail steps={STEPS} activeId="connection" onSelect={jest.fn()} />,
+            );
+            scrollIntoView.mockClear();
+
+            rerender(
+                <Provider theme={defaultTheme}>
+                    <StepRail steps={STEPS} activeId="backend" onSelect={jest.fn()} />
+                </Provider>,
+            );
+
+            expect(scrollIntoView).toHaveBeenCalledTimes(1);
+            expect(scrollIntoView.mock.instances[0]).toBe(tab('backend'));
+        });
+
+        it('scrolls nothing when the active id matches no rendered step', () => {
+            renderWithProvider(
+                <StepRail steps={STEPS} activeId="nonexistent" onSelect={jest.fn()} />,
+            );
+            expect(scrollIntoView).not.toHaveBeenCalled();
         });
     });
 
