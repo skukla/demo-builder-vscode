@@ -7,7 +7,10 @@
  * deployedUrls form and the full Adobe context.
  */
 
-import { AppManagementApiError } from '@/features/app-builder/services/appManagementClient';
+import {
+    AppManagementApiError,
+    AppManagementClient,
+} from '@/features/app-builder/services/appManagementClient';
 import {
     APP_MANAGEMENT_HANDS_BACK,
     IO_EVENTS_ENV,
@@ -18,11 +21,23 @@ import {
     type AppManagementUninstallDeps,
     type UninstallerClient,
 } from '@/features/app-builder/services/appManagementUninstaller';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockProject } from '../../../helpers/projectFake';
 
+// The real client is only stood up by the DEFAULT factory test; every other test
+// injects its own. `requireActual` keeps AppManagementApiError a real class so the
+// module's `instanceof` check still means something.
+jest.mock('@/features/app-builder/services/appManagementClient', () => ({
+    ...jest.requireActual('@/features/app-builder/services/appManagementClient'),
+    AppManagementClient: jest.fn(),
+}));
+
 const NS_BASE = 'https://285361-kuklabodeamesh5ngv-stage.adobeioruntime.net/api/v1/web';
+
+/** The uninstaller's own budget arithmetic: TIMEOUTS.LONG over a 5s poll interval. */
+const POLL_ROUNDS = Math.ceil(TIMEOUTS.LONG / 5000);
 
 const DEPLOYED_URLS = {
     'starter-kit/info': `${NS_BASE}/starter-kit/info`,
@@ -202,7 +217,9 @@ describe('uninstallAppManagementApp', () => {
         );
 
         expect(result.status).toBe('failed');
+        expect(result.detail).toContain('uninstaller reported a failure');
         expect(result.detail).toContain(APP_MANAGEMENT_HANDS_BACK);
+        expect(client.startUninstallation).toHaveBeenCalledTimes(1);
         expect(client.clearAssociation).not.toHaveBeenCalled();
     });
 
@@ -230,5 +247,153 @@ describe('uninstallAppManagementApp', () => {
         expect(result.status).toBe('failed');
         expect(result.detail).toContain('No Adobe sign-in');
         expect(client.startUninstallation).not.toHaveBeenCalled();
+    });
+    it('constructs the real client from the derived base URL and the resolved auth', async () => {
+        const constructed = AppManagementClient as unknown as jest.Mock;
+        constructed.mockReset();
+        constructed.mockImplementation(() => makeClient());
+        const deps = makeDeps(makeClient(), { clientFactory: undefined });
+
+        const result = await uninstallAppManagementApp(paasProject(), DEPLOYED_URLS, deps);
+
+        expect(result.status).toBe('uninstalled');
+        expect(constructed).toHaveBeenCalledWith(`${NS_BASE}/app-management`, {
+            accessToken: 'fake-test-pw-not-a-secret',
+            imsOrgId: 'ABC@AdobeOrg',
+        });
+    });
+
+    it('fails without calling the API when the project has no Commerce backend', async () => {
+        const client = makeClient();
+        const project = createMockProject({
+            ...paasProject(),
+            componentSelections: {},
+        });
+
+        const result = await uninstallAppManagementApp(project, DEPLOYED_URLS, makeDeps(client));
+
+        expect(result.status).toBe('failed');
+        expect(result.detail).toContain('no Commerce backend');
+        expect(client.startUninstallation).not.toHaveBeenCalled();
+    });
+
+    it('fails without calling the API when the Adobe context is incomplete', async () => {
+        const client = makeClient();
+        const base = paasProject();
+        const project = createMockProject({
+            ...base,
+            adobe: { ...base.adobe, workspaceName: undefined },
+        });
+
+        const result = await uninstallAppManagementApp(project, DEPLOYED_URLS, makeDeps(client));
+
+        expect(result.status).toBe('failed');
+        expect(result.detail).toContain('Adobe context is missing');
+        expect(client.startUninstallation).not.toHaveBeenCalled();
+    });
+
+    it('hands back — without clearing anything — when the poll budget runs out', async () => {
+        const client = makeClient({
+            startUninstallation: jest.fn().mockResolvedValue({ message: 'queued', id: 'u-1' }),
+            getUninstallationState: jest.fn().mockResolvedValue({ id: 'u-1', status: 'in-progress' }),
+        });
+
+        const result = await uninstallAppManagementApp(
+            paasProject(),
+            DEPLOYED_URLS,
+            makeDeps(client)
+        );
+
+        expect(result.status).toBe('failed');
+        expect(result.detail).toContain('still running');
+        expect(client.getUninstallationState).toHaveBeenCalledTimes(POLL_ROUNDS);
+        expect(client.clearUninstallationState).not.toHaveBeenCalled();
+        expect(client.clearAssociation).not.toHaveBeenCalled();
+    });
+
+    it('gives a self-racing uninstall a bounded number of rounds, then hands back', async () => {
+        const client = makeClient({
+            startUninstallation: jest.fn().mockResolvedValue({ message: 'queued', id: 'u-1' }),
+            getUninstallationState: jest.fn().mockResolvedValue({
+                id: 'u-1',
+                status: 'failed',
+                error: { message: 'HTTP 409 Conflict — Error 409 from upstream' },
+            }),
+        });
+
+        const result = await uninstallAppManagementApp(
+            paasProject(),
+            DEPLOYED_URLS,
+            makeDeps(client)
+        );
+
+        expect(result.status).toBe('failed');
+        expect(result.detail).toContain('transient conflict');
+        expect(client.startUninstallation).toHaveBeenCalledTimes(5);
+        expect(client.clearAssociation).not.toHaveBeenCalled();
+    });
+
+    it('narrates the first round plainly and every later one as a retry', async () => {
+        const onProgress = jest.fn();
+        const client = makeClient({
+            startUninstallation: jest
+                .fn()
+                .mockResolvedValueOnce({ message: 'queued', id: 'u-1' })
+                .mockResolvedValueOnce({ message: 'queued', id: 'u-2' }),
+            getUninstallationState: jest
+                .fn()
+                .mockResolvedValueOnce({
+                    id: 'u-1',
+                    status: 'failed',
+                    error: { message: 'HTTP 409 Conflict — Error 409 from upstream' },
+                })
+                .mockResolvedValueOnce({ id: 'u-2', status: 'succeeded' }),
+        });
+
+        await uninstallAppManagementApp(
+            paasProject(),
+            DEPLOYED_URLS,
+            makeDeps(client, { onProgress })
+        );
+
+        const messages = onProgress.mock.calls.map((call) => call[0]);
+        expect(messages).toHaveLength(2);
+        expect(messages[0]).toContain('Removing the app');
+        expect(messages[1]).toContain('round 2');
+    });
+
+    it('a 409 that is not an App Management error is still a failure, not a skip', async () => {
+        const notOurs = Object.assign(new Error('gateway said 409'), { status: 409 });
+        const client = makeClient({
+            startUninstallation: jest.fn().mockRejectedValue(notOurs),
+        });
+
+        const result = await uninstallAppManagementApp(
+            paasProject(),
+            DEPLOYED_URLS,
+            makeDeps(client)
+        );
+
+        expect(result.status).toBe('failed');
+        expect(result.detail).toContain('gateway said 409');
+    });
+
+    it('an App Management error that is not a 409 is a failure, not a skip', async () => {
+        const client = makeClient({
+            startUninstallation: jest
+                .fn()
+                .mockRejectedValue(
+                    new AppManagementApiError('Start uninstallation failed (HTTP 500)', 500)
+                ),
+        });
+
+        const result = await uninstallAppManagementApp(
+            paasProject(),
+            DEPLOYED_URLS,
+            makeDeps(client)
+        );
+
+        expect(result.status).toBe('failed');
+        expect(result.detail).toContain('HTTP 500');
     });
 });
