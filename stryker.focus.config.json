@@ -8,9 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/patches/contentPatchRegistry.ts",
-        "src/features/eds/services/patches/patchTargetPolicy.ts",
-        "src/features/eds/services/storefront/servedStorefrontConfig.ts"
+        "src/core/utils/quickPickUtils.ts",
+        "src/features/ai/server/consentViaChat.ts",
+        "src/features/app-builder/services/owPackageName.ts",
+        "src/features/dashboard/ui/configure/configureFieldValidation.ts",
+        "src/features/data-installer/services/accsCredentialProvisioner.ts"
     ],
     "reporters": [
         "clear-text",

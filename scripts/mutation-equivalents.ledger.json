@@ -16229,6 +16229,105 @@
             "decision": "none \u2014 the log is the only reason the block has a body, and pinning its wording is banned",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/app-builder/services/owPackageName.ts",
+            "anchors": [
+                ".replace(/[^a-z0-9-]+/g, '-')",
+                ".replace(/^-+|-+$/g, '');"
+            ],
+            "mutants": 3,
+            "category": "other",
+            "reason": "Stryker drops the + quantifier from the character-class replace and from each half of the trim. Between them sits .replace(/-+/g, '-'), which collapses every run of hyphens to one, so by the time either mutated regex is reached no run of length two can exist for the quantifier to match differently. Verified by running the mutated and unmutated sanitizers side by side over every string up to length three from a 15-character alphabet containing the hyphen (2,954 inputs) and 300,000 random longer ones: zero differences. Killing one would need an input the collapse cannot reach, and there is none.",
+            "decision": "none - the quantifiers state the intent and are correct if the collapse is ever reordered away",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/app-builder/services/owPackageName.ts",
+            "anchors": [
+                "const truncatedStem = stem.slice(0, stemBudget).replace(/-+$/g, '') || FALLBACK_STEM;"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The same quantifier argument, on the trailing-hyphen trim applied after truncation: sanitizeStem has already collapsed every run, so the slice can end in at most ONE hyphen and /-$/ removes exactly what /-+$/ removes. Verified over 1,000,000 stem-and-budget pairs drawn from random ids at five truncation points: zero differences. The OTHER regex mutant on this same line - dropping the anchor, so every hyphen goes - is killed by the truncation test, so the line is not exempt as a whole.",
+            "decision": "none - the quantifier is right and the anchored form is what makes it a trim",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/configureFieldValidation.ts",
+            "anchors": [
+                "if (!result.valid && result.error) return result.error;"
+            ],
+            "line": 49,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Swapping && for || cannot change the outcome, because a Validator returns exactly one of two shapes: valid() is { valid: true } with no error, and invalid(message) is { valid: false, error }. When the value is valid both operands are falsy and neither form fires; when it is invalid both are truthy and both return the same message. Killing it would need a validator that reports invalid with no message, which url() and pattern() cannot produce - every failure of theirs is built through invalid(message).",
+            "decision": "none - && reads as the guard it is, and the || form is only accidentally equal",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/dashboard/ui/configure/configureFieldValidation.ts",
+            "anchors": [
+                "if (!result.valid && result.error) return result.error;"
+            ],
+            "line": 58,
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Two mutants on the LAST check in the function, where the statement after it is return undefined. Replacing the condition with true returns result.error unconditionally, which on a valid value IS undefined - the same value by a shorter route, with nothing after it to skip. (The identical mutation on line 49 is killed, because the pattern check still follows that one.) Swapping && for || is equivalent for the reason recorded against line 49: a Validator never reports invalid without a message, nor valid with one.",
+            "decision": "none - the guard is the same shape as the URL one above it and should stay",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/data-installer/services/accsCredentialProvisioner.ts",
+            "anchors": [
+                "} else {"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The whole body of this else branch is one log call saying the service was already subscribed. Emptying it changes nothing a caller can observe - the same result comes back, no collaborator is called differently - so the only assertion that could kill it is on the logger's text, which the ratchet exists to refuse to reward. The branch's real subject, that the subscribe PUT is skipped when the code is already there, is pinned by its own test.",
+            "decision": "none - the else says out loud which way the guard went, and the log is the point of it",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/data-installer/services/accsCredentialProvisioner.ts",
+            "anchors": [
+                "log(`subscribing ${ACCS_SERVICE_CODE} (union of ${subscribed.length + 1} services)`);"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The + 1 exists only inside a log message. The union actually sent to the Console is built on the next line from a spread, and that argument is asserted by the union test; this arithmetic reaches no decision, no return value and no collaborator. The only test that could tell + from - would assert the logger's text, which is banned. Note the classifier reads this as 'other' rather than log wording because the call is a bare log(), not logger.log().",
+            "decision": "none - the count tells the reader how many services the PUT is about to carry",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/data-installer/services/accsCredentialProvisioner.ts",
+            "anchors": [
+                "const credentials = parsed.project?.workspace?.details?.credentials ?? [];"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker fills the fallback array with one string. That array is consumed by exactly one expression - .find(entry => entry.integration_type === 'oauth_server_to_server') - and a string has no integration_type, so find returns undefined for the filled array exactly as it does for the empty one. Every path after it is identical: s2s undefined, clientId undefined, the missing-credential reason. There is no value the fallback could carry that a test could tell apart from none.",
+            "decision": "none - the empty array is what makes the find total",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
+        },
+        {
+            "module": "src/features/ai/server/consentViaChat.ts",
+            "anchors": [
+                "if (!prompt) return 'unavailable';"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "With the guard removed, prompt is undefined and the next statement interpolates prompt.title into the elicitation message - inside the try, and while building the argument, so sendRequest is never reached. The TypeError lands in the catch below, which returns the same 'unavailable'. Both routes therefore agree on everything a test can see: the same return value, and the SDK handle not called. Verified by planting the mutation and driving askChatForConsent with a tool that has no authored consent copy.",
+            "decision": "none - the guard states that a tool with no authored copy is not asked, rather than leaving it to a thrown TypeError",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-03"
         }
     ]
 }

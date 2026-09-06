@@ -146,9 +146,60 @@ describe('provisionAccsCredentials', () => {
 
         const result = await provisionAccsCredentials(deps, TARGET);
 
-        expect(result).toEqual({
+        // The WHOLE reason, not a substring of it: "Cannot read properties of
+        // undefined (reading 'client_secrets')" also contains "secret", so a
+        // looser assertion passes on a crash it was written to rule out.
+        expect(result).toStrictEqual({
             ok: false,
-            reason: expect.stringContaining('secret'),
+            reason: expect.stringContaining('carries no client secret'),
+        });
+    });
+
+    // A download can be well-formed JSON and still be missing any level of the
+    // path this reads. Each one must come back as the reason, not as a TypeError
+    // the outer catch turns into a message nobody can act on.
+    it.each([
+        ['no project at all', {}],
+        ['a project with no workspace', { project: {} }],
+        ['a workspace with no details', { project: { workspace: {} } }],
+        ['details with no credentials', { project: { workspace: { details: {} } } }],
+    ])('reports %s as a missing credential', async (_label, download) => {
+        const { deps } = makeDeps();
+        deps.downloadWorkspaceJson.mockResolvedValue(JSON.stringify(download));
+
+        const result = await provisionAccsCredentials(deps, TARGET);
+
+        expect(result).toStrictEqual({
+            ok: false,
+            reason: expect.stringContaining('carries no client secret'),
+        });
+    });
+
+    it('reports a credential that exists but carries no secrets list', async () => {
+        const { deps } = makeDeps();
+        deps.downloadWorkspaceJson.mockResolvedValue(
+            JSON.stringify({
+                project: {
+                    workspace: {
+                        details: {
+                            credentials: [
+                                {
+                                    integration_type: 'oauth_server_to_server',
+                                    oauth_server_to_server: { client_id: 'cid-1' },
+                                },
+                            ],
+                        },
+                    },
+                },
+            })
+        );
+
+        const result = await provisionAccsCredentials(deps, TARGET);
+
+        // Half a pair is not a pair: an id with no secret must not come back ok.
+        expect(result).toStrictEqual({
+            ok: false,
+            reason: expect.stringContaining('carries no client secret'),
         });
     });
 
@@ -200,5 +251,11 @@ describe('a malformed workspace download', () => {
         expect(result.ok).toBe(false);
         expect(JSON.stringify(result)).not.toContain(secret);
         expect(lines.join('\n')).not.toContain(secret);
+        // The parse failure has to be ANSWERED here, not left to fall through to
+        // the outer catch — that one reports whatever message it was handed.
+        expect(result).toStrictEqual({
+            ok: false,
+            reason: expect.stringContaining('Download it again'),
+        });
     });
 });

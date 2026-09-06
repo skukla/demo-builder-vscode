@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "contentPatchRegistry: unknown-id warning moved above the page filter (real defect) + local-path offline/quiet pins; patchTargetPolicy: every refusal reason categorised; servedStorefrontConfig: abort signal, non-OK body, non-object public.default, non-string values, per-code scope match",
+    "_note": "PL-22 MUT-03: quickPickUtils, consentViaChat, owPackageName, configureFieldValidation, accsCredentialProvisioner to zero open gaps",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -1308,18 +1308,16 @@
             "openGaps": 5
         },
         "src/core/utils/quickPickUtils.ts": {
-            "score": 64.29,
-            "killed": 17,
-            "survived": 10,
+            "score": 100,
+            "killed": 27,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 1,
-            "survivorCategories": {
-                "branch": 10
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 10,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 10
+            "openGaps": 0
         },
         "src/core/utils/singleFlight.ts": {
             "score": 100,
@@ -2476,24 +2474,20 @@
             "openGaps": 0
         },
         "src/features/ai/server/consentViaChat.ts": {
-            "score": 50,
-            "killed": 18,
-            "survived": 15,
-            "noCoverage": 3,
+            "score": 94.44,
+            "killed": 34,
+            "survived": 1,
+            "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "string": 6,
-                "optionalChain": 1,
-                "branch": 1,
-                "other": 7
+                "branch": 1
             },
             "uncoveredCategories": {
-                "string": 2,
-                "block": 1
+                "string": 1
             },
             "highValueSurvivors": 1,
-            "equivalent": 0,
-            "openGaps": 10
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/features/ai/server/contentAuthoringTools.ts": {
             "score": 92.77,
@@ -3236,20 +3230,19 @@
             "openGaps": 5
         },
         "src/features/app-builder/services/owPackageName.ts": {
-            "score": 72.92,
-            "killed": 35,
-            "survived": 13,
+            "score": 87.5,
+            "killed": 42,
+            "survived": 6,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 6,
-                "string": 3,
-                "branch": 4
+                "other": 4,
+                "string": 2
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 4,
-            "equivalent": 0,
-            "openGaps": 10
+            "highValueSurvivors": 0,
+            "equivalent": 4,
+            "openGaps": 0
         },
         "src/features/app-builder/services/runtimeCredentials.ts": {
             "score": 88.37,
@@ -4797,21 +4790,20 @@
             "openGaps": 0
         },
         "src/features/dashboard/ui/configure/configureFieldValidation.ts": {
-            "score": 78.69,
-            "killed": 48,
-            "survived": 12,
+            "score": 93.44,
+            "killed": 57,
+            "survived": 3,
             "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 10,
-                "string": 2
+                "branch": 3
             },
             "uncoveredCategories": {
                 "string": 1
             },
-            "highValueSurvivors": 10,
-            "equivalent": 0,
-            "openGaps": 10
+            "highValueSurvivors": 3,
+            "equivalent": 3,
+            "openGaps": 0
         },
         "src/features/dashboard/ui/configure/configureHelpers.tsx": {
             "score": 97.96,
@@ -5028,24 +5020,20 @@
             "openGaps": 0
         },
         "src/features/data-installer/services/accsCredentialProvisioner.ts": {
-            "score": 65.45,
-            "killed": 36,
-            "survived": 18,
-            "noCoverage": 1,
+            "score": 80,
+            "killed": 44,
+            "survived": 11,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "optionalChain": 5,
-                "string": 9,
-                "other": 1,
-                "block": 2,
-                "branch": 1
+                "other": 2,
+                "string": 8,
+                "block": 1
             },
-            "uncoveredCategories": {
-                "other": 1
-            },
-            "highValueSurvivors": 3,
-            "equivalent": 0,
-            "openGaps": 10
+            "uncoveredCategories": {},
+            "highValueSurvivors": 1,
+            "equivalent": 3,
+            "openGaps": 0
         },
         "src/features/data-installer/services/commerceCredentialBroker.ts": {
             "score": 75.42,
