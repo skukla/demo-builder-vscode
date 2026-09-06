@@ -78,15 +78,51 @@ describe('PromptCard', () => {
             prompt: 'Do something specific.',
         };
 
+        // Handlers are supplied in both of these ON PURPOSE. Without them the
+        // card falls out through the missing-handler guard below instead, so
+        // the tests passed whatever `isUserPrompt` defaulted to — they proved
+        // the guard, not the default.
         it('does not render the kebab when isUserPrompt is omitted (curated default)', () => {
-            renderCard({ prompt: USER_PROMPT });
+            renderCard({
+                prompt: USER_PROMPT,
+                onEdit: jest.fn(),
+                onDuplicate: jest.fn(),
+                onDelete: jest.fn(),
+            });
             expect(screen.queryByLabelText(/more actions/i)).not.toBeInTheDocument();
         });
 
         it('does not render the kebab when isUserPrompt is false', () => {
-            renderCard({ prompt: USER_PROMPT, isUserPrompt: false });
+            renderCard({
+                prompt: USER_PROMPT,
+                isUserPrompt: false,
+                onEdit: jest.fn(),
+                onDuplicate: jest.fn(),
+                onDelete: jest.fn(),
+            });
             expect(screen.queryByLabelText(/more actions/i)).not.toBeInTheDocument();
         });
+
+        // Every kebab item invokes a handler, so a card missing any ONE of them
+        // would offer actions that do nothing. It renders as a plain card
+        // instead — and it must still LAUNCH, which is the card's whole job.
+        it.each([['onEdit'], ['onDuplicate'], ['onDelete']])(
+            'renders the bare card when %s is missing, even with isUserPrompt',
+            (missing) => {
+                const handlers: Record<string, jest.Mock> = {
+                    onEdit: jest.fn(),
+                    onDuplicate: jest.fn(),
+                    onDelete: jest.fn(),
+                };
+                delete handlers[missing];
+                const onLaunch = jest.fn();
+                renderCard({ prompt: USER_PROMPT, isUserPrompt: true, onLaunch, ...handlers });
+
+                expect(screen.queryByLabelText(/more actions/i)).not.toBeInTheDocument();
+                fireEvent.click(screen.getByTestId('ai-prompt-card'));
+                expect(onLaunch).toHaveBeenCalledTimes(1);
+            }
+        );
 
         it('renders the kebab when isUserPrompt is true', () => {
             renderCard({
@@ -302,5 +338,95 @@ describe('PromptCard', () => {
             screen.getByLabelText(/more actions/i).click();
             expect(screen.queryByText('Open in workbench')).not.toBeInTheDocument();
         });
+    });
+});
+
+/**
+ * The card acts on the prompt as it is NOW.
+ *
+ * Both handlers are memoised, so a dependency list that stops listing what they
+ * close over freezes them at the first render: the kebab would keep toggling
+ * the pin state the card had when it mounted, and the body click would keep
+ * calling the launcher the parent has already replaced. Neither shows up in a
+ * single-render test — the values only diverge once the props change.
+ */
+describe('PromptCard — memoised handlers follow the current props', () => {
+    const USER_PROMPT = {
+        id: 'user-1',
+        title: 'My prompt',
+        prompt: 'Do something specific.',
+    };
+
+    function renderThenUpdate(
+        first: React.ComponentProps<typeof PromptCard>,
+        second: React.ComponentProps<typeof PromptCard>
+    ) {
+        const { rerender } = render(
+            <Provider theme={defaultTheme}>
+                <PromptCard {...first} />
+            </Provider>
+        );
+        rerender(
+            <Provider theme={defaultTheme}>
+                <PromptCard {...second} />
+            </Provider>
+        );
+    }
+
+    it('toggles from the pinned state the card shows now, not the one it mounted with', () => {
+        const onPinToggle = jest.fn();
+        const shared = {
+            isUserPrompt: true as const,
+            onLaunch: jest.fn(),
+            onEdit: jest.fn(),
+            onDuplicate: jest.fn(),
+            onDelete: jest.fn(),
+            onPinToggle,
+        };
+        renderThenUpdate(
+            { prompt: USER_PROMPT, ...shared },
+            { prompt: { ...USER_PROMPT, pinned: true }, ...shared }
+        );
+
+        screen.getByLabelText(/more actions/i).click();
+        screen.getByText('Unpin').click();
+
+        expect(onPinToggle).toHaveBeenCalledWith(false);
+    });
+
+    it('copies the body the card shows now, not the one it mounted with', () => {
+        const onCopy = jest.fn();
+        const shared = {
+            isUserPrompt: true as const,
+            onLaunch: jest.fn(),
+            onEdit: jest.fn(),
+            onDuplicate: jest.fn(),
+            onDelete: jest.fn(),
+            onPinToggle: jest.fn(),
+            onCopy,
+        };
+        renderThenUpdate(
+            { prompt: USER_PROMPT, ...shared },
+            { prompt: { ...USER_PROMPT, prompt: 'Edited body.' }, ...shared }
+        );
+
+        screen.getByLabelText(/more actions/i).click();
+        screen.getByText('Copy prompt').click();
+
+        expect(onCopy).toHaveBeenCalledWith('Edited body.');
+    });
+
+    it('launches through the handler the parent hands it now', () => {
+        const stale = jest.fn();
+        const current = jest.fn();
+        renderThenUpdate(
+            { prompt: USER_PROMPT, onLaunch: stale },
+            { prompt: USER_PROMPT, onLaunch: current }
+        );
+
+        fireEvent.click(screen.getByTestId('ai-prompt-card'));
+
+        expect(current).toHaveBeenCalledTimes(1);
+        expect(stale).not.toHaveBeenCalled();
     });
 });
