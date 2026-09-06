@@ -15278,6 +15278,31 @@
             "decision": "none \u2014 an explicit undefined and an implicit one are the same value",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/commands/claudeCodeFootprint.ts",
+            "anchors": [
+                "if (oldestMs === undefined || ms < oldestMs) oldestMs = ms;"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "The mutant widens `ms < oldestMs` to `ms <= oldestMs`, and the two differ only when ms equals oldestMs \u2014 where the guarded statement assigns oldestMs the value it already holds. No transcript tree can make that assignment observable, because the only reader is the ISO date rendered from oldestMs and both branches leave it identical. Planted and re-run 2026-09-06: all 14 suite tests pass, as they must.",
+            "decision": "none \u2014 the strict comparison is correct and the equal case is a no-op assignment",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/commands/claudeCodeFootprint.ts",
+            "anchors": [
+                "} catch (error) {",
+                "return { root, exists: true, error: (error as Error).message };"
+            ],
+            "mutants": 3,
+            "category": "block",
+            "reason": "The outer catch is the module's 'never throws' guarantee and nothing a real filesystem can present enters it. Every operation after the root readdir is already guarded: directorySize and transcriptStats each wrap their own readdir and their per-entry stat, path.join and Array.sort cannot throw, and the one unguarded expression left \u2014 new Date(oldestMs).toISOString() \u2014 cannot see an out-of-range value because utimes clamps a far-future time to the int64 nanosecond ceiling (probed 2026-09-06: 9e12 seconds stored as mtimeMs 9223372036854, well inside Date's range). Reaching it would need an invented Dirent whose isDirectory() throws, which is a shape no fs produces. Planted 2026-09-06 \u2014 the catch body emptied and its return replaced \u2014 and all 14 tests pass, because no test enters it either.",
+            "decision": "none \u2014 the catch keeps the documented never-throws contract for future unguarded edits; deleting it would remove the error field's only producer",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }
