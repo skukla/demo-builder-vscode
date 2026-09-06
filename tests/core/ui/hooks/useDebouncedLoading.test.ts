@@ -219,6 +219,42 @@ describe('useDebouncedLoading', () => {
         });
     });
 
+    describe('timer ownership', () => {
+        /**
+         * The hook must not be the reason a node process stays alive, so it unrefs
+         * the timer it arms. jsdom's setTimeout only ever returns a number, so
+         * nothing reaches that branch by accident — the node case has to be handed a
+         * timer that HAS unref. The swap is confined to the render that arms the
+         * timer, and the real ids are cleared here rather than by the hook, whose
+         * clearTimeout runs after the globals are back.
+         */
+        it('unrefs the pending timer when the host timer supports it', () => {
+            const unref = jest.fn();
+            const armed: ReturnType<typeof setTimeout>[] = [];
+            const realSetTimeout = global.setTimeout;
+            const realClearTimeout = global.clearTimeout;
+
+            const { rerender } = renderHook(
+                ({ isLoading }) => useDebouncedLoading(isLoading, 300),
+                { initialProps: { isLoading: false } }
+            );
+
+            try {
+                global.setTimeout = ((fn: () => void, ms?: number) => {
+                    armed.push(realSetTimeout(fn, ms));
+                    return { unref };
+                }) as unknown as typeof global.setTimeout;
+
+                rerender({ isLoading: true });
+            } finally {
+                global.setTimeout = realSetTimeout;
+                for (const id of armed) realClearTimeout(id);
+            }
+
+            expect(unref).toHaveBeenCalledTimes(1);
+        });
+    });
+
     describe('edge cases', () => {
         it('handles delay of 0', () => {
             const { result, rerender } = renderHook(
