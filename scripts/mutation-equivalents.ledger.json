@@ -13598,6 +13598,42 @@
             "decision": "none \u2014 the array is local and its only reader compares against a closed set of chip codes",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/dashboard/handlers/destinationHandlers.ts",
+            "anchors": [
+                "project.adobe?.workspace === nextWorkspace.id"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "This line is only evaluated when the line above it was true, and that requires project.adobe?.projectId to equal nextProject.id \u2014 a string the caller has already proved non-empty. So project.adobe is guaranteed to exist by the time this optional chain runs, and removing the ?. cannot throw. Verified by planting project.adobe.workspace: all 40 tests pass, including the one that drives a project carrying no adobe at all (which short-circuits on the line above).",
+            "decision": "none \u2014 the ?. mirrors the line above it and reads as one condition; splitting the two spellings would be worse",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/dashboard/handlers/destinationHandlers.ts",
+            "anchors": [
+                "if (project.appBuilderComponents?.[id]?.kind === 'mesh') {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "routeCardStatus is not exported and has exactly one caller: the callback handed to moveAppBuilderComponentsToDestination, which the handler only reaches when Object.keys(project.appBuilderComponents).length > 0. So the map is always present when this runs and dropping the FIRST ?. cannot throw; the second ?. is reachable and is killed by the unknown-id test. Verified by planting project.appBuilderComponents[id]?.kind \u2014 all 40 tests pass.",
+            "decision": "none \u2014 the map is optional on the type, so the ?. is what typechecks; only its runtime failure mode is unreachable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/dashboard/handlers/destinationHandlers.ts",
+            "anchors": [
+                "if (move.moved.length > 0 && previous) {"
+            ],
+            "mutants": 7,
+            "category": "branch",
+            "reason": "The whole body of this guard is one context.logger.info call, so every mutant of the condition \u2014 flipping it, widening the comparison, swapping && for || \u2014 changes nothing a test can observe except that log line's presence and wording. Asserting either is what tests/sop/no-logger-wording-assertions.test.ts bans and what the mutation worklist filters out by design (a log-only branch is noise). Verified by planting length >= 0 || previous: all 40 tests pass.",
+            "decision": "none \u2014 the line tells an SC that the previous deployments are still in the Console and worth removing; it is the guard, not the message, that is untestable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
