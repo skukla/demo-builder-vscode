@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "MUT-01 React group: EmptyState centering, ControlPanelLayout secondary cap, GridLayout class list, Spinner indeterminate/size; three constant-deps equivalents ledgered",
+    "_note": "MUT-02 React group: useOrgSwitchFlow guard release, useImportProgress payload-less push, UtilityBar dead compact prop removed; two constant-dependency-array equivalents ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -4255,22 +4255,21 @@
             "openGaps": 0
         },
         "src/features/dashboard/services/onOpenChecks/mcpHealthCheck.ts": {
-            "score": 78.13,
-            "killed": 25,
-            "survived": 6,
+            "score": 81.25,
+            "killed": 26,
+            "survived": 5,
             "noCoverage": 1,
             "timeout": 0,
             "survivorCategories": {
                 "string": 1,
-                "logPresentation": 4,
-                "other": 1
+                "logPresentation": 4
             },
             "uncoveredCategories": {
                 "logPresentation": 1
             },
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 1
+            "openGaps": 0
         },
         "src/features/dashboard/services/onOpenChecks/meshVerifyCheck.ts": {
             "score": 81.25,
@@ -4288,19 +4287,18 @@
             "openGaps": 0
         },
         "src/features/dashboard/services/onOpenChecks/orchestrator.ts": {
-            "score": 94.29,
-            "killed": 33,
-            "survived": 2,
+            "score": 97.14,
+            "killed": 34,
+            "survived": 1,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 1,
                 "logPresentation": 1
             },
             "uncoveredCategories": {},
-            "highValueSurvivors": 1,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 1
+            "openGaps": 0
         },
         "src/features/dashboard/services/onOpenChecks/orgContextCheck.ts": {
             "score": 91.78,
@@ -5213,8 +5211,8 @@
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 1
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/features/dashboard/ui/hooks/useLiveDestination.ts": {
             "score": 90.91,
@@ -5227,22 +5225,20 @@
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 1
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/features/dashboard/ui/hooks/useOrgSwitchFlow.ts": {
-            "score": 95.65,
-            "killed": 22,
-            "survived": 1,
+            "score": 100,
+            "killed": 23,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 1
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 1,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 1
+            "openGaps": 0
         },
         "src/features/dashboard/ui/hooks/useRowStatusOverrides.ts": {
             "score": 90.63,
@@ -5470,18 +5466,16 @@
             "openGaps": 0
         },
         "src/features/data-installer/ui/hooks/useImportProgress.ts": {
-            "score": 92.31,
-            "killed": 12,
-            "survived": 1,
+            "score": 100,
+            "killed": 13,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "optionalChain": 1
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 1
+            "openGaps": 0
         },
         "src/features/data-installer/ui/importDependencies.ts": {
             "score": 100,
@@ -7423,35 +7417,31 @@
             "openGaps": 0
         },
         "src/features/mesh/handlers/shared.ts": {
-            "score": 96.43,
-            "killed": 27,
+            "score": 100,
+            "killed": 28,
             "survived": 0,
-            "noCoverage": 1,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {},
-            "uncoveredCategories": {
-                "block": 1
-            },
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 1
+            "openGaps": 0
         },
         "src/features/mesh/handlers/subscribeHandler.ts": {
-            "score": 81.48,
-            "killed": 22,
+            "score": 85.19,
+            "killed": 23,
             "survived": 4,
-            "noCoverage": 1,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "string": 3,
-                "logPresentation": 1
+                "logPresentation": 2,
+                "string": 2
             },
-            "uncoveredCategories": {
-                "other": 1
-            },
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 1
+            "openGaps": 0
         },
         "src/features/mesh/services/deployMeshHeadless.ts": {
             "score": 82.61,
@@ -7588,18 +7578,16 @@
             "openGaps": 0
         },
         "src/features/mesh/services/meshUpdateDecline.ts": {
-            "score": 92.86,
-            "killed": 13,
-            "survived": 1,
+            "score": 100,
+            "killed": 14,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "optionalChain": 1
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 1
+            "openGaps": 0
         },
         "src/features/mesh/services/meshVerifier.ts": {
             "score": 82.33,
@@ -9205,18 +9193,16 @@
             "openGaps": 0
         },
         "src/features/sidebar/ui/views/UtilityBar.tsx": {
-            "score": 92.86,
+            "score": 100,
             "killed": 13,
-            "survived": 1,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "branch": 1
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
-            "highValueSurvivors": 1,
+            "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 1
+            "openGaps": 0
         },
         "src/features/updates/commands/checkUpdates.ts": {
             "score": 92.33,

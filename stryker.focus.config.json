@@ -8,13 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/components/feedback/EmptyState.tsx",
-        "src/core/ui/components/layout/ControlPanelLayout.tsx",
-        "src/core/ui/components/layout/GridLayout.tsx",
-        "src/core/ui/components/ui/CardActionsMenu.tsx",
-        "src/core/ui/components/ui/Spinner.tsx",
-        "src/core/ui/hooks/useSelectableDefault.ts",
-        "src/core/ui/hooks/useVSCodeMessage.ts"
+        "src/features/dashboard/ui/hooks/useLiveDaLiveUrl.ts",
+        "src/features/dashboard/ui/hooks/useLiveDestination.ts",
+        "src/features/dashboard/ui/hooks/useOrgSwitchFlow.ts",
+        "src/features/data-installer/ui/hooks/useImportProgress.ts",
+        "src/features/sidebar/ui/views/UtilityBar.tsx"
     ],
     "reporters": [
         "clear-text",
