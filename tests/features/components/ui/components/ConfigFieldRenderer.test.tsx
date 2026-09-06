@@ -6,19 +6,12 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import '@testing-library/jest-dom';
 import { ConfigFieldRenderer } from '@/features/components/ui/components/ConfigFieldRenderer';
 import { UniqueField } from '@/features/components/ui/hooks/useComponentConfig';
-
-// Mock useSelectableDefault hook
-jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
-    useSelectableDefault: () => ({
-        UNSAFE_className: 'selectable-default',
-    }),
-}));
 
 // Helper to render with Spectrum Provider
 const renderWithProvider = (ui: React.ReactElement) => {
@@ -122,6 +115,24 @@ describe('ConfigFieldRenderer', () => {
             expect(screen.queryByText('This field is required')).not.toBeInTheDocument();
         });
 
+        it('does NOT normalize on blur — normalization is url-only', () => {
+            const onNormalizeUrl = jest.fn();
+            renderWithProvider(
+                <ConfigFieldRenderer
+                    field={textField}
+                    value="trailing/"
+                    error={undefined}
+                    isTouched={false}
+                    onUpdate={mockOnUpdate}
+                    onNormalizeUrl={onNormalizeUrl}
+                />
+            );
+
+            fireEvent.blur(screen.getByLabelText(/Test Field/i));
+
+            expect(onNormalizeUrl).not.toHaveBeenCalled();
+        });
+
         it('renders field wrapper with correct id', () => {
             const { container } = renderWithProvider(
                 <ConfigFieldRenderer
@@ -174,6 +185,39 @@ describe('ConfigFieldRenderer', () => {
 
             expect(screen.getByDisplayValue('https://api.example.com')).toBeInTheDocument();
         });
+
+        it('normalizes THIS field on blur, naming it to the caller', () => {
+            const onNormalizeUrl = jest.fn();
+            renderWithProvider(
+                <ConfigFieldRenderer
+                    field={urlField}
+                    value="https://api.example.com/"
+                    error={undefined}
+                    isTouched={false}
+                    onUpdate={mockOnUpdate}
+                    onNormalizeUrl={onNormalizeUrl}
+                />
+            );
+
+            fireEvent.blur(screen.getByLabelText(/API URL/i));
+
+            // Which field is normalized is the whole content of the call.
+            expect(onNormalizeUrl).toHaveBeenCalledWith(urlField);
+        });
+
+        it('blurs harmlessly when no normalizer was handed in', () => {
+            renderWithProvider(
+                <ConfigFieldRenderer
+                    field={urlField}
+                    value="https://api.example.com/"
+                    error={undefined}
+                    isTouched={false}
+                    onUpdate={mockOnUpdate}
+                />
+            );
+
+            expect(() => fireEvent.blur(screen.getByLabelText(/API URL/i))).not.toThrow();
+        });
     });
 
     describe('password field type', () => {
@@ -198,6 +242,24 @@ describe('ConfigFieldRenderer', () => {
             );
 
             expect(screen.getByLabelText(/API Key/i)).toBeInTheDocument();
+        });
+
+        it('reports a typed password to onUpdate against its own field', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
+            renderWithProvider(
+                <ConfigFieldRenderer
+                    field={passwordField}
+                    value=""
+                    error={undefined}
+                    isTouched={false}
+                    onUpdate={mockOnUpdate}
+                />
+            );
+
+            await user.type(screen.getByLabelText(/API Key/i), 'x');
+
+            expect(mockOnUpdate).toHaveBeenCalledWith(passwordField, 'x');
         });
 
         it('renders password field with masked input', () => {
@@ -260,6 +322,50 @@ describe('ConfigFieldRenderer', () => {
             expect(picker).toBeInTheDocument();
             // The picker shows the selected label text
             expect(picker?.textContent).toContain('Staging');
+        });
+
+        it('reports the chosen option key to onUpdate', () => {
+            renderWithProvider(
+                <ConfigFieldRenderer
+                    field={selectField}
+                    value=""
+                    error={undefined}
+                    isTouched={false}
+                    onUpdate={mockOnUpdate}
+                />
+            );
+
+            fireEvent.change(screen.getByTestId('spectrum-picker-select'), {
+                target: { value: 'dev' },
+            });
+
+            // The VALUE, not the label, and not a stringified boolean.
+            expect(mockOnUpdate).toHaveBeenCalledWith(selectField, 'dev');
+        });
+
+        it('renders a select whose options key is absent entirely', () => {
+            const fieldWithNoOptionsKey: UniqueField = {
+                key: 'NO_OPTIONS',
+                componentIds: ['test-component'],
+                label: 'No Options',
+                type: 'select',
+                required: false,
+            };
+
+            const { container } = renderWithProvider(
+                <ConfigFieldRenderer
+                    field={fieldWithNoOptionsKey}
+                    value=""
+                    error={undefined}
+                    isTouched={false}
+                    onUpdate={mockOnUpdate}
+                />
+            );
+
+            expect(container.querySelector('button[type="button"]')).toBeInTheDocument();
+            // And offers NOTHING to choose — the empty-list fallback must stay
+            // empty rather than become a phantom option.
+            expect(container.querySelectorAll('option')).toHaveLength(0);
         });
 
         it('handles select without options gracefully', () => {
@@ -376,6 +482,21 @@ describe('ConfigFieldRenderer', () => {
             required: false,
         };
 
+        /**
+         * useSelectableDefault's whole contract is an onFocus that selects the
+         * field's text, so the only honest question is whether focusing the
+         * input reaches `select()`. The hook itself is REAL here — mocking it
+         * meant asserting an invented prop shape it never returns.
+         */
+        const selectableDefaultApplied = (container: HTMLElement) => {
+            const input = container.querySelector('input')!;
+            const select = jest.spyOn(input, 'select');
+            fireEvent.focus(input);
+            const applied = select.mock.calls.length > 0;
+            select.mockRestore();
+            return applied;
+        };
+
         it('applies selectable default props when value equals default', () => {
             const { container } = renderWithProvider(
                 <ConfigFieldRenderer
@@ -387,12 +508,8 @@ describe('ConfigFieldRenderer', () => {
                 />
             );
 
-            // When value matches default, the useSelectableDefault hook is applied
-            // The hook adds onFocus handler to select all text for easy replacement
-            // Verify the text field is rendered with the default value
-            const input = container.querySelector('input');
-            expect(input).toBeInTheDocument();
-            expect(input).toHaveValue('default_store');
+            expect(container.querySelector('input')).toHaveValue('default_store');
+            expect(selectableDefaultApplied(container)).toBe(true);
         });
 
         it('does not apply selectable default props when value differs from default', () => {
@@ -406,10 +523,117 @@ describe('ConfigFieldRenderer', () => {
                 />
             );
 
-            // When value differs from default, verify field renders with custom value
-            const input = container.querySelector('input');
-            expect(input).toBeInTheDocument();
-            expect(input).toHaveValue('custom_store');
+            expect(container.querySelector('input')).toHaveValue('custom_store');
+            expect(selectableDefaultApplied(container)).toBe(false);
+        });
+
+        it('does not apply them to a field that declares no default at all', () => {
+            const noDefault: UniqueField = {
+                key: 'FREE_TEXT',
+                componentIds: ['test-component'],
+                label: 'Free Text',
+                type: 'text',
+                required: false,
+            };
+
+            const { container } = renderWithProvider(
+                <ConfigFieldRenderer
+                    field={noDefault}
+                    value="anything"
+                    error={undefined}
+                    isTouched={false}
+                    onUpdate={mockOnUpdate}
+                />
+            );
+
+            expect(selectableDefaultApplied(container)).toBe(false);
+        });
+
+        it('an empty value is never the default, even when the default is empty', () => {
+            const emptyDefault: UniqueField = {
+                key: 'EMPTY_DEFAULT',
+                componentIds: ['test-component'],
+                label: 'Empty Default',
+                type: 'text',
+                default: '',
+                required: false,
+            };
+
+            const { container } = renderWithProvider(
+                <ConfigFieldRenderer
+                    field={emptyDefault}
+                    value=""
+                    error={undefined}
+                    isTouched={false}
+                    onUpdate={mockOnUpdate}
+                />
+            );
+
+            expect(selectableDefaultApplied(container)).toBe(false);
+        });
+
+        it('applies them to a password field on its default too', () => {
+            const passwordWithDefault: UniqueField = {
+                key: 'SEEDED_SECRET',
+                componentIds: ['test-component'],
+                label: 'Seeded Secret',
+                type: 'password',
+                default: 'seed',
+                required: false,
+            };
+
+            const { container } = renderWithProvider(
+                <ConfigFieldRenderer
+                    field={passwordWithDefault}
+                    value="seed"
+                    error={undefined}
+                    isTouched={false}
+                    onUpdate={mockOnUpdate}
+                />
+            );
+
+            expect(selectableDefaultApplied(container)).toBe(true);
+        });
+    });
+
+    describe('help content', () => {
+        const fieldWithHelp: UniqueField = {
+            key: 'HELPED_FIELD',
+            componentIds: ['test-component'],
+            label: 'Helped Field',
+            type: 'text',
+            required: false,
+            help: { title: 'Where to find it', text: 'Look in the console.' },
+        };
+
+        it('renders a help button beside the label when the field carries help', () => {
+            renderWithProvider(
+                <ConfigFieldRenderer
+                    field={fieldWithHelp}
+                    value=""
+                    error={undefined}
+                    isTouched={false}
+                    onUpdate={mockOnUpdate}
+                />
+            );
+
+            expect(screen.getByRole('button', { name: /Helped Field/i })).toBeInTheDocument();
+        });
+
+        it('renders no help button for a field without help', () => {
+            const plain: UniqueField = { ...fieldWithHelp, help: undefined };
+
+            renderWithProvider(
+                <ConfigFieldRenderer
+                    field={plain}
+                    value=""
+                    error={undefined}
+                    isTouched={false}
+                    onUpdate={mockOnUpdate}
+                />
+            );
+
+            expect(screen.queryByRole('button')).not.toBeInTheDocument();
         });
     });
 

@@ -14627,6 +14627,18 @@
             "decision": "none \u2014 the guard is defence against a re-entry the listener bookkeeping makes impossible",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/components/ui/components/ConfigFieldRenderer.tsx",
+            "anchors": [
+                "default:"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Stryker empties the switch's default clause, so an unrecognised field type returns undefined where the source returns null. React 18.3.1 renders the two identically and warns about neither \u2014 planted the mutant (default clause body deleted) and the 31-test suite stayed green with no console output. The only way to see the difference is to call the component as a plain function and inspect its return, which asserts a distinction no rendered surface has. The decision itself, that an unknown type renders nothing, is asserted by the 'unknown field type' test.",
+            "decision": "none \u2014 null and undefined are the same value to every consumer this component has",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
