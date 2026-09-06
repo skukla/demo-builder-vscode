@@ -15495,6 +15495,18 @@
             "decision": "none \u2014 the filter is correct formatting for a message that is by design the only observer of this expression",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/eds/services/configService/siteConfigRegistrar.ts",
+            "anchors": [
+                "let last: SiteRegistrationOutcome = { registered: false, statusCode: 403 };"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "The initial value is never returned. The loop runs CONFIG_SERVICE_PROPAGATION_DELAYS_MS.length times (always 3), and every path through its body either returns or assigns `last = outcome`, so any exit through `return last` has assigned it at least once. Only an empty delays array could expose the initializer, and that array is a module constant. Planted 2026-09-06 as { registered: true, statusCode: 999 } \u2014 a bigger change than either mutant \u2014 with the full retry suite driving all three attempts: all 32 tests pass. Removing it is worse than keeping it: TypeScript requires `last` be assigned before `return last`, so the alternatives are a `?? { ... }` at the return (the same dead literal plus a new branch) or an extra last-attempt check inside the loop.",
+            "decision": "none \u2014 the initializer is the compiler's requirement, and it states the value an exhausted loop would report",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }

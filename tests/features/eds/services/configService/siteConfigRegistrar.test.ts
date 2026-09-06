@@ -28,12 +28,14 @@ import {
     CONFIG_SERVICE_PROPAGATION_DELAYS_MS,
 } from '@/features/eds/services/configService/siteConfigRegistrar';
 import { registerPublishKey } from '@/features/eds/services/pdp/publishKeyRegistrar';
+import { sleep } from '@/core/utils/sleep';
 import type { RegistrarConfigService } from '@/features/eds/services/configService/siteConfigRegistrar';
 import { DaLiveAuthError } from '@/features/eds/services/types';
 import type { Logger } from '@/types/logger';
 import { createMockLogger } from '../../../../helpers/loggerFake';
 
 const mockRegisterPublishKey = registerPublishKey as jest.MockedFunction<typeof registerPublishKey>;
+const mockSleep = sleep as jest.MockedFunction<typeof sleep>;
 
 const tokenProvider = { getAccessToken: jest.fn().mockResolvedValue('da-live-token') };
 
@@ -269,6 +271,147 @@ describe('registerSiteConfig', () => {
         expect(onProgress).toHaveBeenCalledWith(
             expect.stringContaining('Waiting for Configuration Service access')
         );
+    });
+
+    /**
+     * The backoff exists to outlast a documented 30–90s admin-role propagation
+     * window. Nothing pinned the delays themselves, so halving them would have
+     * left every attempt inside the window while the suite stayed green — and
+     * the failure that produces is "the repair did not work", with no clue why.
+     */
+    describe('the backoff outlasts the propagation window', () => {
+        it('waits longer each attempt, past 90s in total', async () => {
+            const delays = [...CONFIG_SERVICE_PROPAGATION_DELAYS_MS];
+
+            expect(delays.every((d, i) => i === 0 || d > delays[i - 1])).toBe(true);
+            expect(delays.reduce((a, b) => a + b, 0)).toBeGreaterThan(90_000);
+        });
+
+        it('hands the registrar’s own delays to sleep, in order', async () => {
+            await run(service(jest.fn().mockResolvedValue({ success: false, statusCode: 403 })), true);
+
+            expect(mockSleep.mock.calls.map((c) => c[0])).toEqual([
+                ...CONFIG_SERVICE_PROPAGATION_DELAYS_MS,
+            ]);
+        });
+    });
+
+    it('numbers the progress messages from one', async () => {
+        // The SC reads these while they wait. `attempt` is zero-based, so the
+        // +1 is what stops the first message reading "(0/3)".
+        const onProgress = jest.fn();
+
+        await run(
+            service(jest.fn().mockResolvedValue({ success: false, statusCode: 403 })),
+            true,
+            onProgress
+        );
+
+        const n = CONFIG_SERVICE_PROPAGATION_DELAYS_MS.length;
+        expect(onProgress.mock.calls.map((c) => c[0])).toEqual(
+            Array.from(
+                { length: n },
+                (_, i) => `Waiting for Configuration Service access (${i + 1}/${n})...`
+            )
+        );
+    });
+
+    /**
+     * A registration that SUCCEEDED must not also report a failure. Both
+     * success exits fall through to the failure warning when their guard is
+     * removed and still return the same object, so the log is the only thing
+     * that tells the two apart — asserted as silence, not as wording.
+     */
+    describe('a success is not also reported as a failure', () => {
+        it('says nothing when a 409 updates successfully', async () => {
+            await run(
+                service(
+                    jest.fn().mockResolvedValue({ success: false, statusCode: 409 }),
+                    jest.fn().mockResolvedValue({ success: true })
+                )
+            );
+
+            expect(logger.warn).not.toHaveBeenCalled();
+        });
+
+        it('says nothing when the update succeeds inside the retry loop', async () => {
+            // Enters the loop on a direct 403 — no update ran yet, so nothing has
+            // warned — and then succeeds through the 409 path on the retry.
+            const register = jest
+                .fn()
+                .mockResolvedValueOnce({ success: false, statusCode: 403 })
+                .mockResolvedValue({ success: false, statusCode: 409 });
+            const update = jest.fn().mockResolvedValue({ success: true });
+
+            const result = await run(service(register, update), true);
+
+            expect(result.registered).toBe(true);
+            expect(logger.warn).not.toHaveBeenCalled();
+        });
+
+        it('warns once when the update actually fails', async () => {
+            await run(
+                service(
+                    jest.fn().mockResolvedValue({ success: false, statusCode: 409 }),
+                    jest.fn().mockResolvedValue({ success: false, statusCode: 500 })
+                )
+            );
+
+            // Both the update warning and the registration-failed warning fire.
+            expect(logger.warn).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    it('retries ONLY a 403, even when the caller asked for retries', async () => {
+        // `retryOn403` is not "retry everything". A 500 will not improve with
+        // waiting, and three more writes against a broken service is the wrong
+        // thing to do while someone watches a progress bar.
+        const update = jest.fn().mockResolvedValue({ success: false, statusCode: 500 });
+
+        const result = await run(
+            service(jest.fn().mockResolvedValue({ success: false, statusCode: 409 }), update),
+            true
+        );
+
+        expect(update).toHaveBeenCalledTimes(1);
+        expect(mockSleep).not.toHaveBeenCalled();
+        expect(result.statusCode).toBe(500);
+    });
+
+    /**
+     * Grants are reported only when they were actually LOST. Reporting them
+     * whenever the service happens to name some would tell an SC that addresses
+     * were destroyed when the update handed every one of them back.
+     */
+    describe('grants restored are not reported as grants lost', () => {
+        it('leaves them off the auth error when the update restored them', async () => {
+            const register = jest.fn().mockResolvedValue({ success: false, statusCode: 409 });
+            const update = jest.fn().mockResolvedValue({
+                success: false,
+                statusCode: 401,
+                grantsRestored: true,
+                lostGrants: ['a****@x.test'],
+            });
+
+            const error = await run(service(register, update)).catch((e: DaLiveAuthError) => e);
+
+            expect(error).toBeInstanceOf(DaLiveAuthError);
+            expect((error as DaLiveAuthError).lostGrants).toBeUndefined();
+        });
+
+        it('leaves the key off a failed outcome when the update restored them', async () => {
+            const register = jest.fn().mockResolvedValue({ success: false, statusCode: 409 });
+            const update = jest.fn().mockResolvedValue({
+                success: false,
+                statusCode: 500,
+                grantsRestored: true,
+                lostGrants: ['a****@x.test'],
+            });
+
+            const result = await run(service(register, update));
+
+            expect(result).not.toHaveProperty('lostGrants');
+        });
     });
 
     it('awaits an onProgress that returns a promise', async () => {
