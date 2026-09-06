@@ -8,11 +8,11 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/app-builder/services/appBuilderDeployOutcome.ts",
-        "src/features/components/services/meshCatalogDerivation.ts",
-        "src/features/ai/skillInspector.ts",
-        "src/features/app-builder/services/appBuilderComponentMigration.ts",
-        "src/features/app-builder/services/appConfigPackages.ts"
+        "src/features/app-builder/services/appManagementClient.ts",
+        "src/features/data-installer/services/sampleDataInstall.ts",
+        "src/features/eds/handlers/blockLibraryPublish.ts",
+        "src/features/eds/services/credentialServiceProbe.ts",
+        "src/features/eds/services/daAuthHelperToken.ts"
     ],
     "reporters": [
         "clear-text",

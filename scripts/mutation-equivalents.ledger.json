@@ -15157,6 +15157,127 @@
             "decision": "none \u2014 the continue states the intent that the optional chain would otherwise imply",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-07 \u2014 each verified by planting the mutation and re-running the module's suite"
+        },
+        {
+            "module": "src/features/app-builder/services/appManagementClient.ts",
+            "anchors": [
+                "const reason = (body as { reason?: unknown } | undefined)?.reason;"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Dropping the ?. makes a null/undefined 409 body throw a TypeError instead of yielding undefined \u2014 but the only caller wraps this in the try/catch that already answers a bodyless 409 with reason undefined, so both paths build the identical AppManagementApiError(status, reason: undefined, noOpMessage: undefined). Verified by planting the mutation and probing a 409 whose json() resolves to null.",
+            "decision": "none \u2014 the observable error object is byte-identical either way",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/app-builder/services/appManagementClient.ts",
+            "anchors": [
+                "if (typeof body?.message === 'string') {"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "Same null-body path as parseNoOpReason's optional chain: body.message throws for a null 409 body, the enclosing catch swallows it, and the error is built with reason and noOpMessage both undefined \u2014 which is what the unmutated code produces for that body too. Verified by planting.",
+            "decision": "none \u2014 indistinguishable through the only exit this function has",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/app-builder/services/appManagementClient.ts",
+            "anchors": [
+                "body: body === undefined ? undefined : JSON.stringify(body),"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing the false branch sends JSON.stringify(body) for every request, and JSON.stringify(undefined) evaluates to the value undefined \u2014 so a bodyless GET/DELETE still carries body: undefined. The ternary is there for readers, not for the runtime.",
+            "decision": "none \u2014 the two branches produce the same value for the only input that reaches the guard",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/eds/handlers/blockLibraryPublish.ts",
+            "anchors": [
+                "for (let i = 0; i < absolute.length; i += LIBRARY_PUBLISH_BATCH) {"
+            ],
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Widening the loop bound to <= adds one iteration only when the path count is an exact multiple of the batch size, and that iteration slices an EMPTY batch: Promise.allSettled([]) resolves to [], the forEach body never runs, and neither the published count nor the failure list moves. No call reaches the admin API and no value differs.",
+            "decision": "none \u2014 the extra pass is a no-op by construction; the batch is empty whenever it happens",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/eds/handlers/blockLibraryPublish.ts",
+            "anchors": [
+                "const sample = failures.slice(0, 5).join(', ');"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "The cap of five only shortens the WARNING TEXT \u2014 the same failures, the same count, the same return value either way. Killing it means asserting the log line's wording, which the no-logger-wording enforcer refuses (this file's ceiling is 2 and is shrink-only).",
+            "decision": "none \u2014 the only observable difference is a log message's length",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/eds/services/credentialServiceProbe.ts",
+            "anchors": [
+                "return (await deps?.getTokenManager().inspectToken())?.token;"
+            ],
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Either optional chain, removed, turns a missing auth dep or a token manager that answers undefined into a TypeError \u2014 which this function's own try/catch converts back into the same undefined it would have returned anyway. Verified by planting BOTH removals together and probing the two inputs that reach them (no auth deps at all; inspectToken resolving undefined): the probe reads 'not signed in' and makes no fetch either way.",
+            "decision": "none \u2014 the catch that makes this function total also makes both chains unobservable",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/eds/services/daAuthHelperToken.ts",
+            "anchors": [
+                "return null; // not present / unreadable"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch does not skip the null: execution falls through with raw still unassigned, JSON.parse(undefined) parses the string \"undefined\", throws, and the very next catch returns the same null. Verified by planting \u2014 the absent-file test passes either way because both routes end at the same return.",
+            "decision": "none \u2014 the second catch already covers every input the first one refuses",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/eds/services/daAuthHelperToken.ts",
+            "anchors": [
+                "raw = {};"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The merge-preserve read initialises raw to {} before the try, so the catch's reassignment restores a value it already holds. Deleting the statement leaves raw as the same empty object. Verified by planting.",
+            "decision": "none \u2014 the assignment is a no-op against the declaration's own initialiser",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/eds/services/daAuthHelperToken.ts",
+            "anchors": [
+                "if (typeof value === 'number' && Number.isFinite(value)) {"
+            ],
+            "mutants": 2,
+            "category": "branch",
+            "reason": "Two mutants on this line, both unobservable. The operator swap (&& for ||) only differs for a value that is a number but NOT finite \u2014 NaN or +/-Infinity \u2014 and the only input this module ever sees is JSON.parse output of the on-disk cache, which cannot express either. The narrower one replaces the typeof test alone with true, leaving if (Number.isFinite(value)); Number.isFinite returns true ONLY for values whose typeof is already number, so the test it drops is entailed by the call beside it. Verified by planting.",
+            "decision": "none \u2014 one is unreachable through the module's only input (a JSON file path); the other drops a guard that its neighbour already implies",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
+        },
+        {
+            "module": "src/features/eds/services/credentialServiceProbe.ts",
+            "anchors": [
+                "return undefined;"
+            ],
+            "line": 107,
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying this catch does not change what readToken answers: a function that falls off its end returns undefined, which is exactly what the deleted statement returned. The caller's 'not signed in' branch is reached either way.",
+            "decision": "none \u2014 an explicit undefined and an implicit one are the same value",
+            "recorded": "2026-09-06",
+            "source": "PL-22 batch MUT-08"
         }
     ]
 }
