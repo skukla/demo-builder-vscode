@@ -65,6 +65,15 @@ describe('deriveOwPackage', () => {
             const result = deriveOwPackage('$()`;');
             expect(result.length).toBeGreaterThan(0);
             expect(result).toMatch(SAFE_NAME);
+            // The stem is the named fallback, not an empty one: a name that began
+            // with the joining hyphen would still pass SAFE_NAME.
+            expect(result).toMatch(/^pkg-[0-9a-f]{8}$/);
+        });
+
+        it('should collapse a run of hyphens to one', () => {
+            // The run is already inside the safe charset, so nothing else removes
+            // it — `erp--integration` and `erp-integration` must not both survive.
+            expect(deriveOwPackage('erp--integration')).toMatch(/^erp-integration-[0-9a-f]{8}$/);
         });
     });
 
@@ -99,6 +108,21 @@ describe('deriveOwPackage', () => {
         it('should be deterministic for long ids', () => {
             const longId = 'integration-' + 'x'.repeat(100);
             expect(deriveOwPackage(longId)).toBe(deriveOwPackage(longId));
+        });
+
+        it('should pass a clean id of exactly the maximum length through verbatim', () => {
+            // 50 is IN budget, not over it: the boundary is the whole difference
+            // between a readable name and one carrying a hash nobody asked for.
+            const atLimit = 'a'.repeat(50);
+            expect(deriveOwPackage(atLimit)).toBe(atLimit);
+        });
+
+        it('should truncate to the readable stem and keep its hyphens', () => {
+            // 41 characters of stem (50 minus the 8-char hash and its hyphen),
+            // then the hash — the internal hyphen is part of what makes the
+            // truncated name readable, so only a TRAILING one is trimmed.
+            const result = deriveOwPackage('a'.repeat(20) + '-' + 'b'.repeat(40));
+            expect(result).toMatch(/^a{20}-b{20}-[0-9a-f]{8}$/);
         });
     });
 });
