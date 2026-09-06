@@ -8,31 +8,8 @@
  */
 
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
+import { fakeServer } from './discoveryTools.testUtils';
 import { expectWithinCeiling } from './responseCeilings';
-
-/**
- * Fake McpServer capturing registrations — the DEFINITION as well as the handler.
- *
- * Discarding the second argument is what let every declaration on these three
- * tools (needsAuth, the read-only annotations, the title) go unasserted while
- * the suite stayed green.
- */
-function fakeServer() {
-    const tools = new Map<string, () => Promise<{ content: Array<{ text: string }> }>>();
-    const defs = new Map<string, Record<string, unknown>>();
-    return {
-        registerTool(name: string, def: unknown, handler: () => Promise<{ content: Array<{ text: string }> }>) {
-            tools.set(name, handler);
-            defs.set(name, def as Record<string, unknown>);
-        },
-        async call(name: string): Promise<unknown> {
-            const result = await tools.get(name)!();
-            return JSON.parse(result.content[0].text);
-        },
-        tools,
-        defs,
-    };
-}
 
 describe('registerDiscoveryTools', () => {
     it('registers the three discovery tools', () => {
@@ -106,9 +83,7 @@ describe('registerDiscoveryTools', () => {
     it('emits compact JSON (no pretty-print newlines)', async () => {
         const server = fakeServer();
         registerDiscoveryTools(server);
-        const handler = server.tools.get('list_stacks')!;
-        const text = (await handler()).content[0].text;
-        expect(text).not.toContain('\n');
+        expect(await server.callText('list_stacks')).not.toContain('\n');
     });
 });
 

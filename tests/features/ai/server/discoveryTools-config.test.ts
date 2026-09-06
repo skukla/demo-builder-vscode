@@ -8,6 +8,7 @@
  * those shapes in it and asserts what comes out.
  */
 
+import { fakeServer } from './discoveryTools.testUtils';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 
 /**
@@ -28,19 +29,6 @@ const MALFORMED_REGISTRY = {
 };
 
 type Grouped = Record<string, Array<{ id: string; name: string }>>;
-
-function fakeServer() {
-    const tools = new Map<string, () => Promise<{ content: Array<{ text: string }> }>>();
-    return {
-        registerTool(name: string, _def: unknown, handler: () => Promise<{ content: Array<{ text: string }> }>) {
-            tools.set(name, handler);
-        },
-        async call(name: string): Promise<unknown> {
-            const result = await tools.get(name)!();
-            return JSON.parse(result.content[0].text);
-        },
-    };
-}
 
 async function listComponents(): Promise<Grouped> {
     const server = fakeServer();

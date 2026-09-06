@@ -8,8 +8,9 @@
  * arm that never fires are both invisible to a test that only checks the code it
  * was written for.
  *
- * `isRecoverableError` is the auto-retry set. ORG_MISMATCH's exclusion from it
- * has its own suite (errorCodes-orgMismatch); this one pins the set itself.
+ * `isRecoverableError` is the auto-retry set, pinned here both by its members
+ * and by its width. ORG_MISMATCH gets its own block at the end: it is the one
+ * code whose exclusion from that set is a decision rather than an omission.
  */
 import {
     ErrorCode,
@@ -99,5 +100,27 @@ describe('getErrorTitle', () => {
     it('falls back to a generic title for a code that is not in the table', () => {
         const unmapped = 'NOT_A_REAL_CODE' as ErrorCode;
         expect(getErrorTitle(unmapped)).toBe('Error');
+    });
+});
+
+describe('ErrorCode.ORG_MISMATCH', () => {
+    // Signals that the Adobe CLI is targeting a different organization than the
+    // operation needs. User-recoverable in the UI (pick a different org /
+    // re-login) but it MUST NOT be in the auto-retry recoverable set — an agent
+    // retrying the identical call would 403 into the same wrong org.
+    it('exists on the ErrorCode enum with a stable string value', () => {
+        expect(ErrorCode.ORG_MISMATCH).toBe('ORG_MISMATCH');
+    });
+
+    it('is categorized as an auth error', () => {
+        expect(getErrorCategory(ErrorCode.ORG_MISMATCH)).toBe('auth');
+    });
+
+    it('has a user-friendly title', () => {
+        expect(getErrorTitle(ErrorCode.ORG_MISMATCH)).toBe('Wrong organization');
+    });
+
+    it('is NOT in the auto-retry recoverable set', () => {
+        expect(isRecoverableError(ErrorCode.ORG_MISMATCH)).toBe(false);
     });
 });
