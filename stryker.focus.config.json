@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/utils/autoUpdater.ts"
+        "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx"
     ],
     "reporters": [
         "clear-text",

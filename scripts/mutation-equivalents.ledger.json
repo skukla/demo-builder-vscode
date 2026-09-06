@@ -12691,6 +12691,136 @@
             "decision": "none - the guarded field is always set, so the guard has one reachable outcome",
             "recorded": "2026-09-06",
             "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 88,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces this empty dependency list with a one-element array holding a constant string. A constant is identical on every render, so React compares the lists as equal exactly as it does for two empty ones and the callback is never recreated - the mutant produces the same memoised function the original does. The lists that DO carry a real dependency are a different matter and are killed by tests: emptying [userPrompts] strands each handler with the list it was born with, and three specs act on a prompt that arrived after mount to prove it.",
+            "decision": "none - a constant dependency never changes, so the mutated list memoises identically",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 95,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces this empty dependency list with a one-element array holding a constant string. A constant is identical on every render, so React compares the lists as equal exactly as it does for two empty ones and the callback is never recreated - the mutant produces the same memoised function the original does. The lists that DO carry a real dependency are a different matter and are killed by tests: emptying [userPrompts] strands each handler with the list it was born with, and three specs act on a prompt that arrived after mount to prove it.",
+            "decision": "none - a constant dependency never changes, so the mutated list memoises identically",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 110,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces this empty dependency list with a one-element array holding a constant string. A constant is identical on every render, so React compares the lists as equal exactly as it does for two empty ones and the callback is never recreated - the mutant produces the same memoised function the original does. The lists that DO carry a real dependency are a different matter and are killed by tests: emptying [userPrompts] strands each handler with the list it was born with, and three specs act on a prompt that arrived after mount to prove it.",
+            "decision": "none - a constant dependency never changes, so the mutated list memoises identically",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 121,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces this empty dependency list with a one-element array holding a constant string. A constant is identical on every render, so React compares the lists as equal exactly as it does for two empty ones and the callback is never recreated - the mutant produces the same memoised function the original does. The lists that DO carry a real dependency are a different matter and are killed by tests: emptying [userPrompts] strands each handler with the list it was born with, and three specs act on a prompt that arrived after mount to prove it.",
+            "decision": "none - a constant dependency never changes, so the mutated list memoises identically",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 149,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces this empty dependency list with a one-element array holding a constant string. A constant is identical on every render, so React compares the lists as equal exactly as it does for two empty ones and the callback is never recreated - the mutant produces the same memoised function the original does. The lists that DO carry a real dependency are a different matter and are killed by tests: emptying [userPrompts] strands each handler with the list it was born with, and three specs act on a prompt that arrived after mount to prove it.",
+            "decision": "none - a constant dependency never changes, so the mutated list memoises identically",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 167,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces this empty dependency list with a one-element array holding a constant string. A constant is identical on every render, so React compares the lists as equal exactly as it does for two empty ones and the callback is never recreated - the mutant produces the same memoised function the original does. The lists that DO carry a real dependency are a different matter and are killed by tests: emptying [userPrompts] strands each handler with the list it was born with, and three specs act on a prompt that arrived after mount to prove it.",
+            "decision": "none - a constant dependency never changes, so the mutated list memoises identically",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx",
+            "anchors": [
+                "}, []);"
+            ],
+            "line": 171,
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces this empty dependency list with a one-element array holding a constant string. A constant is identical on every render, so React compares the lists as equal exactly as it does for two empty ones and the callback is never recreated - the mutant produces the same memoised function the original does. The lists that DO carry a real dependency are a different matter and are killed by tests: emptying [userPrompts] strands each handler with the list it was born with, and three specs act on a prompt that arrived after mount to prove it.",
+            "decision": "none - a constant dependency never changes, so the mutated list memoises identically",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx",
+            "anchors": [
+                "if (!target) return;"
+            ],
+            "line": 100,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard false means continuing with an undefined target. It cannot be reached: the only caller is PromptGrid, which renders exactly one card per entry of the same userPrompts array this line searches, and the callback's dependency list keeps that array current - a point tests now pin from the other side, by acting on a prompt that appeared after mount. So `find` cannot miss for any id the UI can produce, and the guard has no reachable false arm. Its true arm is covered: a spec opens the edit dialog on the second card and asserts it carries that card's values.",
+            "decision": "none - defensive against an id the composed UI cannot emit; the guard's other arm is tested",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx",
+            "anchors": [
+                "if (!target) return;"
+            ],
+            "line": 126,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard false means continuing with an undefined target. It cannot be reached: the only caller is PromptGrid, which renders exactly one card per entry of the same userPrompts array this line searches, and the callback's dependency list keeps that array current - a point tests now pin from the other side, by acting on a prompt that appeared after mount. So `find` cannot miss for any id the UI can produce, and the guard has no reachable false arm. Its true arm is covered: a spec duplicates the second card and asserts the saved copy carries that card's title and body.",
+            "decision": "none - defensive against an id the composed UI cannot emit; the guard's other arm is tested",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
+        },
+        {
+            "module": "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx",
+            "anchors": [
+                "if (!target) return;"
+            ],
+            "line": 154,
+            "mutants": 1,
+            "category": "branch",
+            "reason": "Forcing this guard false means continuing with an undefined target. It cannot be reached: the only caller is PromptGrid, which renders exactly one card per entry of the same userPrompts array this line searches, and the callback's dependency list keeps that array current - a point tests now pin from the other side, by acting on a prompt that appeared after mount. So `find` cannot miss for any id the UI can produce, and the guard has no reachable false arm. Its true arm is covered: a spec pins the second card and asserts the whole prompt was saved with pinned true.",
+            "decision": "none - defensive against an id the composed UI cannot emit; the guard's other arm is tested",
+            "recorded": "2026-09-06",
+            "source": "PL-22 MUT-04, 2026-09-05"
         }
     ]
 }

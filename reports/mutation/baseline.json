@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "autoUpdater: notify/download/install + background-check suites (38 tests) and 12 ledger rows",
+    "_note": "AiOverviewScreen: decisions + unusable-response suites (44 tests) and 10 ledger rows",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 83.33,
@@ -4887,28 +4887,20 @@
             "openGaps": 38
         },
         "src/features/dashboard/ui/aiSurface/AiOverviewScreen.tsx": {
-            "score": 45.22,
-            "killed": 52,
-            "survived": 41,
-            "noCoverage": 22,
+            "score": 90.43,
+            "killed": 104,
+            "survived": 11,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "branch": 21,
-                "block": 3,
-                "string": 2,
-                "optionalChain": 4,
-                "other": 11
+                "other": 7,
+                "branch": 3,
+                "string": 1
             },
-            "uncoveredCategories": {
-                "string": 3,
-                "other": 4,
-                "block": 4,
-                "branch": 10,
-                "optionalChain": 1
-            },
-            "highValueSurvivors": 24,
-            "equivalent": 0,
-            "openGaps": 58
+            "uncoveredCategories": {},
+            "highValueSurvivors": 3,
+            "equivalent": 10,
+            "openGaps": 0
         },
         "src/features/dashboard/ui/aiSurface/components/PromptCard.tsx": {
             "score": 54.17,

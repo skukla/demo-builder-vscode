@@ -177,3 +177,63 @@ export async function renderScreen(
     });
     return { ...result, project, webviewClient };
 }
+
+/**
+ * Render with the project prop under the spec's control, so it can be CHANGED.
+ *
+ * `renderScreen` above builds its own project and answers every request the same
+ * way for the life of the test. The mount effect keys on `project.path`, and the
+ * response it ignores when that key changes is a decision nothing could reach
+ * through that helper.
+ */
+export async function renderWithProject(
+    project: Project,
+    respond: (type: string) => Promise<unknown>
+) {
+    const { webviewClient } = jest.requireMock('@/core/ui/utils/WebviewClient');
+    webviewClient.request.mockImplementation((type: string) => respond(type));
+
+    const tree = (p: Project) => (
+        <Provider theme={defaultTheme}>
+            <AiOverviewScreen project={p} />
+        </Provider>
+    );
+
+    let result!: ReturnType<typeof render>;
+    await act(async () => {
+        result = render(tree(project));
+        jest.runAllTimers();
+    });
+    await settleScreen();
+
+    return {
+        ...result,
+        webviewClient,
+        async showProject(next: Project) {
+            await act(async () => {
+                result.rerender(tree(next));
+                jest.runAllTimers();
+            });
+            await settleScreen();
+        },
+    };
+}
+
+/** Drain the in-flight requests inside act(), the way `reactSettle` prescribes. */
+export async function settleScreen(): Promise<void> {
+    await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+    });
+}
+
+/** A promise the spec resolves by hand, for responses that must arrive LATE. */
+export function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((r) => {
+        resolve = r;
+    });
+    return { promise, resolve };
+}
