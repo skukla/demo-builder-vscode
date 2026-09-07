@@ -1,4 +1,13 @@
 /**
+ * RENAMED from `executor.appBuilderIntegrations.test.ts` on 2026-09-07 (PL-45): these tests
+ * exercise symbols defined in `executorAppBuilderPhase.ts`, and the old filename
+ * paired the suite with `executor.ts`, which only re-exports them —
+ * so every kill was credited to a module these tests never constrain.
+ * The import now names the declaring module directly.
+ * The suite's own description follows.
+ */
+
+/**
  * Executor - App Builder Integrations Phase
  *
  * Unit tests for `executeAppBuilderIntegrationsPhase` — the creation-flow phase
@@ -46,7 +55,7 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
-import { executeAppBuilderIntegrationsPhase } from '@/features/project-creation/handlers/executor';
+import { executeAppBuilderIntegrationsPhase } from '@/features/project-creation/handlers/executorAppBuilderPhase';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';

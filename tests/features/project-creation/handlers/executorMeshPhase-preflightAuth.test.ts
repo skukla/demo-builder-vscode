@@ -1,4 +1,13 @@
 /**
+ * RENAMED from `executor-meshPreflightAuth.test.ts` on 2026-09-07 (PL-45): these tests
+ * exercise symbols defined in `executorMeshPhase.ts`, and the old filename
+ * paired the suite with `executor.ts`, which only re-exports them —
+ * so every kill was credited to a module these tests never constrain.
+ * The import now names the declaring module directly.
+ * The suite's own description follows.
+ */
+
+/**
  * Executor - Mesh Pre-flight Authentication Test Suite
  *
  * Regression tests for multiple browser popup bug during mesh deployment.
@@ -13,10 +22,10 @@
  * Total tests: 5
  */
 
-import { ensureMeshPreflightAuth } from '@/features/project-creation/handlers/executor';
-import { createMockLogger } from '../../../helpers/loggerFake';
+import { ensureMeshPreflightAuth } from './executorMeshPhase.testUtils';
+import { createMockLogger } from './executorMeshPhase.testUtils';
 
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockAuthenticationService } from './executorMeshPhase.testUtils';
 describe('Executor - Mesh Pre-flight Authentication', () => {
     // Minimal mock for authManager
     function createMockAuthManager(overrides: {

@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "SuccessStateDisplay: assert centerMessage=true reaches the message and detail class",
+    "_note": "Six suites renamed onto the modules that DEFINE their subjects (PL-45, 2026-09-07). The four modules they were previously scored against are unchanged to two decimals — diagnostics 78.65, edsHandlers 90.57, storefrontSetupHandlers 74.32, executor 74.26 — so the renames took away only tests that were counting for nothing. Four modules enter the baseline for the first time: diagnosticsReport, executorMeshPhase, executorAppBuilderPhase, executorSampleDataPhase.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -5653,10 +5653,10 @@
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
+                "optionalChain": 1,
                 "logPresentation": 11,
                 "block": 2,
-                "branch": 1,
-                "optionalChain": 1
+                "branch": 1
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 3,
@@ -5716,11 +5716,11 @@
             "timeout": 0,
             "survivorCategories": {
                 "logPresentation": 15,
+                "branch": 16,
                 "block": 4,
                 "optionalChain": 1,
                 "other": 4,
-                "string": 4,
-                "branch": 16
+                "string": 4
             },
             "uncoveredCategories": {
                 "block": 4,
@@ -7919,8 +7919,8 @@
             "survivorCategories": {
                 "other": 1,
                 "logPresentation": 6,
-                "branch": 6,
-                "string": 7
+                "string": 7,
+                "branch": 6
             },
             "uncoveredCategories": {
                 "string": 1,
@@ -9559,6 +9559,100 @@
             "highValueSurvivors": 0,
             "equivalent": 0,
             "openGaps": 0
+        },
+        "src/commands/diagnosticsReport.ts": {
+            "score": 43.12,
+            "killed": 163,
+            "survived": 140,
+            "noCoverage": 75,
+            "timeout": 0,
+            "survivorCategories": {
+                "block": 7,
+                "branch": 60,
+                "string": 67,
+                "other": 4,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {
+                "branch": 15,
+                "string": 44,
+                "block": 11,
+                "other": 5
+            },
+            "highValueSurvivors": 67,
+            "equivalent": 0,
+            "openGaps": 104
+        },
+        "src/features/project-creation/handlers/executorAppBuilderPhase.ts": {
+            "score": 53.23,
+            "killed": 33,
+            "survived": 10,
+            "noCoverage": 19,
+            "timeout": 0,
+            "survivorCategories": {
+                "other": 2,
+                "optionalChain": 1,
+                "block": 2,
+                "branch": 3,
+                "string": 2
+            },
+            "uncoveredCategories": {
+                "branch": 8,
+                "optionalChain": 3,
+                "block": 1,
+                "logPresentation": 4,
+                "string": 3
+            },
+            "highValueSurvivors": 5,
+            "equivalent": 0,
+            "openGaps": 20
+        },
+        "src/features/project-creation/handlers/executorMeshPhase.ts": {
+            "score": 27.27,
+            "killed": 36,
+            "survived": 44,
+            "noCoverage": 52,
+            "timeout": 0,
+            "survivorCategories": {
+                "block": 4,
+                "logPresentation": 14,
+                "branch": 21,
+                "other": 1,
+                "optionalChain": 4
+            },
+            "uncoveredCategories": {
+                "block": 10,
+                "branch": 23,
+                "string": 5,
+                "logPresentation": 7,
+                "optionalChain": 5,
+                "other": 2
+            },
+            "highValueSurvivors": 25,
+            "equivalent": 0,
+            "openGaps": 70
+        },
+        "src/features/project-creation/handlers/executorSampleDataPhase.ts": {
+            "score": 40,
+            "killed": 16,
+            "survived": 14,
+            "noCoverage": 10,
+            "timeout": 0,
+            "survivorCategories": {
+                "string": 7,
+                "other": 1,
+                "block": 2,
+                "logPresentation": 1,
+                "branch": 3
+            },
+            "uncoveredCategories": {
+                "string": 5,
+                "branch": 4,
+                "block": 1
+            },
+            "highValueSurvivors": 5,
+            "equivalent": 0,
+            "openGaps": 11
         }
     }
 }

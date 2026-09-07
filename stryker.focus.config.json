@@ -8,7 +8,14 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/components/feedback/SuccessStateDisplay.tsx"
+        "src/features/eds/handlers/edsHandlers.ts",
+        "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
+        "src/features/project-creation/handlers/executorAppBuilderPhase.ts",
+        "src/features/project-creation/handlers/executorSampleDataPhase.ts",
+        "src/features/project-creation/handlers/executorMeshPhase.ts",
+        "src/features/project-creation/handlers/executor.ts",
+        "src/commands/diagnosticsReport.ts",
+        "src/commands/diagnostics.ts"
     ],
     "reporters": [
         "clear-text",

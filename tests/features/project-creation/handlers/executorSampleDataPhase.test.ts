@@ -1,4 +1,13 @@
 /**
+ * RENAMED from `executor-sampleDataPhase.test.ts` on 2026-09-07 (PL-45): these tests
+ * exercise symbols defined in `executorSampleDataPhase.ts`, and the old filename
+ * paired the suite with `executor.ts`, which only re-exports them —
+ * so every kill was credited to a module these tests never constrain.
+ * The import now names the declaring module directly.
+ * The suite's own description follows.
+ */
+
+/**
  * The build's sample-data phase.
  *
  * The wizard records a pack (Sample Data) and a scope (Business Structure), and
@@ -19,7 +28,7 @@
  * Strict TDD: written BEFORE the phase exists.
  */
 
-import { executeSampleDataPhase } from '@/features/project-creation/handlers/executor';
+import { executeSampleDataPhase } from '@/features/project-creation/handlers/executorSampleDataPhase';
 import { installSampleData } from '@/features/data-installer/services/sampleDataInstall';
 import type { Project } from '@/types/base';
 import { createMockLogger } from '../../../helpers/loggerFake';

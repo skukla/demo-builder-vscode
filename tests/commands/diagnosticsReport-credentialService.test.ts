@@ -1,4 +1,13 @@
 /**
+ * RENAMED from `diagnostics-credentialService.test.ts` on 2026-09-07 (PL-45): these tests
+ * exercise symbols defined in `diagnosticsReport.ts`, and the old filename
+ * paired the suite with `diagnostics.ts`, which only re-exports them —
+ * so every kill was credited to a module these tests never constrain.
+ * The import now names the declaring module directly.
+ * The suite's own description follows.
+ */
+
+/**
  * The shared Commerce credential service, as it appears in the report.
  *
  * The probe decides the verdict; this pins what a person actually READS, because
@@ -11,8 +20,8 @@
  * one-click Copy button.
  */
 
-import { buildSummaryLines } from '@/commands/diagnostics';
-import type { DiagnosticsReport } from '@/commands/diagnostics';
+import { buildSummaryLines } from '@/commands/diagnosticsReport';
+import type { DiagnosticsReport } from '@/commands/diagnosticsReport';
 import type { CredentialServiceProbeResult } from '@/features/eds/services/credentialServiceProbe';
 
 const ENDPOINT = 'https://285361-somewhere-stage.adobeioruntime.net/api/v1/web/x/get-commerce-credentials';

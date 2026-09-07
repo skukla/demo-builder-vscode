@@ -1,4 +1,13 @@
 /**
+ * RENAMED from `executor-meshDeployContext.test.ts` on 2026-09-07 (PL-45): these tests
+ * exercise symbols defined in `executorMeshPhase.ts`, and the old filename
+ * paired the suite with `executor.ts`, which only re-exports them —
+ * so every kill was credited to a module these tests never constrain.
+ * The import now names the declaring module directly.
+ * The suite's own description follows.
+ */
+
+/**
  * Executor - Mesh Deploy Org-Context Tests (Phase 4a)
  *
  * deployFreshMesh no longer mutates the shared `aio` global via selectWorkspace
@@ -42,14 +51,14 @@ jest.mock('@/features/project-creation/services/projectFinalizationService', () 
     sendCompletionAndCleanup: jest.fn(),
 }));
 
-import { deployFreshMesh } from '@/features/project-creation/handlers/executor';
+import { deployFreshMesh } from './executorMeshPhase.testUtils';
 import { ProjectSetupContext } from '@/features/project-creation/services/ProjectSetupContext';
 import type { MeshSetupContext } from '@/features/project-creation/services/meshSetupService';
 import type { AuthenticationService } from '@/features/authentication/services/authenticationService';
 import type { HandlerContext } from '@/types/handlers';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
-import { createMockLogger } from '../../../helpers/loggerFake';
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
+import { createMockLogger } from './executorMeshPhase.testUtils';
+import { createMockAuthenticationService } from './executorMeshPhase.testUtils';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';

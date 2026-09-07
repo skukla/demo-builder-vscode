@@ -1,4 +1,12 @@
 /**
+ * RENAMED from `storefrontSetupHandlers.test.ts` on 2026-09-07 (PL-45): these tests
+ * exercise symbols defined in `edsHandlers.ts`, and the old filename
+ * paired the suite with `storefrontSetupHandlers.ts`, which only re-exports them —
+ * so every kill was credited to a module these tests never constrain.
+ * The suite's own description follows.
+ */
+
+/**
  * Storefront Setup Handlers Tests
  *
  * Phase 1: Rename eds-preflight to storefront-setup
