@@ -10,9 +10,12 @@ parent: PL-11
 
 # 635 tests catch nothing — find out WHY before deciding what goes
 
-Measured 2026-09-07 by the redundancy sweep that followed [[PL-22]] to zero: of 15,227
-tests, **635 caught no deliberate change to the code they were measured against.** Not
-"caught less than another test" — caught nothing at all.
+Measured 2026-09-07 by the redundancy sweep that followed [[PL-22]] to zero. It completed
+all 609 modules: of **21,429 tests, 792 caught no deliberate change** to the code they were
+measured against. Not "caught less than another test" — caught nothing at all.
+
+(An earlier draft said 635 of 15,227, read from a partial log midway through the run. The
+figures here are the sweep's own final totals.)
 
 Sibling of [[PL-48]], which covers the much larger droppable count. These two are different
 findings and must not be merged: droppable is a property of a GROUP and names no test, while
@@ -39,7 +42,9 @@ at a habit worth fixing, and fixing the habit is worth more than any number of d
 | 101 / 133 | `features/dashboard/handlers/dashboardHandlers.ts` | mock-heavy handler suite |
 | 88 / 93 | `core/utils/timeoutConfig.ts` | a file of constants |
 | 46 / 91 | `features/dashboard/handlers/aiHandlers.ts` | mock-heavy handler suite |
+| 35 / 64 | `features/eds/services/pdp/pdp404HandlerPublisher.ts` | |
 | 29 / 54 | `commands/diagnostics.ts` | |
+| 24 / 65 | `features/project-creation/handlers/executor.ts` | mock-heavy handler suite |
 | 19 / 134 | `features/eds/services/daLive/daLiveContentOperations.ts` | |
 
 **The handler suites are the ones to read first**, because this repository already knows the
@@ -55,10 +60,14 @@ constant is mutated, so it would catch something. That 88 do not is either a rea
 insight about how the file is tested or a defect in how it was measured — and it is worth
 knowing which before trusting the other 634 rows.
 
-## Rebuilding the list — the sweep does NOT save one
+## Rebuilding the list — the sweep saves COUNTS, never names
 
-The sweep prints its analysis and keeps only the raw per-module reports. The named tests are
-recoverable from those with no re-measurement, which is how the example above was found:
+`reports/mutation/redundancy/summary.jsonl` holds one row per module with `tests`,
+`killedNothing`, `redundant` and `pulling` as integers. That is what the tables above are
+built from, and it is enough to RANK but not to act: no test is named anywhere in it.
+
+The names are recoverable from the raw per-module reports the sweep also keeps, with no
+re-measurement — which is how the example above was found:
 
 ```python
 import json

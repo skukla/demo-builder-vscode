@@ -49,13 +49,16 @@ are separate KINDS of finding.
 
 | | Finding | Why it is its own item |
 |---|---|---|
-| [[PL-48]] | 7,599 of 15,227 tests (50%) sit outside the minimal catching set | A property of a GROUP. Names no individual test, so it can only be used to rank — the work is consolidating the worst files, never deleting on the number |
-| [[PL-49]] | 635 tests catch no deliberate change at all | Names tests EXACTLY. The work is classifying why, because a shared cause means one fix rather than 635 decisions |
+| [[PL-48]] | 12,564 of 21,429 tests (59%) catch things, but nothing that another test does not already catch | A property of a GROUP. Names no individual test, so it can only be used to rank — the work is consolidating the worst files, never deleting on the number |
+| [[PL-49]] | 792 tests catch no deliberate change at all | Names tests EXACTLY once rebuilt from the raw reports. The work is classifying why, because a shared cause means one fix rather than 792 decisions |
 
 Do PL-49 first. It is the sharper signal, its list is recoverable offline with no
 re-measurement, and two of its clusters look like one habit this repo already warns about —
 asserting that a mock was called tests the mock. If that is what it turns out to be, the
 result is a rule for test authors, which outlives any cleanup.
+
+The sweep measured 609 modules and 58,550 possible changes to the source; its per-module
+counts are in `reports/mutation/redundancy/summary.jsonl`.
 
 Both are newly safe to attempt. Zero open gaps means a test removal is now falsifiable:
 re-measure, and the gap count must still read zero. That safety net did not exist before

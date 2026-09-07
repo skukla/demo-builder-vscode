@@ -10,9 +10,20 @@ parent: PL-11
 
 # Half the suite catches nothing new — consolidate the worst, delete none of it
 
-Measured 2026-09-07 by the redundancy sweep that ran straight after [[PL-22]] reached zero:
-**15,227 tests across 456 modules, of which 7,599 (50%) sit outside the minimal catching
-set.** This item is what to do about that number — and, just as importantly, what not to.
+Measured 2026-09-07 by the redundancy sweep that ran straight after [[PL-22]] reached zero.
+The sweep completed all 609 modules and its own summary
+(`reports/mutation/redundancy/summary.jsonl`) partitions **21,429 tests** exactly three ways:
+
+| | | |
+|---|---|---|
+| Catch something no other test catches | 8,073 | 38% |
+| **Catch things, but nothing uniquely** | **12,564** | **59%** |
+| Catch nothing at all | 792 | 4% — that is [[PL-49]] |
+
+This item is the middle row — and, just as importantly, what not to do with it.
+
+An earlier draft of this item cited 7,599 of 15,227 from a partial log parse midway through
+the run. Those numbers were real but incomplete; these are the sweep's own totals.
 
 ## What the number actually means
 
@@ -52,25 +63,26 @@ means ten tests driving the same path with different inputs. That is repetition,
 cost is maintenance — when that code changes, all ten need editing. The fix is to merge them
 into one table-driven test, which removes the future work and loses no assertion.
 
-Ranked by ratio, minimum 25 tests:
+Ranked by ratio, minimum 25 tests, from the final summary:
 
-| droppable / tests | | module |
+| redundant / tests | | module |
 |---|---|---|
-| 49 / 51 | 96% | `features/authentication/services/adobeEntityService.ts` |
-| 84 / 90 | 93% | `core/validation/fieldValidation.ts` |
-| 29 / 35 | 83% | `core/utils/promiseUtils.ts` |
-| 21 / 26 | 81% | `features/eds/services/pdp/pdpUrlEncoding.ts` |
-| 33 / 41 | 80% | `features/project-creation/services/sanitization.ts` |
-| 34 / 43 | 79% | `core/state/transientStateManager.ts` |
-| 70 / 89 | 79% | `features/dashboard/ui/ProjectDashboardScreen.tsx` |
-| 119 / 153 | 78% | `features/authentication/services/adobeEntityFetcher.ts` |
+| 90 / 90 | **100%** | `core/validation/fieldValidation.ts` |
+| 50 / 51 | 98% | `features/authentication/services/adobeEntityService.ts` |
+| 78 / 81 | 96% | `features/project-creation/services/aiBundle/aiContextWriter.ts` |
+| 33 / 35 | 94% | `core/utils/promiseUtils.ts` |
+| 33 / 35 | 94% | `features/eds/services/patches/patchTargetPolicy.ts` |
+| 24 / 26 | 92% | `features/eds/services/pdp/pdpUrlEncoding.ts` |
+| 39 / 43 | 91% | `core/state/transientStateManager.ts` |
+| 37 / 41 | 90% | `features/project-creation/services/sanitization.ts` |
 
-A ratio above ~90% is not ordinary overlap. `fieldValidation.ts` at 84 of 90 is almost
-certainly one test written ninety times with different data — exactly the shape a
-parameterised test replaces.
+**`fieldValidation.ts` is 90 of 90 — every single test, no exceptions.** Not one of its
+tests catches anything the others do not, which for a pure validation module is the exact
+signature of one test written ninety times with different data. It is the obvious first
+target and the cheapest proof of the method.
 
-Start with the top two. They are small, they are pure functions, and they prove the method
-before it is pointed at a 153-test authentication suite.
+Then `adobeEntityService.ts` and `promiseUtils.ts`: small, pure, and enough to establish the
+pattern before anything touches an 81-test bundle writer.
 
 ## The safety net, which is new as of today
 
