@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "aiPromptHandlers: payload-validation, save-routing, delete/copy guard suites (PL-22 MUT-02)",
+    "_note": "DashboardStatusHeader: first suite that drives the component — 22 uncovered mutants killed by asserting the props StatusCard is handed",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -9506,21 +9506,16 @@
             "openGaps": 0
         },
         "src/features/dashboard/ui/components/DashboardStatusHeader.tsx": {
-            "score": 0,
-            "killed": 0,
+            "score": 100,
+            "killed": 22,
             "survived": 0,
-            "noCoverage": 22,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {},
-            "uncoveredCategories": {
-                "block": 1,
-                "branch": 13,
-                "string": 6,
-                "other": 2
-            },
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 16
+            "openGaps": 0
         },
         "src/features/dashboard/ui/configure/storedSecretPayload.ts": {
             "score": 100,
