@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/components/DashboardStatusHeader.tsx"
+        "src/features/dashboard/ui/configure/AppBuilderComponentFieldsSection.tsx"
     ],
     "reporters": [
         "clear-text",

@@ -154,6 +154,23 @@ describe('AppBuilderComponentFieldsSection', () => {
         expect(screen.getByText(/commerce-paas-mesh/i)).toBeInTheDocument();
     });
 
+    it('appends the resolved value to a connected row, and omits it when unresolved', () => {
+        const { unmount } = renderSection({
+            catalog: [consumerEntry],
+            provided: { MESH_ENDPOINT: 'https://mesh.example.com/graphql' },
+        });
+        expect(document.getElementById('field-MESH_ENDPOINT')?.textContent).toContain(
+            'Connected to commerce-paas-mesh (https://mesh.example.com/graphql)'
+        );
+        unmount();
+
+        renderSection({ catalog: [consumerEntry], provided: EMPTY_PROVIDED });
+        const unresolved = document.getElementById('field-MESH_ENDPOINT')?.textContent;
+        expect(unresolved).toContain('Connected to commerce-paas-mesh');
+        // Nothing at all follows the provider name when the value is not resolved yet.
+        expect(unresolved?.endsWith('commerce-paas-mesh')).toBe(true);
+    });
+
     it('renders NO field for a bucket-1 (derivedFrom) var', () => {
         renderSection({ catalog: [seedMeshEntry] });
 
@@ -169,5 +186,75 @@ describe('AppBuilderComponentFieldsSection', () => {
         expect(inputs).toHaveLength(0);
         expect(onTextChange).not.toHaveBeenCalled();
         expect(onSecretChange).not.toHaveBeenCalled();
+    });
+
+    it('shows the stored componentConfigs value in a text field', () => {
+        renderSection({
+            catalog: [erpEntry],
+            configs: { 'erp-integration': { ERP_HOST: 'erp.example.com' } },
+        });
+
+        const input = document
+            .getElementById('field-ERP_HOST')
+            ?.querySelector('input') as HTMLInputElement;
+        expect(input.value).toBe('erp.example.com');
+    });
+
+    it('renders an empty text field when componentConfigs holds no value for the var', () => {
+        renderSection({ catalog: [erpEntry], configs: {} });
+
+        const input = document
+            .getElementById('field-ERP_HOST')
+            ?.querySelector('input') as HTMLInputElement;
+        expect(input.value).toBe('');
+    });
+
+    it('reports a secret as NOT set when no flag is recorded for it', () => {
+        renderSection({ catalog: [erpEntry], secretFlags: {} });
+
+        expect(screen.queryByText('Secret is set')).not.toBeInTheDocument();
+        const secretInput = document
+            .getElementById('field-ERP_API_KEY')
+            ?.querySelector('input') as HTMLInputElement;
+        expect(secretInput.placeholder).toBe('');
+    });
+
+    it('reports a secret as NOT set when its flag is explicitly false', () => {
+        renderSection({
+            catalog: [erpEntry],
+            secretFlags: { 'erp-integration': { ERP_API_KEY: false } },
+        });
+
+        expect(screen.queryByText('Secret is set')).not.toBeInTheDocument();
+    });
+
+    it('renders one section per entry and divides every section after the first', () => {
+        renderSection({
+            catalog: [erpEntry, consumerEntry],
+            provided: { MESH_ENDPOINT: 'https://mesh.example.com/graphql' },
+        });
+
+        // ConfigSection carries showDivider in its className, so the class names say
+        // WHICH section got the divider — not merely that one exists somewhere.
+        const first = document.getElementById('section-appBuilderComponent-erp-integration');
+        const second = document.getElementById('section-appBuilderComponent-storefront-consumer');
+        expect(first).toHaveClass('config-section');
+        expect(first).not.toHaveClass('config-section-with-padding');
+        expect(second).toHaveClass('config-section-with-padding');
+    });
+
+    it('renders NOTHING (not an empty wrapper) when no entry has a visible field', () => {
+        // Asserted on the return value: null and an empty fragment are indistinguishable
+        // in the DOM, and the component's contract is to contribute no node at all.
+        const rendered = AppBuilderComponentFieldsSection({
+            catalog: [seedMeshEntry],
+            configs: {},
+            provided: EMPTY_PROVIDED,
+            secretFlags: EMPTY_FLAGS,
+            onTextChange: jest.fn(),
+            onSecretChange: jest.fn(),
+        });
+
+        expect(rendered).toBeNull();
     });
 });
