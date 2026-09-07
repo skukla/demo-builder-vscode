@@ -18,8 +18,12 @@
  */
 
 import {
+    SMART_404_HEAD_MARKER_END,
+    SMART_404_HEAD_MARKER_START,
+    SMART_404_HEAD_SNIPPET_TEMPLATE,
     buildSmart404Snippet,
     derivePrepublishUrl,
+    deriveRegisterKeyUrl,
     extractCspNonce,
     replaceMarkedBlock,
 } from '@/features/eds/services/pdp/pdp404Snippet';
@@ -62,6 +66,56 @@ describe('derivePrepublishUrl', () => {
     it('rejects pathologically long URLs', () => {
         const longUrl = 'https://example.com/' + 'a'.repeat(2500) + '/render-pdp';
         expect(derivePrepublishUrl(longUrl)).toBeUndefined();
+    });
+
+    it('accepts an overlay URL of exactly the 2048-character cap and rejects 2049', () => {
+        // The cap is inclusive: 2048 is the longest URL we will derive from.
+        // Pinned at the boundary because an off-by-one here silently stops
+        // deriving the trigger for a legitimate (if long) overlay URL, and the
+        // smart 404 is then skipped with no error anywhere.
+        const build = (length: number): string => {
+            const prefix = 'https://example.com/';
+            const suffix = '/render-pdp';
+            return prefix + 'a'.repeat(length - prefix.length - suffix.length) + suffix;
+        };
+        const atCap = build(2048);
+        expect(atCap).toHaveLength(2048);
+        expect(derivePrepublishUrl(atCap)).toBe(atCap.replace('/render-pdp', '/prepublish-pdp'));
+        expect(derivePrepublishUrl(build(2049))).toBeUndefined();
+    });
+
+    it('rewrites only the FINAL /render-pdp segment when the path contains it twice', () => {
+        // The rewrite is anchored to the end of the path. An unanchored
+        // replace would rewrite the first occurrence and leave the action
+        // segment intact, producing a URL that resolves to nothing.
+        const overlay = 'https://example.com/api/render-pdp/v1/render-pdp';
+        expect(derivePrepublishUrl(overlay)).toBe(
+            'https://example.com/api/render-pdp/v1/prepublish-pdp'
+        );
+    });
+});
+
+describe('deriveRegisterKeyUrl', () => {
+    it('rewrites /render-pdp to the register-publish-key sibling and drops the query', () => {
+        // The extension POSTs the site-scoped publish key here; a wrong action
+        // segment means prepublish-pdp never gets a key and every cold PDP on a
+        // pinned site 401s.
+        const overlay =
+            'https://example.adobeioruntime.net/api/v1/web/accs-discovery/render-pdp?org=skukla&site=citisignal';
+        expect(deriveRegisterKeyUrl(overlay)).toBe(
+            'https://example.adobeioruntime.net/api/v1/web/accs-discovery/register-publish-key'
+        );
+    });
+
+    it('handles a trailing slash on /render-pdp/', () => {
+        expect(deriveRegisterKeyUrl('https://example.com/web/pkg/render-pdp/')).toBe(
+            'https://example.com/web/pkg/register-publish-key'
+        );
+    });
+
+    it('returns undefined for anything that is not a plausible overlay URL', () => {
+        expect(deriveRegisterKeyUrl('not-a-url')).toBeUndefined();
+        expect(deriveRegisterKeyUrl('https://example.com/web/pkg/discover-stores')).toBeUndefined();
     });
 });
 
@@ -324,6 +378,77 @@ describe('replaceMarkedBlock', () => {
         const content = `${END}\nstray\n${START}\nold body\n${END}\ntail`;
         expect(replaceMarkedBlock(content, START, END, fresh)).toBe(
             `${END}\nstray\n${START}\nnew body\n${END}\ntail`
+        );
+    });
+
+    it('searches for the end marker AFTER the start marker, not before it', () => {
+        // Tighter than the case above: the stray end marker sits within one
+        // marker-length of the start marker, so a search offset that goes
+        // backwards instead of forwards finds it and splices the file at the
+        // wrong point — duplicating the block rather than replacing it.
+        const content = `head\n${END}\n${START}\nold body\n${END}\ntail`;
+        expect(replaceMarkedBlock(content, START, END, fresh)).toBe(
+            `head\n${END}\n${START}\nnew body\n${END}\ntail`
+        );
+    });
+
+    it('returns null when only the end marker is present, however far into the file', () => {
+        // The missing-start guard is what stops a half-marked file being
+        // spliced from index -1, which silently drops the file's first
+        // character and pastes the block in the wrong place.
+        const content = `${'x'.repeat(40)}\n${END}\ntail`;
+        expect(replaceMarkedBlock(content, START, END, fresh)).toBeNull();
+    });
+
+    it('takes only the marked block out of freshFull, not the whole string', () => {
+        // The real templates carry blank lines around their markers. Splicing
+        // the whole fresh string in would accumulate that padding on every
+        // re-vendor.
+        const paddedFresh = `\n\n${START}\nnew body\n${END}\n\n`;
+        const content = `before\n${START}\nold body\n${END}\nafter`;
+        expect(replaceMarkedBlock(content, START, END, paddedFresh)).toBe(
+            `before\n${START}\nnew body\n${END}\nafter`
+        );
+    });
+});
+
+describe('SMART_404_HEAD_SNIPPET_TEMPLATE', () => {
+    it('re-splices in place through replaceMarkedBlock with its own head markers', () => {
+        // Idempotency contract: the installer detects an already-installed
+        // eager redirect by these markers and swaps the block in place. If
+        // either marker or the template itself is wrong, a re-run either
+        // duplicates the snippet or leaves a stale nonce behind.
+        const stale = SMART_404_HEAD_SNIPPET_TEMPLATE.replace('__NONCE__', 'stale');
+        const freshHead = SMART_404_HEAD_SNIPPET_TEMPLATE.replace('__NONCE__', 'aem');
+        const installed = `<head>\n${stale}\n</head>`;
+        expect(
+            replaceMarkedBlock(
+                installed,
+                SMART_404_HEAD_MARKER_START,
+                SMART_404_HEAD_MARKER_END,
+                freshHead
+            )
+        ).toBe(`<head>\n${freshHead}\n</head>`);
+    });
+
+    it('bails out of a prerender before touching location', () => {
+        // head.html declares speculation rules that prerender PDP URLs on
+        // hover; calling location.replace() in that context is unspecified
+        // browser behaviour and wastes the prerender.
+        expect(SMART_404_HEAD_SNIPPET_TEMPLATE).toContain(
+            'if (document.prerendering) return;'
+        );
+    });
+
+    it('hides only <main> on a cold 404, and only when the retry flag is absent', () => {
+        // Hiding the whole body would take the storefront header and footer
+        // with it; skipping the pdpRetry check would hide main on the second
+        // pass, after the page has legitimately been published.
+        expect(SMART_404_HEAD_SNIPPET_TEMPLATE).toContain(
+            "if (window.isErrorPage && !new URLSearchParams(location.search).has('pdpRetry'))"
+        );
+        expect(SMART_404_HEAD_SNIPPET_TEMPLATE).toContain(
+            "s.textContent = 'main { visibility: hidden; }';"
         );
     });
 });
