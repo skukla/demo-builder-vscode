@@ -17058,6 +17058,44 @@
             "decision": "none \u2014 the sibling OptionalChaining mutant on payload?.prompt IS killed (a call with no payload at all), which is the same guard read from the reachable side.",
             "recorded": "2026-09-07",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/project-creation/handlers/executorMeshPhase.ts",
+            "anchors": [
+                "workspace: typedConfig.adobe?.workspace,"
+            ],
+            "line": 173,
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "This line is inside the same-workspace-import branch, which is entered only when isSameWorkspaceImport is true. That requires typedConfig.importedWorkspaceId to be truthy AND strictly equal to typedConfig.adobe?.workspace. A truthy value can never be strictly equal to the undefined that adobe?.workspace yields when adobe is absent, so typedConfig.adobe is provably a non-null object by the time this line runs and dropping the ?. cannot throw. Planted 2026-09-07 (typedConfig.adobe.workspace) and all 40 tests in the four-suite family passed unchanged.",
+            "decision": "none - the sibling OptionalChaining mutant on the SAME expression at the branch condition IS killed, by a config that imports a workspace and endpoint with no Adobe selection at all; that is this guard read from the reachable side.",
+            "recorded": "2026-09-07",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/handlers/executorMeshPhase.ts",
+            "anchors": [
+                "context.logger.debug(`[Mesh Setup] Decision context:`);"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "The mutant empties the whole body of logMeshDecisionContext, whose every statement is a context.logger.debug call. The function returns void, takes no collaborator it can mutate, and its only non-logging expression is a second shouldConfigureExistingMesh(...) call whose result is interpolated straight into a debug string and then dropped. Emptying it therefore changes nothing any caller, collaborator or project state can observe - only the wording and presence of debug output, which this repo forbids pinning with assertions on logger arguments. Planted 2026-09-07 by returning before the first statement; all 40 tests passed unchanged.",
+            "decision": "none - the decision context log is a deliberate debugging aid for a four-way branch that is hard to reconstruct from a bug report, and the branch it describes is fully constrained by the executePhase suite.",
+            "recorded": "2026-09-07",
+            "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/handlers/executorMeshPhase.ts",
+            "anchors": [
+                "typedConfig.importedWorkspaceId &&"
+            ],
+            "line": 245,
+            "mutants": 6,
+            "category": "branch",
+            "reason": "Six mutants on one site: the guard's two ConditionalExpression forms, its LogicalOperator, the second operand's ConditionalExpression and EqualityOperator, and the BlockStatement it guards. The block holds exactly one statement, a context.logger.debug call, and the guard governs nothing else - deployFreshMesh proceeds to ensureMeshPreflightAuth and withOrgContext identically whichever way it evaluates. So every one of the six changes only whether a debug line is emitted, and killing any of them would mean asserting a logger call, which this repo refuses because it pins wording. Each was planted separately on 2026-09-07 and all 40 tests in the four-suite family passed unchanged every time.",
+            "decision": "none - the log is worth keeping: it is the only record distinguishing 'imported a mesh from a different workspace, so a fresh deploy is correct' from 'deployed a second mesh by mistake' when reading a creation-time debug dump. The OptionalChaining mutant on the same condition is NOT in this row; it IS killed, by a deploy whose config names an imported workspace with no Adobe selection.",
+            "recorded": "2026-09-07",
+            "source": "PL-22 batch MUT-01"
         }
     ]
 }

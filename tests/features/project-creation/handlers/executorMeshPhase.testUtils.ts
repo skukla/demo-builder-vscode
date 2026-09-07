@@ -1,11 +1,13 @@
 /**
  * Shared setup for the `executorMeshPhase` suites.
  *
- * The two suites became a split family on 2026-09-07, when both were renamed out
- * of `executor-*` to sit against the module that DEFINES their subjects
+ * The family became a split family on 2026-09-07, when two suites were renamed
+ * out of `executor-*` to sit against the module that DEFINES their subjects
  * (`executorMeshPhase.ts`) rather than the one that re-exports them. A split
  * family needs a shared setup — `tests/sop/test-family-setup.test.ts` enforces
- * that, and it is what caught the rename.
+ * that, and it is what caught the rename. Two more joined the same day
+ * (`-executePhase`, `-componentConfigs`), which is why all four SUT exports are
+ * listed below.
  *
  * This file owns the SUT import deliberately. Mocks declared in a spec hoist
  * above that spec's own imports, so a spec that imports the subject itself can
@@ -21,6 +23,8 @@
 export {
     ensureMeshPreflightAuth,
     deployFreshMesh,
+    executeMeshPhase,
+    populateMeshComponentConfigs,
 } from '@/features/project-creation/handlers/executorMeshPhase';
 
 export { createMockLogger } from '../../../helpers/loggerFake';

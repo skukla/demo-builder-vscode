@@ -180,4 +180,58 @@ describe('Executor - Mesh Deploy Org-Context (Phase 4a)', () => {
         expect(mockWithOrgContext).not.toHaveBeenCalled();
         expect(mockDeployNewMesh).not.toHaveBeenCalled();
     });
+
+    it('should still build a target when there is no auth service to ask for a cached org', async () => {
+        const context = createMockHandlerContext({
+            logger: createLogger(),
+            authManager: undefined,
+        });
+
+        await deployFreshMesh(context, createConfig(), meshContext);
+
+        expect(mockWithOrgContext).toHaveBeenCalledWith(
+            expect.objectContaining({
+                orgId: 'org-123',
+                orgCode: undefined,
+                orgName: undefined,
+                projectId: 'proj-456',
+                workspaceId: 'ws-789',
+            }),
+            expect.any(Function)
+        );
+        expect(mockDeployNewMesh).toHaveBeenCalledTimes(1);
+    });
+
+    it('should deploy for an imported workspace even when nothing Adobe-side is selected', async () => {
+        const context = createContext();
+        const config: ProjectCreationConfig = {
+            projectName: 'demo',
+            importedWorkspaceId: 'ws-imported',
+        };
+
+        await deployFreshMesh(context, config, meshContext);
+
+        expect(mockWithOrgContext).toHaveBeenCalledWith(
+            expect.objectContaining({ orgId: '', projectId: undefined, workspaceId: undefined }),
+            expect.any(Function)
+        );
+        expect(mockDeployNewMesh).toHaveBeenCalledTimes(1);
+    });
+
+    it('should forward the project’s Adobe selection to the re-login it triggers', async () => {
+        const loginAndRestoreProjectContext = jest.fn().mockResolvedValue(true);
+        const context = createContext({
+            isAuthenticated: jest.fn().mockResolvedValueOnce(false).mockResolvedValue(true),
+            loginAndRestoreProjectContext,
+        });
+
+        await deployFreshMesh(context, createConfig(), meshContext);
+
+        expect(loginAndRestoreProjectContext).toHaveBeenCalledWith({
+            organization: 'org-123',
+            projectId: 'proj-456',
+            workspace: 'ws-789',
+        });
+        expect(mockDeployNewMesh).toHaveBeenCalledTimes(1);
+    });
 });

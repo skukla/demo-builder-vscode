@@ -8,8 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/utils/envParser.ts",
-        "src/types/webview.ts"
+        "src/features/project-creation/handlers/executorMeshPhase.ts"
     ],
     "reporters": [
         "clear-text",
