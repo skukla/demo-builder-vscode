@@ -827,6 +827,19 @@ breaks the code on purpose and reports what nothing noticed.
 > is ledgered with its reason.
 > Enforced by `tests/sop/no-wall-clock-bounds.test.ts`.
 
+> **Convention.** Assert emptiness with `toStrictEqual`, never `toEqual`.
+> *Why:* `toEqual` treats an ABSENT value and a PRESENT-but-empty one as the same thing,
+> so `expect(result).toEqual([])` is satisfied by a list holding one empty entry and
+> `toEqual({})` by an object whose every key is unset. On 2026-09-04 a goal session
+> working `installHandler` found a real mutant surviving behind exactly that. The whole
+> form is banned rather than ledgered because the strict version is strictly stronger and
+> never wrong — there is no test that wants "empty, or holding one undefined". 834
+> assertions were switched on 2026-09-07 and every one of the 1,555 suites passed
+> unchanged, so the stricter form costs nothing. What it buys is that the failure cannot
+> recur silently in 834 places, in a suite that had 54 strict comparisons against 3,150
+> lenient ones when the defect was found. Non-empty comparisons are untouched.
+> Enforced by `tests/sop/no-lenient-emptiness.test.ts`.
+
 > **Convention.** A canonical fake covers its subject's WHOLE public surface, and
 > invents nothing.
 > *Why:* both halves have failed here. A fake NARROWER than the need is one nobody
@@ -1165,11 +1178,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 44 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 45 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 86 conventions. 85 of them are enforced; 1 is not.**
+**This handbook states 87 conventions. 86 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on
