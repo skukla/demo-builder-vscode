@@ -101,6 +101,39 @@ already catches the same decision. The goal is removing repetition, not reaching
 **Done:** the three suites are consolidated, the module re-measures at zero open gaps, and
 the test-file line counts fall. Half a day.
 
+## Phase 1 OUTCOME — shipped 2026-09-07, and it re-aims Phase 3
+
+Done. `fieldValidation`'s three suites are tables; 647 lines became 322; the ratchet held at
+95.24% with 0 survivors and 0 uncovered. Roughly two hours, not the half day estimated.
+
+**The metric did not move, and cannot.** Measured like-for-like with `disableBail`:
+
+| | tests | redundant | minimal cover |
+|---|---|---|---|
+| before | 90 | 90 | 6 |
+| after | **99** | **99** | 6 |
+
+Nine MORE tests, because a loop over twelve characters inside one `it` became twelve named
+rows that each report their own failure. `it.each` emits one test per row, and the rows still
+overlap in what they catch, so consolidation of this kind moves the redundancy number by
+zero. It falls only by deleting tests, or by hiding them inside loops — and hiding them costs
+exactly the diagnostics the change bought.
+
+**So Phase 3 is not a redundancy-reduction programme and must stop being described as one.**
+What it delivers is line count, maintenance cost and assertion strength:
+
+- half the lines, and one line to add a case
+- assertions strengthened on the way through — whole-object equality instead of two separate
+  field checks, and exact messages instead of `toContain` fragments
+- three vague cases pinned to real behaviour, including one that asserted only that a result
+  came back, and two dispatcher tests that would have passed with a broken switch label
+  because a VALID value cannot tell routing from fall-through
+- one genuinely uncovered decision found and covered: composition order
+
+That last point is the argument for continuing. Consolidation did not reduce the number of
+tests, but reading 90 cases closely found a real gap and three weak assertions — which is
+what the exercise is actually worth.
+
 ## Phase 2 — Find out why 547 tests catch nothing
 
 Independent of Phase 1 and answers a different question, so it can run alongside.
@@ -148,8 +181,8 @@ depends on what they say:
 
 | If Phase 1 shows | then |
 |---|---|
-| consolidation is quick and the re-measure holds | continue to Phase 3 |
-| it is slow, or the re-measure moves | stop. The redundancy is load-bearing and the 59% is not an opportunity |
+| ~~consolidation is quick and the re-measure holds~~ | **ANSWERED: quick (2h) and the ratchet held — but the metric did not move.** Continue to Phase 3 for the line count and the assertion strength, NOT to reduce the 59% |
+| ~~it is slow, or the re-measure moves~~ | did not happen |
 
 | If Phase 2 shows | then |
 |---|---|

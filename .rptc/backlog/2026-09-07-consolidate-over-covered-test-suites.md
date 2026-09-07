@@ -152,3 +152,4 @@ decides whether Phase 3 happens at all.
 ## Shipped so far
 
 - nothing yet; measured and specified 2026-09-07.
+- 2026-09-07  Phase 1 shipped: fieldValidation consolidated, 647 lines -> 322, ratchet held (95.24%, 0 survivors). Finding: the redundancy metric did NOT move (90 tests/90 redundant -> 99/99, minimal cover 6 both times) — it.each emits one test per row, so consolidation cannot reduce the 59%. Value is lines, maintenance and assertion strength; reading the cases also found one uncovered decision and three weak assertions.
