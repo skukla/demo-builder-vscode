@@ -45,9 +45,15 @@ The six, measured directly:
 `DashboardStatusHeader.tsx` at 0% is the other: its only suite is a `.test.ts` that does not
 render the component.
 
-**They have NOT been added to the baseline.** Doing so moves the reported total from 51 open
-gaps to roughly 156, and whether to take that visibly is the owner's call, not a side effect
-of a measurement.
+**BASELINED 2026-09-07 on the owner's decision.** The reported total moved from 51 open gaps
+to **156 across 6 modules**, and the baseline now tracks 617. Nothing regressed — no test got
+worse and no module changed behaviour; six modules stopped being invisible.
+
+`types/webview.ts` got no row: it produces no mutants, so it was never really invisible, just
+not mutable. The set is effectively five.
+
+`mutationQueue.mjs` picks all six up in a single batch with no change to it, so closing them
+is ordinary burn-down work rather than a special project.
 
 ### The count was 17 before it was 6 — and why that matters
 
@@ -219,3 +225,4 @@ front of the size-ordered queue, so some will be at zero before this is touched,
 - 2026-09-07  Second direction measured 2026-09-07 (from PL-49 Phase 2): 284 tests across 52 mutant-rich modules are scored against a module they never exercise - the mirror image of this item. Confirmed re-export mechanism in 2 by reading; 46 of the 52 have no re-export, so a second mechanism is unidentified.
 - 2026-09-07  Attribution fixes 1-3 shipped 2026-09-07: pdp404Snippet (35 tests, rename), appBuilderComponentState (15 tests moved out of dashboardStatusService, 8 weaker duplicates dropped), aiPromptHandlers (31 tests, 2 files renamed). All three consuming modules unchanged. TWO PREVIOUSLY UNMEASURED MODULES NOW IN THE BASELINE with 51 open gaps between them (aiPromptHandlers 45, pdp404Snippet 6) - they had 66 tests all along, credited to the wrong file. Second mechanism identified: a consumer suite testing its dependency's functions (dashboardStatusService), which is likely the common case since 46 of 52 have no re-export.
 - 2026-09-07  Sized the invisible set 2026-09-07: 859 modules in scope, 612 measured, 247 unmeasured of which only SIX have their own mirroring suite. Those six hold ~105 open gaps, 80 of them in useSelectionStep.ts (185 mutants, 4 suites, never measured). Not baselined - that decision is the owner's. Also found: mutationScope.suitesFor and focusModule.suitesFor disagree on which suites belong to a module (stem-anywhere vs mirror-location), which inflated the first count from 6 to 17.
+- 2026-09-07  The six baselined 2026-09-07 on the owner's decision: total open gaps now 156 across 6 modules, baseline tracks 617. types/webview.ts produces no mutants so takes no row. mutationQueue picks all six up in one batch, so closing them is ordinary burn-down work.
