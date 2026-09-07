@@ -32,6 +32,7 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 }));
 
 export { useSelectionStep } from '@/core/ui/hooks/useSelectionStep';
+export type { UseSelectionStepOptions } from '@/core/ui/hooks/useSelectionStep';
 
 import { WizardState } from '@/types/webview';
 import '@testing-library/jest-dom';
@@ -72,4 +73,31 @@ export const testItems: TestItem[] = [
 export function resetMocks(): void {
     jest.clearAllMocks();
     mockOnMessage.mockReturnValue(jest.fn()); // Return unsubscribe function
+}
+
+/** The channels a render subscribed to, plus every unsubscribe handed back. */
+export interface CapturedChannels {
+    handlers: Record<string, (data: unknown) => void>;
+    /** One entry per subscription, in order — a resubscribe appends rather than replaces. */
+    unsubscribes: Record<string, jest.Mock[]>;
+}
+
+/**
+ * Drive the hook's message channels by hand.
+ *
+ * `resetMocks: true` in jest.config.js wipes implementations between tests, so every
+ * test that needs to push a message calls this itself rather than relying on setup.
+ * Each unsubscribe handed to the hook is kept so a test can assert the effect cleaned
+ * up — including the FIRST one for a channel, which is what a resubscribe after a
+ * messageType change must have called.
+ */
+export function captureChannels(): CapturedChannels {
+    const captured: CapturedChannels = { handlers: {}, unsubscribes: {} };
+    mockOnMessage.mockImplementation((type: string, callback: (data: unknown) => void) => {
+        captured.handlers[type] = callback;
+        const unsubscribe = jest.fn();
+        (captured.unsubscribes[type] ??= []).push(unsubscribe);
+        return unsubscribe;
+    });
+    return captured;
 }

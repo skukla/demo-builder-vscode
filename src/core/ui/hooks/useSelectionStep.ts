@@ -6,7 +6,14 @@ import { WizardSessionState, WizardState } from '@/types/webview';
 
 /**
  * Check if a selected item needs syncing with fresh data
- * Handles hydration (ID-only imports) and refresh (external rename)
+ *
+ * Covers BOTH jobs this hook documents: hydration (an ID-only import, whose
+ * selection carries no display fields yet) and refresh (an external rename).
+ * Hydration needs no term of its own — a selection with no title, against an
+ * incoming item that HAS one, is already a title change, because a falsy stored
+ * title can never equal a truthy incoming one. A third `needsHydration` clause
+ * saying so separately sat here until 2026-09-07 and could not change the answer
+ * in any of the 256 field combinations this helper can be handed.
  */
 function needsSelectedItemSync<T extends { id: string }>(
   selectedItem: Pick<T, 'id'> & Partial<T>,
@@ -19,9 +26,8 @@ function needsSelectedItemSync<T extends { id: string }>(
 
   const titleChanged = matchingTitle && selectedTitle !== matchingTitle;
   const nameChanged = matchingName && selectedName !== matchingName;
-  const needsHydration = !selectedTitle && matchingTitle;
 
-  return !!(titleChanged || nameChanged || needsHydration);
+  return !!(titleChanged || nameChanged);
 }
 
 /**

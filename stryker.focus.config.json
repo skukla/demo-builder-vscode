@@ -8,9 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/components/feedback/SuccessStateDisplay.tsx",
-        "src/core/ui/hooks/useSelectionStep.ts",
-        "src/features/dashboard/ui/configure/AppBuilderComponentFieldsSection.tsx"
+        "src/core/ui/hooks/useSelectionStep.ts"
     ],
     "reporters": [
         "clear-text",

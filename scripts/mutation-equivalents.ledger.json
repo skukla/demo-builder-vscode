@@ -17022,6 +17022,30 @@
             "decision": "none \u2014 the empty deps array is correct; the projectDestinationUpdate subscription depends on nothing (the re-seed effect above it is the one that takes a dependency)",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/core/ui/hooks/useSelectionStep.ts",
+            "anchors": [
+                "const latest = useRef({ onSelect, validateBeforeLoad, messagePayload });"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker empties the useRef INITIAL value. React reads that argument only on the first render, and the very next statement \u2014 'latest.current = { onSelect, validateBeforeLoad, messagePayload }', assigned during render on purpose so the effects below never see a stale callback \u2014 overwrites it before anything can read it. There is no point in any render, effect or callback at which latest.current still holds the initial object, so no test can observe the difference. Planted 2026-09-07 and the full 67-test suite passed unchanged.",
+            "decision": "none \u2014 the initial value is required by useRef's signature and is dead by construction",
+            "recorded": "2026-09-07",
+            "source": "mutationLedger add"
+        },
+        {
+            "module": "src/core/ui/hooks/useSelectionStep.ts",
+            "anchors": [
+                "const selectItem = useCallback((item: T) => {"
+            ],
+            "mutants": 1,
+            "category": "other",
+            "reason": "Stryker replaces the selectItem useCallback's EMPTY dependency array with ['Stryker was here']. React compares dependencies element-wise with Object.is, and the injected element is the same string literal on every render, so the callback is memoised exactly as it is with no dependencies at all. The only observable is selectItem's identity across renders, which is stable either way. Planted 2026-09-07 and the full 67-test suite passed unchanged.",
+            "decision": "none \u2014 the empty deps array is correct; the callback reads only latest.current",
+            "recorded": "2026-09-07",
+            "source": "mutationLedger add"
         }
     ]
 }

@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "Baselining the react half of the never-measured set (PL-45, 2026-09-07). useSelectionStep.ts is the headline: 185 mutants and FOUR test suites, never once measured because no suite carried its filename in its mirror location. Recorded at its true score so the gaps stop being invisible.",
+    "_note": "useSelectionStep: 3 new suites (33 tests) cover selected-item sync, the mount-time auto-load and every dependency array; dead needsHydration term removed; 2 unobservable mutants ledgered",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -9542,26 +9542,18 @@
             "openGaps": 0
         },
         "src/core/ui/hooks/useSelectionStep.ts": {
-            "score": 53.51,
-            "killed": 99,
-            "survived": 74,
-            "noCoverage": 12,
+            "score": 98.88,
+            "killed": 177,
+            "survived": 2,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "block": 4,
-                "string": 4,
-                "branch": 56,
-                "other": 9,
-                "optionalChain": 1
+                "other": 2
             },
-            "uncoveredCategories": {
-                "branch": 7,
-                "block": 3,
-                "string": 2
-            },
-            "highValueSurvivors": 60,
-            "equivalent": 0,
-            "openGaps": 80
+            "uncoveredCategories": {},
+            "highValueSurvivors": 0,
+            "equivalent": 2,
+            "openGaps": 0
         },
         "src/features/dashboard/ui/configure/AppBuilderComponentFieldsSection.tsx": {
             "score": 61.29,
