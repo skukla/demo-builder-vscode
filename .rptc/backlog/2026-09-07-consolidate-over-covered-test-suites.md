@@ -43,6 +43,18 @@ against 56 possible changes:
 So 9 of the 19 are droppable, and that is a true statement about the score and a misleading
 one about the tests.
 
+## Scope: the outliers only — about 3% of that 12,564
+
+This item does NOT propose working through the 59%. The modules it names hold 384 redundant
+tests, and the redundancy is too spread out for any plan to reach much more: 111 modules hold
+half of it, 277 hold 80%.
+
+**~59% is also normal here.** Median redundancy across the 527 modules with ten or more tests
+is **58%** (middle half 44–71%), so the typical module already looks like the headline
+number. The targets below sit at 90–100%, the 95th percentile and above. No benchmark says
+what a healthy ratio is, so the extremes are the only part that can be acted on without
+inventing a threshold.
+
 ## Why deleting on this metric would be wrong
 
 **Those 10 tests are not checking the same thing.** They assert different outcomes — a

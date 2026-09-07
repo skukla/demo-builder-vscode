@@ -185,6 +185,37 @@ than nothing, because it fails builds for a defect that is not there.
 
 ---
 
+## This plan reaches 3% of the 59%, on purpose
+
+Stated plainly because the phases above would otherwise read as the beginning of a march
+through 12,564 tests. They are not.
+
+**The eight modules named in Phases 1 and 3 hold 384 redundant tests — 3.1% of the total.**
+No realistic version of this plan reaches much more, because the redundancy is not
+concentrated:
+
+| | |
+|---|---|
+| Modules holding half the redundancy | 111 |
+| Modules holding 80% of it | 277 |
+| Redundant tests living in modules with < 25 tests | 2,258 (18%), spread over 300 modules |
+
+At roughly half a day per module, reaching even half would be fifty-odd days.
+
+**And ~59% is NORMAL here, not a defect.** Across the 527 modules with ten or more tests the
+median redundancy ratio is **58%**, with the middle half between 44% and 71%. The average
+module already looks like the headline number. The eight targets sit at 90–100% — the 95th
+percentile and above — which is why their repetition is self-evident and the rest is not.
+
+**The number also has no target value.** No benchmark was found for what a healthy
+redundancy ratio is, and without one "reduce the 59%" is not something anyone can aim at or
+know they have finished. That is precisely why the phases above are anchored to modules
+whose ratio is extreme enough to be obvious without a threshold, and why the gate is written
+to stop rather than to continue.
+
+If a benchmark ever turns up, or if Phase 1 proves consolidation is far cheaper than half a
+day per module, revisit this section — it is the only thing holding the scope down.
+
 ## Out of scope, deliberately
 
 - **Bulk deletion on either number.** Both traps above exist to prevent exactly this.
@@ -201,4 +232,6 @@ Phase 1 and Phase 2 are complete and the gate has been answered — in writing, 
 PL-49 — with either a decision to continue or a recorded reason to stop. Phases 3 and 4
 happen only if the gate says so.
 
-**Not** "the 59% is gone". That number will barely move, and moving it was never the point.
+**Not** "the 59% is gone". The phases here move it by about 3 points at most, the median
+module sits at 58% already, and no benchmark says what it ought to be — see the section
+above. Moving that number was never the point and cannot be the measure.
