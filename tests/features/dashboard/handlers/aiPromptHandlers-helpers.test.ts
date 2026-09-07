@@ -55,9 +55,9 @@ describe('aiHandlers — copy & module helpers', () => {
                 name: 'Hero Block Generator',
             });
 
-            expect(loggerInfo).toHaveBeenCalledWith(
-                expect.stringContaining('[handleCopyAiPrompt] prompt copied')
-            );
+            // The assertion is about WHAT reaches the log, not how it is worded: the
+            // two checks below need a log line to have happened at all, and pinning
+            // its prefix as well only fixes the wording in place.
             const logged = loggerInfo.mock.calls.map((c) => String(c[0])).join('\n');
             expect(logged).toContain('Hero Block Generator');
             expect(logged).not.toContain('SECRET_BODY_should_not_appear_in_logs');

@@ -40,7 +40,6 @@
         "tests/features/components/handlers/componentHandlers.test.ts": 2,
         "tests/features/components/services/componentManager-install-version-detection.test.ts": 8,
         "tests/features/components/services/componentManager-installNpmDependencies.test.ts": 1,
-        "tests/features/dashboard/handlers/aiHandlers-misc.test.ts": 1,
         "tests/features/dashboard/handlers/aiHandlers-regenerate.test.ts": 1,
         "tests/features/dashboard/handlers/aiHandlers-setup.test.ts": 4,
         "tests/features/dashboard/handlers/dashboardHandlers-openDevConsole.test.ts": 1,

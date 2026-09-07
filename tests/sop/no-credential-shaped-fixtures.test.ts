@@ -76,7 +76,6 @@ const AGREED_MARKER =
 const CREDENTIAL_CEILINGS: Record<string, number> = {
     'tests/core/logging/debugLogger-commandDetail.test.ts': 1,
     'tests/core/utils/envVarExtraction.test.ts': 2,
-    'tests/core/validation/fieldValidation-commerceUrl.test.ts': 1,
     'tests/core/validation/securityValidation-githubUrl.test.ts': 1,
     'tests/features/ai/server/agentTraceSink.test.ts': 1,
     'tests/features/authentication/services/adobeEntityFetcher-apiServices.test.ts': 2,
