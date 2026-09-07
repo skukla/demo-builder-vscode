@@ -174,12 +174,11 @@ describe('ProcessCleanup - Mocked Tests', () => {
             const cleanup = new ProcessCleanup();
             const nonExistentPid = 999999;
 
-            const startTime = Date.now();
             await cleanup.killProcessTree(nonExistentPid);
-            const duration = Date.now() - startTime;
 
-            // Should complete immediately (< 50ms)
-            expect(duration).toBeLessThan(50);
+            // "Immediately" means it took the existence-check path and stopped.
+            // That is what the kill-signal assertion below proves; a wall-clock
+            // bound only proved the machine was not busy (PL-41).
 
             // Should not have sent any kill signals (only existence check)
             const actualKills = killCalls.filter((c) => c.signal !== 0);

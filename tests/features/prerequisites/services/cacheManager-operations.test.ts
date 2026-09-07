@@ -62,12 +62,12 @@ describe('PrerequisitesCacheManager - Basic Operations', () => {
 
                 cacheManager.setCachedResult('node', mockResult);
 
-                const startTime = Date.now();
                 const cached = cacheManager.getCachedResult('node');
-                const duration = Date.now() - startTime;
 
-                expect(cached?.data).toEqual(mockResult);
-                expect(duration).toBeLessThan(10); // Must complete in <10ms
+                // A hit returns the STORED object itself. Identity is the claim
+                // "no work was redone"; the wall clock only ever asserted that
+                // the machine was idle (PL-41).
+                expect(cached?.data).toBe(mockResult);
             });
 
             it('should return undefined for cache miss', () => {

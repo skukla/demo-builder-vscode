@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **85** conventions, **84** enforced
+- **86** conventions, **85** enforced
 - **20** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -123,6 +123,7 @@ it means the rule rests on somebody noticing.
 | A test file's environment is decided by a rule in `jest.config.js`, never by a `@jest-environment` docblock in the file. |  |  | `no-jest-environment-docblocks.test.ts` |
 | A test may not assert a LOGGER call's arguments — no `expect(logger.x).toHaveBeenCalledWith(...)` — beyond its file's recorded ceiling, and the ceilings only fall. |  |  | `no-logger-wording-assertions.test.ts` |
 | No credential-SHAPED string under `tests/` — not a `user:password@host` URL, not a `Basic <base64>` header — even a fake one. Build the value by parts. |  |  | `no-credential-shaped-fixtures.test.ts` |
+| A test may not put an upper bound on a wall-clock duration. |  |  | `no-wall-clock-bounds.test.ts` |
 | A canonical fake covers its subject's WHOLE public surface, and invents nothing. |  |  | `fake-mirrors-subject.test.ts` |
 | A split test family shares one `.testUtils` file, which owns the mocks and the subject import. enforced by `tests/sop/test-family-setup.test.ts`. |  | [procedure](../../.claude/skills/webview-test-authoring/SKILL.md) | `test-family-setup.test.ts` |
 | A suite imports its shared mock wall BEFORE it imports the code under test. Enforced by `tests/sop/mock-wall-import-order.test.ts` (shrink-only ledger). |  |  | `mock-wall-import-order.test.ts` |

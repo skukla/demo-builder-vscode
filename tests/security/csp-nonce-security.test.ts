@@ -159,18 +159,18 @@ describe('Security: CSP Nonce Generation', () => {
     });
 
     describe('Performance', () => {
-        it('should generate nonces efficiently', () => {
+        it('generates a distinct nonce every time, a thousand times over', () => {
             const iterations = 1000;
-            const startTime = Date.now();
 
+            const nonces = new Set<string>();
             for (let i = 0; i < iterations; i++) {
-                command.testGetNonce();
+                nonces.add(command.testGetNonce());
             }
 
-            const duration = Date.now() - startTime;
-
-            // Should complete 1000 nonces in under 100ms
-            expect(duration).toBeLessThan(100);
+            // A repeat is the security failure. The old assertion timed the loop
+            // instead, which measured the machine rather than the nonce (PL-41)
+            // and would have passed just as happily on a constant.
+            expect(nonces.size).toBe(iterations);
         });
     });
 });

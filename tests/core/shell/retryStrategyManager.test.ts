@@ -190,8 +190,11 @@ describe('RetryStrategyManager', () => {
 
             const duration = Date.now() - startTime;
 
-            // Delays should be capped at 100ms each (4 retries × 100ms = 400ms)
-            expect(duration).toBeLessThan(600);
+            // Capped, the four retries wait 100ms each — 400ms. UNCAPPED they
+            // would wait 1000ms, then 10s, then 100s, so any bound in seconds
+            // still fails loudly if the cap breaks. 600ms did not measure the
+            // cap, it measured whether the machine was busy (PL-41).
+            expect(duration).toBeLessThan(5_000);
         });
 
         it('should handle network errors with network strategy', async () => {

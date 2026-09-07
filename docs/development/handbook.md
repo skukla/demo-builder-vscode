@@ -808,6 +808,25 @@ breaks the code on purpose and reports what nothing noticed.
 > Prose counts too: write "user-colon-password-at-host", not the shape.
 > Enforced by `tests/sop/no-credential-shaped-fixtures.test.ts`.
 
+> **Convention.** A test may not put an upper bound on a wall-clock duration.
+> *Why:* on 2026-09-03 three suites failed `npm run gate` inside the pre-push hook on
+> commits that could not have caused it, one of them docs-only. Measured on an idle
+> 16-core machine the full suite passes at every `maxWorkers` setting, so the worker
+> ratio was never the cause: the flakes needed another run overlapping — a goal
+> session's Stryker, or a second gate — AND a test asserting something finished within
+> N milliseconds. Starved of CPU the assertion fails while the code is fine, and a gate
+> that fails for reasons unrelated to the change teaches people to re-run rather than
+> read. Only upper bounds are banned, because load makes things slower and never
+> faster, so a LOWER bound on a duration asserts real behaviour and cannot flake.
+> Every one of the five assertions removed when this rule landed had a behavioural
+> claim underneath it, twice already asserted on the next line: "resolves immediately"
+> meant no kill signal was sent, "returns instantly from cache" meant the stored object
+> came back by identity, "generates nonces efficiently" meant a thousand nonces are a
+> thousand DISTINCT nonces — a property the timing version would have passed on a
+> constant. A deadline with an order-of-magnitude margin is not a performance bound and
+> is ledgered with its reason.
+> Enforced by `tests/sop/no-wall-clock-bounds.test.ts`.
+
 > **Convention.** A canonical fake covers its subject's WHOLE public surface, and
 > invents nothing.
 > *Why:* both halves have failed here. A fake NARROWER than the need is one nobody
@@ -1146,11 +1165,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 43 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 44 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 85 conventions. 84 of them are enforced; 1 is not.**
+**This handbook states 86 conventions. 85 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

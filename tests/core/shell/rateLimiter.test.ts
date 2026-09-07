@@ -333,11 +333,9 @@ describe('RateLimiter', () => {
                 operations.push(rateLimiter.checkRateLimit('resource1'));
             }
 
-            const startTime = Date.now();
-            await Promise.all(operations);
-            const duration = Date.now() - startTime;
-
-            expect(duration).toBeLessThan(500); // Should be fast
+            // Every call resolves because the limit is far above the number of
+            // calls. Timing this only asserted the machine was idle (PL-41).
+            await expect(Promise.all(operations)).resolves.toHaveLength(100);
         });
 
         it('should handle resource names with special characters', async () => {
