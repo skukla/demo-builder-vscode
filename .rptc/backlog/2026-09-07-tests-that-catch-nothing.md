@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: backlog
+status: shipped
 parent: PL-11
 ---
 
@@ -162,3 +162,6 @@ Phase 2 finds a real habit.
 
 - nothing yet; measured and specified 2026-09-07.
 - 2026-09-07  Phase 2 complete. 691 catch-nothing tests split three ways: 137 in thin-mutant modules (not findings), 284 across 52 modules misattributed to a file they never exercise (moved to PL-45), 270 that genuinely execute and catch nothing (absence assertions - keep). No deletions justified. Mock-assertion hypothesis dead for the second time; Phase 4 enforcer cancelled.
+- 2026-09-07  docs: Phase 2 — nothing to delete, and the real finding is a measurement fault (`aa4a8092a`)
+- 2026-09-07  docs(backlog): normalise both findings by how much there is to catch — a third of one is an artefact (`b43e271ae`)
+- 2026-09-07  Complete 2026-09-07. Phase 2 classified all 792: 137 in thin-mutant modules (not findings), 284 misattributed (moved to PL-45, now shipped), 270 genuine absence assertions that must be KEPT. No deletions justified. The mock-assertion hypothesis died twice. Phase 4's enforcer is cancelled - there is no habit to enforce against.

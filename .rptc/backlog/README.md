@@ -291,18 +291,18 @@ each item's own file; what has already landed against an item is in its
 | `PL-14` | chore | └ [ADR-016 enforcement tooling — the seven artifacts](2026-08-28-adr-016-enforcement-tooling.md) | — | high | built |
 | `PL-15` | chore | └ [Run-noise burn-down to zero](2026-08-28-noise-burndown.md) | PL-14 | med | shipped |
 | `PL-16` | fix | └ [Give StateManager and Project fixtures a shared builder, the way HandlerContext has one](2026-08-28-shared-test-builders.md) | — | high | shipped |
-| `PL-22` | question | └ [93% was the ceiling, not the norm — mutation scores fall as async density rises](2026-08-30-mutation-score-beyond-confident-modules.md) | PL-9 | med | open |
+| `PL-22` | question | └ [93% was the ceiling, not the norm — mutation scores fall as async density rises](2026-08-30-mutation-score-beyond-confident-modules.md) | PL-9 | med | shipped |
 | `PL-32` | chore | └ [Work the type-erasing casts in tests to zero](2026-08-31-type-erasing-casts.md) | — | med | shipped |
 | `PL-46` | question | └ [Functional testing that drives the real VS Code, and where to stop](2026-09-06-functional-ui-testing-through-the-real-vs-code.md) | — | high | backlog |
 | `PL-47` | feature | └ [One harness, more probes: themes, widths, and the accessibility gap](2026-09-06-deepen-the-webview-visual-baseline-themes-widths-accessibility.md) | — | high | backlog |
-| `PL-48` | chore | └ [Half the suite catches nothing new — consolidate the worst, delete none of it](2026-09-07-consolidate-over-covered-test-suites.md) | — | high | backlog |
-| `PL-49` | chore | └ [635 tests catch nothing — find out WHY before deciding what goes](2026-09-07-tests-that-catch-nothing.md) | — | high | backlog |
+| `PL-48` | chore | └ [Half the suite catches nothing new — consolidate the worst, delete none of it](2026-09-07-consolidate-over-covered-test-suites.md) | — | high | active |
+| `PL-49` | chore | └ [635 tests catch nothing — find out WHY before deciding what goes](2026-09-07-tests-that-catch-nothing.md) | — | high | shipped |
 | `PL-12` | question | [Pattern-conformance audit — one architecture, or one per feature?](2026-08-28-pattern-conformance-audit.md) | — | med | shipped |
 | `PL-17` | question | [The architecture is written for the extension host only; the frontend has rules but no document](2026-08-28-adr015-webview-jurisdiction.md) | — | high | shipped |
 | `PL-18` | feature | [ADR-017 §6 is stated but unenforced — the check that closes it](2026-08-29-adr017-stylesheet-bundle-check.md) | — | high | shipped |
 | `PL-42` | fix | └ [Read the redundancy lists and delete what pins nothing — about half of every suite is a candidate](2026-09-04-redundant-test-read.md) | — | high | open |
 | `PL-43` | fix | └ [651 assertions claim something is empty using a comparison that accepts an empty value instead](2026-09-04-lenient-equality-hides-empty-values.md) | — | high | backlog |
-| `PL-45` | fix | └ [Tests named so the mirror convention misses them](2026-09-05-tests-named-so-the-mirror-convention-misses-them.md) | — | high | backlog |
+| `PL-45` | fix | └ [Tests named so the mirror convention misses them](2026-09-05-tests-named-so-the-mirror-convention-misses-them.md) | — | high | shipped |
 | `PL-25` | chore | [Skill descriptions should trigger, not describe](skill-description-triggers.md) | — | med | dropped |
 | `PL-26` | feature | [A glossary, so the agent describes things back in our words](project-glossary.md) | — | med | active |
 | `PL-28` | question | [Rules stated as law that no handbook, ADR or check backs](unratified-rules-register.md) | — | high | shipped |
@@ -417,7 +417,7 @@ the table cannot hold: why the layers are ordered this way.*
 
 - `AI-1a` [AI-surface coverage: do the MCP tools, skills and agents empower an agent to USE the extension?](2026-08-16-mcp-surface-for-sc-design-work.md) — active
 - `AI-1b` [104 tools, and agents reach 20 of them](2026-08-25-agents-barely-use-the-tool-surface.md) — open
-- `PL-22` [93% was the ceiling, not the norm — mutation scores fall as async density rises](2026-08-30-mutation-score-beyond-confident-modules.md) — open
+- `PL-22` [93% was the ceiling, not the norm — mutation scores fall as async density rises](2026-08-30-mutation-score-beyond-confident-modules.md) — shipped
 
 **B** — 6 items
 

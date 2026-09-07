@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: backlog
+status: active
 parent: PL-11
 ---
 
@@ -153,3 +153,9 @@ decides whether Phase 3 happens at all.
 
 - nothing yet; measured and specified 2026-09-07.
 - 2026-09-07  Phase 1 shipped: fieldValidation consolidated, 647 lines -> 322, ratchet held (95.24%, 0 survivors). Finding: the redundancy metric did NOT move (90 tests/90 redundant -> 99/99, minimal cover 6 both times) — it.each emits one test per row, so consolidation cannot reduce the 59%. Value is lines, maintenance and assertion strength; reading the cases also found one uncovered decision and three weak assertions.
+- 2026-09-07  docs(plan): Phase 1 answered the gate — continue, but not for the reason the plan gave (`cbc826510`)
+- 2026-09-07  test(validation): fieldValidation as data — half the lines, and the metric did not move (`177402a0f`)
+- 2026-09-07  docs(plan): state the ceiling — this reaches 3% of the 59%, and that is the right amount (`fa6ea7547`)
+- 2026-09-07  docs(plan): the workplan for consolidating what the suite actually constrains (`0ce1494ec`)
+- 2026-09-06  docs(backlog): the sweep's FINAL totals — and two claims in the first draft were wrong (`13e18001c`)
+- 2026-09-06  docs(backlog): PL-48 and PL-49 — what the redundancy sweep found, and what not to do with it (`fa2bbd6c6`)

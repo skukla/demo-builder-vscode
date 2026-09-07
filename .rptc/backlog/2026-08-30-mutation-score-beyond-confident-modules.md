@@ -5,7 +5,7 @@ area: platform
 parent: PL-11
 needs: [PL-9]
 value: med
-status: open
+status: shipped
 layer: A
 ---
 
@@ -157,8 +157,27 @@ the full set rather than sixteen: the tiers are right, the floors are targets, a
 4. **70 files have no tests at all.** A coverage question, not a mutation one. (The plan
    says 72; `mutationScope.mjs` reports 70 and 120-with-no-own-suite as of today.)
 
-The plan states PL-22 closes once every included module is measured and ratcheted, at
-which point the cadence drops to release cuts.
+~~The plan states PL-22 closes once every included module is measured and ratcheted, at
+which point the cadence drops to release cuts.~~
+
+**CLOSED 2026-09-07 on exactly that condition.** All **622** measurable modules are measured
+and ratcheted, and every one reads zero open gaps. Item 2 above last recorded 17,475 gaps
+across 71 finished modules; the remaining 551 were worked over four days of goal-queue runs.
+
+Two things the burn-down changed about the question itself, both worth keeping:
+
+- **The map grew while it was being worked.** 610 modules at zero on 2026-09-06 became 622,
+  because fixing test ATTRIBUTION exposed twelve modules the instrument could not see — one
+  with 217 mutants, one with four suites, one reading 0% because its only suite tested a
+  stylesheet. A score is only as honest as the set it is measured over. That work is [[PL-45]].
+- **The async correlation held.** The hardest modules in the tail were the async ones, exactly
+  as r = -0.72 predicted: `executorMeshPhase` opened at 22.73% and `diagnosticsReport` at
+  41.53%, both orchestration-heavy.
+
+Item 4 stays out of scope by its own terms — files with no tests at all are a coverage
+question, not a mutation one, and closing this item does not answer it.
+
+The cadence now drops to release cuts.
 
 ## Tooling that now exists
 
@@ -474,6 +493,26 @@ which point the cadence drops to release cuts.
 - 2026-09-05  test(eds): close authoringExperience's mutation gaps (`5ebccce7e`)
 - 2026-09-05  test(eds): close lkgReader's mutation gaps (`9ae61a0fc`)
 - 2026-09-06  Burn-down complete: 610 of 610 modules at zero open gaps. Every behavioural mutant is killed by a test asserting the decision or recorded in the equivalence ledger. Runs 6-7 pushed green; batch size raised 5->10 after measuring that 80% of a batch was fixed setup cost.
+- 2026-09-07  chore(overnight): empty the queue — every tracked module is at zero again (`7d4fff72e`)
+- 2026-09-07  test(core): pin every decision envParser makes about a line (`a9e5219f8`)
+- 2026-09-07  test(commands): pin every line the diagnostics report prints (`8dc681f96`)
+- 2026-09-07  test(project-creation): pin every line the sample-data phase says (`218852dcc`)
+- 2026-09-07  test(project-creation): share the executorAppBuilderPhase family's fixtures (`b0478699b`)
+- 2026-09-07  test(project-creation): drive ensureWorkspaceRuntimeReady's three gates (`c0e6ced04`)
+- 2026-09-07  test(project-creation): drive executeMeshPhase and populateMeshComponentConfigs (`b974132f4`)
+- 2026-09-07  chore(overnight): run 1 queue — 5 modules, regenerated from the baseline (`0df36c810`)
+- 2026-09-07  chore(overnight): empty the queue — every tracked module is at zero again (`3039e3717`)
+- 2026-09-07  test(ui): close SuccessStateDisplay — 1 open gap to zero (`b2b7e0b70`)
+- 2026-09-07  test(eds): close pdp404Snippet — 6 open gaps to zero (`c2533722b`)
+- 2026-09-07  test(configure): close AppBuilderComponentFieldsSection — 8 open gaps to zero (`b2305d820`)
+- 2026-09-07  test(dashboard): close DashboardStatusHeader — 16 open gaps to zero (`b728bb4ff`)
+- 2026-09-07  test(dashboard): close aiPromptHandlers — 45 open gaps to zero (`035f80790`)
+- 2026-09-07  fix(sop): clear three ledger failures the earlier attribution commits left red (`fff11a8d6`)
+- 2026-09-07  test(ui): move the useSelectionStep suites to the module they test (`ec520d3bd`)
+- 2026-09-07  test(ui): close useSelectionStep — 80 open gaps to zero, and one term that could never matter (`d9d1bc8bc`)
+- 2026-09-07  chore(overnight): run 1 queue — 6 modules, regenerated from the baseline (`b878cafe8`)
+- 2026-09-07  perf(mutation): one module a batch — the work dominates again, so there is nothing to amortise (`4a7517e08`)
+- 2026-09-07  CLOSED 2026-09-07 on its own stated condition: every included module measured and ratcheted. 622 modules, all at zero open gaps. The measurable set grew from 610 to 622 during the work because fixing attribution exposed modules the instrument could not see. The async correlation held - the tail's hardest modules were the orchestration-heavy ones. Cadence drops to release cuts.
 
 ## Two lanes were tried and reverted — the gate is what blocks it (2026-09-05)
 

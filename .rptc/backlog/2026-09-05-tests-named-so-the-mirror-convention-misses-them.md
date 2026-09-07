@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: backlog
+status: shipped
 parent: PL-22
 ---
 
@@ -16,6 +16,36 @@ Filed 2026-09-05, from the PL-22 burn-down.
 FILENAME does not start with that module's stem.** 17 of those sit on modules that still
 have open gaps, together holding 472 of them. The tests run and pass on every CI build;
 they simply count towards nothing.
+
+## BOTH DIRECTIONS CLOSED — verified 2026-09-07
+
+**Direction one (this item's original claim) is resolved.** Re-measured by attributing every
+one of the 1,555 suites through `focusModule.suitesFor` and listing what no module claims:
+
+| | |
+|---|---|
+| Suites total | 1,555 |
+| Claimed by a module | 1,404 |
+| Orphaned | 151 — of which **150 name no source module at all** |
+| Orphaned AND naming a real module | **1**, and it is a false match |
+
+That one is `tests/sop/webview-architecture-rules.test.ts`, whose first hyphen-token
+"webview" collides with `types/webview.ts`. It is an architecture enforcer, not a suite for
+that module. The other 150 are cross-cutting by design — `diPatterns`,
+`stateOwnershipAudit`, `layerDeclarations`, `webviewHandlerCoverage` and their kin test a
+PATTERN across the tree and correctly belong to no single module.
+
+The original 44 were fixed during the burn-down itself: the goal text instructed every
+session to rename sibling suites named for a function rather than the file BEFORE measuring,
+so the work happened module by module rather than as a separate pass.
+
+**The item's opening numbers are stale and should be read as history.** "17 of those sit on
+modules that still have open gaps, together holding 472" was true on 2026-09-05; every
+tracked module is now at zero, so no gap hides behind a misnamed suite.
+
+**Direction two is closed too** — see the section below and the shipped log. Of the 189 tests
+the sweep flagged, a dozen suites were genuinely misattributed and are fixed; 96 were never
+misattribution at all.
 
 ## HOW BIG IS THE HOLE — measured 2026-09-07, and it is SMALL
 
@@ -226,3 +256,17 @@ front of the size-ordered queue, so some will be at zero before this is touched,
 - 2026-09-07  Attribution fixes 1-3 shipped 2026-09-07: pdp404Snippet (35 tests, rename), appBuilderComponentState (15 tests moved out of dashboardStatusService, 8 weaker duplicates dropped), aiPromptHandlers (31 tests, 2 files renamed). All three consuming modules unchanged. TWO PREVIOUSLY UNMEASURED MODULES NOW IN THE BASELINE with 51 open gaps between them (aiPromptHandlers 45, pdp404Snippet 6) - they had 66 tests all along, credited to the wrong file. Second mechanism identified: a consumer suite testing its dependency's functions (dashboardStatusService), which is likely the common case since 46 of 52 have no re-export.
 - 2026-09-07  Sized the invisible set 2026-09-07: 859 modules in scope, 612 measured, 247 unmeasured of which only SIX have their own mirroring suite. Those six hold ~105 open gaps, 80 of them in useSelectionStep.ts (185 mutants, 4 suites, never measured). Not baselined - that decision is the owner's. Also found: mutationScope.suitesFor and focusModule.suitesFor disagree on which suites belong to a module (stem-anywhere vs mirror-location), which inflated the first count from 6 to 17.
 - 2026-09-07  The six baselined 2026-09-07 on the owner's decision: total open gaps now 156 across 6 modules, baseline tracks 617. types/webview.ts produces no mutants so takes no row. mutationQueue picks all six up in one batch, so closing them is ordinary burn-down work.
+- 2026-09-07  chore(mutation): baseline envParser — attribution done, 231 gaps visible across 5 modules (`3e26d58d6`)
+- 2026-09-07  test(eds): the last misattributed suite — resetEdsProjectWithUI belongs to edsResetUI (`c222f1d2f`)
+- 2026-09-07  test(core): give parseEnvFile its own suite, out of meshStatusResolver (`0f983bb5e`)
+- 2026-09-07  test(diagnostics): give the re-formed family the shared setup the enforcer asks for (`88e4a439a`)
+- 2026-09-07  test(daLive): split two suites onto daLiveContentCopy, which declares their subjects (`299c883f2`)
+- 2026-09-07  test(diagnostics): split the copy-report tests onto the module that declares them (`396bceda9`)
+- 2026-09-07  test: rename six suites onto the modules that define their subjects — four more appear (`80fe5c917`)
+- 2026-09-07  docs(backlog): the six are baselined — 156 open gaps, visible (`be4afdf07`)
+- 2026-09-07  chore(mutation): baseline the six modules that were invisible — the total is 156, not zero (`736db862e`)
+- 2026-09-07  docs(backlog): size the invisible set — six modules, ~105 gaps, and two matchers that disagree (`bd22cadaf`)
+- 2026-09-07  test(ai): score the prompt tests against aiPromptHandlers, which defines them (`949b0a205`)
+- 2026-09-07  test(state): move the mesh-record tests to the module that defines them (`62fe9535b`)
+- 2026-09-07  test(pdp): score the snippet tests against the module that defines them (`ea5e312a5`)
+- 2026-09-07  Both directions verified closed 2026-09-07. Direction one re-measured: of 1555 suites, 1404 are claimed by a module and 151 orphaned - 150 of those name no source module at all (cross-cutting by design) and the single remaining hit is a false stem match on an sop enforcer. The original 44 were fixed inside the burn-down, whose goal text told each session to rename misnamed sibling suites before measuring. Direction two: a dozen suites genuinely misattributed and fixed; 96 of the 189 flagged tests were never misattribution.
