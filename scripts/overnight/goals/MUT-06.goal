@@ -1,7 +1,7 @@
-Work backlog item PL-22 — the mutation burn-down, batch MUT-02. Bring each
+Work backlog item PL-22 — the mutation burn-down, batch MUT-06. Bring each
 of these modules to ZERO open gaps, in this order:
 
-  - src/features/dashboard/handlers/aiPromptHandlers.ts  (45 open gaps)
+  - src/core/ui/components/feedback/SuccessStateDisplay.tsx  (1 open gaps)
 
 READ scripts/overnight/BURNDOWN.md FIRST. It carries the evidence for every rule below —
 what each has cost when skipped, and the traps that have burned real time. Read it once;
