@@ -34,7 +34,7 @@ export async function executeSampleDataPhase(
     project: import('@/types/base').Project,
     progressTracker: ProgressTracker,
 ): Promise<void> {
-    const chosen = (project as { datapack?: { name: string; version: string } }).datapack;
+    const chosen = project.datapack;
     if (!chosen) {
         return;
     }
