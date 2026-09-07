@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/pdp/pdp404Snippet.ts"
+        "src/core/ui/components/feedback/SuccessStateDisplay.tsx"
     ],
     "reporters": [
         "clear-text",
