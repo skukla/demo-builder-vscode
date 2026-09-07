@@ -174,6 +174,36 @@ Commit the generated list so the next person is not re-deriving it from a rotati
 **Done:** both modules classified, proportions recorded on PL-49, and a stated verdict on
 whether the mock-assertion habit is real. Two to three hours.
 
+## Phase 2 OUTCOME — shipped 2026-09-07: nothing to delete, and a measurement fault instead
+
+Done. The named lists were rebuilt offline from the raw reports, two modules were read, and
+the 691 catch-nothing tests visible in the 605 saved reports split three ways:
+
+| | tests | verdict |
+|---|---|---|
+| Modules with < 30 mutants | 137 | not findings — too little to catch |
+| Zero mutant coverage in a mutant-rich module | **284 across 52 modules** | **misattribution** |
+| Execute the module and still catch nothing | 270 | legitimate, mostly absence assertions |
+
+**The mock-assertion hypothesis died for the second time.** It was first built on two modules
+that proved to be thin-mutant artefacts; read properly, neither surviving group is about mocks.
+
+**The 284 are suites scored against a module they never exercise.** `pdp404HandlerPublisher`
+exports one function while its suite imports three others through it — those live in
+`pdp404Snippet`. `aiHandlers` re-exports from `aiPromptHandlers`, and all 45 dead tests name
+functions defined there. This is [[PL-45]]'s fault running the other way, and it is recorded
+there with the caveat that 46 of the 52 modules have no re-export, so a second mechanism
+exists and is unidentified.
+
+**The 270 are absence assertions** — *never throws*, *should NOT skip*, *leaves running
+undotted*. Two bodies read, both real guarantees that no mutation can break by construction.
+Confidence is a sample of two plus twenty names, and nothing depends on tightening it,
+because the verdict either way is keep.
+
+**A caution this phase paid for:** covering zero mutants is NOT the same as never executing
+the file. A module with few mutants produces zeros trivially, which is how 137 tests were
+first miscounted as findings before being separated out.
+
 ## Gate — decide here, not before
 
 Phases 1 and 2 answer the only questions that matter, and they are cheap. Everything after
@@ -186,8 +216,8 @@ depends on what they say:
 
 | If Phase 2 shows | then |
 |---|---|
-| the mock habit dominates | Phase 4 — the finding is a RULE, worth more than any cleanup |
-| the tests are mostly legitimate-but-unmutable | stop at 153 small judgements nobody needs to make |
+| ~~the mock habit dominates~~ | **did not happen — the hypothesis died twice** |
+| ~~the tests are mostly legitimate-but-unmutable~~ | **ANSWERED: yes. STOP.** No deletions are justified. Phase 4 does not happen — there is no habit to enforce against. The one real finding, 284 misattributed tests, moved to [[PL-45]] |
 
 ## Phase 3 — conditional: the next consolidation candidates
 
@@ -206,7 +236,13 @@ Ranked by redundancy, minimum 25 tests, **after** applying the decisions-per-tes
 Take the two smallest pure-function modules next (`promiseUtils`, `pdpUrlEncoding`) before
 anything touches an 81-test bundle writer.
 
-## Phase 4 — conditional: turn a habit into an enforcer
+## Phase 4 — CANCELLED by the gate (2026-09-07)
+
+Phase 2 found no habit, so there is nothing to enforce. Left here with its reasoning intact
+because the refusal below is the durable part: an enforcer for a rare habit fails builds for a
+defect that is not there. The original text follows.
+
+### (original, not to be acted on)
 
 Only if Phase 2 finds the mock-assertion pattern is real and widespread. This repository's
 pattern for a confirmed habit is an enforcer with a shrink-only ledger, not a document —

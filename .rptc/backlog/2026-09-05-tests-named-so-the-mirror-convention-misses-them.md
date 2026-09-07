@@ -17,6 +17,45 @@ FILENAME does not start with that module's stem.** 17 of those sit on modules th
 have open gaps, together holding 472 of them. The tests run and pass on every CI build;
 they simply count towards nothing.
 
+## THE SAME FAULT RUNS THE OTHER WAY TOO — measured 2026-09-07
+
+The item above is about a suite whose filename misses the module it tests, so its kills count
+for nothing. The redundancy sweep found the mirror image: **a suite whose filename MATCHES a
+module it does not exercise.**
+
+**284 tests across 52 modules cover none of their module's mutants, in modules holding 30 or
+more.** They run, they pass, and they are scored against a file they never reach — which also
+means the measurement spends time running suites that cannot affect the result.
+
+The mechanism, confirmed by reading two:
+
+- `pdp404HandlerPublisher.ts` exports ONE function. Its suite imports three more through it;
+  those live in `pdp404Snippet.ts`. 35 of its 64 tests score against the wrong file.
+- `aiHandlers.ts` re-exports `readMergedAiPrompts` from `./aiPromptHandlers`, and all 45 dead
+  tests across its four suites name functions defined there.
+
+Both are re-exports: the filename matches the module the code is imported FROM, not the one
+it is defined in. Five of the six worst cases share that shape.
+
+**The other 46 modules do NOT contain a re-export, so a second mechanism exists and has not
+been identified.** Finding it is part of this item now. Worst cases:
+
+| dead / tests | mutants | module |
+|---|---|---|
+| 45 / 91 | 130 | `features/dashboard/handlers/aiHandlers.ts` |
+| 35 / 64 | 135 | `features/eds/services/pdp/pdp404HandlerPublisher.ts` |
+| 29 / 54 | 89 | `commands/diagnostics.ts` |
+| 24 / 65 | 101 | `features/project-creation/handlers/executor.ts` |
+| 15 / 31 | 58 | `features/dashboard/services/dashboardStatusService.ts` |
+| 12 / 70 | 222 | `features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts` |
+
+A caution the sweep taught, so this is not re-learned: **coverage of zero mutants is NOT the
+same as never executing the file.** A module with few mutants produces zeros trivially — 137
+further tests were excluded on exactly that ground. The 284 above are only counted where the
+module has 30 or more mutants to cover.
+
+Source: [[PL-49]] Phase 2, `.rptc/plans/test-suite-consolidation/overview.md`.
+
 ## MEASURED FOUR TIMES THE SAME DAY — raised to high on this evidence
 
 Filed as a modest cleanup. Four modules met it within hours, and in each the rename ALONE
@@ -127,3 +166,7 @@ runs, or after the burn-down.
 **Whoever picks it up: re-measure first.** Four of the seven live modules are near the
 front of the size-ordered queue, so some will be at zero before this is touched, and the
 472 will be smaller.
+
+## Shipped so far
+
+- 2026-09-07  Second direction measured 2026-09-07 (from PL-49 Phase 2): 284 tests across 52 mutant-rich modules are scored against a module they never exercise - the mirror image of this item. Confirmed re-export mechanism in 2 by reading; 46 of the 52 have no re-export, so a second mechanism is unidentified.
