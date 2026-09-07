@@ -40,6 +40,27 @@ fixtures are the seam that will rot silently — a functional test is the only t
 could check they still match what the extension really sends.
 
 
+## What the burn-down left behind — added 2026-09-07
+
+[[PL-22]] reached zero open gaps across all 610 modules on 2026-09-06, and the sweep that
+ran straight after it measured the suite from the other side: not "does a test exist" but
+"does it catch anything". Two findings came out, and they are separate items because they
+are separate KINDS of finding.
+
+| | Finding | Why it is its own item |
+|---|---|---|
+| [[PL-48]] | 7,599 of 15,227 tests (50%) sit outside the minimal catching set | A property of a GROUP. Names no individual test, so it can only be used to rank — the work is consolidating the worst files, never deleting on the number |
+| [[PL-49]] | 635 tests catch no deliberate change at all | Names tests EXACTLY. The work is classifying why, because a shared cause means one fix rather than 635 decisions |
+
+Do PL-49 first. It is the sharper signal, its list is recoverable offline with no
+re-measurement, and two of its clusters look like one habit this repo already warns about —
+asserting that a mock was called tests the mock. If that is what it turns out to be, the
+result is a rule for test authors, which outlives any cleanup.
+
+Both are newly safe to attempt. Zero open gaps means a test removal is now falsifiable:
+re-measure, and the gap count must still read zero. That safety net did not exist before
+this week, which is why neither item was worth filing until now.
+
 ## What this epic collects
 
 - `PL-9` — tests-tree dedup census (execution lane; two mechanical clusters
