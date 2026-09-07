@@ -1,8 +1,17 @@
 /**
- * aiHandlers Tests — Prompt CRUD & scope
+ * aiPromptHandlers — prompt CRUD and scope
  *
- * handleDeleteAiPrompt, handleListAiPrompts, pin-aware ordering, and the full
- * pin/unpin/delete scope flow. Shared setup lives in aiHandlers.testUtils.ts.
+ * Renamed from `aiHandlers-*.test.ts` on 2026-09-07. Every test here exercises
+ * handleSaveAiPrompt, handleDeleteAiPrompt and handleListAiPrompts,
+ * all of which are DEFINED IN `aiPromptHandlers.ts`. Suites are matched to
+ * modules by filename, so the whole file was scored against `aiHandlers.ts` —
+ * which only re-exports one of these — and killed nothing there, while
+ * `aiPromptHandlers.ts` had no suite of its own and had never appeared in the
+ * mutation baseline.
+ *
+ * The subjects are reached through `aiHandlers.testUtils`, which already
+ * re-exports them from the defining module, so nothing about how these tests
+ * run has changed — only which module their kills are credited to.
  */
 
 import {

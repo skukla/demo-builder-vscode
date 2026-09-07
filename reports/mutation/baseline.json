@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "pdp404Snippet.ts enters the baseline for the first time. Its 35 tests lived in pdp404HandlerPublisher.test.ts and were scored against the publisher, which only re-exports them, so this module has never been measured. Renamed 2026-09-07; the publisher is unchanged at 79.26% with the same 4 survivors and 3 uncovered.",
+    "_note": "aiPromptHandlers.ts enters the baseline for the first time. Its 31 tests lived in aiHandlers-prompts.test.ts and aiHandlers-misc.test.ts and were scored against aiHandlers.ts, which re-exports one of the functions, so this 217-mutant module has never been measured. Renamed 2026-09-07; aiHandlers is unchanged at 77.69% with the same 4 survivors and 4 uncovered.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -9489,6 +9489,28 @@
             "highValueSurvivors": 2,
             "equivalent": 0,
             "openGaps": 6
+        },
+        "src/features/dashboard/handlers/aiPromptHandlers.ts": {
+            "score": 75.12,
+            "killed": 163,
+            "survived": 48,
+            "noCoverage": 6,
+            "timeout": 0,
+            "survivorCategories": {
+                "branch": 36,
+                "other": 2,
+                "string": 8,
+                "optionalChain": 2
+            },
+            "uncoveredCategories": {
+                "branch": 2,
+                "other": 2,
+                "block": 1,
+                "string": 1
+            },
+            "highValueSurvivors": 36,
+            "equivalent": 0,
+            "openGaps": 45
         }
     }
 }
