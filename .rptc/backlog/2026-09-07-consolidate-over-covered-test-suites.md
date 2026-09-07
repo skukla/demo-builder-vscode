@@ -131,6 +131,12 @@ Each module in the table is either consolidated with its gap count still zero, o
 line recorded saying why its repetition is worth keeping. Not "the 50% is gone" — that
 number will barely move, and it is not the goal.
 
+## The plan
+
+`.rptc/plans/test-suite-consolidation/overview.md` sequences this item with
+[[PL-49]]: Phase 1 is this item's pilot, Phase 3 its continuation, and the gate between them
+decides whether Phase 3 happens at all.
+
 ## Shipped so far
 
 - nothing yet; measured and specified 2026-09-07.
