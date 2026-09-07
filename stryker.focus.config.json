@@ -8,7 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/validation/fieldValidation.ts"
+        "src/core/ui/components/feedback/SuccessStateDisplay.tsx",
+        "src/core/ui/hooks/useSelectionStep.ts",
+        "src/features/dashboard/ui/configure/AppBuilderComponentFieldsSection.tsx"
     ],
     "reporters": [
         "clear-text",
