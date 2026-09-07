@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: active
+status: shipped
 ---
 
 # Three suites fail only under full-suite load, and it costs real pushes
@@ -70,3 +70,4 @@ caught at either number.
 - 2026-09-03  fix(tests): give the MCP server suite the same 30s ceiling as its socket sibling (`61b4a51bf`)
 - 2026-09-04  fix(sop): close the other half of the probe-file race (`469503bb6`)
 - 2026-09-04  fix(sop): stop two enforcers racing the probe files other suites create (`c8da09d18`)
+- 2026-09-07  CLOSED 2026-09-07. The remaining exposure - 'any NEW timing assertion, no enforcer bans those yet' - is now tests/sop/no-wall-clock-bounds.test.ts, with three controls and a shrink-only ledger for deliberate deadlines. Five live wall-clock bounds were removed on the way: four replaced by the behavioural claim underneath them (twice already asserted on the next line), one converted from a 600ms performance bound to a 5000ms deadline. Only UPPER bounds are banned - load makes things slower, never faster, so a lower bound cannot flake.
