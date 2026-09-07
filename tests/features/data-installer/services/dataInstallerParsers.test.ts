@@ -244,7 +244,7 @@ describe('dataInstallerParsers', () => {
             // from "still starting" without the runner's grace window.
             const snap = parseJobStatus(load('datapack-process-status-neverstarted.json'));
             expect(snap.hasRecord).toBe(false);
-            expect(snap.perType).toEqual({});
+            expect(snap.perType).toStrictEqual({});
             expect(snap.processingTimeMs).toBeUndefined();
         });
 

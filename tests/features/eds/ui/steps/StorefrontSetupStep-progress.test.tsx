@@ -236,6 +236,6 @@ describe('StorefrontSetupStep — subscriptions', () => {
 
         unmount();
 
-        expect(subscribedMessageTypes()).toEqual([]);
+        expect(subscribedMessageTypes()).toStrictEqual([]);
     });
 });

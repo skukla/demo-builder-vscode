@@ -70,7 +70,7 @@ describe('hasConfigurableEnvVars', () => {
 
 describe('collectStackComponents', () => {
     it('returns nothing without a stack', () => {
-        expect(collectStackComponents(undefined, {})).toEqual([]);
+        expect(collectStackComponents(undefined, {})).toStrictEqual([]);
     });
 
     it.each([

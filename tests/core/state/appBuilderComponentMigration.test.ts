@@ -81,7 +81,7 @@ describe('migrateLegacyToAppBuilderComponents', () => {
     });
 
     it('returns an empty object when neither meshState nor appState exist', () => {
-        expect(migrateLegacyToAppBuilderComponents({})).toEqual({});
+        expect(migrateLegacyToAppBuilderComponents({})).toStrictEqual({});
     });
 
     it('returns a forward-state manifest unchanged (idempotent — no double migration)', () => {
@@ -179,7 +179,7 @@ describe('migrateLegacyToAppBuilderComponents', () => {
 
             const appBuilderComponents = migrateLegacyToAppBuilderComponents(manifest);
 
-            expect(appBuilderComponents.mesh.envVars).toEqual({});
+            expect(appBuilderComponents.mesh.envVars).toStrictEqual({});
         });
 
         it('carries the "Later" decline flags onto the migrated mesh entry', () => {
@@ -244,7 +244,7 @@ describe('migrateLegacyToAppBuilderComponents', () => {
             // leaves behind, and the types say it cannot happen.
             const manifest: ProjectManifest = JSON.parse('{"meshState": null, "appState": null}');
 
-            expect(migrateLegacyToAppBuilderComponents(manifest)).toEqual({});
+            expect(migrateLegacyToAppBuilderComponents(manifest)).toStrictEqual({});
         });
 
         it('returns an empty map without throwing when BOTH legacy fields are malformed', () => {
@@ -254,7 +254,7 @@ describe('migrateLegacyToAppBuilderComponents', () => {
             } as ProjectManifest;
 
             expect(() => migrateLegacyToAppBuilderComponents(manifest)).not.toThrow();
-            expect(migrateLegacyToAppBuilderComponents(manifest)).toEqual({});
+            expect(migrateLegacyToAppBuilderComponents(manifest)).toStrictEqual({});
         });
     });
 });

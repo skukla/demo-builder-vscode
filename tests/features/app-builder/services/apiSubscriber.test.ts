@@ -159,7 +159,7 @@ describe('apiSubscriber', () => {
         it('an UNKNOWN service with no platformList still resolves empty (no guessing)', () => {
             const services = [...SERVICES_FOR_ORG, { code: 'MysterySDK' }];
             const [mystery] = resolveServiceInfos(['MysterySDK'], services);
-            expect(mystery.platformList).toEqual([]);
+            expect(mystery.platformList).toStrictEqual([]);
         });
 
         it('should carry the org service display name through', () => {
@@ -195,8 +195,8 @@ describe('apiSubscriber', () => {
 
             const { apiKey, oauthS2S, unmatched } = partitionByPlatform([orphan]);
 
-            expect(apiKey).toEqual([]);
-            expect(oauthS2S).toEqual([]);
+            expect(apiKey).toStrictEqual([]);
+            expect(oauthS2S).toStrictEqual([]);
             expect(unmatched.map((s) => s.sdkCode)).toEqual(['OrphanSDK']);
         });
     });

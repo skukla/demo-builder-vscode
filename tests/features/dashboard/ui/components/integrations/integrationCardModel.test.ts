@@ -93,7 +93,7 @@ describe('deriveIntegrationCard — status matrix', () => {
         // both set would print the same step twice in the flyout.
         expect(model.message).toBeUndefined();
         // Nothing is offered mid-deploy: every item would race the runner.
-        expect(model.menuActions).toEqual([]);
+        expect(model.menuActions).toStrictEqual([]);
     });
 
     it('deploying with no step reported yet: falls back to the static label', () => {
@@ -475,7 +475,7 @@ describe('deriveIntegrationCard — url + lastDeployed derivation', () => {
             // 'deploying' is transient and arrives via the override channel,
             // never the persisted entry (normalizeIntegrationStatus's docblock).
             const model = deriveIntegrationCard(integration(), { status: 'deploying' });
-            expect(model.menuActions).toEqual([]);
+            expect(model.menuActions).toStrictEqual([]);
         });
     });
 });

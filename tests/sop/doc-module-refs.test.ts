@@ -270,7 +270,7 @@ describe('a link to a heading reaches a heading that exists', () => {
         const dead = anchorLinks()
             .filter(({ target, anchor }) => !slugs(target).has(anchor))
             .map(({ from, target, anchor }) => `${from} -> ${target}#${anchor}`);
-        expect(dead).toEqual([]);
+        expect(dead).toStrictEqual([]);
     });
 });
 
@@ -298,12 +298,12 @@ describe('the inventories that claim to be complete, are', () => {
 
     it('src/features/CLAUDE.md names every feature directory', () => {
         const body = readFileSync(join(ROOT, 'src/features/CLAUDE.md'), 'utf8');
-        expect(dirsIn('src/features').filter((d) => !body.includes(d))).toEqual([]);
+        expect(dirsIn('src/features').filter((d) => !body.includes(d))).toStrictEqual([]);
     });
 
     it('src/core/CLAUDE.md names every core directory', () => {
         const body = readFileSync(join(ROOT, 'src/core/CLAUDE.md'), 'utf8');
-        expect(dirsIn('src/core').filter((d) => !body.includes(d))).toEqual([]);
+        expect(dirsIn('src/core').filter((d) => !body.includes(d))).toStrictEqual([]);
     });
 
     it('src/commands/CLAUDE.md names every module in that directory', () => {
@@ -312,7 +312,7 @@ describe('the inventories that claim to be complete, are', () => {
             .split('\n')
             .filter(Boolean)
             .map((f) => f.split('/').pop() as string);
-        expect(files.filter((f) => !body.includes(f))).toEqual([]);
+        expect(files.filter((f) => !body.includes(f))).toStrictEqual([]);
     });
 
     // Added 2026-08-30 in the Phase B pass over `src/core/ui/hooks/CLAUDE.md`. Unlike
@@ -332,7 +332,7 @@ describe('the inventories that claim to be complete, are', () => {
 
     it('src/core/ui/hooks/CLAUDE.md names every hook in that directory', () => {
         const body = readFileSync(join(ROOT, 'src/core/ui/hooks/CLAUDE.md'), 'utf8');
-        expect(hookNames().filter((h) => !body.includes(`\`${h}\``))).toEqual([]);
+        expect(hookNames().filter((h) => !body.includes(`\`${h}\``))).toStrictEqual([]);
     });
 });
 
@@ -459,7 +459,7 @@ describe('every area of the codebase has exactly one front door', () => {
         // door that lives under `docs/`.
         const asIndexed = (f: string): string => relative('docs', f);
         const missing = Object.values(FRONT_DOORS).filter((f) => !table.includes(asIndexed(f)));
-        expect(missing).toEqual([]);
+        expect(missing).toStrictEqual([]);
     });
 
     it('CONTROL: a path that should not resolve, does not', () => {
@@ -500,7 +500,7 @@ describe('the documentation index lists every document under docs/', () => {
     it('names every one of them', () => {
         const body = readFileSync(INDEX, 'utf8');
         const missing = indexed().filter((f) => !body.includes(f.replace('docs/', '')));
-        expect(missing).toEqual([]);
+        expect(missing).toStrictEqual([]);
     });
 });
 
@@ -532,7 +532,7 @@ describe('the architecture index lists every architecture document', () => {
         // are deliberately out of scope here.
         const index = readFileSync(INDEX, 'utf8');
         const missing = topLevelDocs().filter((d) => !index.includes(d));
-        expect(missing).toEqual([]);
+        expect(missing).toStrictEqual([]);
     });
 });
 
@@ -565,7 +565,7 @@ describe('relative references resolve against the file that makes them', () => {
     });
 
     it('every relative reference names a file that exists', () => {
-        expect(findings()).toEqual([]);
+        expect(findings()).toStrictEqual([]);
     });
 });
 
@@ -583,12 +583,12 @@ describe('module paths cited by current-tense documents resolve', () => {
     });
 
     it('every cited module location exists', () => {
-        expect(scan(citations, citationResolves)).toEqual([]);
+        expect(scan(citations, citationResolves)).toStrictEqual([]);
     });
 
     it('every import in a documented code example resolves', () => {
         // These are the lines a reader copies, so a dead one costs them a compile error.
-        expect(scan(imports, importResolves)).toEqual([]);
+        expect(scan(imports, importResolves)).toStrictEqual([]);
     });
 
     it('CONTROL: the checks can actually fail', () => {
@@ -608,8 +608,8 @@ describe('module paths cited by current-tense documents resolve', () => {
     });
 
     it('CONTROL: a placeholder is not mistaken for a path', () => {
-        expect(citations('see `@/features/.../Thing`')).toEqual([]);
-        expect(imports("import { T } from '@/features/.../Thing';")).toEqual([]);
+        expect(citations('see `@/features/.../Thing`')).toStrictEqual([]);
+        expect(imports("import { T } from '@/features/.../Thing';")).toStrictEqual([]);
     });
 
     it('the alias table matches tsconfig', () => {
@@ -635,7 +635,7 @@ describe('module paths cited by current-tense documents resolve', () => {
                 if (!existsSync(join(ROOT, dirname(f), target))) bad.push(`${f}  ${target}`);
             }
         }
-        expect([...new Set(bad)].sort()).toEqual([]);
+        expect([...new Set(bad)].sort()).toStrictEqual([]);
     });
 
     it('every backticked repo path names a file that exists', () => {
@@ -647,15 +647,15 @@ describe('module paths cited by current-tense documents resolve', () => {
                 if (!existsSync(join(ROOT, p)) && !ALLOWED[`${f}::${p}`]) bad.push(`${f}  ${p}`);
             }
         }
-        expect([...new Set(bad)].sort()).toEqual([]);
+        expect([...new Set(bad)].sort()).toStrictEqual([]);
     });
 
     it('CONTROL: the backticked-path extractor finds paths and skips prose', () => {
         expect(backtickedPaths('see `src/core/validation/README.md` for detail')).toEqual([
             'src/core/validation/README.md',
         ]);
-        expect(backtickedPaths('everything under `src/features/` is a feature')).toEqual([]);
-        expect(backtickedPaths('a `src/features/{name}/index.ts` barrel')).toEqual([]);
+        expect(backtickedPaths('everything under `src/features/` is a feature')).toStrictEqual([]);
+        expect(backtickedPaths('a `src/features/{name}/index.ts` barrel')).toStrictEqual([]);
     });
 
     it('no markdown link target contains a space', () => {
@@ -672,7 +672,7 @@ describe('module paths cited by current-tense documents resolve', () => {
                 bad.push(`${f}  ](${t})`);
             }
         }
-        expect([...new Set(bad)].sort()).toEqual([]);
+        expect([...new Set(bad)].sort()).toStrictEqual([]);
     });
 
     it('CONTROL: the link check can fail', () => {

@@ -48,7 +48,7 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
 
         const result = await getRequiredNodeVersions(context);
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
         expect(mockGetRequiredNodeVersions).not.toHaveBeenCalled();
     });
 
@@ -83,7 +83,7 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
 
         const result = await getRequiredNodeVersions(context);
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('should pass all component selection parameters', async () => {
@@ -122,7 +122,7 @@ describe('Prerequisites Handlers - getRequiredNodeVersions', () => {
     it('treats the absent selection as a normal outcome, not a failure it swallows', async () => {
         const context = createPrereqHandlerContext();
 
-        expect(await getRequiredNodeVersions(context)).toEqual([]);
+        expect(await getRequiredNodeVersions(context)).toStrictEqual([]);
         // The catch also returns an empty list, so the value proves nothing. What
         // separates the two routes is that the early return reports once and the
         // catch reports not at all. The count is the discriminator; the wording is

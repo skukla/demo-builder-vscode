@@ -91,7 +91,7 @@ describe('no test asserts a logger call’s arguments beyond its recorded ceilin
         // Lower a ceiling when you remove an assertion; never raise one. A new file
         // has a ceiling of zero. If the only observable difference is which log line
         // prints, the mutant belongs in scripts/mutation-equivalents.ledger.json.
-        expect(over).toEqual([]);
+        expect(over).toStrictEqual([]);
     });
 
     it('the ledger only shrinks: no ceiling stands above the count on disk', () => {
@@ -101,6 +101,6 @@ describe('no test asserts a logger call’s arguments beyond its recorded ceilin
                 ([file, ceiling]) => `${file}: ceiling ${ceiling}, on disk ${counts.get(file) ?? 0}`
             );
         // A ceiling above the real count is headroom nobody chose. Lower it.
-        expect(stale).toEqual([]);
+        expect(stale).toStrictEqual([]);
     });
 });

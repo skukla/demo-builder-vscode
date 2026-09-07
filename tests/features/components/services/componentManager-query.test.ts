@@ -93,7 +93,7 @@ describe('ComponentManager - Query', () => {
         it('should return empty array for non-matching type', () => {
             const components = componentManager.getComponentsByType(mockProject, 'dependency');
 
-            expect(components).toEqual([]);
+            expect(components).toStrictEqual([]);
         });
 
         it('should return empty array if componentInstances is undefined', () => {
@@ -101,7 +101,7 @@ describe('ComponentManager - Query', () => {
 
             const components = componentManager.getComponentsByType(mockProject, 'frontend');
 
-            expect(components).toEqual([]);
+            expect(components).toStrictEqual([]);
         });
     });
 

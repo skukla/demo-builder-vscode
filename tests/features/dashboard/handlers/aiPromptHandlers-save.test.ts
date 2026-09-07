@@ -143,7 +143,7 @@ describe('aiPromptHandlers — save', () => {
             expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([
                 { id: 'g1', title: 'Pinned', prompt: 'p', pinned: true },
             ]);
-            expect(project.aiPrompts).toEqual([]);
+            expect(project.aiPrompts).toStrictEqual([]);
         });
 
         it('writes a new unpinned prompt to project.aiPrompts, NOT to globalState', async () => {
@@ -152,7 +152,7 @@ describe('aiPromptHandlers — save', () => {
                 prompt: { id: 'p1', title: 'Unpinned', prompt: 'p' },
             });
             expect(project.aiPrompts).toEqual([{ id: 'p1', title: 'Unpinned', prompt: 'p' }]);
-            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toStrictEqual([]);
         });
 
         it('moves a prompt project→global when pin toggles false→true', async () => {
@@ -182,7 +182,7 @@ describe('aiPromptHandlers — save', () => {
                 prompt: { id: 'g', title: 'G', prompt: 'g', pinned: false },
             });
             // Removed from global
-            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toStrictEqual([]);
             // Added to project
             expect(project.aiPrompts).toEqual([
                 { id: 'y', title: 'Y', prompt: 'y' },
@@ -213,7 +213,7 @@ describe('aiPromptHandlers — save', () => {
             expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([
                 { id: 'g', title: 'New', prompt: 'new', pinned: true },
             ]);
-            expect(project.aiPrompts).toEqual([]);
+            expect(project.aiPrompts).toStrictEqual([]);
         });
     });
 

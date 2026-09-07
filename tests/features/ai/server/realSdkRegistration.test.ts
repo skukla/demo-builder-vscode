@@ -186,7 +186,7 @@ describe('registration against the real MCP SDK', () => {
         const uncovered = calls.filter(
             (name) => !new RegExp(`${name}\\(\\s*s[,)]`).test(thisSuite)
         );
-        expect(uncovered).toEqual([]);
+        expect(uncovered).toStrictEqual([]);
     });
 
     // The control. Without it, "does not throw" would pass even if the SDK

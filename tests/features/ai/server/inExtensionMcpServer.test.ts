@@ -352,7 +352,7 @@ describe('InExtensionMcpServer', () => {
         const leftovers = fs
             .readdirSync(path.dirname(socketPath))
             .filter((n) => n.startsWith(path.basename(socketPath) + '.'));
-        expect(leftovers).toEqual([]);
+        expect(leftovers).toStrictEqual([]);
     });
 });
 
@@ -397,7 +397,7 @@ describe('agent-operation visibility (the notifier seam)', () => {
         const names = await listToolsOverSocket(socketPath);
         expect(names).toContain('list_projects');
         await callToolOverSocket(socketPath, 'list_projects', {});
-        expect(seen).toEqual([]);
+        expect(seen).toStrictEqual([]);
 
         // sync_storefront is mutating: must go through the notifier (the call
         // itself fails on the empty projects dir — irrelevant; the notifier
@@ -504,7 +504,7 @@ describe('agent-operation visibility (the notifier seam)', () => {
             expect.objectContaining({ confirm: true }),
             expect.any(String)
         );
-        expect(notified).toEqual([]);
+        expect(notified).toStrictEqual([]);
     });
 
     it('standing consent (consentNotRequired) beats BOTH the chat ask and the gate', async () => {

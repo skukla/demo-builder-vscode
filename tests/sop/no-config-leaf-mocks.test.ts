@@ -85,7 +85,7 @@ describe('SOP: no config-leaf mocks', () => {
                 "jest.mock('@/core/config/ConfigurationLoader');",
                 "jest.mock('fs');",
             ].join('\n');
-            expect(findConfigLeafMocks(sample)).toEqual([]);
+            expect(findConfigLeafMocks(sample)).toStrictEqual([]);
         });
     });
 
@@ -109,12 +109,12 @@ describe('SOP: no config-leaf mocks', () => {
 
         it('has no NEW config-leaf mocks outside the allowlist', () => {
             const unexpected = offenders.filter(rel => !ALLOWLIST.includes(rel));
-            expect(unexpected).toEqual([]);
+            expect(unexpected).toStrictEqual([]);
         });
 
         it('has no stale allowlist entries (allowlist only shrinks)', () => {
             const stale = ALLOWLIST.filter(rel => !offenders.includes(rel));
-            expect(stale).toEqual([]);
+            expect(stale).toStrictEqual([]);
         });
     });
 });

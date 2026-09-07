@@ -280,7 +280,7 @@ describe('WizardContainer', () => {
 
             await press(screen.getByRole('button', { name: 'switch' }));
 
-            expect(configs()).toEqual({});
+            expect(configs()).toStrictEqual({});
         });
     });
 

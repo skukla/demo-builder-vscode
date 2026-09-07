@@ -79,7 +79,7 @@ describe('Component Registry Manager - Component Retrieval', () => {
 
             const integrations = await manager.getIntegrations();
 
-            expect(integrations).toEqual([]);
+            expect(integrations).toStrictEqual([]);
         });
     });
 

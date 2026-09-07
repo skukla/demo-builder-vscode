@@ -57,7 +57,7 @@ describe('checkBlockLibraries', () => {
     it('an empty library list asks nothing', async () => {
         await expect(
             checker.checkBlockLibraries(makeProject({ installedBlockLibraries: [] }))
-        ).resolves.toEqual([]);
+        ).resolves.toStrictEqual([]);
 
         expect(mockGetLatestBranchCommit).not.toHaveBeenCalled();
     });
@@ -108,7 +108,7 @@ describe('checkBlockLibraries', () => {
             makeProject({ installedBlockLibraries: [library('blocks')] })
         );
 
-        expect(results).toEqual([]);
+        expect(results).toStrictEqual([]);
         expect(mockCompareCommits).not.toHaveBeenCalled();
     });
 
@@ -119,7 +119,7 @@ describe('checkBlockLibraries', () => {
             makeProject({ installedBlockLibraries: [library('blocks')] })
         );
 
-        expect(results).toEqual([]);
+        expect(results).toStrictEqual([]);
         expect(mockCompareCommits).not.toHaveBeenCalled();
     });
 

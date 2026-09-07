@@ -82,7 +82,7 @@ describe('event provider tool declarations', () => {
     });
 
     it('declares the fields each tool accepts', () => {
-        expect(inputFields(def('list_event_providers'))).toEqual([]);
+        expect(inputFields(def('list_event_providers'))).toStrictEqual([]);
         expect(inputFields(def('create_event_provider'))).toEqual([
             'providerKey',
             'label',

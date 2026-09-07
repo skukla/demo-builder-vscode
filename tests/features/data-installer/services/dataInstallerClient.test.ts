@@ -209,7 +209,7 @@ describe('DataInstallerClient', () => {
             const snap = await makeClient(f).getJobStatus('fresh-activation');
 
             expect(snap.hasRecord).toBe(false);
-            expect(snap.perType).toEqual({});
+            expect(snap.perType).toStrictEqual({});
         });
 
         it('still throws on a 404 from any OTHER action', async () => {
@@ -316,7 +316,7 @@ describe('DataInstallerClient', () => {
             const page = await makeClient(jsonFetch({ success: true, count: 0 }), {
                 onDrift: jest.fn(),
             }).findDatapacks({});
-            expect(page.items).toEqual([]);
+            expect(page.items).toStrictEqual([]);
         });
     });
     /**
@@ -603,7 +603,7 @@ describe('DataInstallerClient', () => {
             const page = await makeClient(jsonFetch(null), { onDrift }).findDatapacks({});
 
             expect(onDrift).toHaveBeenCalledWith('find-datapacks', ['datapacks']);
-            expect(page.items).toEqual([]);
+            expect(page.items).toStrictEqual([]);
         });
 
         it('reports drift when a 200 body is not JSON at all', async () => {
@@ -616,7 +616,7 @@ describe('DataInstallerClient', () => {
             }).findDatapacks({});
 
             expect(onDrift).toHaveBeenCalledWith('find-datapacks', ['datapacks']);
-            expect(page.items).toEqual([]);
+            expect(page.items).toStrictEqual([]);
         });
     });
 });

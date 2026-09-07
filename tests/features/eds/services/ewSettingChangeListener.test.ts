@@ -376,7 +376,7 @@ describe('registerEwSettingChangeListener', () => {
             persistAfterLoad: false,
         });
         const [, componentFactory] = (sm.loadProjectFromPath as jest.Mock).mock.calls[0];
-        expect((componentFactory as () => unknown[])()).toEqual([]);
+        expect((componentFactory as () => unknown[])()).toStrictEqual([]);
     });
 
     it('hands the flip the shared context, logger, token service and a save hook', async () => {

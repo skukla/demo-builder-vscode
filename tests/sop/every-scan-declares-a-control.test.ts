@@ -59,7 +59,7 @@ describe('every SOP scan declares a control', () => {
         const undeclared = suites.filter(
             (f) => !DECLARES_CONTROL.test(readFileSync(join(SOP_DIR, f), 'utf8'))
         );
-        expect(undeclared).toEqual([]);
+        expect(undeclared).toStrictEqual([]);
     });
 
     it('CONTROL: a suite without one would be caught', () => {

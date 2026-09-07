@@ -61,7 +61,7 @@ describe('executePhaseHelixConfig — cancellation', () => {
 
         await expect(promise).rejects.toThrow('Operation cancelled');
         expect(fileOps.createOrUpdateFile).not.toHaveBeenCalled();
-        expect(progressPushes(sendMessage)).toEqual([]);
+        expect(progressPushes(sendMessage)).toStrictEqual([]);
     });
 });
 

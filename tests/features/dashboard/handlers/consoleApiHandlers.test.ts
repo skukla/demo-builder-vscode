@@ -315,7 +315,7 @@ describe('handleSetConsoleApis', () => {
             'localhost:3000',
             []
         );
-        expect(resolveDesiredApis(project)).toEqual([]);
+        expect(resolveDesiredApis(project)).toStrictEqual([]);
     });
 
     it('rejects a non-array / invalid-code payload', async () => {

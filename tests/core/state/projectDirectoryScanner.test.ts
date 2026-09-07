@@ -71,7 +71,7 @@ describe('ProjectDirectoryScanner', () => {
 
         const projects = await new ProjectDirectoryScanner(logger).getAllProjects();
 
-        expect(projects).toEqual([]);
+        expect(projects).toStrictEqual([]);
     });
 
     it('orders projects newest manifest first, regardless of directory order', async () => {
@@ -90,7 +90,7 @@ describe('ProjectDirectoryScanner', () => {
 
         const projects = await new ProjectDirectoryScanner(logger).getAllProjects();
 
-        expect(projects).toEqual([]);
+        expect(projects).toStrictEqual([]);
         // A file is not a candidate, so it is never reported as a skipped DIRECTORY.
         expect(logger.debug).not.toHaveBeenCalledWith(expect.stringContaining('stray.txt'));
     });
@@ -111,7 +111,7 @@ describe('ProjectDirectoryScanner', () => {
 
         const projects = await new ProjectDirectoryScanner(logger).getAllProjects();
 
-        expect(projects).toEqual([]);
+        expect(projects).toStrictEqual([]);
         // A missing root is the normal first-run state, not a failure.
         expect(logger.error).not.toHaveBeenCalled();
         expect(logger.debug).toHaveBeenCalledTimes(1);
@@ -126,7 +126,7 @@ describe('ProjectDirectoryScanner', () => {
 
         const projects = await new ProjectDirectoryScanner(logger).getAllProjects();
 
-        expect(projects).toEqual([]);
+        expect(projects).toStrictEqual([]);
         expect(logger.error).toHaveBeenCalledTimes(1);
         expect(logger.error.mock.calls[0][1]).toBe(denied);
         expect(logger.debug).not.toHaveBeenCalled();

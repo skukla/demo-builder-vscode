@@ -195,7 +195,7 @@ describe('StateManager - Error Handling', () => {
 
             const result = await stateManager.getAllProjects();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
             // Should log debug message (not error) for ENOENT
         });
 
@@ -205,7 +205,7 @@ describe('StateManager - Error Handling', () => {
 
             const result = await stateManager.getAllProjects();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
             // Should log error for permission issues
         });
 

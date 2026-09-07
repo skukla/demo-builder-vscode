@@ -91,7 +91,7 @@ describe('which components reach the map', () => {
     it('returns an EMPTY map when nothing was selected and nothing pins a version', async () => {
         const manager = managerFor(mockRawRegistry);
 
-        await expect(manager.getNodeVersionToComponentIdMapping()).resolves.toEqual({});
+        await expect(manager.getNodeVersionToComponentIdMapping()).resolves.toStrictEqual({});
     });
 
     it('skips a selection whose component is not in the registry', async () => {
@@ -99,7 +99,7 @@ describe('which components reach the map', () => {
 
         await expect(
             manager.getNodeVersionToComponentIdMapping('gone', 'also-gone', ['missing']),
-        ).resolves.toEqual({});
+        ).resolves.toStrictEqual({});
     });
 
     it('skips a FRONTEND and a BACKEND carrying no configuration block', async () => {
@@ -122,7 +122,7 @@ describe('which components reach the map', () => {
 
         await expect(
             manager.getNodeVersionToComponentIdMapping('bare-frontend', 'bare-backend'),
-        ).resolves.toEqual({});
+        ).resolves.toStrictEqual({});
     });
 
     it('skips a component that carries no configuration block at all', async () => {
@@ -132,7 +132,7 @@ describe('which components reach the map', () => {
 
         await expect(
             manager.getNodeVersionToComponentIdMapping(undefined, undefined, ['test-tool']),
-        ).resolves.toEqual({});
+        ).resolves.toStrictEqual({});
     });
 });
 

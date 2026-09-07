@@ -134,7 +134,7 @@ describe('the chat reads the declaration, not the name', () => {
         socket.end();
 
         expect(res.result).toBeDefined();
-        expect(progress).toEqual([]);
+        expect(progress).toStrictEqual([]);
     });
 });
 
@@ -183,7 +183,7 @@ describe('every tool declares', () => {
         // audition). The floor guards against the extraction silently matching
         // nothing, not against a deliberate deletion.
         expect(tools.length).toBeGreaterThanOrEqual(9);
-        expect(undeclared).toEqual([]);
+        expect(undeclared).toStrictEqual([]);
     });
 
     it('agrees with the name shape except where a disagreement is recorded', async () => {
@@ -196,7 +196,7 @@ describe('every tool declares', () => {
             .map((t) => t.name)
             .filter((n) => !(n in RECORDED_DISAGREEMENTS));
 
-        expect(surprises).toEqual([]);
+        expect(surprises).toStrictEqual([]);
     });
 });
 
@@ -251,6 +251,6 @@ describe('every registration site declares, at the source', () => {
             }
         }
 
-        expect(missing).toEqual([]);
+        expect(missing).toStrictEqual([]);
     });
 });

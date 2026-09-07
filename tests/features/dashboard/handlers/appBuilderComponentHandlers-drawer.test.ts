@@ -518,7 +518,7 @@ describe('progress register', () => {
             (call: unknown[]) =>
                 typeof call[2] === 'string' && /Checking requirements/.test(call[2])
         );
-        expect(stepPushes).toEqual([]);
+        expect(stepPushes).toStrictEqual([]);
     });
 });
 

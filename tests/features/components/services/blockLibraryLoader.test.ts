@@ -222,7 +222,7 @@ describe('blockLibraryLoader', () => {
             // an EDS-only block library.
             const headlessStack = makeStack({ id: 'headless-paas', frontend: 'headless' });
 
-            expect(getNativeBlockLibraries(headlessStack, 'isle5')).toEqual([]);
+            expect(getNativeBlockLibraries(headlessStack, 'isle5')).toStrictEqual([]);
         });
     });
 
@@ -236,7 +236,7 @@ describe('blockLibraryLoader', () => {
             const edsStack = makeStack();
             const defaults = getDefaultBlockLibraryIds(edsStack, 'custom');
 
-            expect(defaults).toEqual([]);
+            expect(defaults).toStrictEqual([]);
         });
 
         it('returns empty array for Isle5 package without userDefaults (isle5 is native, not in available)', () => {
@@ -244,7 +244,7 @@ describe('blockLibraryLoader', () => {
             const defaults = getDefaultBlockLibraryIds(edsStack, 'isle5');
 
             expect(defaults).not.toContain('isle5');
-            expect(defaults).toEqual([]);
+            expect(defaults).toStrictEqual([]);
         });
 
         it('does not include storefront-specific libraries as defaults', () => {
@@ -303,7 +303,7 @@ describe('blockLibraryLoader', () => {
             // pre-checking everything the package can see.
             const edsStack = makeStack();
 
-            expect(getDefaultBlockLibraryIds(edsStack, 'custom', ['isle5'])).toEqual([]);
+            expect(getDefaultBlockLibraryIds(edsStack, 'custom', ['isle5'])).toStrictEqual([]);
         });
 
         it('ignores a stale isle5 userDefault for non-isle5 packages (pinned via onlyForPackages)', () => {
@@ -334,12 +334,12 @@ describe('blockLibraryLoader', () => {
 
         it('returns [] for packages the library does not default to', () => {
             const edsStack = makeStack();
-            expect(getPackageDefaultBlockLibraryIds(edsStack, 'isle5')).toEqual([]);
+            expect(getPackageDefaultBlockLibraryIds(edsStack, 'isle5')).toStrictEqual([]);
         });
 
         it('returns [] for non-EDS stacks', () => {
             const headlessStack = makeStack({ id: 'headless-paas', frontend: 'headless' });
-            expect(getPackageDefaultBlockLibraryIds(headlessStack, 'citisignal')).toEqual([]);
+            expect(getPackageDefaultBlockLibraryIds(headlessStack, 'citisignal')).toStrictEqual([]);
         });
     });
 
@@ -517,7 +517,7 @@ describe('blockLibraryLoader', () => {
                 blockLibSection?.properties?.['demoBuilder.blockLibraries.custom'];
             expect(customSetting).toBeDefined();
             expect(customSetting.type).toBe('array');
-            expect(customSetting.default).toEqual([]);
+            expect(customSetting.default).toStrictEqual([]);
         });
     });
 

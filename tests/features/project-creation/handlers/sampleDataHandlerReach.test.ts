@@ -40,7 +40,7 @@ describe('the wizard handler map', () => {
         const writeTypes = Object.keys(importHandlers);
         const leaked = writeTypes.filter((type) => type in projectCreationHandlers);
 
-        expect(leaked).toEqual([]);
+        expect(leaked).toStrictEqual([]);
         // Positive control: the write map is non-empty, so an empty `leaked`
         // means "none reached the wizard", not "there was nothing to check".
         expect(writeTypes.length).toBeGreaterThan(0);

@@ -76,7 +76,7 @@ describe('seedDefaultAiPrompts', () => {
 
         await seedDefaultAiPrompts(gs);
 
-        expect(gs._store.get(GLOBAL_AI_PROMPTS_KEY)).toEqual([]);
+        expect(gs._store.get(GLOBAL_AI_PROMPTS_KEY)).toStrictEqual([]);
     });
 
     it('does not write the prompt store at all when every default is already present', async () => {

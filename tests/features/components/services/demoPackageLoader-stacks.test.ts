@@ -62,7 +62,7 @@ describe('getAutoSelectedOptionalDependencies', () => {
     it('returns nothing for the same stack when the package does not require mesh', async () => {
         await expect(
             getAutoSelectedOptionalDependencies('citisignal', 'eds-paas'),
-        ).resolves.toEqual([]);
+        ).resolves.toStrictEqual([]);
     });
 
     it('returns nothing for a package that does not exist', async () => {
@@ -77,7 +77,7 @@ describe('getAutoSelectedOptionalDependencies', () => {
     // whichever stack happens to be first.
     it('returns nothing for a stack that is not shipped', async () => {
         await expect(getAutoSelectedOptionalDependencies('buildright', 'no-such-stack'))
-            .resolves.toEqual([]);
+            .resolves.toStrictEqual([]);
     });
 });
 
@@ -107,7 +107,7 @@ describe('the injected packages list is used instead of the bundled config', () 
         await expect(getAvailableStacksForPackage('only-one', injected)).resolves.toEqual([
             'eds-paas',
         ]);
-        await expect(getAvailableStacksForPackage('citisignal', injected)).resolves.toEqual([]);
+        await expect(getAvailableStacksForPackage('citisignal', injected)).resolves.toStrictEqual([]);
     });
 
     it('getAllStorefronts flattens only the injected list', async () => {
@@ -120,7 +120,7 @@ describe('the injected packages list is used instead of the bundled config', () 
     // bundled config here would make a caller that filtered everything out see
     // the whole shipped catalogue instead.
     it('an empty injected list is honoured, not treated as absent', async () => {
-        await expect(getAllStorefronts([])).resolves.toEqual([]);
+        await expect(getAllStorefronts([])).resolves.toStrictEqual([]);
         await expect(getPackageById('citisignal', [])).resolves.toBeUndefined();
     });
 });

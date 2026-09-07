@@ -115,6 +115,6 @@ describe('DaLiveAuthService.storeToken — opts versus JWT claims', () => {
         service.dispose();
         await service.storeToken(jwtWith(JWT_CLAIMS));
 
-        expect(seen).toEqual([]);
+        expect(seen).toStrictEqual([]);
     });
 });

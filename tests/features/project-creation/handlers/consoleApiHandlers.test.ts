@@ -448,7 +448,7 @@ describe('attribution (step 04)', () => {
         const row = apisOf(result).find((a) => a.code === 'AdobeIOManagementAPISDK');
         expect(row?.ownership).toBe('baseline');
         // Naming an owner here would be a lie — nothing chose it, it is always on.
-        expect(row?.requiredBy).toEqual([]);
+        expect(row?.requiredBy).toStrictEqual([]);
     });
 
     it("treats the asking integration's own requirement as mine, not another's", async () => {
@@ -486,6 +486,6 @@ describe('attribution (step 04)', () => {
         const row = apisOf(result).find((a) => a.code === 'GraphQLServiceSDK');
         expect(row?.locked).toBe(false);
         expect(row?.ownership).toBeUndefined();
-        expect(row?.requiredBy).toEqual([]);
+        expect(row?.requiredBy).toStrictEqual([]);
     });
 });

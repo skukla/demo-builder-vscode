@@ -36,7 +36,7 @@ describe('DaLiveSourceOperations', () => {
         it('returns [] on 404', async () => {
             apiClient.fetchWithRetry.mockResolvedValue(makeResponse(404));
 
-            await expect(service.listDirectory('org', 'site', '/')).resolves.toEqual([]);
+            await expect(service.listDirectory('org', 'site', '/')).resolves.toStrictEqual([]);
         });
 
         it('parses JSON on 200', async () => {

@@ -179,7 +179,7 @@ describe('PrerequisitesManager - Prerequisite Checking', () => {
         it('should handle empty mapping', async () => {
             const result = await manager.checkMultipleNodeVersions({});
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should handle ENOENT errors in PrerequisitesManager gracefully', async () => {

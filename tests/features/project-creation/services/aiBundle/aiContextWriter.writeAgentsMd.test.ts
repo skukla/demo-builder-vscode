@@ -519,7 +519,7 @@ describe('aiContextWriter', () => {
                 await writeAgentsMd(PROJECT_PATH, makeEdsProject(), STACKS, writer);
 
                 expect(writer.report().written).toContain('AGENTS.md');
-                expect(writer.report().skipped).toEqual([]);
+                expect(writer.report().skipped).toStrictEqual([]);
             });
         });
     });

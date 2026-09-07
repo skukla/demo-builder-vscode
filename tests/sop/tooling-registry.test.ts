@@ -120,7 +120,7 @@ describe('the tooling registry matches what is on disk', () => {
 
     it('registers every skill that exists', () => {
         const unregistered = skillsOnDisk.filter((s) => !registered.has(s));
-        expect(unregistered).toEqual([]);
+        expect(unregistered).toStrictEqual([]);
     });
 
     it('registers every check script that exists', () => {
@@ -128,7 +128,7 @@ describe('the tooling registry matches what is on disk', () => {
             .filter(isCheckScript)
             .filter((s) => !registered.has(s))
             .sort();
-        expect(unregistered).toEqual([]);
+        expect(unregistered).toStrictEqual([]);
     });
 
     it('the gate skill and the gate script run the same number of steps', () => {
@@ -170,7 +170,7 @@ describe('the tooling registry matches what is on disk', () => {
         const claudeMd = readFileSync(join(REPO_ROOT, 'CLAUDE.md'), 'utf-8');
         const routed = new Set([...claudeMd.matchAll(/`([a-z0-9-]+)` +—/g)].map((m) => m[1]));
         const unrouted = skillsOnDisk.filter((s) => !routed.has(s));
-        expect(unrouted).toEqual([]);
+        expect(unrouted).toStrictEqual([]);
     });
 
     it('has no entry for a skill that was deleted', () => {
@@ -178,14 +178,14 @@ describe('the tooling registry matches what is on disk', () => {
         const ghosts = INSTRUMENTS.filter(
             (i) => i.kind === 'skill' && !existsSync(join(SKILLS_DIR, i.id))
         ).map((i) => i.id);
-        expect(ghosts).toEqual([]);
+        expect(ghosts).toStrictEqual([]);
     });
 
     it('has no entry for an npm script that was deleted', () => {
         const ghosts = INSTRUMENTS.filter(
             (i) => i.kind === 'npm-script' && !(i.id in packageScripts)
         ).map((i) => i.id);
-        expect(ghosts).toEqual([]);
+        expect(ghosts).toStrictEqual([]);
     });
 });
 
@@ -219,27 +219,27 @@ describe("the program's own instruments cannot go dark", () => {
         const unaccounted = rptcScripts.filter(
             (p) => !registeredPaths.has(p) && !(p in NON_INSTRUMENT_SCRIPTS)
         );
-        expect(unaccounted).toEqual([]);
+        expect(unaccounted).toStrictEqual([]);
     });
 
     it('has no exemption for a script that no longer exists', () => {
         const onDisk = new Set(rptcScripts);
         const ghosts = Object.keys(NON_INSTRUMENT_SCRIPTS).filter((p) => !onDisk.has(p));
-        expect(ghosts).toEqual([]);
+        expect(ghosts).toStrictEqual([]);
     });
 
     it('gives every exemption a reason', () => {
         const unexplained = Object.entries(NON_INSTRUMENT_SCRIPTS)
             .filter(([, why]) => why.trim().length < 15)
             .map(([p]) => p);
-        expect(unexplained).toEqual([]);
+        expect(unexplained).toStrictEqual([]);
     });
 
     it('points every registered instrument at a file that exists', () => {
         const broken = INSTRUMENTS.filter((i) => i.path)
             .filter((i) => !existsSync(join(REPO_ROOT, i.path as string)))
             .map((i) => i.id);
-        expect(broken).toEqual([]);
+        expect(broken).toStrictEqual([]);
     });
 });
 
@@ -251,7 +251,7 @@ describe('every entry says enough to be actionable', () => {
 
     it('describes what each instrument catches', () => {
         const vague = INSTRUMENTS.filter((i) => i.what.trim().length < 15).map((i) => i.id);
-        expect(vague).toEqual([]);
+        expect(vague).toStrictEqual([]);
     });
 
     it('explains every instrument that runs nothing', () => {
@@ -260,7 +260,7 @@ describe('every entry says enough to be actionable', () => {
         const unexplained = INSTRUMENTS.filter((i) => i.runs === null && !i.unwiredReason).map(
             (i) => i.id
         );
-        expect(unexplained).toEqual([]);
+        expect(unexplained).toStrictEqual([]);
     });
 
     it('names a real command for everything the sweep will execute', () => {
@@ -272,7 +272,7 @@ describe('every entry says enough to be actionable', () => {
                 return script ? !existsSync(join(REPO_ROOT, script)) : false;
             })
             .map((i) => i.runs);
-        expect(broken).toEqual([]);
+        expect(broken).toStrictEqual([]);
     });
 
     it('says whether the exit code means anything, for everything it runs', () => {
@@ -282,7 +282,7 @@ describe('every entry says enough to be actionable', () => {
         const unstated = INSTRUMENTS.filter((i) => i.runs !== null && !i.resultKind).map(
             (i) => i.id
         );
-        expect(unstated).toEqual([]);
+        expect(unstated).toStrictEqual([]);
     });
 
     it('CONTROL: both result kinds are actually in use', () => {
@@ -327,7 +327,7 @@ describe('every entry says enough to be actionable', () => {
             sweepable()
                 .filter((i) => i.writes)
                 .map((i) => i.id)
-        ).toEqual([]);
+        ).toStrictEqual([]);
         // ...and the registry really does contain writers, so that means something.
         expect(INSTRUMENTS.filter((i) => i.writes).length).toBeGreaterThan(0);
     });
@@ -336,6 +336,6 @@ describe('every entry says enough to be actionable', () => {
         const broken = INSTRUMENTS.filter((i) => i.kind === 'npm-script')
             .filter((i) => !(i.id in packageScripts))
             .map((i) => i.id);
-        expect(broken).toEqual([]);
+        expect(broken).toStrictEqual([]);
     });
 });

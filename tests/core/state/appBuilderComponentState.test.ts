@@ -118,7 +118,7 @@ describe('appBuilderComponentState accessors', () => {
         });
 
         it('should return an empty array for a bare project', () => {
-            expect(listAppBuilderComponents(makeProject())).toEqual([]);
+            expect(listAppBuilderComponents(makeProject())).toStrictEqual([]);
         });
     });
 
@@ -157,7 +157,7 @@ describe('appBuilderComponentState accessors', () => {
 
     describe('getProvidedEnvVars', () => {
         it('should return an empty object when no appBuilderComponent provides vars', () => {
-            expect(getProvidedEnvVars(makeProject())).toEqual({});
+            expect(getProvidedEnvVars(makeProject())).toStrictEqual({});
         });
 
         it('should collect providesEnvVars across all appBuilderComponents', () => {

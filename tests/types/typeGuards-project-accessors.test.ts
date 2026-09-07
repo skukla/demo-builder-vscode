@@ -113,15 +113,15 @@ describe('typeGuards - Project Accessors', () => {
         });
 
         it('should return empty array for undefined', () => {
-            expect(getComponentIds(undefined)).toEqual([]);
+            expect(getComponentIds(undefined)).toStrictEqual([]);
         });
 
         it('should return empty array for null', () => {
-            expect(getComponentIds(null)).toEqual([]);
+            expect(getComponentIds(null)).toStrictEqual([]);
         });
 
         it('should return empty array for empty object', () => {
-            expect(getComponentIds({})).toEqual([]);
+            expect(getComponentIds({})).toStrictEqual([]);
         });
     });
 

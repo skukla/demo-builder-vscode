@@ -86,7 +86,7 @@ describe('mergeRuntimeSurfaces', () => {
             { derived: { customerPages: ['/customer/orders'] } },
             base
         );
-        expect(merged.authPages).toEqual([]);
+        expect(merged.authPages).toStrictEqual([]);
     });
 });
 

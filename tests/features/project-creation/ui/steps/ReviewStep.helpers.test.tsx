@@ -65,22 +65,22 @@ describe('reviewStepHelpers', () => {
 
         it('should return empty array when backendId is undefined', () => {
             const result = resolveServiceNames(undefined, mockBackends, mockServices);
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should return empty array when backends is undefined', () => {
             const result = resolveServiceNames('adobe-commerce-paas', undefined, mockServices);
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should return empty array when services is undefined', () => {
             const result = resolveServiceNames('adobe-commerce-paas', mockBackends, undefined);
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should return empty array when backend is not found', () => {
             const result = resolveServiceNames('unknown-backend', mockBackends, mockServices);
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should filter out services not found in registry', () => {
@@ -417,7 +417,7 @@ describe('reviewStepHelpers', () => {
                 const result = buildComponentInfoList(undefined, undefined, mockComponentsData, []);
 
                 // Then: Should return empty array
-                expect(result).toEqual([]);
+                expect(result).toStrictEqual([]);
             });
 
             it('should return empty array when componentsData is undefined', () => {
@@ -432,7 +432,7 @@ describe('reviewStepHelpers', () => {
                 const result = buildComponentInfoList(state.components, undefined, undefined, []);
 
                 // Then: Should return empty array
-                expect(result).toEqual([]);
+                expect(result).toStrictEqual([]);
             });
 
             it('should handle empty components object', () => {
@@ -440,7 +440,7 @@ describe('reviewStepHelpers', () => {
                 const result = buildComponentInfoList({}, undefined, mockComponentsData, []);
 
                 // Then: Should return empty array
-                expect(result).toEqual([]);
+                expect(result).toStrictEqual([]);
             });
         });
 
@@ -517,8 +517,8 @@ describe('reviewStepHelpers', () => {
                 appBuilderComponentSources: {},
             };
 
-            expect(resolveReviewIntegrationNames(wizardState(state), [], [])).toEqual([]);
-            expect(resolveReviewIntegrationNames(wizardState(), [], [])).toEqual([]);
+            expect(resolveReviewIntegrationNames(wizardState(state), [], [])).toStrictEqual([]);
+            expect(resolveReviewIntegrationNames(wizardState(), [], [])).toStrictEqual([]);
         });
     });
 });

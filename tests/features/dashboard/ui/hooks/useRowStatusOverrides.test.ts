@@ -41,7 +41,7 @@ beforeEach(() => {
 describe('useRowStatusOverrides', () => {
     it('starts empty and merges a status push', () => {
         const { result } = renderHook(() => useRowStatusOverrides());
-        expect(result.current).toEqual({});
+        expect(result.current).toStrictEqual({});
 
         pushStatus({ id: 'erp', status: 'deploying', message: 'Adding…' });
 
@@ -54,7 +54,7 @@ describe('useRowStatusOverrides', () => {
         pushStatus({ status: 'deploying' });
         pushStatus({ id: 'erp' });
 
-        expect(result.current).toEqual({});
+        expect(result.current).toStrictEqual({});
     });
 
     it('survives a status push with no payload at all', () => {
@@ -93,7 +93,7 @@ describe('useRowStatusOverrides', () => {
 
             pushSnapshot({});
 
-            expect(result.current).toEqual({});
+            expect(result.current).toStrictEqual({});
         });
 
         it('keeps overrides for ids the snapshot still holds', () => {

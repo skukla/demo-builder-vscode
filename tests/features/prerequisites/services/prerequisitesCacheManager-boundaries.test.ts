@@ -66,7 +66,7 @@ describe('PrerequisitesCacheManager - Boundaries', () => {
 
             time.advance(10_000);
 
-            expect(cache.getPerVersionResults('aio-cli')).toEqual([]);
+            expect(cache.getPerVersionResults('aio-cli')).toStrictEqual([]);
             time.restore();
         });
     });

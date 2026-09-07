@@ -230,7 +230,7 @@ describe('Design Token System', () => {
       const nonNamespaced = customProperties.filter(
         (prop) => !prop.startsWith('--db-')
       );
-      expect(nonNamespaced).toEqual([]);
+      expect(nonNamespaced).toStrictEqual([]);
     });
 
     it('semantic tokens reference primitives using var()', () => {

@@ -215,9 +215,9 @@ describe('commerceStoreDiscovery', () => {
 
             const result = await fetchStoreStructurePaas('https://magento.test', MOCK_ADMIN_TOKEN);
 
-            expect(result.websites).toEqual([]);
-            expect(result.storeGroups).toEqual([]);
-            expect(result.storeViews).toEqual([]);
+            expect(result.websites).toStrictEqual([]);
+            expect(result.storeGroups).toStrictEqual([]);
+            expect(result.storeViews).toStrictEqual([]);
         });
     });
 

@@ -130,7 +130,7 @@ describe('useProjectBuilder — onStackSelect addon seeding (parity)', () => {
             result.current.onStackSelect('headless-paas');
         });
         const call = updateState.mock.calls[0][0];
-        expect(call.selectedAddons).toEqual([]);
+        expect(call.selectedAddons).toStrictEqual([]);
     });
 });
 
@@ -218,8 +218,8 @@ describe('useProjectBuilder — onStackSelect block library seeding (parity)', (
             result.current.onStackSelect('headless-paas');
         });
         const call = updateState.mock.calls[0][0];
-        expect(call.selectedBlockLibraries).toEqual([]);
-        expect(call.customBlockLibraries).toEqual([]);
+        expect(call.selectedBlockLibraries).toStrictEqual([]);
+        expect(call.customBlockLibraries).toStrictEqual([]);
     });
 
     it('does not call the block library loaders for a non-EDS stack', () => {

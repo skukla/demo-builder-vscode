@@ -258,13 +258,13 @@ describe('every bespoke tool module builds its answer with the shared helper', (
             .filter(({ source }) => !/mcpToolResult'/.test(source))
             .map(({ file }) => file);
 
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 
     it('the exemptions are real files that still register tools', () => {
         // A stale exemption is a hole that reads as a decision.
         const names = new Set(registrars.map((r) => r.file));
-        expect([...EXEMPT].filter((f) => !names.has(f))).toEqual([]);
+        expect([...EXEMPT].filter((f) => !names.has(f))).toStrictEqual([]);
     });
 
     it('no registrar hand-rolls the envelope inline', () => {
@@ -277,6 +277,6 @@ describe('every bespoke tool module builds its answer with the shared helper', (
             .filter(({ source }) => /content:\s*\[\s*\{\s*type:\s*'text'/.test(source))
             .map(({ file }) => file);
 
-        expect(inlined).toEqual([]);
+        expect(inlined).toStrictEqual([]);
     });
 });

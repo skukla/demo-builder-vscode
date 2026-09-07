@@ -303,13 +303,13 @@ describe('integrationsSummaryGroup', () => {
     };
 
     it('contributes no rows when nothing is configured (even with a mesh available)', () => {
-        expect(integrationsSummaryGroup(state({}), packages, stacks).rows).toEqual([]);
+        expect(integrationsSummaryGroup(state({}), packages, stacks).rows).toStrictEqual([]);
         const meshAvailable = integrationsSummaryGroup(
             state({ selectedPackage: 'citisignal', selectedStack: 'eds-accs' }),
             packages,
             stacks
         );
-        expect(meshAvailable.rows).toEqual([]);
+        expect(meshAvailable.rows).toStrictEqual([]);
     });
 
     it('adds a "Needs setup" row for a selected mesh without a destination', () => {
@@ -337,7 +337,7 @@ describe('integrationsSummaryGroup', () => {
             selectedOptionalDependencies: [MESH_LEGACY_DEP],
         };
         const group = integrationsSummaryGroup(state(legacy), packages, stacks);
-        expect(group.rows).toEqual([]);
+        expect(group.rows).toStrictEqual([]);
     });
 
     it('marks a row Ready + done once the shared destination is committed', () => {
@@ -382,7 +382,7 @@ describe('integrationsSummaryGroup', () => {
             packages,
             stacks
         );
-        expect(group.rows).toEqual([]);
+        expect(group.rows).toStrictEqual([]);
     });
 
     it('rows a custom integration even on a stack with no catalog entries', () => {

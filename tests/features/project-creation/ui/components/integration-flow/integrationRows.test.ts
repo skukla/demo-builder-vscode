@@ -57,7 +57,7 @@ describe('resolveIntegrationRows — mesh row (single-authority selection)', () 
             CATALOG
         );
 
-        expect(rows).toEqual([]);
+        expect(rows).toStrictEqual([]);
     });
 
     it('never doubles the mesh into a custom row, even when a source is keyed by its id', () => {
@@ -79,7 +79,7 @@ describe('resolveIntegrationRows — mesh row (single-authority selection)', () 
     });
 
     it('yields no mesh row when no mesh is selected', () => {
-        expect(resolveIntegrationRows(state(), MESH_ENTRY, CATALOG)).toEqual([]);
+        expect(resolveIntegrationRows(state(), MESH_ENTRY, CATALOG)).toStrictEqual([]);
     });
 
     it("stamps the mesh row required when the resolved requirement is 'required'", () => {
@@ -128,7 +128,7 @@ describe('resolveIntegrationRows — mesh row (single-authority selection)', () 
             CATALOG
         );
 
-        expect(rows).toEqual([]);
+        expect(rows).toStrictEqual([]);
     });
 
     it('mesh sourceLine reads the entry description', () => {
@@ -197,7 +197,7 @@ describe('resolveIntegrationRows — catalog rows', () => {
             [MESH_ENTRY, otherMesh]
         );
 
-        expect(rows).toEqual([]);
+        expect(rows).toStrictEqual([]);
     });
 
     it('excludes unknown ids (not in catalog, no custom source)', () => {
@@ -207,7 +207,7 @@ describe('resolveIntegrationRows — catalog rows', () => {
             CATALOG
         );
 
-        expect(rows).toEqual([]);
+        expect(rows).toStrictEqual([]);
     });
 });
 
@@ -291,7 +291,7 @@ describe('resolveIntegrationRows — blank starter ("Build custom") rows', () =>
             CATALOG
         );
 
-        expect(rows).toEqual([]);
+        expect(rows).toStrictEqual([]);
     });
 });
 
@@ -415,6 +415,6 @@ describe('resolveIntegrationRows — ordering, apis, needsSetup, reserved key', 
     });
 
     it('returns [] for empty state', () => {
-        expect(resolveIntegrationRows(state(), undefined, CATALOG)).toEqual([]);
+        expect(resolveIntegrationRows(state(), undefined, CATALOG)).toStrictEqual([]);
     });
 });

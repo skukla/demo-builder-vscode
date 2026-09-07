@@ -57,7 +57,7 @@ describe('useGitHubAuth Hook', () => {
         expect(result.current.isChecking).toBe(true);
         expect(result.current.isAuthenticated).toBe(false);
         expect(result.current.isAuthenticating).toBe(false);
-        expect(result.current.orgs).toEqual([]);
+        expect(result.current.orgs).toStrictEqual([]);
     });
 
     it('should update state when auth-status received', async () => {
@@ -386,7 +386,7 @@ describe('useGitHubAuth Hook', () => {
             // `orgs` feeds a picker that maps over it.
             const result = await renderAndPush('github-auth-status', { isAuthenticated: true });
 
-            expect(result.current.orgs).toEqual([]);
+            expect(result.current.orgs).toStrictEqual([]);
         });
 
         it('auth-complete ends the check, records the login and clears the error', async () => {
@@ -419,7 +419,7 @@ describe('useGitHubAuth Hook', () => {
         it('auth-complete with no orgs reports an empty list, never undefined', async () => {
             const result = await renderAndPush('github-auth-complete', { isAuthenticated: true });
 
-            expect(result.current.orgs).toEqual([]);
+            expect(result.current.orgs).toStrictEqual([]);
         });
 
         it('an OAuth error ends the initial check too', async () => {

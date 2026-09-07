@@ -48,7 +48,7 @@ describe('ACTION_DESCRIPTORS', () => {
         expect(d!.map).toBe(edsHandlers);
         expect(d!.type).toBe('refresh-block-library');
         // Targets the current project's library — the only arg is the gate.
-        expect(Object.keys(d!.inputSchema ?? {})).toEqual([]);
+        expect(Object.keys(d!.inputSchema ?? {})).toStrictEqual([]);
         // Confirm-gated. This row used to assert the opposite, on the reasoning
         // that a rebuild is "idempotent/reversible (re-run)". Locally it is —
         // but it runs with skipPublish: false, so the re-sync reaches the live

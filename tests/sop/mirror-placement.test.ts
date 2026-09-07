@@ -167,7 +167,7 @@ describe('ADR-016 placement: tests mirror src/', () => {
 
     it('no test file lives in a tier directory', () => {
         const offenders = TEST_FILES.filter((f) => BANNED_TIER_DIRS.includes(f.split(path.sep)[0]));
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 
     it('every test file is under a src/ mirror or a listed non-mirror directory', () => {
@@ -179,7 +179,7 @@ describe('ADR-016 placement: tests mirror src/', () => {
             const mirrored = path.resolve(TESTS_ROOT, '..', 'src', path.dirname(f));
             return !fs.existsSync(mirrored);
         });
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 
     it('every placement exemption is still a real offender — a fixed row must leave', () => {
@@ -188,7 +188,7 @@ describe('ADR-016 placement: tests mirror src/', () => {
             const mirrored = path.resolve(TESTS_ROOT, '..', 'src', path.dirname(f));
             return fs.existsSync(mirrored); // now correctly placed
         });
-        expect(stale).toEqual([]);
+        expect(stale).toStrictEqual([]);
     });
 
     it('POSITIVE CONTROL: the subject resolver finds a subject for most suites', () => {
@@ -211,19 +211,19 @@ describe('ADR-016 placement: tests mirror src/', () => {
             if (subjectDir === undefined) return undefined;
             return mismatch(f, subjectDir) ? `${f} -> src/${subjectDir}` : undefined;
         }).filter(Boolean);
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 
     it('the non-mirror allowlist carries a reason for every entry, and may only shrink', () => {
         const reasonless = Object.entries(NON_MIRROR_DIRS)
             .filter(([, reason]) => !reason.trim())
             .map(([dir]) => dir);
-        expect(reasonless).toEqual([]);
+        expect(reasonless).toStrictEqual([]);
 
         // A listed directory that no longer exists is a stale row — delete it.
         const stale = Object.keys(NON_MIRROR_DIRS).filter(
             (d) => !fs.existsSync(path.join(TESTS_ROOT, d))
         );
-        expect(stale).toEqual([]);
+        expect(stale).toStrictEqual([]);
     });
 });

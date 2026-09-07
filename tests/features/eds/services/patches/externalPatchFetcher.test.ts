@@ -196,7 +196,7 @@ describe('fetchExternalPatches — ledger responses', () => {
 
         const patches = await fetchExternalPatches(SOURCE, 'code-patches.json', makeLogger());
 
-        // toStrictEqual, not toEqual: `expect([undefined]).toEqual([])` passes.
+        // toStrictEqual, not toEqual: `expect([undefined]).toStrictEqual([])` passes.
         expect(patches).toStrictEqual([]);
     });
 

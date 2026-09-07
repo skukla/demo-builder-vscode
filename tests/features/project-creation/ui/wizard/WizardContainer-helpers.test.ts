@@ -60,15 +60,15 @@ describe('filterRemovedCustomLibraries', () => {
     it('should return empty array when all removed', () => {
         const selected = [buildright];
         const defaults: CustomBlockLibrary[] = [];
-        expect(filterRemovedCustomLibraries(selected, defaults)).toEqual([]);
+        expect(filterRemovedCustomLibraries(selected, defaults)).toStrictEqual([]);
     });
 
     it('should return empty array when selected is empty', () => {
-        expect(filterRemovedCustomLibraries([], [myBlocks])).toEqual([]);
+        expect(filterRemovedCustomLibraries([], [myBlocks])).toStrictEqual([]);
     });
 
     it('should return empty array when selected is undefined', () => {
-        expect(filterRemovedCustomLibraries(undefined, [myBlocks])).toEqual([]);
+        expect(filterRemovedCustomLibraries(undefined, [myBlocks])).toStrictEqual([]);
     });
 
     it('should return selected unchanged when defaults is undefined', () => {

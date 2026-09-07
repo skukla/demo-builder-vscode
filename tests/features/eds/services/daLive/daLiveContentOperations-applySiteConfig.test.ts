@@ -308,7 +308,7 @@ describe('DaLiveContentOperations.applySiteConfig — site-scoped config write',
             );
 
             expect(result.success).toBe(true);
-            expect(result.removed ?? []).toEqual([]);
+            expect(result.removed ?? []).toStrictEqual([]);
         });
     });
 

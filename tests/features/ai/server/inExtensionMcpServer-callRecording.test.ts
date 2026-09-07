@@ -166,7 +166,7 @@ describe('InExtensionMcpServer - recording and schema tightening', () => {
 
             await callToolOverSocket(socketPath, 'set_probe_noargs', {});
 
-            expect(entryFor('set_probe_noargs')?.argumentKeys).toEqual([]);
+            expect(entryFor('set_probe_noargs')?.argumentKeys).toStrictEqual([]);
         });
 
         it('records the project shape the host supplies', async () => {
@@ -274,7 +274,7 @@ describe('InExtensionMcpServer - recording and schema tightening', () => {
             const schemaless = listed.find((t) => t.name === 'set_probe_schemaless');
 
             expect(schemaless).toBeDefined();
-            expect(Object.keys(schemaless?.inputSchema?.properties ?? {})).toEqual([]);
+            expect(Object.keys(schemaless?.inputSchema?.properties ?? {})).toStrictEqual([]);
         });
 
         it('gives a no-argument write tool room for the consent fields', async () => {
@@ -315,7 +315,7 @@ describe('InExtensionMcpServer - recording and schema tightening', () => {
             );
             socket.end();
 
-            expect(progress).toEqual([]);
+            expect(progress).toStrictEqual([]);
         });
     });
 });

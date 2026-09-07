@@ -306,15 +306,15 @@ describe('gatedSkillReasons', () => {
     });
 
     it('says nothing about a skill whose tool is installed', () => {
-        expect(gatedSkillReasons(edsProject(), [PLAYWRIGHT_PKG], SCRAPE)).toEqual([]);
+        expect(gatedSkillReasons(edsProject(), [PLAYWRIGHT_PKG], SCRAPE)).toStrictEqual([]);
     });
 
     it('says nothing about a skill whose tool does not apply — that is composition', () => {
-        expect(gatedSkillReasons(makeProject(), [], SCRAPE)).toEqual([]);
+        expect(gatedSkillReasons(makeProject(), [], SCRAPE)).toStrictEqual([]);
     });
 
     it('ignores a dependency naming a tool ai-defaults does not have', () => {
-        expect(gatedSkillReasons(edsProject(), [], { 'x.md': 'no-such-tool' })).toEqual([]);
+        expect(gatedSkillReasons(edsProject(), [], { 'x.md': 'no-such-tool' })).toStrictEqual([]);
     });
 
     it('reports every dependent skill of a missing tool', () => {
@@ -350,16 +350,16 @@ describe('gatedSkillReasons', () => {
         // The setting only explains an absence the project would otherwise HAVE.
         // Playwright requires a storefront, so a mesh-only project is not missing it.
         it('stays silent when the project would not qualify for the tool anyway', () => {
-            expect(gatedSkillReasons(meshOnlyProject(), [PLAYWRIGHT_PKG], SCRAPE)).toEqual([]);
+            expect(gatedSkillReasons(meshOnlyProject(), [PLAYWRIGHT_PKG], SCRAPE)).toStrictEqual([]);
         });
 
         it('stays silent for a project with no components installed', () => {
-            expect(gatedSkillReasons(makeProject(), [PLAYWRIGHT_PKG], SCRAPE)).toEqual([]);
+            expect(gatedSkillReasons(makeProject(), [PLAYWRIGHT_PKG], SCRAPE)).toStrictEqual([]);
         });
 
         it('stays silent for a manifest carrying no componentInstances at all', () => {
             const bare = makeProject({ componentInstances: undefined });
-            expect(gatedSkillReasons(bare, [PLAYWRIGHT_PKG], SCRAPE)).toEqual([]);
+            expect(gatedSkillReasons(bare, [PLAYWRIGHT_PKG], SCRAPE)).toStrictEqual([]);
         });
     });
 });

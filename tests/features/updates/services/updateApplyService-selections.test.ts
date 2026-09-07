@@ -118,7 +118,7 @@ describe('computeProjectUpdateSelections', () => {
 
             const sel = await computeProjectUpdateSelections(edsProject(), handlerCtx);
 
-            expect(sel.forkSync).toEqual([]);
+            expect(sel.forkSync).toStrictEqual([]);
             expect(handlerCtx.logger.warn).not.toHaveBeenCalled();
         });
 
@@ -131,7 +131,7 @@ describe('computeProjectUpdateSelections', () => {
             );
 
             expect(mockCheckForkStatus).not.toHaveBeenCalled();
-            expect(sel.forkSync).toEqual([]);
+            expect(sel.forkSync).toStrictEqual([]);
             expect(handlerCtx.logger.warn).not.toHaveBeenCalled();
         });
     });
@@ -155,7 +155,7 @@ describe('computeProjectUpdateSelections', () => {
                 createMockHandlerContext()
             );
 
-            expect(sel.template).toEqual([]);
+            expect(sel.template).toStrictEqual([]);
         });
     });
 
@@ -205,7 +205,7 @@ describe('computeProjectUpdateSelections', () => {
 
             const sel = await computeProjectUpdateSelections(edsProject(), handlerCtx);
 
-            expect(sel.component).toEqual([]);
+            expect(sel.component).toStrictEqual([]);
             expect(handlerCtx.logger.warn).not.toHaveBeenCalled();
         });
     });
@@ -239,7 +239,7 @@ describe('computeProjectUpdateSelections', () => {
                 createMockHandlerContext()
             );
 
-            expect(sel.adobeMcp).toEqual([]);
+            expect(sel.adobeMcp).toStrictEqual([]);
         });
     });
 
@@ -278,7 +278,7 @@ describe('computeProjectUpdateSelections', () => {
                 createMockHandlerContext()
             );
 
-            expect(sel.inspector).toEqual([]);
+            expect(sel.inspector).toStrictEqual([]);
         });
     });
 
@@ -314,7 +314,7 @@ describe('computeProjectUpdateSelections', () => {
 
                 const sel = await computeProjectUpdateSelections(project, handlerCtx);
 
-                expect(sel[category]).toEqual([]);
+                expect(sel[category]).toStrictEqual([]);
                 const others = (Object.keys(sel) as Array<keyof typeof sel>).filter(
                     (k) => k !== category && !(category === 'blockLibrary' && k === 'inspector')
                 );

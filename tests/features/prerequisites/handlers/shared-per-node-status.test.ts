@@ -136,7 +136,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             { version: 'Node 20', component: '10.0.0', installed: true, major: '20' },
         ]);
         expect(result.perNodeVariantMissing).toBe(false);
-        expect(result.missingVariantMajors).toEqual([]);
+        expect(result.missingVariantMajors).toStrictEqual([]);
     });
 
     it('should detect installed versions correctly', async () => {
@@ -348,9 +348,9 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
         const context = createPrereqHandlerContext();
         const result = await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
 
-        expect(result.perNodeVersionStatus).toEqual([]);
+        expect(result.perNodeVersionStatus).toStrictEqual([]);
         expect(result.perNodeVariantMissing).toBe(false);
-        expect(result.missingVariantMajors).toEqual([]);
+        expect(result.missingVariantMajors).toStrictEqual([]);
     });
 
     it('should return empty arrays when no Node versions provided', async () => {
@@ -364,9 +364,9 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
         const context = createPrereqHandlerContext();
         const result = await checkPerNodeVersionStatus(prereq, [], context);
 
-        expect(result.perNodeVersionStatus).toEqual([]);
+        expect(result.perNodeVersionStatus).toStrictEqual([]);
         expect(result.perNodeVariantMissing).toBe(false);
-        expect(result.missingVariantMajors).toEqual([]);
+        expect(result.missingVariantMajors).toStrictEqual([]);
     });
 
     it('should log debug message when Node version not installed', async () => {
@@ -491,7 +491,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
                 major: '18',
             });
             expect(result.perNodeVariantMissing).toBe(false);
-            expect(result.missingVariantMajors).toEqual([]);
+            expect(result.missingVariantMajors).toStrictEqual([]);
         });
     });
 

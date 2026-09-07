@@ -53,12 +53,12 @@ describe('the development handbook points at things that exist', () => {
 
     it('every linked document exists', () => {
         const missing = linkedPaths(md).filter((p) => !existsSync(join(ROOT, p)));
-        expect(missing).toEqual([]);
+        expect(missing).toStrictEqual([]);
     });
 
     it('every named enforcer — test, hook rule, script, git hook — exists', () => {
         const missing = namedFiles(md).filter((p) => !existsSync(join(ROOT, p)));
-        expect(missing).toEqual([]);
+        expect(missing).toStrictEqual([]);
     });
 
     it('the convention scorecard matches the conventions actually stated', () => {

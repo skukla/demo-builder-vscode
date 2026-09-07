@@ -43,8 +43,8 @@ describe('useSelectionStep - Basic Selection Flow', () => {
                 })
             );
 
-            expect(result.current.items).toEqual([]);
-            expect(result.current.filteredItems).toEqual([]);
+            expect(result.current.items).toStrictEqual([]);
+            expect(result.current.filteredItems).toStrictEqual([]);
             // When cache is empty, hook initializes isLoading to true
             expect(result.current.isLoading).toBe(true);
             expect(result.current.error).toBeNull();

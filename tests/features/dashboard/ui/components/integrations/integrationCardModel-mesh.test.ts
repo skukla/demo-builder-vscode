@@ -60,14 +60,14 @@ describe('deriveMeshCard — status matrix', () => {
 
         expect(model.status).toBe('checking');
         expect(model.dotVariant).toBe('neutral');
-        expect(model.menuActions).toEqual([]);
+        expect(model.menuActions).toStrictEqual([]);
     });
 
     it('undefined status behaves as checking (unresolved)', () => {
         const model = deriveMeshCard(display({ color: 'gray', text: 'Checking…' }), undefined, undefined, false);
 
         expect(model.status).toBe('checking');
-        expect(model.menuActions).toEqual([]);
+        expect(model.menuActions).toStrictEqual([]);
     });
 
     it('needs-auth: warning dot, Sign in LEADS the menu', () => {
@@ -106,7 +106,7 @@ describe('deriveMeshCard — status matrix', () => {
 
         expect(model.status).toBe('deploying');
         expect(model.dotVariant).toBe('info');
-        expect(model.menuActions).toEqual([]);
+        expect(model.menuActions).toStrictEqual([]);
     });
 
     it('deployed: success dot, NO Open (a GraphQL endpoint is not browsable), Redeploy in the MENU', () => {
@@ -143,7 +143,7 @@ describe('deriveMeshCard — status matrix', () => {
 
         // An action you cannot take is not offered. The bar used to render it
         // disabled; a menu item has no disabled state, so it is simply absent.
-        expect(model.menuActions).toEqual([]);
+        expect(model.menuActions).toStrictEqual([]);
     });
 
     it.each(['config-changed', 'update-declined'] as const)(
@@ -227,7 +227,7 @@ describe('deriveMeshCard — identity + propagation', () => {
         for (const status of MESH_STATUSES) {
             const model = deriveMeshCard(display(), status, meshEntry(), false);
             if (model.status === 'deploying' || model.status === 'checking') {
-                expect(model.menuActions).toEqual([]);
+                expect(model.menuActions).toStrictEqual([]);
             } else if (model.status === 'deployed') {
                 expect(model.menuActions).toEqual(['redeploy']);
             } else {
@@ -291,7 +291,7 @@ describe('deriveMeshCard — identity + propagation', () => {
             const model = deriveMeshCard(display(), status, meshEntry(), true);
             // A menu item has no disabled state, so an unavailable action is
             // withheld rather than shown greyed.
-            expect(model.menuActions).toEqual([]);
+            expect(model.menuActions).toStrictEqual([]);
         }
     });
 
@@ -365,7 +365,7 @@ describe('buildIntegrationCards', () => {
             'eds-accs-mesh',
         );
 
-        expect(cards).toEqual([]);
+        expect(cards).toStrictEqual([]);
     });
 
     // The add case, which is why the synthesis cannot simply be dropped for
@@ -423,7 +423,7 @@ describe('buildIntegrationCards', () => {
             gone: { status: 'deployed' },
             failed: { status: 'error' },
         });
-        expect(cards).toEqual([]);
+        expect(cards).toStrictEqual([]);
     });
 
     it('a known-id deploying override merges into its card instead of synthesizing a duplicate', () => {

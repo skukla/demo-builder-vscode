@@ -253,7 +253,7 @@ describe('telling a repeat from a different question', () => {
         call('error');
         call('ok');
 
-        expect(trace.repeats()).toEqual([]);
+        expect(trace.repeats()).toStrictEqual([]);
     });
 });
 

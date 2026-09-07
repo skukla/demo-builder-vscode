@@ -13,14 +13,14 @@ describe('LineBuffer', () => {
 
     it('retains a partial tail until its newline arrives', () => {
         const buf = new LineBuffer();
-        expect(buf.push('{"a":')).toEqual([]); // no newline yet
+        expect(buf.push('{"a":')).toStrictEqual([]); // no newline yet
         expect(buf.push('1}\n')).toEqual(['{"a":1}\n']);
     });
 
     it('handles a line split across several chunks', () => {
         const buf = new LineBuffer();
-        expect(buf.push('{"hel')).toEqual([]);
-        expect(buf.push('lo":')).toEqual([]);
+        expect(buf.push('{"hel')).toStrictEqual([]);
+        expect(buf.push('lo":')).toStrictEqual([]);
         expect(buf.push('true}\n')).toEqual(['{"hello":true}\n']);
     });
 

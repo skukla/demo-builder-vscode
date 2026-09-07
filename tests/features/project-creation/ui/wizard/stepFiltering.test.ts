@@ -138,7 +138,7 @@ describe('stepFiltering', () => {
             const result = filterStepsForStack(steps, headlessStack);
 
             // Then: Should return empty array
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should handle stack with only requiresGitHub', () => {

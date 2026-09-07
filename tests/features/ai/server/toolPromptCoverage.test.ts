@@ -63,7 +63,7 @@ describe('every tool is exercised by a battery prompt', () => {
         const grandfathered = new Set(baseline.tools);
 
         const unjudged = [...shipped].filter((t) => !prompted.has(t) && !grandfathered.has(t)).sort();
-        expect(unjudged).toEqual([]);
+        expect(unjudged).toStrictEqual([]);
     });
 
     it('every floor entry carries a NAMED reason — a bare entry is an IOU, not a floor', () => {
@@ -76,12 +76,12 @@ describe('every tool is exercised by a battery prompt', () => {
         const unreasoned = baseline.tools.filter(
             (t) => !baseline.reasons?.[t] || baseline.reasons[t].length < 10,
         );
-        expect(unreasoned).toEqual([]);
+        expect(unreasoned).toStrictEqual([]);
         // And no orphaned reason survives its tool leaving the floor.
         const orphaned = Object.keys(baseline.reasons ?? {}).filter(
             (t) => !baseline.tools.includes(t),
         );
-        expect(orphaned).toEqual([]);
+        expect(orphaned).toStrictEqual([]);
     });
 
     it('the baseline may only shrink — a paid-off entry left listed is rot', () => {
@@ -96,7 +96,7 @@ describe('every tool is exercised by a battery prompt', () => {
         );
 
         const stale = baseline.tools.filter((t) => prompted.has(t));
-        expect(stale).toEqual([]);
+        expect(stale).toStrictEqual([]);
     });
 
     it('the baseline lists only tools that still exist', () => {
@@ -105,6 +105,6 @@ describe('every tool is exercised by a battery prompt', () => {
             readFileSync(join(BATTERY, 'unprompted-baseline.json'), 'utf8'),
         );
         const gone = baseline.tools.filter((t) => !shipped.has(t));
-        expect(gone).toEqual([]);
+        expect(gone).toStrictEqual([]);
     });
 });

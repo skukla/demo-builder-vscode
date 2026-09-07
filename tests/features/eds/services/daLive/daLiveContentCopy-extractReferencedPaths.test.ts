@@ -43,7 +43,7 @@ describe('extractReferencedPaths', () => {
             '<a href="./relative">rel</a>',
             '<a href="">empty</a>',
         ].join('');
-        expect(extractReferencedPaths(html, base)).toEqual([]);
+        expect(extractReferencedPaths(html, base)).toStrictEqual([]);
     });
 
     it('ignores media, assets, icons, and product-overlay paths', () => {
@@ -72,23 +72,23 @@ describe('extractReferencedPaths', () => {
     });
 
     it('does not match a path embedded mid-text (only fragment-block paths)', () => {
-        expect(extractReferencedPaths('<div>See /customer/nav for details</div>', base)).toEqual([]);
+        expect(extractReferencedPaths('<div>See /customer/nav for details</div>', base)).toStrictEqual([]);
     });
 
     it('does NOT match a bare-path leaf outside a fragment block (precision)', () => {
         // A bare path in ordinary content is not a fragment reference — don't over-discover it.
-        expect(extractReferencedPaths('<div><div>/some/stray/path</div></div>', base)).toEqual([]);
+        expect(extractReferencedPaths('<div><div>/some/stray/path</div></div>', base)).toStrictEqual([]);
     });
 
     it('does not match closing tags or non-path cell text', () => {
-        expect(extractReferencedPaths('<div>My account</div><div></div>', base)).toEqual([]);
+        expect(extractReferencedPaths('<div>My account</div><div></div>', base)).toStrictEqual([]);
     });
 
     it('returns an empty array when there are no links', () => {
-        expect(extractReferencedPaths('<body><main>no links</main></body>', base)).toEqual([]);
+        expect(extractReferencedPaths('<body><main>no links</main></body>', base)).toStrictEqual([]);
     });
 
     it('does not return the site root', () => {
-        expect(extractReferencedPaths(`<a href="/">home</a><a href="${base}/">home2</a>`, base)).toEqual([]);
+        expect(extractReferencedPaths(`<a href="/">home</a><a href="${base}/">home2</a>`, base)).toStrictEqual([]);
     });
 });

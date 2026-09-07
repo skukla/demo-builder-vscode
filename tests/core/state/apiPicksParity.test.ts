@@ -73,7 +73,7 @@ describe('SOP: step 07 retired the flat write — componentApiPicks is the one w
             }
         }
 
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 
     it('still recognises the shape it is meant to catch', () => {

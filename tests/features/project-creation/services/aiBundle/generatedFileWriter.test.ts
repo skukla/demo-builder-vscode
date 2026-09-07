@@ -284,9 +284,9 @@ describe('createGeneratedFileWriter', () => {
 
             await writer.writeMerged('.claude/settings.json', '{"merged":true}');
 
-            expect(writeFileCalls()).toEqual([]);
+            expect(writeFileCalls()).toStrictEqual([]);
             expect(writer.hashes()['.claude/settings.json']).toBe(sha256('{"merged":true}'));
-            expect(writer.report().written).toEqual([]);
+            expect(writer.report().written).toStrictEqual([]);
         });
     });
 
@@ -317,7 +317,7 @@ describe('createGeneratedFileWriter', () => {
 
             await writer.remove('.claude/skills/old.md');
 
-            expect(writer.hashes()).toEqual({});
+            expect(writer.hashes()).toStrictEqual({});
             expect(writer.report().removed).toEqual(['.claude/skills/old.md']);
         });
     });
@@ -414,7 +414,7 @@ describe('createGeneratedFileWriter', () => {
 
             expect(result).toBe('absent');
             expect(fsPromises.unlink).not.toHaveBeenCalled();
-            expect(writer.hashes()).toEqual({});
+            expect(writer.hashes()).toStrictEqual({});
         });
 
         it('does not report an absent file as removed or skipped', async () => {

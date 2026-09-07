@@ -93,14 +93,14 @@ describe('every tool declares real sign-ins', () => {
         // The compiler already requires this; asserting it here means the DERIVATION
         // is sound too — a null means this file failed to read a declaration it should
         // have, which would silently shrink every count below.
-        expect(decls.filter((d) => d.providers === null).map((d) => d.name)).toEqual([]);
+        expect(decls.filter((d) => d.providers === null).map((d) => d.name)).toStrictEqual([]);
     });
 
     it('no tool names a sign-in the extension cannot offer', () => {
         const bad = decls
             .flatMap((d) => (d.providers ?? []).map((p) => ({ tool: d.name, provider: p })))
             .filter(({ provider }) => !PROVIDERS.has(provider));
-        expect(bad).toEqual([]);
+        expect(bad).toStrictEqual([]);
     });
 
     it('each tool is declared exactly once', () => {

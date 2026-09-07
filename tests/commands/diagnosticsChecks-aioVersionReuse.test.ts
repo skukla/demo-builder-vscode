@@ -43,7 +43,7 @@ describe('checkAdobeCLI — reusing the version checkTools already fetched', () 
     it('does not run `aio --version` when handed the tool result', async () => {
         await checkAdobeCLI(aioTool('@adobe/aio-cli/11.1.2'));
 
-        expect(ranCommands().filter((c) => c === 'aio --version')).toEqual([]);
+        expect(ranCommands().filter((c) => c === 'aio --version')).toStrictEqual([]);
     });
 
     it('reports the handed-in version rather than re-deriving it', async () => {
@@ -58,7 +58,7 @@ describe('checkAdobeCLI — reusing the version checkTools already fetched', () 
         // not-installed result has to gate them the same way the local check did.
         await checkAdobeCLI(aioTool(undefined));
 
-        expect(ranCommands()).toEqual([]);
+        expect(ranCommands()).toStrictEqual([]);
     });
 
     it('still probes auth and orgs when aio IS installed', async () => {

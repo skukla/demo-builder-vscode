@@ -129,7 +129,7 @@ describe('ConfigureProjectWebviewCommand - env file reads and writes', () => {
                 projectWith({ api: { path: '/c/api' } })
             );
 
-            expect(values.api).toEqual({});
+            expect(values.api).toStrictEqual({});
         });
 
         it('skips a component instance that has no path at all', async () => {
@@ -177,7 +177,7 @@ describe('ConfigureProjectWebviewCommand - env file reads and writes', () => {
                 componentConfigs: undefined,
             });
 
-            await expect(files(command).loadExistingEnvValues(project)).resolves.toEqual({});
+            await expect(files(command).loadExistingEnvValues(project)).resolves.toStrictEqual({});
         });
     });
 

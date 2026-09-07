@@ -115,7 +115,7 @@ describe('the CDN unpublish step', () => {
         const result = await deleteProject(context(), edsProject(), SERVICES);
 
         // Nothing was published, so there is nothing to report as cleaned up.
-        expect(of(resultsOf(result), 'helix')).toEqual([]);
+        expect(of(resultsOf(result), 'helix')).toStrictEqual([]);
     });
 
     it('records no helix result when the unpublish failed', async () => {
@@ -126,7 +126,7 @@ describe('the CDN unpublish step', () => {
 
         const result = await deleteProject(context(), edsProject(), SERVICES);
 
-        expect(of(resultsOf(result), 'helix')).toEqual([]);
+        expect(of(resultsOf(result), 'helix')).toStrictEqual([]);
         // ...and it must not stop the rest of the deletion.
         expect(mockDeleteDaLiveSite).toHaveBeenCalled();
         expect(mockRm).toHaveBeenCalled();

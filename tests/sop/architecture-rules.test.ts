@@ -367,7 +367,7 @@ describe('ADR-015: a handler translates and returns — it never renders', () =>
     });
 
     it('no handler imports React', () => {
-        expect(violations).toEqual([]);
+        expect(violations).toStrictEqual([]);
     });
 });
 
@@ -399,7 +399,7 @@ describe('ADR-021: one dependency bundle per call, data as ordinary arguments', 
     });
 
     it('no function takes two dependency bundles', () => {
-        expect(violations).toEqual([]);
+        expect(violations).toStrictEqual([]);
     });
 });
 
@@ -534,6 +534,6 @@ describe('a cast at a call boundary is a silenced type error', () => {
                 if (PAT.test(line)) violations.push(`${f}:${i + 1}  ${line.trim().slice(0, 80)}`);
             });
         }
-        expect(violations).toEqual([]);
+        expect(violations).toStrictEqual([]);
     });
 });

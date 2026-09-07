@@ -269,7 +269,7 @@ describe('Prerequisites Continue Handler - Decisions', () => {
                 { version: 'Node 18', component: 'v18.0.0', installed: true },
                 { version: 'Node 20', component: 'v20.0.0', installed: true },
             ]);
-            expect(states.get(1).nodeVersionStatus).toEqual([]);
+            expect(states.get(1).nodeVersionStatus).toStrictEqual([]);
         });
 
         it('keeps the recorded check result when the version probe then fails', async () => {

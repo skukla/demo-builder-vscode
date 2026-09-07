@@ -215,7 +215,7 @@ describe('split test families share their setup', () => {
         const counts = new Map<string, number>();
         for (const f of LEDGER.families) counts.set(f, (counts.get(f) ?? 0) + 1);
         const duplicated = [...counts].filter(([, n]) => n > 1).map(([f]) => f);
-        expect(duplicated).toEqual([]);
+        expect(duplicated).toStrictEqual([]);
     });
 
     it('every adjudicated family carries a reason that says something', () => {
@@ -225,12 +225,12 @@ describe('split test families share their setup', () => {
         const thin = Object.entries(LEDGER.adjudicated)
             .filter(([, reason]) => reason.trim().split(/\s+/).length < 8)
             .map(([family]) => family);
-        expect(thin).toEqual([]);
+        expect(thin).toStrictEqual([]);
     });
 
     it('a family is debt OR adjudicated, never both', () => {
         const both = LEDGER.families.filter((f) => f in LEDGER.adjudicated);
-        expect(both).toEqual([]);
+        expect(both).toStrictEqual([]);
     });
 
     it('no NEW family arrives without a shared setup, and fixed families leave the ledger', () => {

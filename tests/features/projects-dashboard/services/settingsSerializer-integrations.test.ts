@@ -211,7 +211,7 @@ describe('settingsSerializer', () => {
             expect(result.selections).toEqual({
                 appBuilder: ['firefly-image-gen', 'acme-widget'],
             });
-            expect(result.configs).toEqual({});
+            expect(result.configs).toStrictEqual({});
             expect(result.version).toBe(SETTINGS_FILE_VERSION);
             expect(result.source.project).toBe('integrations-project');
         });

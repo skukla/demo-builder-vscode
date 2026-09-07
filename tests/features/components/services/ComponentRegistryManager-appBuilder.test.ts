@@ -60,7 +60,7 @@ describe('ComponentRegistryManager - App Builder Category', () => {
             const registry = await manager.loadRegistry();
 
             expect(registry.components.appBuilder).toBeDefined();
-            expect(registry.components.appBuilder).toEqual([]);
+            expect(registry.components.appBuilder).toStrictEqual([]);
         });
 
         it('should load app-builder components from the "appBuilder" section', async () => {
@@ -98,7 +98,7 @@ describe('ComponentRegistryManager - App Builder Category', () => {
 
             const appBuilders = await manager.getAppBuilder();
 
-            expect(appBuilders).toEqual([]);
+            expect(appBuilders).toStrictEqual([]);
         });
     });
 

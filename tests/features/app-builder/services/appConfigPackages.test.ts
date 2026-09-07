@@ -169,7 +169,7 @@ describe('listDeclaredPackageNames (AB-7 attribution ground truth)', () => {
 
     it('a missing or unparseable app.config answers empty, not a throw', async () => {
         mockRead.mockRejectedValueOnce(new Error('ENOENT'));
-        await expect(listDeclaredPackageNames('/app')).resolves.toEqual([]);
+        await expect(listDeclaredPackageNames('/app')).resolves.toStrictEqual([]);
     });
 });
 

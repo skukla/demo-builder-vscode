@@ -201,7 +201,7 @@ describe('list_console_apis emits the group legend once, not per row', () => {
     it('preserves the other row fields and the envelope', () => {
         const out = JSON.parse(row('list_console_apis')!.shape!(RESPONSE, {}));
         expect(out.apis[0]).toMatchObject({ code: 'A', name: 'Alpha' });
-        expect(out.added).toEqual([]);
+        expect(out.added).toStrictEqual([]);
     });
 });
 

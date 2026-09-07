@@ -27,7 +27,7 @@ describe('StateManager - Recent Projects', () => {
 
             const result = await stateManager.getRecentProjects();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should load and return recent projects', async () => {
@@ -112,7 +112,7 @@ describe('StateManager - Recent Projects', () => {
             await stateManager.initialize();
             const result = await stateManager.getRecentProjects();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 

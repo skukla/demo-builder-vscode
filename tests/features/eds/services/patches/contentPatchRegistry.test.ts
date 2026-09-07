@@ -64,7 +64,7 @@ describe('applyContentPatches', () => {
         const html = '<div>Orchard7</div>';
         const result = await applyContentPatches(html, '/', [], mockLogger);
         expect(result.html).toBe(html);
-        expect(result.results).toEqual([]);
+        expect(result.results).toStrictEqual([]);
     });
 
     it('applies matching patch to correct page path', async () => {
@@ -90,7 +90,7 @@ describe('applyContentPatches', () => {
             mockLogger,
         );
         expect(result.html).toBe(html);
-        expect(result.results).toEqual([]);
+        expect(result.results).toStrictEqual([]);
     });
 
     it('reports not applied when search pattern not found', async () => {

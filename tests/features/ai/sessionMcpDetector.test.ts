@@ -71,7 +71,7 @@ describe('detectSessionMcps', () => {
 
             const result = await detectSessionMcps();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('throws a descriptive error when ~/.claude.json is malformed', async () => {
@@ -85,7 +85,7 @@ describe('detectSessionMcps', () => {
 
             const result = await detectSessionMcps();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('returns empty array when claudeAiMcpEverConnected is not an array', async () => {
@@ -93,7 +93,7 @@ describe('detectSessionMcps', () => {
 
             const result = await detectSessionMcps();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('returns one entry per claudeAiMcpEverConnected string with needsAuth false (no cache file)', async () => {

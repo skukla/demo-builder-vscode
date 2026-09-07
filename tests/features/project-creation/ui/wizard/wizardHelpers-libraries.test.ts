@@ -34,8 +34,8 @@ const NEUTRAL_AUTH: WizardState['adobeAuth'] = { isAuthenticated: false, isCheck
 
 describe('filterRemovedCustomLibraries', () => {
     it('should return an empty list when nothing was selected', () => {
-        expect(filterRemovedCustomLibraries(undefined, [library('A', 'acme', 'a')])).toEqual([]);
-        expect(filterRemovedCustomLibraries([], [library('A', 'acme', 'a')])).toEqual([]);
+        expect(filterRemovedCustomLibraries(undefined, [library('A', 'acme', 'a')])).toStrictEqual([]);
+        expect(filterRemovedCustomLibraries([], [library('A', 'acme', 'a')])).toStrictEqual([]);
     });
 
     it('should keep every selection when the settings list is absent', () => {
@@ -45,7 +45,7 @@ describe('filterRemovedCustomLibraries', () => {
     });
 
     it('should drop every selection when the settings list is empty', () => {
-        expect(filterRemovedCustomLibraries([library('A', 'acme', 'a')], [])).toEqual([]);
+        expect(filterRemovedCustomLibraries([library('A', 'acme', 'a')], [])).toStrictEqual([]);
     });
 
     it('should keep only the selections the settings still offer', () => {
@@ -61,7 +61,7 @@ describe('filterRemovedCustomLibraries', () => {
         const sameNameElsewhere = library('Old name', 'other', 'blocks');
 
         expect(filterRemovedCustomLibraries([selected], [renamed])).toEqual([selected]);
-        expect(filterRemovedCustomLibraries([selected], [sameNameElsewhere])).toEqual([]);
+        expect(filterRemovedCustomLibraries([selected], [sameNameElsewhere])).toStrictEqual([]);
     });
 });
 
@@ -91,8 +91,8 @@ describe('getNextButtonText', () => {
 
 describe('getEnabledWizardSteps', () => {
     it('should return nothing for an absent or empty step list', () => {
-        expect(getEnabledWizardSteps(undefined)).toEqual([]);
-        expect(getEnabledWizardSteps([])).toEqual([]);
+        expect(getEnabledWizardSteps(undefined)).toStrictEqual([]);
+        expect(getEnabledWizardSteps([])).toStrictEqual([]);
     });
 });
 
@@ -117,13 +117,13 @@ describe('filterStepsByComponents', () => {
         // the step still has to clear its requiredAny gate.
         const steps = [step({ requiredComponents: [], requiredAny: ['commerce-mesh'] })];
 
-        expect(filterStepsByComponents(steps, { frontend: 'eds' })).toEqual([]);
+        expect(filterStepsByComponents(steps, { frontend: 'eds' })).toStrictEqual([]);
     });
 
     it('should drop a step whose required component is not selected', () => {
         const steps = [step({ requiredComponents: ['commerce-mesh'] })];
 
-        expect(filterStepsByComponents(steps, { frontend: 'eds' })).toEqual([]);
+        expect(filterStepsByComponents(steps, { frontend: 'eds' })).toStrictEqual([]);
     });
 });
 
@@ -173,7 +173,7 @@ describe('computeStateUpdatesForBackwardNav', () => {
 
 describe('initializeAdobeContextFromImport', () => {
     it('should return nothing when the import carries no Adobe section at all', () => {
-        expect(initializeAdobeContextFromImport({} as ImportedSettings)).toEqual({});
+        expect(initializeAdobeContextFromImport({} as ImportedSettings)).toStrictEqual({});
     });
 
     it('should rebuild only the parts the import actually names', () => {
@@ -283,10 +283,10 @@ describe('buildProjectConfig', () => {
     it('should default the list-shaped selections to empty rather than undefined', () => {
         const config = buildProjectConfig(base, null, []);
 
-        expect(config.selectedAddons).toEqual([]);
-        expect(config.selectedBlockLibraries).toEqual([]);
-        expect(config.customBlockLibraries).toEqual([]);
-        expect(config.selectedAppBuilderComponents).toEqual([]);
+        expect(config.selectedAddons).toStrictEqual([]);
+        expect(config.selectedBlockLibraries).toStrictEqual([]);
+        expect(config.customBlockLibraries).toStrictEqual([]);
+        expect(config.selectedAppBuilderComponents).toStrictEqual([]);
     });
 
     it('should carry the workspace id the import named', () => {

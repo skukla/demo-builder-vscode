@@ -50,7 +50,7 @@ describe('inspectAllServers', () => {
 
             const result = await inspectAllServers(PROJECT_PATH);
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('returns empty array when mcp.json is malformed JSON', async () => {
@@ -58,7 +58,7 @@ describe('inspectAllServers', () => {
 
             const result = await inspectAllServers(PROJECT_PATH);
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('returns empty array when mcp.json has no mcpServers key', async () => {
@@ -66,7 +66,7 @@ describe('inspectAllServers', () => {
 
             const result = await inspectAllServers(PROJECT_PATH);
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('returns empty array when mcpServers is empty', async () => {
@@ -74,7 +74,7 @@ describe('inspectAllServers', () => {
 
             const result = await inspectAllServers(PROJECT_PATH);
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('reads .claude/mcp.json under the project as utf-8', async () => {

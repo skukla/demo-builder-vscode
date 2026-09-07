@@ -193,7 +193,7 @@ describe('list-datapack-import-scopes', () => {
         const result = await importHandlers['list-datapack-import-scopes'](context);
 
         expect(result.success).toBe(true);
-        expect(websitesOf(result)).toEqual([]);
+        expect(websitesOf(result)).toStrictEqual([]);
         expect(mockedDiscover).not.toHaveBeenCalled();
     });
 
@@ -214,7 +214,7 @@ describe('list-datapack-import-scopes', () => {
         const result = await importHandlers['list-datapack-import-scopes'](context);
 
         expect(result.success).toBe(true);
-        expect(websitesOf(result)).toEqual([]);
+        expect(websitesOf(result)).toStrictEqual([]);
         expect(mockedDiscover).not.toHaveBeenCalled();
     });
 
@@ -225,7 +225,7 @@ describe('list-datapack-import-scopes', () => {
         const result = await importHandlers['list-datapack-import-scopes'](context);
 
         expect(result.success).toBe(true);
-        expect(websitesOf(result)).toEqual([]);
+        expect(websitesOf(result)).toStrictEqual([]);
         expect(mockedDiscover).not.toHaveBeenCalled();
     });
 });

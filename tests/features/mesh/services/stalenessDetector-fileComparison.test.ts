@@ -138,7 +138,7 @@ describe('StalenessDetector - File Comparison', () => {
 
             const result = await fetchDeployedMeshConfig(meshLogger, meshDeps);
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
     });
     /**
@@ -210,7 +210,7 @@ describe('StalenessDetector - File Comparison', () => {
 
             const result = await fetchDeployedMeshConfig(meshLogger, meshDeps);
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('returns an empty map when meshConfig carries no sources', async () => {
@@ -221,7 +221,7 @@ describe('StalenessDetector - File Comparison', () => {
 
             const result = await fetchDeployedMeshConfig(meshLogger, meshDeps);
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('returns null — not an empty baseline — when the response is not an object', async () => {
@@ -240,7 +240,7 @@ describe('StalenessDetector - File Comparison', () => {
 
             const result = await fetchDeployedMeshConfig(meshLogger, meshDeps);
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('skips a magento source whose handler has no graphql block', async () => {
@@ -251,7 +251,7 @@ describe('StalenessDetector - File Comparison', () => {
 
             const result = await fetchDeployedMeshConfig(meshLogger, meshDeps);
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('skips a catalog source with no handler', async () => {
@@ -262,7 +262,7 @@ describe('StalenessDetector - File Comparison', () => {
 
             const result = await fetchDeployedMeshConfig(meshLogger, meshDeps);
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('skips a catalog source whose handler has no graphql block', async () => {
@@ -273,7 +273,7 @@ describe('StalenessDetector - File Comparison', () => {
 
             const result = await fetchDeployedMeshConfig(meshLogger, meshDeps);
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('takes a catalog endpoint even when the source carries no operationHeaders', async () => {

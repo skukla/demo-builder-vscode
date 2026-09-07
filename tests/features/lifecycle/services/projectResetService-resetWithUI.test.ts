@@ -468,7 +468,7 @@ describe('resetProjectWithUI — the rebuild itself', () => {
                 commandManager,
             }),
         );
-        expect(project.componentInstances).toEqual({});
+        expect(project.componentInstances).toStrictEqual({});
         expect(mockInstallAllComponents).toHaveBeenCalledWith(installContext);
         expect(mockCloneAllComponents.mock.invocationCallOrder[0]).toBeLessThan(
             mockInstallAllComponents.mock.invocationCallOrder[0],

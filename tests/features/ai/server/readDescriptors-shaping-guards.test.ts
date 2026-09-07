@@ -144,7 +144,7 @@ describe('list_console_apis guards', () => {
             success: true,
             data: { apis: [{ code: 'A', name: 'Alpha' }] },
         });
-        expect(out.groups).toEqual({});
+        expect(out.groups).toStrictEqual({});
         expect(out.apis[0]).toEqual({ code: 'A', name: 'Alpha' });
     });
 
@@ -156,7 +156,7 @@ describe('list_console_apis guards', () => {
             success: true,
             data: { apis: [{ code: 'A', name: 'Alpha', group: { code: 'g1' } }] },
         });
-        expect(out.groups).toEqual({});
+        expect(out.groups).toStrictEqual({});
         expect(out.apis[0].group).toBe('g1');
     });
 

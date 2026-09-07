@@ -185,7 +185,7 @@ describe('createBlockLibraryFromTemplate', () => {
 
         expect(result.success).toBe(true);
         expect(result.blocksCount).toBe(0);
-        expect(result.paths).toEqual([]);
+        expect(result.paths).toStrictEqual([]);
     });
 
     describe('generateStubDocPages', () => {

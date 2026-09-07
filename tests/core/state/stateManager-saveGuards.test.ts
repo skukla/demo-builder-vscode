@@ -110,7 +110,7 @@ describe('StateManager.saveProject — guards', () => {
         ).rejects.toBe(failure);
 
         expect(mockLoggerInstance.error).toHaveBeenCalledWith('Failed to save state', failure);
-        expect(writesTo('.demo-builder.json.tmp')).toEqual([]);
+        expect(writesTo('.demo-builder.json.tmp')).toStrictEqual([]);
     });
 
     it('does not recreate a project that was cleared while its save was in flight', async () => {
@@ -133,7 +133,7 @@ describe('StateManager.saveProject — guards', () => {
             testMocks.stateManager.saveProject(createStateManagerProject()),
         ).resolves.toBeUndefined();
 
-        expect(writesTo('.demo-builder.json.tmp')).toEqual([]);
+        expect(writesTo('.demo-builder.json.tmp')).toStrictEqual([]);
         expect(fs.mkdir).not.toHaveBeenCalledWith(PROJECT_PATH, expect.anything());
     });
 });
@@ -156,7 +156,7 @@ describe('StateManager.saveProjectConfigOnly', () => {
         expect(writesTo('.demo-builder.json.tmp')).toEqual([
             path.join(OTHER_PATH, '.demo-builder.json.tmp'),
         ]);
-        expect(writesTo('state.json.tmp')).toEqual([]);
+        expect(writesTo('state.json.tmp')).toStrictEqual([]);
         expect(listener).not.toHaveBeenCalled();
         await expect(testMocks.stateManager.hasProject()).resolves.toBe(false);
     });
@@ -172,7 +172,7 @@ describe('StateManager.saveProjectConfigOnly', () => {
         expect(writesTo('.demo-builder.json.tmp')).toEqual([
             path.join(OTHER_PATH, '.demo-builder.json.tmp'),
         ]);
-        expect(writesTo('state.json.tmp')).toEqual([]);
+        expect(writesTo('state.json.tmp')).toStrictEqual([]);
         (fs.readFile as jest.Mock).mockRejectedValue(new Error('ENOENT'));
         const current = await testMocks.stateManager.getCurrentProject();
         expect(current?.path).toBe(PROJECT_PATH);

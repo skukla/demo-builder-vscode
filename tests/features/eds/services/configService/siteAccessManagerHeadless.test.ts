@@ -430,7 +430,7 @@ describe('listSiteAccess reports why the site read failed', () => {
         const result = await listSiteAccess(project, context, logger);
 
         expect(result.status).toBe('ok');
-        expect(result.siteAdmins).toEqual([]);
+        expect(result.siteAdmins).toStrictEqual([]);
     });
 });
 
@@ -578,7 +578,7 @@ describe('removeSiteAdmin verification predicate', () => {
 
         const result = await removeSiteAdmin(project, 'gone@adobe.com', context, logger);
 
-        expect(result.siteAdmins).toEqual([]);
+        expect(result.siteAdmins).toStrictEqual([]);
         expect(result.verified).toBe(true);
     });
 });

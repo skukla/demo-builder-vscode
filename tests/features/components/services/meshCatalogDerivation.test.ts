@@ -102,7 +102,7 @@ describe('deriveMeshCatalogEntries', () => {
     // generateComponentEnvFile. A derived entry must not resurrect the fiction.
     it('declares no envSchema — the registry owns the env contract', () => {
         for (const entry of entries) {
-            expect(entry.envSchema ?? []).toEqual([]);
+            expect(entry.envSchema ?? []).toStrictEqual([]);
         }
     });
 

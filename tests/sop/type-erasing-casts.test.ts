@@ -188,6 +188,6 @@ describe('a test never erases a type', () => {
                 const body = stripComments(fs.readFileSync(path.join(repoRoot, f), 'utf8'));
                 return /\bas\s+any\b/.test(body) || /\bas\s+never\b/.test(body);
             });
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 });

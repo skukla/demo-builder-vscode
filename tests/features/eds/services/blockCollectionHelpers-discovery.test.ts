@@ -328,7 +328,7 @@ describe('installBlockCollections (single library)', () => {
             // Then: Should fail — source had no blocks at all
             expect(result.success).toBe(false);
             expect(result.blocksCount).toBe(0);
-            expect(result.blockIds).toEqual([]);
+            expect(result.blockIds).toStrictEqual([]);
             expect(result.error).toBe('No blocks found in source libraries');
         });
 
@@ -354,7 +354,7 @@ describe('installBlockCollections (single library)', () => {
             // Then: Should fail gracefully
             expect(result.success).toBe(false);
             expect(result.blocksCount).toBe(0);
-            expect(result.blockIds).toEqual([]);
+            expect(result.blockIds).toStrictEqual([]);
         });
 
         it('should succeed when all library blocks already exist in destination', async () => {
@@ -397,7 +397,7 @@ describe('installBlockCollections (single library)', () => {
             // Then: success — nothing to copy, blocks were already there
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(0);
-            expect(result.blockIds).toEqual([]);
+            expect(result.blockIds).toStrictEqual([]);
             // No GitHub commit should be created (nothing to write)
             expect(mockGithubFileOps.createCommit).not.toHaveBeenCalled();
         });

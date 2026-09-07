@@ -498,6 +498,6 @@ describe('toStepRailTabs', () => {
     });
 
     it('returns no tabs for no sections', () => {
-        expect(toStepRailTabs([], 'anything')).toEqual([]);
+        expect(toStepRailTabs([], 'anything')).toStrictEqual([]);
     });
 });

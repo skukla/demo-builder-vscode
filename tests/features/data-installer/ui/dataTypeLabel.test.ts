@@ -95,7 +95,7 @@ describe('dataTypeLabel', () => {
     it('leaves no underscore in any real data type', () => {
         const withUnderscore = REAL_CODES.filter((code) => dataTypeLabel(code).includes('_'));
 
-        expect(withUnderscore).toEqual([]);
+        expect(withUnderscore).toStrictEqual([]);
         expect(REAL_CODES).toHaveLength(21);
     });
 

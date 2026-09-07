@@ -34,8 +34,8 @@ describe('buildInitialProject', () => {
         expect(project.name).toBe('demo');
         expect(project.path).toBe(PROJECT_PATH);
         expect(project.status).toBe('created');
-        expect(project.componentInstances).toEqual({});
-        expect(project.componentSelections?.appBuilder).toEqual([]);
+        expect(project.componentInstances).toStrictEqual({});
+        expect(project.componentSelections?.appBuilder).toStrictEqual([]);
     });
 
     it('preserves the original creation date in edit mode', () => {
@@ -240,8 +240,8 @@ describe('buildInitialProject — the fields the wire config decides', () => {
     it('starts both lists EMPTY when the config names none', () => {
         const project = buildInitialProject(config(), PROJECT_PATH);
 
-        expect(project.componentSelections?.dependencies).toEqual([]);
-        expect(project.componentSelections?.integrations).toEqual([]);
+        expect(project.componentSelections?.dependencies).toStrictEqual([]);
+        expect(project.componentSelections?.integrations).toStrictEqual([]);
     });
 
     it('takes the datapack from the config, not from a project that has none', () => {

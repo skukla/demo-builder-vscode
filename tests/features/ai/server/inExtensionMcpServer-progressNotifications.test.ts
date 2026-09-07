@@ -137,7 +137,7 @@ describe('agent activity is reported to the chat', () => {
             {}
         );
 
-        expect(progressMessages).toEqual([]);
+        expect(progressMessages).toStrictEqual([]);
     });
 
     it('still runs the tool when the client asks for no progress', async () => {
@@ -153,6 +153,6 @@ describe('agent activity is reported to the chat', () => {
         socket.end();
 
         expect(res.result).toBeDefined();
-        expect(progress).toEqual([]);
+        expect(progress).toStrictEqual([]);
     });
 });

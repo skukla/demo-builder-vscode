@@ -72,8 +72,8 @@ describe('storefront driver', () => {
     });
 
     it('has no commit-gating (no-op commit/uncommit)', () => {
-        expect(driver.commit(state({}), 'accounts')).toEqual({});
-        expect(driver.uncommit(state({}), ['accounts', 'block-libraries'], 'accounts')).toEqual({});
+        expect(driver.commit(state({}), 'accounts')).toStrictEqual({});
+        expect(driver.uncommit(state({}), ['accounts', 'block-libraries'], 'accounts')).toStrictEqual({});
     });
 });
 

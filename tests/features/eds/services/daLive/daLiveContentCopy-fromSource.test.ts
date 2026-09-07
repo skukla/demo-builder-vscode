@@ -521,7 +521,7 @@ describe('DaLiveContentCopy.copyContentFromSource', () => {
                 report
             );
 
-            expect(report.results).toEqual([]);
+            expect(report.results).toStrictEqual([]);
         });
 
         it('records nothing for a reference that WAS copied', async () => {
@@ -548,7 +548,7 @@ describe('DaLiveContentCopy.copyContentFromSource', () => {
 
             expect(result.copiedFiles).toEqual(['/account', '/customer/nav']);
             expect(result.totalFiles).toBe(2);
-            expect(report.results).toEqual([]);
+            expect(report.results).toStrictEqual([]);
         });
 
         it('audits without a report, leaving the copy successful', async () => {

@@ -302,7 +302,7 @@ describe('deployAppComponent', () => {
             // Deploy succeeded; missing URL must not turn it into a failure.
             expect(result.success).toBe(true);
             expect(result.data?.url).toBe('');
-            expect(result.data?.deployedUrls).toEqual({});
+            expect(result.data?.deployedUrls).toStrictEqual({});
         });
 
         it('should return best-effort success when get-url JSON is unparseable', async () => {
@@ -317,7 +317,7 @@ describe('deployAppComponent', () => {
 
             expect(result.success).toBe(true);
             expect(result.data?.url).toBe('');
-            expect(result.data?.deployedUrls).toEqual({});
+            expect(result.data?.deployedUrls).toStrictEqual({});
         });
 
         it('should tolerate a parseable-but-unexpected shape without throwing', async () => {

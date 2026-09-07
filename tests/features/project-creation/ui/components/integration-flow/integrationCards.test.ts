@@ -52,7 +52,7 @@ describe('toIntegrationCards', () => {
     });
 
     it('returns an empty list for no rows', () => {
-        expect(toIntegrationCards([])).toEqual([]);
+        expect(toIntegrationCards([])).toStrictEqual([]);
     });
 
     // Nothing is deployed yet. A status would be the same on every card, so the
@@ -121,7 +121,7 @@ describe('toIntegrationCards', () => {
             // established "no kebab" signal (IntegrationActionsMenu returns
             // null on length 0).
             const [card] = toIntegrationCards([row({ kind: 'mesh', required: true })]);
-            expect(card.menuActions).toEqual([]);
+            expect(card.menuActions).toStrictEqual([]);
             expect(card.required).toBe(true);
         });
     });

@@ -52,7 +52,7 @@ describe('mcpSocketDiscovery', () => {
 
     describe('listCandidateSockets', () => {
         it('returns [] when the socket directory does not exist', async () => {
-            await expect(listCandidateSockets(path.join(dir, 'missing'))).resolves.toEqual([]);
+            await expect(listCandidateSockets(path.join(dir, 'missing'))).resolves.toStrictEqual([]);
         });
 
         it('lists only *.sock files, newest mtime first', async () => {

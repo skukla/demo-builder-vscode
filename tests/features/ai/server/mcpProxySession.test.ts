@@ -107,7 +107,7 @@ describe('while disconnected, client traffic is held rather than dropped', () =>
 
         session.fromClient(CALL(1));
 
-        expect(toServer).toEqual([]);
+        expect(toServer).toStrictEqual([]);
         expect(session.inspect().pendingCount).toBe(1);
     });
 
@@ -131,7 +131,7 @@ describe('while disconnected, client traffic is held rather than dropped', () =>
         session.onDisconnected();
         session.fromClient(CALL(2));
 
-        expect(toServer).toEqual([]);
+        expect(toServer).toStrictEqual([]);
         expect(session.inspect().pendingCount).toBe(1);
     });
 });
@@ -261,7 +261,7 @@ describe('exactly one duplicate init response is swallowed', () => {
 
         session.fromServer(INIT_RESPONSE(7));
 
-        expect(toClient).toEqual([]);
+        expect(toClient).toStrictEqual([]);
         expect(session.inspect().swallowing).toBe(false); // armed once, then spent
     });
 
@@ -317,7 +317,7 @@ describe('exactly one duplicate init response is swallowed', () => {
 
         h.session.fromServer(`\uFEFF${INIT_RESPONSE(7)}`);
 
-        expect(h.toClient).toEqual([]);
+        expect(h.toClient).toStrictEqual([]);
     });
 });
 
@@ -329,7 +329,7 @@ describe('framing survives chunk boundaries', () => {
         const line = CALL(1);
 
         session.fromClient(line.slice(0, 10));
-        expect(toServer).toEqual([]);
+        expect(toServer).toStrictEqual([]);
 
         session.fromClient(line.slice(10));
         expect(toServer).toEqual([line]);
@@ -361,6 +361,6 @@ describe('framing survives chunk boundaries', () => {
         h.session.fromServer(response.slice(0, 15));
         h.session.fromServer(response.slice(15));
 
-        expect(h.toClient).toEqual([]);
+        expect(h.toClient).toStrictEqual([]);
     });
 });

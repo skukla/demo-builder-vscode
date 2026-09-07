@@ -138,7 +138,7 @@ describe('what may be granted is decided by the AUTHORED copy', () => {
             .filter(([, c]) => c.sessionGrant && /can't be undone|cannot be undone|is lost/i.test(c.consequence))
             .map(([tool]) => tool);
 
-        expect(contradictions).toEqual([]);
+        expect(contradictions).toStrictEqual([]);
     });
 
     it('every entry states a decision', () => {
@@ -147,6 +147,6 @@ describe('what may be granted is decided by the AUTHORED copy', () => {
             .map(([tool]) => tool);
 
         expect(Object.keys(AGENT_ALERT_COPY).length).toBeGreaterThan(10);
-        expect(undecided).toEqual([]);
+        expect(undecided).toStrictEqual([]);
     });
 });

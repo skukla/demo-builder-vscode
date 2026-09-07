@@ -59,11 +59,11 @@ describe('the generated tool catalog states every confirm gate', () => {
 
     it('publishes no tool as ungated while its source gates it', () => {
         const missing = [...gatedInSource()].filter((t) => !gatedInCatalog().has(t)).sort();
-        expect(missing).toEqual([]);
+        expect(missing).toStrictEqual([]);
     });
 
     it('publishes no tool as gated while its source does not', () => {
         const phantom = [...gatedInCatalog()].filter((t) => !gatedInSource().has(t)).sort();
-        expect(phantom).toEqual([]);
+        expect(phantom).toStrictEqual([]);
     });
 });

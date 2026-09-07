@@ -409,7 +409,7 @@ describe('capturePayloadFrom', () => {
     }
 
     it('WITHOUT it, the tool returns nothing — the "cannot fail" defect', async () => {
-        expect(await serverFor({})()).toEqual({});
+        expect(await serverFor({})()).toStrictEqual({});
     });
 
     it('WITH it, the pushed payload becomes the tool result', async () => {
@@ -420,7 +420,7 @@ describe('capturePayloadFrom', () => {
     });
 
     it('ignores an event name that never fires, rather than inventing one', async () => {
-        expect(await serverFor({ capturePayloadFrom: 'never-sent' })()).toEqual({});
+        expect(await serverFor({ capturePayloadFrom: 'never-sent' })()).toStrictEqual({});
     });
 
     it("lets the handler's own return win over the captured payload", async () => {
@@ -626,7 +626,7 @@ describe('preflight', () => {
     it('returns the handoff and NEVER dispatches', async () => {
         const t = build({ preflight: () => HANDOFF });
         expect(JSON.parse((await t.call({})).content[0].text)).toEqual(HANDOFF);
-        expect(t.ran).toEqual([]);
+        expect(t.ran).toStrictEqual([]);
     });
 
     it('dispatches normally when preflight returns nothing', async () => {
@@ -647,7 +647,7 @@ describe('preflight', () => {
     it('an unconfirmed destructive row still refuses first', async () => {
         const t = build({ confirm: true, preflight: () => HANDOFF });
         expect((await t.call({})).content[0].text).toMatch(/requires confirm:true/);
-        expect(t.ran).toEqual([]);
+        expect(t.ran).toStrictEqual([]);
     });
 });
 

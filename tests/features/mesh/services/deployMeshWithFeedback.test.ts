@@ -128,7 +128,7 @@ describe('progress register', () => {
         const stepPushes = mockSendMeshStatusUpdate.mock.calls.filter(
             (c) => typeof c[1] === 'string' && /Reading mesh configuration/.test(c[1])
         );
-        expect(stepPushes).toEqual([]);
+        expect(stepPushes).toStrictEqual([]);
     });
 
     // The core sends step-ish text on the STATUS channel too ("Starting

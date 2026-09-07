@@ -145,7 +145,7 @@ describe('reconcileComponentSelections — a deployed integration is a selected 
 
         reconcileComponentSelections(p);
 
-        expect(p.componentSelections?.appBuilder ?? []).toEqual([]);
+        expect(p.componentSelections?.appBuilder ?? []).toStrictEqual([]);
     });
 });
 
@@ -206,6 +206,6 @@ describe('reconcileComponentSelections — the live demo-builder-test shape', ()
         expect(reconcileComponentSelections(p)).toBe(true);
         // The mesh is still known by its id; the null integration is not listed.
         expect(p.componentSelections?.dependencies).toEqual(['eds-accs-mesh']);
-        expect(p.componentSelections?.appBuilder).toEqual([]);
+        expect(p.componentSelections?.appBuilder).toStrictEqual([]);
     });
 });

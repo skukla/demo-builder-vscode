@@ -116,7 +116,7 @@ describe('batchTreeEntries', () => {
     });
 
     it('produces no batches for no entries', () => {
-        expect(batchTreeEntries([])).toEqual([]);
+        expect(batchTreeEntries([])).toStrictEqual([]);
     });
 });
 
@@ -306,7 +306,7 @@ describe('resetRepoToTemplate — when the archive cannot be fetched', () => {
         await expect(
             ops().resetRepoToTemplate('me', 'template', 'me', 'shop', new Map()),
         ).rejects.toThrow('Failed to download archive: HTTP 404');
-        expect(treeCalls).toEqual([]);
+        expect(treeCalls).toStrictEqual([]);
     });
 
     it('refuses without a GitHub token', async () => {

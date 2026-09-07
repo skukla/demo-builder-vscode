@@ -200,7 +200,7 @@ describe('ACTION_DESCRIPTORS — per-row contract', () => {
 
         it('set_console_apis.apis DOES take an empty list — that is how extras are cleared', () => {
             const apis = row('set_console_apis').inputSchema!.apis;
-            expect(apis.parse([])).toEqual([]);
+            expect(apis.parse([])).toStrictEqual([]);
         });
     });
 });

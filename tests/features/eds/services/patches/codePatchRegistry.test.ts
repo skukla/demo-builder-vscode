@@ -67,7 +67,7 @@ const SOURCE: CodePatchSource = {
 describe('getCodePatches', () => {
     it('returns empty array when no patch IDs requested', async () => {
         const patches = await getCodePatches([], SOURCE, mockLogger);
-        expect(patches).toEqual([]);
+        expect(patches).toStrictEqual([]);
         expect(global.fetch).not.toHaveBeenCalled();
     });
 
@@ -119,7 +119,7 @@ describe('getCodePatches', () => {
 
         const patches = await getCodePatches(['patch-a'], SOURCE, mockLogger);
 
-        expect(patches).toEqual([]);
+        expect(patches).toStrictEqual([]);
         expect(mockLogger.warn).toHaveBeenCalledWith(
             expect.stringContaining('External fetch failed')
         );
@@ -130,7 +130,7 @@ describe('getCodePatches', () => {
 
         const patches = await getCodePatches(['patch-a'], SOURCE, mockLogger);
 
-        expect(patches).toEqual([]);
+        expect(patches).toStrictEqual([]);
         expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Network down'));
     });
 
@@ -190,7 +190,7 @@ describe('applyCodePatches — happy path', () => {
     it('returns empty results when patchIds is empty', async () => {
         const files = new Map<string, string>();
         const results = await applyCodePatches(files, [], SOURCE, mockLogger);
-        expect(results).toEqual([]);
+        expect(results).toStrictEqual([]);
         expect(global.fetch).not.toHaveBeenCalled();
     });
 

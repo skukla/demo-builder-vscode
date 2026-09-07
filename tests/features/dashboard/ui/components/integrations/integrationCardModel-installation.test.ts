@@ -73,7 +73,7 @@ describe('deriveIntegrationCard — installation facet', () => {
             integration({ status: 'error', installation: failedInstall })
         );
 
-        expect(deploying.menuActions).toEqual([]);
+        expect(deploying.menuActions).toStrictEqual([]);
         expect(errored.menuActions).not.toContain('install');
     });
 });

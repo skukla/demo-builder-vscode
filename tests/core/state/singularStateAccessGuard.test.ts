@@ -81,7 +81,7 @@ describe('singular meshState/appState access guard (ADR-011 D3 Step 07)', () => 
             });
         }
 
-        expect(violations).toEqual([]);
+        expect(violations).toStrictEqual([]);
     });
 
     it('allowlisted files match their pinned singular-access counts exactly', () => {

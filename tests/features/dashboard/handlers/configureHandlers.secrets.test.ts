@@ -114,7 +114,7 @@ describe('splitAppBuilderComponentSecrets', () => {
 
         const { secrets } = splitAppBuilderComponentSecrets(configs, [meshEntry]);
 
-        expect(secrets).toEqual([]);
+        expect(secrets).toStrictEqual([]);
     });
 });
 

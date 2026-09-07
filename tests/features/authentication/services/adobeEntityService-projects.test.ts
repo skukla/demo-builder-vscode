@@ -158,7 +158,7 @@ describe('AdobeEntityService - Projects', () => {
 
             const result = await service.getProjects();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should throw error for other CLI failures', async () => {

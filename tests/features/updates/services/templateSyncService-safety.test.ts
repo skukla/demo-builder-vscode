@@ -127,7 +127,7 @@ describe('CRITERION 3 — conflicts surface rather than resolving silently', () 
 
     it('CONTROL: with no conflicts the result carries none', async () => {
         const result = await service().syncWithTemplate(edsProject(), { strategy: 'merge' });
-        expect(result.conflicts ?? []).toEqual([]);
+        expect(result.conflicts ?? []).toStrictEqual([]);
     });
 
     it('names the conflicted files in the result', async () => {

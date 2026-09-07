@@ -91,7 +91,7 @@ describe('inspectSkills', () => {
 
             const result = await inspectSkills(PROJECT_PATH);
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('returns empty array when skills directory is present but empty', async () => {
@@ -99,7 +99,7 @@ describe('inspectSkills', () => {
 
             const result = await inspectSkills(PROJECT_PATH);
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 

@@ -154,7 +154,7 @@ describe('getEnvironment', () => {
         const previous = process.env.PATH;
         delete process.env.PATH;
         try {
-            expect(getEnvironment().PATH).toEqual([]);
+            expect(getEnvironment().PATH).toStrictEqual([]);
         } finally {
             process.env.PATH = previous;
         }
@@ -211,7 +211,7 @@ describe('checkOrphanedSettings', () => {
             { daLive: { AEMRepositoryId: 'b' } },
         );
 
-        expect(checkOrphanedSettings()).toEqual([]);
+        expect(checkOrphanedSettings()).toStrictEqual([]);
     });
 
     it('accuses nothing when reading the configuration throws', () => {
@@ -220,7 +220,7 @@ describe('checkOrphanedSettings', () => {
             throw new Error('workspace not ready');
         });
 
-        expect(checkOrphanedSettings()).toEqual([]);
+        expect(checkOrphanedSettings()).toStrictEqual([]);
     });
 });
 

@@ -81,7 +81,7 @@ describe('aiBundleService — skills summary and tier-1 dist path', () => {
     it('generateAIContextFiles returns an empty skills list when writeSkillFiles returns no summary', async () => {
         const result = await generateAIContextFiles(PROJECT_PATH, project, EXTENSION_PATH);
 
-        expect(result.skills).toEqual([]);
+        expect(result.skills).toStrictEqual([]);
     });
 
     it('generateAIContextFiles returns the summary\'s written skills verbatim', async () => {

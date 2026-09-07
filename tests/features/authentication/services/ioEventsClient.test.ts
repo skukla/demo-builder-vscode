@@ -78,13 +78,13 @@ describe('ioEventsClient', () => {
         it('returns [] when _embedded is missing', async () => {
             mockFetch.mockResolvedValueOnce(jsonResponse(200, {}));
 
-            await expect(makeClient(mockFetch).listProviders('org-1')).resolves.toEqual([]);
+            await expect(makeClient(mockFetch).listProviders('org-1')).resolves.toStrictEqual([]);
         });
 
         it('returns [] when _embedded.providers is empty', async () => {
             mockFetch.mockResolvedValueOnce(jsonResponse(200, { _embedded: { providers: [] } }));
 
-            await expect(makeClient(mockFetch).listProviders('org-1')).resolves.toEqual([]);
+            await expect(makeClient(mockFetch).listProviders('org-1')).resolves.toStrictEqual([]);
         });
 
         it('follows an absolute _links.next.href then terminates', async () => {
@@ -254,7 +254,7 @@ describe('ioEventsClient', () => {
 
             await expect(
                 makeClient(mockFetch).listRegistrations('org-1', 'proj-1', 'ws-1'),
-            ).resolves.toEqual([]);
+            ).resolves.toStrictEqual([]);
         });
 
         it('returns [] when _embedded is missing', async () => {
@@ -262,7 +262,7 @@ describe('ioEventsClient', () => {
 
             await expect(
                 makeClient(mockFetch).listRegistrations('org-1', 'proj-1', 'ws-1'),
-            ).resolves.toEqual([]);
+            ).resolves.toStrictEqual([]);
         });
 
         it('throws a typed error carrying the status on other failures', async () => {

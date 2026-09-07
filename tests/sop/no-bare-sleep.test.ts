@@ -99,7 +99,7 @@ describe('SOP: sleeps route through the shared sleep()', () => {
             });
         }
 
-        expect(violations).toEqual([]);
+        expect(violations).toStrictEqual([]);
     });
 
     it('CONTROL: still recognises the idiom it is meant to catch', () => {

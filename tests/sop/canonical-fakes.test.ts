@@ -202,7 +202,7 @@ describe('a fake with a canonical builder is not hand-rolled again', () => {
     getLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }));`
             )
-        ).toEqual([]);
+        ).toStrictEqual([]);
         // ...but a literal AFTER the factory closes is still caught.
         expect(
             handRolledFakes(
@@ -214,8 +214,8 @@ describe('a fake with a canonical builder is not hand-rolled again', () => {
     it('CONTROL: does not mistake an unrelated fake for a logger', () => {
         expect(
             handRolledFakes('const s = { info: jest.fn(), error: jest.fn(), deploy: jest.fn() };')
-        ).toEqual([]);
-        expect(handRolledFakes('const s = { debug: jest.fn(), info: jest.fn() };')).toEqual([]);
+        ).toStrictEqual([]);
+        expect(handRolledFakes('const s = { debug: jest.fn(), info: jest.fn() };')).toStrictEqual([]);
     });
 
     /**
@@ -356,7 +356,7 @@ describe('a fake of a real type is not a literal the compiler was told to ignore
     it('CONTROL: the ban list is populated and disjoint from the ceilings', () => {
         // An empty list would make every assertion below vacuous.
         expect(BANNED.length).toBeGreaterThanOrEqual(5);
-        expect(BANNED.filter((t) => t in CEILINGS)).toEqual([]);
+        expect(BANNED.filter((t) => t in CEILINGS)).toStrictEqual([]);
         // And a generic type is caught — a `\b` after `>` would have missed it.
         expect(BANNED).toContain('Partial<Project>');
         const generic = /\}\s*as\s+(?:unknown\s+as\s+)?Partial<Project>(?!\w)/;
@@ -484,7 +484,7 @@ describe('a jest.mock factory reaches the builder too', () => {
             .filter((f) => f !== path.relative(repoRoot, __filename).replace(/\\/g, '/'))
             .filter((f) => !EXEMPT_FACTORIES.has(f))
             .filter((f) => factoryLoggerLiterals(readOrEmpty(f)) > 0);
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 });
 
@@ -563,6 +563,6 @@ describe('a fake two feature directories need lives in tests/helpers/', () => {
             .filter(([, seen]) => seen.size >= 2)
             .map(([name, seen]) => `${name} — needed by ${[...seen].sort().join(', ')}`)
             .sort();
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 });

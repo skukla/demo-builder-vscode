@@ -682,7 +682,7 @@ describe('derived orders never leave canonical sequence', () => {
         }
 
         expect(combinations).toBe(480);
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 });
 

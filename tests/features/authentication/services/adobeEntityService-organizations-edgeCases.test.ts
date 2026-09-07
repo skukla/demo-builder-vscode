@@ -74,7 +74,7 @@ describe('AdobeEntityService - Organizations - Edge Cases', () => {
             const result = await service.getOrganizations();
 
             // Assert
-            expect(result).toEqual([]); // Empty array returned
+            expect(result).toStrictEqual([]); // Empty array returned
 
             // Verify 4 CLI calls: 1 for org list + 3 for config delete
             expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(4);
@@ -129,7 +129,7 @@ describe('AdobeEntityService - Organizations - Edge Cases', () => {
             const result = await service.getOrganizations();
 
             // Assert
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
 
             // Verify 4 CLI calls: 1 for org list + 3 for config delete
             expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(4);
@@ -327,7 +327,7 @@ describe('AdobeEntityService - Organizations - Edge Cases', () => {
             const result = await service.getOrganizations();
 
             // Assert: Should not throw error
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
 
             // Cache clear should still be called (cleanup proceeds despite failures)
             expect(mockCacheManager.clearConsoleWhereCache).toHaveBeenCalledTimes(1);

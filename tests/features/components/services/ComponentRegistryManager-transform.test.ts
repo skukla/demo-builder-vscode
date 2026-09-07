@@ -65,13 +65,13 @@ describe('sections that are absent', () => {
     it('loads a registry with no mesh section', async () => {
         const manager = managerFor(without('mesh'));
 
-        await expect(manager.getMesh()).resolves.toEqual([]);
+        await expect(manager.getMesh()).resolves.toStrictEqual([]);
     });
 
     it('loads a registry with no appBuilder section', async () => {
         const manager = managerFor(without('appBuilder'));
 
-        await expect(manager.getAppBuilder()).resolves.toEqual([]);
+        await expect(manager.getAppBuilder()).resolves.toStrictEqual([]);
     });
 
     it('loads a registry with no infrastructure section', async () => {
@@ -85,15 +85,15 @@ describe('sections that are absent', () => {
 
         const registry = await manager.loadRegistry();
 
-        expect(registry.components.frontends).toEqual([]);
-        expect(registry.components.backends).toEqual([]);
+        expect(registry.components.frontends).toStrictEqual([]);
+        expect(registry.components.backends).toStrictEqual([]);
     });
 
     it('reports NO services rather than undefined when the section is absent', async () => {
         // Callers index straight into this record.
         const manager = managerFor(without('services'));
 
-        await expect(manager.getServices()).resolves.toEqual({});
+        await expect(manager.getServices()).resolves.toStrictEqual({});
     });
 
     it('reports NO shared env vars rather than undefined when the section is absent', async () => {

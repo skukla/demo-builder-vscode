@@ -102,7 +102,7 @@ describe('service env vars fold into a component .env', () => {
             context
         );
 
-        expect(writtenKeys()).toEqual([]);
+        expect(writtenKeys()).toStrictEqual([]);
     });
 
     it('writes required and optional vars, required first', async () => {

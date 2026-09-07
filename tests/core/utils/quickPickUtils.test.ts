@@ -140,7 +140,7 @@ describe('quickPickUtils', () => {
                 onDidHideCallback();
                 await promise;
 
-                expect(mockQuickPick.items).toEqual([]);
+                expect(mockQuickPick.items).toStrictEqual([]);
             });
 
             it('should handle custom ignoreFocusOut value', async () => {

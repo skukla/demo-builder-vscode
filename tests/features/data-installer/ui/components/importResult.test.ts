@@ -48,7 +48,7 @@ describe('describePerType', () => {
     });
 
     it('returns nothing for a job that has reported no type yet', () => {
-        expect(describePerType(record({}))).toEqual([]);
+        expect(describePerType(record({}))).toStrictEqual([]);
     });
 
     /**
@@ -78,7 +78,7 @@ describe('describePerType', () => {
         it('returns nothing when every type succeeded', () => {
             const allGood = record({ categories: 'success' as DataTypeStatus });
 
-            expect(describePerType(allGood, { troubledOnly: true })).toEqual([]);
+            expect(describePerType(allGood, { troubledOnly: true })).toStrictEqual([]);
         });
     });
 });

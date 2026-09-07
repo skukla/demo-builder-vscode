@@ -125,7 +125,7 @@ describe('StalenessDetector - change decisions', () => {
             );
 
             expect(result.hasChanges).toBe(false);
-            expect(result.changedEnvVars).toEqual([]);
+            expect(result.changedEnvVars).toStrictEqual([]);
         });
 
         it('tolerates a project that has selected no backend at all', async () => {

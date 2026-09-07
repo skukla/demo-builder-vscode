@@ -167,7 +167,7 @@ describe('registerAuthTools', () => {
         const server = fakeServer();
         registerAuthTools(server, makeCtxFactory(true));
 
-        expect(server.schema('get_auth_status').inputSchema).toEqual({});
+        expect(server.schema('get_auth_status').inputSchema).toStrictEqual({});
     });
 
     it('get_auth_status reports adobe/github/dalive without side effects', async () => {

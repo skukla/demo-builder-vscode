@@ -99,7 +99,7 @@ describe('a mock that does nothing is not written', () => {
                 }
             }
         }
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 
     /**
@@ -111,7 +111,7 @@ describe('a mock that does nothing is not written', () => {
         expect(bareAutomocks("jest.mock('vscode');")).toEqual(['vscode']);
 
         // Negative 1: a factory OVERRIDES the mapping, so it is not dead.
-        expect(bareAutomocks("jest.mock('vscode', () => ({ window: {} }));")).toEqual([]);
+        expect(bareAutomocks("jest.mock('vscode', () => ({ window: {} }));")).toStrictEqual([]);
 
         // Negative 2: a factory whose body contains parens must not end the call early.
         expect(bareAutomocks("jest.mock('uuid', () => ({ v4: jest.fn(() => 'x') }));")).toEqual(
@@ -119,8 +119,8 @@ describe('a mock that does nothing is not written', () => {
         );
 
         // Negative 3: prose about the rule is not the rule being broken.
-        expect(bareAutomocks("/** like jest.mock('vscode'); */")).toEqual([]);
-        expect(bareAutomocks("// jest.mock('vscode');")).toEqual([]);
+        expect(bareAutomocks("/** like jest.mock('vscode'); */")).toStrictEqual([]);
+        expect(bareAutomocks("// jest.mock('vscode');")).toStrictEqual([]);
     });
 
     it('CONTROL: it actually read the tree and the mapper', () => {

@@ -77,7 +77,7 @@ describe('StorefrontSetupStep — the start request on mount', () => {
         renderStep();
 
         expect(startPayloads()).toHaveLength(1);
-        expect(startPayloads()[0].dependencies).toEqual([]);
+        expect(startPayloads()[0].dependencies).toStrictEqual([]);
         expect(startPayloads()[0].backendComponentId).toBeUndefined();
     });
 
@@ -104,7 +104,7 @@ describe('StorefrontSetupStep — the start request on retry', () => {
         failThenRetry();
 
         expect(startPayloads()).toHaveLength(2);
-        expect(startPayloads()[1].dependencies).toEqual([]);
+        expect(startPayloads()[1].dependencies).toStrictEqual([]);
         expect(startPayloads()[1].backendComponentId).toBeUndefined();
     });
 

@@ -39,7 +39,7 @@ const existingWith = (key: 'PreToolUse' | 'PostToolUse', list: unknown[]) => ({
 
 describe('parseExistingSettings', () => {
     it('returns an empty object when there is no file to read', () => {
-        expect(parseExistingSettings(undefined)).toEqual({});
+        expect(parseExistingSettings(undefined)).toStrictEqual({});
     });
 
     it('returns the parsed object when the file is valid JSON', () => {
@@ -51,18 +51,18 @@ describe('parseExistingSettings', () => {
     it('returns an empty object when the file is not JSON at all', () => {
         // A half-written settings.json. Claude Code could not read it either, so a
         // fresh write is the recovery — but it must not take the regenerate down.
-        expect(parseExistingSettings('{ "hooks": ')).toEqual({});
+        expect(parseExistingSettings('{ "hooks": ')).toStrictEqual({});
     });
 
     it('returns an empty object when the file holds JSON null', () => {
         // `null` parses fine and is typeof 'object'. Merging into it would spread
         // nothing and then read `.hooks` off null.
-        expect(parseExistingSettings('null')).toEqual({});
+        expect(parseExistingSettings('null')).toStrictEqual({});
     });
 
     it('returns an empty object when the file holds a bare JSON scalar', () => {
-        expect(parseExistingSettings('5')).toEqual({});
-        expect(parseExistingSettings('"a string"')).toEqual({});
+        expect(parseExistingSettings('5')).toStrictEqual({});
+        expect(parseExistingSettings('"a string"')).toStrictEqual({});
     });
 });
 
@@ -179,13 +179,13 @@ describe('generateClaudeSettings — projects that get no hooks at all', () => {
     it('returns a bare object, not an empty hooks container', () => {
         // `{ hooks: {} }` would be written to disk and read back as a settings file
         // that declares a hooks section with nothing in it.
-        expect(generateClaudeSettings(makeHeadlessProject(), NODE_PATH)).toEqual({});
+        expect(generateClaudeSettings(makeHeadlessProject(), NODE_PATH)).toStrictEqual({});
     });
 
     it('survives a project that has no componentInstances at all', () => {
         // Pre-keyed-instances projects on disk, and any project mid-creation.
         const project = makeHeadlessProject({ componentInstances: undefined });
 
-        expect(generateClaudeSettings(project, NODE_PATH)).toEqual({});
+        expect(generateClaudeSettings(project, NODE_PATH)).toStrictEqual({});
     });
 });

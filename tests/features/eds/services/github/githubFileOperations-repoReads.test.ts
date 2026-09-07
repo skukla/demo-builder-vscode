@@ -230,7 +230,7 @@ describe('listRepoFiles', () => {
     it('reports an empty repository rather than failing when the branch is missing', async () => {
         mockRequest.mockRejectedValue(notFound());
 
-        await expect(ops().listRepoFiles('me', 'shop')).resolves.toEqual([]);
+        await expect(ops().listRepoFiles('me', 'shop')).resolves.toStrictEqual([]);
     });
 
     it('lets any other GitHub failure through', async () => {

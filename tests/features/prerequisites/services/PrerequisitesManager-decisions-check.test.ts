@@ -354,7 +354,7 @@ describe('PrerequisitesManager — check routing, caching and errors', () => {
         });
 
         it('returns an empty list for an empty request', async () => {
-            expect(await manager.checkAllPrerequisites([])).toEqual([]);
+            expect(await manager.checkAllPrerequisites([])).toStrictEqual([]);
             expect(mocks.executor.execute).not.toHaveBeenCalled();
         });
     });

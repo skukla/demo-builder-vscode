@@ -127,7 +127,7 @@ describe('SOP: Complex Expression Extraction', () => {
                 }
             }
 
-            expect(allViolations).toEqual([]);
+            expect(allViolations).toStrictEqual([]);
         });
     });
 
@@ -146,7 +146,7 @@ describe('SOP: Complex Expression Extraction', () => {
                 }
             }
 
-            expect(allViolations).toEqual([]);
+            expect(allViolations).toStrictEqual([]);
         });
     });
 

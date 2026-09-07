@@ -293,7 +293,7 @@ describe('DaLiveContentCopy.overlayAccountChrome', () => {
 
         // No content patches are applied on the overlay pass — the report is
         // carried so a later reference audit can share it, not filled here.
-        expect(report.results).toEqual([]);
+        expect(report.results).toStrictEqual([]);
         expect(applyContentPatches).not.toHaveBeenCalled();
     });
 

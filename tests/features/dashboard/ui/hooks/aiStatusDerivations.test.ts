@@ -138,8 +138,8 @@ describe('deriveAiInventoryView', () => {
     it('should report loading when no result and no failure yet', () => {
         const view = deriveAiInventoryView(null, false);
         expect(view.aiInventoryLoading).toBe(true);
-        expect(view.aiSkills).toEqual([]);
-        expect(view.aiMcps).toEqual([]);
+        expect(view.aiSkills).toStrictEqual([]);
+        expect(view.aiMcps).toStrictEqual([]);
         expect(view.aiSkillsError).toBe(false);
         expect(view.aiMcpsError).toBe(false);
     });
@@ -198,7 +198,7 @@ describe('deriveAiInventoryView', () => {
     });
 
     it('should degrade every absent list to an EMPTY one, not a populated one', () => {
-        // toStrictEqual, not toEqual: `expect([undefined]).toEqual([])` passes, so
+        // toStrictEqual, not toEqual: `expect([undefined]).toStrictEqual([])` passes, so
         // toEqual would let a one-element default through as "empty".
         const view = deriveAiInventoryView({ inventory: {} }, false);
         expect(view.aiSkills).toStrictEqual([]);

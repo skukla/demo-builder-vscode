@@ -96,7 +96,7 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
             result.current.onRemoveAppBuilderComponent('erp-sync');
         });
         const call = updateState.mock.calls[0][0];
-        expect(call.selectedConsoleApis).toEqual({});
+        expect(call.selectedConsoleApis).toStrictEqual({});
     });
 
     it('onRemoveAppBuilderComponent preserves other integrations picks', () => {
@@ -134,7 +134,7 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
             result.current.onAppBuilderComponentToggle('erp-sync', false);
         });
         const call = updateState.mock.calls[0][0];
-        expect(call.selectedConsoleApis).toEqual({});
+        expect(call.selectedConsoleApis).toStrictEqual({});
     });
 
     it('toggle-OFF preserves other integrations picks', () => {
@@ -183,7 +183,7 @@ describe('useProjectBuilder — selectedConsoleApis cleanup (integrations flow)'
             result.current.onAppBuilderComponentToggle('headless-commerce-mesh', false);
         });
         const call = updateState.mock.calls[0][0];
-        expect(call.selectedAppBuilderComponents).toEqual([]);
-        expect(call.selectedConsoleApis).toEqual({});
+        expect(call.selectedAppBuilderComponents).toStrictEqual([]);
+        expect(call.selectedConsoleApis).toStrictEqual({});
     });
 });

@@ -151,7 +151,7 @@ describe('SOP: Inline Styles', () => {
                 }
             }
 
-            expect(undocumented).toEqual([]);
+            expect(undocumented).toStrictEqual([]);
         });
     });
 
@@ -180,7 +180,7 @@ describe('SOP: Inline Styles', () => {
                 }
             }
 
-            expect(violations).toEqual([]);
+            expect(violations).toStrictEqual([]);
         });
     });
 
@@ -269,7 +269,7 @@ describe('SOP: Inline Styles', () => {
                 }
             }
 
-            expect(violations).toEqual([]);
+            expect(violations).toStrictEqual([]);
         });
 
         it('should document custom-spectrum.css as having utility classes', () => {
@@ -312,7 +312,7 @@ describe('SOP: Inline Styles', () => {
                 }
             }
 
-            expect(invalidExceptions).toEqual([]);
+            expect(invalidExceptions).toStrictEqual([]);
         });
     });
 });

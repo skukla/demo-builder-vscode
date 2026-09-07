@@ -94,7 +94,7 @@ describe('Install Handler - plugins', () => {
         const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
         expect(result.success).toBe(true);
-        expect(pluginCommandsRun()).toEqual([]);
+        expect(pluginCommandsRun()).toStrictEqual([]);
     });
 
     it('installs the plugin when commands are available', async () => {
@@ -187,7 +187,7 @@ describe('Install Handler - plugins', () => {
 
         await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
-        expect(pluginCommandsRun()).toEqual([]);
+        expect(pluginCommandsRun()).toStrictEqual([]);
     });
 
     it('installs for the Node version the plugin is required for', async () => {

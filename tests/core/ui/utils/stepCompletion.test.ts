@@ -30,7 +30,7 @@ describe('clearCompletedFrom', () => {
     });
 
     it('clears everything when navigating to the first step (index 0)', () => {
-        expect(clearCompletedFrom(['a', 'b', 'c'], order, 'a', 0)).toEqual([]);
+        expect(clearCompletedFrom(['a', 'b', 'c'], order, 'a', 0)).toStrictEqual([]);
     });
 
     it('clears ids that are no longer in the order at all, not just the known ones', () => {
@@ -56,6 +56,6 @@ describe('clearCompletedFrom', () => {
     });
 
     it('handles an undefined list', () => {
-        expect(clearCompletedFrom(undefined, order, 'b', 1)).toEqual([]);
+        expect(clearCompletedFrom(undefined, order, 'b', 1)).toStrictEqual([]);
     });
 });

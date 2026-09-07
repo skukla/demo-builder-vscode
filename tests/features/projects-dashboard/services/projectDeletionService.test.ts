@@ -154,7 +154,7 @@ describe('CRITERION 1 — cancelling deletes nothing', () => {
         // question and may still appear, so match the confirmation text rather
         // than asserting the modal was never used for anything at all.
         const asked = mockShowWarningMessage.mock.calls.map((c) => String(c[0]));
-        expect(asked.filter((t) => /Are you sure/.test(t))).toEqual([]);
+        expect(asked.filter((t) => /Are you sure/.test(t))).toStrictEqual([]);
         expect(mockRm).toHaveBeenCalled();
     });
 

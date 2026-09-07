@@ -23,7 +23,7 @@ describe('addIntegrationFlowHandlers', () => {
             .filter(([, handler]) => typeof handler !== 'function')
             .map(([type]) => type);
 
-        expect(notFunctions).toEqual([]);
+        expect(notFunctions).toStrictEqual([]);
     });
 
     it('covers the destination stages the flow renders', () => {
@@ -66,7 +66,7 @@ describe('addIntegrationFlowHandlers', () => {
             (type) => !(type in projectCreationHandlers)
         );
 
-        expect(missing).toEqual([]);
+        expect(missing).toStrictEqual([]);
     });
 
     // The hosts spread this map; they must not gain the wizard's own messages by

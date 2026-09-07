@@ -66,25 +66,25 @@ describe('typeGuards - Mesh Component Accessors', () => {
         it('should return empty array when no matching subType', () => {
             const project = createProjectWithMesh('eds-commerce-mesh');
             const inspectors = getComponentInstancesBySubType(project, 'inspector');
-            expect(inspectors).toEqual([]);
+            expect(inspectors).toStrictEqual([]);
         });
 
         it('should return empty array for undefined project', () => {
-            expect(getComponentInstancesBySubType(undefined, 'mesh')).toEqual([]);
+            expect(getComponentInstancesBySubType(undefined, 'mesh')).toStrictEqual([]);
         });
 
         it('should return empty array for null project', () => {
-            expect(getComponentInstancesBySubType(null, 'mesh')).toEqual([]);
+            expect(getComponentInstancesBySubType(null, 'mesh')).toStrictEqual([]);
         });
 
         it('should return empty array for undefined subType', () => {
             const project = createProjectWithMesh('eds-commerce-mesh');
-            expect(getComponentInstancesBySubType(project, undefined)).toEqual([]);
+            expect(getComponentInstancesBySubType(project, undefined)).toStrictEqual([]);
         });
 
         it('should return empty array when componentInstances is undefined', () => {
             const project = createMockProject();
-            expect(getComponentInstancesBySubType(project, 'mesh')).toEqual([]);
+            expect(getComponentInstancesBySubType(project, 'mesh')).toStrictEqual([]);
         });
 
         it('should return multiple components with same subType', () => {

@@ -242,14 +242,14 @@ describe('healthy project (fresh stamp, configs current)', () => {
         const perProjectActions = loggedLines(logger, 'info').filter(
             (line) => line.includes('repaired ') || line.includes('refreshed ')
         );
-        expect(perProjectActions).toEqual([]);
+        expect(perProjectActions).toStrictEqual([]);
     });
 
     it('never reads the tools manifest (tier-1-only runs stay manifest-read-free)', async () => {
         await runHealthySweep();
 
         const manifestReads = readPaths().filter((p) => p.includes('.demo-builder-mcp'));
-        expect(manifestReads).toEqual([]);
+        expect(manifestReads).toStrictEqual([]);
     });
 });
 
@@ -411,7 +411,7 @@ describe('stale .mcp.json (dead dist path, provably ours)', () => {
         // Acting is not healthy — the debug decision line must not also fire.
         expect(
             loggedLines(logger, 'debug').filter((line) => line.includes('tier1 ok'))
-        ).toEqual([]);
+        ).toStrictEqual([]);
     });
 });
 
@@ -653,7 +653,7 @@ describe('failure isolation', () => {
         expect(deps.configWriter.saveProjectConfig).not.toHaveBeenCalled();
         expect(
             loggedLines(logger, 'info').filter((line) => line.includes('Activation sweep:'))
-        ).toEqual([]);
+        ).toStrictEqual([]);
     });
 });
 

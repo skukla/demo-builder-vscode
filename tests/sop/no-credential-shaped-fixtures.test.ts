@@ -193,7 +193,7 @@ describe('no credential-shaped string under tests/', () => {
                 }
             });
         }
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 
     it('CONTROL: the token pattern matches a built shape and not an ordinary word', () => {
@@ -222,7 +222,7 @@ describe('no credential-shaped string under tests/', () => {
         }
         // A new token-shaped literal is the thing this rule exists to stop. Build it with
         // tests/helpers/jwtFake.ts instead — the same shape, assembled at run time.
-        expect(over).toEqual([]);
+        expect(over).toStrictEqual([]);
     });
 
     it('CONTROL: the any-scheme pattern catches what http/https misses', () => {
@@ -253,7 +253,7 @@ describe('no credential-shaped string under tests/', () => {
             if (n > ceiling) over.push(`${rel}: ${n} (ceiling ${ceiling})`);
         }
         // Build it with credentialShapes.credentialedUrlShape instead.
-        expect(over).toEqual([]);
+        expect(over).toStrictEqual([]);
     });
 
     it('the userinfo ledger only shrinks: no ceiling stands above the count on disk', () => {
@@ -270,7 +270,7 @@ describe('no credential-shaped string under tests/', () => {
                 stale.push(`${file}: ceiling ${ceiling}, on disk ${userinfoUrlCount(body)}`);
             }
         }
-        expect(stale).toEqual([]);
+        expect(stale).toStrictEqual([]);
     });
 
     it('CONTROL: the credential pattern catches what fired, and clears the agreed marker', () => {
@@ -307,7 +307,7 @@ describe('no credential-shaped string under tests/', () => {
         }
         // A new one is what this rule exists to stop. Build it with
         // tests/helpers/credentialShapes.ts instead.
-        expect(over).toEqual([]);
+        expect(over).toStrictEqual([]);
     });
 
     it('the credential ledger only shrinks: no ceiling stands above the count on disk', () => {
@@ -324,7 +324,7 @@ describe('no credential-shaped string under tests/', () => {
             if (n < ceiling) stale.push(`${file}: ceiling ${ceiling}, on disk ${n}`);
         }
         // Rewriting one means lowering its ceiling in the same change.
-        expect(stale).toEqual([]);
+        expect(stale).toStrictEqual([]);
     });
 
     it('the token ledger only shrinks: no ceiling stands above the count on disk', () => {
@@ -346,6 +346,6 @@ describe('no credential-shaped string under tests/', () => {
             );
         // Rewriting one of these to use the helper means lowering its ceiling in the
         // same change. Headroom nobody chose is how a ratchet stops ratcheting.
-        expect(stale).toEqual([]);
+        expect(stale).toStrictEqual([]);
     });
 });

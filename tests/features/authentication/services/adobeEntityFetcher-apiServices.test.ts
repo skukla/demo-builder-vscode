@@ -207,12 +207,12 @@ describe('AdobeEntityFetcher — API-service wrappers', () => {
 
         it('returns [] when sdkList is absent', async () => {
             sdk.getIntegration.mockResolvedValue({ body: {} });
-            expect(await fetcher.getSubscribedServiceCodes('org1', 'int-1')).toEqual([]);
+            expect(await fetcher.getSubscribedServiceCodes('org1', 'int-1')).toStrictEqual([]);
         });
 
         it('returns [] (never throws) when the SDK call fails', async () => {
             sdk.getIntegration.mockRejectedValue(new Error('boom'));
-            expect(await fetcher.getSubscribedServiceCodes('org1', 'int-1')).toEqual([]);
+            expect(await fetcher.getSubscribedServiceCodes('org1', 'int-1')).toStrictEqual([]);
         });
     });
 

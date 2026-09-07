@@ -45,7 +45,7 @@ describe('a field of the wrong type is treated as absent, never passed through',
     it('a non-array data_types list yields an empty one, not a fabricated entry', () => {
         const [item] = parseDatapackList({ datapacks: [{ ...ROW, data_types: 'products' }] }).items;
 
-        expect(item.dataTypes).toEqual([]);
+        expect(item.dataTypes).toStrictEqual([]);
     });
 
     it('a data_types list drops the members that are not strings', () => {

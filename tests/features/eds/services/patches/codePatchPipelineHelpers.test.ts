@@ -50,7 +50,7 @@ describe('applyCanonicalCodePatches', () => {
             SOURCE,
             mockLogger
         );
-        expect(results).toEqual([]);
+        expect(results).toStrictEqual([]);
         expect(global.fetch).not.toHaveBeenCalled();
     });
 
@@ -312,7 +312,7 @@ describe('applyBlockCodePatches', () => {
     it('returns empty results when no patch IDs requested', async () => {
         const ops = makeFileOps({});
         const results = await applyBlockCodePatches(ops, 'owner', 'repo', [], SOURCE, mockLogger);
-        expect(results).toEqual([]);
+        expect(results).toStrictEqual([]);
     });
 
     it('filters in only block-phase patches (target starts with blocks/)', async () => {
@@ -490,7 +490,7 @@ describe('applyBlockCodePatches', () => {
             mockLogger
         );
 
-        expect(results).toEqual([]);
+        expect(results).toStrictEqual([]);
         expect(ops.getFileContent).not.toHaveBeenCalled();
         expect(ops.createOrUpdateFile).not.toHaveBeenCalled();
     });

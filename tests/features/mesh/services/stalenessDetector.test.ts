@@ -137,7 +137,7 @@ describe('detectMeshChanges - Timeout Handling', () => {
         expect(result.unknownDeployedState).toBe(true); // Flag as unknown
         expect(result.envVarsChanged).toBe(false);
         expect(result.sourceFilesChanged).toBe(false);
-        expect(result.changedEnvVars).toEqual([]);
+        expect(result.changedEnvVars).toStrictEqual([]);
     });
 
     // Test 2: Token expired (auth service returns not authenticated)
@@ -196,7 +196,7 @@ describe('detectMeshChanges - Timeout Handling', () => {
         expect(result.shouldSaveProject).toBe(true); // Baseline was populated
         expect(result.envVarsChanged).toBe(false);
         expect(result.sourceFilesChanged).toBe(false);
-        expect(result.changedEnvVars).toEqual([]);
+        expect(result.changedEnvVars).toStrictEqual([]);
         // Note: unknownDeployedState is undefined (not false) in success path
     });
 });

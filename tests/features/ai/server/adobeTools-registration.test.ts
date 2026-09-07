@@ -71,7 +71,7 @@ describe('registerAdobeTools — registered schemas', () => {
     it('list_orgs and list_workspaces take no arguments', () => {
         const server = registered();
         for (const name of ['list_orgs', 'list_workspaces']) {
-            expect(Object.keys(schemaOf(server.definitionOf(name)).shape)).toEqual([]);
+            expect(Object.keys(schemaOf(server.definitionOf(name)).shape)).toStrictEqual([]);
         }
     });
 

@@ -154,6 +154,6 @@ describe('what must keep working', () => {
             duration: 0,
         });
 
-        await expect(mocks.service.getProjects()).resolves.toEqual([]);
+        await expect(mocks.service.getProjects()).resolves.toStrictEqual([]);
     });
 });

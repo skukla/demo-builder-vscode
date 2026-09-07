@@ -150,7 +150,7 @@ describe('the cleanup dialog it builds', () => {
 
         expect(pick.items().map((i) => i.id)).toEqual(['github', 'daLive']);
         // Destroying a repo is opt-in. A pre-ticked row makes Enter destructive.
-        expect(pick.selectedAtShow()).toEqual([]);
+        expect(pick.selectedAtShow()).toStrictEqual([]);
     });
 
     it('offers only the DA.live row when the project has no GitHub repo', async () => {
@@ -291,7 +291,7 @@ describe('cleanupBehavior: localOnly deletes the project and nothing else', () =
         expect(mockRm).toHaveBeenCalled();
         expect(mockDeleteRepository).not.toHaveBeenCalled();
         expect(mockDeleteDaLiveSite).not.toHaveBeenCalled();
-        expect(resultsOf(result)).toEqual([]);
+        expect(resultsOf(result)).toStrictEqual([]);
     });
 
     it('asks with a modal', async () => {

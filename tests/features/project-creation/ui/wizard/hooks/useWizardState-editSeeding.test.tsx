@@ -50,7 +50,7 @@ describe('useWizardState - edit-mode App Builder seeding', () => {
     it('leaves selectedAppBuilderComponents unset when selections carry no appBuilder ids', () => {
         const state = renderWizardState(makeEditProject({ selections: {} }));
 
-        expect(state.selectedAppBuilderComponents ?? []).toEqual([]);
+        expect(state.selectedAppBuilderComponents ?? []).toStrictEqual([]);
     });
 
     it('seeds appBuilderComponentSources from the extracted settings', () => {

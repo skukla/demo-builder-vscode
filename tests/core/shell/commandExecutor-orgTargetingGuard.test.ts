@@ -89,7 +89,7 @@ describe('CommandExecutor — untargeted org-scoped command warning', () => {
     it('stays silent when the same command runs inside withOrgContext', async () => {
         await run('aio api-mesh:describe', true);
 
-        expect(untargetedWarnings()).toEqual([]);
+        expect(untargetedWarnings()).toStrictEqual([]);
     });
 
     it.each([
@@ -116,6 +116,6 @@ describe('CommandExecutor — untargeted org-scoped command warning', () => {
     ])('stays silent for %s', async (command) => {
         await run(command, false);
 
-        expect(untargetedWarnings()).toEqual([]);
+        expect(untargetedWarnings()).toStrictEqual([]);
     });
 });

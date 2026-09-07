@@ -40,13 +40,13 @@ describe('skill→tool dependencies name real ai-defaults entries', () => {
         const unknown = Object.entries(SKILL_MCP_TOOL_DEPENDENCIES)
             .filter(([, id]) => !AI_DEFAULT_IDS.has(id))
             .map(([skill, id]) => `${skill} -> ${id}`);
-        expect(unknown).toEqual([]);
+        expect(unknown).toStrictEqual([]);
     });
 
     it('every dependent skill is a declared always-on skill', () => {
         const names = new Set<string>(DEMO_BUILDER_ALWAYS_ON_SKILLS);
         const orphans = Object.keys(SKILL_MCP_TOOL_DEPENDENCIES).filter((f) => !names.has(f));
-        expect(orphans).toEqual([]);
+        expect(orphans).toStrictEqual([]);
     });
 });
 
@@ -119,7 +119,7 @@ describe('no bundle writer writes around the hash-and-skip seam', () => {
             .split('\n')
             .map((line, i) => ({ line: line.trim(), no: i + 1 }))
             .filter(({ line }) => /\bwriteFile\b/.test(line));
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 });
 

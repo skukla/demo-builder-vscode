@@ -45,13 +45,13 @@ describe('RepoSelectionInline — readiness and the Code Sync gate', () => {
         it('asks nothing while no repository is selected', async () => {
             await h.renderInline(stateWith());
 
-            expect(h.requestsOf('check-repo-readiness')).toEqual([]);
+            expect(h.requestsOf('check-repo-readiness')).toStrictEqual([]);
         });
 
         it('asks nothing in new-repo mode', async () => {
             await h.renderInline(stateWith({ repoMode: 'new', selectedRepo: REPO }));
 
-            expect(h.requestsOf('check-repo-readiness')).toEqual([]);
+            expect(h.requestsOf('check-repo-readiness')).toStrictEqual([]);
         });
 
         it('treats a failed readiness request as undetermined and still probes Code Sync', async () => {
@@ -113,7 +113,7 @@ describe('RepoSelectionInline — readiness and the Code Sync gate', () => {
                 await h.renderInline(stateWith({ selectedRepo: REPO }));
                 await settle();
 
-                expect(h.requestsOf('check-github-app')).toEqual([]);
+                expect(h.requestsOf('check-github-app')).toStrictEqual([]);
         });
     });
 
@@ -431,7 +431,7 @@ describe('RepoSelectionInline — readiness and the Code Sync gate', () => {
         it('is never asked about', async () => {
             await h.renderInline(stateWith({ selectedRepo: ODD }, [ODD, OTHER]));
 
-            expect(h.requestsOf('check-repo-readiness')).toEqual([]);
+            expect(h.requestsOf('check-repo-readiness')).toStrictEqual([]);
         });
     });
 

@@ -363,7 +363,7 @@ describe('GitHub Token Service', () => {
             const orgs = await service.getUserOrgs();
 
             // Then: empty (picker degrades to "personal account only")
-            expect(orgs).toEqual([]);
+            expect(orgs).toStrictEqual([]);
         });
 
         it('returns empty array when the GitHub request fails (graceful degradation)', async () => {
@@ -379,7 +379,7 @@ describe('GitHub Token Service', () => {
             const orgs = await service.getUserOrgs();
 
             // Then: empty, not throw — wizard should still advance with personal-only picker
-            expect(orgs).toEqual([]);
+            expect(orgs).toStrictEqual([]);
         });
     });
 });

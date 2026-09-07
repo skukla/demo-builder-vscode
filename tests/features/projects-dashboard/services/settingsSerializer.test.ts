@@ -248,8 +248,8 @@ describe('settingsSerializer', () => {
 
             const result = extractSettingsFromProject(project, false);
 
-            expect(result.selections).toEqual({});
-            expect(result.configs).toEqual({});
+            expect(result.selections).toStrictEqual({});
+            expect(result.configs).toStrictEqual({});
         });
     });
 

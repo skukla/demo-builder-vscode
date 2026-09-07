@@ -298,7 +298,7 @@ describe('useDaLiveAuth - incoming messages', () => {
 
             unmount();
 
-            expect([...messageHandlers.keys()]).toEqual([]);
+            expect([...messageHandlers.keys()]).toStrictEqual([]);
         });
 
         it('asks the extension for the current status again on demand', async () => {

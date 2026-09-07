@@ -74,7 +74,7 @@ describe('ComponentRegistryManager - Mesh Entries', () => {
             const headless = componentsJson.frontends?.headless;
 
             expect(headless).toBeDefined();
-            expect(headless.dependencies?.required).toEqual([]);
+            expect(headless.dependencies?.required).toStrictEqual([]);
             expect(headless.dependencies?.required).not.toContain('commerce-mesh');
         });
 

@@ -115,11 +115,11 @@ describe('evaluateInstanceName', () => {
     const none = new Set<string>();
 
     it('empty input → no instance, no message (just incomplete)', () => {
-        expect(evaluateInstanceName('', none)).toEqual({});
+        expect(evaluateInstanceName('', none)).toStrictEqual({});
     });
 
     it('whitespace-only input → no instance, no message', () => {
-        expect(evaluateInstanceName('   ', none)).toEqual({});
+        expect(evaluateInstanceName('   ', none)).toStrictEqual({});
     });
 
     it('name slugging to empty → message about needing letters, no instance', () => {

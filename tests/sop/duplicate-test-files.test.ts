@@ -191,7 +191,7 @@ describe('SOP: no test file duplicates another', () => {
             }
         }
         // A mutual pair reports twice, once per direction — deleting either clears both.
-        expect(redundant).toEqual([]);
+        expect(redundant).toStrictEqual([]);
     });
 
     it('CONTROL: the containment check can actually fail', () => {

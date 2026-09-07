@@ -80,7 +80,7 @@ describe('open_url', () => {
         const out = await h.call('open_url', { target: 'liveSite' });
 
         expect(String(out.error)).toMatch(/confirm:true/);
-        expect(h.opened).toEqual([]);
+        expect(h.opened).toStrictEqual([]);
         // Refused BEFORE resolving — no work done for a call that will not proceed.
         expect(mockDispatchHandler).not.toHaveBeenCalled();
     });
@@ -121,7 +121,7 @@ describe('open_url', () => {
         expect(String(out.error)).toContain('storefront');
         // The list is already in hand; an agent that guessed wrong needs it.
         expect(out.available).toEqual(['devConsole']);
-        expect(h.opened).toEqual([]);
+        expect(h.opened).toStrictEqual([]);
     });
 
     it('passes the resolution failure through instead of opening anything', async () => {
@@ -131,7 +131,7 @@ describe('open_url', () => {
         const out = await h.call('open_url', { target: 'liveSite', confirm: true });
 
         expect(out.error).toBe('No project found');
-        expect(h.opened).toEqual([]);
+        expect(h.opened).toStrictEqual([]);
     });
 
     // The property the whole design rests on: an agent cannot name a destination,

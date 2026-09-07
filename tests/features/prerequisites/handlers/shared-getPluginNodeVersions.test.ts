@@ -51,7 +51,7 @@ describe('Prerequisites Handlers - getPluginNodeVersions', () => {
             const result = getPluginNodeVersions(mapping, requiredFor);
 
             // Then: Should return an empty array
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 
@@ -69,7 +69,7 @@ describe('Prerequisites Handlers - getPluginNodeVersions', () => {
             const result = getPluginNodeVersions(mapping, requiredFor);
 
             // Then: Should return empty because the dependency isn't mapped to a Node version
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should find Node version for dependencies that exist in mapping', () => {
@@ -107,7 +107,7 @@ describe('Prerequisites Handlers - getPluginNodeVersions', () => {
             const result = getPluginNodeVersions(mapping, requiredFor);
 
             // Then: Should return an empty array
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should handle empty requiredFor array', () => {
@@ -119,7 +119,7 @@ describe('Prerequisites Handlers - getPluginNodeVersions', () => {
             const result = getPluginNodeVersions(mapping, requiredFor);
 
             // Then: Should return an empty array (no components require the plugin)
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should handle undefined dependencies parameter', () => {

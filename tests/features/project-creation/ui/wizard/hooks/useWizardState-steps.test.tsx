@@ -138,7 +138,7 @@ describe('WIZARD_STEPS', () => {
     it('is empty when no step configuration was handed in', () => {
         const { result } = renderHook(() => useWizardState({}));
 
-        expect(result.current.WIZARD_STEPS).toEqual([]);
+        expect(result.current.WIZARD_STEPS).toStrictEqual([]);
     });
 });
 
@@ -251,8 +251,8 @@ describe('the UI state the hook exposes', () => {
     it('starts every transition and loading flag off, and no step completed', () => {
         const { result } = renderHook(() => useWizardState({ wizardSteps: STEPS }));
 
-        expect(result.current.completedSteps).toEqual([]);
-        expect(result.current.confirmedSteps).toEqual([]);
+        expect(result.current.completedSteps).toStrictEqual([]);
+        expect(result.current.confirmedSteps).toStrictEqual([]);
         expect(result.current.highestCompletedStepIndex).toBe(-1);
         expect(result.current.canProceed).toBe(false);
         expect(result.current.animationDirection).toBe('forward');

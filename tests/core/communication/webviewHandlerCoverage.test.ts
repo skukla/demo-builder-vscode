@@ -271,6 +271,6 @@ describe('webview handler coverage — every panel answers what its UI sends', (
             .filter(([type]) => !registered.has(type) && !PLATFORM_HANDLED.has(type))
             .map(([type, from]) => `${type}  (sent from ${from})`);
 
-        expect(missing).toEqual([]);
+        expect(missing).toStrictEqual([]);
     });
 });

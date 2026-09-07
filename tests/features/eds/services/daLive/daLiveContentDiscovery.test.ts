@@ -129,7 +129,7 @@ describe('DaLiveContentDiscovery', () => {
 
             const paths = await discovery.getContentPathsFromDaLive('org', 'site');
 
-            expect(paths).toEqual([]);
+            expect(paths).toStrictEqual([]);
         });
 
         it('should deeply recurse nested directories', async () => {
@@ -198,7 +198,7 @@ describe('DaLiveContentDiscovery', () => {
                 indexUrl: 'https://main--test-site--test-org.aem.live/full-index.json',
             });
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should return empty array when data property is missing', async () => {
@@ -210,7 +210,7 @@ describe('DaLiveContentDiscovery', () => {
                 indexUrl: 'https://main--test-site--test-org.aem.live/full-index.json',
             });
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should throw error when index fetch fails', async () => {

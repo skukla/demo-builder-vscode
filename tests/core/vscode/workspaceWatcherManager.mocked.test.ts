@@ -395,7 +395,7 @@ describe('WorkspaceWatcherManager', () => {
             const watchers = manager.getWatchersForFolder(folder);
 
             // Then: Should return empty array
-            expect(watchers).toEqual([]);
+            expect(watchers).toStrictEqual([]);
         });
     });
 });

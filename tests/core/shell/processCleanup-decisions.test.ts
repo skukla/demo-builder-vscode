@@ -129,7 +129,7 @@ describe('ProcessCleanup — decisions', () => {
             await new ProcessCleanup().killProcessTree(1000, 'SIGTERM');
 
             expect(mockTreeKill).not.toHaveBeenCalled();
-            expect(signalsSent()).toEqual([]);
+            expect(signalsSent()).toStrictEqual([]);
         });
 
         /**
@@ -238,7 +238,7 @@ describe('ProcessCleanup — decisions', () => {
             installTable([1000]);
 
             await expect(new ProcessCleanup().killProcessTree(1000)).rejects.toBe(failure);
-            expect(signalsSent()).toEqual([]);
+            expect(signalsSent()).toStrictEqual([]);
         });
 
         it('treats an ESRCH from tree-kill as success and stops there', async () => {
@@ -287,7 +287,7 @@ describe('ProcessCleanup — decisions', () => {
             await promise;
 
             jest.advanceTimersByTime(5000);
-            expect(signalsSent()).toEqual([]);
+            expect(signalsSent()).toStrictEqual([]);
         });
 
         it('cannot SIGKILL a pid it has finished with, even once the pid is reused', async () => {
@@ -309,7 +309,7 @@ describe('ProcessCleanup — decisions', () => {
 
             gone = false; // the pid is handed to something else
             jest.advanceTimersByTime(2000);
-            expect(signalsSent()).toEqual([]);
+            expect(signalsSent()).toStrictEqual([]);
         });
 
         it('sends no SIGKILL when the process exits exactly on the deadline', async () => {
@@ -323,7 +323,7 @@ describe('ProcessCleanup — decisions', () => {
             jest.advanceTimersByTime(50);
             await promise;
 
-            expect(signalsSent()).toEqual([]);
+            expect(signalsSent()).toStrictEqual([]);
         });
 
         it('sends SIGKILL to the same pid when the deadline finds it alive', async () => {

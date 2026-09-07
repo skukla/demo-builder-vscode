@@ -179,7 +179,7 @@ describe('the plugin rows a per-node-version tool shows', () => {
         });
 
         await waitFor(() => screen.getByText('Adobe I/O CLI is installed'));
-        expect(pluginRows()).toEqual([]);
+        expect(pluginRows()).toStrictEqual([]);
         // Not merely empty — absent. An empty container still adds its top margin.
         expect(document.querySelectorAll('.prerequisite-expandable [data-testid="spectrum-view"]'))
             .toHaveLength(0);

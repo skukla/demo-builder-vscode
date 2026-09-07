@@ -127,8 +127,8 @@ describe('ProjectFileLoader — component discovery', () => {
 
         const project = await new ProjectFileLoader(logger).loadProject(PROJECT_PATH, NO_TERMINALS);
 
-        expect(project?.componentInstances).toEqual({});
-        expect(project?.componentVersions).toEqual({});
+        expect(project?.componentInstances).toStrictEqual({});
+        expect(project?.componentVersions).toStrictEqual({});
         // A missing directory is the normal state of a fresh project: noted at
         // debug, never surfaced as an error.
         expect(logger.debug).toHaveBeenCalledTimes(1);

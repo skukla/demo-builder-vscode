@@ -144,7 +144,7 @@ describe('phases reach the chat', () => {
     it('emits no PHASE lines for read tools', async () => {
         await start(false);
 
-        expect(await callWithProgress(socketPath, 'get_probe_thing')).toEqual([]);
+        expect(await callWithProgress(socketPath, 'get_probe_thing')).toStrictEqual([]);
     });
 
     it('does not leak phases between calls', async () => {
@@ -155,6 +155,6 @@ describe('phases reach the chat', () => {
         await callWithProgress(socketPath, 'deploy_mesh');
         const second = await callWithProgress(socketPath, 'get_probe_thing');
 
-        expect(second).toEqual([]);
+        expect(second).toStrictEqual([]);
     });
 });

@@ -111,8 +111,8 @@ describe('wizardHelpers - state & config', () => {
         });
 
         it('should return empty object when no imported settings', () => {
-            expect(initializeAdobeContextFromImport(null)).toEqual({});
-            expect(initializeAdobeContextFromImport(undefined)).toEqual({});
+            expect(initializeAdobeContextFromImport(null)).toStrictEqual({});
+            expect(initializeAdobeContextFromImport(undefined)).toStrictEqual({});
         });
 
         it('should return partial context when some fields missing', () => {
@@ -239,7 +239,7 @@ describe('wizardHelpers - state & config', () => {
 
             const config = buildProjectConfig(state);
 
-            expect(config.components?.dependencies).toEqual([]);
+            expect(config.components?.dependencies).toStrictEqual([]);
         });
 
         it('should include selectedAddons in the config', () => {
@@ -265,7 +265,7 @@ describe('wizardHelpers - state & config', () => {
 
             const config = buildProjectConfig(state);
 
-            expect(config.selectedAddons).toEqual([]);
+            expect(config.selectedAddons).toStrictEqual([]);
         });
 
         it('should include package and stack selections', () => {
@@ -461,8 +461,8 @@ describe('wizardHelpers - state & config', () => {
 
             const config = buildProjectConfig(state);
 
-            expect(config.selectedAppBuilderComponents).toEqual([]);
-            expect(config.appBuilderComponentSources).toEqual({});
+            expect(config.selectedAppBuilderComponents).toStrictEqual([]);
+            expect(config.appBuilderComponentSources).toStrictEqual({});
         });
 
         it('should default customBlockLibraries to empty array when not set', () => {
@@ -473,7 +473,7 @@ describe('wizardHelpers - state & config', () => {
 
             const config = buildProjectConfig(state);
 
-            expect(config.customBlockLibraries).toEqual([]);
+            expect(config.customBlockLibraries).toStrictEqual([]);
         });
 
         it('should handle missing frontendSource and contentSource gracefully', () => {

@@ -121,7 +121,7 @@ describe('PL-16: a builder name has one definition', () => {
         const unlisted = DUPLICATED.map(([name]) => name)
             .filter((name) => !(name in KNOWN_DUPLICATES))
             .sort();
-        expect(unlisted).toEqual([]);
+        expect(unlisted).toStrictEqual([]);
     });
 
     it('a consolidated name leaves the ledger — the list may only shrink', () => {
@@ -129,13 +129,13 @@ describe('PL-16: a builder name has one definition', () => {
         const stale = Object.keys(KNOWN_DUPLICATES)
             .filter((name) => !duplicatedNames.has(name))
             .sort();
-        expect(stale).toEqual([]);
+        expect(stale).toStrictEqual([]);
     });
 
     it('no listed name grows MORE copies than it had at baseline', () => {
         const grown = DUPLICATED.filter(
             ([name, files]) => name in KNOWN_DUPLICATES && files.length > KNOWN_DUPLICATES[name]
         ).map(([name, files]) => `${name}: ${KNOWN_DUPLICATES[name]} -> ${files.length}`);
-        expect(grown).toEqual([]);
+        expect(grown).toStrictEqual([]);
     });
 });

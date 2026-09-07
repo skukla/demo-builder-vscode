@@ -116,7 +116,7 @@ UNRELATED_VAR=should-be-ignored
 
             const result = await readMeshEnvVarsFromFile('/test/mesh');
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('should return empty object for empty .env file', async () => {
@@ -124,7 +124,7 @@ UNRELATED_VAR=should-be-ignored
 
             const result = await readMeshEnvVarsFromFile('/test/mesh');
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
 
         it('should handle malformed lines gracefully', async () => {

@@ -90,7 +90,7 @@ describe('the happy path', () => {
         const out = await migrateDeclaredSecrets(configs(), PROJECT, secrets);
 
         expect(out.moved).toEqual(['ACCS_OAUTH_CLIENT_SECRET']);
-        expect(out.retained).toEqual([]);
+        expect(out.retained).toStrictEqual([]);
         expect(
             out.sanitizedConfigs?.['adobe-commerce-accs'],
         ).not.toHaveProperty('ACCS_OAUTH_CLIENT_SECRET');
@@ -125,7 +125,7 @@ describe('the credential is never lost', () => {
     it('keeps it in configs when the write THROWS', async () => {
         const out = await migrateDeclaredSecrets(configs(), PROJECT, throwingStore());
 
-        expect(out.moved).toEqual([]);
+        expect(out.moved).toStrictEqual([]);
         expect(out.retained).toEqual(['ACCS_OAUTH_CLIENT_SECRET']);
         expect(out.sanitizedConfigs?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(
             FAKE_SECRET,
@@ -174,7 +174,7 @@ describe('nothing to do', () => {
     it('is a no-op without SecretStorage', async () => {
         const out = await migrateDeclaredSecrets(configs(), PROJECT, undefined);
 
-        expect(out.moved).toEqual([]);
+        expect(out.moved).toStrictEqual([]);
         expect(out.sanitizedConfigs?.['adobe-commerce-accs'].ACCS_OAUTH_CLIENT_SECRET).toBe(
             FAKE_SECRET,
         );
@@ -195,7 +195,7 @@ describe('nothing to do', () => {
     it('handles a project with no configs at all', async () => {
         const out = await migrateDeclaredSecrets(undefined, PROJECT, workingStore());
 
-        expect(out.moved).toEqual([]);
+        expect(out.moved).toStrictEqual([]);
     });
 });
 
@@ -312,7 +312,7 @@ describe('re-keying after a rename', () => {
 
         const moved = await reKeyProjectSecrets(PROJECT, '/p/renamed', ['adobe-commerce-accs'], secrets);
 
-        expect(moved).toEqual([]);
+        expect(moved).toStrictEqual([]);
         expect(secrets.delete).not.toHaveBeenCalled();
         // Assert the STORED value directly: the pair cannot assemble from storage
         // alone here (the client id lives in configs, which this case does not
@@ -388,12 +388,12 @@ describe('isSet flags — what the webview is allowed to know', () => {
             workingStore(),
         );
 
-        expect(flags).toEqual({});
+        expect(flags).toStrictEqual({});
     });
 
     it('is empty without a project id or a store', async () => {
-        expect(await loadDeclaredSecretFlags(['x'], undefined, workingStore())).toEqual({});
-        expect(await loadDeclaredSecretFlags(['x'], PROJECT, undefined)).toEqual({});
+        expect(await loadDeclaredSecretFlags(['x'], undefined, workingStore())).toStrictEqual({});
+        expect(await loadDeclaredSecretFlags(['x'], PROJECT, undefined)).toStrictEqual({});
     });
 });
 
@@ -407,8 +407,8 @@ describe('idempotence', () => {
         const second = await migrateDeclaredSecrets(first.sanitizedConfigs, PROJECT, secrets);
 
         expect(secrets.store).not.toHaveBeenCalled();
-        expect(second.moved).toEqual([]);
-        expect(second.retained).toEqual([]);
+        expect(second.moved).toStrictEqual([]);
+        expect(second.retained).toStrictEqual([]);
     });
 });
 

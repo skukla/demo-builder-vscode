@@ -411,10 +411,10 @@ describe('skillsWriter — the App Builder skill set follows the work, not the t
 
         await writeSkillFiles(PROJECT_PATH, makeEdsProject({ path: PROJECT_PATH }), writer);
 
-        expect(writer.report().removed).toEqual([]);
+        expect(writer.report().removed).toStrictEqual([]);
         expect(writer.report().skipped).toContain(
             '.claude/skills/appbuilder-architect/SKILL.md'
         );
-        expect(unlinkedFiles()).toEqual([]);
+        expect(unlinkedFiles()).toStrictEqual([]);
     });
 });

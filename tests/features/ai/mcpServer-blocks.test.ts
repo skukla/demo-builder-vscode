@@ -327,7 +327,7 @@ describe('toolHandlers.listBlocks', () => {
 
         const result = await toolHandlers.listBlocks(PROJECTS_DIR, PROJECT_NAME);
 
-        expect(JSON.parse(result)).toEqual([]);
+        expect(JSON.parse(result)).toStrictEqual([]);
     });
 
     it('filters out files — only returns directory entries', async () => {

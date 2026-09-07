@@ -75,7 +75,7 @@ describe('watch list covers every key configGenerator reads', () => {
                 })
                 .map(([name]) => name);
 
-            expect(missing).toEqual([]);
+            expect(missing).toStrictEqual([]);
         }
     );
 

@@ -93,7 +93,7 @@ describe('AdobeProjectPicker — what it hands SelectionStepContent', () => {
         });
 
         it('disables no rows while no delete is in flight', () => {
-            expect(listProps().disabledIds).toEqual([]);
+            expect(listProps().disabledIds).toStrictEqual([]);
         });
     });
 

@@ -439,7 +439,7 @@ describe('the rest of the pipeline instruction', () => {
     it('carries no content sources when no libraries were selected', async () => {
         await runSetup(createEdsConfig());
 
-        expect(pipelineInput().libraryContentSources).toEqual([]);
+        expect(pipelineInput().libraryContentSources).toStrictEqual([]);
     });
 });
 

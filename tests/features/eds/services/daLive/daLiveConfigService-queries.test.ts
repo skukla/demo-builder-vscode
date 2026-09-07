@@ -304,7 +304,7 @@ describe('DaLiveConfigService - queries & access', () => {
 
             expect(result.configured).toBe(false);
             expect(result.userCount).toBe(0);
-            expect(result.users).toEqual([]);
+            expect(result.users).toStrictEqual([]);
         });
 
         it('reports unconfigured for a permissions sheet with no rows', async () => {

@@ -163,7 +163,7 @@ describe('customBlockLibraryUtils', () => {
         it('should return empty array when settings is empty', () => {
             const result = parseCustomBlockLibrarySettings([]);
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         // The URL parser tolerates ordinary spaces itself, so plain padding proves

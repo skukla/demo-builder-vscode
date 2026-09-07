@@ -357,7 +357,7 @@ describe('generateComponentConfigFiles — the json writer', () => {
             context
         );
 
-        expect(writtenJson()).toEqual({});
+        expect(writtenJson()).toStrictEqual({});
     });
 
     it('renames a key on the way out when fieldRenames names it', async () => {

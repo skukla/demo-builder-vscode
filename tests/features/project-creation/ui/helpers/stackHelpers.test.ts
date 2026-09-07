@@ -331,7 +331,7 @@ describe('stackHelpers', () => {
                     currentConfigs
                 );
 
-                expect(result).toEqual({});
+                expect(result).toStrictEqual({});
             });
 
             it('should return empty object when currentConfigs is empty', () => {
@@ -341,7 +341,7 @@ describe('stackHelpers', () => {
                     {}
                 );
 
-                expect(result).toEqual({});
+                expect(result).toStrictEqual({});
             });
 
             it('should return empty object when currentConfigs has no matching components', () => {
@@ -356,7 +356,7 @@ describe('stackHelpers', () => {
                     currentConfigs
                 );
 
-                expect(result).toEqual({});
+                expect(result).toStrictEqual({});
             });
 
             it('does not invent a key for a retained component that has no config', () => {

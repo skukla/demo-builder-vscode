@@ -216,7 +216,7 @@ describe('AuthCacheManager - Read/Write Operations', () => {
             cacheManager.setCachedOrgList([]);
             const result = cacheManager.getCachedOrgList();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
     });
 

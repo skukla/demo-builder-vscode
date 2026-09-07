@@ -316,7 +316,7 @@ describe('StateManager - Utilities', () => {
             await stateManager.initialize();
             const projects = await stateManager.getAllProjects();
 
-            expect(projects).toEqual([]);
+            expect(projects).toStrictEqual([]);
         });
 
         it('should exclude non-directory entries', async () => {

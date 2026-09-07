@@ -120,7 +120,7 @@ describe('projectHandlers - Fetch', () => {
             const result = await handleGetProjects(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.data).toEqual([]);
+            expect(result.data).toStrictEqual([]);
         });
 
         it('should handle timeout error', async () => {

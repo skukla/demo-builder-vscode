@@ -94,7 +94,7 @@ describe('AddonUpdateChecker', () => {
 
             const results = await checker.checkBlockLibraries(project);
 
-            expect(results).toEqual([]);
+            expect(results).toStrictEqual([]);
         });
 
         it('should return empty array when project has no installed libraries', async () => {
@@ -102,7 +102,7 @@ describe('AddonUpdateChecker', () => {
 
             const results = await checker.checkBlockLibraries(project);
 
-            expect(results).toEqual([]);
+            expect(results).toStrictEqual([]);
         });
 
         it('should skip library with missing source and log warning', async () => {
@@ -111,7 +111,7 @@ describe('AddonUpdateChecker', () => {
 
             const results = await checker.checkBlockLibraries(project);
 
-            expect(results).toEqual([]);
+            expect(results).toStrictEqual([]);
             expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('[Updates]'));
         });
 
@@ -122,7 +122,7 @@ describe('AddonUpdateChecker', () => {
 
             const results = await checker.checkBlockLibraries(project);
 
-            expect(results).toEqual([]);
+            expect(results).toStrictEqual([]);
             expect(mockLogger.warn).toHaveBeenCalled();
         });
     });

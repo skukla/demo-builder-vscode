@@ -125,14 +125,14 @@ describe('every mutated module has a test selected to cover it', () => {
                 if (!existsSync(join(ROOT, t))) missing.push(`${p.jestConfig}  ${t}`);
             }
         }
-        expect(missing).toEqual([]);
+        expect(missing).toStrictEqual([]);
     });
 
     it.each(CONFIGS)('%s: no mutated module is left with no test selected', (c) => {
         const p = load(c);
         const uncovered = p.mutate.filter((m) => !covered(p, m));
         // A module here would report 0% and read as a coverage catastrophe.
-        expect(uncovered).toEqual([]);
+        expect(uncovered).toStrictEqual([]);
     });
 
     it.each(CONFIGS)('%s: EVERY suite for a mutated module is selected, not just one', (c) => {
@@ -168,7 +168,7 @@ describe('every mutated module has a test selected to cover it', () => {
             );
             for (const a of absent) gaps.push(`${m}  <-  ${a}`);
         }
-        expect(gaps).toEqual([]);
+        expect(gaps).toStrictEqual([]);
     });
 
     it('CONTROL: a STRAYED suite counts only when no same-named module could own it', () => {
@@ -291,7 +291,7 @@ describe('the mutation baseline covers what the config mutates', () => {
         const mutate: string[] = JSON.parse(
             readFileSync(join(ROOT, 'stryker.pl22.config.json'), 'utf8')
         ).mutate;
-        expect(mutate.filter((m) => !(m in modules))).toEqual([]);
+        expect(mutate.filter((m) => !(m in modules))).toStrictEqual([]);
     });
 
     it('every baseline row names a module that can still be re-measured', () => {
@@ -311,7 +311,7 @@ describe('the mutation baseline covers what the config mutates', () => {
                         /\.test\.tsx?$/.test(f))
             );
         });
-        expect(unreproducible).toEqual([]);
+        expect(unreproducible).toStrictEqual([]);
     });
 
     it('every baseline row carries the fields the ratchet compares', () => {
@@ -328,6 +328,6 @@ describe('the mutation baseline covers what the config mutates', () => {
                     typeof r.highValueSurvivors !== 'number'
             )
             .map(([p]) => p);
-        expect(incomplete).toEqual([]);
+        expect(incomplete).toStrictEqual([]);
     });
 });

@@ -199,7 +199,7 @@ describe('service-declared env vars', () => {
 
         const result = await groupsFor([component('a', { requiredServices: ['catalog'] })]);
 
-        expect(result.current.serviceGroups).toEqual([]);
+        expect(result.current.serviceGroups).toStrictEqual([]);
     });
 
     it('takes a plain service requiredEnvVars when it is not backend-specific', async () => {
@@ -214,13 +214,13 @@ describe('service-declared env vars', () => {
     it('survives a service that declares no env vars at all', async () => {
         const result = await groupsFor([component('a', { requiredServices: ['empty'] })]);
 
-        expect(result.current.serviceGroups).toEqual([]);
+        expect(result.current.serviceGroups).toStrictEqual([]);
     });
 
     it('survives a requiredServices entry the registry has no service for', async () => {
         const result = await groupsFor([component('a', { requiredServices: ['ghost'] })]);
 
-        expect(result.current.serviceGroups).toEqual([]);
+        expect(result.current.serviceGroups).toStrictEqual([]);
     });
 
     it('skips the service walk entirely when the stack names no backend', async () => {
@@ -228,7 +228,7 @@ describe('service-declared env vars', () => {
         // absent and there is no backend to resolve service vars against.
         const result = await groupsFor([component('a', { requiredServices: ['plain'] })], 'unknown');
 
-        expect(result.current.serviceGroups).toEqual([]);
+        expect(result.current.serviceGroups).toStrictEqual([]);
     });
 });
 

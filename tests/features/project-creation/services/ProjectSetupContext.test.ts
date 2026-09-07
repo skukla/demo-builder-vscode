@@ -162,7 +162,7 @@ describe('ProjectSetupContext', () => {
             );
 
             const envVars = context.getEnvVarDefinitions();
-            expect(envVars).toEqual({});
+            expect(envVars).toStrictEqual({});
         });
     });
 

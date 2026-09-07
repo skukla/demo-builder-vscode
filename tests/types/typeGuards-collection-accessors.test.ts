@@ -83,16 +83,14 @@ describe('getComponentInstanceEntries', () => {
     });
 
     it('returns an empty array when the project holds no instances record', () => {
-        expect(getComponentInstanceEntries(createMockProject({ componentInstances: undefined }))).toEqual(
-            []
-        );
+        expect(getComponentInstanceEntries(createMockProject({ componentInstances: undefined }))).toStrictEqual([]);
     });
 
     it.each([
         ['undefined', undefined],
         ['null', null],
     ])('returns an empty array for a %s project rather than throwing', (_label, value) => {
-        expect(getComponentInstanceEntries(value)).toEqual([]);
+        expect(getComponentInstanceEntries(value)).toStrictEqual([]);
     });
 });
 
@@ -102,16 +100,14 @@ describe('getComponentInstanceValues', () => {
     });
 
     it('returns an empty array when the project holds no instances record', () => {
-        expect(getComponentInstanceValues(createMockProject({ componentInstances: undefined }))).toEqual(
-            []
-        );
+        expect(getComponentInstanceValues(createMockProject({ componentInstances: undefined }))).toStrictEqual([]);
     });
 
     it.each([
         ['undefined', undefined],
         ['null', null],
     ])('returns an empty array for a %s project rather than throwing', (_label, value) => {
-        expect(getComponentInstanceValues(value)).toEqual([]);
+        expect(getComponentInstanceValues(value)).toStrictEqual([]);
     });
 });
 
@@ -122,7 +118,7 @@ describe('getComponentInstancesByType', () => {
     });
 
     it('returns an empty array when no instance has that type', () => {
-        expect(getComponentInstancesByType(project, 'mesh')).toEqual([]);
+        expect(getComponentInstancesByType(project, 'mesh')).toStrictEqual([]);
     });
 
     it('returns an empty array when no type is asked for', () => {
@@ -136,13 +132,13 @@ describe('getComponentInstancesByType', () => {
                 'api-mesh': { id: 'api-mesh', name: 'API Mesh', status: 'ready', subType: 'mesh' },
             },
         });
-        expect(getComponentInstancesByType(withUntyped, undefined)).toEqual([]);
+        expect(getComponentInstancesByType(withUntyped, undefined)).toStrictEqual([]);
     });
 
     it.each([
         ['undefined', undefined],
         ['null', null],
     ])('returns an empty array for a %s project rather than throwing', (_label, value) => {
-        expect(getComponentInstancesByType(value, 'frontend')).toEqual([]);
+        expect(getComponentInstancesByType(value, 'frontend')).toStrictEqual([]);
     });
 });

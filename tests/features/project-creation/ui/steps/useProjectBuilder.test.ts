@@ -376,7 +376,7 @@ describe('required mesh cannot be toggled off', () => {
         });
 
         const call = updateState.mock.calls[0][0];
-        expect(call.selectedAppBuilderComponents).toEqual([]);
+        expect(call.selectedAppBuilderComponents).toStrictEqual([]);
     });
 
     it('never blocks toggle-ON, required or not', () => {

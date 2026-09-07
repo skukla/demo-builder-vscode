@@ -151,7 +151,7 @@ describe('initializePrerequisiteCheck', () => {
         expect(payloadsOfType(context, 'prerequisites-complete')).toEqual([
             { allInstalled: true, prerequisites: [] },
         ]);
-        expect(payloadsOfType(context, 'error')).toEqual([]);
+        expect(payloadsOfType(context, 'error')).toStrictEqual([]);
     });
 
     it('records an empty prerequisite list when there is no manager to resolve one', async () => {
@@ -252,7 +252,7 @@ describe('prerequisites-loaded payload', () => {
         expect(payloadsOfType(context, 'prerequisites-complete')).toEqual([
             { allInstalled: true, prerequisites: [] },
         ]);
-        expect(payloadsOfType(context, 'error')).toEqual([]);
+        expect(payloadsOfType(context, 'error')).toStrictEqual([]);
     });
 
     it('waits the UI update delay after publishing the list', async () => {
@@ -277,7 +277,7 @@ describe('failure of the whole check', () => {
             error: 'Failed to check prerequisites',
             code: ErrorCode.UNKNOWN,
         });
-        expect(payloadsOfType(context, 'prerequisites-complete')).toEqual([]);
+        expect(payloadsOfType(context, 'prerequisites-complete')).toStrictEqual([]);
     });
 });
 

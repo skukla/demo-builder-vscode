@@ -320,7 +320,7 @@ describe('find_storefront_name_mismatches', () => {
         // MCP tool has no VS Code terminals to hand back — its default reaches for
         // `vscode.window.terminals`, which does not exist here.
         const [, terminals] = loadProjectFromPath.mock.calls[0];
-        expect(terminals!()).toEqual([]);
+        expect(terminals!()).toStrictEqual([]);
     });
 
     it('skips a project whose manifest resolves to nothing, and keeps scanning', async () => {
@@ -530,7 +530,7 @@ describe('migrate_storefront_name', () => {
             persistAfterLoad: false,
         });
         const [, terminals] = loadProjectFromPath.mock.calls[0];
-        expect(terminals!()).toEqual([]);
+        expect(terminals!()).toStrictEqual([]);
     });
 
     it('accepts a project path with stray whitespace around it', async () => {

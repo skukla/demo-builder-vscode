@@ -103,7 +103,7 @@ describe('SOP: Component Extraction', () => {
                 }
             }
 
-            expect(violations).toEqual([]);
+            expect(violations).toStrictEqual([]);
         });
     });
 
@@ -145,7 +145,7 @@ describe('SOP: Component Extraction', () => {
                 });
             }
 
-            expect(violations).toEqual([]);
+            expect(violations).toStrictEqual([]);
         });
     });
 
@@ -203,7 +203,7 @@ describe('SOP: Component Extraction', () => {
                 });
             }
 
-            expect(violations).toEqual([]);
+            expect(violations).toStrictEqual([]);
         });
     });
 

@@ -111,7 +111,7 @@ describe('StateManager - componentVersions Persistence', () => {
 
             expect(manifestCall).toBeDefined();
             const manifestContent = JSON.parse(manifestCall![1] as string);
-            expect(manifestContent.componentVersions).toEqual({});
+            expect(manifestContent.componentVersions).toStrictEqual({});
         });
 
         it('should handle undefined componentVersions (backward compatibility)', async () => {
@@ -200,7 +200,7 @@ describe('StateManager - componentVersions Persistence', () => {
 
             expect(project).not.toBeNull();
             // Should default to empty object (line 401: manifest.componentVersions || {})
-            expect(project?.componentVersions).toEqual({});
+            expect(project?.componentVersions).toStrictEqual({});
         });
 
         it('should handle null componentVersions in manifest', async () => {
@@ -224,7 +224,7 @@ describe('StateManager - componentVersions Persistence', () => {
 
             expect(project).not.toBeNull();
             // Should fallback to empty object
-            expect(project?.componentVersions).toEqual({});
+            expect(project?.componentVersions).toStrictEqual({});
         });
     });
 

@@ -144,7 +144,7 @@ describe('aiHandlers — copy & module helpers', () => {
         });
 
         it('returns an empty array when both stores are empty', () => {
-            expect(mergePromptsForRead([], [])).toEqual([]);
+            expect(mergePromptsForRead([], [])).toStrictEqual([]);
         });
     });
 
@@ -171,7 +171,7 @@ describe('aiHandlers — copy & module helpers', () => {
 
         it('does not throw and returns [] when there are no prompts and no project', () => {
             const { context } = makeScopedContext();
-            expect(readMergedAiPrompts(context, undefined)).toEqual([]);
+            expect(readMergedAiPrompts(context, undefined)).toStrictEqual([]);
         });
     });
 
@@ -205,7 +205,7 @@ describe('aiHandlers — copy & module helpers', () => {
 
             const remaining = await deleteAiPromptById(context, project, 'g');
 
-            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toStrictEqual([]);
             expect(project.aiPrompts).toEqual([{ id: 'p', title: 'P', prompt: 'p' }]);
             expect(remaining).toEqual([{ id: 'p', title: 'P', prompt: 'p' }]);
         });
@@ -218,9 +218,9 @@ describe('aiHandlers — copy & module helpers', () => {
 
             const remaining = await deleteAiPromptById(context, project, 'dup');
 
-            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
-            expect(project.aiPrompts).toEqual([]);
-            expect(remaining).toEqual([]);
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toStrictEqual([]);
+            expect(project.aiPrompts).toStrictEqual([]);
+            expect(remaining).toStrictEqual([]);
         });
 
         it('handles an undefined project by deleting from the global store only', async () => {

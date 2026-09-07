@@ -69,7 +69,7 @@ describe('trackPatchMisses', () => {
         expect(await trackPatchMisses(miss, logger)).toEqual({ p1: 2 });
 
         const hit = reportWith([{ id: 'p1', applied: true }]);
-        expect(await trackPatchMisses(hit, logger)).toEqual({});
+        expect(await trackPatchMisses(hit, logger)).toStrictEqual({});
 
         expect(await trackPatchMisses(miss, logger)).toEqual({ p1: 1 });
     });

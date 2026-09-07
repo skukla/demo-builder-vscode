@@ -75,7 +75,7 @@ describe('StalenessDetector - Initialization', () => {
         it('should return empty object for empty config', () => {
             const result = getMeshEnvVars({});
 
-            expect(result).toEqual({});
+            expect(result).toStrictEqual({});
         });
     });
 });

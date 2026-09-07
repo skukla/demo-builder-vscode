@@ -349,9 +349,9 @@ describe('verifyAiSetup', () => {
             const result = await verifyAiSetup(PROJECT_PATH, EXT_DIST_PATH);
 
             expect(result.inventory).toBeDefined();
-            expect(result.inventory.skills).toEqual([]);
-            expect(result.inventory.mcps).toEqual([]);
-            expect(result.inventory.sessionMcps).toEqual([]);
+            expect(result.inventory.skills).toStrictEqual([]);
+            expect(result.inventory.mcps).toStrictEqual([]);
+            expect(result.inventory.sessionMcps).toStrictEqual([]);
         });
 
         it('populates inventory with each inspector output', async () => {
@@ -403,7 +403,7 @@ describe('verifyAiSetup', () => {
             // 5); the mocked fs makes the package look installed, so the row
             // appears with 'ok'.
             expect(result.checks).toHaveLength(5);
-            expect(result.inventory.mcps).toEqual([]);
+            expect(result.inventory.mcps).toStrictEqual([]);
         });
 
         it('does not surface inspector exceptions through verifyAiSetup', async () => {
@@ -414,7 +414,7 @@ describe('verifyAiSetup', () => {
 
             // The check status is unaffected; the failed inspector degrades to []
             expect(result.status).toBe('ok');
-            expect(result.inventory.skills).toEqual([]);
+            expect(result.inventory.skills).toStrictEqual([]);
         });
     });
 
@@ -451,9 +451,9 @@ describe('verifyAiSetup', () => {
 
             const inventory = await gatherInventory(PROJECT_PATH);
 
-            expect(inventory.skills).toEqual([]);
+            expect(inventory.skills).toStrictEqual([]);
             expect(inventory.mcps).toHaveLength(1);
-            expect(inventory.sessionMcps).toEqual([]);
+            expect(inventory.sessionMcps).toStrictEqual([]);
         });
 
         it('surfaces a *Error field for each rejected inspector', async () => {
@@ -476,7 +476,7 @@ describe('verifyAiSetup', () => {
 
             const inventory = await gatherInventory(PROJECT_PATH);
 
-            expect(inventory.mcps).toEqual([]);
+            expect(inventory.mcps).toStrictEqual([]);
             expect(inventory.mcpsError).toBe('mcps broke');
         });
 

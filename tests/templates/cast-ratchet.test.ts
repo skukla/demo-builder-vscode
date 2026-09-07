@@ -62,7 +62,7 @@ describe('boundary-cast ratchet', () => {
     const { total, asAny, sites } = countCasts();
 
     it('src has ZERO any-erasing casts', () => {
-        expect(asAny).toEqual([]);
+        expect(asAny).toStrictEqual([]);
     });
 
     it(`cast count stays at or below the ${BASELINE} verdicted sites`, () => {

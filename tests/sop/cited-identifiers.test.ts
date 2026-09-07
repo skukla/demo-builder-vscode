@@ -177,7 +177,7 @@ describe('identifiers named by current-tense documents exist', () => {
                 offenders.push(row);
             }
         }
-        expect([...new Set(offenders)].sort()).toEqual([]);
+        expect([...new Set(offenders)].sort()).toStrictEqual([]);
     });
 
     /**
@@ -213,7 +213,7 @@ describe('identifiers named by current-tense documents exist', () => {
                 offenders.push(row);
             }
         }
-        expect([...new Set(offenders)].sort()).toEqual([]);
+        expect([...new Set(offenders)].sort()).toStrictEqual([]);
     });
 
     it('every deliberate-mention row still applies, and states a reason', () => {

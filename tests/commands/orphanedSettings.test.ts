@@ -29,7 +29,7 @@ describe('orphanedKeys', () => {
     it('says nothing about a key that is still contributed', () => {
         expect(
             orphanedKeys(['demoBuilder.daLive.aemAuthorUrl'], ['demoBuilder.daLive.aemAuthorUrl']),
-        ).toEqual([]);
+        ).toStrictEqual([]);
     });
 
     it('sorts, so two runs of the report diff cleanly', () => {
@@ -40,7 +40,7 @@ describe('orphanedKeys', () => {
     });
 
     it('reports nothing when the user has set nothing', () => {
-        expect(orphanedKeys(['demoBuilder.daLive.aemAuthorUrl'], [])).toEqual([]);
+        expect(orphanedKeys(['demoBuilder.daLive.aemAuthorUrl'], [])).toStrictEqual([]);
     });
 });
 
@@ -72,22 +72,18 @@ describe('contributedKeysFrom', () => {
 
     /** A diagnostic must never become the failure it was called to explain. */
     it('returns nothing rather than throwing on a shape it does not recognise', () => {
-        expect(contributedKeysFrom(undefined)).toEqual([]);
-        expect(contributedKeysFrom({ contributes: {} })).toEqual([]);
-        expect(contributedKeysFrom('nonsense')).toEqual([]);
+        expect(contributedKeysFrom(undefined)).toStrictEqual([]);
+        expect(contributedKeysFrom({ contributes: {} })).toStrictEqual([]);
+        expect(contributedKeysFrom('nonsense')).toStrictEqual([]);
     });
 
     it('skips a section that declares no properties', () => {
         // A configuration section may exist purely for its title and order.
-        expect(contributedKeysFrom({ contributes: { configuration: [{ title: 'Demo' }] } })).toEqual(
-            []
-        );
+        expect(contributedKeysFrom({ contributes: { configuration: [{ title: 'Demo' }] } })).toStrictEqual([]);
     });
 
     it('skips a section that is not an object at all', () => {
-        expect(contributedKeysFrom({ contributes: { configuration: [null, undefined] } })).toEqual(
-            []
-        );
+        expect(contributedKeysFrom({ contributes: { configuration: [null, undefined] } })).toStrictEqual([]);
     });
 
     it('skips a section whose properties is not an object', () => {
@@ -95,7 +91,7 @@ describe('contributedKeysFrom', () => {
         // name settings that are single characters of somebody's typo.
         expect(
             contributedKeysFrom({ contributes: { configuration: [{ properties: 'oops' }] } })
-        ).toEqual([]);
+        ).toStrictEqual([]);
     });
 });
 
@@ -134,7 +130,7 @@ describe('collectUserSetKeys', () => {
             inspector({}, ['demoBuilder.daLive.aemAuthorUrl']),
         );
 
-        expect(keys).toEqual([]);
+        expect(keys).toStrictEqual([]);
     });
 
     it('does not descend INTO an object-valued setting the user set', () => {
@@ -160,7 +156,7 @@ describe('collectUserSetKeys', () => {
     });
 
     it('survives a null or non-object tree', () => {
-        expect(collectUserSetKeys(null as unknown as Record<string, unknown>, 'demoBuilder', () => undefined)).toEqual([]);
+        expect(collectUserSetKeys(null as unknown as Record<string, unknown>, 'demoBuilder', () => undefined)).toStrictEqual([]);
     });
 
     it.each([['workspaceValue'], ['workspaceFolderValue']])(
@@ -239,6 +235,6 @@ describe('collectUserSetKeys', () => {
 
         expect(collectUserSetKeys(tree, 'demoBuilder', (k) =>
             k === key ? { globalValue: 'value' } : undefined
-        )).toEqual([]);
+        )).toStrictEqual([]);
     });
 });

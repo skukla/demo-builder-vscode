@@ -130,7 +130,7 @@ describe('generateAIContextFiles', () => {
 
         await generateAIContextFiles('/projects/test', project, '/ext/path');
 
-        expect(project.aiFileHashes).toEqual({});
+        expect(project.aiFileHashes).toStrictEqual({});
     });
 
     it('stamps AI_CONTEXT_VERSION onto the passed project (single point for all callers)', async () => {

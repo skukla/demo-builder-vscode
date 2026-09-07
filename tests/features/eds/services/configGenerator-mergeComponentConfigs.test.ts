@@ -14,11 +14,11 @@ import { mergeComponentConfigs } from '@/features/eds/services/configGenerator';
 
 describe('mergeComponentConfigs', () => {
     it('should return empty object for undefined componentConfigs', () => {
-        expect(mergeComponentConfigs(undefined)).toEqual({});
+        expect(mergeComponentConfigs(undefined)).toStrictEqual({});
     });
 
     it('should return empty object for empty componentConfigs', () => {
-        expect(mergeComponentConfigs({})).toEqual({});
+        expect(mergeComponentConfigs({})).toStrictEqual({});
     });
 
     it('should merge all component env vars into flat object', () => {

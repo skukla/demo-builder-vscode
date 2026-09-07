@@ -166,10 +166,10 @@ describe('create_project', () => {
             });
             // Headless creation selects nothing extra; a non-empty default here
             // would install components the agent never asked for.
-            expect(state.selectedAddons).toEqual([]);
-            expect(state.selectedBlockLibraries).toEqual([]);
-            expect(state.customBlockLibraries).toEqual([]);
-            expect(state.componentConfigs).toEqual({});
+            expect(state.selectedAddons).toStrictEqual([]);
+            expect(state.selectedBlockLibraries).toStrictEqual([]);
+            expect(state.customBlockLibraries).toStrictEqual([]);
+            expect(state.componentConfigs).toStrictEqual({});
         });
     });
 
@@ -445,9 +445,9 @@ describe('create_project', () => {
                 contentPatches: [{ path: '/index' }],
                 preflightComplete: true,
             });
-            expect(state.selectedAddons).toEqual([]);
-            expect(state.selectedBlockLibraries).toEqual([]);
-            expect(state.customBlockLibraries).toEqual([]);
+            expect(state.selectedAddons).toStrictEqual([]);
+            expect(state.selectedBlockLibraries).toStrictEqual([]);
+            expect(state.customBlockLibraries).toStrictEqual([]);
         });
     });
 });

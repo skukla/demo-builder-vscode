@@ -93,7 +93,7 @@ describe('AdobeOrgServices — getServicesForOrg cache', () => {
         const { service, client } = makeService();
         client.getServicesForOrg.mockResolvedValue({ body: [] });
 
-        await expect(service.getServicesForOrg('org-1')).resolves.toEqual([]);
+        await expect(service.getServicesForOrg('org-1')).resolves.toStrictEqual([]);
         await service.getServicesForOrg('org-1');
 
         expect(client.getServicesForOrg).toHaveBeenCalledTimes(2);
@@ -211,7 +211,7 @@ describe('AdobeOrgServices — fetch budget and empty answers', () => {
         const { service, client } = makeService();
         client.getServicesForOrg.mockResolvedValue({});
 
-        await expect(service.getServicesForOrg('org-1')).resolves.toEqual([]);
+        await expect(service.getServicesForOrg('org-1')).resolves.toStrictEqual([]);
     });
 });
 
@@ -233,21 +233,21 @@ describe('AdobeOrgServices — getSubscribedServiceCodes', () => {
         const { service, client } = makeService();
         client.getIntegration.mockResolvedValue({ body: {} });
 
-        await expect(service.getSubscribedServiceCodes('org-1', 'int-9')).resolves.toEqual([]);
+        await expect(service.getSubscribedServiceCodes('org-1', 'int-9')).resolves.toStrictEqual([]);
     });
 
     it('no response at all reads as no subscriptions', async () => {
         const { service, client } = makeService();
         client.getIntegration.mockResolvedValue(undefined);
 
-        await expect(service.getSubscribedServiceCodes('org-1', 'int-9')).resolves.toEqual([]);
+        await expect(service.getSubscribedServiceCodes('org-1', 'int-9')).resolves.toStrictEqual([]);
     });
 
     it('a failing read is fail-safe: [] so callers fall through to subscribing', async () => {
         const { service, client } = makeService();
         client.getIntegration.mockRejectedValue(new Error('403'));
 
-        await expect(service.getSubscribedServiceCodes('org-1', 'int-9')).resolves.toEqual([]);
+        await expect(service.getSubscribedServiceCodes('org-1', 'int-9')).resolves.toStrictEqual([]);
     });
 });
 

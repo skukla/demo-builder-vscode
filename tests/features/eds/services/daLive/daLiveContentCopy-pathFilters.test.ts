@@ -44,7 +44,7 @@ describe('filterProductOverlays', () => {
     it('drops a path that merely starts with the default name (no slash boundary)', () => {
         // `/products/defaults` is a different document — endsWith and the
         // trailing-slash include are both boundary checks, not prefixes.
-        expect(filterProductOverlays(['/products/defaults'])).toEqual([]);
+        expect(filterProductOverlays(['/products/defaults'])).toStrictEqual([]);
     });
 
     it('applies the product rule anywhere in the path, not only at the start', () => {
@@ -68,19 +68,19 @@ describe('extractReferencedPaths — what counts as a reference', () => {
     });
 
     it('drops an absolute URL on another host', () => {
-        expect(refsFromHref('https://example.com/customer/nav')).toEqual([]);
+        expect(refsFromHref('https://example.com/customer/nav')).toStrictEqual([]);
     });
 
     it('drops a protocol-relative URL', () => {
-        expect(refsFromHref('//example.com/customer/nav')).toEqual([]);
+        expect(refsFromHref('//example.com/customer/nav')).toStrictEqual([]);
     });
 
     it('drops mailto: and other schemes', () => {
-        expect(refsFromHref('mailto:someone@example.com')).toEqual([]);
+        expect(refsFromHref('mailto:someone@example.com')).toStrictEqual([]);
     });
 
     it('drops anchors and relative links', () => {
-        expect(extractReferencedPaths('<a href="#top">a</a><a href="./x">b</a>', BASE)).toEqual([]);
+        expect(extractReferencedPaths('<a href="#top">a</a><a href="./x">b</a>', BASE)).toStrictEqual([]);
     });
 
     it('trims surrounding whitespace before deciding', () => {
@@ -88,13 +88,11 @@ describe('extractReferencedPaths — what counts as a reference', () => {
     });
 
     it('ignores an empty href', () => {
-        expect(refsFromHref('')).toEqual([]);
+        expect(refsFromHref('')).toStrictEqual([]);
     });
 
     it('drops the site root, however it is written', () => {
-        expect(extractReferencedPaths(`<a href="/">a</a><a href="${BASE}">b</a>`, BASE)).toEqual(
-            []
-        );
+        expect(extractReferencedPaths(`<a href="/">a</a><a href="${BASE}">b</a>`, BASE)).toStrictEqual([]);
     });
 
     it('strips the query string and the fragment', () => {
@@ -102,7 +100,7 @@ describe('extractReferencedPaths — what counts as a reference', () => {
     });
 
     it('drops a path that is only a query string', () => {
-        expect(refsFromHref('/?x=1')).toEqual([]);
+        expect(refsFromHref('/?x=1')).toStrictEqual([]);
     });
 
     it('deduplicates repeated references', () => {
@@ -138,17 +136,17 @@ describe('extractReferencedPaths — what is deliberately not a reference', () =
         '/font.woff2',
         '/font.ttf',
     ])('drops the media/asset URL %s', (href) => {
-        expect(refsFromHref(href)).toEqual([]);
+        expect(refsFromHref(href)).toStrictEqual([]);
     });
 
     it('drops media_ hash URLs wherever they sit in the path', () => {
-        expect(refsFromHref('/en/media_1a2b3c')).toEqual([]);
+        expect(refsFromHref('/en/media_1a2b3c')).toStrictEqual([]);
     });
 
     it('drops the icons and styles directories', () => {
         expect(
             extractReferencedPaths('<a href="/icons/x"></a><a href="/styles/y"></a>', BASE)
-        ).toEqual([]);
+        ).toStrictEqual([]);
     });
 
     it('keeps a path containing a colon that is not a scheme', () => {
@@ -171,11 +169,11 @@ describe('extractReferencedPaths — what is deliberately not a reference', () =
     it('drops a path that COLLAPSES to the site root once .html is stripped', () => {
         // `/.html` -> `/` at the extension strip, after the earlier root guard
         // has already run. Only the final guard can catch it.
-        expect(refsFromHref('/.html')).toEqual([]);
+        expect(refsFromHref('/.html')).toStrictEqual([]);
     });
 
     it('drops product overlays, which the copy pipeline handles elsewhere', () => {
-        expect(refsFromHref('/products/sku-1')).toEqual([]);
+        expect(refsFromHref('/products/sku-1')).toStrictEqual([]);
     });
 
     it('keeps a path that merely contains "icons" further down', () => {
@@ -199,12 +197,12 @@ describe('extractReferencedPaths — the EDS fragment-block convention', () => {
     });
 
     it('ignores a bare path outside a fragment block', () => {
-        expect(extractReferencedPaths('<div><div>/customer/nav</div></div>', BASE)).toEqual([]);
+        expect(extractReferencedPaths('<div><div>/customer/nav</div></div>', BASE)).toStrictEqual([]);
     });
 
     it('ignores a class that merely contains the word fragment', () => {
         const html = '<div class="fragments"><div><div>/customer/nav</div></div></div>';
-        expect(extractReferencedPaths(html, BASE)).toEqual([]);
+        expect(extractReferencedPaths(html, BASE)).toStrictEqual([]);
     });
 
     it('reads a fragment block whose class list carries other classes FIRST', () => {
@@ -228,6 +226,6 @@ describe('extractReferencedPaths — the EDS fragment-block convention', () => {
     });
 
     it('returns nothing for HTML with no references at all', () => {
-        expect(extractReferencedPaths('<p>hello</p>', BASE)).toEqual([]);
+        expect(extractReferencedPaths('<p>hello</p>', BASE)).toStrictEqual([]);
     });
 });

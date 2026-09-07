@@ -115,7 +115,7 @@ describe('getInstalledNodeVersions', () => {
         mockExecute.mockRejectedValue(new Error('boom'));
         const logger = makeLogger();
 
-        await expect(getInstalledNodeVersions(executor, logger)).resolves.toEqual([]);
+        await expect(getInstalledNodeVersions(executor, logger)).resolves.toStrictEqual([]);
         expect(logger.warn).toHaveBeenCalled();
     });
 });

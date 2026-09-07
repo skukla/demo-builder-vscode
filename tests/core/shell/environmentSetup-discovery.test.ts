@@ -119,7 +119,7 @@ describe('EnvironmentSetup — discovery decisions', () => {
         it('does not read a directory that is not there, and finds nothing', () => {
             onlyTheseExist();
 
-            expect(collect(environmentSetup, FNM_BASE, ['bin'])).toEqual([]);
+            expect(collect(environmentSetup, FNM_BASE, ['bin'])).toStrictEqual([]);
             expect(mockedReaddir).not.toHaveBeenCalled();
         });
 
@@ -215,7 +215,7 @@ describe('EnvironmentSetup — discovery decisions', () => {
             mockedReaddir.mockReturnValue([]);
             onlyTheseExist();
 
-            expect(environmentSetup.findNpmGlobalPaths()).toEqual([]);
+            expect(environmentSetup.findNpmGlobalPaths()).toStrictEqual([]);
         });
 
         it('includes both fnm and nvm bin directories it finds', () => {

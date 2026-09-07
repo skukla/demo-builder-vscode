@@ -166,7 +166,7 @@ describe('RefreshBlockLibraryCommand', () => {
         // Load-bearing: an empty (truthy) blockCollectionIds array signals the
         // pipeline to read component-definition.json from the USER's repo so
         // MCP-promoted blocks survive the destructive rebuild.
-        expect(params.blockCollectionIds).toEqual([]);
+        expect(params.blockCollectionIds).toStrictEqual([]);
     });
 
     it('surfaces progress messages during pipeline execution', async () => {

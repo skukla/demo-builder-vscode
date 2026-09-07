@@ -71,7 +71,7 @@ describe('useConfigureFieldValues - reading values back', () => {
                 createMockProject({ componentConfigs: undefined })
             );
 
-            expect(result.current.componentConfigs).toEqual({});
+            expect(result.current.componentConfigs).toStrictEqual({});
         });
 
         it('RE-SEEDS when Configure is reopened and sends fresh values', () => {

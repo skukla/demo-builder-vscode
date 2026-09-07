@@ -79,7 +79,7 @@ describe('buildAioConsoleEnv', () => {
 
     it('returns an empty object when orgId is empty', () => {
         // No org target → nothing to inject (safe no-op).
-        expect(buildAioConsoleEnv({ orgId: '' })).toEqual({});
+        expect(buildAioConsoleEnv({ orgId: '' })).toStrictEqual({});
     });
 
     it('ignores empty-string optional fields rather than emitting blank vars', () => {

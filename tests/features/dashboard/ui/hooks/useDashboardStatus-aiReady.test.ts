@@ -293,7 +293,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
     it('degrades aiEditedFiles to an empty array when the inventory omits it (pre-ADR)', () => {
         const { result } = renderHook(() => useDashboardStatus());
         deliverAiVerify(mocks, buildVerifyResponse());
-        expect(result.current.aiEditedFiles).toEqual([]);
+        expect(result.current.aiEditedFiles).toStrictEqual([]);
     });
 
     it('flags aiSkillsError when the skill inspector errored', () => {
@@ -335,7 +335,7 @@ describe('useDashboardStatus — AI Ready Badge State', () => {
 
     it('returns a stable empty MCPs reference before the ai-verify outcome arrives', () => {
         const { result } = renderHook(() => useDashboardStatus());
-        expect(result.current.aiMcps).toEqual([]);
+        expect(result.current.aiMcps).toStrictEqual([]);
         expect(result.current.aiMcpsError).toBe(false);
     });
 

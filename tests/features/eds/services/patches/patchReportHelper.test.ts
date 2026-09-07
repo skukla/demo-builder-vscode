@@ -143,11 +143,11 @@ describe('getUnapplied', () => {
         const r = createPatchReport();
         addContentResult(r, { patchId: 'c1', pagePath: '/', applied: true });
         addCodeResult(r, { patchId: 'k1', target: 'a.js', applied: true });
-        expect(getUnapplied(r)).toEqual([]);
+        expect(getUnapplied(r)).toStrictEqual([]);
     });
 
     it('returns empty array for an empty report', () => {
-        expect(getUnapplied(createPatchReport())).toEqual([]);
+        expect(getUnapplied(createPatchReport())).toStrictEqual([]);
     });
 });
 

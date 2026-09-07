@@ -295,7 +295,7 @@ describe('startExport', () => {
 
         // An invented row would read as a type that ran and exported nothing,
         // which is a different claim from "the service said nothing about it".
-        expect(outcome.perType).toEqual([]);
+        expect(outcome.perType).toStrictEqual([]);
     });
 
     it('reads a bare result row as a failure that exported nothing', async () => {

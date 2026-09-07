@@ -69,6 +69,6 @@ describe('no test file chooses its own jest environment', () => {
             .map((f) => relative(ROOT, f));
         // If one is genuinely needed, place the file by a rule in jest.config.js instead
         // — see the node project's testMatch exclusions for the pattern.
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 });

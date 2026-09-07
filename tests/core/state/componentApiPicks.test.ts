@@ -34,10 +34,8 @@ describe('resolveDesiredApis', () => {
     });
 
     it('returns an empty list when nothing is picked', () => {
-        expect(resolveDesiredApis(project())).toEqual([]);
-        expect(resolveDesiredApis(project({ componentApiPicks: {} }))).toEqual(
-            []
-        );
+        expect(resolveDesiredApis(project())).toStrictEqual([]);
+        expect(resolveDesiredApis(project({ componentApiPicks: {} }))).toStrictEqual([]);
     });
 
     it('reads the LEGACY flat field when the keyed map is absent', () => {

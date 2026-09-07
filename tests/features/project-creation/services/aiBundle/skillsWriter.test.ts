@@ -401,7 +401,7 @@ describe('skillsWriter', () => {
             expect(readdirPaths).toContain(EDS_STOREFRONT_BUNDLE_PATH);
             expect(
                 readdirPaths.filter((dirPath) => dirPath.includes('/components/eds-storefront/'))
-            ).toEqual([]);
+            ).toStrictEqual([]);
         });
 
         it('copies each skill folder from the bundle to .claude/skills/<prefix>-<skill>/', async () => {

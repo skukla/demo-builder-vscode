@@ -569,7 +569,7 @@ describe('DaLiveConfigService - mutations', () => {
             const written = JSON.parse(body.get('config') as string) as MultiSheetConfig;
 
             expect(written.permissions?.[':colWidths']).toEqual([200, 350, 75, 150]);
-            expect(written.permissions?.data).toEqual([]);
+            expect(written.permissions?.data).toStrictEqual([]);
         });
 
         it('reports the write failure rather than throwing out of the revoke', async () => {

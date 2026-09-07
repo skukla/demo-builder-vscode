@@ -216,7 +216,7 @@ describe('ensureMeshApiSubscribed', () => {
             logger,
         });
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
         expect(authService.getServicesForOrg).not.toHaveBeenCalled();
         expect(withOrgContext).not.toHaveBeenCalled();
     });
@@ -266,7 +266,7 @@ describe('ensureMeshApiSubscribed', () => {
             logger,
         });
 
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
         expect(authService.getServicesForOrg).not.toHaveBeenCalled();
         expect(withOrgContext).not.toHaveBeenCalled();
     });

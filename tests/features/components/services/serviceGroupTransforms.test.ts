@@ -63,7 +63,7 @@ describe('toServiceGroupWithSortedFields', () => {
 
         const result = toServiceGroupWithSortedFields(def, groups) as ServiceGroup;
 
-        expect(result.fields).toEqual([]);
+        expect(result.fields).toStrictEqual([]);
     });
 
     it('handles multiple fields with defined order', () => {

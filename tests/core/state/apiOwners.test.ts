@@ -112,6 +112,6 @@ describe('resolveApiOwners', () => {
     });
 
     it('returns an empty list for a project with no integrations', () => {
-        expect(resolveApiOwners(createMockProject(), lookup)).toEqual([]);
+        expect(resolveApiOwners(createMockProject(), lookup)).toStrictEqual([]);
     });
 });

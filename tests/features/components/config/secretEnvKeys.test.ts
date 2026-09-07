@@ -46,7 +46,7 @@ describe('SECRET_ENV_KEYS covers every credential in the catalog', () => {
 
         // Fails the moment someone adds e.g. COMMERCE_CLIENT_SECRET to
         // components.json without listing it here. Add it to SECRET_ENV_KEYS.
-        expect(unlisted).toEqual([]);
+        expect(unlisted).toStrictEqual([]);
     });
 
     it('lists no key that has left the catalog', () => {
@@ -55,7 +55,7 @@ describe('SECRET_ENV_KEYS covers every credential in the catalog', () => {
         // covering it while the list still looks populated.
         const stale = SECRET_ENV_KEYS.filter((key) => !catalogKeys.includes(key));
 
-        expect(stale).toEqual([]);
+        expect(stale).toStrictEqual([]);
     });
 
     it('does not claim App Builder component secrets', () => {

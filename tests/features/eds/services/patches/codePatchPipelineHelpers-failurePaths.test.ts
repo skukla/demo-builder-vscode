@@ -61,13 +61,13 @@ describe('codePatchPipelineHelpers — failure paths', () => {
                 mockLogger
             );
 
-            expect(results).toEqual([]);
+            expect(results).toStrictEqual([]);
             expect(fileOverrides.size).toBe(0);
             // Only the ledger read — no per-target template fetch.
             const targetFetches = fetchMock.mock.calls
                 .map(([url]) => String(url))
                 .filter((url) => url.endsWith('blocks/hero/hero.js'));
-            expect(targetFetches).toEqual([]);
+            expect(targetFetches).toStrictEqual([]);
         });
 
         it('gives the template fetch an abort signal', async () => {

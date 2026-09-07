@@ -125,17 +125,17 @@ describe('blockedBy', () => {
     });
 
     it('is empty when nothing selected depends on it', () => {
-        expect(blockedBy('customer_groups', ['customer_groups', 'categories'])).toEqual([]);
+        expect(blockedBy('customer_groups', ['customer_groups', 'categories'])).toStrictEqual([]);
     });
 
     it('never reports the type as blocking itself', () => {
-        expect(blockedBy('products', ['products'])).toEqual([]);
+        expect(blockedBy('products', ['products'])).toStrictEqual([]);
     });
 
     it('does not let a self-referencing map make a type block its own removal', () => {
         // The map is hand-written, so a typo CAN name a type as its own dependency.
         // Reading that literally would disable the checkbox permanently.
-        expect(blockedBy('a', ['a'], { a: ['a'] })).toEqual([]);
+        expect(blockedBy('a', ['a'], { a: ['a'] })).toStrictEqual([]);
     });
 });
 
@@ -149,7 +149,7 @@ describe('missingDependencies', () => {
     });
 
     it('is empty when every dependency is present', () => {
-        expect(missingDependencies(['products'], ALL)).toEqual([]);
+        expect(missingDependencies(['products'], ALL)).toStrictEqual([]);
     });
 
     it('reports nothing for a type the map does not name at all', () => {
@@ -163,7 +163,7 @@ describe('missingDependencies', () => {
         // is not the user's problem yet.
         const pack = ['products', 'attribute_sets', 'categories', 'customer_groups', 'coupons'];
 
-        expect(missingDependencies(['products'], pack)).toEqual([]);
+        expect(missingDependencies(['products'], pack)).toStrictEqual([]);
     });
 
     it('de-duplicates a dependency two selected types share', () => {
@@ -216,8 +216,8 @@ describe('deselectType', () => {
 
         const out = deselectType(after, 'products');
 
-        expect(out.selected).toEqual([]);
-        expect(out.auto).toEqual([]);
+        expect(out.selected).toStrictEqual([]);
+        expect(out.auto).toStrictEqual([]);
     });
 
     it('keeps a dependency the user owned', () => {
@@ -276,7 +276,7 @@ describe('the map itself', () => {
 
         // A renamed or removed type fails here instead of silently doing
         // nothing at runtime. Re-measure LIVE_IMPORT_TYPES if this fires.
-        expect([...named].filter((t) => !LIVE_IMPORT_TYPES.includes(t))).toEqual([]);
+        expect([...named].filter((t) => !LIVE_IMPORT_TYPES.includes(t))).toStrictEqual([]);
     });
 
     it('carries NO inventory edges — bodea disproved them for import', () => {

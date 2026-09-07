@@ -289,7 +289,7 @@ describe('which components are checked', () => {
         ]);
         respond(zipRelease('1.1.0'));
 
-        await expect(manager.checkAllProjectsForUpdates([project])).resolves.toEqual([]);
+        await expect(manager.checkAllProjectsForUpdates([project])).resolves.toStrictEqual([]);
     });
 });
 
@@ -364,7 +364,7 @@ describe('resolving the repository', () => {
     it('a component nothing can resolve is skipped without a fetch', async () => {
         const project = createUpdateManagerProject([component('widget', '1.0.0')]);
 
-        await expect(manager.checkAllProjectsForUpdates([project])).resolves.toEqual([]);
+        await expect(manager.checkAllProjectsForUpdates([project])).resolves.toStrictEqual([]);
 
         expect(mockGetRepositoryInfo).toHaveBeenCalledWith('widget');
         expect(fetchMock).not.toHaveBeenCalled();
@@ -375,7 +375,7 @@ describe('resolving the repository', () => {
             component('widget', '1.0.0', { repoUrl: 'https://gitlab.com/acme/widget' }),
         ]);
 
-        await expect(manager.checkAllProjectsForUpdates([project])).resolves.toEqual([]);
+        await expect(manager.checkAllProjectsForUpdates([project])).resolves.toStrictEqual([]);
 
         expect(fetchMock).not.toHaveBeenCalled();
     });
@@ -386,7 +386,7 @@ describe('resolving the repository', () => {
         ]);
         respond(zipRelease('1.1.0'), 404);
 
-        await expect(manager.checkAllProjectsForUpdates([project])).resolves.toEqual([]);
+        await expect(manager.checkAllProjectsForUpdates([project])).resolves.toStrictEqual([]);
     });
 });
 
@@ -429,7 +429,7 @@ describe('how a release is read', () => {
         ]);
         respond(zipRelease('1.1.0', { zipball_url: '' }));
 
-        await expect(manager.checkAllProjectsForUpdates([project])).resolves.toEqual([]);
+        await expect(manager.checkAllProjectsForUpdates([project])).resolves.toStrictEqual([]);
 
         expect(logger.debug).not.toHaveBeenCalled();
         expect(logger.warn).not.toHaveBeenCalled();

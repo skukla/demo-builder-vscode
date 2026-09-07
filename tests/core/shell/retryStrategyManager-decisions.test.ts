@@ -175,7 +175,7 @@ describe('RetryStrategyManager — decisions', () => {
                 ),
             ).rejects.toThrow('flaky');
 
-            expect(delays()).toEqual([]);
+            expect(delays()).toStrictEqual([]);
         });
     });
 
@@ -213,7 +213,7 @@ describe('RetryStrategyManager — decisions', () => {
             ).rejects.toThrow('nope');
 
             expect(executeFn).toHaveBeenCalledTimes(1);
-            expect(delays()).toEqual([]);
+            expect(delays()).toStrictEqual([]);
         });
     });
 

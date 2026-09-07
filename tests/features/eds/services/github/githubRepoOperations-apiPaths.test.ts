@@ -317,7 +317,7 @@ describe('GitHubRepoOperations — Octokit paths', () => {
             mockRequest.mockResolvedValue({ data: [apiRepo({ permissions: undefined })] });
 
             // When/Then: it is filtered out rather than treated as writable
-            await expect(build().listUserRepositories()).resolves.toEqual([]);
+            await expect(build().listUserRepositories()).resolves.toStrictEqual([]);
         });
 
         it('wraps a listing failure with its cause', async () => {

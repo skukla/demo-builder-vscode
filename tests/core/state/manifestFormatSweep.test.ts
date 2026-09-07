@@ -243,7 +243,7 @@ describe('sweepManifestFormat — the stamp read and the summary line', () => {
 
         await sweepManifestFormat(deps);
 
-        expect(summaryLines(deps.logLines)).toEqual([]);
+        expect(summaryLines(deps.logLines)).toStrictEqual([]);
     });
 
     it('summarises a run that migrated something, with the counts', async () => {

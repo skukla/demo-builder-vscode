@@ -323,7 +323,7 @@ describe('publishBrandAssets policy', () => {
                         { path: 'styles/b.css', installed: false, reason: 'already current' },
                     ],
                 })
-            ).toEqual([]);
+            ).toStrictEqual([]);
         });
     });
 });

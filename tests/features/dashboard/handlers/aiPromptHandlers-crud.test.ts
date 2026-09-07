@@ -130,7 +130,7 @@ describe('aiHandlers — prompt CRUD & scope', () => {
             });
             const result = await handleDeleteAiPrompt(context, { promptId: 'a' });
             expect(result.success).toBe(true);
-            expect(result.aiPrompts).toEqual([]);
+            expect(result.aiPrompts).toStrictEqual([]);
         });
 
         // ── Global-pin-store scope-aware delete ───────────────────────────
@@ -170,8 +170,8 @@ describe('aiHandlers — prompt CRUD & scope', () => {
                 globalPrompts: [{ id: 'dup', title: 'Global copy', prompt: 'g', pinned: true }],
             });
             await handleDeleteAiPrompt(context, { promptId: 'dup' });
-            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
-            expect(project.aiPrompts).toEqual([]);
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toStrictEqual([]);
+            expect(project.aiPrompts).toStrictEqual([]);
         });
 
         it('is a no-op (success, no error) when the prompt id exists in neither store', async () => {
@@ -354,13 +354,13 @@ describe('aiHandlers — prompt CRUD & scope', () => {
                 prompt: { id: 'x', title: 'X', prompt: 'x' },
             });
             expect(project.aiPrompts).toEqual([{ id: 'x', title: 'X', prompt: 'x' }]);
-            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toStrictEqual([]);
 
             // 2. Pin it → migrates to global, removed from project
             await handleSaveAiPrompt(context, {
                 prompt: { id: 'x', title: 'X', prompt: 'x', pinned: true },
             });
-            expect(project.aiPrompts).toEqual([]);
+            expect(project.aiPrompts).toStrictEqual([]);
             expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([
                 { id: 'x', title: 'X', prompt: 'x', pinned: true },
             ]);
@@ -373,15 +373,15 @@ describe('aiHandlers — prompt CRUD & scope', () => {
             await handleSaveAiPrompt(context, {
                 prompt: { id: 'x', title: 'X', prompt: 'x', pinned: false },
             });
-            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toStrictEqual([]);
             expect(project.aiPrompts).toEqual([
                 { id: 'x', title: 'X', prompt: 'x', pinned: false },
             ]);
 
             // 5. Delete → gone from both stores
             await handleDeleteAiPrompt(context, { promptId: 'x' });
-            expect(project.aiPrompts).toEqual([]);
-            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toEqual([]);
+            expect(project.aiPrompts).toStrictEqual([]);
+            expect(memento._store.get('demoBuilder.ai.globalPrompts')).toStrictEqual([]);
         });
     });
 

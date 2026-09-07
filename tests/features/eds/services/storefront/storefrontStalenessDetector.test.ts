@@ -110,7 +110,7 @@ describe('detectStorefrontChanges — ACCS store-config keys', () => {
         const result = detectStorefrontChanges(project, { accs: { ...bodea } });
 
         expect(result.hasChanges).toBe(false);
-        expect(result.changedEnvVars).toEqual([]);
+        expect(result.changedEnvVars).toStrictEqual([]);
     });
 
     it('still flags PaaS code changes (no regression to existing behavior)', () => {

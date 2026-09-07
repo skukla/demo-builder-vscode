@@ -257,7 +257,7 @@ describe('StalenessDetector - Edge Cases', () => {
 
             expect(result.hasChanges).toBe(false);
             expect(result.envVarsChanged).toBe(false);
-            expect(result.changedEnvVars).toEqual([]);
+            expect(result.changedEnvVars).toStrictEqual([]);
         });
 
         it('should detect ACCS env var changes for eds-accs-mesh', async () => {

@@ -52,7 +52,7 @@ describe('buildComponentList — app-builder derivation', () => {
         const list = buildComponentList(stack, project);
 
         const appEntries = list.filter((c) => c.type === 'app-builder');
-        expect(appEntries).toEqual([]);
+        expect(appEntries).toStrictEqual([]);
     });
 
     it('still includes frontend and dependencies unchanged', () => {
@@ -71,7 +71,7 @@ describe('buildComponentList — app-builder derivation', () => {
         const stack = createStack({ frontend: undefined, dependencies: undefined });
         const project = createMockProject({ componentSelections: undefined });
 
-        expect(buildComponentList(stack, project)).toEqual([]);
+        expect(buildComponentList(stack, project)).toStrictEqual([]);
     });
 
     it('produces no app-builder entry when appBuilder selection is empty/absent', () => {
@@ -80,7 +80,7 @@ describe('buildComponentList — app-builder derivation', () => {
 
         const list = buildComponentList(stack, project);
 
-        expect(list.filter((c) => c.type === 'app-builder')).toEqual([]);
+        expect(list.filter((c) => c.type === 'app-builder')).toStrictEqual([]);
     });
 });
 

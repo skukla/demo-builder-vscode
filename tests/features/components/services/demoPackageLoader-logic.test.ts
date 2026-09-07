@@ -136,7 +136,7 @@ describe('demoPackageLoader (logic, injected fixture)', () => {
         });
 
         it('returns an empty array for an unknown package', async () => {
-            expect(await getAvailableStacksForPackage('nope', packages)).toEqual([]);
+            expect(await getAvailableStacksForPackage('nope', packages)).toStrictEqual([]);
         });
     });
 

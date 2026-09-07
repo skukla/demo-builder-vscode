@@ -76,7 +76,7 @@ describe('ApiAccessPicker — the excluded cloud families', () => {
             apis: listWith({ code: 'document_cloud', name: 'Document Cloud' }),
         });
 
-        expect(chipLabels(container)).toEqual([]);
+        expect(chipLabels(container)).toStrictEqual([]);
     });
 
     // The pattern is anchored at BOTH ends on purpose: only the two families
@@ -105,7 +105,7 @@ describe('ApiAccessPicker — the excluded cloud families', () => {
             apis: listWith({ code: 'document_cloud', name: 'Document  Cloud' }),
         });
 
-        expect(chipLabels(container)).toEqual([]);
+        expect(chipLabels(container)).toStrictEqual([]);
     });
 });
 
@@ -143,7 +143,7 @@ describe('ApiAccessPicker — which chips exist at all', () => {
             }),
         });
 
-        expect(chipLabels(container)).toEqual([]);
+        expect(chipLabels(container)).toStrictEqual([]);
     });
 
     it('marks only the active chip', () => {
@@ -175,19 +175,19 @@ describe('ApiAccessPicker — the secondary code text', () => {
     });
 
     it('hides a code that repeats the display name exactly', () => {
-        expect(shownFor('AEMAssets', 'AEMAssets')).toEqual([]);
+        expect(shownFor('AEMAssets', 'AEMAssets')).toStrictEqual([]);
     });
 
     it('hides an empty code', () => {
-        expect(shownFor('Adobe Target', '')).toEqual([]);
+        expect(shownFor('Adobe Target', '')).toStrictEqual([]);
     });
 
     it('hides a code that is really a sentence', () => {
-        expect(shownFor('AEM Assets', 'AEM Assets Author API')).toEqual([]);
+        expect(shownFor('AEM Assets', 'AEM Assets Author API')).toStrictEqual([]);
     });
 
     it('hides a code carrying a GUID', () => {
-        expect(shownFor('Edge Delivery', 'nogw-4011f358-2edb-4b01-acb8-3c84e0cbb299')).toEqual([]);
+        expect(shownFor('Edge Delivery', 'nogw-4011f358-2edb-4b01-acb8-3c84e0cbb299')).toStrictEqual([]);
     });
 
     it('shows a code that only LOOKS like a GUID', () => {
@@ -249,7 +249,7 @@ describe('ApiAccessPicker — search and the empty state', () => {
         search('zzzz');
 
         expect(screen.getByText('No APIs match “zzzz”.')).toBeInTheDocument();
-        expect(listNames(container)).toEqual([]);
+        expect(listNames(container)).toStrictEqual([]);
     });
 
     it('never toggles a locked row', () => {

@@ -88,7 +88,7 @@ describe('useProjectBuilder — addon seeding', () => {
         const s = setup({ selectedPackage: 'no-such-package' });
 
         // No package resolves, so only the stack's defaults remain.
-        expect(selectStack(s, 'headless-paas').selectedAddons).toEqual([]);
+        expect(selectStack(s, 'headless-paas').selectedAddons).toStrictEqual([]);
     });
 });
 
@@ -154,7 +154,7 @@ describe('useProjectBuilder — block-library seeding', () => {
     it('seeds an empty custom list when neither the state nor the settings hold any', () => {
         const s = setup({ selectedPackage: 'citisignal' });
 
-        expect(selectStack(s, 'eds-paas').customBlockLibraries).toEqual([]);
+        expect(selectStack(s, 'eds-paas').customBlockLibraries).toStrictEqual([]);
     });
 
     it('clears both lists for a non-EDS stack', () => {
@@ -164,8 +164,8 @@ describe('useProjectBuilder — block-library seeding', () => {
         );
 
         const update = selectStack(s, 'headless-paas');
-        expect(update.selectedBlockLibraries).toEqual([]);
-        expect(update.customBlockLibraries).toEqual([]);
+        expect(update.selectedBlockLibraries).toStrictEqual([]);
+        expect(update.customBlockLibraries).toStrictEqual([]);
     });
 });
 
@@ -184,9 +184,9 @@ describe('useProjectBuilder — a stack id the catalog does not have', () => {
         // The old stack's mesh is stripped and no new one can be seeded, because
         // the unknown stack declares no optional dependencies.
         expect(update.selectedAppBuilderComponents).toEqual(['acme-widget']);
-        expect(update.selectedAddons).toEqual([]);
+        expect(update.selectedAddons).toStrictEqual([]);
         expect(update.edsConfig).toBeUndefined();
-        expect(update.customBlockLibraries).toEqual([]);
+        expect(update.customBlockLibraries).toStrictEqual([]);
     });
 });
 

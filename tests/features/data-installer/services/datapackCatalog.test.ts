@@ -99,7 +99,7 @@ describe('datapackCatalog', () => {
         });
 
         it('returns an empty list for an empty catalog rather than throwing', () => {
-            expect(groupDatapacks([])).toEqual([]);
+            expect(groupDatapacks([])).toStrictEqual([]);
         });
 
         it('preserves first-seen order of names, so the API\'s sort survives', () => {

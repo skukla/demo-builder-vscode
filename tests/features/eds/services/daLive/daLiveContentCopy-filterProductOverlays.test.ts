@@ -33,7 +33,7 @@ describe('filterProductOverlays', () => {
     it('should filter /products/overlay-page paths', () => {
         const paths = ['/products/overlay-page', '/products/another-overlay'];
         const result = filterProductOverlays(paths);
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('should keep non-product paths unchanged', () => {
@@ -45,7 +45,7 @@ describe('filterProductOverlays', () => {
     it('should handle empty paths array', () => {
         const paths: string[] = [];
         const result = filterProductOverlays(paths);
-        expect(result).toEqual([]);
+        expect(result).toStrictEqual([]);
     });
 
     it('should handle mixed content with both product default and overlays', () => {

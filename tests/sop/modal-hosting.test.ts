@@ -83,7 +83,7 @@ describe('SOP: Modal hosting', () => {
             .filter(({ name }) => !HOSTED_BY_PARENT[name])
             .map(({ file }) => path.relative(SRC, file));
 
-        expect(unhosted).toEqual([]);
+        expect(unhosted).toStrictEqual([]);
     });
 
     describe('the allowlist stays true', () => {
@@ -107,7 +107,7 @@ describe('SOP: Modal hosting', () => {
                 }
             }
 
-            expect(broken).toEqual([]);
+            expect(broken).toStrictEqual([]);
         });
 
         it('lists nothing that now hosts itself', () => {
@@ -118,7 +118,7 @@ describe('SOP: Modal hosting', () => {
                 .filter(({ source }) => HOSTS.test(source))
                 .map(({ name }) => name);
 
-            expect(stale).toEqual([]);
+            expect(stale).toStrictEqual([]);
         });
     });
 });

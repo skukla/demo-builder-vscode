@@ -95,7 +95,7 @@ describe('detectPerNodeVariantStatus', () => {
         await handleCheckPrerequisites(context);
 
         const result = payloadsOfType(context, 'prerequisite-status')[1] as Record<string, unknown>;
-        expect(result.nodeVersionStatus).toEqual([]);
+        expect(result.nodeVersionStatus).toStrictEqual([]);
         expect(result.installed).toBe(false);
         expect(result.message).toBe('Adobe I/O CLI is not installed');
     });

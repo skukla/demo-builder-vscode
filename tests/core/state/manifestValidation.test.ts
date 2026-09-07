@@ -46,17 +46,17 @@ describe('validateManifestShape', () => {
                 selectedStack: 'eds-paas',
                 componentConfigs: { 'eds-storefront': { SOME_VAR: 'x' } },
             })
-        ).toEqual([]);
+        ).toStrictEqual([]);
     });
 
     it('returns no issues for an EMPTY manifest — every field is optional', () => {
-        expect(validateManifestShape({})).toEqual([]);
+        expect(validateManifestShape({})).toStrictEqual([]);
     });
 
     it('tolerates unknown fields — manifests cross versions in both directions', () => {
         expect(
             validateManifestShape({ name: 'demo', fieldFromAFutureVersion: { anything: true } })
-        ).toEqual([]);
+        ).toStrictEqual([]);
     });
 
     it('reports a wrong-typed known field as ONE issue: its path and Ajv\'s message', () => {
@@ -90,7 +90,7 @@ describe('validateManifestShape', () => {
                 ],
             },
         });
-        expect(issues).toEqual([]);
+        expect(issues).toStrictEqual([]);
     });
 
     it('reports nested drift inside a known structure', () => {

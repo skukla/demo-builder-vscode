@@ -60,7 +60,7 @@ describe('Prerequisites Handlers - getNodeVersionMapping', () => {
 
         const result = await getNodeVersionMapping(context);
 
-        expect(result).toEqual({});
+        expect(result).toStrictEqual({});
         expect(mockGetNodeVersionToComponentMapping).not.toHaveBeenCalled();
     });
 
@@ -77,7 +77,7 @@ describe('Prerequisites Handlers - getNodeVersionMapping', () => {
 
         const result = await getNodeVersionMapping(context);
 
-        expect(result).toEqual({});
+        expect(result).toStrictEqual({});
         expect(context.logger.warn).toHaveBeenCalledWith(
             'Failed to get Node version mapping:',
             error
@@ -185,7 +185,7 @@ describe('Prerequisites Handlers - getNodeVersionIdMapping', () => {
     it('is empty without a selection, and the registry is not asked', async () => {
         const context = createPrereqHandlerContext();
 
-        expect(await getNodeVersionIdMapping(context)).toEqual({});
+        expect(await getNodeVersionIdMapping(context)).toStrictEqual({});
         expect(mockGetNodeVersionToComponentIdMapping).not.toHaveBeenCalled();
         // Having no selection yet is a normal state, not a degraded one: the empty
         // result must come from the early return, never from the catch. Both look
@@ -202,7 +202,7 @@ describe('Prerequisites Handlers - getNodeVersionIdMapping', () => {
             },
         });
 
-        expect(await getNodeVersionIdMapping(context)).toEqual({});
+        expect(await getNodeVersionIdMapping(context)).toStrictEqual({});
         expect(context.logger.warn).toHaveBeenCalledTimes(1);
     });
 });

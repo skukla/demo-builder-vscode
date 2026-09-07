@@ -154,7 +154,7 @@ describe('DaLiveConfigOperations.applySiteConfig', () => {
 
             await ops().applySiteConfig('org', 'site', { 'editor.path': '/new' }, ['editor.path']);
 
-            expect(postedRows()).toEqual([]);
+            expect(postedRows()).toStrictEqual([]);
         });
 
         it('reports nothing removed when the write failed', async () => {
@@ -175,7 +175,7 @@ describe('DaLiveConfigOperations.applySiteConfig', () => {
             const result = await ops().applySiteConfig('org', 'site', {}, ['editor.path']);
 
             expect(result.success).toBe(false);
-            expect(result.removed).toEqual([]);
+            expect(result.removed).toStrictEqual([]);
         });
     });
 

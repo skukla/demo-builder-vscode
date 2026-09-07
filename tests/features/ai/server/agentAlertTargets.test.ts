@@ -108,7 +108,7 @@ describe('consent targets name real arguments', () => {
             }
         }
 
-        expect(bogus).toEqual([]);
+        expect(bogus).toStrictEqual([]);
     });
 
     it('never shows a credential-shaped key', () => {
@@ -119,7 +119,7 @@ describe('consent targets name real arguments', () => {
             .flatMap(([tool, copy]) => copy.target.map((k) => `${tool}: ${k}`))
             .filter((s) => /token|secret|password|credential|apikey|api_key/i.test(s));
 
-        expect(secrets).toEqual([]);
+        expect(secrets).toStrictEqual([]);
     });
 
     it('gives every entry a target decision, even when that decision is "the open project"', () => {
@@ -128,6 +128,6 @@ describe('consent targets name real arguments', () => {
         // an empty array is a real answer rather than an unfinished one.
         const missing = entries.filter(([, copy]) => !Array.isArray(copy.target));
 
-        expect(missing).toEqual([]);
+        expect(missing).toStrictEqual([]);
     });
 });

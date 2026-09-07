@@ -386,7 +386,7 @@ describe('promiseUtils', () => {
 
         it('should return empty array for empty input', async () => {
             const results = await runInBatches([], 5, async (x: number) => x);
-            expect(results).toEqual([]);
+            expect(results).toStrictEqual([]);
         });
 
         it('should handle batch size larger than items', async () => {

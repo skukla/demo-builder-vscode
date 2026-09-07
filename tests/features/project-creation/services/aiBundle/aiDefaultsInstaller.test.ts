@@ -245,7 +245,7 @@ describe('applicableMcpPackages', () => {
     });
 
     it('returns nothing for a bare project', () => {
-        expect(applicableMcpPackages(BARE_PROJECT)).toEqual([]);
+        expect(applicableMcpPackages(BARE_PROJECT)).toStrictEqual([]);
     });
 
     it('agrees with what the installer would install (the two must not drift)', async () => {
@@ -344,12 +344,12 @@ describe('readInstalledMcpPackages', () => {
     });
 
     it('reads as [] when the manifest is absent (nothing installed — can only cause a warning, never mask one)', async () => {
-        await expect(readInstalledMcpPackages(PROJECT_PATH)).resolves.toEqual([]);
+        await expect(readInstalledMcpPackages(PROJECT_PATH)).resolves.toStrictEqual([]);
     });
 
     it('reads as [] when the manifest is unparseable', async () => {
         (fsPromises.readFile as jest.Mock).mockResolvedValueOnce('not json');
-        await expect(readInstalledMcpPackages(PROJECT_PATH)).resolves.toEqual([]);
+        await expect(readInstalledMcpPackages(PROJECT_PATH)).resolves.toStrictEqual([]);
     });
 });
 

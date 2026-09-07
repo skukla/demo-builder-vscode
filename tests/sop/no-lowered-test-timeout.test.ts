@@ -145,7 +145,7 @@ describe('SOP: no per-test timeout below the file budget', () => {
             }
         }
 
-        expect(violations).toEqual([]);
+        expect(violations).toStrictEqual([]);
     });
 
     it('CONTROL: scans a corpus big enough to be worth scanning', () => {
@@ -179,7 +179,7 @@ describe('SOP: no per-test timeout below the file budget', () => {
             '        });',
         ];
 
-        expect(findPerTestTimeouts(callback)).toEqual([]);
+        expect(findPerTestTimeouts(callback)).toStrictEqual([]);
     });
 
     it('reads a budget from code but not from prose', () => {
@@ -214,6 +214,6 @@ describe('SOP: no per-test timeout below the file budget', () => {
         ]);
 
         expect(hits).toEqual([{ line: 3, value: 60000 }]);
-        expect(hits.filter((h) => h.value < 30_000)).toEqual([]);
+        expect(hits.filter((h) => h.value < 30_000)).toStrictEqual([]);
     });
 });

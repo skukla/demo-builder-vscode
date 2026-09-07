@@ -329,7 +329,7 @@ describe('the rest of what the webview opens with', () => {
     });
 
     it('sends an empty name list when there are no projects yet', async () => {
-        expect((await dataWithProjects([])).existingProjectNames).toEqual([]);
+        expect((await dataWithProjects([])).existingProjectNames).toStrictEqual([]);
     });
 
     it('sends the dark theme when VS Code is in a dark colour scheme', async () => {
@@ -365,8 +365,8 @@ describe('the rest of what the webview opens with', () => {
     it('sends the block-library settings, empty when neither has been set', async () => {
         const data = await internals(build()).getInitialData();
 
-        expect(data.blockLibraryDefaults).toEqual([]);
-        expect(data.customBlockLibraryDefaults).toEqual([]);
+        expect(data.blockLibraryDefaults).toStrictEqual([]);
+        expect(data.customBlockLibraryDefaults).toStrictEqual([]);
         expect(data.projectsViewMode).toBe('cards');
     });
 

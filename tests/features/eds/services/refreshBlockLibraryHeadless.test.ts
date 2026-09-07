@@ -122,7 +122,7 @@ describe('refreshBlockLibraryHeadless', () => {
         expect(params.includeBlockLibrary).toBe(true);
         expect(params.skipContent).toBe(true);
         expect(params.skipPublish).toBe(false);
-        expect(params.blockCollectionIds).toEqual([]);
+        expect(params.blockCollectionIds).toStrictEqual([]);
 
         expect(result).toEqual({
             success: true,

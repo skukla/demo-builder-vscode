@@ -75,7 +75,7 @@ describe('spine choke-points', () => {
         expect(hits).toEqual(expect.arrayContaining(spine));
 
         const strays = hits.filter((f) => !spine.includes(f));
-        expect(strays).toEqual([]);
+        expect(strays).toStrictEqual([]);
         // Verified 2026-08-22: six entry points (wizard creation, dashboard
         // deploy command, webview/MCP deploy-api-mesh, integrations runner,
         // EDS reset, non-EDS reset) all converge on deployMeshComponent here.
@@ -96,7 +96,7 @@ describe('spine choke-points', () => {
         const hits = filesTouchingPrimitive(primitive);
 
         expect(hits).toEqual(expect.arrayContaining(spine));
-        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+        expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
     it('app-builder UNDEPLOY: the aio app undeploy primitive lives only in the runner', () => {
@@ -112,7 +112,7 @@ describe('spine choke-points', () => {
         const hits = filesTouchingPrimitive(primitive);
 
         expect(hits).toEqual(expect.arrayContaining(spine));
-        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+        expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
     it('app-management INSTALL: the reconcile POST lives only in the installer', () => {
@@ -128,7 +128,7 @@ describe('spine choke-points', () => {
         );
 
         expect(hits).toEqual(expect.arrayContaining(spine));
-        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+        expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
     it('app-management UNINSTALL: the uninstall POST lives only in the uninstaller', () => {
@@ -144,7 +144,7 @@ describe('spine choke-points', () => {
         );
 
         expect(hits).toEqual(expect.arrayContaining(spine));
-        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+        expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
     it('agent CONSENT: the chat-elicitation ask has ONE caller, the server call wrapper', () => {
@@ -161,7 +161,7 @@ describe('spine choke-points', () => {
         );
 
         expect(hits).toEqual(expect.arrayContaining(spine));
-        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+        expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
     it('mesh DELETE: the destructive command has ONE spelling, in meshDeleteCommand', () => {
@@ -176,7 +176,7 @@ describe('spine choke-points', () => {
         const hits = filesTouchingPrimitive(primitive);
 
         expect(hits).toEqual(expect.arrayContaining(spine));
-        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+        expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
     it('adobe SIGN-IN/OUT: aio auth login/logout run only in authenticationService', () => {
@@ -192,7 +192,7 @@ describe('spine choke-points', () => {
         const hits = filesTouchingPrimitive(primitive);
 
         expect(hits).toEqual(expect.arrayContaining(spine));
-        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+        expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
     it('manifest WRITE: only the config writer and the MCP agent door write .demo-builder.json', () => {
@@ -221,7 +221,7 @@ describe('spine choke-points', () => {
         const hits = filesTouchingBoth(namesManifest, writes);
 
         expect(hits).toEqual(expect.arrayContaining(spine));
-        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+        expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
     it('VS Code SETTINGS writes: never from MCP/AI tool code, only the two command sites', () => {
@@ -251,7 +251,7 @@ describe('spine choke-points', () => {
 
         expect(hits).toEqual(expect.arrayContaining(spine));
         const strays = hits.filter((f) => !spine.includes(f));
-        expect(strays).toEqual([]);
+        expect(strays).toStrictEqual([]);
     });
 
     it('SECRET storage mutations: each secret family has ONE owner module', () => {
@@ -271,7 +271,7 @@ describe('spine choke-points', () => {
         const hits = filesTouchingPrimitive(primitive);
 
         expect(hits).toEqual(expect.arrayContaining(spine));
-        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+        expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
     it('helix URLS + HOST: one engine — every partition URL and the host live in helixApiClient', () => {
@@ -296,7 +296,7 @@ describe('spine choke-points', () => {
         const spine = ['features/eds/services/helix/helixApiClient.ts'];
 
         expect(filesTouchingPrimitive(genericTemplate)).toEqual(spine);
-        expect(filesTouchingPrimitive(verbLiteral)).toEqual([]);
+        expect(filesTouchingPrimitive(verbLiteral)).toStrictEqual([]);
         expect(filesTouchingPrimitive(hostLiteral)).toEqual(spine);
     });
 
@@ -315,7 +315,7 @@ describe('spine choke-points', () => {
         const hits = filesTouchingPrimitive(primitive);
 
         expect(hits).toEqual(expect.arrayContaining(spine));
-        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+        expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
     it('config-service PATHS: /config/{org}/… builders live in the three role owners', () => {
@@ -336,7 +336,7 @@ describe('spine choke-points', () => {
         const hits = filesTouchingPrimitive(primitive);
 
         expect(hits).toEqual(expect.arrayContaining(spine));
-        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+        expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
     it('github MUTATIONS: repo/content writes go through the two eds owners only', () => {
@@ -357,7 +357,7 @@ describe('spine choke-points', () => {
         const hits = filesTouchingPrimitive(primitive);
 
         expect(hits).toEqual(expect.arrayContaining(spine));
-        expect(hits.filter((f) => !spine.includes(f))).toEqual([]);
+        expect(hits.filter((f) => !spine.includes(f))).toStrictEqual([]);
     });
 
     it('demo LIFECYCLE: one terminal factory, two process-kill owners', () => {
@@ -376,6 +376,6 @@ describe('spine choke-points', () => {
         const killSpine = ['core/shell/commandExecutor.ts', 'core/shell/processCleanup.ts'];
         const killHits = filesTouchingPrimitive(killPrimitive);
         expect(killHits).toEqual(expect.arrayContaining(killSpine));
-        expect(killHits.filter((f) => !killSpine.includes(f))).toEqual([]);
+        expect(killHits.filter((f) => !killSpine.includes(f))).toStrictEqual([]);
     });
 });

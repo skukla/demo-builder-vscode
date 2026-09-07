@@ -112,7 +112,7 @@ describe('RepoSelectionInline — choosing an existing repository', () => {
             );
 
             expect(await screen.findByText(/GitHub authentication required/i)).toBeInTheDocument();
-            expect(h.requestsOf('get-github-repos')).toEqual([]);
+            expect(h.requestsOf('get-github-repos')).toStrictEqual([]);
             expect(mockPostMessage.mock.calls.some((c) => c[0] === 'get-github-repos')).toBe(
                 false
             );

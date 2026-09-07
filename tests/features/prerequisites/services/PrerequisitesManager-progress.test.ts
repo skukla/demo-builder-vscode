@@ -93,7 +93,7 @@ describe('PrerequisitesManager - Progress Tracking', () => {
         it('should handle empty array', () => {
             const result = manager.resolveDependencies([]);
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
         });
 
         it('should handle prerequisites without dependencies', () => {

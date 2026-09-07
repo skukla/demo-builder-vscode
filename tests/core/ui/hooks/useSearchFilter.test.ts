@@ -165,7 +165,7 @@ describe('useSearchFilter', () => {
                 result.current.setQuery('test');
             });
 
-            expect(result.current.filteredItems).toEqual([]);
+            expect(result.current.filteredItems).toStrictEqual([]);
         });
 
         it('handles null field values', () => {

@@ -459,7 +459,7 @@ describe('installBlockCollections (single library)', () => {
             expect(result.success).toBe(false);
             expect(result.error).toBe('API rate limit');
             expect(result.blocksCount).toBe(0);
-            expect(result.blockIds).toEqual([]);
+            expect(result.blockIds).toStrictEqual([]);
         });
 
         it('should return error result on commit failure', async () => {

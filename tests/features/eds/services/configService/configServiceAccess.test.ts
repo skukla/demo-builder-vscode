@@ -72,7 +72,7 @@ describe('readOrgAdmins', () => {
 
         const result = await readOrgAdmins(tokenProvider, 'skukla', logger);
 
-        expect(result.admins).toEqual([]);
+        expect(result.admins).toStrictEqual([]);
     });
 });
 
@@ -94,7 +94,7 @@ describe('readSiteAccess', () => {
         const result = await readSiteAccess(tokenProvider, 'skukla', 'bodea-source', logger);
 
         expect(result.status).toBe('ok');
-        expect(result.roles).toEqual({});
+        expect(result.roles).toStrictEqual({});
     });
 });
 
@@ -441,7 +441,7 @@ describe('readSiteAccess — absent vs empty role map (silent-clobber guard)', (
 
         const result = await readSiteAccess(tokenProvider, 'skukla', 'bodea-source', logger);
 
-        expect(result.roles).toEqual({});
+        expect(result.roles).toStrictEqual({});
     });
 
     it('ensureSiteAdmin REFUSES to write when the role key is absent', async () => {
@@ -494,7 +494,7 @@ describe('a site with no access doc yet (404)', () => {
         const result = await readSiteAccess(tokenProvider, 'skukla', 'fresh-site', logger);
 
         expect(result.status).toBe('ok');
-        expect(result.roles).toEqual({});
+        expect(result.roles).toStrictEqual({});
     });
 
     it('lets ensureSiteAdmin SEED the role — writing cannot clobber what does not exist', async () => {

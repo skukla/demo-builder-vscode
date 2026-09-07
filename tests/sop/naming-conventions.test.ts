@@ -85,7 +85,7 @@ describe('the naming rules that survive measurement', () => {
             .filter((f) => !(rel(f) in COMPONENT_NAME_EXEMPTIONS))
             .filter((f) => !declaredNames(f).has(path.basename(f, '.tsx')))
             .map(rel);
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 
     it('every exemption still applies, and states a reason', () => {
@@ -122,6 +122,6 @@ describe('the naming rules that survive measurement', () => {
                 if (!/^[A-Z][A-Z0-9_]*$/.test(name)) offenders.push(`${rel(f)}  ${name}`);
             }
         }
-        expect(offenders).toEqual([]);
+        expect(offenders).toStrictEqual([]);
     });
 });

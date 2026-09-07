@@ -208,7 +208,7 @@ describe('executeEdsPipeline - operations', () => {
             );
 
             expect(result.success).toBe(true);
-            expect(result.libraryPaths).toEqual([]);
+            expect(result.libraryPaths).toStrictEqual([]);
             expect(mockDaLiveContentOps.createBlockLibraryFromTemplate).not.toHaveBeenCalled();
         });
 

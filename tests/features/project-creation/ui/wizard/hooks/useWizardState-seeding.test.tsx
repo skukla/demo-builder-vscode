@@ -226,7 +226,7 @@ describe('mode, name and selections', () => {
         expect(state.wizardMode).toBe('create');
         expect(state.projectName).toBe('');
         expect(state.adobeAuth).toEqual({ isAuthenticated: false, isChecking: false });
-        expect(state.componentConfigs).toEqual({});
+        expect(state.componentConfigs).toStrictEqual({});
     });
 
     it('opens in import mode and takes the source project name', () => {
@@ -361,7 +361,7 @@ describe('mode, name and selections', () => {
     });
 
     it('starts componentConfigs empty for an edit project that stored none', () => {
-        expect(stateFor({ editProject: editProjectWith({}) }).componentConfigs).toEqual({});
+        expect(stateFor({ editProject: editProjectWith({}) }).componentConfigs).toStrictEqual({});
     });
 
     it('falls back to the flat API list when the keyed picks object is present but empty', () => {

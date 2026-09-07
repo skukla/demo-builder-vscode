@@ -259,7 +259,7 @@ describe('installBlockCollections', () => {
 
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(0);
-            expect(result.blockIds).toEqual([]);
+            expect(result.blockIds).toStrictEqual([]);
             expect(mockGithubFileOps.listRepoFiles).not.toHaveBeenCalled();
             expect(mockGithubFileOps.createCommit).not.toHaveBeenCalled();
         });
@@ -283,7 +283,7 @@ describe('installBlockCollections', () => {
 
             expect(result.success).toBe(false);
             expect(result.blocksCount).toBe(0);
-            expect(result.blockIds).toEqual([]);
+            expect(result.blockIds).toStrictEqual([]);
         });
 
         it('should work correctly with a single library (backward compatible behavior)', async () => {
@@ -409,7 +409,7 @@ describe('installBlockCollections', () => {
             );
 
             expect(result.success).toBe(true);
-            expect(result.libraryVersions ?? []).toEqual([]);
+            expect(result.libraryVersions ?? []).toStrictEqual([]);
         });
     });
 });

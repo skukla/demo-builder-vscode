@@ -104,7 +104,7 @@ describe('SOP: Magic Timeout Constants', () => {
 
             const violations = findMagicTimeouts(filePath);
 
-            expect(violations).toEqual([]);
+            expect(violations).toStrictEqual([]);
         });
 
         it('should not have magic timeout numbers in core UI components', () => {
@@ -121,7 +121,7 @@ describe('SOP: Magic Timeout Constants', () => {
                 }
             }
 
-            expect(allViolations).toEqual([]);
+            expect(allViolations).toStrictEqual([]);
         });
     });
 });

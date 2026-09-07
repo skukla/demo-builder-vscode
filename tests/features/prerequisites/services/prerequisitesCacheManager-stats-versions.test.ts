@@ -163,7 +163,7 @@ describe('PrerequisitesCacheManager - Statistics & Versions', () => {
         it('should return empty array when no results cached', () => {
             const results = cacheManager.getPerVersionResults('nonexistent');
 
-            expect(results).toEqual([]);
+            expect(results).toStrictEqual([]);
         });
 
         it('should return results with major field', () => {

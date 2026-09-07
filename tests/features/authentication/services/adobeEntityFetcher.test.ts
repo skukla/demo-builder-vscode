@@ -253,7 +253,7 @@ describe('AdobeEntityFetcher', () => {
 
             const result = await fetcher.getOrganizationsSdkOnly();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
             expect(mockCacheManager.setCachedOrgList).not.toHaveBeenCalled();
         });
@@ -311,7 +311,7 @@ describe('AdobeEntityFetcher', () => {
 
             const result = await fetcher.getProjectsSdkOnly();
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
 
@@ -328,7 +328,7 @@ describe('AdobeEntityFetcher', () => {
 
             const result = await fetcher.getWorkspacesSdkOnly({ projectId: 'proj1' });
 
-            expect(result).toEqual([]);
+            expect(result).toStrictEqual([]);
             expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
 

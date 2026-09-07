@@ -64,7 +64,7 @@ describe('every tool has an authored phrase', () => {
     it('leaves no tool wordless', () => {
         const wordless = names.filter((n) => !narrationFor(n));
 
-        expect(wordless).toEqual([]);
+        expect(wordless).toStrictEqual([]);
     });
 
     it('carries no phrase for a tool that no longer exists', () => {
@@ -72,7 +72,7 @@ describe('every tool has an authored phrase', () => {
         // dead text that reads as coverage.
         const orphans = Object.keys(TOOL_NARRATION).filter((n) => !names.includes(n));
 
-        expect(orphans).toEqual([]);
+        expect(orphans).toStrictEqual([]);
     });
 });
 
@@ -88,7 +88,7 @@ describe('the phrases read as English, not as schema', () => {
             .filter(([, phrase]) => !/^[A-Z][a-z]+ing\b/.test(phrase))
             .map(([tool, phrase]) => `${tool}: ${phrase}`);
 
-        expect(notProgressive).toEqual([]);
+        expect(notProgressive).toStrictEqual([]);
     });
 
     it('never leaks a schema word into prose', () => {
@@ -99,7 +99,7 @@ describe('the phrases read as English, not as schema', () => {
             .filter(([tool, phrase]) => phrase.includes('_') || phrase.includes(tool))
             .map(([tool, phrase]) => `${tool}: ${phrase}`);
 
-        expect(leaks).toEqual([]);
+        expect(leaks).toStrictEqual([]);
     });
 
     it('names an object rather than trailing off', () => {
@@ -109,7 +109,7 @@ describe('the phrases read as English, not as schema', () => {
             .filter(([, phrase]) => phrase.trim().split(/\s+/).length < 2)
             .map(([tool, phrase]) => `${tool}: ${phrase}`);
 
-        expect(tooShort).toEqual([]);
+        expect(tooShort).toStrictEqual([]);
     });
 
     it('checks a non-empty table', () => {

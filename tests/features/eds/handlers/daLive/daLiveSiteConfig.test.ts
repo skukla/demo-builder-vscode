@@ -329,7 +329,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
             );
 
             const [, , updates, removeKeys] = mockApplySiteConfig.mock.calls[0];
-            expect(updates).toEqual({});
+            expect(updates).toStrictEqual({});
             expect([...removeKeys].sort()).toEqual(['aem.repositoryId', 'editor.path']);
         });
     });
@@ -418,7 +418,7 @@ describe('applyDaLiveOrgConfigSettings — config scope routing', () => {
         const [org, site, updates, removeKeys] = mockApplySiteConfig.mock.calls[0];
         expect(org).toBe(DA_LIVE_ORG);
         expect(site).toBe(DA_LIVE_SITE);
-        expect(updates).toEqual({});
+        expect(updates).toStrictEqual({});
         // Neither setting has a value here, so BOTH rows are cleared.
         expect([...removeKeys].sort()).toEqual(['aem.repositoryId', 'editor.path']);
         expect(mockApplyOrgConfig).not.toHaveBeenCalled();

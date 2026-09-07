@@ -67,7 +67,7 @@ describe('buildApiAccessCatalog', () => {
     });
 
     it('hides a disabled row that reports no reasons at all', () => {
-        expect(buildApiAccessCatalog([svc({ code: 'Silent', enabled: false })])).toEqual([]);
+        expect(buildApiAccessCatalog([svc({ code: 'Silent', enabled: false })])).toStrictEqual([]);
     });
 
     it('hides deprecated / unsupported / exception disabled rows', () => {
@@ -76,7 +76,7 @@ describe('buildApiAccessCatalog', () => {
             svc({ code: 'Unsupported', enabled: false, disabledReasons: ['UNSUPPORTED_ORG_TYPE'] }),
             svc({ code: 'Broken', enabled: false, disabledReasons: ['EXCEPTION'] }),
         ]);
-        expect(rows).toEqual([]);
+        expect(rows).toStrictEqual([]);
     });
 
     it('dedupes by code, preferring the enabled variant over a disabled duplicate', () => {

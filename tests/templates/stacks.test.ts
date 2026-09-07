@@ -59,7 +59,7 @@ describe('stacks.json', () => {
             // Headless stacks have headless-commerce-mesh as optional dependency
             expect(optDeps).toContain('headless-commerce-mesh');
             // dependencies should be empty (mesh moved to optionalDependencies)
-            expect(headless?.dependencies).toEqual([]);
+            expect(headless?.dependencies).toStrictEqual([]);
         });
 
         it('should have features array', () => {
@@ -98,7 +98,7 @@ describe('stacks.json', () => {
             // EDS ACCS stacks have eds-accs-mesh as optional dependency
             expect(optDeps).toContain('eds-accs-mesh');
             // dependencies should be empty (mesh moved to optionalDependencies)
-            expect(eds?.dependencies).toEqual([]);
+            expect(eds?.dependencies).toStrictEqual([]);
         });
 
         it('should require GitHub OAuth', () => {

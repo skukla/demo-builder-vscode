@@ -140,7 +140,7 @@ describe('mesh staleness resolves the store scope from the backend', () => {
             meshDeps,
         );
 
-        expect(result.changedEnvVars).toEqual([]);
+        expect(result.changedEnvVars).toStrictEqual([]);
         expect(result.hasChanges).toBe(false);
     });
 
@@ -273,7 +273,7 @@ describe('mesh staleness agrees with the .env generator on non-scope keys', () =
             meshDeps,
         );
 
-        expect(result.changedEnvVars).toEqual([]);
+        expect(result.changedEnvVars).toStrictEqual([]);
         expect(result.hasChanges).toBe(false);
     });
 
@@ -291,7 +291,7 @@ describe('mesh staleness agrees with the .env generator on non-scope keys', () =
             meshDeps,
         );
 
-        expect(result.changedEnvVars).toEqual([]);
+        expect(result.changedEnvVars).toStrictEqual([]);
     });
 
     it('still resolves the store SCOPE from the backend, whatever the order', async () => {

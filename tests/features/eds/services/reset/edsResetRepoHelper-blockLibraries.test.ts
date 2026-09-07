@@ -164,7 +164,7 @@ describe('resetRepoToTemplate — block library reinstall', () => {
         );
         expect(report).toHaveBeenCalledWith(3, 'Installing inspector tagging...');
         expect(result.blockCollectionIds).toBeUndefined();
-        expect(result.libraryContentSources).toEqual([]);
+        expect(result.libraryContentSources).toStrictEqual([]);
     });
 
     it('installs nothing when the project selects no libraries and no inspector entries exist', async () => {
@@ -188,7 +188,7 @@ describe('resetRepoToTemplate — block library reinstall', () => {
 
         await runReset(params);
 
-        expect(mocks.installBlockCollections.mock.calls[0][5]).toEqual([]);
+        expect(mocks.installBlockCollections.mock.calls[0][5]).toStrictEqual([]);
         expect(mocks.installInspectorTagging).not.toHaveBeenCalled();
     });
 });

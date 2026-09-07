@@ -109,9 +109,7 @@ describe('resolveRequiredMajors', () => {
     });
 
     it('a component nothing in the stack uses yields no majors, not all of them', () => {
-        expect(resolveRequiredMajors({ requiredFor: ['unknown'] }, nameMapping, idMapping)).toEqual(
-            []
-        );
+        expect(resolveRequiredMajors({ requiredFor: ['unknown'] }, nameMapping, idMapping)).toStrictEqual([]);
     });
 });
 

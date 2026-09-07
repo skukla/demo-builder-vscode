@@ -18,10 +18,10 @@ import type { AppBuilderComponentEnvVar } from '@/types/appBuilderComponents';
 describe('classifyEnvSchema', () => {
     it('returns the four buckets, all empty, for an empty schema (Edge)', () => {
         const result = classifyEnvSchema([]);
-        expect(result.autoProvisioned).toEqual([]);
-        expect(result.autoWired).toEqual([]);
-        expect(result.userText).toEqual([]);
-        expect(result.userSecret).toEqual([]);
+        expect(result.autoProvisioned).toStrictEqual([]);
+        expect(result.autoWired).toStrictEqual([]);
+        expect(result.userText).toStrictEqual([]);
+        expect(result.userSecret).toStrictEqual([]);
     });
 
     it('classifies a providedBy var as autoWired (never asked)', () => {
@@ -35,9 +35,9 @@ describe('classifyEnvSchema', () => {
         ];
         const result = classifyEnvSchema(schema);
         expect(result.autoWired.map((v) => v.name)).toEqual(['MESH_ENDPOINT']);
-        expect(result.autoProvisioned).toEqual([]);
-        expect(result.userText).toEqual([]);
-        expect(result.userSecret).toEqual([]);
+        expect(result.autoProvisioned).toStrictEqual([]);
+        expect(result.userText).toStrictEqual([]);
+        expect(result.userSecret).toStrictEqual([]);
     });
 
     it('carries the provider id on the autoWired var for the "connected" UI', () => {
@@ -64,9 +64,9 @@ describe('classifyEnvSchema', () => {
         ];
         const result = classifyEnvSchema(schema);
         expect(result.autoProvisioned.map((v) => v.name)).toEqual(['COMMERCE_ENDPOINT']);
-        expect(result.userText).toEqual([]);
-        expect(result.userSecret).toEqual([]);
-        expect(result.autoWired).toEqual([]);
+        expect(result.userText).toStrictEqual([]);
+        expect(result.userSecret).toStrictEqual([]);
+        expect(result.autoWired).toStrictEqual([]);
     });
 
     it('classifies a plain text var (no providedBy/derivedFrom) as userText', () => {
@@ -75,7 +75,7 @@ describe('classifyEnvSchema', () => {
         ];
         const result = classifyEnvSchema(schema);
         expect(result.userText.map((v) => v.name)).toEqual(['ERP_HOST']);
-        expect(result.userSecret).toEqual([]);
+        expect(result.userSecret).toStrictEqual([]);
     });
 
     it('classifies a plain secret var (no providedBy/derivedFrom) as userSecret', () => {
@@ -84,7 +84,7 @@ describe('classifyEnvSchema', () => {
         ];
         const result = classifyEnvSchema(schema);
         expect(result.userSecret.map((v) => v.name)).toEqual(['ERP_API_KEY']);
-        expect(result.userText).toEqual([]);
+        expect(result.userText).toStrictEqual([]);
     });
 
     it('classifies a mixed schema into the correct buckets', () => {
@@ -122,7 +122,7 @@ describe('classifyEnvSchema', () => {
         ];
         const result = classifyEnvSchema(schema);
         expect(result.autoWired.map((v) => v.name)).toEqual(['SHARED_SECRET']);
-        expect(result.userSecret).toEqual([]);
+        expect(result.userSecret).toStrictEqual([]);
     });
 
     describe('seed-mesh "zero user input" case', () => {
@@ -136,8 +136,8 @@ describe('classifyEnvSchema', () => {
                 // the accessor that used to wrap this was deleted 2026-08-23
                 // (zero production callers; this test was its last reference).
                 const result = classifyEnvSchema(getAppBuilderComponentEntry(id)?.envSchema ?? []);
-                expect(result.userText).toEqual([]);
-                expect(result.userSecret).toEqual([]);
+                expect(result.userText).toStrictEqual([]);
+                expect(result.userSecret).toStrictEqual([]);
             }
         });
     });

@@ -398,7 +398,7 @@ describe('createBlockLibraryFromTemplate', () => {
 
             expect(result.success).toBe(true);
             expect(result.blocksCount).toBe(0);
-            expect(result.paths).toEqual([]);
+            expect(result.paths).toStrictEqual([]);
 
             const infoCalls = (mockLogger.info as jest.Mock).mock.calls;
             const noBlocksLog = infoCalls.find((call: string[]) =>

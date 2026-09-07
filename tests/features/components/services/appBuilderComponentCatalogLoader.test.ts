@@ -590,7 +590,7 @@ describe('isPrebuiltIntegration — what belongs in the Pre-built gallery', () =
         ]) {
             const all = getAvailableAppBuilderComponents(b, f);
             expect(all.length).toBeGreaterThan(0); // the mixed list is NOT empty
-            expect(all.filter(isPrebuiltIntegration)).toEqual([]);
+            expect(all.filter(isPrebuiltIntegration)).toStrictEqual([]);
             expect(all.filter(isSeedIntegration).map((e) => e.id)).toEqual([
                 'commerce-integration-starter-kit',
             ]);

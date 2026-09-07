@@ -260,12 +260,10 @@ describe('SETTING_KEYS tracks package.json', () => {
     });
 
     it('exposes every declared setting', () => {
-        expect(declared.filter((k) => !(SETTING_KEYS as readonly string[]).includes(k))).toEqual(
-            []
-        );
+        expect(declared.filter((k) => !(SETTING_KEYS as readonly string[]).includes(k))).toStrictEqual([]);
     });
 
     it('exposes no setting that has been removed from the manifest', () => {
-        expect(SETTING_KEYS.filter((k) => !declared.includes(k))).toEqual([]);
+        expect(SETTING_KEYS.filter((k) => !declared.includes(k))).toStrictEqual([]);
     });
 });

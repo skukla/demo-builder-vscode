@@ -43,7 +43,7 @@ describe('slow-command warning — thresholds matched to the tool', () => {
         // problem anyone can act on.
         logCommandTaking('aio config get ims.contexts.cli', 3927);
 
-        expect(slowWarnings()).toEqual([]);
+        expect(slowWarnings()).toStrictEqual([]);
     });
 
     it('still warns when an aio command is genuinely stuck', () => {
@@ -68,6 +68,6 @@ describe('slow-command warning — thresholds matched to the tool', () => {
     it('stays quiet for a fast command', () => {
         logCommandTaking('node --version', 52);
 
-        expect(slowWarnings()).toEqual([]);
+        expect(slowWarnings()).toStrictEqual([]);
     });
 });

@@ -147,7 +147,7 @@ describe('Executor - Mesh State Population After Deployment', () => {
 
             const fetchedConfig = await stalenessDetector.fetchDeployedMeshConfig(meshLogger, meshDeps);
 
-            expect(fetchedConfig).toEqual({});
+            expect(fetchedConfig).toStrictEqual({});
             expect(Object.keys(fetchedConfig!)).toHaveLength(0);
 
             // In the executor, this would be caught by:
@@ -249,7 +249,7 @@ describe('Executor - Mesh State Population After Deployment', () => {
             const hasEnvVars = Object.keys(mockProject.appBuilderComponents!.mesh!.envVars || {}).length > 0;
 
             expect(hasEnvVars).toBe(false); // Dashboard will show "Not Deployed" (fallback)
-            expect(mockProject.appBuilderComponents!.mesh!.envVars).toEqual({}); // Still empty
+            expect(mockProject.appBuilderComponents!.mesh!.envVars).toStrictEqual({}); // Still empty
         });
     });
 });

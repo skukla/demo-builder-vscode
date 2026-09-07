@@ -86,7 +86,7 @@ describe('presets', () => {
     it('reports none — components.json has carried no presets since v2', async () => {
         const manager = managerFor();
 
-        await expect(manager.getPresets()).resolves.toEqual([]);
+        await expect(manager.getPresets()).resolves.toStrictEqual([]);
     });
 });
 
@@ -188,7 +188,7 @@ describe('the NAME mapping reads through the same chain', () => {
 
         await expect(
             manager.getNodeVersionToComponentMapping(undefined, 'renamed-away'),
-        ).resolves.toEqual({});
+        ).resolves.toStrictEqual({});
     });
 
     it('skips a component carrying no configuration block', async () => {
@@ -196,7 +196,7 @@ describe('the NAME mapping reads through the same chain', () => {
 
         await expect(
             manager.getNodeVersionToComponentMapping(undefined, undefined, ['test-tool']),
-        ).resolves.toEqual({});
+        ).resolves.toStrictEqual({});
     });
 
     it('skips a frontend and a backend carrying no configuration block', async () => {
@@ -204,7 +204,7 @@ describe('the NAME mapping reads through the same chain', () => {
 
         await expect(
             manager.getNodeVersionToComponentMapping('bare-frontend', 'bare-backend'),
-        ).resolves.toEqual({});
+        ).resolves.toStrictEqual({});
     });
 
     it('skips a dependency id nothing matches', async () => {
@@ -212,7 +212,7 @@ describe('the NAME mapping reads through the same chain', () => {
 
         await expect(
             manager.getNodeVersionToComponentMapping(undefined, undefined, ['renamed-away']),
-        ).resolves.toEqual({});
+        ).resolves.toStrictEqual({});
     });
 
     it('names the components it DID find', async () => {
