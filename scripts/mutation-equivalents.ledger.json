@@ -17046,6 +17046,18 @@
             "decision": "none \u2014 the empty deps array is correct; the callback reads only latest.current",
             "recorded": "2026-09-07",
             "source": "mutationLedger add"
+        },
+        {
+            "module": "src/features/dashboard/handlers/aiPromptHandlers.ts",
+            "anchors": [
+                "const name = payload?.name ?? '';"
+            ],
+            "mutants": 1,
+            "category": "optionalChain",
+            "reason": "The line is reached only after the guard above has established that payload?.prompt is a non-empty string, which is impossible unless payload is a non-null object. Dropping the ?. therefore cannot throw for any input that gets this far, so no call to handleCopyAiPrompt distinguishes payload?.name from payload.name.",
+            "decision": "none \u2014 the sibling OptionalChaining mutant on payload?.prompt IS killed (a call with no payload at all), which is the same guard read from the reachable side.",
+            "recorded": "2026-09-07",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }

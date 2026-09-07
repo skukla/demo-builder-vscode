@@ -123,15 +123,14 @@ export {
 // `aiHandlers`, which re-exported eight names — and this file was the only
 // consumer of six of them, so production code carried a re-export block kept
 // alive solely by its own test helper.
+// Only the four the handler-map identity test needs: the aiPromptHandlers suites
+// now import their subjects from the defining module directly, which is also what
+// pairs them to it in the mutation configs.
 export {
     handleSaveAiPrompt,
     handleDeleteAiPrompt,
     handleListAiPrompts,
     handleCopyAiPrompt,
-    GLOBAL_AI_PROMPTS_KEY,
-    mergePromptsForRead,
-    deleteAiPromptById,
-    readMergedAiPrompts,
 } from '@/features/dashboard/handlers/aiPromptHandlers';
 export { hasHandler, getRegisteredTypes } from '@/core/handlers/dispatchHandler';
 export { verifyAiSetup } from '@/features/ai/aiSetupVerifier';

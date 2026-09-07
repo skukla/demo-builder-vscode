@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/hooks/useSelectionStep.ts"
+        "src/features/dashboard/handlers/aiPromptHandlers.ts"
     ],
     "reporters": [
         "clear-text",

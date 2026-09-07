@@ -14,15 +14,19 @@
  * run has changed — only which module their kills are credited to.
  */
 
+// The mock preamble lives in aiHandlers.testUtils, so it must be required BEFORE
+// the module under test — hence this import first. The subjects then come from the
+// module that DECLARES them, which is also what pairs this suite to that module in
+// the mutation configs (tests/sop/mutation-config-pairing.test.ts).
+import { createAiHandlerContext, makeScopedContext } from './aiHandlers.testUtils';
 import {
     handleCopyAiPrompt,
     GLOBAL_AI_PROMPTS_KEY,
     mergePromptsForRead,
     deleteAiPromptById,
     readMergedAiPrompts,
-    createAiHandlerContext,
-    makeScopedContext,
-} from './aiHandlers.testUtils';
+} from '@/features/dashboard/handlers/aiPromptHandlers';
+import { ErrorCode } from '@/types/errorCodes';
 
 describe('aiHandlers — copy & module helpers', () => {
     beforeEach(() => {
@@ -61,6 +65,41 @@ describe('aiHandlers — copy & module helpers', () => {
             const logged = loggerInfo.mock.calls.map((c) => String(c[0])).join('\n');
             expect(logged).toContain('Hero Block Generator');
             expect(logged).not.toContain('SECRET_BODY_should_not_appear_in_logs');
+        });
+
+        it('rejects a payload with no prompt body and never touches the clipboard', async () => {
+            const vscode = jest.requireMock('vscode');
+            const context = createAiHandlerContext();
+
+            const result = await handleCopyAiPrompt(context, {});
+
+            expect(result).toEqual({
+                success: false,
+                error: 'Invalid prompt payload',
+                code: ErrorCode.CONFIG_INVALID,
+            });
+            expect(vscode.env.clipboard.writeText).not.toHaveBeenCalled();
+            expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+        });
+
+        it('rejects an empty prompt body rather than clearing the clipboard', async () => {
+            const vscode = jest.requireMock('vscode');
+            const context = createAiHandlerContext();
+
+            const result = await handleCopyAiPrompt(context, { prompt: '' });
+
+            expect(result.success).toBe(false);
+            expect(vscode.env.clipboard.writeText).not.toHaveBeenCalled();
+        });
+
+        it('rejects a missing payload entirely', async () => {
+            // The kebab menu can invoke copy with nothing attached; reading
+            // `payload.prompt` unguarded would throw out of the handler.
+            const context = createAiHandlerContext();
+
+            const result = await handleCopyAiPrompt(context);
+
+            expect(result.success).toBe(false);
         });
 
         it('still copies and reports success when name is omitted', async () => {

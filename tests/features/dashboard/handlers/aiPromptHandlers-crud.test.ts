@@ -14,14 +14,18 @@
  * run has changed — only which module their kills are credited to.
  */
 
+// The mock preamble lives in aiHandlers.testUtils, so it must be required BEFORE
+// the module under test — hence this import first. The subjects then come from the
+// module that DECLARES them, which is also what pairs this suite to that module in
+// the mutation configs (tests/sop/mutation-config-pairing.test.ts).
+import { createAiHandlerContext, makeScopedContext } from './aiHandlers.testUtils';
 import {
     handleSaveAiPrompt,
     handleDeleteAiPrompt,
     handleListAiPrompts,
-    createAiHandlerContext,
-    makeScopedContext,
-} from './aiHandlers.testUtils';
+} from '@/features/dashboard/handlers/aiPromptHandlers';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
+import { ErrorCode } from '@/types/errorCodes';
 
 describe('aiHandlers — prompt CRUD & scope', () => {
     beforeEach(() => {
@@ -61,6 +65,45 @@ describe('aiHandlers — prompt CRUD & scope', () => {
             const context = createAiHandlerContext();
             const result = await handleDeleteAiPrompt(context, undefined);
             expect(result.success).toBe(false);
+        });
+
+        it('rejects a payload that carries no promptId, without looking up a project', async () => {
+            const getCurrentProject = jest.fn();
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({ getCurrentProject }),
+            });
+
+            const result = await handleDeleteAiPrompt(context, {});
+
+            expect(result).toEqual({
+                success: false,
+                error: 'Invalid promptId',
+                code: ErrorCode.CONFIG_INVALID,
+            });
+            expect(getCurrentProject).not.toHaveBeenCalled();
+        });
+
+        it('rejects an empty promptId rather than treating it as a delete of nothing', async () => {
+            // A blank id reaches here from a UI row that lost its record. Letting
+            // it through returns success for a delete that removed nothing.
+            const saveProject = jest.fn();
+            const context = createAiHandlerContext({
+                stateManager: createMockStateManager({
+                    getCurrentProject: jest
+                        .fn()
+                        .mockResolvedValue({ name: 'p', path: '/projects/p', aiPrompts: [] }),
+                    saveProject,
+                }),
+            });
+
+            const result = await handleDeleteAiPrompt(context, { promptId: '' });
+
+            expect(result).toEqual({
+                success: false,
+                error: 'Invalid promptId',
+                code: ErrorCode.CONFIG_INVALID,
+            });
+            expect(saveProject).not.toHaveBeenCalled();
         });
 
         it('returns project-not-found when no current project is loaded', async () => {
