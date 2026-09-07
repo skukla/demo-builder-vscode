@@ -17,6 +17,53 @@ FILENAME does not start with that module's stem.** 17 of those sit on modules th
 have open gaps, together holding 472 of them. The tests run and pass on every CI build;
 they simply count towards nothing.
 
+## HOW BIG IS THE HOLE — measured 2026-09-07, and it is SMALL
+
+Asked before fixing more modules: how many modules are invisible to the mutation
+measurement altogether? Answer: **six**, holding about 105 open gaps.
+
+| | |
+|---|---|
+| Modules in scope (`mutationScope.sourceFiles`) | 859 |
+| In the baseline | 612 |
+| Unmeasured | 247 — of which 202 contain real logic |
+| **Unmeasured but HAVING their own mirroring suite** | **6** |
+| Unmeasured with no suite at all | 196 — untested, a different problem |
+
+The six, measured directly:
+
+| module | suites | score | ~open gaps |
+|---|---|---|---|
+| `core/ui/hooks/useSelectionStep.ts` | 4 | 53.5% | **~80** |
+| `features/dashboard/ui/components/DashboardStatusHeader.tsx` | 1 | 0.0% | ~16 |
+| `features/dashboard/ui/configure/AppBuilderComponentFieldsSection.tsx` | 1 | 61.3% | ~8 |
+| `core/ui/components/feedback/SuccessStateDisplay.tsx` | 1 | 75.0% | ~1 |
+| `features/dashboard/ui/configure/storedSecretPayload.ts` | 1 | 100% | 0 |
+| `types/webview.ts` | 2 | produced no mutants | 0 |
+
+`useSelectionStep.ts` is the finding: 185 mutants, FOUR test suites, and never once measured.
+`DashboardStatusHeader.tsx` at 0% is the other: its only suite is a `.test.ts` that does not
+render the component.
+
+**They have NOT been added to the baseline.** Doing so moves the reported total from 51 open
+gaps to roughly 156, and whether to take that visibly is the owner's call, not a side effect
+of a measurement.
+
+### The count was 17 before it was 6 — and why that matters
+
+**This repository has TWO different definitions of "which suites belong to this module".**
+`mutationScope.suitesFor` matches the file's basename stem ANYWHERE in the test tree;
+`focusModule.suitesFor` requires the mirror location too. The first says
+`commands/configure.ts` has NINE suites — they are the suites in a test DIRECTORY called
+`configure/`. The second says zero, correctly.
+
+The first count here used the loose one and reported 17 invisible modules. Six survive the
+strict one. The redundancy sweep imports the STRICT matcher from `focusModule.mjs`, so the
+284 misattributed tests recorded above are unaffected.
+
+That two matchers disagree, in the same repo, on the question this whole item is about is
+itself worth fixing — and is the same class of fault as everything else here.
+
 ## THE SAME FAULT RUNS THE OTHER WAY TOO — measured 2026-09-07
 
 The item above is about a suite whose filename misses the module it tests, so its kills count
@@ -170,3 +217,5 @@ front of the size-ordered queue, so some will be at zero before this is touched,
 ## Shipped so far
 
 - 2026-09-07  Second direction measured 2026-09-07 (from PL-49 Phase 2): 284 tests across 52 mutant-rich modules are scored against a module they never exercise - the mirror image of this item. Confirmed re-export mechanism in 2 by reading; 46 of the 52 have no re-export, so a second mechanism is unidentified.
+- 2026-09-07  Attribution fixes 1-3 shipped 2026-09-07: pdp404Snippet (35 tests, rename), appBuilderComponentState (15 tests moved out of dashboardStatusService, 8 weaker duplicates dropped), aiPromptHandlers (31 tests, 2 files renamed). All three consuming modules unchanged. TWO PREVIOUSLY UNMEASURED MODULES NOW IN THE BASELINE with 51 open gaps between them (aiPromptHandlers 45, pdp404Snippet 6) - they had 66 tests all along, credited to the wrong file. Second mechanism identified: a consumer suite testing its dependency's functions (dashboardStatusService), which is likely the common case since 46 of 52 have no re-export.
+- 2026-09-07  Sized the invisible set 2026-09-07: 859 modules in scope, 612 measured, 247 unmeasured of which only SIX have their own mirroring suite. Those six hold ~105 open gaps, 80 of them in useSelectionStep.ts (185 mutants, 4 suites, never measured). Not baselined - that decision is the owner's. Also found: mutationScope.suitesFor and focusModule.suitesFor disagree on which suites belong to a module (stem-anywhere vs mirror-location), which inflated the first count from 6 to 17.
