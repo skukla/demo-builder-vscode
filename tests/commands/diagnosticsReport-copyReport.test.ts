@@ -1,63 +1,26 @@
 /**
- * Diagnostics — copyable report
+ * diagnosticsReport — the copyable report
  *
- * Getting a diagnostic report out of a colleague's machine has cost a
- * round-trip every time. The existing paths are "Export Log" (a file to find,
- * save, and email) or select-all in the output channel, which copies EVERY run
- * in the session — that is how a report arrives at 45 KB with a duplicated
- * section in the middle.
+ * Split from `diagnostics-copyReport.test.ts` on 2026-09-07 (PL-45). Every test
+ * here drives `buildSummaryLines` or `browserProbeCommand`, both DECLARED in
+ * `diagnosticsReport.ts`; the old filename paired them with `diagnostics.ts`,
+ * which only re-exports them, so 23 of the file's 28 tests killed nothing where
+ * they were counted.
  *
- * A "Copy Report" action on the completion notification hands them the current
- * run, curated, in one click.
- *
- * The summary is safe to paste by construction: the credential section prints a
- * login, a credential TYPE prefix, granted scopes, a boolean, status codes, and
- * Adobe's x-error — never the token. The leak guard below is what keeps that
- * true as the summary grows.
+ * Getting a diagnostic report off a colleague's machine used to cost a
+ * round-trip every time. "Copy Report" hands them the current run, curated, in
+ * one click — and the summary is safe to paste BY CONSTRUCTION: it prints a
+ * login, a credential TYPE prefix, granted scopes, status codes and Adobe's
+ * x-error, never the token. The leak guard below is what keeps that true.
  */
 
-import * as vscode from 'vscode';
 import {
     browserProbeCommand,
     buildSummaryLines,
-    runDiagnosticsAction,
-} from '@/commands/diagnostics';
-import type { DiagnosticsReport } from '@/commands/diagnostics';
-
-import { createMockDebugLogger } from '../helpers/debugLoggerFake';
-const TOKEN = 'gho_SUPERSECRETVALUE0000000000000000000';
-
-function makeReport(overrides: Partial<DiagnosticsReport> = {}): DiagnosticsReport {
-    return {
-        timestamp: '2026-07-29T00:00:00Z',
-        system: { platform: 'darwin', release: '25.5.0' },
-        vscode: { version: '1.99.0' },
-        tools: {
-            node: { installed: true, output: 'v22.0.0', duration: 1 },
-            git: { installed: false, duration: 1 },
-        },
-        adobe: { installed: true, version: '11.0.1', authConfigured: true, tokenExpired: false },
-        environment: {},
-        tests: {
-            browserLaunch: { available: true },
-            adobeLoginCommand: { available: true },
-            fileSystem: { canWrite: true },
-        },
-        mcp: { running: true, tools: ['sign_in'], hasSignIn: true },
-        githubCredential: {
-            github: {
-                reachable: true,
-                login: 'skukla',
-                tokenType: 'gho_',
-                grantedScopes: ['repo', 'workflow'],
-            },
-            repo: { fullName: 'owner/repo', canPush: true },
-            adminApi: { httpStatus: 401, xError: '[admin] not authenticated' },
-            verdict: 'Not a scope or permission problem — AEM is refusing the credential itself.',
-        },
-        ...overrides,
-    } as unknown as DiagnosticsReport;
-}
+    makeReport,
+    TOKEN,
+    type DiagnosticsReport,
+} from './diagnosticsReport.testUtils';
 
 describe('buildSummaryLines', () => {
     it('produces the whole summary as lines', () => {
@@ -281,52 +244,6 @@ describe('buildSummaryLines', () => {
         });
 
         expect(buildSummaryLines(report).join('\n')).toContain('Can List Orgs: Yes\n');
-    });
-});
-
-describe('runDiagnosticsAction', () => {
-    /**
- * `runDiagnosticsAction` declares `DebugLogger`, not `Logger` — it calls `show()`
- * to reveal the output channel. The two are different interfaces and both live on
- * `HandlerContext`; picking the wrong builder here is what the compiler caught.
- */
-const logger = createMockDebugLogger();
-    const SUMMARY = '=== DIAGNOSTICS SUMMARY ===\nSystem: darwin';
-
-    beforeEach(() => jest.clearAllMocks());
-
-    it('copies the summary when Copy Report is chosen', async () => {
-        await runDiagnosticsAction('Copy Report', SUMMARY, logger);
-
-        expect(vscode.env.clipboard.writeText).toHaveBeenCalledWith(SUMMARY);
-    });
-
-    it('confirms the copy so the user knows it worked', async () => {
-        await runDiagnosticsAction('Copy Report', SUMMARY, logger);
-
-        expect(vscode.window.showInformationMessage).toHaveBeenCalled();
-    });
-
-    it('still reveals the channel for Show Logs', async () => {
-        await runDiagnosticsAction('Show Logs', SUMMARY, logger);
-
-        expect(logger.show).toHaveBeenCalled();
-        expect(vscode.env.clipboard.writeText).not.toHaveBeenCalled();
-    });
-
-    it('still exports for Export Log', async () => {
-        await runDiagnosticsAction('Export Log', SUMMARY, logger);
-
-        expect(logger.exportDebugLog).toHaveBeenCalled();
-        expect(vscode.env.clipboard.writeText).not.toHaveBeenCalled();
-    });
-
-    it('does nothing when the notification is dismissed', async () => {
-        await runDiagnosticsAction(undefined, SUMMARY, logger);
-
-        expect(vscode.env.clipboard.writeText).not.toHaveBeenCalled();
-        expect(logger.show).not.toHaveBeenCalled();
-        expect(logger.exportDebugLog).not.toHaveBeenCalled();
     });
 });
 

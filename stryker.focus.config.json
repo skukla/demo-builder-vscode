@@ -8,14 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/handlers/edsHandlers.ts",
-        "src/features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts",
-        "src/features/project-creation/handlers/executorAppBuilderPhase.ts",
-        "src/features/project-creation/handlers/executorSampleDataPhase.ts",
-        "src/features/project-creation/handlers/executorMeshPhase.ts",
-        "src/features/project-creation/handlers/executor.ts",
-        "src/commands/diagnosticsReport.ts",
-        "src/commands/diagnostics.ts"
+        "src/core/state/transientStateManager.ts"
     ],
     "reporters": [
         "clear-text",
