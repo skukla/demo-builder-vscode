@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/commands/diagnosticsReport.ts"
+        "src/core/utils/envParser.ts"
     ],
     "reporters": [
         "clear-text",
