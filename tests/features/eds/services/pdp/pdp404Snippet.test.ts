@@ -1,25 +1,28 @@
 /**
- * Smart 404 handler installer tests — Phase 1 of BYOM PDP routing.
+ * pdp404Snippet — the pure helpers behind the Smart 404 PDP rebuild.
  *
- * Covers the two pure helpers (buildSmart404Snippet, derivePrepublishUrl)
- * and the orchestrator (installSmart404Handler) end-to-end.
+ * Renamed from `pdp404HandlerPublisher.test.ts` on 2026-09-07. Every test here
+ * exercises a function DEFINED IN THIS MODULE; none of them touched the
+ * publisher, which reaches them through a re-export. Because suites are matched
+ * to modules by filename, all 35 were scored against the publisher and counted
+ * for nothing, while `pdp404Snippet.ts` had no suite at all and has never
+ * appeared in the mutation baseline.
  *
- * Phase 1 v2 contract (post-2026-06-09): the smart 404 handler is
- * vendored into `scripts/delayed.js` rather than published as a DA.live
- * `/404.html` page. EDS strips `<script>` tags from authored content,
- * which silently broke the v1 page-publish approach. Tests pin the new
- * delayed-vendor contract.
+ * The publisher keeps its own two suites — `.install` and `.eagerRedirect`,
+ * 29 tests — so nothing it relies on moved.
  *
- * The installer MUST be non-fatal at every step: any failure logs and
- * returns `{ installed: false, reason }`. These tests enforce that.
+ * Phase 1 v2 contract (post-2026-06-09): the smart 404 handler is vendored into
+ * `scripts/delayed.js` rather than published as a DA.live `/404.html` page. EDS
+ * strips `<script>` tags from authored content, which silently broke the v1
+ * page-publish approach. These tests pin the delayed-vendor contract.
  */
 
 import {
     buildSmart404Snippet,
     derivePrepublishUrl,
     extractCspNonce,
-} from '@/features/eds/services/pdp/pdp404HandlerPublisher';
-import { replaceMarkedBlock } from '@/features/eds/services/pdp/pdp404Snippet';
+    replaceMarkedBlock,
+} from '@/features/eds/services/pdp/pdp404Snippet';
 
 describe('derivePrepublishUrl', () => {
     it('rewrites /render-pdp to /prepublish-pdp at the end of the path', () => {
