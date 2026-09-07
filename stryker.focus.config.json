@@ -8,11 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/dashboard/ui/hooks/useLiveDaLiveUrl.ts",
-        "src/features/dashboard/ui/hooks/useLiveDestination.ts",
-        "src/features/dashboard/ui/hooks/useOrgSwitchFlow.ts",
-        "src/features/data-installer/ui/hooks/useImportProgress.ts",
-        "src/features/sidebar/ui/views/UtilityBar.tsx"
+        "src/core/validation/fieldValidation.ts"
     ],
     "reporters": [
         "clear-text",

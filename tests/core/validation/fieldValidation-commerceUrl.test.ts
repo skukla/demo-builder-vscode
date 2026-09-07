@@ -1,246 +1,103 @@
 /**
  * Field Validation Tests - Commerce URL
  *
- * Tests for validateCommerceUrlUI function.
- * Validates URL format with friendly error messages.
+ * Tests for validateCommerceUrlUI, which wraps `optional(url(...))`: a blank
+ * value passes because the field is optional, and anything else must both start
+ * with an http(s) scheme AND parse as a URL.
  *
- * Target Coverage: 90%+
+ * The cases are DATA — every row below was its own `it` block asserting the
+ * same pair of expectations against a different input. Each row still reports
+ * as its own named test, so a failure names the URL that broke.
+ *
+ * EVERY rejection produces the same message, whichever of the two checks
+ * failed: the scheme test and the `new URL()` catch arm both return it. That is
+ * a property of the validator worth stating once here rather than repeating it
+ * sixteen times.
  */
 
 import { validateCommerceUrlUI } from '@/core/validation/fieldValidation';
+import { credentialedUrlShape, passwordShape } from '../../helpers/credentialShapes';
+
+const INVALID = 'Invalid URL format. Must start with http:// or https://';
+
+const ACCEPTED: ReadonlyArray<readonly [string, string]> = [
+    ['an https URL', 'https://example.com'],
+    ['an http URL', 'http://example.com'],
+    ['a path', 'https://example.com/store/path'],
+    ['query parameters', 'https://example.com?key=value&other=param'],
+    ['a port', 'https://example.com:8080'],
+    ['the highest port', 'https://example.com:65535'],
+    ['a subdomain', 'https://store.example.com'],
+    ['a fragment', 'https://example.com/page#section'],
+    ['an IPv6 host', 'https://[::1]'],
+    // No SSRF protection here on purpose — this is UI shape validation, and the
+    // extension legitimately points at local Commerce instances.
+    ['localhost', 'https://localhost'],
+    ['a loopback address', 'https://127.0.0.1'],
+    ['a private IP range', 'https://192.168.1.1'],
+    ['a very long path', `https://example.com/${'a'.repeat(1000)}`],
+    [
+        'many query parameters',
+        `https://example.com?${Array.from({ length: 50 }, (_, i) => `k${i}=v${i}`).join('&')}`,
+    ],
+];
+
+/** The field is optional, so blank input is accepted rather than demanded. */
+const BLANK: ReadonlyArray<readonly [string, string]> = [
+    ['an empty string', ''],
+    ['spaces only', '   '],
+    ['tabs only', '\t\t'],
+];
+
+const REJECTED: ReadonlyArray<readonly [string, string]> = [
+    ['a bare host with no scheme', 'example.com'],
+    ['a javascript: scheme', 'javascript:alert(1)'],
+    ['a javascript: scheme with void', 'javascript:void(0)'],
+    ['a file: scheme', 'file:///etc/passwd'],
+    ['an ftp: scheme', 'ftp://example.com'],
+    ['a data: scheme', 'data:text/html,<script>alert(1)</script>'],
+    ['a mailto: scheme', 'mailto:test@example.com'],
+    ['prose rather than a URL', 'not a url'],
+    ['a script tag', '<script>alert("xss")</script>'],
+    ['a typo in the scheme', 'htps://example.com'],
+    ['a single slash after the scheme', 'https:/example.com'],
+    ['a missing colon', 'https//example.com'],
+    ['a truncated scheme', 'http:/'],
+    ['a space before the TLD', 'https://example .com'],
+    ['a space inside the host', 'https://exam ple.com'],
+    ['no host at all', 'https://'],
+];
 
 describe('validateCommerceUrlUI', () => {
-    describe('valid inputs', () => {
-        it('should accept valid HTTPS URLs', () => {
-            const result = validateCommerceUrlUI('https://example.com');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should accept valid HTTP URLs', () => {
-            const result = validateCommerceUrlUI('http://example.com');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should accept URLs with paths', () => {
-            const result = validateCommerceUrlUI('https://example.com/store/path');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should accept URLs with query parameters', () => {
-            const result = validateCommerceUrlUI('https://example.com?key=value&other=param');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should accept URLs with ports', () => {
-            const result = validateCommerceUrlUI('https://example.com:8080');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should accept URLs with subdomains', () => {
-            const result = validateCommerceUrlUI('https://store.example.com');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should accept URLs with authentication', () => {
-            // Built by parts — see securityValidation-githubUrl for why.
-            const withAuth = new URL('https://example.com');
-            withAuth.username = 'user';
-            withAuth.password = 'pass';
-            const result = validateCommerceUrlUI(withAuth.toString());
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should accept URLs with fragments', () => {
-            const result = validateCommerceUrlUI('https://example.com/page#section');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
+    it.each(ACCEPTED)('accepts %s', (_label, value) => {
+        expect(validateCommerceUrlUI(value)).toEqual({ isValid: true, message: '' });
     });
 
-    describe('empty/optional field', () => {
-        it('should accept empty strings (optional field)', () => {
-            const result = validateCommerceUrlUI('');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should accept whitespace-only strings (optional field)', () => {
-            const result = validateCommerceUrlUI('   ');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should accept strings with only tabs', () => {
-            const result = validateCommerceUrlUI('\t\t');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
+    it.each(BLANK)('accepts %s, because the field is optional', (_label, value) => {
+        expect(validateCommerceUrlUI(value)).toEqual({ isValid: true, message: '' });
     });
 
-    describe('invalid protocol', () => {
-        it('should reject URLs without protocol', () => {
-            const result = validateCommerceUrlUI('example.com');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
-
-        it('should reject URLs with javascript protocol', () => {
-            const result = validateCommerceUrlUI('javascript:alert(1)');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
-
-        it('should reject URLs with file protocol', () => {
-            const result = validateCommerceUrlUI('file:///etc/passwd');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
-
-        it('should reject URLs with ftp protocol', () => {
-            const result = validateCommerceUrlUI('ftp://example.com');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
-
-        it('should reject URLs with data protocol', () => {
-            const result = validateCommerceUrlUI('data:text/html,<script>alert(1)</script>');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
-
-        it('should reject URLs with mailto protocol', () => {
-            const result = validateCommerceUrlUI('mailto:test@example.com');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
+    it.each(REJECTED)('rejects %s', (_label, value) => {
+        expect(validateCommerceUrlUI(value)).toEqual({ isValid: false, message: INVALID });
     });
 
-    describe('malformed URLs', () => {
-        it('should reject completely invalid URLs', () => {
-            const result = validateCommerceUrlUI('not a url');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
+    // Assembled rather than written out: a userinfo URL in test source is the
+    // shape a secret scanner matches, and one raised an alert here on
+    // 2026-09-03. See tests/helpers/credentialShapes.ts.
+    it('accepts a URL carrying credentials in its userinfo', () => {
+        const withAuth = credentialedUrlShape('https://example.com', 'user', passwordShape());
 
-        it('should reject URLs with spaces', () => {
-            const result = validateCommerceUrlUI('https://example .com');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
-
-        it('should reject URLs with invalid characters', () => {
-            const result = validateCommerceUrlUI('https://exam ple.com');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
-
-        it('should reject URLs without domain', () => {
-            const result = validateCommerceUrlUI('https://');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
-
-        it('should reject partial URLs', () => {
-            const result = validateCommerceUrlUI('http:/');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
+        expect(validateCommerceUrlUI(withAuth)).toEqual({ isValid: true, message: '' });
     });
 
-    describe('localhost and private IPs', () => {
-        it('should accept localhost (no SSRF protection in UI validation)', () => {
-            const result = validateCommerceUrlUI('https://localhost');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
+    // This case previously asserted only that a result came back, on the
+    // grounds that the behaviour was implementation-specific. It is not:
+    // the scheme check passes and `new URL()` DROPS the null byte, so the
+    // value is accepted. Pinning it means a change in that behaviour is a
+    // failure rather than a silent shift.
+    it('accepts a URL containing a null byte, which URL parsing discards', () => {
+        const withNullByte = `https://example.com/test${String.fromCharCode(0)}`;
 
-        it('should accept 127.0.0.1', () => {
-            const result = validateCommerceUrlUI('https://127.0.0.1');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should accept private IP ranges', () => {
-            const result = validateCommerceUrlUI('https://192.168.1.1');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-    });
-
-    describe('XSS attempts', () => {
-        it('should reject script injection attempts', () => {
-            const result = validateCommerceUrlUI('<script>alert("xss")</script>');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
-
-        it('should reject javascript: in URL', () => {
-            const result = validateCommerceUrlUI('javascript:void(0)');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
-    });
-
-    describe('edge cases', () => {
-        it('should handle URLs with unusual ports', () => {
-            const result = validateCommerceUrlUI('https://example.com:65535');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should handle URLs with IPv6', () => {
-            const result = validateCommerceUrlUI('https://[::1]');
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should handle very long URLs', () => {
-            const longPath = 'a'.repeat(1000);
-            const result = validateCommerceUrlUI(`https://example.com/${longPath}`);
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should handle URLs with many query parameters', () => {
-            const params = Array.from({ length: 50 }, (_, i) => `key${i}=value${i}`).join('&');
-            const result = validateCommerceUrlUI(`https://example.com?${params}`);
-            expect(result.isValid).toBe(true);
-            expect(result.message).toBe('');
-        });
-
-        it('should handle URLs with control characters', () => {
-            // URL() constructor accepts null bytes in path - this is implementation-specific
-            const result = validateCommerceUrlUI('https://example.com/test\x00');
-            // Just verify it doesn't crash - behavior may vary
-            expect(result).toBeDefined();
-        });
-    });
-
-    describe('common mistakes', () => {
-        it('should reject URL with typo in protocol', () => {
-            const result = validateCommerceUrlUI('htps://example.com');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
-
-        it('should reject URL with single slash', () => {
-            const result = validateCommerceUrlUI('https:/example.com');
-            expect(result.isValid).toBe(false);
-            // Error message depends on URL constructor behavior
-            expect(result.message).toContain('URL');
-        });
-
-        it('should reject URL with missing colon', () => {
-            const result = validateCommerceUrlUI('https//example.com');
-            expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
-        });
+        expect(validateCommerceUrlUI(withNullByte)).toEqual({ isValid: true, message: '' });
     });
 });
