@@ -21,6 +21,7 @@
  */
 
 import { buildSummaryLines } from '@/commands/diagnosticsReport';
+import { section } from './diagnosticsReport.testUtils';
 import type { DiagnosticsReport } from '@/commands/diagnosticsReport';
 import type { CredentialServiceProbeResult } from '@/features/eds/services/credentialServiceProbe';
 
@@ -115,6 +116,21 @@ describe('credential service section', () => {
 
         expect(text).not.toContain(ENDPOINT);
         expect(text).not.toContain('adobeioruntime.net');
+    });
+
+    // Configured but never called: the endpoint leg is ABSENT rather than
+    // printed as `HTTP undefined`, which reads as an answer that never came.
+    it('renders the section with no org and no endpoint leg', () => {
+        expect(
+            section(
+                buildSummaryLines(makeReport({ configured: true, verdict: 'Configured; not called.' })),
+                'Commerce credential service (shared):',
+            ),
+        ).toStrictEqual([
+            'Commerce credential service (shared):',
+            '  Configured: yes',
+            '  \u2192 Configured; not called.',
+        ]);
     });
 
     // CONTROL: the section really is in the text, so the absence above is a

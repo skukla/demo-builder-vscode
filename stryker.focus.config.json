@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/handlers/executorSampleDataPhase.ts"
+        "src/commands/diagnosticsReport.ts"
     ],
     "reporters": [
         "clear-text",
