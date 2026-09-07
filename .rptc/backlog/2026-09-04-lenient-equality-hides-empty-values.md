@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: backlog
+status: shipped
 parent: PL-22
 ---
 
@@ -73,3 +73,4 @@ That is what stops the count climbing back.
 ## Shipped so far
 
 - 2026-09-04  docs(backlog): PL-43 — 651 emptiness assertions use a comparison that accepts an empty value (`b4d69ab3e`)
+- 2026-09-07  CLOSED 2026-09-07 with a negative result. The exposure had grown since filing - 651 emptiness assertions became 834 across 297 files - and all were switched to toStrictEqual. Nothing failed: 1555 suites passed unchanged, the three densest-changed modules re-measured identically, and so did the three with the most ledgered mutants (the sharp check - a mutant judged unkillable behind a lenient assertion would become killable under a strict one). tests/sop/no-lenient-emptiness.test.ts now bans the form outright, since toStrictEqual against an empty literal is strictly stronger and never wrong.
