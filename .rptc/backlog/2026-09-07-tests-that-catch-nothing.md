@@ -35,30 +35,63 @@ see its value. Deleting it would remove a true statement about the code and gain
 So the question worth answering is **why** these 635 catch nothing, because a pattern points
 at a habit worth fixing, and fixing the habit is worth more than any number of deletions.
 
-## The two clusters look like different causes — check both first
+## FIRST: normalise by how much there is to catch — it removes a third of the list
 
-| catch nothing / tests | module | likely cause |
+**Stryker has no mutator for plain numbers.** Verified across 120 modules: zero numeric
+mutations, out of 10,400. A module built from numeric constants therefore generates almost
+nothing to catch, and every test of it is scored as catching nothing — correctly, and
+meaninglessly.
+
+`core/utils/timeoutConfig.ts` is the proof: **380 lines, 4 mutants, all caught.** Its 88
+"catch nothing" tests are not weak tests. There is nothing there for them to catch.
+
+Dividing mutants by tests separates the artefact from the finding:
+
+| | tests | share of the 792 |
 |---|---|---|
-| 101 / 133 | `features/dashboard/handlers/dashboardHandlers.ts` | mock-heavy handler suite |
-| 88 / 93 | `core/utils/timeoutConfig.ts` | a file of constants |
-| 46 / 91 | `features/dashboard/handlers/aiHandlers.ts` | mock-heavy handler suite |
-| 35 / 64 | `features/eds/services/pdp/pdp404HandlerPublisher.ts` | |
-| 29 / 54 | `commands/diagnostics.ts` | |
-| 24 / 65 | `features/project-creation/handlers/executor.ts` | mock-heavy handler suite |
-| 19 / 134 | `features/eds/services/daLive/daLiveContentOperations.ts` | |
+| In modules with < 0.5 mutants per test | 245 across 13 modules | **31% — not findings** |
+| In modules with a normal amount to mutate | 547 across 153 modules | 69% — the real question |
 
-**The handler suites are the ones to read first**, because this repository already knows the
-failure they probably represent: asserting that a mock was called tests the mock, not the
-code. A suite where 101 of 133 tests catch nothing, sitting behind a wall of module mocks,
-is what that habit looks like when measured. If that is confirmed, the finding is a
-test-writing pattern reaching far beyond these files.
+**Do this filter first.** It is minutes of work against
+`reports/mutation/redundancy/summary.jsonl`, which already carries `mutants` per row, and it
+removes a third of the list before anyone reads a single test.
 
-**`timeoutConfig.ts` is a puzzle and should be read second, carefully.** It is a constants
-file that had NO test at all this morning and was given one during the burn-down; 88 of its
-93 tests now catch nothing. A test asserting `SOME_TIMEOUT === 5000` would fail when that
-constant is mutated, so it would catch something. That 88 do not is either a real
-insight about how the file is tested or a defect in how it was measured — and it is worth
-knowing which before trusting the other 634 rows.
+## The two headline examples were BOTH artefacts — the first hypothesis is dead
+
+An earlier draft named `dashboardHandlers.ts` (101 of 133) and `timeoutConfig.ts` (88 of 93)
+as the clusters to read first, and proposed they might share one cause: this repo's known
+trap that asserting a mock was called tests the mock rather than the code.
+
+**That hypothesis is unsupported and should not be carried forward.** Both files fail the
+filter above — `dashboardHandlers.ts` has 133 tests against just **50 mutants** (0.38 per
+test). Its tests catch little because there is little to catch, not because they assert the
+wrong thing. The mock-habit theory was built on the two files least able to support it.
+
+It may still be true elsewhere. It now has to be tested on modules where it CAN be tested —
+ones with plenty to catch and many tests catching none of it:
+
+| catch nothing / tests | mutants | module |
+|---|---|---|
+| 46 / 91 | 130 | `features/dashboard/handlers/aiHandlers.ts` |
+| 35 / 64 | 135 | `features/eds/services/pdp/pdp404HandlerPublisher.ts` |
+| 29 / 54 | 89 | `commands/diagnostics.ts` |
+| 24 / 65 | 101 | `features/project-creation/handlers/executor.ts` |
+| 17 / 90 | 162 | `core/shell/processCleanup.ts` |
+| 12 / 70 | 222 | `features/eds/handlers/storefrontSetup/storefrontSetupHandlers.ts` |
+
+Three of those six are handlers, which is what kept the habit theory alive — but read them
+before believing it a second time.
+
+## The fast-follow slice
+
+1. Run the mutants-per-test filter and commit the resulting list. Minutes.
+2. Read `aiHandlers.ts` and `pdp404HandlerPublisher.ts` — the two thickest — and classify
+   why their tests catch nothing. Hours, not days.
+3. Only then decide whether the remaining 547 have one cause or many.
+
+Step 2 is the whole value of this item. If those two share a cause, it is a rule for test
+authors and the rest follows cheaply. If they do not, this is 153 separate small judgements
+and worth much less than it looks.
 
 ## Rebuilding the list — the sweep saves COUNTS, never names
 

@@ -84,6 +84,38 @@ target and the cheapest proof of the method.
 Then `adobeEntityService.ts` and `promiseUtils.ts`: small, pure, and enough to establish the
 pattern before anything touches an 81-test bundle writer.
 
+## The fast-follow slice: fieldValidation, 90 tests against 21 decisions
+
+Stated precisely, because the raw ratio undersells it. `core/validation/fieldValidation.ts`
+is 109 lines that generate **21 mutable decisions**, and it has **90 tests** spread over
+three suite files (16 + 35 + 39). The minimal catching set is **6**.
+
+Six tests catch everything the ninety catch.
+
+That is not a metric artefact — it is 90 tests written against 21 decisions, which is what
+input-variation testing looks like when nobody consolidates it. The three suites are already
+split by function (dispatcher, commerce URL, project name), so the shape is there: each
+becomes one table-driven test per function with the cases as data.
+
+**The slice:** consolidate those three suites, re-measure the module, and require the open
+gap count to still read zero. One module, a few hours, and it establishes both the method
+and the proof step for everything after it.
+
+Do NOT set a target of 6 tests. The minimal set is what the SCORE needs; the readable set is
+larger, because cases worth naming for a human are worth keeping even when another test
+already catches the same decision. The goal is removing repetition, not reaching a number.
+
+Then `adobeEntityService.ts` (50 of 51) and `promiseUtils.ts` (33 of 35) as the second and
+third, before anything touches an 81-test bundle writer.
+
+## A caution the same normalisation raises
+
+The redundancy count is inflated by the same thing that inflates [[PL-49]]'s: a module with
+few mutable decisions and many tests will report high redundancy whatever the tests do. Judge
+a candidate by decisions-per-test, not by the raw percentage — `fieldValidation` survives
+that check (21 decisions, 90 tests) and is a real finding; something with 5 decisions and 20
+tests probably is not.
+
 ## The safety net, which is new as of today
 
 [[PL-22]] left every module at zero open gaps, so a consolidation is now FALSIFIABLE:
