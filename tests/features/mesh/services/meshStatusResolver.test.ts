@@ -10,7 +10,6 @@ import {
     checkMeshConfigCompleteness,
     determineMeshStatus,
 } from '@/features/mesh/services/meshStatusResolver';
-import { parseEnvFile } from '@/core/utils/envParser';
 import type { ComponentInstance, Project } from '@/types/base';
 import { createMockProject } from '../../../helpers/projectFake';
 
@@ -515,48 +514,6 @@ ADOBE_CATALOG_API_KEY=api-key-123
         });
     });
 
-    describe('parseEnvFile (shared utility)', () => {
-        it('parses simple key=value pairs', () => {
-            const content = 'KEY=value\nANOTHER=test';
-            const result = parseEnvFile(content);
-
-            expect(result).toEqual({ KEY: 'value', ANOTHER: 'test' });
-        });
-
-        it('skips comments and empty lines', () => {
-            const content = '# Comment\nKEY=value\n\n# Another comment\nKEY2=value2';
-            const result = parseEnvFile(content);
-
-            expect(result).toEqual({ KEY: 'value', KEY2: 'value2' });
-        });
-
-        it('removes double quotes from values', () => {
-            const content = 'KEY="quoted value"';
-            const result = parseEnvFile(content);
-
-            expect(result).toEqual({ KEY: 'quoted value' });
-        });
-
-        it('removes single quotes from values', () => {
-            const content = "KEY='quoted value'";
-            const result = parseEnvFile(content);
-
-            expect(result).toEqual({ KEY: 'quoted value' });
-        });
-
-        it('handles values with equals signs', () => {
-            const content = 'URL=https://example.com?foo=bar';
-            const result = parseEnvFile(content);
-
-            expect(result).toEqual({ URL: 'https://example.com?foo=bar' });
-        });
-
-        it('returns empty object for empty content', () => {
-            const result = parseEnvFile('');
-
-            expect(result).toEqual({});
-        });
-    });
 
     // ADR-011 D3 Steps 07+09: the quick status update reads the endpoint from the
     // keyed mesh entry — a keyed-only project (post-Step-07, no meshState) must
