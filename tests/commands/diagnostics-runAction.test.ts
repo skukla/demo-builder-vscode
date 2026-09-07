@@ -11,8 +11,7 @@
  */
 
 import * as vscode from 'vscode';
-import { createMockDebugLogger } from '../helpers/debugLoggerFake';
-import { runDiagnosticsAction } from '@/commands/diagnostics';
+import { createMockDebugLogger, runDiagnosticsAction } from './diagnostics.testUtils';
 
 describe('runDiagnosticsAction', () => {
     /**

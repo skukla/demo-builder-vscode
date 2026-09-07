@@ -62,8 +62,7 @@ jest.mock('@/features/eds/services/storefront/storefrontProbe', () => ({
 
 import * as vscode from 'vscode';
 import { collectClaudeCodeFootprint } from '@/commands/claudeCodeFootprint';
-import { DiagnosticsCommand } from '@/commands/diagnostics';
-import type { DiagnosticsReport } from '@/commands/diagnostics';
+import { DiagnosticsCommand, type DiagnosticsReport } from './diagnostics.testUtils';
 import {
     checkAdobeCLI,
     checkOrphanedSettings,
@@ -96,7 +95,7 @@ import type { StorefrontProbeResult } from '@/features/eds/services/storefront/s
 import type { Project } from '@/types/base';
 import type { Logger } from '@/types/logger';
 import { createMockAuthenticationService } from '../helpers/authenticationServiceFake';
-import { createMockDebugLogger } from '../helpers/debugLoggerFake';
+import { createMockDebugLogger } from './diagnostics.testUtils';
 import { createMockExtensionContext } from '../helpers/extensionContextFake';
 import { createMockLogger } from '../helpers/loggerFake';
 import { createMockProject } from '../helpers/projectFake';
