@@ -44,14 +44,16 @@ jest.mock('@/features/project-creation/services/appBuilderComponentRunnerDeps', 
 
 // ---- permission gate -------------------------------------------------------
 const mockTestDeveloperPermissions = jest.fn();
+// Stable identities: the runner-deps context is asserted BY REFERENCE below, so
+// each locator call has to hand back the same object the handler should forward.
+const mockCommandExecutor = { execute: jest.fn() };
+const mockAuthService = { testDeveloperPermissions: mockTestDeveloperPermissions };
 jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
-        getAuthenticationService: () => ({
-            testDeveloperPermissions: mockTestDeveloperPermissions,
-        }),
+        getAuthenticationService: () => mockAuthService,
         // ADR-015 (2026-08-28): the handler resolves these when assembling
         // runner deps, so the module mock must answer them.
-        getCommandExecutor: jest.fn(() => ({ execute: jest.fn() })),
+        getCommandExecutor: () => mockCommandExecutor,
     },
 }));
 
@@ -114,6 +116,13 @@ describe('executeAppBuilderIntegrationsPhase', () => {
         );
 
         expect(mockTestDeveloperPermissions).toHaveBeenCalledTimes(1);
+        // The runner deps are built ONCE from the located services — an empty
+        // context here strands the runner with no auth or command executor.
+        expect(mockBuildRunnerDepsContext).toHaveBeenCalledWith(context, project, {
+            authManager: mockAuthService,
+            commandManager: mockCommandExecutor,
+        });
+        expect(mockBuildDefaultRunnerDeps).toHaveBeenCalledWith({ _ctx: true });
         expect(mockAddAppBuilderComponent).toHaveBeenCalledTimes(1);
         expect(mockAddAppBuilderComponent).toHaveBeenCalledWith(
             project,

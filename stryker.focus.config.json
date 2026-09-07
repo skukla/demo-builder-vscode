@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/handlers/executorMeshPhase.ts"
+        "src/features/project-creation/handlers/executorAppBuilderPhase.ts"
     ],
     "reporters": [
         "clear-text",

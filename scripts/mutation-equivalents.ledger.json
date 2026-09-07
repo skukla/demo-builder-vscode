@@ -17096,6 +17096,19 @@
             "decision": "none - the log is worth keeping: it is the only record distinguishing 'imported a mesh from a different workspace, so a fresh deploy is correct' from 'deployed a second mesh by mistake' when reading a creation-time debug dump. The OptionalChaining mutant on the same condition is NOT in this row; it IS killed, by a deploy whose config names an imported workspace with no Adobe selection.",
             "recorded": "2026-09-07",
             "source": "PL-22 batch MUT-01"
+        },
+        {
+            "module": "src/features/project-creation/handlers/executorAppBuilderPhase.ts",
+            "anchors": [
+                "if (!adobe?.organization || !adobe?.projectId || !adobe?.workspace) {"
+            ],
+            "line": 64,
+            "mutants": 2,
+            "category": "optionalChain",
+            "reason": "Stryker drops the `?.` from the SECOND and THIRD operands (`adobe.projectId`, `adobe.workspace`). Either would throw only when `adobe` is nullish \u2014 and when it is, `!adobe?.organization` is true and the `||` short-circuits before those operands are ever evaluated. So no input reaches the difference: the operands run only on an object, where `adobe.x` and `adobe?.x` are identical. Verified by planting both mutations on 2026-09-07: the 18 tests in the two executorAppBuilderPhase suites still passed, including the one that calls the phase with no `adobe` block at all. The first operand's own optional-chain mutant IS killable and IS killed by that test.",
+            "decision": "none \u2014 the `?.` on every operand is required by AdobeConfig's all-optional shape and correct as written",
+            "recorded": "2026-09-07",
+            "source": "PL-22 batch MUT-02"
         }
     ]
 }
