@@ -57,34 +57,18 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
-import { executeAppBuilderIntegrationsPhase } from '@/features/project-creation/handlers/executorAppBuilderPhase';
-import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
 import { createMockProject } from '../../../helpers/projectFake';
-
-const INTEGRATION_ENTRY = {
-    id: 'erp-sync',
-    name: 'ERP Sync',
-    description: 'Sync ERP',
-    kind: 'integration' as const,
-    source: { owner: 'acme', repo: 'erp-sync', branch: 'main' },
-};
-
-const MESH_ENTRY = {
-    id: 'commerce-paas-mesh',
-    name: 'API Mesh',
-    description: 'Mesh',
-    kind: 'mesh' as const,
-    source: { owner: 'adobe', repo: 'mesh', branch: 'main' },
-};
+import {
+    executeAppBuilderIntegrationsPhase,
+    creationConfig as config,
+    INTEGRATION_ENTRY,
+    MESH_ENTRY,
+} from './executorAppBuilderPhase.testUtils';
 
 const context = createMockHandlerContext();
 const project = createMockProject({ name: 'demo' });
 const progressTracker = jest.fn();
-
-function config(overrides: Partial<ProjectCreationConfig> = {}): ProjectCreationConfig {
-    return { projectName: 'demo', ...overrides };
-}
 
 beforeEach(() => {
     jest.clearAllMocks();

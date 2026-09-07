@@ -69,31 +69,22 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
-import { ensureWorkspaceRuntimeReady } from '@/features/project-creation/handlers/executorAppBuilderPhase';
 import type { AdobeConfig } from '@/types/base';
 import type { ProjectCreationConfig } from '@/types/webviewRequests';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-
-const INTEGRATION_ENTRY = {
-    id: 'erp-sync',
-    name: 'ERP Sync',
-    description: 'Sync ERP',
-    kind: 'integration' as const,
-    source: { owner: 'acme', repo: 'erp-sync', branch: 'main' },
-};
-
-const MESH_ENTRY = { ...INTEGRATION_ENTRY, id: 'commerce-paas-mesh', kind: 'mesh' as const };
-
-const ADOBE: AdobeConfig = {
-    organization: 'org-1@AdobeOrg',
-    projectId: 'proj-1',
-    workspace: 'ws-1',
-};
+import {
+    ensureWorkspaceRuntimeReady,
+    creationConfig,
+    ADOBE,
+    INTEGRATION_ENTRY,
+    MESH_ENTRY,
+} from './executorAppBuilderPhase.testUtils';
 
 const context = createMockHandlerContext();
 
+/** Every case here starts from a COMPLETE deploy target, so a skip is the gate's doing. */
 function config(overrides: Partial<ProjectCreationConfig> = {}): ProjectCreationConfig {
-    return { projectName: 'demo', adobe: ADOBE, ...overrides };
+    return creationConfig({ adobe: ADOBE, ...overrides });
 }
 
 beforeEach(() => {
