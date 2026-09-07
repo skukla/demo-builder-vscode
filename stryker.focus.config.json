@@ -8,7 +8,8 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/state/transientStateManager.ts"
+        "src/core/utils/envParser.ts",
+        "src/types/webview.ts"
     ],
     "reporters": [
         "clear-text",
