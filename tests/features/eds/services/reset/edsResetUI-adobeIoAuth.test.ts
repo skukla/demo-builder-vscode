@@ -1,10 +1,12 @@
 /**
- * EDS Reset Service - Adobe I/O Auth Tests
+ * RENAMED from `edsResetService-auth.test.ts` on 2026-09-07 (PL-45). Every test
+ * here drives `resetEdsProjectWithUI`, which is declared in `edsResetUI.ts`; the
+ * old name paired the suite with `edsResetService.ts`, so all three were scored
+ * against a module they never constrain.
  *
- * Regression test: resetEdsProjectWithUI should call loginAndRestoreProjectContext
- * (not bare login()) when Adobe I/O re-authentication is needed during reset.
- * This ensures the AIO CLI has the correct org/project/workspace context after login,
- * matching the pattern used by deployMesh, dashboardHandlers, and configure.
+ * Named `-adobeIoAuth` rather than `-auth` because `edsResetUI-auth.test.ts`
+ * already exists and covers the same function from a different setup; merging the
+ * two would mean harmonising two fixture styles for no gain.
  */
 
 import type { Project } from '@/types/base';
