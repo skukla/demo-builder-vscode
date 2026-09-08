@@ -45,8 +45,8 @@ finished (see [[PL-29]]'s second-pass table).
 |---|---|---|---|
 | 1 | Claims from three t3.gg videos, applied where they fit | **Done**, enforced | — |
 | 2 | Documentation synthesis — canonical, useful, enforced | **Phases A, B and C all DONE** — [[PL-29]] | Nothing this track owns. Two documents stay provisional until track 3 settles the strategy they describe |
-| 3 | Test strategy — de-duplicate and clean up | **Substantially done.** ADR-016 ratified; the convergence plan SHIPPED and archived; 8 enforcer suites; ~24 completed test plans | 13 mock-wall suites, shared fixture builders ([[PL-16]]), the mutation follow-through ([[PL-22]]) |
-| 4 | Architecture programme and standards | **Substantially done.** SEVEN ADRs ratified 2026-08-28→30 (015, 016, 017, 018, 020, 021, 022); the handbook — 66 conventions; `where-code-goes.md`; 5 enforcer suites | 30 shrink-only ledger rows ([[PL-13]]), the CSS decision ADR-018 parked ([[PL-21]]), [[PL-19]], [[PL-20]] |
+| 3 | Test strategy — de-duplicate and clean up | **Substantially done.** ADR-016 ratified; the convergence plan SHIPPED and archived; 8 enforcer suites; ~24 completed test plans. The mock walls, the shared fixture builders ([[PL-16]]) and the mutation burn-down ([[PL-22]]) all SHIPPED | [[PL-48]] (mid-flight), [[PL-50]] and [[PL-46]] (open questions), [[PL-47]] (not started), [[PL-14]] (waiting on use) |
+| 4 | Architecture programme and standards | **Substantially done.** SEVEN ADRs ratified 2026-08-28→30 (015, 016, 017, 018, 020, 021, 022); the handbook — now 88 conventions, 87 enforced; `where-code-goes.md`; 5 enforcer suites. [[PL-31]] closed 2026-09-08 | 3 ledger rows + one ceiling ([[PL-13]]), the parked CSS decision ([[PL-21]]), [[PL-19]], [[PL-20]], [[PL-27]], and [[PL-33]]'s last convention which PL-21 gates |
 
 **Tracks 3 and 4 are NOT pending — they are the tracks that produced the handbook**,
 and they ran FIRST. The program's earliest commits, 2026-08-28, are test-builder
@@ -98,44 +98,53 @@ will not let this epic close while any of them is unfinished — the relationshi
 mechanical, not a promise in prose.
 
 Each row says what FINISHED means, because an item without a done-condition is how a
-programme runs forever. Where a row says *needs a done-condition*, that is the first
-work on it.
+programme runs forever.
 
-### Track 2 — documentation
+> **Re-measured 2026-09-08**, because the "Now" column had gone stale in both
+> directions: it still described [[PL-22]] as "16 of 507" and [[PL-32]] as "as any 286"
+> months after both shipped, while [[PL-26]] sat on the roster with no `parent` set — on
+> the roster in prose only, exactly the failure the paragraph above claims is impossible.
+> Both fixed. Every state below was measured against the code, not read from this file.
 
-| Item | Finished when | Now |
+**Ten items left.** Three of the four tracks are closed; track 4 holds most of what
+remains.
+
+### Wave 1 — unblocked, no decision needed. Start here.
+
+| Item | Finished when | Measured state, 2026-09-08 |
 |---|---|---|
-| [[PL-29]] | The two provisional documents are final — they cannot be, until track 3 settles the strategy they describe | 2 provisional |
-| [[PL-26]] | *needs a done-condition* — a glossary exists and something checks the words are used | no glossary |
+| [[PL-13]] | The ADR-015 exemption ledger is empty | 3 rows (`commandBase`, `typesPurity`, `layerDirection`) + the `patternBSendMessageCeiling` at 143 |
+| [[PL-19]] | The sidebar uses the shared webview client like the other seven | 1 outlier. `sidebar/ui/index.tsx` still calls `acquireVsCodeApi` at module scope |
+| [[PL-34]] | Section A empty, B holds only the two large builders, C only rows needing a person | sections A/B/C open, plus 3 recorded flakes nobody has reproduced |
+| [[PL-11]] → PL-48 | The most repetitive suites have been READ and what reading finds is fixed | active, mid-flight |
+| [[PL-11]] → PL-47 | Themes, widths and accessibility are further readings of the existing baseline harness | not started. Cheap — extends an instrument that already loads all eight bundles |
 
-### Track 3 — test strategy (epic: [[PL-11]])
+### Wave 2 — needs one decision from the owner before, or as, the work
 
-| Item | Finished when | Now |
+| Item | The decision | Then |
 |---|---|---|
-| [[PL-9]] | Every test sits at its subject's mirror, and the enforcer checks SUBJECT rather than directory | **built** — 45 moved, allowlist row gone, half 3 added. Blind spot stated: the resolver cannot name a subject for 316 suites, so half 1 still carries those |
-| [[PL-14]] | Built. Closes when the seven artifacts are in use, not merely present | built |
-| [[PL-15]] | A full run emits zero act() warnings, zero prop warnings, zero stray error lines | 355 / 72 / 600+ at baseline |
-| [[PL-16]] | StateManager and Project each have ONE builder, and the literal-cast ledger for them is empty | 205 casts across 4 types; 63 split families without shared setup |
-| [[PL-22]] | Every included module is measured and ratcheted; thresholds ratified | 16 of 507 (3.2%) |
-| [[PL-32]] | Both forms are zero and the ban replaces the ceiling | `as any` 286, `as never` 190 |
+| [[PL-21]] | Phase 2 (the CSS AUDIT) needs no authorisation and is the next step. Phase 4 (the refactor) does | Audit → ADR-018 → refactor |
+| [[PL-20]] | Per class: was the rule never written, or is the class dead? Only a person can say | 19 classes, ledgered so the set cannot grow |
+| [[PL-26]] | *Needs a done-condition* — that is the first work on it | A glossary exists and something checks the words are used |
+| [[PL-27]] | Which of the skills is doing a job a check should hold | *needs a count* |
+| [[PL-11]] → PL-50 | What to do about modules measured against suites that merely share their filename | open question |
+| [[PL-11]] → PL-46 | Whether to drive the real VS Code, given it creates real Adobe/GitHub/DA.live resources | a question before it is work |
 
-### Track 4 — architecture and conventions
+### Wave 3 — blocked, and by what
 
-| Item | Finished when | Now |
+| Item | Blocked on | Why |
 |---|---|---|
-| [[PL-13]] | The ADR-015 exemption ledger is empty | ~8 rows |
-| [[PL-19]] | The sidebar uses the shared webview client like the other seven | 1 outlier |
-| [[PL-20]] | Each of the 19 classes is either styled or removed | 19 |
-| [[PL-21]] | ADR-018 decides the CSS question it deliberately parked | parked |
-| [[PL-27]] | Every skill that is doing a check's job has been adjudicated | *needs a count* |
-| [[PL-31]] | No re-export index file remains, or the survivors are ledgered with reasons | 8 |
-| [[PL-33]] | Built — every convention enforced or removed | 78 conventions, 77 enforced |
+| [[PL-33]] | [[PL-21]] | 88 conventions, 87 enforced. The one gap is a `@layer vendor` rule that is **not yet true** — no such layer exists in `src/`, so a check would fail the build rather than protect anything. It waits on the CSS migration, which is not authorised. A rule with a start date, not debt |
+| [[PL-29]] | track 3 ([[PL-11]]) | Two documents stay provisional until the test strategy they describe settles |
+| [[PL-11]] | its own children | Closes when PL-14, PL-46, PL-47, PL-48 and PL-50 do |
 
-### Cross-cutting
+[[PL-14]] is built and waiting on USE, not work: all seven artifacts landed
+2026-08-31, and it closes when a webview test is authored against the new
+`webview-test-authoring` sections. Fold it into the next webview test rather than
+scheduling it.
 
-| Item | Finished when | Now |
-|---|---|---|
-| [[PL-34]] | Every finding from the 2026-09-01 toolchain day is closed or dropped | active |
+**The critical path is [[PL-21]].** It gates PL-33 outright, it is the largest single
+item left, and its phase 2 can start today without a ruling.
 
 ## What is deliberately NOT in this program
 

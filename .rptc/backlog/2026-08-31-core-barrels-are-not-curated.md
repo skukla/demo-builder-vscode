@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: med
-status: built
+status: shipped
 parent: PL-30
 ---
 
@@ -133,3 +133,4 @@ filename.
 - 2026-08-31  refactor(helpers): move validateField out of the re-export index (PL-31 step 1 of 2) (`814268b57`)
 - 2026-08-31  refactor(barrels): src/types retired — the reExportIndex ledger is CLOSED (`b0910f79f`)
 - 2026-08-31  Loop 2026-08-31: all 43 re-export indexes retired; ledger closed
+- 2026-09-08  Done-condition verified 2026-09-08 and closed: reExportIndex is a BAN (expectBanned in architecture-rules.test.ts), not a ledger; the only index.tsx files under src/ are the 7 bundle entries (the 8th entry is dashboard/main.tsx); and the handbook reads 'LEDGER CLOSED: all 43 that predated the rule were retired on 2026-08-31'. All three clauses hold.

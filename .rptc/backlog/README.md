@@ -305,7 +305,6 @@ each item's own file; what has already landed against an item is in its
 | `PL-43` | fix | └ [651 assertions claim something is empty using a comparison that accepts an empty value instead](2026-09-04-lenient-equality-hides-empty-values.md) | — | high | shipped |
 | `PL-45` | fix | └ [Tests named so the mirror convention misses them](2026-09-05-tests-named-so-the-mirror-convention-misses-them.md) | — | high | shipped |
 | `PL-25` | chore | [Skill descriptions should trigger, not describe](skill-description-triggers.md) | — | med | dropped |
-| `PL-26` | feature | [A glossary, so the agent describes things back in our words](project-glossary.md) | — | med | active |
 | `PL-28` | question | [Rules stated as law that no handbook, ADR or check backs](unratified-rules-register.md) | — | high | shipped |
 | `PL-30` | epic | [The four-track program — enforceable conventions, in sequence](four-track-program.md) | — | high | active |
 | `PL-11` | epic | └ [Test health and optimization](2026-08-28-test-health-epic.md) | — | med | active |
@@ -313,9 +312,10 @@ each item's own file; what has already landed against an item is in its
 | `PL-19` | fix | └ [The sidebar is the only webview not using the shared client](2026-08-29-sidebar-converge-on-webview-client.md) | — | med | backlog |
 | `PL-20` | fix | └ [19 classes a component asks for that nothing styles](2026-08-29-triage-classes-defined-nowhere.md) | — | med | backlog |
 | `PL-21` | question | └ [CSS: understand it, then get a safety net, then rule on it — refactor last, if at all](2026-08-29-css-architecture-understand-before-refactor.md) | — | high | active |
+| `PL-26` | feature | └ [A glossary, so the agent describes things back in our words](project-glossary.md) | — | med | active |
 | `PL-27` | question | └ [Is any of our 37 skills doing a job a check should hold?](skills-vs-enforcement-layer.md) | — | low | open |
 | `PL-29` | epic | └ [Track 2 — documentation synthesis, and every document enforced](doc-synthesis-track.md) | PL-11 | high | active |
-| `PL-31` | chore | └ [Retire the 43 re-export index files, module by module](2026-08-31-core-barrels-are-not-curated.md) | — | med | built |
+| `PL-31` | chore | └ [Retire the 43 re-export index files, module by module](2026-08-31-core-barrels-are-not-curated.md) | — | med | shipped |
 | `PL-33` | chore | └ [Every convention is enforced, or it stops being a convention](2026-08-31-every-convention-enforced.md) | — | high | built |
 | `PL-34` | chore | └ [Every open finding from the 2026-09-01 toolchain day, in one list](2026-09-01-cast-and-builder-worklog.md) | — | high | active |
 | `PL-37` | chore | [The webview handshake's `stateVersion` is write-only](2026-09-02-webview-state-version-dead.md) | — | low | backlog |
