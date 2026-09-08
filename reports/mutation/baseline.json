@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "PL48-04 configGenerator: 89.71 -> 92.57, survivors 17 -> 12, openGaps 0 -> 0. Five newly-killed mutants are decisions, not wording: the three isAccs guards that drop the PaaS catalog endpoint / API key / environment id (a mutant probe showed all three uncovered), the addon-entry optional chain, and the empty commerce-endpoint default. Behavioural survivors held at 1 because that 1 IS the ledgered equivalent mutant at 'if (params.selectedPackage)' and cannot fall; every other survivor is logger wording or a switch-case literal whose mutation reaches the same default arm.",
+    "_note": "First baseline for daLiveBlockLibraryOperations: it had no mirrored suite, so focusModule could not focus it and it had never been measured. Six new suites (82 -> 96 tests) drive it directly with injected collaborators and assert the arguments handed to fetchWithRetry/createSource/deleteSource/updateSiteConfig/copySingleFile. 81.87% total, 62 survivors, most of them logger string literals. NOTE: the module was NOT unexecuted before this - five daLiveContentOperations-* suites already ran it to 90% statement coverage; it was unattributed, not uncovered.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -9701,6 +9701,31 @@
             "highValueSurvivors": 0,
             "equivalent": 0,
             "openGaps": 0
+        },
+        "src/features/eds/services/daLive/daLiveBlockLibraryOperations.ts": {
+            "score": 81.87,
+            "killed": 314,
+            "survived": 62,
+            "noCoverage": 8,
+            "timeout": 2,
+            "survivorCategories": {
+                "logPresentation": 19,
+                "other": 4,
+                "branch": 23,
+                "block": 9,
+                "string": 6,
+                "optionalChain": 1
+            },
+            "uncoveredCategories": {
+                "string": 2,
+                "block": 2,
+                "other": 2,
+                "branch": 1,
+                "logPresentation": 1
+            },
+            "highValueSurvivors": 32,
+            "equivalent": 0,
+            "openGaps": 42
         }
     }
 }

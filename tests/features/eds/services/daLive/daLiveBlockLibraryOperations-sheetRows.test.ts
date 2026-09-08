@@ -38,12 +38,15 @@ describe('DaLiveBlockLibraryOperations sheet rows', () => {
         path: 'https://content.da.live/user-org/user-site/.da/library/blocks/hero',
     };
 
-    /** The rows handed to the rewrite POST. */
-    const rewrittenRows = async (): Promise<Array<Record<string, string>>> => {
-        const post = h.fetchWithRetry.mock.calls.find(
+    /** The rewrite POST, as `[url, init]`. */
+    const rewritePost = (): [string, { body?: unknown }] =>
+        h.fetchWithRetry.mock.calls.find(
             (call) => (call[1] as { method?: string }).method === 'POST'
         ) as [string, { body?: unknown }];
-        const body = (await readSpreadsheetBody(post[1].body)) as {
+
+    /** The rows handed to the rewrite POST. */
+    const rewrittenRows = async (): Promise<Array<Record<string, string>>> => {
+        const body = (await readSpreadsheetBody(rewritePost()[1].body)) as {
             data: { data: Array<Record<string, string>> };
         };
         return body.data.data;
@@ -122,10 +125,35 @@ describe('DaLiveBlockLibraryOperations sheet rows', () => {
 
             await h.ops.appendBlockToLibrary(org, site, { blockId: 'hero', title: 'Hero' });
 
-            const post = h.fetchWithRetry.mock.calls.find(
-                (call) => (call[1] as { method?: string }).method === 'POST'
-            ) as [string, { body?: unknown }];
-            expect((post[1].body as FormData).get('overwrite')).toBe('true');
+            expect((rewritePost()[1].body as FormData).get('overwrite')).toBe('true');
+        });
+
+        it('rewrites the same sheet it read, under the two library columns', async () => {
+            h.fetchWithRetry.mockImplementation(sheetProbe([cardsRow]));
+
+            await h.ops.appendBlockToLibrary(org, site, { blockId: 'hero', title: 'Hero' });
+
+            const [url, init] = rewritePost();
+            expect(url).toBe(sheetUrl);
+            const body = (await readSpreadsheetBody(init.body)) as {
+                data: { ':colWidths': number[] };
+            };
+            // One width per header: the sheet is written with ['name', 'path'].
+            expect(body.data[':colWidths']).toStrictEqual([300, 300]);
+        });
+
+        it('treats a sheet body with no data envelope as an empty sheet', async () => {
+            h.fetchWithRetry.mockImplementation(async (_url: string, init?: { method?: string }) =>
+                init?.method === 'GET' ? fakeResponse(200, {}) : fakeResponse(200)
+            );
+
+            const result = await h.ops.appendBlockToLibrary(org, site, {
+                blockId: 'hero',
+                title: 'Hero',
+            });
+
+            expect(await rewrittenRows()).toStrictEqual([heroRow]);
+            expect(result.status).toBe('appended');
         });
 
         it('writes nothing when a row of that title is already there', async () => {
@@ -237,6 +265,36 @@ describe('DaLiveBlockLibraryOperations sheet rows', () => {
             const result = await h.ops.removeBlockFromLibrary(org, site, { blockId: 'hero' });
 
             expect(await rewrittenRows()).toStrictEqual([cardsRow]);
+            expect(result.sheet).toBe('removed');
+        });
+
+        it('reads and rewrites the same sheet URL', async () => {
+            h.fetchWithRetry.mockImplementation(sheetProbe([cardsRow, heroRow]));
+
+            await h.ops.removeBlockFromLibrary(org, site, { blockId: 'hero' });
+
+            expect(h.fetchWithRetry).toHaveBeenCalledWith(sheetUrl, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${HARNESS_TOKEN}` },
+            });
+            const [url, init] = rewritePost();
+            expect(url).toBe(sheetUrl);
+            expect((init.body as FormData).get('overwrite')).toBe('true');
+            const body = (await readSpreadsheetBody(init.body)) as {
+                data: { ':colWidths': number[] };
+            };
+            expect(body.data[':colWidths']).toStrictEqual([300, 300]);
+        });
+
+        it('keeps a row that carries no path at all rather than dropping it', async () => {
+            const pathlessRow = { name: 'Hand-added' };
+            h.fetchWithRetry.mockImplementation(
+                sheetProbe([pathlessRow as Record<string, string>, heroRow])
+            );
+
+            const result = await h.ops.removeBlockFromLibrary(org, site, { blockId: 'hero' });
+
+            expect(await rewrittenRows()).toStrictEqual([pathlessRow]);
             expect(result.sheet).toBe('removed');
         });
 

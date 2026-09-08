@@ -113,6 +113,20 @@ describe('DaLiveBlockLibraryOperations doc pages', () => {
             expect(h.createSource).not.toHaveBeenCalled();
         });
 
+        it('writes each page exactly once when there are more blocks than one batch', async () => {
+            h.fetchWithRetry.mockImplementation(docPageProbe([]));
+            const many = Array.from({ length: 7 }, (_unused, i) => ({
+                title: `Block ${i}`,
+                id: `block-${i}`,
+                exampleHtml: `<div class="block-${i}"></div>`,
+            }));
+
+            await h.ops.ensureBlockDocPages(org, site, many);
+
+            const written = h.createSource.mock.calls.map((call) => call[2]);
+            expect(written).toStrictEqual(many.map((b) => `.da/library/blocks/${b.id}.html`));
+        });
+
         it('writes the remaining pages when one of them fails', async () => {
             h.fetchWithRetry.mockImplementation(docPageProbe([]));
             h.createSource.mockImplementation(async (_o: string, _s: string, path: string) =>
@@ -149,6 +163,36 @@ describe('DaLiveBlockLibraryOperations doc pages', () => {
         });
     });
 
+    describe('the doc-page probe', () => {
+        it('HEADs each block page on the destination site with the bearer token', async () => {
+            h.fetchWithRetry.mockImplementation(docPageProbe([]));
+
+            await h.ops.ensureBlockDocPages(org, site, [
+                { title: 'Hero', id: 'hero', exampleHtml: '<div class="hero"></div>' },
+            ]);
+
+            expect(h.fetchWithRetry).toHaveBeenCalledWith(
+                'https://admin.da.live/source/user-org/user-site/.da/library/blocks/hero.html',
+                { method: 'HEAD', headers: { Authorization: 'Bearer mock-ims-token' } }
+            );
+        });
+
+        it('treats a block whose probe throws as undocumented rather than failing', async () => {
+            h.fetchWithRetry.mockRejectedValue(new Error('network down'));
+
+            await h.ops.ensureBlockDocPages(org, site, [
+                { title: 'Hero', id: 'hero', exampleHtml: '<div class="hero"></div>' },
+            ]);
+
+            expect(h.createSource).toHaveBeenCalledWith(
+                org,
+                site,
+                '.da/library/blocks/hero.html',
+                expect.stringContaining('class="hero"')
+            );
+        });
+    });
+
     describe('the generated stub pages', () => {
         const runCreation = (
             blocks: Array<{ title: string; id: string }>
@@ -180,6 +224,65 @@ describe('DaLiveBlockLibraryOperations doc pages', () => {
                 '.da/library/blocks/store-locator.html',
                 '<body><header></header><main><div><div class="store-locator"><div><div><p>Store Locator</p></div></div></div></div></main><footer></footer></body>'
             );
+        });
+
+        it('does not stub a block that carries its own example markup', async () => {
+            h.fetchWithRetry.mockImplementation(docPageProbe([]));
+
+            await h.ops.createBlockLibraryFromTemplate(
+                org,
+                site,
+                'hlxsites',
+                'citisignal',
+                jest.fn().mockResolvedValue(
+                    componentDefinition([
+                        {
+                            id: 'blocks',
+                            components: [
+                                {
+                                    title: 'Hero',
+                                    id: 'hero',
+                                    plugins: { da: { unsafeHTML: '<div class="hero">Ex</div>' } },
+                                },
+                            ],
+                        },
+                    ])
+                ) as unknown as (
+                    owner: string,
+                    repo: string,
+                    path: string
+                ) => Promise<{ content: string; sha: string } | null>
+            );
+
+            // One write only — the ensure pass. A stub on top would replace the
+            // template's own example with a placeholder.
+            expect(h.createSource).toHaveBeenCalledTimes(1);
+            expect(h.createSource.mock.calls[0][3]).toContain('<div class="hero">Ex</div>');
+        });
+
+        it('treats a block with an empty plugins object as having no example', async () => {
+            h.fetchWithRetry.mockImplementation(docPageProbe([]));
+
+            await h.ops.createBlockLibraryFromTemplate(
+                org,
+                site,
+                'hlxsites',
+                'citisignal',
+                jest.fn().mockResolvedValue(
+                    componentDefinition([
+                        {
+                            id: 'blocks',
+                            components: [{ title: 'Hero', id: 'hero', plugins: {} }],
+                        },
+                    ])
+                ) as unknown as (
+                    owner: string,
+                    repo: string,
+                    path: string
+                ) => Promise<{ content: string; sha: string } | null>
+            );
+
+            expect(h.createSource.mock.calls[0][3]).toContain('<p>Hero</p>');
         });
 
         it('does not stub a block that already has a doc page', async () => {

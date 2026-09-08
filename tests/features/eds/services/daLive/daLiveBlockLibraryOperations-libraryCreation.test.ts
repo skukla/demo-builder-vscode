@@ -157,6 +157,24 @@ describe('DaLiveBlockLibraryOperations.createBlockLibrary', () => {
             expect((post[1].body as FormData).get('overwrite')).toBe('true');
         });
 
+        it('writes to the library sheet path under the two library columns', async () => {
+            h.fetchWithRetry.mockImplementation(docPageProbe(['cards']));
+            withBlocks([{ title: 'Cards', id: 'cards' }]);
+
+            await run();
+
+            const post = h.fetchWithRetry.mock.calls.find(
+                (call) => (call[1] as { method?: string }).method === 'POST'
+            ) as [string, { body?: unknown }];
+            expect(post[0]).toBe(
+                'https://admin.da.live/source/user-org/user-site/.da/library/blocks.json'
+            );
+            const body = (await readSpreadsheetBody(post[1].body)) as {
+                data: { ':colWidths': number[] };
+            };
+            expect(body.data[':colWidths']).toStrictEqual([300, 300]);
+        });
+
         it('reports failure naming the sheet when the write is rejected', async () => {
             h.fetchWithRetry.mockImplementation(async (url: string, init?: { method?: string }) => {
                 if (init?.method === 'POST' && url.endsWith('.da/library/blocks.json')) {
