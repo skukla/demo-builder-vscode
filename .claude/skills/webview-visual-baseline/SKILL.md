@@ -32,6 +32,22 @@ themes. A diff between the two theme captures is what would show that slipping.
 class a single-width capture cannot see at all. 900 is a normal editor column;
 1280 is the historical baseline, kept so older fingerprints stay comparable.
 
+**`auditContrast()` runs the one WCAG rule jsdom cannot.** The jest suite
+(`tests/core/ui/accessibility.test.tsx`) checks every render but must disable
+`color-contrast`, because jsdom has no paint. This runs the same rule in a real
+browser against the real bundle. First run, 2026-09-08: dashboard, wizard and
+sidebar all clean — 10, 14 and 8 passing checks, zero violations.
+
+**READ THE PASS COUNT, NOT JUST THE VIOLATION COUNT.** Zero violations with zero
+passes means nothing was inspected, not that everything is fine. The sidebar
+reported exactly that on the first attempt, and the cause was a stale FIXTURE:
+PL-19 moved its message envelope from `data` to `payload` and
+`buildPushedMessages` still sent the old one, so the surface sat on its spinner in
+the harness while working perfectly in a real window. That is the fixture rot
+PL-47 predicted, and it appeared the same day as the change that caused it. Fixed;
+the sidebar went from 11 elements and no text to 42 elements and 8 contrast
+checks.
+
 Not screenshots: exact string equality, no pixel tolerance, no font drift, and it
 catches cascade and specificity changes, which is what this codebase's CSS
 failures actually are.
@@ -59,6 +75,8 @@ npm run compile
 mkdir -p /tmp/vr && cp dist/webview/*-bundle.js /tmp/vr/
 cp src/core/ui/styles/reset.css src/core/ui/styles/tokens.css /tmp/vr/
 cp .claude/skills/webview-visual-baseline/harness.html /tmp/vr/h.html
+# Only needed for auditContrast() — the WCAG rule jsdom cannot judge.
+cp node_modules/axe-core/axe.min.js /tmp/vr/
 node .claude/skills/webview-visual-baseline/build-fixtures.mjs /tmp/vr
 
 # 3. Serve where the browser can reach it

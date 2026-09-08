@@ -201,3 +201,65 @@ function diff(before, after) {
     }
     return moved;
 }
+
+/**
+ * WCAG COLOUR CONTRAST — the one accessibility rule jsdom cannot judge.
+ *
+ * `tests/core/ui/accessibility.test.tsx` runs axe on every render in the jest
+ * suite and explicitly DISABLES `color-contrast`, because jsdom has no layout or
+ * paint and therefore no rendered colour to measure. This is the other half: the
+ * same rule, in a real browser, against the real built bundle.
+ *
+ * Requires `axe.min.js` staged beside the harness (see SKILL.md step 2). Injected
+ * into each iframe rather than into the harness itself, so an ordinary fingerprint
+ * capture stays untouched by a 500KB script.
+ *
+ * Contrast is measured at the DARK theme only by default, and that is not laziness:
+ * the extension imposes `vscode-dark` on every user deliberately, so the dark
+ * rendering is the only one a person actually sees. Pass a theme to check that the
+ * imposition has not slipped.
+ */
+async function auditContrast({ surfaces = SURFACES, theme = 'dark', width = 1280 } = {}) {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const out = {};
+    for (const bundle of surfaces) {
+        const frame = document.createElement('iframe');
+        frame.style.cssText = `width:${width}px;height:900px;border:0;position:absolute;left:-9999px`;
+        frame.src = `/h.html?b=${bundle}&t=${theme}&cb=ax${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+        document.body.appendChild(frame);
+        await wait(SETTLE_MS);
+
+        const doc = frame.contentDocument, win = frame.contentWindow;
+        if (win.__FREEZE__) win.__FREEZE__();
+
+        // Inject axe INTO the frame: it must run in the same document whose
+        // computed colours it is measuring.
+        await new Promise((res, rej) => {
+            const sc = doc.createElement('script');
+            sc.src = '/axe.min.js';
+            sc.onload = res;
+            sc.onerror = () => rej(new Error('axe.min.js not staged beside the harness'));
+            doc.head.appendChild(sc);
+        });
+
+        const res = await win.axe.run(doc.getElementById('root'), {
+            runOnly: { type: 'rule', values: ['color-contrast'] },
+        });
+
+        out[`${bundle}@${theme}@${width}`] = {
+            violations: res.violations.map((v) => ({
+                impact: v.impact,
+                nodes: v.nodes.map((n) => ({
+                    target: n.target.join(' '),
+                    summary: (n.failureSummary || '').split('\n').filter(Boolean).slice(-1)[0] || '',
+                })),
+            })),
+            // A zero with nothing checked is not a pass. axe reports what it could
+            // not decide separately, and both matter.
+            passes: res.passes.length,
+            incomplete: res.incomplete.length,
+        };
+        frame.remove();
+    }
+    return out;
+}

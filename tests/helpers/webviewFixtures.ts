@@ -199,7 +199,12 @@ export function buildPushedMessages(project: Project): Record<string, PushedMess
     };
 
     return {
-        getContext: { type: 'contextResponse', data: { context } },
+        // `payload`, not `data`: the sidebar joined the shared webview client on
+        // 2026-09-08 (PL-19) and its provider now sends the standard envelope. The
+        // stale `data` here left the sidebar blank in the visual harness while it
+        // worked perfectly in a real window — which is exactly the fixture rot PL-47
+        // warns about, arriving the same day as the change that caused it.
+        getContext: { type: 'contextResponse', payload: { context } },
         requestStatus: { type: 'statusUpdate', payload: status },
     };
 }
