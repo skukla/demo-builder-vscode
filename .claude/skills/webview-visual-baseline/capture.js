@@ -24,6 +24,15 @@ const PROPS = [
     // carrying `!important`, and the original 16-property list could not see any
     // of them — so an `!important` sweep would have reported clean either way.
     'box-shadow', 'border-radius', 'z-index', 'transform', 'overflow', 'outline', 'gap',
+    // Added 2026-09-08 by PL-21 phase 2. The audit found three duplicated utility
+    // classes whose two definitions genuinely disagree, and one of them is
+    // `.letter-spacing-05`. With letter-spacing uncaptured, deleting the losing
+    // definition produced an empty diff — the instrument reporting clean because it
+    // was not looking, which is the exact failure the 23rd property was added to
+    // stop. `text-transform` and `line-height` join it: `.text-uppercase` is
+    // duplicated the same way, and a unitless line-height moves whenever font-size
+    // does, so capturing font-size without it tells half the story.
+    'letter-spacing', 'text-transform', 'line-height',
 ];
 
 const SURFACES = [

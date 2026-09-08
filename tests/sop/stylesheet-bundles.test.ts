@@ -128,9 +128,28 @@ describe('ADR-018 §2: !important is a symptom, not a mechanism', () => {
         expect(total).toBeGreaterThan(10_000);
     });
 
+    /**
+     * COMMENTS ARE STRIPPED FIRST, and that is not a nicety.
+     *
+     * This counted raw matches until 2026-09-08, so a comment EXPLAINING the
+     * !important problem incremented the !important count. PL-21 phase 2 wrote
+     * three sentences about it into eds-steps.css and pushed the ceiling from
+     * 1,969 to 1,972 — a red build caused entirely by documentation, and an
+     * instrument that quietly taxes anyone writing down what it is measuring.
+     * Seven of the counted occurrences were already comment text before that.
+     * The real declaration count is what the ratchet is for.
+     */
+    const stripComments = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    it('CONTROL: stripping comments does not empty the corpus', () => {
+        const stripped = CSS.map((f) => stripComments(readFileSync(f, 'utf8'))).join('');
+        expect(stripped).toContain('!important');
+        expect(stripped.length).toBeGreaterThan(10_000);
+    });
+
     it('the count never grows, and a fall is pinned', () => {
         const count = CSS.reduce(
-            (n, f) => n + (readFileSync(f, 'utf8').match(/!important/g) ?? []).length,
+            (n, f) => n + (stripComments(readFileSync(f, 'utf8')).match(/!important/g) ?? []).length,
             0
         );
         expectCeiling(LEDGER, 'importantCeiling', count);

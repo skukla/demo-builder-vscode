@@ -33,8 +33,8 @@
     "messageChannelOwners": {
         "src/core/ui/utils/WebviewClient.ts": "THE singleton channel — the shared client all eight bundles talk through. The sidebar joined them on 2026-09-08 (PL-19); before that it acquired its own and was listed below."
     },
-    "importantCeiling": 1969,
-    "_importantCeiling_note": "ADR-018 measured 1,866 removable uses when it was written; the count had drifted to 1,969 by 2026-08-30, which is why it is pinned rather than left as advice. Migration is PL-21 and is not authorised yet — this only stops the number growing back.",
+    "importantCeiling": 1965,
+    "_importantCeiling_note": "ADR-018 measured 1,866 removable uses when it was written; the count had drifted to 1,969 by 2026-08-30, which is why it is pinned rather than left as advice. Migration is PL-21 and is not authorised yet — this only stops the number growing back. LOWERED to 1,965 on 2026-09-08: the check counted raw matches, so seven of those 1,969 were the word !important inside COMMENTS explaining the problem. It now strips comments before counting, which is why the pin falls without a single declaration being removed.",
     "styleBlockLeaks": {
         "src/features/eds/ui/components/VerifiedField.tsx::text-red-500": "Redundant copy — .text-red-500 was added to custom-spectrum.css when this block was found to be its only definition (see the comment at that sheet's line 6177). The block copy was never removed. Measured 2026-08-30.",
         "src/features/project-creation/ui/wizard/WizardContainer.tsx::backward": "Redundant copy — .backward is also in custom-spectrum.css and wizard.css. Measured 2026-08-30.",

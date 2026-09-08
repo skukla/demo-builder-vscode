@@ -6,54 +6,24 @@
  */
 
 /* ========== Typography Utilities ========== */
-.font-medium {
-    font-weight: 500;
-}
 
-.font-semibold {
-    font-weight: 600;
-}
 
-.text-sm {
-    font-size: 0.875rem;
-}
 
-.text-xs {
-    font-size: 0.75rem;
-}
 
-.text-uppercase {
-    text-transform: uppercase;
-}
 
-.letter-spacing-05 {
-    letter-spacing: 0.05em;
-}
 
 /* ========== Color Utilities (Spectrum Design Tokens) ========== */
 .text-gray-400 {
     color: var(--spectrum-global-color-gray-400);
 }
 
-.text-gray-500 {
-    color: var(--spectrum-global-color-gray-500);
-}
 
-.text-gray-600 {
-    color: var(--spectrum-global-color-gray-600);
-}
 
-.text-gray-700 {
-    color: var(--spectrum-global-color-gray-700);
-}
 
 .text-gray-900 {
     color: var(--spectrum-global-color-gray-900);
 }
 
-.text-green-600 {
-    color: var(--spectrum-global-color-green-600);
-}
 
 .text-blue-500 {
     color: var(--spectrum-global-color-blue-500);
@@ -65,6 +35,30 @@
    did not apply there. Kept UNLAYERED at the destination: this file declares no
    @layer, so these rules currently outrank layered ones, and moving them into
    `@layer theme` would have quietly lowered their priority. */
+
+/* The typography and colour utilities that lived here — .text-sm, .text-xs,
+   .letter-spacing-05, .font-medium, .font-semibold, .text-uppercase,
+   .text-gray-500/600/700, .text-green-600 — were REMOVED 2026-09-08 (PL-21 phase 2).
+   custom-spectrum.css defines every one of them and reaches all eight bundles,
+   where this sheet reaches only the wizard.
+
+   THEY WERE INERT, and the reason is the one thing about this cascade that is
+   easy to get backwards. This file declares no @layer, and an unlayered NORMAL
+   rule does beat a layered normal one — but every core copy carries !important,
+   and author-important beats author-normal whatever the layers say. So the core
+   values always won and these duplicates styled nothing. Proved by deleting them
+   under the visual baseline: 48 surface/theme/width captures, 2,700 elements,
+   ZERO moved. On the wizard .text-sm computes to core's 12px, .text-xs to 11px
+   and .letter-spacing-05 to 0.5px, not to the 0.875rem/0.75rem/0.05em that were
+   written here.
+
+   WHY DELETING THEM FIRST MATTERS. They were inert only because of the
+   !important. The moment ADR-018's sweep removes !important from the core copies,
+   an unlayered normal duplicate would start winning and the wizard would silently
+   diverge. Removing the duplicates is therefore a PREREQUISITE for that sweep,
+   not tidying to do afterwards.
+
+   Add a utility to custom-spectrum.css, not to a feature sheet. */
 
 /* ========== Layout Utilities ========== */
 .flex-shrink-0 {
