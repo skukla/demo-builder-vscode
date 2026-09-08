@@ -102,6 +102,25 @@ number. The targets below sit at 90–100%, the 95th percentile and above. No be
 what a healthy ratio is, so the extremes are the only part that can be acted on without
 inventing a threshold.
 
+**WHY EIGHT, stated explicitly because the owner had to ask on 2026-09-08.** The cut is two
+filters, and the prose above only described the first:
+
+1. **Redundancy ratio at or above 90%** — the 95th percentile and above. That is 26 modules.
+2. **Of those, the eight with the largest ABSOLUTE redundant-test count.** Their counts sum
+   to exactly the 384 quoted above, which is how the selection can be checked rather than
+   taken on trust.
+
+The second filter is where the effort actually is. Ratio alone would put
+`CenteredFeedbackContainer` (19/19, 100%) and `resourceLocker` (17/17, 100%) ahead of
+`sanitization` (37/41, 90%), and reading a 19-test module returns less than reading a
+41-test one for the same effort. Below the cut the counts fall away — number nine holds 22
+redundant tests against number eight's 24 — which is the same diminishing return the
+"111 modules hold half of it" line describes, seen from the top.
+
+Re-measured 2026-09-08 against `reports/mutation/redundancy/summary.jsonl`: 534 modules with
+ten or more tests, not 527, and a median of 58% exactly as recorded. The 534 is the number to
+trust; the 527 predates a later sweep.
+
 ## Why deleting on this metric would be wrong
 
 **Those 10 tests are not checking the same thing.** They assert different outcomes — a
