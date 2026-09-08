@@ -430,7 +430,7 @@ describe('a jest.mock factory reaches the builder too', () => {
         const stripped = body.replace(/\/\*[\s\S]*?\*\//g, '');
         for (const m of stripped.matchAll(/jest\.mock\(/g)) {
             let depth = 0;
-            let j = m.index! + 'jest.mock'.length;
+            let j = m.index + 'jest.mock'.length;
             for (; j < stripped.length; j++) {
                 if (stripped[j] === '(') depth += 1;
                 else if (stripped[j] === ')') {
@@ -441,7 +441,7 @@ describe('a jest.mock factory reaches the builder too', () => {
                     }
                 }
             }
-            const call = stripped.slice(m.index!, j);
+            const call = stripped.slice(m.index, j);
             for (const lit of call.matchAll(/\{[^{}]*\}/g)) {
                 const keys = new Set([...lit[0].matchAll(/(\w+)\s*:/g)].map((k) => k[1]));
                 const loggerish = [...keys].filter((k) => LOGGER_METHODS.has(k)).length;
