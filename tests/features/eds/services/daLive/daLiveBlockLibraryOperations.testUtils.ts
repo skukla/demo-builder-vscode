@@ -107,6 +107,51 @@ export function createBlockLibraryHarness(): BlockLibraryHarness {
     return { ops, logger, ...doubles };
 }
 
+/**
+ * A `fetchWithRetry` implementation that answers the HEAD probe
+ * `getBlocksWithDocs` makes: 200 for the block ids named here, 404 for every
+ * other block, and 200 for anything that is not a doc-page probe (the sheet
+ * POST, the sheet GET).
+ *
+ * `sourceOps.createSource` is a double in these suites, so writing a doc page
+ * does not make one exist — which block ids count as documented is decided
+ * here and nowhere else.
+ */
+export function docPageProbe(
+    existingBlockIds: string[]
+): (url: string, init?: { method?: string }) => Promise<Response> {
+    return async (url: string, init?: { method?: string }) => {
+        if (init?.method !== 'HEAD') return fakeResponse(200);
+        const id = url.split('/.da/library/blocks/')[1]?.replace(/\.html$/, '') ?? '';
+        return fakeResponse(existingBlockIds.includes(id) ? 200 : 404);
+    };
+}
+
+/**
+ * A `component-definition.json` body, as `getFileContent` hands it over —
+ * already base64-decoded by `GitHubFileOperations`.
+ *
+ * Typed rather than hand-written per spec: the shape the module destructures
+ * (`groups[].components[].plugins.da.unsafeHTML`) is invented easily and the
+ * compiler only reads it here.
+ */
+export interface ComponentDefinitionGroup {
+    id?: string;
+    components?: Array<{
+        title: string;
+        id: string;
+        plugins?: { da?: { unsafeHTML?: string } };
+    }>;
+}
+
+/** Serialize groups the way the template repo stores them. */
+export function componentDefinition(groups: ComponentDefinitionGroup[]): {
+    content: string;
+    sha: string;
+} {
+    return { content: JSON.stringify({ groups }), sha: 'test-sha' };
+}
+
 /** The `[url, init]` pair of the nth `fetchWithRetry` call, typed. */
 export function fetchCall(
     fetchWithRetry: jest.Mock,
