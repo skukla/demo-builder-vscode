@@ -54,15 +54,14 @@ import { profile, tierOf } from './mutationScope.mjs';
 const BASELINE = 'reports/mutation/baseline.json';
 const QUEUE = 'scripts/overnight/queue';
 const GOALS = 'scripts/overnight/goals';
-// Modules per batch. This number tracks WHICH COST DOMINATES, and it has now moved twice.
-// At the tail of the burn-down a batch was 11 minutes of Stryker setup against 3 minutes of
-// writing tests, so 10 amortised the setup over as many modules as the character cap allowed.
-// The six modules left after the attribution fixes are the opposite case: 156 open gaps
-// between them, 80 in one module, so the WORK dominates and there is nothing left to
-// amortise. Batching them only concentrates risk — run.sh's own note says a context overflow
-// clears a goal outright, and a session carrying 125 gaps is where that happens.
-// One module per session until the queue is small-gap again.
-const BATCH = 1;
+// Modules per batch. This number tracks WHICH COST DOMINATES and has now moved three times.
+// At the tail of the first burn-down a batch was 11 minutes of Stryker setup against 3
+// minutes of writing tests, so 10 amortised the setup. The five modules the attribution
+// fixes exposed carried 156 gaps between them, 80 in one, so the WORK dominated and 1 kept a
+// context overflow from taking a whole goal with it. The four left now hold 13 gaps between
+// them — setup dominates again, and four separate sessions would spend 44 minutes of
+// startup on an hour's worth of nothing.
+const BATCH = 10;
 // The cap on a goal condition. 4,000 is ENFORCED BY `/goal` ITSELF, which refuses a
 // longer condition outright: "Goal condition is limited to 4000 characters (got 4402)".
 // Raised to 4,600 on 2026-09-05 on the strength of the DELIVERY path — the runner passes
