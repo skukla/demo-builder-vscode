@@ -522,6 +522,16 @@ check says so and names the file.
 > Enforced by `.claude/hooks/rules/30-reuse-first.rule`, which interrupts at the moment you
 > create the file.
 
+> **Convention.** Before adding a file to a curated directory, read what is already in it.
+> *Why:* a second enforcer or a second canonical fake does not fail anything. It passes, it
+> reads as coverage, and it is maintained forever. Detection cannot save you here: measured
+> recall for independently-written same-behaviour code is under 1% (Juergens et al., CSMR
+> 2010), and the benchmark that suggested otherwise turned out 93% mislabelled. The only
+> intervention with a positive result behind it delivers the existing candidates while you
+> write (Ye & Fischer, ICSE 2002).
+> Enforced by `.claude/hooks/rules/31-registry-dir.rule`, which lists the directory's
+> contents at the moment you create the file.
+
 > **Convention.** A component's own style block styles that component only.
 > *Why:* a component that reaches out to style its neighbours makes both un-moveable, and
 > the styling then depends on where the definer happens to be mounted.
@@ -1193,12 +1203,12 @@ it is, and the count of unenforced rules is stated rather than hidden.
 
 Conventions decay unless something checks them. Four layers do:
 
-- **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
+- **Hooks** stop a bad action as it happens — 12 rules in `.claude/hooks/rules/`
 - **Enforcer suites** fail the build when code drifts — 46 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 88 conventions. 87 of them are enforced; 1 is not.**
+**This handbook states 89 conventions. 88 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

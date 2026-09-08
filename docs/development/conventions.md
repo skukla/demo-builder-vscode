@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **88** conventions, **87** enforced
+- **89** conventions, **88** enforced
 - **20** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -99,6 +99,7 @@ it means the rule rests on somebody noticing.
 | Modals are hosted in one place, not mounted wherever they are opened. |  |  | `modal-hosting.test.ts` |
 | A CSS class used in a bundle is styled by that bundle. |  |  | `stylesheet-bundles.test.ts` |
 | Before writing a new UI component, check whether the shared vocabulary already has it. |  |  | `30-reuse-first.rule` |
+| Before adding a file to a curated directory, read what is already in it. |  |  | `31-registry-dir.rule` |
 | A component's own style block styles that component only. | [ADR](../architecture/adr/018-css-architecture.md) |  | `styleBlockLeaks` ledger |
 | Utility classes live in the overrides layer, not scattered through component sheets. | [ADR](../architecture/adr/018-css-architecture.md) |  | `inline-styles.test.ts` |
 | Styling reaches Spectrum through `UNSAFE_className` and the `cn()` helper, not through style objects. |  |  | `inline-styles.test.ts` |

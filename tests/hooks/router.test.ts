@@ -516,6 +516,11 @@ describe('every rule is reachable through the pre-filter', () => {
         'secret-files': () =>
             run(write(path.join(REPO2, '.env'), 'X=1'), fresh(), { CLAUDE_PROJECT_DIR: REPO2 }),
         'reuse-first': () => run(write(path.join(REPO2, 'src/features/x/ui/BrandNew.tsx')), fresh()),
+        // A .ts path, deliberately: the pre-filter's `*.tsx*` token does not admit
+        // `.ts`, so this probe is the thing standing between the rule and a fourth
+        // instance of a guard that is unreachable at the gate.
+        'registry-dir': () =>
+            run(write(path.join(REPO2, 'tests/sop/brand-new-enforcer.test.ts')), fresh()),
         'webview-test-skill': () =>
             run(edit(path.join(REPO2, 'tests/features/x/ui/Thing.test.tsx')), fresh()),
         // The list-valued variable passed bare. This rule's own proof failed 3 of

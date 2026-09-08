@@ -1,0 +1,71 @@
+# Delivers the CONTENTS of a curated directory before a new file is added to it.
+#
+# The gap: `30-reuse-first` fires on new .tsx under src/*/ui/ and explicitly
+# EXCLUDES tests/. `component-reuse-check` reads className markup, so it is .tsx
+# only. Between them, creating a new file in a small curated directory — where a
+# duplicate is silent, passes, and is maintained forever — is unguarded.
+#
+# Real instance, 2026-09-08: `tests/sop/counted-claims.test.ts` was written to
+# enforce that counted claims in docs match the disk. `claude-md-handbook-agreement`
+# already enforced exactly that, including to disk. Nothing fired, and nothing
+# could have. The suite was deleted the same session.
+#
+# WHY THIS PRINTS A LIST RATHER THAN ASKING A QUESTION. Duplicate detection does
+# not work: measured recall for independently-written same-behaviour code is under
+# 1% (Juergens et al., CSMR 2010), and the benchmark that suggested otherwise is
+# 93% mislabelled. So there is no check to run. What HAS been measured to prevent
+# a duplicate is delivering the existing candidates at the moment of authoring —
+# Ye & Fischer, ICSE 2002: of 20 delivered components the subjects reused, they
+# "did not anticipate the existence of 9", which "could not have been reused
+# without the support of CodeBroker". Five subjects, never replicated at scale,
+# and still the only positive result in the literature. So: no judgement, no
+# question, just the list.
+#
+# Scope is two directories on purpose. Both are small, curated, and carry a
+# registry that makes a duplicate expensive: tests/sop/ (46 enforcer suites, whose
+# count is pinned in CLAUDE.md and the handbook) and tests/helpers/ (the canonical
+# fakes, which `canonical-fakes.test.ts` polices for NEW suites hand-rolling a
+# covered fake). Adding a third directory means measuring that it is small enough
+# for the listing to be readable, and that duplicates there actually cost something.
+#
+# Fires only on Write, only for a path that does not exist yet. Editing an existing
+# file in these directories is not the reflex being guarded, and the tool layer
+# already refuses to edit a file that was not read.
+#
+# .rule files can only exit 2 (show the message) or 0 (silent) — there is no
+# "print and proceed". So this interrupts once per file creation, which is rare by
+# construction. If it ever becomes frequent, that is the signal to narrow it, not
+# to raise the cap.
+rule_id=registry-dir
+rule_once=0
+
+rule_match() {
+    [ "$1" = "Write" ] || return 1
+    [ -n "$3" ] || return 1
+    case "$3" in
+        */tests/sop/*|*/tests/helpers/*) ;;
+        *) return 1 ;;
+    esac
+    # Exists already → an edit, not a new member.
+    [ -e "$3" ] && return 1
+    return 0
+}
+
+rule_message() {
+    # $FILE is what the router parsed from tool_input.file_path; rule_message
+    # takes no arguments (see router.sh, `rule_message >&2`).
+    dir=$(dirname "$FILE")
+    cat <<MSG
+You are adding a NEW file to a curated directory. Here is what is already in it.
+
+$(ls -1 "$dir" 2>/dev/null | sed 's/^/  /')
+
+Read the ones whose name is close to yours BEFORE writing. A second enforcer or a
+second fake does not fail anything — it passes, it looks like coverage, and it is
+maintained forever. On 2026-09-08 a suite was written here that duplicated
+\`claude-md-handbook-agreement.test.ts\` and had to be deleted the same session.
+
+This is a listing, not an accusation. If yours is genuinely different, say how in
+its header and carry on.
+MSG
+}

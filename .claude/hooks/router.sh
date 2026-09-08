@@ -90,6 +90,12 @@ case "$payload" in
     # it cannot prove every SHAPE does. The .proof.sh files are what cover that,
     # which is the argument for running them rather than trusting them.
     *"grep -c"*|*"grep --count"*) ;;
+    # 31-registry-dir. The rule fires on a Write whose path is under tests/sop/ or
+    # tests/helpers/ — plain .ts files, which the *.tsx* token above does NOT admit
+    # (".tsx" is not a substring of ".ts"). Without this line the rule would be the
+    # FOURTH written, proved, and found dead at this gate. The directory names are
+    # necessary conditions for it, so the gate cannot hide a real hit.
+    *tests/sop/*|*tests/helpers/*) ;;
     *) exit 0 ;;
 esac
 
