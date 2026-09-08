@@ -8,7 +8,7 @@ status: active
 parent: PL-11
 ---
 
-# Half the suite catches nothing new — consolidate the worst, delete none of it
+# Read the most repetitive suites. Consolidation is the excuse, not the point.
 
 Measured 2026-09-07 by the redundancy sweep that ran straight after [[PL-22]] reached zero.
 The sweep completed all 609 modules and its own summary
@@ -24,6 +24,53 @@ This item is the middle row — and, just as importantly, what not to do with it
 
 An earlier draft of this item cited 7,599 of 15,227 from a partial log parse midway through
 the run. Those numbers were real but incomplete; these are the sweep's own totals.
+
+## RESCOPED 2026-09-07, after three files — the ranking is a reading order, not a worklist
+
+This item was filed to consolidate the suites with the highest redundancy. Three of them have
+now been examined and the premise has failed twice while the exercise paid twice, so the item
+is restated to match what it actually delivers.
+
+**What consolidation does NOT do — measured, not argued.** Phase 1 turned `fieldValidation`'s
+three suites into tables: 647 lines became 322 and every assertion got stronger. The
+redundancy metric did not move by one point. 90 tests became 99, still 100% redundant, the
+minimal covering set still 6. `it.each` emits one test per row and the rows still overlap in
+what they catch, so this kind of consolidation cannot move the number and never could.
+
+**And two of the three top candidates were not repetition at all.** They were arithmetic:
+
+| candidate | ranked | what it actually was |
+|---|---|---|
+| `adobeEntityService` | 50 / 51 | a 76-LINE FACTORY with two decisions. Its 51 tests assert "fetch organizations via SDK" and "fall back to CLI" — the behaviour of `AdobeEntityFetcher`, which already has fourteen suites at 100%. 51 tests crossing two decisions reads as 98% redundant and means nothing |
+| `promiseUtils` | 33 / 35 | genuine repetition — five tests re-testing three behaviours under domain names |
+| `fieldValidation` | 84 / 90 | genuine repetition — one test written ninety times with different data |
+
+A high ratio means "many tests, few decisions". That happens when a suite repeats itself AND
+when a module simply has little to decide, and the number cannot tell them apart. Only reading
+can.
+
+**What reading them actually found**, none of it visible in any metric:
+
+- **A production defect.** `withTimeout` never checked `signal.aborted`, so an
+  already-aborted AbortSignal was ignored and the caller waited out the whole timeout —
+  reaching a THIRTY-MINUTE timeout on project creation, reporting a timeout for a build the
+  user had cancelled.
+- **Three vacuous assertions.** `expect(result.timedOut || result.cancelled || result.result).toBeTruthy()`
+  is true for every outcome. One carried a comment describing the defect above instead of
+  failing on it. Two more accepted either outcome of a zero timeout.
+- **An uncovered decision** in `fieldValidation` — composition order — and two dispatcher
+  tests that would have passed with a broken switch label, because a VALID value cannot
+  distinguish routing from fall-through.
+- **A dead module.** Following what `adobeEntityService` constructs found `adobeEntitySelector`,
+  which had a suite and had never been measured, and eight more like it.
+
+**So the item is now: read the most repetitive suites, highest ratio first, and fix what
+reading finds.** Consolidation still happens where the repetition is real — it is how you are
+forced to read every case — but it is the method, not the goal, and the metric it was
+supposed to move will not move.
+
+**Done is no longer a list of files.** It is: each candidate below either read and acted on,
+or read and recorded as arithmetic. Stop when two consecutive candidates yield nothing.
 
 ## What the number actually means
 
@@ -159,3 +206,4 @@ decides whether Phase 3 happens at all.
 - 2026-09-07  docs(plan): the workplan for consolidating what the suite actually constrains (`0ce1494ec`)
 - 2026-09-06  docs(backlog): the sweep's FINAL totals — and two claims in the first draft were wrong (`13e18001c`)
 - 2026-09-06  docs(backlog): PL-48 and PL-49 — what the redundancy sweep found, and what not to do with it (`fa2bbd6c6`)
+- 2026-09-08  Rescoped 2026-09-07 after three candidates. Consolidation does not move the redundancy metric - measured in Phase 1, where 647 lines became 322 and the number did not shift a point. Two of three top candidates were arithmetic (many tests crossing few decisions), not repetition. But reading them found a production defect in withTimeout (an already-aborted AbortSignal ignored, on a 30-minute project-creation timeout), three vacuous assertions, an uncovered decision, and a dead module. The item is now: read the most repetitive suites highest-ratio-first and fix what reading finds; consolidation is the method, not the goal.
