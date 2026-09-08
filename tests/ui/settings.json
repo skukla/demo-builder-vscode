@@ -1,0 +1,8 @@
+{
+    "window.commandCenter": false,
+    "workbench.startupEditor": "none",
+    "security.workspace.trust.enabled": false,
+    "update.mode": "none",
+    "telemetry.telemetryLevel": "off",
+    "extensions.autoUpdate": false
+}

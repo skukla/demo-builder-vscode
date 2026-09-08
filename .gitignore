@@ -126,3 +126,7 @@ reports/mutation/pl22.json
 .stryker-redundancy/
 jest.redundancy.config.js
 stryker.redundancy.config.json
+
+# vscode-extension-tester downloads (PL-46 UI tier)
+test-resources/
+.test-extensions/
