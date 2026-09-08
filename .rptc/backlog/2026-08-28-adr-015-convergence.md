@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: built
+status: shipped
 parent: PL-30
 ---
 
@@ -94,3 +94,4 @@ RATIFIED permanent exception recorded in ADR-015.
 - 2026-08-31  chore(health): snapshot at Track 4 close (`cac8f40d8`)
 - 2026-08-31  docs(handoff): Track 4 loop report — ledger 30 to 6, and what the rows turned out to be (`d9569b793`)
 - 2026-08-31  refactor(authentication): the last feature barrel goes, and 13 dead mocks with it (`8cc07b66b`)
+- 2026-09-08  Verified and closed 2026-09-08. The item's OWN done-condition is 'the ledger is empty OR every remaining row is a RATIFIED permanent exception recorded in ADR-015'; all 3 rows are ratified permanent exceptions (CommandManager by role, typeGuards.ts, serviceLocator.ts), each with its reason and rejected alternatives. The 2026-08-31 log already declared this; only the status was left at 'built'. The patternBSendMessageCeiling 142->143 was a DETECTOR fix (6590761cc, 'the ratchet counted syntax, not call sites'), not a loosened ceiling, and the ceiling is converge-on-touch rather than part of the done-condition.

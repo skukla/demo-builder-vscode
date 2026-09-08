@@ -106,14 +106,19 @@ programme runs forever.
 > the roster in prose only, exactly the failure the paragraph above claims is impossible.
 > Both fixed. Every state below was measured against the code, not read from this file.
 
-**Ten items left.** Three of the four tracks are closed; track 4 holds most of what
+**Nine items left.** Three of the four tracks are closed; track 4 holds most of what
 remains.
+
+> [[PL-13]] was closed 2026-09-08 on inspection, not on new work. This roster had
+> recorded its done-condition as "the exemption ledger is empty"; the item's own
+> body says "empty **or** every remaining row is a RATIFIED permanent exception",
+> and all three rows have been exactly that since 2026-08-31. A roster that
+> paraphrases a done-condition can make a finished item look open indefinitely.
 
 ### Wave 1 — unblocked, no decision needed. Start here.
 
 | Item | Finished when | Measured state, 2026-09-08 |
 |---|---|---|
-| [[PL-13]] | The ADR-015 exemption ledger is empty | 3 rows (`commandBase`, `typesPurity`, `layerDirection`) + the `patternBSendMessageCeiling` at 143 |
 | [[PL-19]] | The sidebar uses the shared webview client like the other seven | 1 outlier. `sidebar/ui/index.tsx` still calls `acquireVsCodeApi` at module scope |
 | [[PL-34]] | Section A empty, B holds only the two large builders, C only rows needing a person | sections A/B/C open, plus 3 recorded flakes nobody has reproduced |
 | [[PL-11]] → PL-48 | The most repetitive suites have been READ and what reading finds is fixed | active, mid-flight |
