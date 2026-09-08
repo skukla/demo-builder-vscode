@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/project-creation/services/aiBundle/aiContextWriter.ts"
+        "src/core/state/transientStateManager.ts"
     ],
     "reporters": [
         "clear-text",
