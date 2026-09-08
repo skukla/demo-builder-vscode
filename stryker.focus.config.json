@@ -8,7 +8,9 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/ui/utils/frontendTimeouts.ts"
+        "src/features/authentication/services/adobeEntitySelector.ts",
+        "src/core/state/sessionUIState.ts",
+        "src/types/ai.ts"
     ],
     "reporters": [
         "clear-text",

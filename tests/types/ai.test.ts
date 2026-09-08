@@ -1,23 +1,26 @@
 /**
- * SKILL_MCP_TOOL_DEPENDENCIES — the machine-readable skill→tool link.
+ * The skill declarations in `@/types/ai` — the two lists and the map.
  *
- * Before 2026-08-14 the relationship between generated skills and the
- * ai-defaults MCP tools they drive existed only as prose inside skill bodies,
- * so "if the user opts out of a tool, which skills are disabled?" had no
- * answer the code could act on. The map in `@/types/ai` declares it; these
- * tests hold the declaration against reality in both directions:
+ * `SKILL_MCP_TOOL_DEPENDENCIES` is the machine-readable skill→tool link. Before
+ * 2026-08-14 that relationship existed only as prose inside skill bodies, so "if
+ * the user opts out of a tool, which skills are disabled?" had no answer the code
+ * could act on. `DEMO_BUILDER_SKILL_NAMES` is the classifier that decides whether
+ * a skill found on a project's disk is first-party at all.
  *
- *   - every declared value must be a real `ai-defaults.json` entry id
- *     (the map cannot import the JSON — it reaches webview bundles);
- *   - a template body that instructs Playwright use must be declared, and a
- *     declared skill must actually instruct it — so a skill that starts (or
- *     stops) driving the tool fails here until the map says so.
+ * Both are held against reality here rather than merely read: the map against
+ * `ai-defaults.json` and the template bodies on disk, the set against the two
+ * lists it is spread from.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import aiDefaults from '@/features/project-creation/config/ai-defaults.json';
-import { DEMO_BUILDER_ALWAYS_ON_SKILLS, SKILL_MCP_TOOL_DEPENDENCIES } from '@/types/ai';
+import {
+    DEMO_BUILDER_ALWAYS_ON_SKILLS,
+    DEMO_BUILDER_CONDITIONAL_SKILLS,
+    DEMO_BUILDER_SKILL_NAMES,
+    SKILL_MCP_TOOL_DEPENDENCIES,
+} from '@/types/ai';
 
 const TEMPLATES_DIR = path.join(
     __dirname,
@@ -79,5 +82,31 @@ describe('SKILL_MCP_TOOL_DEPENDENCIES', () => {
                 );
             }
         }
+    });
+});
+
+describe('DEMO_BUILDER_SKILL_NAMES', () => {
+    it('classifies every always-on skill', () => {
+        for (const name of DEMO_BUILDER_ALWAYS_ON_SKILLS) {
+            expect(DEMO_BUILDER_SKILL_NAMES.has(name)).toBe(true);
+        }
+    });
+
+    it('classifies every conditional skill — conditional delivery is still first-party', () => {
+        for (const name of DEMO_BUILDER_CONDITIONAL_SKILLS) {
+            expect(DEMO_BUILDER_SKILL_NAMES.has(name)).toBe(true);
+        }
+    });
+
+    it('holds exactly the two source lists and nothing else', () => {
+        // Membership alone would pass on a set that also carried names no list
+        // declares; the size pins the other direction.
+        expect([...DEMO_BUILDER_SKILL_NAMES].sort()).toStrictEqual(
+            [...DEMO_BUILDER_ALWAYS_ON_SKILLS, ...DEMO_BUILDER_CONDITIONAL_SKILLS].sort()
+        );
+    });
+
+    it('is non-empty — an empty classifier reports every skill as third-party', () => {
+        expect(DEMO_BUILDER_SKILL_NAMES.size).toBeGreaterThan(0);
     });
 });

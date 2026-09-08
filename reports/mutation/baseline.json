@@ -1,6 +1,6 @@
 {
     "_what": "Per-module mutation baseline. A run may not score LOWER than these, and may not raise its score while leaving highValueSurvivors unchanged or higher — that combination is the signature of a score raised by asserting log strings. Regenerate with `npm run test:mutation:baseline` ONLY when the new numbers are genuinely better. `openGaps` is the number that says whether a module is FINISHED: decisions nothing constrains — behavioural survivors PLUS behavioural mutants no test covers at all, minus the ones proved unkillable in scripts/mutation-equivalents.ledger.json. Uncovered counts because it is the worse case: a survivor means a test ran and did not notice, uncovered means no test went there. openGaps zero means done; the score never says that, because a small module can be complete below its tier floor and a large one neglected above it. The ratchet still gates on behavioural survivors, NOT on openGaps, so a ledger entry can never be what makes a run pass.",
-    "_note": "Eight modules enter the baseline: each has its own mirroring suite and had never been measured. Found 2026-09-07 while starting PL-48, when adobeEntityService's top-candidate status turned out to be a 76-line factory whose tests belong to adobeEntityFetcher — and adobeEntitySelector, which it constructs, proved to have a suite and no baseline row. The earlier sweep missed these because its has-logic filter looked for function/=>/if/switch and so skipped a class with async methods and no branches.",
+    "_note": "PL-22 batch MUT-01. adobeEntitySelector asserts the exact `aio config delete` options instead of expect.any(Object), so the encoding and resolved node version are pinned as ARGUMENTS; its catch body is one debug line and is ledgered. sessionUIState pins its field initialisers by constructing a fresh instance, which is the only place they are observable past the beforeEach reset. types/ai.ts had no suite the mirror convention could see: skillMcpToolDependencies.test.ts was named for the constant it tests, and is now tests/types/ai.test.ts with the DEMO_BUILDER_SKILL_NAMES tests folded in (two suites would have formed a split family with no shared setup to extract). codeSyncErrors.ts leaves the baseline because the module was deleted: no production code has imported it since its consumers were retired, and its seven uncovered getters were uncovered because nothing calls them.",
     "modules": {
         "src/commands/claudeCodeFootprint.ts": {
             "score": 92.36,
@@ -9633,50 +9633,32 @@
             "equivalent": 0,
             "openGaps": 0
         },
-        "src/features/eds/services/codeSyncErrors.ts": {
-            "score": 56.25,
-            "killed": 9,
+        "src/core/state/sessionUIState.ts": {
+            "score": 100,
+            "killed": 7,
             "survived": 0,
-            "noCoverage": 7,
+            "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {},
-            "uncoveredCategories": {
-                "block": 7
-            },
+            "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 7
-        },
-        "src/core/state/sessionUIState.ts": {
-            "score": 85.71,
-            "killed": 6,
-            "survived": 1,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "branch": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 1,
-            "equivalent": 0,
-            "openGaps": 1
+            "openGaps": 0
         },
         "src/features/authentication/services/adobeEntitySelector.ts": {
-            "score": 40,
-            "killed": 6,
-            "survived": 9,
+            "score": 80,
+            "killed": 12,
+            "survived": 3,
             "noCoverage": 0,
             "timeout": 0,
             "survivorCategories": {
-                "other": 3,
-                "string": 3,
-                "logPresentation": 2,
-                "block": 1
+                "block": 1,
+                "logPresentation": 2
             },
             "uncoveredCategories": {},
             "highValueSurvivors": 1,
-            "equivalent": 0,
-            "openGaps": 4
+            "equivalent": 1,
+            "openGaps": 0
         },
         "src/features/eds/services/runtimeSurfaceInventory.ts": {
             "score": 100,
@@ -9727,18 +9709,16 @@
             "openGaps": 0
         },
         "src/types/ai.ts": {
-            "score": 0,
-            "killed": 0,
-            "survived": 1,
+            "score": 100,
+            "killed": 1,
+            "survived": 0,
             "noCoverage": 0,
             "timeout": 0,
-            "survivorCategories": {
-                "other": 1
-            },
+            "survivorCategories": {},
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 1
+            "openGaps": 0
         }
     }
 }
