@@ -116,9 +116,10 @@ describe('aiContextWriter', () => {
 
             it('warns against per-product DA pages and folder mapping', () => {
                 const result = generateAgentsMd(makeEdsProject(), STACKS);
-                expect(result).toContain('do not');
-                expect(result).toContain('per-product DA pages');
-                expect(result).toContain('folder mapping');
+                expect(result).toContain(
+                    '**Do not** create per-product DA pages, **do not** configure ' +
+                        'folder mapping',
+                );
             });
 
             it('documents the canonical BYOM overlay routing and SC template handoff', () => {
@@ -307,10 +308,12 @@ describe('aiContextWriter', () => {
                 const project = makeEdsProject({ installedBlockLibraries: installedLibraries });
                 const result = generateAgentsMd(project, STACKS);
 
-                expect(result).toContain('Isle5 Block Collection');
-                expect(result).toContain('https://github.com/stephen-garner-adobe/isle5');
-                expect(result).toContain('hero');
-                expect(result).toContain('carousel');
+                expect(result).toContain(
+                    '- **Isle5 Block Collection** (built-in)\n' +
+                        '  - Source: https://github.com/stephen-garner-adobe/isle5\n' +
+                        '  - Blocks: hero, carousel, newsletter\n' +
+                        '  - Source commit: abc123',
+                );
             });
 
             it('labels custom block libraries as custom', () => {
@@ -335,8 +338,10 @@ describe('aiContextWriter', () => {
                 });
                 const result = generateAgentsMd(project, STACKS);
 
-                expect(result).toContain('custom');
-                expect(result).toContain('My Custom Blocks');
+                expect(result).toContain(
+                    '- **My Custom Blocks** (custom)\n' +
+                        '  - Source: https://github.com/org/my-blocks',
+                );
             });
 
             it('does not include Block Libraries section for headless projects', () => {

@@ -294,10 +294,11 @@ describe('aiContextWriter', () => {
                 });
                 const result = generateAgentsMd(project, STACKS);
 
-                // The ]( sequence that would break Markdown link syntax is stripped
-                expect(result).not.toContain('](https://attacker.com');
-                // The https:// base is preserved
-                expect(result).toContain('https://example.com');
+                // sanitizeUrl strips `[`, `]`, `(`, `)` and keeps everything else, so
+                // the two URLs concatenate into one inert string.
+                expect(result).toContain(
+                    '- **Commerce URL:** https://example.comhttps://attacker.com',
+                );
             });
 
             it('strips Markdown link-breaking chars from GitHub owner/repo in block libraries', () => {
@@ -317,8 +318,11 @@ describe('aiContextWriter', () => {
                 const project = makeEdsProject({ installedBlockLibraries: installedLibraries });
                 const result = generateAgentsMd(project, STACKS);
 
-                // The ]( sequence enabling Markdown link injection is stripped; domain text may remain as plain text
-                expect(result).not.toContain('](https://');
+                // sanitizeTemplateValue strips `](`, then sanitizeGithubSlug strips the
+                // `:` — the domain survives as inert path text, which is the exact output.
+                expect(result).toContain(
+                    '  - Source: https://github.com/orghttps//evil.example.com/repo',
+                );
             });
         });
 
@@ -449,9 +453,23 @@ describe('aiContextWriter', () => {
             await writeAgentsMd(PROJECT_PATH, project, STACKS, makeWriter());
 
             const mkdirMock = fsPromises.mkdir as jest.Mock;
+            const writeFileMock = fsPromises.writeFile as jest.Mock;
             const claudeDir = path.join(PROJECT_PATH, '.claude');
-            const mkdirCall = mkdirMock.mock.calls.find(([dir]: [string]) => dir === claudeDir);
-            expect(mkdirCall).toBeDefined();
+            const pointerPath = path.join(claudeDir, 'CLAUDE.md');
+
+            const mkdirIndex = mkdirMock.mock.calls.findIndex(
+                ([dir]: [string]) => dir === claudeDir,
+            );
+            const writeIndex = writeFileMock.mock.calls.findIndex(
+                ([p]: [string]) => p === pointerPath,
+            );
+
+            expect(mkdirMock.mock.calls[mkdirIndex]).toEqual([claudeDir, { recursive: true }]);
+            // BEFORE, which is what the name claims: compare the two mocks' global
+            // invocation order, not their per-mock indexes.
+            expect(mkdirMock.mock.invocationCallOrder[mkdirIndex]).toBeLessThan(
+                writeFileMock.mock.invocationCallOrder[writeIndex],
+            );
         });
 
         it('writes AGENTS.md content identical to generateAgentsMd output', async () => {

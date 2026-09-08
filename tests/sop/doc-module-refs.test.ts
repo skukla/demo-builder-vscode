@@ -145,6 +145,25 @@ function backtickedPaths(md: string): string[] {
     return [...new Set(out)];
 }
 
+/**
+ * The document with every fenced block and inline code span blanked out.
+ *
+ * The two `](...)` scans below read LINKS, and a `](` inside backticks is quoted
+ * code, not a link. `scripts/overnight/PL48.md` documents a weak assertion by
+ * printing it — `not.toContain('](')` — and the link scanner read that as a link
+ * to `'`, failing on a document that cites nothing. Backticked paths are already
+ * checked separately by `backtickedPaths`, so nothing is lost by skipping them
+ * here; the two channels stay disjoint on purpose.
+ *
+ * Blanked rather than deleted, so every offset (and therefore every reported
+ * position) still lines up with the real file.
+ */
+function withoutCode(md: string): string {
+    return md
+        .replace(/```[\s\S]*?```/g, (m) => ' '.repeat(m.length))
+        .replace(/(`+)[^\n]*?\1/g, (m) => ' '.repeat(m.length));
+}
+
 function scan(pick: (md: string) => string[], resolve: (s: string) => boolean | null) {
     const bad: string[] = [];
     for (const f of docs()) {
@@ -628,7 +647,7 @@ describe('module paths cited by current-tense documents resolve', () => {
         // `troubleshooting.md` that is actually a directory.
         const bad: string[] = [];
         for (const f of docs()) {
-            const md = readFileSync(join(ROOT, f), 'utf8');
+            const md = withoutCode(readFileSync(join(ROOT, f), 'utf8'));
             for (const m of md.matchAll(/\]\(([^)\s]+?)(?:#[^)]*)?\)/g)) {
                 const target = m[1];
                 if (/^(https?:|mailto:|#)/.test(target)) continue;
@@ -665,7 +684,7 @@ describe('module paths cited by current-tense documents resolve', () => {
         // on 2026-08-30 and every reference check stayed green.
         const bad: string[] = [];
         for (const f of docs()) {
-            const md = readFileSync(join(ROOT, f), 'utf8');
+            const md = withoutCode(readFileSync(join(ROOT, f), 'utf8'));
             for (const m of md.matchAll(/\]\(([^)]*\s[^)]*)\)/g)) {
                 const t = m[1];
                 if (/^https?:/.test(t) || /^\S+\s+"[^"]*"$/.test(t)) continue; // URL, or title syntax
@@ -679,6 +698,21 @@ describe('module paths cited by current-tense documents resolve', () => {
         const f = 'docs/development/handbook.md';
         expect(existsSync(join(ROOT, dirname(f), './nope.md'))).toBe(false);
         expect(existsSync(join(ROOT, dirname(f), '../architecture/adr/README.md'))).toBe(true);
+    });
+
+    it('CONTROL: code spans are skipped, prose links are not', () => {
+        // A link in PROSE still reaches the scanner...
+        expect([...withoutCode('see [x](./nope.md)').matchAll(/\]\(([^)\s]+?)\)/g)]).toHaveLength(
+            1,
+        );
+        // ...and the same characters inside backticks do not. This is the exact
+        // line that failed: PL48.md quoting an assertion shape, read as a link.
+        const span = "`not.toContain('](')`";
+        expect(withoutCode(`${span} — true of ANY mangling`)).toBe(
+            `${' '.repeat(span.length)} — true of ANY mangling`,
+        );
+        const fence = '```\n[x](./nope.md)\n```';
+        expect(withoutCode(fence)).toBe(' '.repeat(fence.length));
     });
 
     it('every allowlist entry names a reason and still applies', () => {
