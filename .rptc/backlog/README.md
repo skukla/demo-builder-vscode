@@ -294,7 +294,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-22` | question | └ [93% was the ceiling, not the norm — mutation scores fall as async density rises](2026-08-30-mutation-score-beyond-confident-modules.md) | PL-9 | med | shipped |
 | `PL-32` | chore | └ [Work the type-erasing casts in tests to zero](2026-08-31-type-erasing-casts.md) | — | med | shipped |
 | `PL-46` | question | └ [Functional testing that drives the real VS Code, and where to stop](2026-09-06-functional-ui-testing-through-the-real-vs-code.md) | — | high | backlog |
-| `PL-47` | feature | └ [One harness, more probes: themes, widths, and the accessibility gap](2026-09-06-deepen-the-webview-visual-baseline-themes-widths-accessibility.md) | — | high | backlog |
+| `PL-47` | feature | └ [One harness, more probes: themes, widths, and the accessibility gap](2026-09-06-deepen-the-webview-visual-baseline-themes-widths-accessibility.md) | — | high | shipped |
 | `PL-48` | chore | └ [Read the most repetitive suites. Consolidation is the excuse, not the point.](2026-09-07-consolidate-over-covered-test-suites.md) | — | high | active |
 | `PL-49` | chore | └ [635 tests catch nothing — find out WHY before deciding what goes](2026-09-07-tests-that-catch-nothing.md) | — | high | shipped |
 | `PL-50` | question | └ [160 modules are measured against the suites that share their NAME, not the suites that run them](2026-09-08-modules-measured-by-filename-not-by-what-tests-them.md) | — | high | open |
