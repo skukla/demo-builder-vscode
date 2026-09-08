@@ -111,6 +111,10 @@ describe('DaLiveBlockLibraryOperations doc pages', () => {
 
             expect(h.fetchWithRetry).not.toHaveBeenCalled();
             expect(h.createSource).not.toHaveBeenCalled();
+            // Not one DA.live round-trip: no token is minted either. Without
+            // this the pass could fall through to a probe of an empty list and
+            // still look identical from the writes alone.
+            expect(h.getImsToken).not.toHaveBeenCalled();
         });
 
         it('writes each page exactly once when there are more blocks than one batch', async () => {
@@ -306,6 +310,40 @@ describe('DaLiveBlockLibraryOperations doc pages', () => {
                 '.da/library/blocks/store-locator.html',
                 '.da/library/blocks/accordion.html',
             ]);
+        });
+
+        it('stubs each block exactly once when there are more blocks than one batch', async () => {
+            h.fetchWithRetry.mockImplementation(docPageProbe([]));
+            const many = Array.from({ length: 7 }, (_unused, i) => ({
+                title: `Block ${i}`,
+                id: `block-${i}`,
+            }));
+
+            await runCreation(many);
+
+            const written = h.createSource.mock.calls.map((call) => call[2]);
+            expect(written).toStrictEqual(many.map((b) => `.da/library/blocks/${b.id}.html`));
+        });
+
+        it('writes the remaining stubs when DA.live rejects one of them', async () => {
+            h.fetchWithRetry.mockImplementation(docPageProbe([]));
+            h.createSource.mockImplementation(async (_o: string, _s: string, path: string) =>
+                path.includes('accordion')
+                    ? { success: false, error: 'forbidden' }
+                    : { success: true, path }
+            );
+
+            const result = await runCreation([
+                { title: 'Accordion', id: 'accordion' },
+                { title: 'Carousel', id: 'carousel' },
+            ]);
+
+            const written = h.createSource.mock.calls.map((call) => call[2]);
+            expect(written).toStrictEqual([
+                '.da/library/blocks/accordion.html',
+                '.da/library/blocks/carousel.html',
+            ]);
+            expect(result.success).toBe(true);
         });
 
         it('keeps going when one stub write throws', async () => {

@@ -12,6 +12,7 @@
 import {
     createBlockLibraryHarness,
     fakeResponse,
+    fakeSheet,
     readSpreadsheetBody,
     sheetProbe,
     HARNESS_TOKEN,
@@ -156,6 +157,23 @@ describe('DaLiveBlockLibraryOperations sheet rows', () => {
             expect(result.status).toBe('appended');
         });
 
+        it('treats a null sheet body as an empty sheet', async () => {
+            // DA.live answering 200 with a JSON `null` body. The read must come
+            // back as "no rows", not throw — a throw here aborts the append and
+            // leaves the block out of the library with no failure reported.
+            h.fetchWithRetry.mockImplementation(async (_url: string, init?: { method?: string }) =>
+                init?.method === 'GET' ? fakeResponse(200, null) : fakeResponse(200)
+            );
+
+            const result = await h.ops.appendBlockToLibrary(org, site, {
+                blockId: 'hero',
+                title: 'Hero',
+            });
+
+            expect(await rewrittenRows()).toStrictEqual([heroRow]);
+            expect(result.status).toBe('appended');
+        });
+
         it('writes nothing when a row of that title is already there', async () => {
             h.fetchWithRetry.mockImplementation(sheetProbe([heroRow]));
 
@@ -209,6 +227,23 @@ describe('DaLiveBlockLibraryOperations sheet rows', () => {
             await expect(
                 h.ops.appendBlockToLibrary(org, site, { blockId: 'hero', title: 'Hero' })
             ).rejects.toThrow('Failed to write block library sheet');
+        });
+
+        it('names the DA.live failure in the throw rather than a placeholder', async () => {
+            // The whole message, not its prefix: whoever reads this in the logs
+            // needs the status DA.live actually returned to tell a 503 from a
+            // permissions refusal.
+            h.fetchWithRetry.mockImplementation(async (_url: string, init?: { method?: string }) =>
+                init?.method === 'GET'
+                    ? fakeResponse(200, fakeSheet([]))
+                    : fakeResponse(503, undefined, 'Service Unavailable')
+            );
+
+            await expect(
+                h.ops.appendBlockToLibrary(org, site, { blockId: 'hero', title: 'Hero' })
+            ).rejects.toThrow(
+                'Failed to write block library sheet: Failed to create spreadsheet: 503 Service Unavailable'
+            );
         });
     });
 
@@ -349,6 +384,20 @@ describe('DaLiveBlockLibraryOperations sheet rows', () => {
             await expect(
                 h.ops.removeBlockFromLibrary(org, site, { blockId: 'hero' })
             ).rejects.toThrow('Failed to rewrite block library sheet');
+        });
+
+        it('names the DA.live failure in the throw rather than a placeholder', async () => {
+            h.fetchWithRetry.mockImplementation(async (_url: string, init?: { method?: string }) =>
+                init?.method === 'GET'
+                    ? fakeResponse(200, fakeSheet([heroRow]))
+                    : fakeResponse(503, undefined, 'Service Unavailable')
+            );
+
+            await expect(
+                h.ops.removeBlockFromLibrary(org, site, { blockId: 'hero' })
+            ).rejects.toThrow(
+                'Failed to rewrite block library sheet: Failed to create spreadsheet: 503 Service Unavailable'
+            );
         });
     });
 });

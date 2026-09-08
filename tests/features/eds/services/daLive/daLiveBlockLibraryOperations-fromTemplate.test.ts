@@ -190,6 +190,11 @@ describe('DaLiveBlockLibraryOperations.createBlockLibraryFromTemplate', () => {
             const result = await run();
 
             expect(result).toStrictEqual({ success: true, blocksCount: 0, paths: [] });
+            // And writes nothing. A components fallback that yielded one entry
+            // instead of none reports the same empty result, because a block
+            // with no id fails the doc-page probe — but it first writes a stub
+            // page called `undefined.html` into the customer's site.
+            expect(h.createSource).not.toHaveBeenCalled();
         });
     });
 
