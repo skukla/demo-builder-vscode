@@ -30,6 +30,12 @@ case "$payload" in
     # 20-secret-files. `.env` admits the path guard; the rest are NECESSARY
     # substrings of each content pattern the rule can block on.
     *.env*|*"PRIVATE KEY"*|*ghp_*|*ghs_*|*github_pat_*|*AKIA*|*xox*|*mongodb*) ;;
+    # Rule 20's OpenAI/Anthropic arm. It was UNREACHABLE from the day it was written
+    # until 2026-09-08: the rule matches sk-(proj|ant)- and no token here admitted it,
+    # so a write carrying that shape exited 0 at this gate and the pattern had never
+    # once run. Found by writing the rule's proof, which is the argument for proofs.
+    # Both spellings, because the alternation in the rule is the necessary condition.
+    *sk-proj-*|*sk-ant-*) ;;
     # `npm test` / `npm run test:*` start jest without the string "jest" anywhere
     # in the command, so 15-jest-concurrent would never see them. Matched on the
     # two-word literal rather than a bare *test* — that would drag in every path
