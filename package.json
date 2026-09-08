@@ -510,7 +510,8 @@
         "docs:adr-check": "node scripts/generate-adr-index.mjs --check",
         "health": "node scripts/healthSnapshot.mjs",
         "health:write": "node scripts/healthSnapshot.mjs --write",
-        "codemod:selftest": "node scripts/codemod/selftest.mjs"
+        "codemod:selftest": "node scripts/codemod/selftest.mjs",
+        "test:electron": "node tests/electron/runTest.js"
     },
     "devDependencies": {
         "@eslint/js": "^9.15.0",
@@ -529,7 +530,7 @@
         "@types/sanitize-html": "^2.16.1",
         "@types/semver": "^7.5.8",
         "@types/vscode": "^1.74.0",
-        "@vscode/test-electron": "^2.5.2",
+        "@vscode/test-electron": "^3.1.0",
         "@vscode/vsce": "^3.7.1",
         "axe-core": "^4.13.0",
         "chokidar": "^3.6.0",

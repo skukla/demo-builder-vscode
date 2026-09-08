@@ -1,0 +1,75 @@
+/**
+ * Launch a real VS Code and run the activation suite inside it.
+ *
+ * `npm run test:electron`. PL-46 step one.
+ *
+ * `@vscode/test-electron` has been a devDependency since before this file and was
+ * never used — the whole integration tier was installed and inert. This is the
+ * smallest thing that puts it to work.
+ *
+ * THREE LAUNCH ARGUMENTS, EACH LOAD-BEARING:
+ *
+ *   --disable-workspace-trust  `src/extension.ts` returns at line 318 when the
+ *                              workspace is untrusted. Without this the suite
+ *                              measures a shell; the trust assertion inside the
+ *                              suite is what stops that passing quietly.
+ *   --disable-extensions       other installed extensions must not register
+ *                              commands or throw into this run.
+ *   a temp folder              VS Code opened with no folder behaves differently
+ *                              from one with a workspace, and the extension reads
+ *                              workspace state on activation.
+ *
+ * The first run downloads a VS Code build (~100MB) into `.vscode-test/`, which is
+ * gitignored. Later runs reuse it.
+ */
+
+const path = require('node:path');
+const os = require('node:os');
+const fs = require('node:fs');
+const { runTests } = require('@vscode/test-electron');
+
+async function main() {
+    // The repo root: this file is tests/electron/runTest.js.
+    const extensionDevelopmentPath = path.resolve(__dirname, '..', '..');
+    const extensionTestsPath = path.resolve(__dirname, 'suite');
+
+    if (!fs.existsSync(path.join(extensionDevelopmentPath, 'dist', 'extension.js'))) {
+        throw new Error('dist/extension.js is missing — run `npm run compile` first.');
+    }
+
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'demo-builder-activation-'));
+
+    // A SHORT user-data directory, and it has to be short for a real reason.
+    // VS Code opens a unix socket inside it, and a sockaddr_un path is capped at
+    // ~104 bytes. The default sits under `.vscode-test/` in the repo, and this
+    // repo's path is long enough on its own that VS Code refuses to start:
+    //   "is longer than 103 chars, try a shorter --user-data-dir"
+    //   Error: listen EINVAL … /.vscode-test/user-data/1.13-main.sock
+    // `/tmp` rather than the session scratchpad on purpose — macOS $TMPDIR is a
+    // long /var/folders/... path and would hit the same wall.
+    const userData = fs.mkdtempSync('/tmp/dbv-ud-');
+
+    try {
+        await runTests({
+            extensionDevelopmentPath,
+            extensionTestsPath,
+            launchArgs: [
+                workspace,
+                '--disable-workspace-trust',
+                '--disable-extensions',
+                `--user-data-dir=${userData}`,
+            ],
+        });
+        // eslint-disable-next-line no-console
+        console.log('electron activation suite: PASSED');
+    } finally {
+        fs.rmSync(workspace, { recursive: true, force: true });
+        fs.rmSync(userData, { recursive: true, force: true });
+    }
+}
+
+main().catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error('electron activation suite: FAILED\n', err);
+    process.exit(1);
+});
