@@ -231,6 +231,26 @@ wrong change is one that still produces plausible numbers. The deliverable is a 
 proposal: what to key attribution on, what it costs to run, how to prove the new set is right,
 and what it does to the 628 rows already in the baseline.
 
+### DONE 2026-09-08 — [attribution-design.md](attribution-design.md)
+
+**Recommended: keep the filename rule, and fall back to jest's `--findRelatedTests` only where
+it finds nothing. SAFE-TO-LAND.** That makes 165 of the 180 refused modules measurable
+(~20 hours of sweep, once), leaves all 629 existing rows byte-identical, and is provable by an
+equality check that runs in seconds rather than by re-measuring anything.
+
+**Keying EVERYTHING on jest's graph is NEEDS-THE-OWNER, on cost.** A census over all 809
+modules puts the mean suite set at 2.2 -> 81.6, and a cost model fitted to four real Stryker
+runs — controlled against the sweep log's measured 289.7 minutes, 6% error — puts a full sweep
+at **~76 hours against 4.8 today**. It also buys no accuracy where a row already exists: two
+modules re-measured under BOTH rules returned identical scores and identical open gaps
+(`addonUpdateChecker` 72.86% / 0, `configSyncService` 71.30% / 0) for 7.9x and 40.9x the wall
+time.
+
+The mechanical finding under all of it: every Stryker config here runs with
+`enableFindRelatedTests`, so jest already drops a selected suite that does not import the
+mutated module. **The filename rule's errors of inclusion are free; only its omissions cost
+anything.** That is why the fix is additive.
+
 ## Done when
 
 Step 1's module is covered and ratcheted, step 2 has produced a defensible number, and step 3
