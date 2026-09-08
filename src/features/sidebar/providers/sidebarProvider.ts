@@ -10,6 +10,7 @@ import * as vscode from 'vscode';
 import type { SidebarContext } from '../types';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { LAST_UPDATE_CHECK } from '@/core/constants';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     createWebviewCommunication,
     WebviewCommunicationManager,
@@ -117,7 +118,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         // at a boundary (ADR-015), and this is the same call the seven panels make
         // through BaseWebviewCommand.
         let channel: WebviewCommunicationManager | undefined;
-        void createWebviewCommunication(webviewView, undefined, (comm) => {
+        // TIMEOUTS.NORMAL, the same budget BaseWebviewCommand gives the seven
+        // panels — not the factory's QUICK default. The sidebar loads an ~890KB
+        // bundle on a cold window, and a handshake it misses is not a slow
+        // sidebar, it is a permanently empty one until the view is re-resolved.
+        void createWebviewCommunication(webviewView, { handshakeTimeout: TIMEOUTS.NORMAL }, (comm) => {
             channel = comm;
             this.comm = comm;
             for (const type of SIDEBAR_MESSAGE_TYPES) {
