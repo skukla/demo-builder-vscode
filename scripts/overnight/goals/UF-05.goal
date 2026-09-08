@@ -1,0 +1,37 @@
+Land the attribution change UF-04 designed — ONLY IF UF-04 said it is safe to land.
+
+FIRST, read `.rptc/plans/unmeasured-fifth/attribution-design.md` and find the line reading
+`RECOMMENDATION-VERDICT:`.
+
+IF IT SAYS `NEEDS-THE-OWNER`, or the file does not exist, or the line is missing or says
+anything else: STOP. Change no code. Write two or three sentences into
+`.rptc/handoff/2026-09-08-attribution-decision.md` saying which option was recommended, why it
+needs a person, and what the owner has to decide. Commit that and finish. This is a complete,
+successful outcome — the point of the gate is that a rule change nobody chose never lands.
+
+IF IT SAYS `SAFE-TO-LAND`, implement the recommended option, and treat the control as the
+whole job rather than a formality:
+
+  - RUN the control the design names, BEFORE and AFTER, and paste both outputs into the
+    commit. A control that was not run is not a control.
+  - The failure that matters is silent: a wider suite set inflates scores without anything
+    going red, because a module measured beside a sibling that executes it borrows coverage.
+    diagnosticsReport reads 43.12% beside its sibling and 41.53% alone — that is the shape.
+    So the control must re-measure a SAMPLE under both the old rule and the new one and show
+    that no score rose without a coverage reason you can name.
+  - If any score rises and you cannot explain it from coverage, the change is WRONG. Revert
+    it, write what you found, and stop.
+  - Do NOT re-measure or rewrite the 628 existing baseline rows. If the new rule implies they
+    should change, that is a NEEDS-THE-OWNER decision by definition — say so and stop.
+
+Then the usual: `npx jest --no-coverage` in full, both typecheckers, whole-repo lint. Several
+sop enforcers read the attribution rule (mutation-config-pairing pairs the focus configs, and
+the redundancy sweep imports suitesFor from focusModule) — a change here can break them in
+ways a scoped check cannot see, so run the FULL suite, not a subset.
+
+RAILS. Stay on the work branch; never checkout or merge develop. NO CLOUD WRITES. Commit only
+on a GREEN check with exit codes captured in variables, never read through a pipe. Explicit
+pathspec. `Backlog: PL-50` trailer. No attribution trailers.
+
+FINISH by saying plainly which branch you took, and if you landed a change, what the control
+proved.

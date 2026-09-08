@@ -22,6 +22,24 @@ The proposal must answer:
   - what it does NOT fix. A module replaced everywhere by a jest.mock or an injected double
     is not an attribution problem and no rule change makes it measurable.
 
+CLASSIFY EVERY OPTION, because a later session gates on it. For each, state exactly one of:
+
+  SAFE-TO-LAND — the change is mechanically verifiable by a control that can be RUN. Name the
+    control. It must be able to catch the failure that matters: a wider suite set inflates
+    scores silently, so the control has to re-measure a sample under BOTH rules and show no
+    score rose without a coverage reason. Measured today: diagnosticsReport reads 43.12%
+    beside its sibling and 41.53% alone.
+
+  NEEDS-THE-OWNER — landing it changes what a measurement COSTS from now on (for example
+    running every suite per module, turning a 12-minute run into hours), or changes the
+    MEANING of the 628 baseline rows PL-22 closed against. Say which of the two, and the
+    number if you can measure it.
+
+Put the verdict for the RECOMMENDED option on its own line, exactly:
+    RECOMMENDATION-VERDICT: SAFE-TO-LAND
+or  RECOMMENDATION-VERDICT: NEEDS-THE-OWNER
+Nothing else on that line. A later session reads it and does nothing if it says the second.
+
 Two or three options with a recommendation, not a survey. Cite file:line for every claim
 about how the current tooling behaves.
 
