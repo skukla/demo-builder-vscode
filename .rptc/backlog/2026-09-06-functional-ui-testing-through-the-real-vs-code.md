@@ -4,7 +4,7 @@ kind: question
 area: platform
 needs: []
 value: high
-status: backlog
+status: active
 parent: PL-11
 ---
 
@@ -90,6 +90,32 @@ riskiest path in the product.
 
 Add UI driving on top only once that has earned its place.
 
+## ANSWERED BY THE OWNER, 2026-09-08
+
+**The goal, in his words: "achieve as close to automated user testing of the
+extension as possible."** That is the scope. Everything below is a step toward it,
+not a substitute for it — and an attempt to reduce this item to "do the webviews
+render content" was corrected on the spot. That is one thing the suite must catch,
+not the reason it exists.
+
+**What prompted it:** testing project creation by hand and hitting a React
+component bug in a webview he did not expect. A surface that mounts and shows
+nothing is the shape to guard against, and it is invisible to every check this
+repo had — the visual harness asserts mounting for the DASHBOARD only, and on
+2026-09-08 the sidebar rendered eleven elements and no text with nothing flagging
+it.
+
+Answers to the three questions:
+
+1. **Worth having, yes** — and the reason is broader than catching integration
+   breaks. It never will catch a real Adobe or GitHub break; that stays with
+   `mcp-live-probe` and the live journeys. Its job is the extension's own
+   behaviour under a real user's actions.
+2. **No objection to `vscode-extension-tester`.** The Playwright alternative stays
+   recorded as an unproven option, not a live one.
+3. **Yes, the activation step happens on its own merits**, regardless of how far
+   the UI driving goes.
+
 ## The question for the owner
 
 1. Is a functional suite that stubs the cloud boundary worth having, given it will never
@@ -114,3 +140,5 @@ need this decision resolved.
 ## Shipped so far
 
 - nothing; this is the decision, not the work.
+- 2026-09-08  OWNER ANSWERED 2026-09-08. Goal stated verbatim: 'achieve as close to automated user testing of the extension as possible' — that is the scope, and an attempt to narrow this item to 'do the webviews render content' was corrected. The webview bug that prompted it (a React component fault hit by hand during project creation) is ONE thing the suite must catch, not the reason it exists. (1) Worth having, yes — its job is the extension's own behaviour under real user actions, not integration breaks, which stay with mcp-live-probe and the live journeys. (2) No objection to vscode-extension-tester; Playwright stays an unproven recorded alternative. (3) YES to the activation step on its own merits, regardless of how far UI driving goes. Next: the activation step with @vscode/test-electron.
+- 2026-09-08  STEP ONE SHIPPED 2026-09-08: npm run test:electron launches a real VS Code, activates the extension and asserts a trusted workspace, activation without throwing, every manifest command actually registered, and the sidebar view present. First green run: trusted, 20 commands, 1 view. This enters 864 lines of extension.ts that no test had ever reached — it returns at line 318 on an untrusted workspace, which is why the trust assertion is the control rather than a formality. Zero new frameworks (run() is the whole --extensionTestsPath contract; no mocha). Three obstacles recorded in the files: @vscode/test-electron 2.5.2 cannot launch VS Code 1.110+ because the macOS binary was renamed Electron -> Code (upgraded to 3.1.0, whose changelog names the exact ENOENT); VS Code refuses to start when its user-data path exceeds ~103 chars because a unix socket lives there, so a short /tmp --user-data-dir is required; and the run reported resetAll/resetAiOnboarding as unregistered, which is NOT a bug — --extensionTestsPath means Test mode, not Development, and both are guarded on Development. Filter reads the manifest's own '(Dev Only)' title convention. NEXT: UI driving with vscode-extension-tester, per the owner's answer.
