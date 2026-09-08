@@ -36,7 +36,7 @@ export function UtilityBar({
 }: UtilityBarProps) {
     return (
         <Flex direction="column" gap="size-100" alignItems="center">
-            <Text UNSAFE_className="dashboard-zone-label">Utilities</Text>
+            <Text>Utilities</Text>
 
             <div className="sidebar-tile-grid">
                 {onOpenTools && (

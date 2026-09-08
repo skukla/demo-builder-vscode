@@ -38,8 +38,11 @@ surface (`dashboard/commands/showDashboard.ts::dispose`).
 ## AiZone
 
 Two tiles. **Chat** is a `MenuTrigger` offering *Continue chat* / *New chat*;
-**Prompts** is a plain button opening the QuickPick. The zone label uses
-`dashboard-zone-label`, shared with the dashboard.
+**Prompts** is a plain button opening the QuickPick. The zone label carries no
+class: it used `dashboard-zone-label` until 2026-09-08, and that rule had been
+deleted in `2344f2485` ("no zone heading") long before, so the class styled
+nothing on either surface while this file still described it as shared with the
+dashboard.
 
 Supplying `onNewAiChat` is what turns Chat into a menu — without it the tile stays
 a plain button, so a caller predating the menu is unaffected.

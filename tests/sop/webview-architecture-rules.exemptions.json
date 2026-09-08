@@ -16,10 +16,8 @@
         "control-panel-body": "used in src/core/ui/components/layout/ControlPanelLayout.tsx — no rule defines it in that bundle",
         "control-panel-secondary-inner": "used in src/core/ui/components/layout/ControlPanelLayout.tsx — no rule defines it in that bundle",
         "dashboard-control-panel": "used in src/features/dashboard/ui/ProjectDashboardScreen.tsx — no rule defines it in that bundle",
-        "dashboard-zone-label": "used in src/features/sidebar/ui/components/AiZone.tsx (+1 more) — no rule defines it in that bundle",
         "datapack-danger-detail": "used in src/features/data-installer/ui/components/ImportDatapackModal.tsx — no rule defines it in that bundle",
         "datapack-danger-value": "used in src/features/data-installer/ui/components/ImportDatapackModal.tsx — no rule defines it in that bundle",
-        "done": "used in src/features/project-creation/ui/components/BuildYourProjectSummary.tsx — no rule defines it in that bundle",
         "field-help-button": "used in src/core/ui/components/forms/FieldHelpButton.tsx — no rule defines it in that bundle",
         "field-help-dialog": "used in src/core/ui/components/forms/FieldHelpButton.tsx — no rule defines it in that bundle",
         "inline-rename--editing": "used in src/core/ui/components/forms/InlineRenameField.tsx — no rule defines it in that bundle",
@@ -27,7 +25,8 @@
         "page-header": "used in src/core/ui/components/layout/PageHeader.tsx — no rule defines it in that bundle",
         "page-header-inner": "used in src/core/ui/components/layout/PageHeader.tsx — no rule defines it in that bundle",
         "project-card-menu-button": "used in src/features/projects-dashboard/ui/components/ProjectCard.tsx — no rule defines it in that bundle",
-        "project-row-menu-button": "used in src/features/projects-dashboard/ui/components/ProjectRow.tsx — no rule defines it in that bundle"
+        "project-row-menu-button": "used in src/features/projects-dashboard/ui/components/ProjectRow.tsx — no rule defines it in that bundle",
+        "done": "KEEP. Not a missing rule — a STATE MARKER the suite reads. The CSS that drew the done tick (.sum-row.done .sum-label::before) was deliberately removed in 99e2aed08 when the marker became a Spectrum CheckmarkCircle, so the class styles nothing. But BuildYourProjectSummary's and CommerceStep's tests assert on it as the handle for 'this row is done'. Removing it on 2026-09-08 broke four tests, which is the reason this entry now says keep rather than fix. Triaged PL-20."
     },
     "_classesDefinedNowhere_note": "Classes a component asks for that NO stylesheet in that bundle defines — and that no stylesheet anywhere in src/ defines either. A different defect from bundleStylesheets, with a different fix: for these, either the rule was never written or the markup is dead. Seeded at 21 on 2026-08-29 so the set cannot GROW while it is triaged; the triage itself is PL-20. Two are visible bugs already (.text-red-500 on an error icon, .text-orange-700 on warning text) — they render with no colour. Note .text-red-500 IS defined, but inside VerifiedField's inline <style> block, so it exists only where that component is mounted; the scanner counts style-block classes as defined within their own bundle, which is why this reports only the bundles VerifiedField does not reach.",
     "messageChannelOwners": {

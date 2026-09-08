@@ -88,7 +88,7 @@ function tileFor(
 export function AiZone({ onOpenAiChat, onShowPrompts, onNewAiChat }: AiZoneProps) {
     return (
         <Flex direction="column" gap="size-100" alignItems="center">
-            <Text UNSAFE_className="dashboard-zone-label">AI</Text>
+            <Text>AI</Text>
 
             <div className="sidebar-tile-grid">
                 {onNewAiChat ? (
