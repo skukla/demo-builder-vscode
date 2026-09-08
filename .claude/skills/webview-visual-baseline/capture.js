@@ -31,17 +31,44 @@ const SURFACES = [
     'projectsList', 'aiOverview', 'integrations', 'dataInstaller',
 ];
 
+/**
+ * The two axes the fingerprint was blind to until 2026-09-08 (PL-47 steps 2-3).
+ *
+ * THEMES, AND WHY THE POINT IS THE OPPOSITE OF WHAT IT LOOKS LIKE. PL-47 assumed
+ * the extension inherits the user's VS Code theme. It does not: `WebviewApp` and
+ * the sidebar entry both force `vscode-dark` onto the body, and the owner
+ * confirmed on 2026-09-08 that imposing one theme on every user is deliberate.
+ *
+ * So this axis is not a light/dark regression check. It is a guard that the
+ * IMPOSITION HOLDS. VS Code still supplies its own `--vscode-*` variables from
+ * whatever theme the user picked, and our CSS reads 13 of them, so a light-theme
+ * user is where the imposed theme could leak. Measured on the dashboard the same
+ * day: 68 app elements, byte-identical colours under both — the imposition holds
+ * today, and a diff between the two theme captures is what would show it slipping.
+ *
+ * The harness reads `?t=` and applies real VS Code palettes — see its comment for
+ * why high contrast is absent.
+ *
+ * WIDTHS. VS Code panels resize, and the capture ran at 1280 only. 420 is the
+ * load-bearing one: the root CLAUDE.md records that Spectrum's Flex constrains at
+ * 450px, which is a bug class a single-width capture is structurally incapable of
+ * seeing. 900 is a normal editor column; 1280 is the historical baseline, kept so
+ * old fingerprints stay comparable.
+ */
+const THEMES = ['dark', 'light'];
+const WIDTHS = [420, 900, 1280];
+
 /** Settle time per surface. Generous on purpose; a short one reads as a diff. */
 const SETTLE_MS = 2600;
 
-async function captureSurface(bundle) {
+async function captureSurface(bundle, theme = 'dark', width = 1280) {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const frame = document.createElement('iframe');
-    frame.style.cssText = 'width:1280px;height:900px;border:0;position:absolute;left:-9999px';
+    frame.style.cssText = `width:${width}px;height:900px;border:0;position:absolute;left:-9999px`;
     // CACHE-BUST, or the browser serves the previous build and a before/after
     // comparison silently compares a build against ITSELF. The harness forwards
     // `cb` to the bundle URL for the same reason.
-    frame.src = `/h.html?b=${bundle}&cb=${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+    frame.src = `/h.html?b=${bundle}&t=${theme}&cb=${Date.now()}${Math.floor(Math.random() * 1e6)}`;
     document.body.appendChild(frame);
     await wait(SETTLE_MS);
 
@@ -103,15 +130,51 @@ async function assertHarnessFaithful() {
     if (win.__FIXTURE_ERROR__) problems.push(`fixtures failed to load: ${win.__FIXTURE_ERROR__}`);
 
     frame.remove();
+
+    // THE THEME AXIS NEEDS ITS OWN CONTROL, and it is the one most worth having.
+    // If `?t=light` silently did nothing, every light capture would be byte-equal
+    // to its dark twin, every theme diff would be empty, and the run would report
+    // "no theme-dependent bugs" — a false all-clear that looks exactly like a
+    // clean result. So: load the same surface twice and require the rendered
+    // background to actually differ.
+    const bg = async (theme) => {
+        const f = document.createElement('iframe');
+        f.style.cssText = 'width:900px;height:600px;border:0;position:absolute;left:-9999px';
+        f.src = `/h.html?b=dashboard&t=${theme}&cb=ctl${theme}${Date.now()}`;
+        document.body.appendChild(f);
+        await wait(SETTLE_MS);
+        const v = f.contentWindow.getComputedStyle(f.contentDocument.body).backgroundColor;
+        f.remove();
+        return v;
+    };
+    const darkBg = await bg('dark');
+    const lightBg = await bg('light');
+    if (darkBg === lightBg) {
+        problems.push(`theme switch is INERT — dark and light both render ${darkBg}`);
+    }
+
     if (problems.length) throw new Error('HARNESS NOT FAITHFUL: ' + problems.join('; '));
-    return 'harness faithful';
+    return `harness faithful (dark ${darkBg} vs light ${lightBg})`;
 }
 
-/** Capture every surface. Returns { surface: string[] }. */
-async function capture() {
+/**
+ * Capture every surface, at every theme and width.
+ *
+ * Keys are `surface@theme@width`, so `diff()` needs no change: it compares by key
+ * and a cell present in one capture and missing from the other is reported as
+ * such. A run is 8 x 2 x 3 = 48 loads at the settle time above, so budget a
+ * couple of minutes; pass a narrower matrix while iterating on one surface.
+ */
+async function capture({ surfaces = SURFACES, themes = THEMES, widths = WIDTHS } = {}) {
     await assertHarnessFaithful();
     const out = {};
-    for (const s of SURFACES) out[s] = await captureSurface(s);
+    for (const s of surfaces) {
+        for (const t of themes) {
+            for (const w of widths) {
+                out[`${s}@${t}@${w}`] = await captureSurface(s, t, w);
+            }
+        }
+    }
     return out;
 }
 

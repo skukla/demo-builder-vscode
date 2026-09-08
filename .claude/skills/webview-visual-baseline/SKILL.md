@@ -15,6 +15,23 @@ element, keyed by structural path, with 23 computed properties — so a CSS chan
 can be proved behaviour-preserving by an empty diff, or shown to move exactly
 the elements it was meant to.
 
+Since 2026-09-08 it captures each surface at **two themes and three widths**
+(PL-47), keyed `surface@theme@width`. That is 8 x 2 x 3 = 48 loads, so budget a
+couple of minutes; pass a narrower matrix to `capture({ surfaces, themes, widths })`
+while iterating on one surface.
+
+**The theme axis is an IMPOSITION guard, not a light/dark regression check.** The
+extension forces `vscode-dark` on every webview body and the owner confirmed that
+is deliberate — one theme for every user. VS Code still supplies its own
+`--vscode-*` variables from the user's real theme, and our CSS reads 13 of them,
+so a light-theme user is where the imposed theme could leak. Verified on the
+dashboard the day it was added: 68 app elements, byte-identical colours at both
+themes. A diff between the two theme captures is what would show that slipping.
+
+**420px is the load-bearing width.** Spectrum's Flex constrains at 450px, a bug
+class a single-width capture cannot see at all. 900 is a normal editor column;
+1280 is the historical baseline, kept so older fingerprints stay comparable.
+
 Not screenshots: exact string equality, no pixel tolerance, no font drift, and it
 catches cascade and specificity changes, which is what this codebase's CSS
 failures actually are.
@@ -51,6 +68,21 @@ cd /tmp/vr && python3 -m http.server 8899
 Then drive a browser at `http://host.docker.internal:8899/h.html?b=dashboard`
 (`host.docker.internal`, not `localhost` — the MCP browser is containerised) and
 evaluate `capture.js`'s `capture()`.
+
+**PROVE THE BROWSER REACHED *YOUR* SERVER FIRST.** On 2026-09-08 port 8899 was
+already answered by an unrelated Fastify app from inside the container, so every
+iframe got a JSON 404 — `#root` missing, no theme class, transparent background.
+Read naively that is "the theme switch is inert", and the run was minutes from
+being reported as a broken instrument. Drop a sentinel next to the harness and
+fetch it through the browser before trusting anything:
+
+```bash
+echo "VR-SENTINEL-$RANDOM" > /tmp/vr/sentinel.txt
+```
+
+Navigate to `/sentinel.txt` and confirm the browser reads back the value you
+wrote. A 404 page and a working page both render; only the sentinel tells them
+apart.
 
 To compare: capture, change CSS, `npm run compile`, re-copy the bundles, capture
 again, `diff(before, after)`.
