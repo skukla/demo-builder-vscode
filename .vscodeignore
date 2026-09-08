@@ -22,6 +22,13 @@ node_modules/**
 .jest-cache/**
 # Editor config, same reasoning.
 .cursor/**
+# Added 2026-09-08 with PL-46's UI tier, for exactly the reason above. ExTester
+# downloads a VS Code build and the extension under test into these; measured the
+# day they appeared, `.test-extensions/` alone was 329 MB across 1,571 files. Both
+# are in .gitignore, which does NOT help — vsce reads THIS file instead whenever
+# it exists, which is what let beta.129 ship a 58.6 MB jest cache.
+.test-extensions/**
+test-resources/**
 
 # TypeScript-compiled individual JS files are redundant: esbuild bundles
 # everything into dist/extension.js. Only the esbuild outputs are needed.
@@ -34,18 +41,24 @@ dist/utils/**
 # Source maps (development only)
 dist/**/*.map
 
-# Build / tooling config
+# Build / tooling config.
+#
+# GLOBS, not individual names. This list named each config file one by one, and
+# every sibling added since slipped through: on 2026-09-08 `vsce ls` showed eleven
+# dev-tooling files being packaged — four jest configs, four stryker configs, two
+# extra eslint configs and tsconfig.test.json. Only 26 KB, so the cost was noise
+# rather than size, but naming files individually guarantees the next one ships
+# too. Patterns cover the siblings that do not exist yet.
 .gitignore
 .eslintrc.json
-tsconfig.json
-tsconfig.build.json
-tsconfig.webview.json
+tsconfig*.json
 webpack.config.js
 esbuild.config.js
-eslint.config.mjs
+eslint*.mjs
+stryker*.json
+jest*.config.js
 .prettierignore
 .swcrc
-jest.config.js
 package.json.backup
 package-lock.json
 
