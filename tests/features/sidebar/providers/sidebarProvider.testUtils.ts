@@ -80,10 +80,22 @@ export function createMockWebviewView(): MockWebviewView {
         webview: {
             options: {},
             html: '',
-            onDidReceiveMessage: jest.fn((handler: (m: unknown) => Promise<void>) => {
-                view.deliver = handler;
-                return { dispose: listenerDisposal };
-            }),
+            // Real `onDidReceiveMessage` takes (handler, thisArg, disposables) and
+            // PUSHES its disposable onto the array when one is given. The manager
+            // relies on that to clean up; a fake that ignores the third argument
+            // makes disposal look broken when it is not.
+            onDidReceiveMessage: jest.fn(
+                (
+                    handler: (m: unknown) => Promise<void>,
+                    _thisArg?: unknown,
+                    disposables?: { dispose: () => void }[],
+                ) => {
+                    view.deliver = handler;
+                    const disposable = { dispose: listenerDisposal };
+                    disposables?.push(disposable);
+                    return disposable;
+                },
+            ),
             postMessage: jest.fn().mockResolvedValue(true),
             asWebviewUri: jest.fn((uri: unknown) => uri),
             cspSource: 'vscode-webview://sidebar',
@@ -132,6 +144,11 @@ export function resolve(
         {} as vscode.WebviewViewResolveContext,
         { isCancellationRequested: false } as vscode.CancellationToken,
     );
+    // A real webview announces itself as soon as its bundle loads, and the
+    // provider's channel QUEUES every outbound message until it does. Without
+    // this the fake sidebar never sends anything and every outbound assertion
+    // fails for a reason that has nothing to do with what it is testing.
+    void view.deliver?.({ type: '__webview_ready__' });
     return view;
 }
 

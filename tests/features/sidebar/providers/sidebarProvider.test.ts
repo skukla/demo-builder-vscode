@@ -72,21 +72,55 @@ type MockWebviewView = {
     onDidDispose: jest.Mock;
     onDidChangeVisibility: jest.Mock;
     visible: boolean;
+    /** Set by `onDidReceiveMessage`; call it to deliver a webview message. */
+    deliver?: (message: unknown) => Promise<void>;
 };
 
 function createMockWebviewView(): MockWebviewView {
-    return {
+    const view: MockWebviewView = {
         webview: {
             options: {},
             html: '',
-            onDidReceiveMessage: jest.fn(() => ({ dispose: jest.fn() })),
-            postMessage: jest.fn(),
+            // Real `onDidReceiveMessage` takes (handler, thisArg, disposables) and
+            // pushes its disposable onto the array when given one. The channel
+            // relies on both: the handler to receive `__webview_ready__`, the
+            // array to clean up.
+            onDidReceiveMessage: jest.fn(
+                (
+                    handler: (m: unknown) => Promise<void>,
+                    _thisArg?: unknown,
+                    disposables?: { dispose: () => void }[],
+                ) => {
+                    view.deliver = handler;
+                    const disposable = { dispose: jest.fn() };
+                    disposables?.push(disposable);
+                    return disposable;
+                },
+            ),
+            postMessage: jest.fn().mockResolvedValue(true),
             asWebviewUri: jest.fn((uri) => uri),
         },
         onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
         onDidChangeVisibility: jest.fn(() => ({ dispose: jest.fn() })),
         visible: true,
     };
+    return view;
+}
+
+/**
+ * Resolve the view AND let the fake webview announce itself.
+ *
+ * The provider's channel queues every outbound message until the webview sends
+ * `__webview_ready__`, exactly as the real bundle does on load. Without this a
+ * `postMessage` assertion fails with "0 calls" for a reason unrelated to it.
+ */
+function resolveAndAnnounce(provider: SidebarProvider, view: MockWebviewView): void {
+    provider.resolveWebviewView(
+        view as unknown as vscode.WebviewView,
+        {} as vscode.WebviewViewResolveContext,
+        { isCancellationRequested: false } as vscode.CancellationToken,
+    );
+    void view.deliver?.({ type: '__webview_ready__' });
 }
 
 describe('SidebarProvider', () => {
@@ -134,11 +168,7 @@ describe('SidebarProvider', () => {
         });
 
         it('should set webview options correctly', () => {
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
 
             expect(mockWebviewView.webview.options).toEqual({
                 enableScripts: true,
@@ -147,32 +177,20 @@ describe('SidebarProvider', () => {
         });
 
         it('should set webview HTML content', () => {
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
 
             expect(mockWebviewView.webview.html).toContain('<!DOCTYPE html>');
             expect(mockWebviewView.webview.html).toContain('sidebar-bundle.js');
         });
 
         it('should register message handler', () => {
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
 
             expect(mockWebviewView.webview.onDidReceiveMessage).toHaveBeenCalled();
         });
 
         it('should register dispose handler', () => {
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
 
             expect(mockWebviewView.onDidDispose).toHaveBeenCalled();
         });
@@ -183,27 +201,13 @@ describe('SidebarProvider', () => {
         let messageHandler: (message: unknown) => void;
 
         beforeEach(() => {
-            mockWebviewView = {
-                webview: {
-                    options: {},
-                    html: '',
-                    onDidReceiveMessage: jest.fn((handler) => {
-                        messageHandler = handler;
-                        return { dispose: jest.fn() };
-                    }),
-                    postMessage: jest.fn(),
-                    asWebviewUri: jest.fn((uri) => uri),
-                },
-                onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
-                onDidChangeVisibility: jest.fn(() => ({ dispose: jest.fn() })),
-                visible: true,
-            };
+            // The shared factory, not a fifth hand-rolled copy: its
+            // `onDidReceiveMessage` records the handler AND honours the
+            // disposables array, both of which the channel depends on.
+            mockWebviewView = createMockWebviewView();
 
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
+            messageHandler = mockWebviewView.deliver!;
         });
 
         it('should handle getContext message with no project', async () => {
@@ -214,7 +218,7 @@ describe('SidebarProvider', () => {
             expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(
                 expect.objectContaining({
                     type: 'contextResponse',
-                    data: expect.objectContaining({
+                    payload: expect.objectContaining({
                         context: { type: 'projects' },
                     }),
                 })
@@ -230,7 +234,7 @@ describe('SidebarProvider', () => {
             expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(
                 expect.objectContaining({
                     type: 'contextResponse',
-                    data: expect.objectContaining({
+                    payload: expect.objectContaining({
                         context: { type: 'project', project: mockProject },
                     }),
                 })
@@ -273,20 +277,15 @@ describe('SidebarProvider', () => {
         beforeEach(() => {
             mockWebviewView = createMockWebviewView();
 
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
         });
 
         it('should send message to webview', async () => {
             await provider.sendMessage('testType', { foo: 'bar' });
 
-            expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith({
-                type: 'testType',
-                data: { foo: 'bar' },
-            });
+            expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(
+                expect.objectContaining({ type: 'testType', payload: { foo: 'bar' } }),
+            );
         });
 
         it('should not throw when webview is not available', async () => {
@@ -309,11 +308,7 @@ describe('SidebarProvider', () => {
         beforeEach(() => {
             mockWebviewView = createMockWebviewView();
 
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
         });
 
         it('should send context update to webview', async () => {
@@ -321,10 +316,9 @@ describe('SidebarProvider', () => {
 
             await provider.updateContext(context);
 
-            expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith({
-                type: 'contextUpdate',
-                data: { context },
-            });
+            expect(mockWebviewView.webview.postMessage).toHaveBeenCalledWith(
+                expect.objectContaining({ type: 'contextUpdate', payload: { context } }),
+            );
         });
     });
 
@@ -381,21 +375,13 @@ describe('SidebarProvider', () => {
             executeCommandMock.mock.calls.some((call) => call[0] === 'demoBuilder.checkForUpdates');
 
         it('runs the update check on first activation (no prior timestamp)', () => {
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
 
             expect(wasCheckCommandInvoked()).toBe(true);
         });
 
         it('records the timestamp in globalState when the check runs', () => {
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
 
             const update = mockContext.globalState.update as unknown as jest.Mock;
             expect(update).toHaveBeenCalledWith('lastUpdateCheck', NOW);
@@ -404,11 +390,7 @@ describe('SidebarProvider', () => {
         it('skips the update check when the last check was within the throttle window', () => {
             globalStateStore.set('lastUpdateCheck', NOW - 30 * 60 * 1000); // 30 min ago
 
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
 
             expect(wasCheckCommandInvoked()).toBe(false);
         });
@@ -416,11 +398,7 @@ describe('SidebarProvider', () => {
         it('runs the update check when the throttle window has elapsed', () => {
             globalStateStore.set('lastUpdateCheck', NOW - (ONE_HOUR_MS + 1)); // just past throttle
 
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
 
             expect(wasCheckCommandInvoked()).toBe(true);
         });
@@ -428,11 +406,7 @@ describe('SidebarProvider', () => {
         it('skips the check at the throttle boundary (last check exactly THROTTLE_MS ago)', () => {
             globalStateStore.set('lastUpdateCheck', NOW - ONE_HOUR_MS);
 
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
 
             // At exactly the boundary the check is still throttled; one
             // additional millisecond reliably crosses it.
@@ -443,11 +417,7 @@ describe('SidebarProvider', () => {
             const getConfig = vscode.workspace.getConfiguration as jest.Mock;
             getConfig.mockReturnValue({ get: jest.fn().mockReturnValue(false) });
 
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
 
             expect(wasCheckCommandInvoked()).toBe(false);
         });
@@ -458,11 +428,7 @@ describe('SidebarProvider', () => {
          * of those is the spam the throttle exists to prevent.
          */
         it('runs the check once however often the view is re-resolved', () => {
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
             // Drop the timestamp the first check wrote, so the throttle cannot
             // be what stops the second one — the once-per-session flag has to.
             globalStateStore.delete('lastUpdateCheck');
@@ -485,11 +451,7 @@ describe('SidebarProvider', () => {
                 get: jest.fn((_key: string, fallback: unknown) => fallback),
             });
 
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
 
             expect(wasCheckCommandInvoked()).toBe(true);
         });
@@ -507,11 +469,7 @@ describe('SidebarProvider', () => {
                     : Promise.resolve(undefined)
             );
 
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
             await Promise.resolve();
             await Promise.resolve();
             await Promise.resolve();
@@ -529,11 +487,7 @@ describe('SidebarProvider', () => {
                 return Promise.resolve(undefined);
             });
 
-            provider.resolveWebviewView(
-                mockWebviewView as unknown as vscode.WebviewView,
-                {} as vscode.WebviewViewResolveContext,
-                { isCancellationRequested: false } as vscode.CancellationToken
-            );
+            resolveAndAnnounce(provider, mockWebviewView);
 
             // Flush the rejection so the rollback runs.
             await Promise.resolve();

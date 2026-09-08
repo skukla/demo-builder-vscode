@@ -12294,7 +12294,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 189,
+            "line": 200,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, the message is pushed onto the queue on the line after this block either way. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12307,7 +12307,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 364,
+            "line": 375,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, it sits inside the timeout hint's catch, which is documented fire-and-forget, and the handler runs next regardless. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12320,7 +12320,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 449,
+            "line": 460,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, the sleep and the recursive send that perform the retry are outside the block. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12333,7 +12333,7 @@
             "anchors": [
                 "if (this.config.enableLogging) {"
             ],
-            "line": 475,
+            "line": 486,
             "mutants": 3,
             "category": "block+branch",
             "reason": "The whole body of this guard is a logger call, so flipping the condition changes only whether a debug or warning line prints. Killing it would mean asserting a logger call's arguments, which pins wording rather than behaviour and is what the burn-down rules forbid. Nothing a caller or the webview receives moves, because the work it narrates happens outside the block. Here, it sits in sendRawMessage's catch immediately before an unconditional rethrow, so the caller sees the identical error. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12346,7 +12346,7 @@
             "anchors": [
                 "if (this.config.enableLogging && this.messageQueue.length > 0) {"
             ],
-            "line": 486,
+            "line": 497,
             "mutants": 7,
             "category": "block+branch",
             "reason": "Every survivor on this line changes only whether one debug line prints \u2014 the block holds a single logger.debug and nothing else. The flush itself happens on the three lines below, outside the guard, so the queued messages are copied, the queue cleared and each message sent whichever way the condition goes. Separating the versions would need an assertion on the logger's arguments. Emptying the guarded block is the same argument from the other side: the body holds nothing the surrounding code does not already do, so removing it removes the log line and no behaviour.",
@@ -12359,7 +12359,7 @@
             "anchors": [
                 "enableLogging: config.enableLogging !== false,"
             ],
-            "line": 128,
+            "line": 139,
             "mutants": 4,
             "category": "branch",
             "reason": "This field is read in exactly five places, and every one of them is a guard whose entire body is a logger call. So whatever value the mutation gives it, the only thing that changes is whether some debug or warning lines print \u2014 no message on the wire, no promise and no piece of manager state depends on it. Each of those five guards is itself recorded here for the same reason.",
@@ -12372,7 +12372,7 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 306,
+            "line": 317,
             "mutants": 1,
             "category": "other",
             "reason": "Nothing reads the queue after dispose. The only reader is flushMessageQueue, which runs once from the handshake completion handler, and that handler was registered with once() and deleted itself when it ran \u2014 a disposed manager cannot handshake again. Seeding the array rather than emptying it therefore leaves a value no code path can observe.",
@@ -12385,7 +12385,7 @@
             "anchors": [
                 "this.messageQueue = [];"
             ],
-            "line": 491,
+            "line": 502,
             "mutants": 1,
             "category": "other",
             "reason": "This assignment is what makes the flush non-repeating, but nothing flushes twice: flushMessageQueue is called only from the handshake completion handler, which once() deletes as it fires. So the array left behind here is read by nothing, and seeding it rather than emptying it cannot change a message sent or a piece of state observed.",
@@ -12398,7 +12398,7 @@
             "anchors": [
                 "}).catch((hintError) => {"
             ],
-            "line": 362,
+            "line": 373,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body leaves the catch itself in place, so the timeout hint's failure is still swallowed and the handler still runs next \u2014 which is the documented contract, the hint is explicitly fire-and-forget so it cannot block. The only thing inside the body is a guarded logger.warn, so the sole difference is whether a warning prints, and pinning that would mean asserting a logger call's arguments.",

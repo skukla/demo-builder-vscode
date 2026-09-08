@@ -167,10 +167,9 @@ describe('SidebarProvider messages', () => {
         it('reports the projects list once it is told that is what is showing', async () => {
             await made.provider.setShowingProjectsList(true);
 
-            expect(view.webview.postMessage).toHaveBeenCalledWith({
-                type: 'contextUpdate',
-                data: { context: { type: 'projectsList' } },
-            });
+            expect(view.webview.postMessage).toHaveBeenCalledWith(
+                    expect.objectContaining({ type: 'contextUpdate', payload: { context: { type: 'projectsList' } } }),
+            );
         });
 
         // The projects-list flag wins over a loaded project: the user is looking
@@ -181,10 +180,9 @@ describe('SidebarProvider messages', () => {
 
             await made.provider.setShowingProjectsList(true);
 
-            expect(view.webview.postMessage).toHaveBeenCalledWith({
-                type: 'contextUpdate',
-                data: { context: { type: 'projectsList' } },
-            });
+            expect(view.webview.postMessage).toHaveBeenCalledWith(
+                    expect.objectContaining({ type: 'contextUpdate', payload: { context: { type: 'projectsList' } } }),
+            );
         });
 
         it('reports the loaded project once the list is dismissed', async () => {
@@ -193,19 +191,17 @@ describe('SidebarProvider messages', () => {
 
             await made.provider.setShowingProjectsList(false);
 
-            expect(view.webview.postMessage).toHaveBeenCalledWith({
-                type: 'contextUpdate',
-                data: { context: { type: 'project', project } },
-            });
+            expect(view.webview.postMessage).toHaveBeenCalledWith(
+                    expect.objectContaining({ type: 'contextUpdate', payload: { context: { type: 'project', project } } }),
+            );
         });
 
         it('answers getContext with the empty state when nothing is loaded', async () => {
             await view.deliver!({ type: 'getContext' });
 
-            expect(view.webview.postMessage).toHaveBeenCalledWith({
-                type: 'contextResponse',
-                data: { context: { type: 'projects' } },
-            });
+            expect(view.webview.postMessage).toHaveBeenCalledWith(
+                    expect.objectContaining({ type: 'contextResponse', payload: { context: { type: 'projects' } } }),
+            );
         });
     });
 
