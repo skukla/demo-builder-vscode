@@ -7,6 +7,10 @@ import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/custom-spectrum.css';
+// The .prerequisite-* rules, moved out of custom-spectrum.css by the CSS
+// migration (.rptc/plans/css-architecture-migration). The wizard is the only
+// entry whose import graph reaches PrerequisitesStep.
+import '@/features/prerequisites/ui/styles/prerequisites.css';
 import type { WizardInitialData } from '@/types/webviewPayloads';
 
 // Get root element

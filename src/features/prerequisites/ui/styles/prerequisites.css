@@ -1,0 +1,142 @@
+/**
+ * prerequisite styles.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
+ * when the visual diff is empty, so the rules are not edited on the way.
+ */
+
+@layer theme {
+.prerequisite-container {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    margin-bottom: 16px !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: 4px !important;
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    padding: 12px !important;
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+.prerequisite-list {
+    padding-bottom: 60px !important;
+}
+
+.prerequisite-item {
+    padding: 12px !important;
+    background-color: var(--spectrum-global-color-gray-75) !important;
+    border-radius: 4px !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    transition: all 0.3s ease !important;
+}
+
+.prerequisite-item:not(:last-child) {
+    margin-bottom: 8px !important;
+}
+
+.prerequisite-content {
+    margin-right: 12px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.prerequisite-title {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    display: block !important;
+    margin-bottom: 2px !important;
+}
+
+.prerequisite-description {
+    font-size: 12px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    display: block !important;
+}
+
+.prerequisite-message {
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    display: block !important;
+    margin-top: 4px !important;
+    min-height: 17px !important;
+    line-height: 17px !important;
+    transition: color 0.3s ease, opacity 0.3s ease !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow: hidden !important;
+}
+
+.prerequisite-message-error {
+    color: var(--spectrum-global-color-red-600) !important;
+}
+
+.prerequisite-message-warning {
+    color: var(--spectrum-global-color-orange-600) !important;
+}
+
+.prerequisite-message-default {
+    color: var(--spectrum-global-color-gray-600) !important;
+}
+
+.prerequisite-plugin-item {
+    font-size: 12px !important;
+    margin-left: 20px !important;
+}
+
+.prerequisite-item-spacing {
+    margin-bottom: 8px !important;
+}
+
+.prerequisite-item * {
+    transition: opacity 0.3s ease, transform 0.3s ease !important;
+}
+
+.prerequisite-content > * {
+    transition: opacity 0.3s ease !important;
+}
+
+.prerequisite-message,
+.prerequisite-description,
+.prerequisite-title {
+    transition: opacity 0.2s ease, color 0.3s ease !important;
+}
+
+.prerequisite-item svg {
+    transition: opacity 0.3s ease, transform 0.2s ease, color 0.3s ease !important;
+}
+
+.prerequisite-item {
+    transition: min-height 0.3s ease, padding 0.3s ease !important;
+}
+
+.prerequisite-content > div {
+    transition: all 0.3s ease !important;
+}
+
+.prerequisite-item [role="progressbar"],
+.prerequisite-item .progress-bar-small-label {
+    animation: fadeInUp 0.3s ease;
+}
+
+.prerequisite-message {
+    transition: opacity 0.2s ease !important;
+}
+
+.prerequisite-message:not(:empty) {
+    animation: fadeIn 0.2s ease;
+}
+
+.prerequisite-item button {
+    transition: opacity 0.3s ease, transform 0.2s ease !important;
+}
+
+.prerequisite-container {
+    will-change: scroll-position;
+}
+
+.prerequisite-item {
+    will-change: transform;
+}
+}

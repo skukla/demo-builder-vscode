@@ -75,6 +75,45 @@ component that uses it. A family moved to a sheet one of its consumers cannot se
 is the `.text-orange-*` bug again, and it renders as "the colour simply did not
 apply there".
 
+## What cycle 1 found — read this before running cycle 2
+
+Three defects in the mover, all found by running it against real CSS on
+2026-09-08, all now controls in `--selftest`:
+
+1. **A multi-line selector list was read as starting at the wrong line.**
+   `.a:hover,` on one line and `.a:hover * {` on the next: only the second carries
+   the brace, so the first selector was left behind. **The visual diff cannot see
+   this** — the leftover still applies, because the god file is still imported by
+   the same bundle. `--move` now runs a completeness check and refuses.
+2. **The cascade layer was dropped.** custom-spectrum's rules live in
+   `@layer theme`; the emitted sheet had no wrapper, so the moved rules became
+   unlayered and started beating Spectrum. 90 sidebar elements moved. The mover
+   now records each rule's enclosing layer and reproduces it.
+3. **A rule was hoisted out of `@media`.** `.sidebar-tile-grid` inside
+   `@media (max-height: 640px)` was emitted at top level, so it applied always —
+   the sidebar's tiles flipped from a column to a row. `--move` now REFUSES a
+   family containing any rule inside `@media`/`@container`/`@supports`, because
+   moving them all hoists them and moving the rest leaves leftovers. **7 families
+   (7 rules) are affected**; the other 95 (597 rules) are clean.
+
+**And the `!important` ceiling reads `git ls-files`.** A new sheet that is not yet
+`git add`ed is invisible to it, so the count appears to fall by however many
+`!important` rode along. Stage the new sheet before reading any pin.
+
+## Two constraints the script cannot see
+
+**ADR-018 §3 blocks 321 of the 685.** A family used by a component in `core/ui/`
+must stay in a globally-loaded sheet, because that component can render on any
+surface. `.intflow-*` — the largest family at 52 rules — is blocked this way by
+`ApiAccessPicker`. Moving those families requires moving the COMPONENT out of
+`core/ui/` first, which is a component refactor and not a CSS cycle.
+
+**105 rules have no `.tsx` user at all.** Neither movable nor obviously dead —
+they want their own investigation before anyone assumes either.
+
+So step 2's realistic scope today is **259 rules, not 685**, and
+`featureRulesInGlobalSheet` cannot reach 0 without a decision about §3.
+
 ## Verification per cycle
 
 1. `npm run compile`, stage bundles, capture (48 cells, 2,700 elements)
