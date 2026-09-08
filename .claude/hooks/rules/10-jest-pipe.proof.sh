@@ -18,11 +18,22 @@
 # rule under test.
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
+# ISOLATE FROM RULE 15. These cases invoke jest, and `15-jest-concurrent` reads the
+# LIVE process list unless DBV_JEST_PS names a snapshot. During a full `npm run gate`
+# there ARE real jest workers running, so rule 15 blocked the cases below that expect
+# to pass — reported four times as a "flake", once refusing a push on a green tree.
+# It was never flaky: it is deterministic, and it fires exactly when the full suite
+# runs this proof. An idle snapshot pins what rule 15 sees so this proof tests only
+# the rule it is named after.
+_IDLE_PS=$(mktemp)
+printf '%s\n' "99999 /bin/zsh -l" > "$_IDLE_PS"
+trap 'rm -f "$_IDLE_PS"' EXIT
+
 run() {
   local cmd="$1" label="$2" expect="$3"
   local payload out code got verdict
   payload=$(CMD="$cmd" python3 -c 'import json,os;print(json.dumps({"tool_name":"Bash","tool_input":{"command":os.environ["CMD"]},"session_id":"proof"}))')
-  out=$(printf '%s' "$payload" | bash .claude/hooks/router.sh 2>&1); code=$?
+  out=$(printf '%s' "$payload" | DBV_JEST_PS="$_IDLE_PS" bash .claude/hooks/router.sh 2>&1); code=$?
   got="pass"; [ "$code" -ne 0 ] && got="BLOCK"
   verdict="OK"; [ "$got" != "$expect" ] && verdict="*** WRONG ***"
   printf '%-54s expect=%-5s got=%-5s %s\n' "$label" "$expect" "$got" "$verdict"

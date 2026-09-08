@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: backlog
+status: shipped
 ---
 
 # A hook-proof suite fails under full parallel load and refuses pushes
@@ -65,3 +65,7 @@ is not a state this can stay in — it is already teaching a re-run reflex.
 
 [[PL-41]] states the principle. [[PL-34]] carries the first three sightings in its
 log.
+
+## Shipped so far
+
+- 2026-09-08  DIAGNOSED AND FIXED 2026-09-08, the day it was filed. Never a flake. 11-jest-redirect.proof.sh did not set the DBV_JEST_PS seam, so 15-jest-concurrent read the LIVE process list; during a full gate there ARE real workers running, so rule 15 blocked exactly the cases rule 11's proof expects to let through. Deterministic, and it fires precisely when the full suite runs the proof, which is why it read as load-dependent. Reproduced on demand by pointing the seam at a snapshot holding a live worker: both reported cases failed, plus a third nobody had seen. 10-jest-pipe.proof.sh had the identical hole, written the same morning. Both now pin an idle snapshot; both pass with a live worker present, full gate green at 1559 suites, zero WRONG lines. Keep the lesson: a proof driving the router must isolate itself from every OTHER rule or it tests the wrong one.

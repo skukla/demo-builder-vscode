@@ -325,7 +325,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-41` | fix | [Three suites fail only under full-suite load, and it costs real pushes](2026-09-03-suites-that-fail-only-under-load.md) | — | med | shipped |
 | `PL-44` | fix | └ [A lint probe planted inside tests/ races every suite that walks tests/](2026-09-05-lint-probe-races-every-tree-walker.md) | — | med | backlog |
 | `PL-51` | fix | [Test suites that rebuild a mock wall their family helper already owns](2026-09-08-suites-rebuilding-their-family-mock-wall.md) | — | med | backlog |
-| `PL-52` | fix | [A hook-proof suite fails under full parallel load and refuses pushes](2026-09-08-hook-proof-suite-flakes-under-load.md) | — | med | backlog |
+| `PL-52` | fix | [A hook-proof suite fails under full parallel load and refuses pushes](2026-09-08-hook-proof-suite-flakes-under-load.md) | — | med | shipped |
 
 <!-- END GENERATED registry -->
 
