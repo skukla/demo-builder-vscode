@@ -101,6 +101,27 @@ repeated `setupUser()` helper in the suite's testUtils.
 Since §0b, it also presents as an `act()` warning that FAILS the suite — which is a better
 diagnosis than either of the other two, so read the warning before assuming a query bug.
 
+### Opting OUT of fake timers: it must be `beforeEach`, never `beforeAll`
+
+`tests/setup/react.ts` calls `jest.useFakeTimers()` inside its OWN `beforeEach`. A
+setup file's hooks are registered first, so they run BEFORE the ones in your suite —
+which means a `beforeAll(() => jest.useRealTimers())` is undone again before every
+single test. The switch silently does nothing.
+
+Put it in a file-level `beforeEach`, which is registered after the setup's and wins:
+
+```ts
+beforeEach(() => {
+    jest.useRealTimers();
+});
+```
+
+Cost of not knowing this, measured 2026-09-08: five probes. Anything that yields
+internally — `axe.run()` is the case that found it — simply never settles under fake
+timers, and the failure is a bare jest timeout naming your test. Nothing points at
+timers. The tell is that the same code completes in a bare jsdom environment with no
+setup file, which is the check worth running before blaming the library.
+
 ## 2. The Spectrum mock preamble
 
 Spectrum primitives are mocked per-suite (the directory convention), not globally. Mock

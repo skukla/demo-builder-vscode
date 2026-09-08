@@ -86,3 +86,7 @@ the harness supplies a fixture instead of the real message. That is [[PL-46]]'s 
 nothing checks they still match what the extension sends. A functional test is exactly the
 thing that could: open a real surface, capture the real payload, compare it to the fixture.
 That is the strongest reason to want both items rather than either.
+
+## Shipped so far
+
+- 2026-09-08  Step 1 (axe-core) SHIPPED 2026-09-08 — and it did NOT need the browser this item assumed. 195 of 211 rendering suites already mount real Spectrum in jsdom, so axe runs inside the existing jest run; only colour contrast still needs the browser harness, which remains this item's step 1b. tests/core/ui/accessibility.test.tsx: 4 components plus a positive control, all clean on first run, which is the expected result since Spectrum handles its own primitives' semantics. No burst of findings materialised, so no shrink-only ledger was needed. Three traps recorded in the suite: real timers must be restored in beforeEach not beforeAll (the React setup re-installs fake ones in its own beforeEach, and axe never settles under them — five probes, cracked by running the same code in a bare jsdom); colour-contrast disabled explicitly because jsdom has no layout; and zero violations with zero PASSES means nothing was inspected, so every case asserts the pass count too. Steps 2 (themes) and 3 (widths) not started.
