@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/utils/envParser.ts"
+        "src/core/ui/utils/frontendTimeouts.ts"
     ],
     "reporters": [
         "clear-text",
