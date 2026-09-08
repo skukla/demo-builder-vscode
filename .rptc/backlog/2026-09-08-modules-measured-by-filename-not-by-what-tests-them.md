@@ -54,60 +54,52 @@ Each fix would be "invent a mirroring suite for it" — a lot of work for module
 already be thoroughly tested. `agentsMdSections` has 81 tests exercising it right now. Doing
 that 160 times treats the symptom 160 times and leaves the rule that caused it intact.
 
-## ANSWERED 2026-09-08 — BOTH, and the split is the finding
+## ANSWERED 2026-09-08 — and CORRECTED the same day
 
-Five of the largest were measured against the suites that reach them, using a hand-written
-config because `focusModule` refuses a module with no suites of its own.
+The first answer posted here was measured against TRUNCATED suite lists — six of thirteen
+consumer suites for one module, three of twelve for another — and reported as if complete.
+That biased every score low and every gap count high. Re-measured against the full sets:
 
-| module | score | mutants | ~gaps | why |
+| module | score | mutants | ~gaps | how the tests reach it |
 |---|---|---|---|---|
-| `agentsMdSections` | 54.55% | 385 | 57 | genuinely exercised through its consumer |
-| `repoSelectionInline.helpers` | 50.15% | 337 | 130 | genuinely exercised through its consumer |
-| `adobeEntityReads` | 31.27% | 259 | 137 | exercised, thinly |
-| `daLiveBlockLibraryOperations` | 0.00% | 386 | 289 | **replaced by an injected double** — its suite asserts the CONSUMER forwards calls, so this code never runs |
-| `storefrontRepublishService` | 0.00% | 163 | 119 | **`jest.mock`ed by 10 of its 12 consumer suites** |
+| `repoSelectionInline.helpers` | 62.61% | 337 | 91 | exercised through 8 consumer suites |
+| `adobeEntityReads` | 57.14% | 259 | 70 | exercised through 13 |
+| `agentsMdSections` | 54.55% | 385 | 57 | exercised through 5 |
+| `storefrontRepublishService` | 31.29% | 163 | 75 | `jest.mock`ed by 10 of 12 — the other 2 do run it |
+| `daLiveBlockLibraryOperations` | **0.00%** | 386 | 289 | **replaced by an injected double; never executed** |
 
-**So it is not a visibility problem, and a tooling change alone will not fix it.** Where the
-code actually runs it averages **45%** — against 90%+ for the measured set, whose floor the
-burn-down drove to zero open gaps. Measuring these would expose real work, not confirm
-existing quality.
+**What the first version got wrong, kept here because the direction of the error is the
+lesson:** it claimed TWO of five are never executed by any test. Only one is.
+`storefrontRepublishService` read 0.00% because the three suites sampled all happened to be
+among the ten that mock it; with all twelve it scores 31.29%. A truncated sample of mockers
+is indistinguishable from a module nothing runs.
 
-**And two of five are never executed by any test at all.** Not weakly tested: substituted, in
-one case by `jest.mock` and in the other by a hand-injected double at an ADR-015 seam. A
-suite named for the consumer asserts that calls are FORWARDED, which is a real thing to
-assert and leaves the forwarded-to module unrun everywhere.
+### What survives, and is now measured properly
 
-### The size, stated plainly
+**It is not a visibility problem.** Where the code runs, the four exercised modules average
+**51%** — against 90%+ for the measured set, whose floor the burn-down drove to zero open
+gaps. Measuring these exposes real work rather than confirming existing quality, so a tooling
+change alone does not answer the question.
 
-Five probes cover 1,530 mutants and about 732 gaps — a mean of **146 gaps per module**. Over
-160 modules that extrapolates to roughly **23,000 open gaps**, which is larger than the
-17,475 the original burn-down started from. Treat that as an order of magnitude, not a
-forecast: the sample is five, chosen as the LARGEST modules, so it is biased high.
+**One module is never executed anywhere.** `daLiveBlockLibraryOperations` — 386 mutants,
+replaced by a hand-injected double at an ADR-015 seam where the suite asserts the CONSUMER
+forwards calls. That is a legitimate thing to assert and it leaves the forwarded-to module
+unrun. Neither branch of the original question anticipated this case, and for it the question
+is not "measure this" but "is anything testing this code at all".
 
-### What this means for the answer
+**Mocking is why a consumer suite is not proof of coverage.** Ten of twelve suites naming
+`storefrontRepublishService` replace it. "A test imports the module" and "a test exercises
+the module" are different claims, and only the second is worth anything here.
 
-Neither branch the question offered is right on its own:
+### The size — an order of magnitude, and biased high
 
-- **A tooling change is still needed**, because these modules cannot currently be measured at
-  all — but it buys visibility, not quality.
-- **A coverage programme is also needed**, and at this scale it is a bigger piece of work than
-  PL-22 was. It should be sized and prioritised deliberately, not started as a follow-on.
-- **A third thing surfaced that neither branch anticipated**: modules substituted everywhere
-  by mocks or injected doubles. For those the question is not "measure them" but "is anything
-  testing this code, anywhere?" — and for `daLiveBlockLibraryOperations`, 386 mutants say no.
+582 gaps across five probes, a mean of **116 per module**. Over 160 modules that is roughly
+**18,600**, against the 17,475 the original burn-down began from. Two reasons not to plan
+against that figure: the sample is the LARGEST five modules, and the per-module gap count
+here is crude — survivors plus uncovered minus string mutants, where the real `openGaps` also
+subtracts ledgered equivalents and excludes another category. Both push the estimate high.
 
-### A trap this experiment paid for
-
-The first probe reported **0.00% with all 385 mutants surviving**, and it was wrong. Its jest
-config lived in `/tmp` with an absolute `rootDir`, so jest ran against the ORIGINAL source
-while Stryker mutated a sandbox copy — the tests never saw a mutation. The working config
-must sit in the repo root and use a RELATIVE `require('./jest.config.js')` with `**/tests/…`
-globs, exactly as `jest.focus.config.js` does, so that it resolves inside the sandbox. A 0%
-where every mutant survives should be read as "the module never ran" until proven otherwise;
-that is also what `storefrontRepublishService` and `daLiveBlockLibraryOperations` turned out
-to mean, for different reasons.
-
-## The experiment that answered this — about an hour
+## The experiment that answered this## The experiment that answered this — about an hour
 
 Take five or six of the largest and measure each against its CONSUMER's suites rather than
 its own. `focusModule` refuses a module with no suites — "Refusing to write a config that
@@ -132,3 +124,4 @@ was taken with a looser filter and did not ask whether tests reach the module an
 
 - nothing; the deciding measurement has not been taken.
 - 2026-09-08  ANSWERED 2026-09-08: both. Five largest probed against the suites that reach them. Where the code runs it averages 45% (agentsMdSections 54.55, repoSelectionInline.helpers 50.15, adobeEntityReads 31.27) against 90%+ for the measured set - so measuring exposes real work, not existing quality. Two of five are never executed by ANY test: storefrontRepublishService is jest.mocked by 10 of 12 consumers, daLiveBlockLibraryOperations is replaced by an injected double at an ADR-015 seam. Mean 146 gaps/module; over 160 modules that is ~23,000, larger than the burn-down's original 17,475 - order of magnitude only, the sample is the largest five and biased high.
+- 2026-09-08  CORRECTED 2026-09-08: the first answer used truncated suite lists (6 of 13, 3 of 12) reported as complete, biasing scores low and gaps high. Full sets: repoSelectionInline.helpers 62.61 (was 50.15), adobeEntityReads 57.14 (was 31.27), storefrontRepublishService 31.29 (was 0.00), agentsMdSections 54.55 unchanged, daLiveBlockLibraryOperations 0.00 unchanged. RETRACTED: 'two of five are never executed' - only ONE is. storefrontRepublishService read 0% because all three sampled suites were among the ten that mock it. Mean gaps 116 not 146; extrapolation ~18,600 not ~23,000, still biased high.
