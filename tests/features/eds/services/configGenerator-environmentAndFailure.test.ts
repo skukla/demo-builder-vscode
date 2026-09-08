@@ -45,57 +45,109 @@ describe('configGenerator — environment fork and failure reporting', () => {
         return JSON.parse(result.content!);
     };
 
+    /**
+     * Both endpoints on every row, never `commerce-core-endpoint` alone.
+     *
+     * On ACCS and ACO the two are EQUAL, and the storefront reads the
+     * *existence* of `commerce-core-endpoint` to decide which requests carry cs
+     * headers (Magento-Website-Code on ACCS, AC-View-ID on ACO). An assertion
+     * that only names the core endpoint cannot tell "kept, equal to the
+     * commerce endpoint" from "dropped, and the reader fell back".
+     */
     describe('commerce-core-endpoint follows the environment type', () => {
-        it('on PaaS it is the Catalog Service endpoint, kept separate from the mesh', () => {
-            const config = generate({ ...baseParams, environmentType: 'paas' });
+        const MESH = 'https://mesh.example.com/graphql';
+        const CATALOG = 'https://catalog.example.com/graphql';
 
-            expect(config.public.default['commerce-core-endpoint']).toBe(
-                'https://catalog.example.com/graphql'
-            );
-            expect(config.public.default['commerce-endpoint']).toBe(
-                'https://mesh.example.com/graphql'
-            );
-        });
-
-        it('on ACCS it is the commerce endpoint, and the catalog value is ignored', () => {
+        it.each<[string, ConfigGeneratorParams, string]>([
+            ['on PaaS it is the Catalog Service endpoint, kept separate from the mesh',
+                { ...baseParams, environmentType: 'paas' }, CATALOG],
             // ACCS serves catalog through the same endpoint. Threading the
             // PaaS-only catalog URL here points cs queries at a host ACCS
             // projects do not have.
-            const config = generate({ ...baseParams, environmentType: 'accs' });
-
-            expect(config.public.default['commerce-core-endpoint']).toBe(
-                'https://mesh.example.com/graphql'
-            );
-        });
-
-        it('on ACO it is the commerce endpoint too', () => {
-            const config = generate({ ...baseParams, environmentType: 'aco' });
-
-            expect(config.public.default['commerce-core-endpoint']).toBe(
-                'https://mesh.example.com/graphql'
-            );
-        });
-
-        it('an ABSENT environment type is treated as PaaS, not as neither', () => {
+            ['on ACCS it is the commerce endpoint, and the catalog value is ignored',
+                { ...baseParams, environmentType: 'accs' }, MESH],
+            ['on ACO it is the commerce endpoint too',
+                { ...baseParams, environmentType: 'aco' }, MESH],
             // The default has to be a real environment: falling through to the
             // ACCS shape would drop the Catalog Service split on every project
             // whose backend was not recorded.
-            const config = generate({ ...baseParams, environmentType: undefined });
+            ['an ABSENT environment type is treated as PaaS, not as neither',
+                { ...baseParams, environmentType: undefined }, CATALOG],
+            ['falls back to the commerce endpoint when PaaS has no catalog endpoint',
+                { ...baseParams, environmentType: 'paas', catalogServiceEndpoint: undefined },
+                MESH],
+        ])('%s', (_label, params, expectedCore) => {
+            const config = generate(params);
 
-            expect(config.public.default['commerce-core-endpoint']).toBe(
-                'https://catalog.example.com/graphql'
+            expect(config.public.default['commerce-core-endpoint']).toBe(expectedCore);
+            expect(config.public.default['commerce-endpoint']).toBe(MESH);
+        });
+    });
+
+    describe('ACCS drops the PaaS-only fields it must never publish', () => {
+        /**
+         * A manifest that still carries the PaaS keys under an ACCS backend —
+         * the shape a project has after its backend is switched, since nothing
+         * deletes the old component's config.
+         *
+         * Without the `isAccs` guards these values would be extracted and
+         * reach generateHeaders, which on ACCS emits neither — but they would
+         * also reach every other consumer of the returned params. The guards
+         * are only observable against a config that HAS the keys, which is why
+         * no other case in this family can see them.
+         */
+        const accsProjectStillCarryingPaasKeys = {
+            'adobe-commerce-accs': {
+                ACCS_GRAPHQL_ENDPOINT: 'https://accs.example.com/graphql',
+                ACCS_STORE_VIEW_CODE: 'citisignal_us',
+                ACCS_STORE_CODE: 'citisignal_store',
+                ACCS_WEBSITE_CODE: 'citisignal',
+                ACCS_CUSTOMER_GROUP: 'group-hash',
+                // Real key names, read off envVarKeys.ts — a plausible-looking
+                // one the reader never looks up would leave every guard below
+                // passing for the wrong reason.
+                PAAS_CATALOG_SERVICE_ENDPOINT: 'https://catalog.example.com/graphql',
+                ADOBE_CATALOG_API_KEY: 'fake-test-key-not-a-secret',
+                ADOBE_COMMERCE_ENVIRONMENT_ID: 'env-abc-123',
+            },
+        };
+
+        it('extracts none of the catalog endpoint, API key or environment id', () => {
+            const params = extractConfigParamsFromConfigs(
+                accsProjectStillCarryingPaasKeys,
+                undefined,
+                'adobe-commerce-accs'
             );
+
+            expect(params).toStrictEqual({
+                environmentType: 'accs',
+                commerceEndpoint: 'https://accs.example.com/graphql',
+                catalogServiceEndpoint: undefined,
+                commerceApiKey: undefined,
+                commerceEnvironmentId: undefined,
+                storeViewCode: 'citisignal_us',
+                storeCode: 'citisignal_store',
+                websiteCode: 'citisignal',
+                customerGroup: 'group-hash',
+                aemAssetsEnabled: false,
+            });
         });
 
-        it('falls back to the commerce endpoint when PaaS has no catalog endpoint', () => {
+        it('publishes the ACCS endpoint as commerce-core-endpoint, not the leftover catalog URL', () => {
             const config = generate({
                 ...baseParams,
-                environmentType: 'paas',
-                catalogServiceEndpoint: undefined,
+                ...extractConfigParamsFromConfigs(
+                    accsProjectStillCarryingPaasKeys,
+                    undefined,
+                    'adobe-commerce-accs'
+                ),
             });
 
             expect(config.public.default['commerce-core-endpoint']).toBe(
-                'https://mesh.example.com/graphql'
+                'https://accs.example.com/graphql'
+            );
+            expect(config.public.default['commerce-endpoint']).toBe(
+                'https://accs.example.com/graphql'
             );
         });
     });

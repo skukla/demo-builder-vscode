@@ -6,10 +6,6 @@
  * which the backend component owns (mesh configs carry a stale duplicate).
  */
 
-jest.mock('@/core/constants', () => ({
-    isMeshComponentId: (id: string) => id.includes('mesh'),
-}));
-
 import { mergeComponentConfigs } from '@/features/eds/services/configGenerator';
 
 describe('mergeComponentConfigs', () => {
@@ -192,7 +188,7 @@ describe('mergeComponentConfigs — the backend owns the scope, not the last non
             'adobe-commerce-accs': { ACCS_GRAPHQL_ENDPOINT: 'https://direct.example.com' },
         });
 
-        expect(Object.keys(result)).not.toContain('MESH_ENDPOINT');
+        expect(result).toStrictEqual({ ACCS_GRAPHQL_ENDPOINT: 'https://direct.example.com' });
     });
 
     it('overrides the merged endpoint with the deployed one when supplied', () => {

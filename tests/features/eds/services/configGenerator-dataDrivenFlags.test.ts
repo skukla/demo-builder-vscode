@@ -121,6 +121,40 @@ describe('configGenerator — data-driven config flags', () => {
         });
     });
 
+    describe('an addon entry with no configuration block at all', () => {
+        /**
+         * The real catalog with the ACO addon stripped of `configuration`.
+         *
+         * Catalog entries are not required to declare one, and the reader walks
+         * `entry?.configuration?.configFlags`. Drop the second `?.` and this is
+         * a TypeError the outer catch turns into "config generation failed" —
+         * for a project that merely selected an addon with no flags.
+         */
+        const catalogWithoutAddonConfiguration = () => {
+            const real = jest.requireActual(COMPONENTS) as {
+                addons: Record<string, unknown>;
+            };
+            return {
+                ...real,
+                addons: { ...real.addons, 'adobe-commerce-aco': { id: 'adobe-commerce-aco' } },
+            };
+        };
+
+        it('generates successfully and injects nothing', async () => {
+            const { generateConfigJson } = await loadGeneratorWith({
+                components: catalogWithoutAddonConfiguration,
+            });
+
+            const result = generateConfigJson(
+                { ...BASE, selectedAddons: ['adobe-commerce-aco'] },
+                mockLogger
+            );
+
+            expect(result.success).toBe(true);
+            expect(result.error).toBeUndefined();
+        });
+    });
+
     describe('a catalog with the whole collection missing', () => {
         it('generates successfully when components.json declares no addons', async () => {
             // The guard is what makes this a no-op instead of a TypeError that
