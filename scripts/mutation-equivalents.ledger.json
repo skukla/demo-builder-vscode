@@ -17109,6 +17109,18 @@
             "decision": "none \u2014 the `?.` on every operand is required by AdobeConfig's all-optional shape and correct as written",
             "recorded": "2026-09-07",
             "source": "PL-22 batch MUT-02"
+        },
+        {
+            "module": "src/features/authentication/services/adobeEntitySelector.ts",
+            "anchors": [
+                "this.debugLogger.debug('[Entity Selector] Failed to clear console context (non-critical):', error);"
+            ],
+            "mutants": 1,
+            "category": "block",
+            "reason": "Emptying the catch body of clearConsoleContext changes nothing a caller or collaborator can see: the method returns void, the rejection is swallowed either way, and the body is one debug line. The failure path itself IS tested from both sides \u2014 a rejecting CLI still resolves, and the console.where cache is left uncleared \u2014 so only the diagnostic line is unconstrained, and asserting debug text is what the ratchet refuses to reward.",
+            "decision": "none \u2014 a swallowed CLI failure should say so in the debug channel; the line stays",
+            "recorded": "2026-09-08",
+            "source": "PL-22 batch MUT-01, adobeEntitySelector focus run"
         }
     ]
 }

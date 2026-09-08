@@ -17,6 +17,17 @@ import { getLogger } from '@/core/logging/debugLogger';
 import { createMockLogger } from '../../../helpers/loggerFake';
 import { createMockCommandExecutor } from '../../../helpers/commandExecutorFake';
 
+// The node version is asserted as an ARGUMENT below, so it is pinned to a value the
+// real resolver never returns: a selector that hardcoded a version instead of asking
+// `getMeshNodeVersion` would otherwise pass. The literal is inline because a mock
+// factory is hoisted above every const in this file.
+jest.mock('@/core/utils/meshConfig', () => ({
+    getMeshNodeVersion: jest.fn(() => '99'),
+}));
+
+/** Exactly the options every `aio config delete` call must carry. */
+const EXPECTED_OPTIONS = { encoding: 'utf8', useNodeVersion: '99' };
+
 describe('AdobeEntitySelector', () => {
     let selector: AdobeEntitySelector;
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
@@ -33,10 +44,7 @@ describe('AdobeEntitySelector', () => {
             clearConsoleWhereCache: jest.fn(),
         } as unknown as jest.Mocked<AuthCacheManager>;
 
-        selector = new AdobeEntitySelector(
-            mockCommandExecutor,
-            mockCacheManager,
-        );
+        selector = new AdobeEntitySelector(mockCommandExecutor, mockCacheManager);
     });
 
     describe('clearConsoleContext()', () => {
@@ -50,19 +58,42 @@ describe('AdobeEntitySelector', () => {
 
             await selector.clearConsoleContext();
 
+            // The OPTIONS are asserted exactly, not as `any(Object)`: the encoding and
+            // the resolved node version are what the CLI actually runs under, and an
+            // empty options object satisfies `any(Object)` while running the command
+            // on whatever node happens to be first on PATH.
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.org',
-                expect.any(Object),
+                EXPECTED_OPTIONS
             );
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.project',
-                expect.any(Object),
+                EXPECTED_OPTIONS
             );
             expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.workspace',
-                expect.any(Object),
+                EXPECTED_OPTIONS
             );
             expect(mockCacheManager.clearConsoleWhereCache).toHaveBeenCalled();
+        });
+
+        it('should issue exactly the three console keys and nothing else', async () => {
+            mockCommandExecutor.execute.mockResolvedValue({
+                stdout: '',
+                stderr: '',
+                code: 0,
+                duration: 0,
+            });
+
+            await selector.clearConsoleContext();
+
+            expect(
+                mockCommandExecutor.execute.mock.calls.map(([command]) => command)
+            ).toStrictEqual([
+                'aio config delete console.org',
+                'aio config delete console.project',
+                'aio config delete console.workspace',
+            ]);
         });
 
         it('should not throw on CLI failure', async () => {
@@ -70,6 +101,15 @@ describe('AdobeEntitySelector', () => {
 
             // Should not throw
             await expect(selector.clearConsoleContext()).resolves.not.toThrow();
+        });
+
+        it('should leave the console.where cache alone when the CLI fails', async () => {
+            mockCommandExecutor.execute.mockRejectedValue(new Error('CLI error'));
+
+            await selector.clearConsoleContext();
+
+            // Nothing was cleared, so a cached console.where still describes reality.
+            expect(mockCacheManager.clearConsoleWhereCache).not.toHaveBeenCalled();
         });
     });
 });
