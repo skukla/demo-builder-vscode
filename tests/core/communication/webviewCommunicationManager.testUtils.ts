@@ -14,7 +14,7 @@ export interface TestMocks {
     mockPanel: vscode.WebviewPanel;
     mockWebview: vscode.Webview;
     manager: WebviewCommunicationManager;
-    messageListener: (message: Message) => void;
+    messageListener: (message: Message) => Promise<void>;
 }
 
 export function setupMocks(): TestMocks {
@@ -39,7 +39,7 @@ export function setupMocks(): TestMocks {
         onDidDispose: jest.fn()
     } as unknown as vscode.WebviewPanel;
 
-    let messageListener: (message: Message) => void = () => {};
+    let messageListener: (message: Message) => Promise<void> = async () => {};
 
     // Capture message listener
     (mockWebview.onDidReceiveMessage as jest.Mock).mockImplementation((listener) => {
@@ -106,7 +106,7 @@ export interface HandshakenMocks extends TestMocks {
      * hit — a dead helper beside N copies of its job usually means the helper is
      * broken, not unwanted.
      */
-    listener: () => (message: Message) => void;
+    listener: () => (message: Message) => Promise<void>;
 }
 
 /**
@@ -118,7 +118,7 @@ export interface HandshakenMocks extends TestMocks {
  */
 export async function setupHandshakenManager(): Promise<HandshakenMocks> {
     const mocks = setupMocks();
-    let live: (message: Message) => void = () => {};
+    let live: (message: Message) => Promise<void> = async () => {};
     (mocks.mockWebview.onDidReceiveMessage as jest.Mock).mockImplementation((l) => {
         live = l;
         return { dispose: jest.fn() };

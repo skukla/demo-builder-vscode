@@ -18,7 +18,7 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
     let mockPanel: vscode.WebviewPanel;
     let mockWebview: vscode.Webview;
     let manager: WebviewCommunicationManager;
-    let listener: () => (message: Message) => void;
+    let listener: () => (message: Message) => Promise<void>;
 
     beforeEach(async () => {
         jest.useFakeTimers();

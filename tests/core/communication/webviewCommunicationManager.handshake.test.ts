@@ -16,7 +16,7 @@ describe('WebviewCommunicationManager - Handshake & Lifecycle', () => {
     let mockPanel: vscode.WebviewPanel;
     let mockWebview: vscode.Webview;
     let manager: WebviewCommunicationManager;
-    let messageListener: (message: Message) => void;
+    let messageListener: (message: Message) => Promise<void>;
 
     beforeEach(() => {
         jest.clearAllMocks();

@@ -198,7 +198,7 @@ describe('SidebarProvider', () => {
 
     describe('message handling', () => {
         let mockWebviewView: MockWebviewView;
-        let messageHandler: (message: unknown) => void;
+        let messageHandler: (message: unknown) => Promise<void>;
 
         beforeEach(() => {
             // The shared factory, not a fifth hand-rolled copy: its

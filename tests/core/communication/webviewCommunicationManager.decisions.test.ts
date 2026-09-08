@@ -33,7 +33,7 @@ const typesPosted = (webview: vscode.Webview): string[] =>
 describe('WebviewCommunicationManager — protocol decisions', () => {
     let mockWebview: vscode.Webview;
     let manager: WebviewCommunicationManager;
-    let listener: () => (message: Message) => void;
+    let listener: () => (message: Message) => Promise<void>;
 
     beforeEach(async () => {
         jest.useFakeTimers();
@@ -317,7 +317,7 @@ describe('WebviewCommunicationManager — configuration', () => {
     it('holds a request for the CONFIGURED message budget, not a shorter one', async () => {
         jest.useFakeTimers();
         const mocks = setupMocks();
-        let live: (message: Message) => void = () => {};
+        let live: (message: Message) => Promise<void> = async () => {};
         (mocks.mockWebview.onDidReceiveMessage as jest.Mock).mockImplementation((l) => {
             live = l;
             return { dispose: jest.fn() };
