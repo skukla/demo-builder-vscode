@@ -1044,18 +1044,6 @@
             "equivalent": 0,
             "openGaps": 0
         },
-        "src/core/ui/components/wizard/stepStatusHelpers.ts": {
-            "score": 100,
-            "killed": 9,
-            "survived": 0,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {},
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
         "src/core/ui/utils/componentDataHelpers.ts": {
             "score": 100,
             "killed": 42,
@@ -1770,37 +1758,6 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 0,
-            "openGaps": 0
-        },
-        "src/core/ui/components/wizard/ConfigurationSummary.tsx": {
-            "score": 90.24,
-            "killed": 37,
-            "survived": 4,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "other": 1,
-                "string": 3
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 1,
-            "openGaps": 0
-        },
-        "src/core/ui/components/wizard/StatusSection.tsx": {
-            "score": 88.37,
-            "killed": 38,
-            "survived": 4,
-            "noCoverage": 1,
-            "timeout": 0,
-            "survivorCategories": {
-                "string": 4
-            },
-            "uncoveredCategories": {
-                "branch": 1
-            },
-            "highValueSurvivors": 0,
-            "equivalent": 1,
             "openGaps": 0
         },
         "src/core/ui/hooks/useAsyncData.ts": {

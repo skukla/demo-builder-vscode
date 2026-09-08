@@ -68,8 +68,8 @@ const VENDOR_PREFIX = /^spectrum-/;
 /**
  * Rules written inside a component's own `<style>` block.
  *
- * Four components do this (TimelineNav, ConfigurationSummary, VerifiedField,
- * WizardContainer), defining 12 classes between them — including
+ * Three components do this (TimelineNav, VerifiedField, WizardContainer),
+ * defining 6 classes between them — including
  * `.text-red-500`, which `AdobeAuthStep` also uses. Those classes exist only
  * while the defining component is MOUNTED, which is a stranger dependency than
  * the one this file was written to catch, but they are not undefined and
