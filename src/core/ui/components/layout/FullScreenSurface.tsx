@@ -10,7 +10,7 @@
  * (measured by the 2026-08-17 codebase sweep).
  *
  * **Not `PageLayout` + `PageHeader`.** Those are the WIZARD's page shell — a title,
- * subtitle and back affordance in `page-header-inner` — and render neither the
+ * subtitle and back affordance in the header’s inner row — and render neither the
  * sticky band nor the padded content column. Different job, checked before this
  * was written.
  *

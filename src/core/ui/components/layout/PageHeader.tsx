@@ -87,7 +87,7 @@ export function PageHeader({
     // on the wizard, the grid on a dashboard) carries the wayfinding, so the header
     // stays short rather than restating it.
     const headerContent = (
-        <div className="page-header-inner">
+        <div>
             <Flex alignItems="center" gap="size-200" wrap>
                 {backButton && (
                     <Button variant="secondary" isQuiet onPress={backButton.onPress}>

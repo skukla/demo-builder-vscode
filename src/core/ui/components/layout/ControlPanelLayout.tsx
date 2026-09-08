@@ -72,7 +72,6 @@ export function ControlPanelLayout({
                             {secondary}
                         </div>
                     }
-                    className="control-panel-body"
                 />
             ) : (
                 // Single-column fallback (no detail panel): match the two-column left

@@ -123,7 +123,6 @@ export function ProjectCard({
                     project={project}
                     isRunning={isRunning}
                     actions={actions}
-                    className="project-card-menu-button"
                 />
             </Flex>
 

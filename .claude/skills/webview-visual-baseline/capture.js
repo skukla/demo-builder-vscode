@@ -35,6 +35,12 @@ const PROPS = [
     'letter-spacing', 'text-transform', 'line-height',
 ];
 
+/**
+ * The smallest real surface is aiOverview at 30 elements, so a cell under this
+ * floor did not mount. See the throw in captureSurface for why a floor exists.
+ */
+const MIN_ELEMENTS = 20;
+
 const SURFACES = [
     'wizard', 'dashboard', 'configure', 'sidebar',
     'projectsList', 'aiOverview', 'integrations', 'dataInstaller',
@@ -99,7 +105,46 @@ async function captureSurface(bundle, theme = 'dark', width = 1280) {
     walk(doc.body, '');
 
     frame.remove();
+
+    // PER-CELL FLOOR. `assertHarnessFaithful()` checks the dashboard ONCE, at the
+    // start of a run, so an individual cell that fails to mount is recorded as a
+    // legitimate fingerprint. On 2026-09-08 a baseline captured wizard@dark@1280
+    // with SIX elements against its usual 105 and the diff reported it as a moved
+    // element — visible only because the count changed. The dangerous direction is
+    // the quiet one: a cell that under-renders in BOTH captures compares identical
+    // and reports clean. A real surface here never renders under 30 elements (the
+    // smallest, aiOverview, is 30), so anything under 20 is a failed mount.
+    if (lines.length < MIN_ELEMENTS) {
+        throw new Error(
+            `capture ${bundle}@${theme}@${width} produced ${lines.length} elements ` +
+            `(floor ${MIN_ELEMENTS}) — the surface did not mount. Re-run; do not diff this.`
+        );
+    }
+
     return lines;
+}
+
+/**
+ * Every CSS property a change TOUCHES must be in PROPS, or the diff cannot see it.
+ *
+ * Pass the CSS text being removed or edited. Added 2026-09-08 after two blind
+ * spots in one day: letter-spacing was not captured, so deleting a
+ * letter-spacing rule produced an empty diff that proved nothing. Reasoning about
+ * whether the fingerprint covers a change is exactly the step that failed; this
+ * makes it a check.
+ */
+function assertPropertiesCovered(cssText) {
+    const declared = new Set(
+        [...cssText.matchAll(/(?:^|[;{])\s*([a-z-]+)\s*:/g)].map((m) => m[1])
+    );
+    const blind = [...declared].filter((p) => !PROPS.includes(p));
+    if (blind.length) {
+        throw new Error(
+            `the fingerprint does not capture: ${blind.join(', ')}. ` +
+            `Add them to PROPS before trusting a diff of this change.`
+        );
+    }
+    return { covered: [...declared] };
 }
 
 /**

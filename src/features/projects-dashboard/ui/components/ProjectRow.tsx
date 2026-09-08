@@ -104,7 +104,6 @@ export function ProjectRow({
                         project={project}
                         isRunning={isRunning}
                         actions={actions}
-                        className="project-row-menu-button"
                     />
                     <Text UNSAFE_className="project-row-status">{statusText}</Text>
                     <ChevronRight size="S" UNSAFE_className="project-row-chevron" />

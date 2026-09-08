@@ -240,7 +240,6 @@ export function FieldHelpButton({
                 <ActionButton
                     isQuiet
                     aria-label={`Help for ${fieldLabel}`}
-                    UNSAFE_className="field-help-button"
                 >
                     <InfoOutline size="S" />
                 </ActionButton>
@@ -283,12 +282,11 @@ export function FieldHelpButton({
                 <ActionButton
                     isQuiet
                     aria-label={`Help for ${fieldLabel}`}
-                    UNSAFE_className="field-help-button"
                 >
                     <InfoOutline size="S" />
                 </ActionButton>
                 {(close) => (
-                    <Dialog size="L" UNSAFE_className="field-help-dialog">
+                    <Dialog size="L">
                         <Heading>
                             <Flex justifyContent="space-between" alignItems="center" width="100%">
                                 <Text>{help.title || `Help: ${fieldLabel}`}</Text>
