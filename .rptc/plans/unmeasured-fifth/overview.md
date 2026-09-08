@@ -38,8 +38,39 @@ is the same misreading the backlog item already retracted for `storefrontRepubli
 none of the five probed modules is unexecuted — all five are unattributed, which is step 3's
 problem, not a coverage hole.
 
-STATUS 2026-09-08: six mirrored suites added (96 tests), baseline row written at **81.87%**,
-42 open gaps. Part two continues from the survivor list.
+STATUS 2026-09-08 (part one): six mirrored suites added (92 tests), baseline row written at
+**81.87%**, 42 open gaps.
+
+STATUS 2026-09-08 (part two): **83.42%**, survivors 62 -> 58, uncovered 8 -> 6, openGaps
+**42 -> 36**. 92 -> 97 tests. Six behavioural mutants killed — a null sheet body the optional
+chain guards; the two rewrite-failure throws, which must carry DA.live's own status rather
+than the `'unknown error'` placeholder; the ensure pass minting no token when no block has an
+example; the stub loop's batch slice (7 blocks wrote every page TWICE without it); and a
+`components` fallback that would write a stub page called `undefined.html` into a customer's
+site. The seventh addition covers a rejected stub write, which no test drove before.
+
+**Every remaining behavioural mutant is triaged, and none of the 36 is a missing test:**
+
+| how many | what | why it is not worth a test |
+|---|---|---|
+| 22 | log-only branches (`if (result.success)`, `if (!configResult.success)`, `if (copiedCount > 0)`, the two `catch` blocks, `copiedCount++`) | the ONLY difference the mutant makes is which log line is written; the ratchet exists to refuse to reward asserting log text |
+| 7 | the duplicate `blocks.length === 0` guard in `createBlockLibrary` (L441-442) and the mutants of the outer guard it makes equivalent (L173) | **unreachable code — see the finding below** |
+| 4 | `(parsed.groups ?? [])`, and the two `i <= missing.length` loop bounds | provably equivalent: the fallback array flat-maps to nothing, and an extra loop pass slices an empty batch |
+| 3 | `blocksNeedingCdnCopy.length === 0`, `missing.length === 0` (CDN copy), `candidates.length === 0` | killable ONLY by pinning an exact `getImsToken` call count — an implementation detail that any refactor moves |
+
+### Finding: `createBlockLibrary`'s empty-blocks guard is unreachable (not fixed — needs a decision)
+
+`daLiveBlockLibraryOperations.ts:441-443` returns early on `blocks.length === 0`.
+`createBlockLibrary` is private and has exactly one caller,
+`createBlockLibraryFromTemplate:173`, which has ALREADY returned on the same condition three
+lines earlier. Nothing can reach it. It is also redundant twice over: falling through
+produces the byte-identical `{ success: true, blocksCount: 0, paths: [] }` at L476-478,
+because every downstream pass filters to an empty list.
+
+Deleting it drops 4 uncovered mutants and makes the outer guard's 2 survivors killable
+(with the inner guard gone, a definition with no blocks is observably different from one
+with blocks). That is 7 of the 36. It is a source change, and this step is tests-only, so it
+was left alone. **Fix now or defer?**
 
 Its methods are `createBlockLibrary`, `createBlockLibraryFromTemplate`, `deleteBlockDocPage`,
 `removeBlockFromLibrary`, `removeBlockLibraryRow`, `copyBlockDocPagesFromSources` — DA.live
