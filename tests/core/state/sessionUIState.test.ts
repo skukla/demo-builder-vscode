@@ -105,6 +105,20 @@ describe('sessionUIState', () => {
         });
     });
 
+    describe('field initialisers', () => {
+        // Every other test runs after `reset()`, which assigns the same values the
+        // field initialisers do — so a freshly constructed instance is the only place
+        // the initialisers are observable. A module registry reset gives one.
+        it('should start a brand-new instance with the logs view hidden', () => {
+            jest.isolateModules(() => {
+                const fresh = require('@/core/state/sessionUIState').sessionUIState;
+
+                expect(fresh.isLogsViewShown).toBe(false);
+                expect(fresh.viewModeOverride).toBeUndefined();
+            });
+        });
+    });
+
     describe('singleton behavior', () => {
         it('should return the same instance on multiple imports', () => {
             // Modify state
