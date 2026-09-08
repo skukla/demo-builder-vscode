@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/state/transientStateManager.ts"
+        "src/features/projects-dashboard/ui/components/ProjectCard.tsx"
     ],
     "reporters": [
         "clear-text",

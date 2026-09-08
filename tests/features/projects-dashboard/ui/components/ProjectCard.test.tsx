@@ -24,15 +24,22 @@ describe('ProjectCard', () => {
 
         it('should show running status with green indicator', () => {
             const project = createRunningProject({ name: 'Running Demo' });
-            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+            const { container } = renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
 
-            // Find the status text specifically (not the project name)
-            const statusElements = screen.getAllByText(/running/i);
-            // Should have at least the status text
-            expect(statusElements.length).toBeGreaterThanOrEqual(1);
-            // Status dots should be present. Plural now: a mesh-supporting stack
-            // always renders its mesh slot beside the project status.
-            expect(screen.getAllByRole('presentation').length).toBeGreaterThanOrEqual(1);
+            // EXACT, both halves. This asserted `length >= 1` on a loose regex
+            // match and again on the dot count -- true of any number of status
+            // rows wearing any colour, including none of the ones the test name
+            // claims. The fixture is a running non-EDS project with a frontend on
+            // port 3000 and nothing deployable, so `getRuntimeSummary` answers one
+            // line and `getDeploymentSummary` answers null: one row, one dot.
+            const statuses = container.querySelectorAll('.project-card-spectrum-status');
+            expect(Array.from(statuses, (n) => n.textContent)).toEqual(['Running on port 3000']);
+            const dots = screen.getAllByRole('presentation');
+            expect(dots).toHaveLength(1);
+            // "green" is the subject of the test name and was never asserted.
+            expect(dots[0]).toHaveAttribute('data-variant', 'success');
         });
 
         it('should show stopped status with gray indicator', () => {
@@ -65,16 +72,29 @@ describe('ProjectCard', () => {
         });
 
         it('should display simplified card with name and status only (no component list)', () => {
-            // The simplified card design shows only name and status (Standard info density)
-            // Component names are intentionally NOT displayed to keep the card clean
-            const project = createProjectsDashboardProject();
-            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+            // The card's only descriptive slot is the brand/stack summary, fed by
+            // `selectedPackage` -- never by `componentInstances`.
+            //
+            // The two absence assertions below USED TO BE UNFALSIFIABLE. The
+            // fixture selected no package, so the summary slot did not render at
+            // all, and the card has no code path that reads an instance's name:
+            // no mutation of this component could have made "CitiSignal" or
+            // "API Mesh" appear. Selecting a package whose brand DIFFERS from the
+            // instance names is what gives them something to catch -- a card
+            // rendering `getComponentSummary` instead would fail both.
+            const project = createProjectsDashboardProject({
+                selectedPackage: 'buildright',
+                selectedStack: 'headless-paas',
+            });
+            const { container } = renderWithProvider(
+                <ProjectCard project={project} onSelect={jest.fn()} />
+            );
 
-            // Should show project name
             expect(screen.getByText('Test Project')).toBeInTheDocument();
-            // Should show status
             expect(screen.getByText('Stopped')).toBeInTheDocument();
-            // Should NOT show component names (simplified design)
+            expect(container.querySelector('.project-card-spectrum-components')).toHaveTextContent(
+                'BuildRight \u00b7 Headless + PaaS'
+            );
             expect(screen.queryByText('CitiSignal')).not.toBeInTheDocument();
             expect(screen.queryByText('API Mesh')).not.toBeInTheDocument();
         });
@@ -290,9 +310,14 @@ describe('ProjectCard', () => {
             const project = createProjectsDashboardProject({ name: 'Pinned Demo', pinned: true });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
+            // The whole inline style, not two of its four rules. `alignItems` and
+            // `color` were the module's only surviving mutants: both are knowable
+            // exactly, and neither had anything asserting it.
             expect(screen.getByTestId('project-card-pin-indicator')).toHaveStyle({
                 display: 'inline-flex',
+                alignItems: 'center',
                 flex: '0 0 auto',
+                color: 'var(--spectrum-global-color-gray-700)',
             });
         });
     });
@@ -435,8 +460,15 @@ describe('ProjectCard', () => {
             const project = createRunningProject({ name: 'Accessible Demo' });
             renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
 
-            const card = screen.getByRole('button');
-            expect(card).toHaveAttribute('aria-label', expect.stringContaining('Accessible Demo'));
+            // EXACT. `stringContaining('Accessible Demo')` passed on the name
+            // alone, so it could not tell the joined label from an unjoined one --
+            // and the join is one of the few decisions this component makes for
+            // itself. A running non-EDS project with nothing deployable and no
+            // package selected contributes exactly two of the four slots.
+            expect(screen.getByRole('button')).toHaveAttribute(
+                'aria-label',
+                'Accessible Demo, Running on port 3000'
+            );
         });
 
         it('names only the lines the card actually renders', () => {
@@ -510,10 +542,11 @@ describe('ProjectCard', () => {
                 />
             );
 
-            const menuButton = screen.queryByLabelText('More actions');
-            if (menuButton) {
-                fireEvent.click(menuButton);
-            }
+            // Unconditional. This used to be `if (menuButton) { click }`, so a
+            // card that stopped rendering the kebab entirely would have passed
+            // without ever opening a menu to look in.
+            fireEvent.click(screen.getByLabelText('More actions'));
+
             expect(screen.queryByText('Open AI')).not.toBeInTheDocument();
         });
     });
@@ -545,6 +578,19 @@ describe('ProjectCard', () => {
 
             expect(
                 screen.queryByRole('button', { name: 'Rename Running Project' })
+            ).not.toBeInTheDocument();
+        });
+
+        it('hides the pencil when no rename callback is wired', () => {
+            // The other half of `disabled={isRunning || !actions.onRenameSubmit}`.
+            // The component's own comment names both reasons; only the running one
+            // was covered, so nothing here distinguished the card's default
+            // `actions = {}` from a card that offers a rename leading nowhere.
+            const project = createProjectsDashboardProject({ name: 'Unwired' });
+            renderWithProvider(<ProjectCard project={project} onSelect={jest.fn()} />);
+
+            expect(
+                screen.queryByRole('button', { name: 'Rename Unwired' })
             ).not.toBeInTheDocument();
         });
 
