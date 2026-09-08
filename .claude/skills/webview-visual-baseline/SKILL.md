@@ -52,6 +52,65 @@ Not screenshots: exact string equality, no pixel tolerance, no font drift, and i
 catches cascade and specificity changes, which is what this codebase's CSS
 failures actually are.
 
+## Interaction states — `capture-interactions.js` (added 2026-09-08, PL-21 phase 4)
+
+The resting fingerprint cannot see a single one of the **147 rules** in our
+stylesheets that carry an interaction selector — 68 `:hover`, 45 `:focus`, 19
+`:focus-visible`, 8 `:disabled`, 5 `:active`. ADR-018's evidence bar for migrating
+existing CSS names this explicitly, and says why it matters: interaction states are
+"exactly where Spectrum's own rules concentrate", which is what the layer fix
+changes.
+
+**It runs through `browser_run_code`, not `browser_evaluate`**, and that is forced
+rather than chosen: `:hover` is driven by the browser's own input state and there
+is no DOM API to set it. Forcing it needs CDP (`CSS.forcePseudoState`), which is
+driven from Playwright, outside the page. So this file takes `page`; `capture.js`
+takes nothing.
+
+Load it the same way each time — the Playwright context has no `fetch`, so read the
+file through the PAGE:
+
+```js
+await page.goto(BASE + '/capture-interactions.js');
+const code = await page.evaluate(() => document.body.innerText);
+const mod = { exports: {} };
+new Function('module','exports', code + '\nmodule.exports={captureInteractions,diffInteractions,assertForcingWorks};')(mod, mod.exports);
+const before = await mod.exports.captureInteractions(page, { base: BASE });
+mod.exports.assertForcingWorks(before);   // NEVER skip this
+```
+
+**`assertForcingWorks` is the control and it is not optional.** If no element
+responds to a forced state, either CDP never reached the page or the surface did
+not mount — and a clean interaction diff would then mean nothing at all. It throws
+rather than returning a verdict.
+
+### Coverage, measured 2026-09-08
+
+168 cells over 42 interactive elements, at dark/1280. Each element is captured at
+rest, hover, focus and active.
+
+| surface | interactive | responding to a forced state |
+|---|---|---|
+| dashboard | 9 | 14 |
+| wizard | 8 | 5 |
+| projectsList | 8 | 3 |
+| sidebar | 6 | **0** |
+| configure | 4 | 1 |
+| integrations | 3 | 1 |
+| aiOverview | 2 | 1 |
+| dataInstaller | 2 | 1 |
+
+**The sidebar's zero is a real gap, not a failure.** It has six interactive
+elements and none changes under a forced hover, focus or active — so whatever
+feedback its tiles give a user is invisible to this instrument. Anything the layer
+fix does to sidebar interaction states will not show up here. Do not read a clean
+sidebar row as evidence.
+
+**`:disabled` and error states are still uncovered.** The fixtures render no
+disabled control and no error state, so two of the four states ADR-018 asked for
+are absent. Forcing works for them (`forcedPseudoClasses: ['disabled']`); what is
+missing is a fixture that produces such an element to force it on.
+
 ## Files
 
 | | |
@@ -59,6 +118,7 @@ failures actually are.
 | `harness.html` | loads one bundle standalone, stubs the VS Code API, serves fixtures |
 | `build-fixtures.mjs` | generates `fixtures.json` from REAL artifacts |
 | `capture.js` | the fingerprint + faithfulness control + diff, run in the browser |
+| `capture-interactions.js` | hover/focus/active fingerprints, driven from Playwright over CDP |
 
 The two writeups stayed in `.rptc/research/webview-visual-testing/` — that tier is
 for findings, this one is for the instrument: `research.md` (how the approach was
