@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/eds/services/configGenerator.ts"
+        "src/core/utils/envParser.ts"
     ],
     "reporters": [
         "clear-text",

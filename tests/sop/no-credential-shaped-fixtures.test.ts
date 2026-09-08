@@ -44,9 +44,8 @@ const JWT_CEILINGS: Record<string, number> = {
     'tests/features/eds/handlers/edsHelpers.test.ts': 3,
     'tests/features/eds/services/configService/configurationService.testUtils.ts': 1,
     'tests/features/eds/services/daLive/daLiveAuthService-parseJwt.test.ts': 2,
-    'tests/features/eds/services/daLive/daLiveAuthService.security.test.ts': 1
+    'tests/features/eds/services/daLive/daLiveAuthService.security.test.ts': 1,
 };
-
 
 /**
  * The fourth shape, added 2026-09-06 after GitGuardian flagged `PASSWORD=p#ssword` in a
@@ -75,7 +74,6 @@ const AGREED_MARKER =
 
 const CREDENTIAL_CEILINGS: Record<string, number> = {
     'tests/core/logging/debugLogger-commandDetail.test.ts': 1,
-    'tests/core/utils/envVarExtraction.test.ts': 2,
     'tests/core/validation/securityValidation-githubUrl.test.ts': 1,
     'tests/features/ai/server/agentTraceSink.test.ts': 1,
     'tests/features/authentication/services/adobeEntityFetcher-apiServices.test.ts': 2,
@@ -228,7 +226,9 @@ describe('no credential-shaped string under tests/', () => {
     it('CONTROL: the any-scheme pattern catches what http/https misses', () => {
         // The three the narrow rule has been blind to since August.
         expect(userinfoUrlCount("'postgresql://user:pass@host/db'")).toBe(1);
-        expect(userinfoUrlCount("'mongodb+srv://svc-user:hunter2pass@cluster0.example.net/db'")).toBe(1);
+        expect(
+            userinfoUrlCount("'mongodb+srv://svc-user:hunter2pass@cluster0.example.net/db'")
+        ).toBe(1);
         // The shape GitGuardian flagged on 2026-09-06 — a token-injected git remote.
         expect(userinfoUrlCount("'https://gh-token-abc:x-oauth-basic@github.com/o/r.git'")).toBe(1);
         // Not userinfo: a port, and a plain URL.
@@ -279,9 +279,13 @@ describe('no credential-shaped string under tests/', () => {
         // `const secret = '<literal>'` IS the shape — a credential-named binding assigned a
         // literal — and the pattern is right to count it. My first version of this control
         // asserted 0 here and the control caught me, not the rule.
-        expect(credentialShapeCount('const secret = ' + JSON.stringify('ghp_0123456789abcdef'))).toBe(1);
+        expect(
+            credentialShapeCount('const secret = ' + JSON.stringify('ghp_0123456789abcdef'))
+        ).toBe(1);
         // A token literal NOT bound to a credential name is a different rule's problem.
-        expect(credentialShapeCount('const url = ' + JSON.stringify('ghp_0123456789abcdef'))).toBe(0);
+        expect(credentialShapeCount('const url = ' + JSON.stringify('ghp_0123456789abcdef'))).toBe(
+            0
+        );
         expect(credentialShapeCount("apiKey: 'super-secret-value-123',")).toBe(1);
         // The convention that exists so a fixture can name a password safely.
         expect(credentialShapeCount("password: 'fake-test-pw-not-a-secret',")).toBe(0);

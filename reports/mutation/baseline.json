@@ -1132,20 +1132,6 @@
             "equivalent": 1,
             "openGaps": 0
         },
-        "src/core/utils/envVarExtraction.ts": {
-            "score": 97.92,
-            "killed": 47,
-            "survived": 1,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "other": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 1,
-            "openGaps": 0
-        },
         "src/core/utils/executionLock.ts": {
             "score": 100,
             "killed": 6,
