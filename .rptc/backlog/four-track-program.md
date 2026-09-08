@@ -216,3 +216,5 @@ the state table above is the record until there is real work to hold.
 - 2026-09-01  chore(health): snapshot 7 — after the PL-33 merge (`bbe320dda`)
 - 2026-09-02  docs(backlog): make the programme one closed roster that can actually finish (`6c45d15c5`)
 - 2026-09-02  fix(backlog): `set` stored a list field as a string, and refused with a nonsense reason (`f907f2aac`)
+- 2026-09-08  docs(backlog): the finish list for the four-track programme, measured not remembered (`353b62b6c`)
+- 2026-09-08  fix(backlog): the glossary item was on the roster in prose only (`c191e6bf4`)

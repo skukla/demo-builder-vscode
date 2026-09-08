@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: backlog
+status: active
 ---
 
 # Test suites that rebuild a mock wall their family helper already owns
@@ -82,3 +82,5 @@ the byte-identical check above belongs there as an enforcer once the 17 are clea
 ## Shipped so far
 
 - 2026-09-08  Reference conversion landed: importHandlers-target.test.ts takes its wall from the family helper; 201 tests in the family passed unchanged. 16 safe suites remain.
+- 2026-09-08  docs(backlog): say plainly that the 79 dead mocks are CLOSED, not open (`250c19e91`)
+- 2026-09-08  test(data-installer): take the import-handler wall from the family helper (`401119819`)
