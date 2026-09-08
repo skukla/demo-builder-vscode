@@ -5,6 +5,7 @@ area: platform
 needs: []
 value: med
 status: active
+parent: PL-30
 ---
 
 # A glossary, so the agent describes things back in our words
