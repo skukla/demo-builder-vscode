@@ -34,10 +34,15 @@ as variants too. That agreement is the only reason to trust the 28.
 
 ## The trap that decides the scope
 
-Importing a helper brings ALL of its mocks. This repo has already measured what
-that produces: **79 dead mocks across eleven families** (PL-14, 2026-08-31). So
-converting a suite that needs only part of a helper's wall trades a small
-duplication for the larger defect.
+Importing a helper brings ALL of its mocks, and this repo has already paid for
+that once: 79 dead mocks accumulated across eleven families' shared setup, found
+and REMOVED on 2026-08-31 (`2eafc0682` found them, `adc0013f6` / `56dc6c09b` /
+`7eb23721a` cleared them). **That backlog is closed** — the scan reports 1
+redundant automock today, and it is inside the enforcer that bans the pattern.
+
+It is cited here as the COST OF THE METHOD, not as open debt: converting a suite
+that needs only part of a helper's wall is how those 79 got there, so doing it
+again would rebuild a problem this repo has already finished paying off.
 
 That splits the 28:
 
