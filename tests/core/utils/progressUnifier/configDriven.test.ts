@@ -121,10 +121,12 @@ describe('ProgressUnifier - Config-Driven Approach', () => {
             );
             expect(milestoneProgress.length).toBeGreaterThan(0);
 
-            // Verify milestone percentages were matched
-            const hasResolving = progressUpdates.some((p) => p.command?.percent === 20);
-            const hasFetching = progressUpdates.some((p) => p.command?.percent === 50);
-            expect(hasResolving || hasFetching).toBe(true);
+            // BOTH milestones are emitted by the mock — 'resolving' at 100ms and
+            // 'fetching' at 200ms — so both must be matched. The old assertion read
+            // `hasResolving || hasFetching`, which passes when only the first
+            // pattern ever matches and so could not see a matcher that stopped
+            // after one. 'linking' is never emitted, so 80 must NOT appear.
+            expect(milestoneProgress.map((p) => p.command?.percent)).toStrictEqual([20, 50]);
         });
 
         it('should accept progressStrategy "synthetic" and generate time-based progress', async () => {

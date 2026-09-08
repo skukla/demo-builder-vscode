@@ -840,6 +840,22 @@ breaks the code on purpose and reports what nothing noticed.
 > lenient ones when the defect was found. Non-empty comparisons are untouched.
 > Enforced by `tests/sop/no-lenient-emptiness.test.ts`.
 
+> **Convention.** An assertion may not be a disjunction — `expect(a || b).toBe(true)`.
+> *Why:* it passes when either side holds, so it cannot say which happened, and a change
+> that flips the outcome from one side to the other keeps it green. Three were found by
+> reading five test files on 2026-09-07 and two were hiding something. One sat above a
+> comment explaining that `withTimeout` ignores an AbortSignal that is ALREADY aborted —
+> documenting a real defect instead of failing on it, and that defect reached a
+> thirty-minute timeout on project creation, where a build the user had cancelled reported
+> a timeout instead. Another claimed milestone percentages were matched while accepting
+> either of two that the test's own mock both emits; replaced with the exact list, it
+> passed first time, because the code was always doing more than the test asked. When the
+> either/or is REAL — every write belongs under the root or under `<root>/.claude` — filter
+> to the violations and assert `toStrictEqual([])`, which proves the same property and
+> names the item that broke it rather than reporting "expected true, got false". The rule
+> is narrow: only a disjunction asserted TRUE is banned, never the operator itself.
+> Enforced by `tests/sop/no-disjunction-assertions.test.ts`.
+
 > **Convention.** A canonical fake covers its subject's WHOLE public surface, and
 > invents nothing.
 > *Why:* both halves have failed here. A fake NARROWER than the need is one nobody
@@ -1178,11 +1194,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 11 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 45 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 46 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 87 conventions. 86 of them are enforced; 1 is not.**
+**This handbook states 88 conventions. 87 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

@@ -342,13 +342,18 @@ describe('ensureHomeAiContext — skills', () => {
 
         const writeFileMock = fsPromises.writeFile as jest.Mock;
         const claudeDir = path.join(PROJECTS_ROOT, '.claude');
-        for (const [p] of writeFileMock.mock.calls as Array<[string]>) {
-            // Every write is either directly under the root or under <root>/.claude.
-            const dir = path.dirname(p);
-            const underRoot = dir === PROJECTS_ROOT;
-            const underClaude = dir === claudeDir || dir.startsWith(claudeDir + path.sep);
-            expect(underRoot || underClaude).toBe(true);
-        }
+
+        // Every write belongs directly under the root or under <root>/.claude.
+        // The disjunction is the real property, but asserting it per-write said
+        // only "expected true, got false" — collecting the strays names the path
+        // that broke the rule, which is the whole point of the test.
+        const strays = (writeFileMock.mock.calls as Array<[string]>)
+            .map(([p]) => path.dirname(p))
+            .filter((dir) => dir !== PROJECTS_ROOT
+                && dir !== claudeDir
+                && !dir.startsWith(claudeDir + path.sep));
+
+        expect(strays).toStrictEqual([]);
     });
 });
 
