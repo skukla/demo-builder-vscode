@@ -321,8 +321,10 @@ layout failures, which no static check can see. Only phase 1 addresses those.
   incident where four consecutive guesses at one spinner's placement cost four
   build-and-reload cycles. That skill is what the team has INSTEAD of an
   architecture, and it is worth reading before phase 2.
-- `docs/development/ui-patterns.md` — currently teaches `!important` as the
-  technique; phase 2 decides whether that stands.
+- `docs/development/styling-guide.md` — CORRECTED 2026-09-08. This said
+  `docs/development/ui-patterns.md` "currently teaches `!important` as the
+  technique". Stale twice: no such file exists, and the guide that does already
+  states `!important` is not a mechanism. Nothing there needs changing.
 
 ## Shipped so far
 
