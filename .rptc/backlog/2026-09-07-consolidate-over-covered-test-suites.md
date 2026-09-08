@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: active
+status: shipped
 parent: PL-11
 ---
 
@@ -190,6 +190,35 @@ Each module in the table is either consolidated with its gap count still zero, o
 line recorded saying why its repetition is worth keeping. Not "the 50% is gone" — that
 number will barely move, and it is not the goal.
 
+## The last two candidates, read 2026-09-08 — both arithmetic
+
+That completes the table: every module in it is now either consolidated or carries
+a recorded reason its repetition is worth keeping.
+
+**`patchTargetPolicy` (33/35, 94%) — ARITHMETIC.** An 83-line security policy with
+one exported function and five decisions: empty, absolute path, path escape,
+outside the allowed prefixes, wrong extension. Its 35 tests are those five rules
+crossed with realistic inputs — every target across the five live ledgers, plus
+`package.json` and `.github/workflows/*`, which are the two the policy exists for.
+Already `it.each` over input tables, which is the form this item recommends
+converting TO. Zero open gaps, zero survivors, zero uncovered.
+
+> **A caution for whoever reads the next candidate.** Half way through that file
+> the refusal tests looked weak — `expect(result.reason).toBeTruthy()` and several
+> asserting only `allowed: false`, which cannot say WHICH rule refused. That was
+> written up as a real finding before reaching the end of the file, where a
+> dedicated block, "every refusal names the rule that refused it", asserts the
+> exact reason for all five branches with a comment explaining that checking only
+> `allowed` had made the guards interchangeable. The strong assertions were last.
+> Read the whole file before judging its assertions.
+
+**`pdpUrlEncoding` (24/26, 92%) — ARITHMETIC, and a model suite.** Verified by
+reading rather than by repeating the goal-doc's claim: the docblock cites ADR-007
+and the reason `encodeURIComponent` is unusable (aem.live 404s percent-encoded
+paths), states the cross-repo byte-identical contract with `eds-demo-patches`, and
+the assertions are 8 exact `toBe` with zero `toContain` and zero `toBeTruthy`. The
+ratio is one reversible encoding crossed with a fixture table. Zero open gaps.
+
 ## The plan
 
 `.rptc/plans/test-suite-consolidation/overview.md` sequences this item with
@@ -226,3 +255,4 @@ decides whether Phase 3 happens at all.
 - 2026-09-07  docs(backlog): rescope PL-48 — the ranking is a reading order, not a worklist (`8ac63f0ad`)
 - 2026-09-07  fix(core): honour an AbortSignal that is already aborted when withTimeout is called (`bc1ae71ee`)
 - 2026-09-07  chore(mutation): eight more modules enter the baseline — my invisible-set filter was wrong (`90fcfd2b2`)
+- 2026-09-08  COMPLETE 2026-09-08. The table's last two candidates read and recorded, both ARITHMETIC: patchTargetPolicy (an 83-line security policy, five decisions crossed with every real ledger target plus the two attacks it exists for, already it.each, 0 open gaps) and pdpUrlEncoding (docblock cites ADR-007 and the cross-repo byte-identical contract, 8 exact toBe assertions and zero loose ones, 0 open gaps). Done-condition met: all 8 modules are either consolidated or carry a recorded reason. Caution added to the item — patchTargetPolicy's refusal tests read as weak half way through the file and a finding was drafted before reaching the dedicated block at the end that asserts the exact reason for all five branches. Read the whole file before judging its assertions.
