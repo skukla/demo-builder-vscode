@@ -106,7 +106,7 @@ programme runs forever.
 > the roster in prose only, exactly the failure the paragraph above claims is impossible.
 > Both fixed. Every state below was measured against the code, not read from this file.
 
-**Nine items left.** Three of the four tracks are closed; track 4 holds most of what
+**Seven items left.** Three of the four tracks are closed; track 4 holds most of what
 remains.
 
 > [[PL-13]] was closed 2026-09-08 on inspection, not on new work. This roster had
@@ -119,10 +119,15 @@ remains.
 
 | Item | Finished when | Measured state, 2026-09-08 |
 |---|---|---|
-| [[PL-19]] | The sidebar uses the shared webview client like the other seven | 1 outlier. `sidebar/ui/index.tsx` still calls `acquireVsCodeApi` at module scope |
-| [[PL-34]] | Section A empty, B holds only the two large builders, C only rows needing a person | sections A/B/C open, plus 3 recorded flakes nobody has reproduced |
-| [[PL-11]] → PL-48 | The most repetitive suites have been READ and what reading finds is fixed | active, mid-flight |
+| [[PL-11]] → PL-48 | The most repetitive suites have been READ and what reading finds is fixed | not started |
 | [[PL-11]] → PL-47 | Themes, widths and accessibility are further readings of the existing baseline harness | not started. Cheap — extends an instrument that already loads all eight bundles |
+
+Shipped out of this wave on 2026-09-08: [[PL-19]] (the sidebar joined the shared
+channel; the manager was retyped so a `WebviewView` qualifies, and the outbound
+envelope moved from `data` to `payload`) and [[PL-34]] (section A cleared, B's
+builders confirmed present, C re-measured — [[PL-32]]'s sweep had already taken
+`as any`/`as never` to 0/0 and the ceilings from 150/38 to 6/1). PL-34's recurring
+hook-proof flake was split to [[PL-52]] rather than closed with it.
 
 ### Wave 2 — needs one decision from the owner before, or as, the work
 

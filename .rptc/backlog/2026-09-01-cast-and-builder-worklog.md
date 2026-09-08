@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: active
+status: shipped
 parent: PL-30
 ---
 
@@ -53,37 +53,47 @@ Writing the first two clears roughly 37 of the 44 that need something new. Each
 belongs in `tests/helpers/`, typed to the real interface so it stops compiling when
 that interface grows — the rule the existing builders already follow.
 
-## C — the cast families, with honest numbers
+## C — the cast families. RE-MEASURED 2026-09-08; almost all of it is gone.
 
-Two different measurements, and conflating them is what produced an overstated
-report once already:
+The table below was written on 2026-09-01 and every number in it is stale by an
+order of magnitude, because [[PL-32]]'s cast sweep landed afterwards. Recorded
+side by side rather than overwritten, since the size of the drift is the point:
+an item that keeps its own numbers becomes the thing it was filed to fix.
 
-| Family | brace-anchored (the ceiling) | every `as T` (AST) |
+| Family | recorded 2026-09-01 | measured 2026-09-08 |
 |---|---|---|
-| `Project` | 150 | — |
-| `HandlerContext` | 38 | 100 |
-| `Partial<Project>` | 38 | — |
-| `vscode.ExtensionContext` | 6 | 0 above the ceiling |
-| `Logger` | 0 (banned) | **98** |
-| `StateManager` | 0 (banned) | **63** |
-| `CommandExecutor` | 0 (banned) | **9** |
+| `Project` (ceiling) | 150 | **6** |
+| `HandlerContext` (ceiling) | 38 | **1** |
+| `Partial<Project>` (ceiling) | 38 | **gone from the ledger** |
+| `vscode.ExtensionContext` (ceiling) | 6 | **gone from the ledger** |
+| `as any` / `as never` over `tests/` | 1,065 / 533 | **0 / 0** |
 
-**C1. `Project` at 150 is BLOCKED on judgement, not tooling.** The builder supplies
-rich defaults and several suites assert on ABSENCE; substituting would silently
-change what they check. No tool resolves that. Do not batch it.
+`tests/sop/type-erasing-casts.ledger.json` reads `{"as any": 0, "as never": 0}`,
+measured 2026-09-02. A shrink-only ceiling at zero already behaves as a ban: a new
+one fails the build. Converting it to the `no-restricted-syntax` rule its own
+docblock plans is polish, not a correctness gap, and it belongs to whoever picks
+up that conversion — not here.
 
-**C2. The 6 remaining `vscode.ExtensionContext`** are residue both oracles rejected —
-their literals carry a stateful `globalState` or a path an assertion reads back. Six
-is a reading job, not a codemod.
+**USE THE ENFORCER'S COUNT.** Re-measured by regex first, this section would have
+said 29 `Project` and 44 `HandlerContext` sites still open. Both wrong: the
+enforcer counts a narrower thing, and the ledger says 6 and 1. That is the trap
+this item already records under "What to be careful of", reproduced on 2026-09-08
+by the session re-measuring it. The regex is not the rule.
 
-**C3. The 12 HandlerContext casts the codemod skipped** cast an identifier or a call
-result, not an object literal. Nothing to hand a builder; each needs reading.
+### What genuinely still needs a person: 7 casts
 
-**C4. `as any` 1,065 and `as never` 533.** The big number. `as never` came down from
-748 by a text-based pass that also corrupted a detector's control fixtures — do not
-repeat that method. Survey by POSITION first: an ARGUMENT cast is a silenced type
-error (four production defects here hid behind exactly that) and gets read; a
-DECLARATION cast is usually a fake and is batchable.
+**C1. `Project`, 6 remaining — judgement, not tooling.** The builder supplies rich
+defaults and several suites assert on ABSENCE, so substituting it would silently
+change what they check. No tool resolves that; each is a read. This was true at 150
+and is still true at 6.
+
+**C2/C3. `HandlerContext`, 1 remaining.** The codemod handles object literals; what
+is left casts an identifier or a call result, so there is nothing to hand a builder.
+
+**C4 is closed.** The `as any` / `as never` population it described reached zero
+over `tests/` on 2026-09-02. The survey-by-position advice it carried — an ARGUMENT
+cast is a silenced type error and gets read, a DECLARATION cast is usually a fake
+and is batchable — is worth keeping and now lives in the handbook rather than here.
 
 ## Where the mechanical seam ENDS — measured 2026-09-01
 
@@ -358,3 +368,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-08  A3 DONE: type-aware config run over the whole test tree for the first time — 246 findings (the repo-wide number this item said was unknown). Fixed the 18 await-thenable call sites where a listener typed '=> void' made every await a no-op against an async handleWebviewMessage; 21 -> 3, and the 3 left are awaits of a genuinely sync generateAgentsMd. TRAP for next time: four suites RE-DECLARE the listener type locally, so fixing the shared helper alone cleared only 6 of 18. Left measured but untouched: 170 no-unnecessary-type-assertion (a blanket --fix regresses requireMock casts, per this item's own warning) and 40 no-base-to-string. The 5 jest/valid-expect hits are 'rule not found' config noise, not malformed expects.
 - 2026-09-08  A2 DONE (two non-null assertions in canonical-fakes.test.ts, at 433/444 not the 394/405 this item records — the file grew 476->560). SECTION A IS NOW EMPTY: A1 shipped 2026-09-01, A2 and A3 done 2026-09-08. SECTION B's done-condition is MET on inspection: secretStorageFake.ts, authenticationServiceFake.ts and webviewPanelFake.ts all exist in tests/helpers; only tokenManager (the smallest, 2 failures) was never written. What remains against the done-condition is section C.
 - 2026-09-08  FOURTH occurrence of the rule-proofs flake, 2026-09-08: 11-jest-redirect's 'correct redirect order' and 'no redirect at all' cases reported BLOCK inside a full gate, then passed 3/3 in isolation immediately after, and the next full gate was green (1559 suites). Ruled out a same-session pre-filter edit as the cause: the proof file contains no tests/sop or tests/helpers string, so the new token cannot reach it. Load-dependent, hook-proof shell scripts, still no falsifying command.
+- 2026-09-08  CLOSED 2026-09-08. Done-condition met on all three clauses. Section A empty (A1 shipped 2026-09-01; A2 and A3 done today). Section B's two large builders exist — secretStorageFake.ts and authenticationServiceFake.ts, plus webviewPanelFake.ts; only tokenManager, the smallest at 2 failures, was never written. Section C re-measured and rewritten: PL-32's sweep landed after this item was drafted, so Project 150->6, HandlerContext 38->1, Partial<Project> and ExtensionContext gone from the ledger, and as any / as never 1065/533 -> 0/0 over tests/. Seven ledgered casts remain, each a judgement call with its reason stated. The recurring rule-proofs flake is SPLIT OUT to PL-52 rather than closed with this item.
