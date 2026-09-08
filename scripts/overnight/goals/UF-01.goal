@@ -1,0 +1,43 @@
+Work `.rptc/plans/unmeasured-fifth/overview.md` STEP 1, part one of two.
+
+src/features/eds/services/daLive/daLiveBlockLibraryOperations.ts is 852 lines and 386 mutants
+executed by NO test anywhere. Its only related suite
+(tests/.../daLiveContentOperations-delegation.test.ts) asserts that the CONSUMER forwards
+calls, using a hand-injected double — so this module's own code never runs.
+
+Its methods write to DA.live against real customer sites: createBlockLibrary,
+createBlockLibraryFromTemplate, deleteBlockDocPage, removeBlockFromLibrary,
+removeBlockLibraryRow, copyBlockDocPagesFromSources. That is why it is first.
+
+READ THE PLAN FIRST, then the module. Give it a suite of its own at
+tests/features/eds/services/daLive/daLiveBlockLibraryOperations.test.ts so the mirror
+convention can finally see it.
+
+COVER AS FAR AS YOU GET, committing per cluster of behaviour rather than saving one large
+commit — a second session continues from wherever you stop. Prefer the CREATE and READ paths
+first (createBlockLibrary, createBlockLibraryFromTemplate, createJsonSpreadsheet, the stub
+page generation): they are the ones a broken test would catch earliest.
+
+Assert the ARGUMENTS the fetch/write collaborators receive, not merely that they were called
+— a mock cannot see a malformed call, and four production defects in this repo hid in exactly
+that gap. Never assert a logger call's wording.
+
+Then measure what you have covered:
+  rm -f reports/mutation/focus-incremental.json
+  node scripts/focusModule.mjs src/features/eds/services/daLive/daLiveBlockLibraryOperations.ts
+  npx stryker run stryker.focus.config.json > /tmp/focus.txt 2>&1     (wait on `Done in`)
+  node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json
+The module has no baseline row yet, so the ratchet will refuse until you add one with
+--write and a reason. PASTE the row you wrote.
+
+RAILS (the standing unattended contract). Stay on the work branch; never checkout or merge
+develop. NO CLOUD WRITES and no live calls — tests and local measurement only. Commit only on
+a GREEN check, exit codes captured in variables and never read through a pipe. Explicit
+pathspec (`git commit -- <paths>`), never bare `git commit` or `-a`. `Backlog: PL-50` trailer.
+No attribution trailers. If blocked, record what you learned and stop — do not force it.
+
+CHECK before each commit: the suites you touched, `npx tsc --noEmit`, `npm run
+typecheck:tests`, eslint on changed files, `npm run validate:test-file-sizes`.
+
+FINISH with three or four plain sentences a tired reader understands: what you did, what you
+found, what you did NOT do.

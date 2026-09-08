@@ -1,0 +1,30 @@
+Work `.rptc/plans/unmeasured-fifth/overview.md` STEP 1, part two of two.
+
+CONTINUE the suite that UF-01 started for
+src/features/eds/services/daLive/daLiveBlockLibraryOperations.ts. Read its commits first to
+see where it stopped and what it already covers — do not duplicate.
+
+Cover the paths UF-01 did not reach, preferring the DESTRUCTIVE ones: deleteBlockDocPage,
+removeBlockFromLibrary, removeBlockLibraryRow, then copyBlockDocPagesFromSources and the site
+config registration. A wrong delete against a customer site is the failure this whole step
+exists to prevent.
+
+Assert the ARGUMENTS the collaborators receive. For each removal, assert BOTH that the right
+thing was removed AND that nothing else was — a removal that takes too much passes any
+assertion that only checks the target is gone.
+
+Re-measure and update the baseline row UF-01 wrote, quoting the before and after.
+
+If UF-01 did not run or left nothing, say so plainly and start from the plan instead.
+
+RAILS (the standing unattended contract). Stay on the work branch; never checkout or merge
+develop. NO CLOUD WRITES and no live calls — tests and local measurement only. Commit only on
+a GREEN check, exit codes captured in variables and never read through a pipe. Explicit
+pathspec (`git commit -- <paths>`), never bare `git commit` or `-a`. `Backlog: PL-50` trailer.
+No attribution trailers. If blocked, record what you learned and stop — do not force it.
+
+CHECK before each commit: the suites you touched, `npx tsc --noEmit`, `npm run
+typecheck:tests`, eslint on changed files, `npm run validate:test-file-sizes`.
+
+FINISH with three or four plain sentences a tired reader understands: what you did, what you
+found, what you did NOT do.
