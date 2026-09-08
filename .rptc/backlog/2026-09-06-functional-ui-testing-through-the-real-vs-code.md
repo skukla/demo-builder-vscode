@@ -90,6 +90,77 @@ riskiest path in the product.
 
 Add UI driving on top only once that has earned its place.
 
+## EXTENDING TO MORE SURFACES — attempted 2026-09-08, STOPPED deliberately
+
+Four iterations in, each fix breaking the previous one. Recorded rather than
+shipped, because the traps below all produce a PASSING test that measures the
+wrong thing, which is worse than no test.
+
+**THE SHIPPED SIDEBAR TEST IS ORDER-DEPENDENT, and its green run was luck.** With
+a webview EDITOR also open it reads that editor's frame instead: on 2026-09-08 it
+reported the wizard's 62 words while claiming to test the sidebar. It passes today
+because it happens to run when no editor webview is open. That is a real
+limitation of what is currently on develop, not a hypothetical.
+
+**Trap 1 — the frame is chosen by position, not by focus.** `new WebView()` binds
+to the FIRST webview frame in the document, not the active editor. Three cases
+"passed" while two of them read the wizard. The only reason it was caught is that
+each case PRINTS what it read; an assertion on "some text" would have stayed green
+forever. Any multi-surface suite must close every editor BEFORE opening the one
+under test.
+
+**Trap 2 — `closeAllEditors()` throws** "no such element" in VS Code 1.136. The
+command `View: Close All Editors` works and is a real user action anyway.
+
+**Trap 3 — reading a frame traps the KEYBOARD.** `switchBack()` moves the driver,
+not the focus, so the next `executeCommand` fails with "element not interactable",
+an error naming the palette input and saying nothing about frames. Switching to
+default content and sending Escape fixes it in isolation but did not survive being
+combined with traps 1 and 2 in one run.
+
+**Measured along the way, and worth keeping:**
+
+- The wizard DOES render real content: `SETUP PROGRESS / Demo Setup /
+  Prerequisites / Build Your Project / Final Review`.
+- It first shows "Loading Project Creation Wizard…" — so "assert some readable
+  text" passes on a SPINNER. A content check has to wait past the loading state,
+  which the shipped sidebar test does not do.
+- `demoBuilder.showDataInstaller` does open a "Data Installer" editor.
+- `demoBuilder.openAi` opens NO webview. It is a prompts picker and does not
+  belong in a surface census.
+- A "Projects" editor is already open once the window settles, so no surface is
+  ever the only webview by default.
+
+**What this suggests for the next attempt:** one surface per VS Code launch, or a
+helper that closes everything and verifies exactly one webview frame exists before
+reading. The sequencing is the work; the approach is sound.
+
+## WHERE THIS IS GOING — the owner's framing, 2026-09-08
+
+Recorded because it changes the shape of the item rather than merely motivating it.
+
+**The practice he wants:** before a release reaches the team, run targeted
+workflows through BOTH surfaces — this UI mechanism, and *the identical flow* for
+an agent driving the MCP tools. A set of workflows, automated, run as a release
+gate. The immediate occasion is 700+ commits waiting to go out.
+
+**Why that is a design constraint and not a nice-to-have.** This repo already
+names the two surfaces — the human surface is the buttons, the agent surface is
+the MCP tools, and both dispatch into the same handlers. `ai-coverage-scan` exists
+because the gap between them is real and measured. A workflow suite that only
+drives the UI proves half of that, and the half it proves is the half that already
+has the most coverage.
+
+So a journey should be defined ONCE and be runnable through either surface. Not
+built yet, and deliberately not abstracted early — the first journeys are being
+written concretely so the shared shape is discovered rather than guessed. But
+nothing here should assume a UI-only future, and a journey that can only be
+expressed as clicks is a journey the agent half cannot check.
+
+**What this makes of [[PL-46]]:** the UI half of a paired release gate, with the
+MCP half its sibling. The click-through is not the destination; a workflow set
+that runs both ways is.
+
 ## ANSWERED BY THE OWNER, 2026-09-08
 
 **The goal, in his words: "achieve as close to automated user testing of the
@@ -143,3 +214,5 @@ need this decision resolved.
 - 2026-09-08  OWNER ANSWERED 2026-09-08. Goal stated verbatim: 'achieve as close to automated user testing of the extension as possible' — that is the scope, and an attempt to narrow this item to 'do the webviews render content' was corrected. The webview bug that prompted it (a React component fault hit by hand during project creation) is ONE thing the suite must catch, not the reason it exists. (1) Worth having, yes — its job is the extension's own behaviour under real user actions, not integration breaks, which stay with mcp-live-probe and the live journeys. (2) No objection to vscode-extension-tester; Playwright stays an unproven recorded alternative. (3) YES to the activation step on its own merits, regardless of how far UI driving goes. Next: the activation step with @vscode/test-electron.
 - 2026-09-08  STEP ONE SHIPPED 2026-09-08: npm run test:electron launches a real VS Code, activates the extension and asserts a trusted workspace, activation without throwing, every manifest command actually registered, and the sidebar view present. First green run: trusted, 20 commands, 1 view. This enters 864 lines of extension.ts that no test had ever reached — it returns at line 318 on an untrusted workspace, which is why the trust assertion is the control rather than a formality. Zero new frameworks (run() is the whole --extensionTestsPath contract; no mocha). Three obstacles recorded in the files: @vscode/test-electron 2.5.2 cannot launch VS Code 1.110+ because the macOS binary was renamed Electron -> Code (upgraded to 3.1.0, whose changelog names the exact ENOENT); VS Code refuses to start when its user-data path exceeds ~103 chars because a unix socket lives there, so a short /tmp --user-data-dir is required; and the run reported resetAll/resetAiOnboarding as unregistered, which is NOT a bug — --extensionTestsPath means Test mode, not Development, and both are guarded on Development. Filter reads the manifest's own '(Dev Only)' title convention. NEXT: UI driving with vscode-extension-tester, per the owner's answer.
 - 2026-09-08  RUNG TWO SHIPPED 2026-09-08: npm run test:ui drives the real VS Code UI with vscode-extension-tester — clicks the Demo Builder activity-bar icon, switches into the sidebar's webview iframe, and asserts readable text. First green run rendered 8 words (AI, Chat, Prompts, Utilities, Tools, Help, Settings, Logs). It counts WORDS not elements: a spinner is elements, a failed render is elements, and readable text is what separates loaded from loading-forever — the exact fault that prompted this item. Trap recorded: use WebviewView, NOT WebView; the latter is for editor webviews and fails against a sidebar with 'Unable to locate element: .editor-instance', which reads like a broken test rather than the wrong page object. COST: 133 packages including Selenium and a downloaded ChromeDriver, against 45 devDependencies before. Kept as a SEPARATE tier — npm run gate does not run it and neither does CI, deliberately, until it has proven stable. HONEST LIMIT: a blank render fails via the 60s wait timing out, which is structural and has not been empirically triggered by breaking a surface on purpose.
+- 2026-09-08  OWNER'S DESTINATION, 2026-09-08: before a release reaches the team, run targeted workflows through BOTH surfaces — this UI mechanism AND the identical flow for an agent driving the MCP tools — as an automated release gate. Occasion: 700+ commits waiting. That makes PL-46 the UI HALF of a paired gate rather than a UI-testing item: a journey should be defined once and runnable either way, and a journey expressible only as clicks is one the agent half cannot check. Not abstracting early — the first journeys are concrete so the shared shape is discovered rather than guessed — but nothing should assume a UI-only future. The repo already names the two surfaces and ai-coverage-scan already measures the gap between them.
+- 2026-09-08  EXTENSION TO MORE SURFACES ATTEMPTED AND STOPPED 2026-09-08, four iterations in, each fix breaking the last. Nothing shipped — the traps all produce a PASSING test that reads the wrong surface, which is worse than no test. KEY FINDING: the sidebar test already on develop is ORDER-DEPENDENT and its green run was luck; with a webview editor also open it reads that editor's frame, and it reported the wizard's 62 words while claiming to test the sidebar. Traps: (1) new WebView() binds to the FIRST webview frame, not the active editor — close all editors before opening the one under test; (2) closeAllEditors() throws 'no such element' in VS Code 1.136, the View: Close All Editors command works; (3) reading a frame traps the KEYBOARD, so the next executeCommand fails 'element not interactable' — switchBack moves the driver, not the focus. MEASURED: the wizard renders SETUP PROGRESS / Demo Setup / Prerequisites / Build Your Project / Final Review, but shows 'Loading Project Creation Wizard...' first, so an 'assert some text' check passes on a SPINNER — the shipped sidebar test does not wait past loading. showDataInstaller opens a real editor; openAi opens NO webview (prompts picker); a Projects editor is always already open. NEXT: one surface per launch, or a helper that verifies exactly one webview frame exists before reading.
