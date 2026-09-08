@@ -66,13 +66,24 @@ export async function withTimeout<T>(
     });
 
     // Create cancellation promise if signal provided - use Error with code for typed detection
+    const cancelled = () => {
+        const cancelError = new Error('Operation cancelled by user');
+        (cancelError as Error & { code?: string }).code = ErrorCode.CANCELLED;
+        return cancelError;
+    };
     const cancellationPromise = signal
         ? new Promise<never>((_, reject) => {
-            signal.addEventListener('abort', () => {
-                const cancelError = new Error('Operation cancelled by user');
-                (cancelError as Error & { code?: string }).code = ErrorCode.CANCELLED;
-                reject(cancelError);
-            });
+            // An AbortSignal that is ALREADY aborted never fires the event again,
+            // so listening alone silently ignores it and the caller waits out the
+            // whole timeout. Project creation passes a controller created moments
+            // before this call and aborted from the wizard's close handler — if
+            // that close lands in between, a 30-minute build used to run on and
+            // report a TIMEOUT rather than a cancellation. Check the flag first.
+            if (signal.aborted) {
+                reject(cancelled());
+                return;
+            }
+            signal.addEventListener('abort', () => reject(cancelled()));
         })
         : null;
 

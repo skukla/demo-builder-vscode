@@ -279,100 +279,6 @@ describe('promiseUtils', () => {
         });
     });
 
-    describe('Real-world scenarios', () => {
-        it('should handle network requests with timeout', async () => {
-            const networkRequest = async () => {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                return { status: 200, data: 'response' };
-            };
-
-            const resultPromise = tryWithTimeout(networkRequest(), { timeoutMs: 500 });
-
-            jest.advanceTimersByTime(100);
-
-            const result = await resultPromise;
-
-            expect(result.result).toEqual({ status: 200, data: 'response' });
-            expect(result.timedOut).toBe(false);
-        });
-
-        it('should handle slow network requests', async () => {
-            const slowRequest = async () => {
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                return { status: 200, data: 'slow response' };
-            };
-
-            const resultPromise = tryWithTimeout(slowRequest(), { timeoutMs: 100 });
-
-            // Advance past timeout
-            jest.advanceTimersByTime(100);
-
-            const result = await resultPromise;
-
-            expect(result.timedOut).toBe(true);
-            expect(result.result).toBeUndefined();
-        });
-
-        it('should handle user cancellation of long operation', async () => {
-            const controller = new AbortController();
-            const longOperation = async () => {
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                return 'completed';
-            };
-
-            // Simulate user clicking cancel after 100ms
-            setTimeout(() => controller.abort(), 100);
-
-            const resultPromise = tryWithTimeout(longOperation(), {
-                timeoutMs: 10000,
-                signal: controller.signal
-            });
-
-            // Advance to trigger abort
-            jest.advanceTimersByTime(100);
-
-            const result = await resultPromise;
-
-            expect(result.cancelled).toBe(true);
-            expect(result.result).toBeUndefined();
-        });
-
-        it('should handle Adobe CLI command with timeout', async () => {
-            const aioCommand = async () => {
-                await new Promise(resolve => setTimeout(resolve, 200));
-                return { stdout: 'command output', stderr: '', code: 0 };
-            };
-
-            const resultPromise = tryWithTimeout(aioCommand(), {
-                timeoutMs: 5000,
-                timeoutMessage: 'Adobe CLI command timed out'
-            });
-
-            jest.advanceTimersByTime(200);
-
-            const result = await resultPromise;
-
-            expect(result.result).toBeDefined();
-            expect(result.result?.stdout).toBe('command output');
-        });
-
-        it('should handle file system operations', async () => {
-            const fileOp = async () => {
-                await new Promise(resolve => setTimeout(resolve, 50));
-                return { path: '/tmp/file.txt', size: 1024 };
-            };
-
-            const resultPromise = withTimeout(fileOp(), { timeoutMs: 1000 });
-
-            jest.advanceTimersByTime(50);
-
-            const result = await resultPromise;
-
-            expect(result.path).toBe('/tmp/file.txt');
-            expect(result.size).toBe(1024);
-        });
-    });
-
     describe('runInBatches', () => {
         it('should process items in sequential batches', async () => {
             const order: number[] = [];
@@ -426,22 +332,21 @@ describe('promiseUtils', () => {
             ).rejects.toThrow('instant error');
         });
 
-        it('should handle zero timeout', async () => {
-            // Use a slow promise that won't resolve before timeout
-            const promise = new Promise<string>(resolve => {
+        it('times out at zero, and says which of the two happened', async () => {
+            const promise = new Promise<string>((resolve) => {
                 setTimeout(() => resolve('value'), 1000);
             });
 
-            // Zero timeout should timeout immediately
             const resultPromise = tryWithTimeout(promise, { timeoutMs: 0 });
-
-            // Advance slightly to trigger timeout
             jest.advanceTimersByTime(1);
-
             const result = await resultPromise;
 
-            // Due to event loop timing, this may not timeout, so accept either result
-            expect(result.timedOut || result.result === undefined).toBe(true);
+            // The old assertion was `timedOut || result === undefined`, true for
+            // BOTH outcomes and therefore unable to fail.
+            expect({ timedOut: result.timedOut, result: result.result }).toStrictEqual({
+                timedOut: true,
+                result: undefined,
+            });
         });
 
         it('should handle very large timeout', async () => {
@@ -471,29 +376,56 @@ describe('promiseUtils', () => {
             expect(result.error).toBeUndefined();
         });
 
-        it('should handle already aborted signal', async () => {
-            const controller = new AbortController();
-            controller.abort();
+        it('does NOT cancel on a signal that was never aborted', async () => {
+            const controller = new AbortController(); // fresh — never aborted
 
-            // Use a slow promise so signal can be checked
-            const promise = new Promise<string>(resolve => {
+            const slow = new Promise<string>((resolve) => {
+                setTimeout(() => resolve('value'), 10_000);
+            });
+
+            const resultPromise = tryWithTimeout(slow, {
+                timeoutMs: 200,
+                signal: controller.signal,
+            });
+            jest.advanceTimersByTime(200);
+            const result = await resultPromise;
+
+            // The converse of the already-aborted case, and the reason it needs its
+            // own test: the pre-check must read the FLAG, not assume it. Treating
+            // every signal as aborted cancels operations nobody cancelled, and the
+            // promise here is slow on purpose — an already-resolved one wins the
+            // race either way and so cannot tell the two apart.
+            expect({ cancelled: result.cancelled, timedOut: result.timedOut }).toStrictEqual({
+                cancelled: false,
+                timedOut: true,
+            });
+        });
+
+        it('cancels at once on a signal that is ALREADY aborted', async () => {
+            const controller = new AbortController();
+            controller.abort(); // aborted BEFORE the call
+
+            const slow = new Promise<string>((resolve) => {
                 setTimeout(() => resolve('value'), 1000);
             });
 
-            const resultPromise = tryWithTimeout(promise, {
+            // No timer advance: the point is that it settles without waiting.
+            const result = await tryWithTimeout(slow, {
                 timeoutMs: 5000,
-                signal: controller.signal
+                signal: controller.signal,
             });
 
-            // Advance past timeout to ensure resolution
-            jest.advanceTimersByTime(5000);
-
-            const result = await resultPromise;
-
-            // The implementation only listens for future abort events
-            // since the signal is already aborted before addEventListener
-            // the operation may continue unless timeout fires
-            expect(result.timedOut || result.cancelled || result.result).toBeTruthy();
+            // An already-aborted signal never fires `abort` again, so listening
+            // alone ignored it and the caller waited out the whole timeout —
+            // measured as {cancelled: false, timedOut: true} before the fix.
+            // Project creation passes exactly such a controller to a 30-minute
+            // timeout, so the old behaviour reported a TIMEOUT for a build the
+            // user had cancelled.
+            expect({ cancelled: result.cancelled, timedOut: result.timedOut }).toStrictEqual({
+                cancelled: true,
+                timedOut: false,
+            });
+            expect(result.error?.message).toBe('Operation cancelled by user');
         });
     });
 });

@@ -8,9 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/features/authentication/services/adobeEntitySelector.ts",
-        "src/core/state/sessionUIState.ts",
-        "src/types/ai.ts"
+        "src/core/utils/promiseUtils.ts"
     ],
     "reporters": [
         "clear-text",
