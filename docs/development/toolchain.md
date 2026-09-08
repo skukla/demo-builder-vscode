@@ -209,7 +209,9 @@ behaviour-preserving.
 ```bash
 npm run test:mutation           # full — hours
 npm run test:mutation:sample    # the pinned module sample
-npm run test:mutation:baseline  # write the baseline
+npm run test:mutation:baseline  # merge a FULL run's numbers into the baseline
+                                # (after `npm run test:mutation`; needs a note:
+                                #  `-- --write "why these are better"`)
 ```
 
 The only instrument that measures whether a test would CATCH a defect rather than

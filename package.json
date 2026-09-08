@@ -502,7 +502,7 @@
         "test:mutation:focus:on": "node scripts/focusModule.mjs",
         "test:mutation:worklist": "node scripts/mutationWorklist.mjs",
         "test:mutation:sample": "stryker run stryker.pl22.config.json && node scripts/checkMutationBaseline.mjs",
-        "test:mutation:baseline": "node scripts/checkMutationBaseline.mjs --write",
+        "test:mutation:baseline": "node scripts/checkMutationBaseline.mjs --report reports/mutation/mutation.json --write",
         "test:mutation:sweep": "node scripts/mutationSweep.mjs",
         "test:mutation:queue": "node scripts/mutationQueue.mjs",
         "test:mutation:selftest": "node scripts/mutationBaseline.selftest.mjs",

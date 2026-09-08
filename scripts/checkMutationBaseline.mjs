@@ -8,7 +8,7 @@
  * Exit 1 on any regression. `--write` is deliberately a separate, explicit act:
  * accepting a worse baseline should take a decision, not a rerun.
  */
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { compare, writeBaseline } from './mutationBaseline.mjs';
 
 /**
@@ -46,6 +46,31 @@ if (!existsSync(REPORT)) {
 // module it measured and knows nothing about the other eleven, so overwriting with it
 // would switch the ratchet off for everything it did not look at.
 const partial = reportFlag !== -1;
+
+// REFUSE the one invocation that silently destroys the record.
+//
+// `--write` without `--report` leaves `partial` false, and writeBaseline treats
+// that as "replace", not "merge". With the default report being the twelve-module
+// pl22 sample, `npm run test:mutation:baseline` therefore swaps 629 pinned rows
+// for 12 — switching the ratchet off for everything it did not look at, and
+// printing a confident success while it does. Found 2026-09-08 by a goal session
+// that nearly ran it.
+//
+// Creating the baseline from scratch is still allowed, and a deliberate wholesale
+// rewrite needs `--wholesale` said out loud.
+if (write && !partial && existsSync(BASELINE) && !process.argv.includes('--wholesale')) {
+    const existing = Object.keys(JSON.parse(readFileSync(BASELINE, 'utf8')).modules).length;
+    console.error(
+        `Refusing to write ${BASELINE} wholesale.\n\n` +
+            `  --write with no --report defaults to ${REPORT} and REPLACES the baseline\n` +
+            `  rather than merging into it: ${existing} pinned rows would become however many\n` +
+            `  that report holds, and every module it does not mention would lose its floor.\n\n` +
+            `  After a focused run, name the report:\n` +
+            `    node scripts/checkMutationBaseline.mjs --report reports/mutation/focus.json --write "<why>"\n\n` +
+            `  If replacing the whole file really is the intent, say --wholesale.`
+    );
+    process.exit(1);
+}
 
 if (write || !existsSync(BASELINE)) {
     const modules = writeBaseline(REPORT, BASELINE, note, partial);
