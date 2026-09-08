@@ -402,6 +402,18 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
+/* The VALUE beside the term above — the Commerce instance whose data is about to be
+   removed, and the count of data types going with it. The markup gave each value its
+   own span (with a comment saying it did so precisely so the value could be styled)
+   and the rule was never written, so on a destructive-action confirm the single most
+   important fact rendered as plain body text while its label was styled. Weight and
+   contrast only: the term above is deliberately small, grey and uppercase, so the
+   value simply needs to out-read it. Added 2026-09-08 (PL-20). */
+.datapack-danger-value {
+    font-weight: 500;
+    color: var(--spectrum-global-color-gray-900);
+}
+
 .datapack-danger-warning {
     color: var(--spectrum-global-color-red-600);
 }

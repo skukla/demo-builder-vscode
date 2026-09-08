@@ -5345,6 +5345,16 @@ div[class*="spectrum"] input[type="search"] {
     font-size: 11px;
     color: var(--spectrum-global-color-gray-600);
 }
+
+/* Why a row cannot be unchecked (`lockedReason`), rendered after the name and code.
+   Secondary explanatory text, so it takes the same register as `.intflow-api-code`
+   directly above rather than a new one. It had no rule at all until 2026-09-08
+   (PL-20) and rendered at inherited body size, louder than the code beside it. */
+.intflow-api-reason {
+    margin-left: 8px;
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-600);
+}
 .intflow-api-empty {
     padding: 24px 8px;
     text-align: center;
