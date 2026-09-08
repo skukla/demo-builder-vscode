@@ -251,6 +251,27 @@ The mechanical finding under all of it: every Stryker config here runs with
 mutated module. **The filename rule's errors of inclusion are free; only its omissions cost
 anything.** That is why the fix is additive.
 
+### LANDED 2026-09-08 — the recommended option only
+
+`suitesFor` in `scripts/focusModule.mjs` now falls back to `relatedSuites` (jest's
+`--findRelatedTests`) where the mirror rule returns nothing, and `covered()` in
+`tests/sop/mutation-config-pairing.test.ts` asks jest the same question when its stem grep
+misses. Options 2 and 3 were NOT implemented — both are still NEEDS-THE-OWNER on cost.
+
+**No baseline row was re-measured or rewritten.** What the controls proved:
+
+- `scripts/checkAttributionEquality.mjs` (new, committed): all **629** rows keep a byte-identical
+  suite set; **0** rows lost their mirroring suite; **0** rows moved. Positive control —
+  `agentsMdSections.ts` goes from 0 suites to 152. Negative control — `wizard/index.tsx`, which
+  nothing imports, still resolves to 0, so the fallback is not handing back the whole tree.
+- A three-module sample re-measured with real Stryker under BOTH rules —
+  `addonUpdateChecker` 72.86% / 0 gaps, `configSyncService` 71.30% / 0 gaps,
+  `useSelectionStep` 98.88% / 0 gaps. Every field equal before and after, and equal to the
+  pinned row. The six generated configs (3 jest + 3 Stryker) are byte-identical between the
+  two halves, which is why no score COULD rise: nothing about those runs changed.
+
+The ~20 hours of sweep that would measure the 165 newly-reachable modules has not been spent.
+
 ## Done when
 
 Step 1's module is covered and ratcheted, step 2 has produced a defensible number, and step 3

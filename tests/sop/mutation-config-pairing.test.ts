@@ -92,15 +92,71 @@ function load(strykerConfig: string): Pairing {
     return { strykerConfig, jestConfig, mutate: cfg.mutate, testFiles };
 }
 
-/** Does any selected test file reference this module? */
+/**
+ * Every suite that reaches `module` through jest's inverse dependency graph — the same
+ * question `relatedSuites` in scripts/focusModule.mjs asks, and the same one Stryker
+ * asks on every run via `enableFindRelatedTests`. Cached: the answer costs a jest spawn
+ * (~0.5s) and several configs can name the same module.
+ *
+ * `--maxWorkers=1` keeps the nested run from starting haste-map crawler workers inside
+ * a jest worker. It does not change the answer — the same 13 suites come back for
+ * TimelineChildren either way, checked 2026-09-08.
+ *
+ * It is NOT a fix for "A worker process has failed to exit gracefully". That line shows
+ * up in a full run on the unchanged tree too (2 of 3 runs, 2026-09-08) and shows up with
+ * this whole suite excluded (3 of 3). Written down because the first reading of it here
+ * was that this spawn caused it, and running the suite-excluded control is what said
+ * otherwise.
+ */
+const relatedCache = new Map<string, string[]>();
+function relatedSuites(module: string): string[] {
+    const hit = relatedCache.get(module);
+    if (hit) return hit;
+    let out: string[] = [];
+    try {
+        out = execSync(
+            `node node_modules/.bin/jest --listTests --maxWorkers=1 --findRelatedTests ${JSON.stringify(module)}`,
+            { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+        )
+            .split('\n')
+            .map((l) => l.trim())
+            .filter(Boolean)
+            .map((abs) => abs.slice(ROOT.length + 1));
+    } catch {
+        out = [];
+    }
+    relatedCache.set(module, out);
+    return out;
+}
+
+/**
+ * Does any selected test file cover this module?
+ *
+ * TEXT FIRST, IMPORT GRAPH SECOND, because they answer different halves. Naming the
+ * module's stem is how a mirroring suite declares its subject, and it is cheap. But
+ * `suitesFor` now falls back to jest's import graph for a module NO suite is named
+ * after, and for 81 of the 165 modules that fallback reaches, no related suite mentions
+ * the stem at all — measured 2026-09-08. Those are exactly the modules tested only
+ * through a consumer, which is the shape the fallback exists to measure, so a stem grep
+ * would fail this enforcer the first time the focus config targets one.
+ *
+ * Asking jest is not a second heuristic: it is the same resolver Stryker uses to decide
+ * which tests run against the mutant, so a suite it names is a suite that really imports
+ * the module.
+ */
 function covered(p: Pairing, module: string): boolean {
     const stem = basename(module).replace(/\.tsx?$/, '');
-    return p.testFiles.some((t) => {
+    const named = p.testFiles.some((t) => {
         const full = join(ROOT, t);
         if (!existsSync(full)) return false;
         const body = readFileSync(full, 'utf8');
         return body.includes(`/${stem}`) || body.includes(`'${stem}'`);
     });
+    if (named) return true;
+    // Nothing selected, or nothing to select against: no spawn can change the answer.
+    if (!p.testFiles.length || !existsSync(join(ROOT, module))) return false;
+    const related = relatedSuites(module);
+    return p.testFiles.some((t) => related.includes(t));
 }
 
 describe('every mutated module has a test selected to cover it', () => {
@@ -255,6 +311,32 @@ describe('every mutated module has a test selected to cover it', () => {
             testFiles: ['tests/sop/mutation-config-pairing.test.ts'],
         };
         expect(covered(here, 'src/anywhere/mutation-config-pairing.ts')).toBe(true);
+    });
+
+    it('CONTROL: a suite that IMPORTS the module counts even when it never names it', () => {
+        // The half the stem grep cannot answer, and the whole reason `suitesFor` gained
+        // its import-graph fallback: TimelineNav-interaction imports TimelineNav, which
+        // imports TimelineChildren, and the suite never writes the word
+        // "TimelineChildren" anywhere. 81 of the 165 modules the fallback reaches look
+        // like this (measured 2026-09-08) — without the import-graph half, this enforcer
+        // goes red the first time the focus config targets one of them.
+        const module = 'src/core/ui/components/TimelineChildren.tsx';
+        const selected: Pairing = {
+            strykerConfig: 'x',
+            jestConfig: 'y',
+            mutate: [module],
+            testFiles: ['tests/core/ui/components/TimelineNav-interaction.test.tsx'],
+        };
+        // The grep half really does miss it — otherwise this control proves nothing.
+        expect(readFileSync(join(ROOT, selected.testFiles[0]), 'utf8')).not.toContain(
+            'TimelineChildren'
+        );
+        expect(covered(selected, module)).toBe(true);
+
+        // NEGATIVE: an unrelated suite is still not coverage. Without this, an
+        // implementation that returned true whenever anything was selected would pass.
+        const unrelated: Pairing = { ...selected, testFiles: ['tests/sop/no-bare-sleep.test.ts'] };
+        expect(covered(unrelated, module)).toBe(false);
     });
 });
 

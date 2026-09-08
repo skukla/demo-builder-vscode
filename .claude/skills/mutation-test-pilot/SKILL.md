@@ -109,6 +109,14 @@ module under src is tested by the same path under tests, plus any suite split fr
 with a hyphenated suffix — and clears the incremental cache, which belongs to the module
 it was built for.
 
+**When the mirror finds NOTHING, jest's import graph answers instead**
+(`jest --listTests --findRelatedTests`), which is how a module tested only through a
+consumer's suite gets measured at all — 165 modules the runner used to refuse. The order
+matters and is not a preference: keying everything on the graph multiplies a sweep's work
+24.5x (4.8 hours to ~76) and bought no accuracy on the two modules run under both rules.
+Only 15 modules are still refused, and for those nothing imports them either. Reasoning and
+the four Stryker runs behind it: `.rptc/plans/unmeasured-fifth/attribution-design.md`.
+
 **It picks the jest PROJECT from the suites, not from the file extension.** This repo
 runs two: `node`, and `react` on jsdom, which owns `tests/core/ui/**` and every
 `.test.tsx` under `tests/features`. The generated config takes whichever project the

@@ -28,11 +28,14 @@
  * report a confident zero.
  *
  * Suites are found by this repo's mirror convention: a module under src is tested by the
- * same path under tests, plus any suite split from it with a hyphenated suffix.
+ * same path under tests, plus any suite split from it with a hyphenated suffix. When that
+ * finds NOTHING, and only then, jest's own inverse dependency graph answers instead —
+ * see `relatedSuites` below for why that order and not the other one.
  */
 import { fileURLToPath } from 'url';
+import { execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, readdirSync, rmSync, realpathSync } from 'fs';
-import { dirname, basename, join } from 'path';
+import { dirname, basename, join, relative } from 'path';
 
 import { isReactSuite } from './mutationScope.mjs';
 
@@ -42,8 +45,39 @@ const SAMPLE_STRYKER = 'stryker.pl22.config.json';
 const SAMPLE_JEST = 'jest.pl22.config.js';
 const INCREMENTAL = 'reports/mutation/focus-incremental.json';
 
-/** Every suite that mirrors `modulePath`, sorted, as repo-relative paths. */
+/**
+ * The suites a focused run measures `modulePath` against.
+ *
+ * MIRROR FIRST, jest's import graph only as a FALLBACK. Keying everything on jest's
+ * graph is the more obviously correct rule and it was measured on 2026-09-08 against
+ * this one: on the two modules run under both, it bought nothing — identical score and
+ * identical open gaps for 7.9x and 40.9x the wall time (`addonUpdateChecker` 72.86%/0
+ * gaps, `configSyncService` 71.30%/0 gaps under each) — and across all 629 baseline
+ * modules it multiplies the sweep's work 24.5x, turning a measured 4.8-hour sweep into
+ * about 76. The filename rule's only real defect is OMISSION: Stryker already narrows
+ * whatever this returns to the module's actual importers (`enableFindRelatedTests`), so
+ * a suite named for a module it never imports costs nothing, while a suite that covers
+ * the module and is not selected reports its mutants as uncovered.
+ *
+ * So the fallback fires exactly where the omission bites — a module with no suite of its
+ * own name, tested only through a consumer's suite. 165 of the 180 modules this
+ * instrument refuses today become measurable; the other 15 have no related suite at all
+ * and are still refused, now for the honest reason.
+ *
+ * The ORDER is what keeps the 629 pinned rows byte-identical: for any module with a
+ * mirroring suite the answer is unchanged, so no existing measurement changes meaning.
+ * `scripts/checkAttributionEquality.mjs` is the check that proves it.
+ *
+ * Full reasoning and the four Stryker runs behind it:
+ * `.rptc/plans/unmeasured-fifth/attribution-design.md`.
+ */
 export function suitesFor(modulePath) {
+    const mirrored = mirroringSuites(modulePath);
+    return mirrored.length ? mirrored : relatedSuites(modulePath);
+}
+
+/** Every suite that mirrors `modulePath`, sorted, as repo-relative paths. */
+export function mirroringSuites(modulePath) {
     if (!modulePath.startsWith('src/')) {
         throw new Error(`Expected a path under src/, got: ${modulePath}`);
     }
@@ -93,6 +127,45 @@ function strayedSuites(modulePath, stem, mirrorDir, isSuiteFor) {
     };
     walk('tests');
     return out;
+}
+
+/**
+ * Every suite that REACHES `modulePath` through jest's own inverse dependency graph.
+ *
+ * This is the same question Stryker already asks on every run: `enableFindRelatedTests`
+ * hands the mutated file to `jest --findRelatedTests`, which walks `resolveInverse`
+ * transitively over the whole file set and filters by `isTestFilePath`. Asking it here
+ * too costs about half a second per module and is the only rule in this file that can
+ * see an import — `mirroringSuites` above reads filenames, and the header note at the
+ * bottom of `main()` records two text heuristics that tried to see imports and were both
+ * wrong.
+ *
+ * `tests/sop/` is EXCLUDED. An enforcer measures the repository, not a module's
+ * behaviour, and several of them shell out to `git` or to jest itself — inside Stryker's
+ * sandbox copy that either fails or re-enters the runner. The same directory is excluded
+ * from `strayedSuites` above, for the same reason.
+ *
+ * Returns [] rather than throwing when jest cannot answer: the caller's job is to refuse
+ * a barren module, and a refusal it can explain beats a stack trace here.
+ */
+export function relatedSuites(modulePath) {
+    let stdout;
+    try {
+        stdout = execFileSync(
+            process.execPath,
+            ['node_modules/.bin/jest', '--listTests', '--findRelatedTests', modulePath],
+            { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 32 * 1024 * 1024 }
+        );
+    } catch {
+        return [];
+    }
+    return stdout
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((abs) => relative(process.cwd(), abs))
+        .filter((p) => p.startsWith('tests/') && !p.startsWith('tests/sop/'))
+        .sort();
 }
 
 function renderJest(suites) {
@@ -259,7 +332,9 @@ function main() {
     if (barren.length) {
         // Refusing is the whole point: a focused run with no suites reports 0% in
         // seconds and reads exactly like a catastrophic result.
-        for (const m of barren) console.error(`No test suites mirror ${m}.`);
+        for (const m of barren) {
+            console.error(`No test suite mirrors ${m}, and none imports it either.`);
+        }
         console.error('Refusing to write a config that would report a confident zero.');
         process.exit(1);
     }
@@ -272,6 +347,10 @@ function main() {
     // Stryker does. A suite that matches by name and never touches the module makes
     // Stryker report "No tests were executed", and `mutationSweep.mjs` files that as a
     // skip rather than a failure. That is the one place the answer is reliable.
+    //
+    // `relatedSuites` asks jest the import question directly, but it is a FALLBACK, not
+    // a filter: it only supplies suites where the mirror rule found none. It is not used
+    // to prune a mirroring suite, because pruning is what Stryker already does for free.
 
     const previous = stryker.mutate ?? [];
     const changed = previous.length !== paths.length || previous.some((m, i) => m !== paths[i]);

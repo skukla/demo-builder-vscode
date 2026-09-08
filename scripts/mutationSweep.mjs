@@ -134,11 +134,11 @@ function main() {
         const started = Date.now();
         const label = `[${i}/${queue.length}] ${mod}`;
 
-        // Refuse before spending minutes on it: a module the mirror convention finds no
-        // suite for would be measured against nothing and report a confident zero.
+        // Refuse before spending minutes on it: a module no suite mirrors AND no suite
+        // imports would be measured against nothing and report a confident zero.
         if (suitesFor(mod).length === 0) {
             tally.skipped += 1;
-            console.log(`${label}\n    SKIP  no mirrored suite`);
+            console.log(`${label}\n    SKIP  no mirroring suite, and none imports it`);
             appendFileSync(LOG, JSON.stringify({ mod, outcome: 'skip-no-suite' }) + '\n');
             continue;
         }
