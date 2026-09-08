@@ -27,9 +27,19 @@ ordered by CONSEQUENCE, not by score.
 
 ## Step 1 — the module nothing runs at all (highest consequence)
 
-`daLiveBlockLibraryOperations.ts` is **852 lines and 386 mutants executed by NO test**. Its
-suite asserts that the CONSUMER forwards calls, so a hand-injected double stands in and the
-real code never runs anywhere.
+`daLiveBlockLibraryOperations.ts` is **852 lines and 386 mutants that no measurement has ever
+counted**. It has no suite under its own name, so `focusModule` refuses it.
+
+**The stronger claim this plan opened with — "executed by NO test" — was wrong.** Checked
+2026-09-08 with jest coverage driven by only the five `daLiveContentOperations-*` suites that
+construct the real facade: 90.22% statements, 75.86% branch, 96.96% functions. The 0.00% came
+from the delegation suite, which does inject a double; the other five run the real code. This
+is the same misreading the backlog item already retracted for `storefrontRepublishService`, so
+none of the five probed modules is unexecuted — all five are unattributed, which is step 3's
+problem, not a coverage hole.
+
+STATUS 2026-09-08: six mirrored suites added (96 tests), baseline row written at **81.87%**,
+42 open gaps. Part two continues from the survivor list.
 
 Its methods are `createBlockLibrary`, `createBlockLibraryFromTemplate`, `deleteBlockDocPage`,
 `removeBlockFromLibrary`, `removeBlockLibraryRow`, `copyBlockDocPagesFromSources` — DA.live
