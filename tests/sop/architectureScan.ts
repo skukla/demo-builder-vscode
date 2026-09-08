@@ -136,6 +136,37 @@ export function expectCeiling(ledger: Ledger, check: string, count: number): voi
 }
 
 /**
+ * The INVERSE ratchet: a value that may only rise.
+ *
+ * `expectCeiling` pins things we want less of. This pins things we want more of,
+ * and it exists for one population: measurements of the INSTRUMENT rather than of
+ * the work — how many CSS properties the visual fingerprint captures, how many
+ * interaction states it forces, how many elements a fixture renders.
+ *
+ * WHY THAT NEEDS A RATCHET OF ITS OWN. A migration verified by a net that is
+ * quietly getting coarser is unverified, and it looks EXACTLY like a verified one:
+ * both report an empty diff. Two instances on 2026-09-08, either of which would
+ * have passed a whole CSS migration as clean — the fingerprint could not see
+ * `letter-spacing`, so deleting a letter-spacing rule produced an empty diff that
+ * proved nothing; and a capture cell rendered 6 elements for a surface that has
+ * 105, which compares clean against another bad cell.
+ *
+ * Same two-sided contract as `expectCeiling`: below the pin is a regression, above
+ * it is progress that must be pinned so it cannot be lost.
+ */
+export function expectFloor(ledger: Ledger, check: string, count: number): void {
+    const floor = ledger[check] as number;
+    expect(typeof floor).toBe('number');
+    expect({
+        check,
+        count,
+        // Below the pin: the instrument got blunter. Restore it.
+        // Above it: good — edit the ledger to `count` so it cannot blunt back.
+        verdict: count < floor ? 'FELL_BELOW_FLOOR' : count > floor ? 'RAISE_THE_PIN' : 'at',
+    }).toEqual({ check, count, verdict: 'at' });
+}
+
+/**
  * A rule whose ledger reached ZERO, banked so it cannot be un-reached.
  *
  * `expectClean` over an empty ledger already fails on a new violation, so this

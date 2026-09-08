@@ -28,7 +28,7 @@
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { reportBundleClassUsage, type UsageReport } from './webviewBundleClasses';
-import { loadLedger, expectBanned, expectClean, expectCeiling } from './architectureScan';
+import { loadLedger, expectBanned, expectClean, expectCeiling, expectFloor } from './architectureScan';
 
 const ROOT = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 const LEDGER = loadLedger('webview-architecture-rules.exemptions.json');
@@ -209,5 +209,76 @@ describe('ADR-018 §3: a component style block styles that component only', () =
 
     it('every class shared out of a style block is a reasoned ledger entry', () => {
         expectClean(LEDGER, 'styleBlockLeaks', violations);
+    });
+});
+
+/**
+ * The CSS migration's ratchets (.rptc/plans/css-architecture-migration).
+ *
+ * Three pins that make the migration loopable: two count the work DOWN, one counts
+ * the instrument UP. Each cycle of step 2 moves one feature family out of the god
+ * file, and these are what make that progress irreversible — `expectCeiling` fails
+ * when a count falls, so an improvement cannot be banked without editing the ledger,
+ * and that edit is a reviewed diff carrying a note.
+ */
+describe('the CSS migration ratchets', () => {
+    const GOD_FILE = 'src/core/ui/styles/custom-spectrum.css';
+
+    /**
+     * Utility prefixes. Lives HERE rather than in the plan's prose so the
+     * measurement and its definition cannot drift apart — a rule is feature-family
+     * when its first class token's prefix is not one of these.
+     */
+    const UTILITY_PREFIXES = new Set([
+        'text', 'bg', 'border', 'w', 'h', 'min', 'max', 'flex', 'gap', 'p', 'm',
+        'mt', 'mb', 'ml', 'mr', 'pt', 'pb', 'pl', 'pr', 'font', 'items', 'justify',
+        'grid', 'rounded', 'shadow', 'opacity', 'overflow', 'cursor', 'hidden',
+        'block', 'inline', 'relative', 'absolute', 'space', 'leading', 'tracking',
+        'letter', 'uppercase', 'truncate', 'whitespace', 'align', 'self', 'order', 'z',
+    ]);
+
+    /** Top-level rules, split into utility and feature families. */
+    function countGodFileRules(): { total: number; feature: number } {
+        const lines = readFileSync(GOD_FILE, 'utf8').split('\n');
+        let total = 0;
+        let feature = 0;
+        for (const line of lines) {
+            const m = /^\s*([.#[][^{]*)\{/.exec(line);
+            if (!m) continue;
+            const classes = [...m[1].matchAll(/\.([A-Za-z_][\w-]*)/g)].map((x) => x[1]);
+            if (!classes.length) continue;
+            total++;
+            if (!UTILITY_PREFIXES.has(classes[0].split('-')[0])) feature++;
+        }
+        return { total, feature };
+    }
+
+    it('CONTROL: the god file is found and parses to a plausible rule count', () => {
+        const { total, feature } = countGodFileRules();
+        // Without this, a moved/renamed file would read as "every rule migrated".
+        expect(total).toBeGreaterThan(100);
+        expect(feature).toBeLessThanOrEqual(total);
+    });
+
+    it('feature rules leave the global sheet and never come back', () => {
+        expectCeiling(LEDGER, 'featureRulesInGlobalSheet', countGodFileRules().feature);
+    });
+
+    it('the god file only shrinks — the control on the metric above', () => {
+        // If featureRulesInGlobalSheet falls while this holds, rules were relabelled
+        // rather than moved out, and the migration would report progress it has not made.
+        expectCeiling(LEDGER, 'godFileTopLevelRules', countGodFileRules().total);
+    });
+
+    it('the visual fingerprint only gets sharper', () => {
+        const capture = readFileSync(
+            '.claude/skills/webview-visual-baseline/capture.js',
+            'utf8'
+        );
+        const block = /const PROPS = \[([\s\S]*?)\];/.exec(capture);
+        expect(block).not.toBeNull();
+        const props = [...block![1].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]);
+        expect(props).toContain('letter-spacing'); // the 2026-09-08 blind spot
+        expectFloor(LEDGER, 'capturedProperties', props.length);
     });
 });
