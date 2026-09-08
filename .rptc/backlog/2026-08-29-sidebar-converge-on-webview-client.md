@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: med
-status: backlog
+status: shipped
 title: The sidebar acquires the VS Code API itself — a latent double-acquire crash
 parent: PL-30
 ---
@@ -54,3 +54,7 @@ No entry calls `acquireVsCodeApi` except `WebviewClient` itself, the sidebar's
 existing suites pass unchanged, and the surface is verified by hand in the
 Extension Dev Host (this is a mount-path change; a green suite is not sufficient
 evidence that a webview still loads).
+
+## Shipped so far
+
+- 2026-09-08  SHIPPED 2026-09-08 (522ec0739). Bigger than 'swap the client': webviewClient QUEUES until __handshake_complete__, which only WebviewCommunicationManager sends, so the frontend could not move alone. Manager retyped to a structural WebviewHost (it touched .panel twice) so a WebviewView qualifies; provider builds its channel via createWebviewCommunication (ADR-015 bans 'new' here) with a new registration hook so handlers exist before the handshake releases the client's queue; outbound envelope data -> payload. ADR-017's ledger row for the sidebar entry deleted as stale — its 2026-08-30 reason argued AGAINST this and never addressed the double-acquire hazard. Bundle verified: exactly 1 acquireVsCodeApi.

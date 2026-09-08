@@ -353,3 +353,4 @@ conversion, which the enforcer requires anyway.
 - 2026-09-02  docs(eds): say why republish overwrites config.json outright (`2c2a3c102`)
 - 2026-09-02  docs(mcp): reinvestigate whether republish and sync_content are destructive (`86f9f40a9`)
 - 2026-09-02  test(eds): the DA.live token check, and what the sign-in boxes reject as you type (`ef4d9ba95`)
+- 2026-09-08  FLAKE, third in the hook-suite family: tests/hooks/rule-proofs.test.ts failed once under a full parallel gate on 2026-09-08 — case 'correct redirect order expect=pass got=BLOCK' in 11-jest-redirect.proof.sh. Passed 3/3 in isolation immediately after, and the next full gate was green. Recorded as an observation, not a diagnosis: no falsifying command yet. Same shape as the two suites already logged here and as router.test.ts — load-dependent, hook-proof shell scripts, likely shared session-marker or temp-path state under concurrency.

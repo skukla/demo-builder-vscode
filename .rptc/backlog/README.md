@@ -309,7 +309,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-30` | epic | [The four-track program — enforceable conventions, in sequence](four-track-program.md) | — | high | active |
 | `PL-11` | epic | └ [Test health and optimization](2026-08-28-test-health-epic.md) | — | med | active |
 | `PL-13` | chore | └ [ADR-015 convergence — empty the exemption ledger](2026-08-28-adr-015-convergence.md) | — | high | shipped |
-| `PL-19` | fix | └ [The sidebar is the only webview not using the shared client](2026-08-29-sidebar-converge-on-webview-client.md) | — | med | backlog |
+| `PL-19` | fix | └ [The sidebar is the only webview not using the shared client](2026-08-29-sidebar-converge-on-webview-client.md) | — | med | shipped |
 | `PL-20` | fix | └ [19 classes a component asks for that nothing styles](2026-08-29-triage-classes-defined-nowhere.md) | — | med | backlog |
 | `PL-21` | question | └ [CSS: understand it, then get a safety net, then rule on it — refactor last, if at all](2026-08-29-css-architecture-understand-before-refactor.md) | — | high | active |
 | `PL-26` | feature | └ [A glossary, so the agent describes things back in our words](project-glossary.md) | — | med | active |
