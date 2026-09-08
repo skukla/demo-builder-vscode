@@ -15,10 +15,10 @@ The full rule, including why cancellation is a *success* carrying a failure, is 
 
 ## Typed errors, for code that must branch
 
-`src/core/errors/index.ts` defines the hierarchy — `AppError` and the domain errors under
-it (`AuthError`, `CodeSyncError`, `CodePatchCriticalError`, and the rest). Use a type
-when something downstream must *distinguish* failures; use a message when it only has
-to show one.
+`src/core/errors/index.ts` defines the hierarchy — `AppError` and the six domain errors
+under it: `TimeoutError`, `NetworkError`, `AuthError`, `ValidationError`,
+`PrerequisiteError`, `MeshError`. Use a type when something downstream must
+*distinguish* failures; use a message when it only has to show one.
 
 `ErrorCode` is the programmatic companion, and is read in ~50 places. It is what lets
 a UI offer "Sign in" for an auth failure and "Retry" for a network one without
