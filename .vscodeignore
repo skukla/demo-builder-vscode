@@ -70,12 +70,32 @@ test/**
 tests/**
 docs/**
 coverage/**
-report/**
 .rptc/**
 .claude/**
+.githooks/**
 
-# Scripts (except required ones)
-scripts/keys.json
+# Measurement output. This said `report/**` — SINGULAR — and the directory has
+# always been `reports/`, so beta.145 packaged 625 mutation-report files, 144 MB
+# on disk. Found 2026-09-08 by reading what `npm run test:ui` packaged, which is
+# the third time a local artifact directory has shipped this way after the jest
+# cache and the ExTester downloads above. The lesson each time is the same: a
+# directory being in `.gitignore` does nothing, because vsce reads THIS file
+# instead whenever it exists.
+reports/**
+
+# Build and quality tooling. Nothing in `scripts/` runs at extension runtime —
+# checked 2026-09-08: every `scripts/` path in `src/` refers to a file inside a
+# STOREFRONT repo, not this one, and no code spawns a node script from the
+# extension directory. This previously excluded one file by name and shipped the
+# other 72.
+scripts/**
+
+# Dev-tooling dotfiles at the root, by pattern rather than by name for the same
+# reason as the config globs above.
+.gitguardian.yaml
+.madgerc
+.pre-commit-config.yaml
+.testfilesizerc.json
 
 # Documentation (keep README and CHANGELOG)
 *.md
