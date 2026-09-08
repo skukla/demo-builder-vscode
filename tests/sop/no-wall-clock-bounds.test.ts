@@ -61,11 +61,26 @@ const LEDGER: Record<string, string> = {
         'under 10,000ms. The bound distinguishes the two, it does not time the call.',
 };
 
+/**
+ * Walk the test tree, tolerating entries that vanish mid-walk.
+ *
+ * Suites create and remove temporary directories under `tests/` while this runs,
+ * so an entry listed by readdirSync can be gone by the statSync a line later —
+ * which failed this enforcer on 2026-09-07 with an ENOENT for `tests/tmp-probe`.
+ * A rule that fails because another suite was mid-cleanup is the exact flake
+ * PL-41 exists to prevent, so a vanished entry is skipped rather than thrown on.
+ */
 function testFiles(dir: string): string[] {
     const out: string[] = [];
     for (const name of readdirSync(dir)) {
         const p = join(dir, name);
-        if (statSync(p).isDirectory()) out.push(...testFiles(p));
+        let isDir: boolean;
+        try {
+            isDir = statSync(p).isDirectory();
+        } catch {
+            continue; // gone between the listing and the stat
+        }
+        if (isDir) out.push(...testFiles(p));
         else if (/\.test\.tsx?$/.test(name)) out.push(p);
     }
     return out;
