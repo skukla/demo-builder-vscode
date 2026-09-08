@@ -8,7 +8,7 @@
         "enableFindRelatedTests": true
     },
     "mutate": [
-        "src/core/utils/promiseUtils.ts"
+        "src/features/project-creation/services/sanitization.ts"
     ],
     "reporters": [
         "clear-text",
