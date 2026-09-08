@@ -7,17 +7,20 @@
  * never used — the whole integration tier was installed and inert. This is the
  * smallest thing that puts it to work.
  *
- * THREE LAUNCH ARGUMENTS, EACH LOAD-BEARING:
+ * TWO LAUNCH ARGUMENTS, EACH LOAD-BEARING:
  *
- *   --disable-workspace-trust  `src/extension.ts` returns at line 318 when the
- *                              workspace is untrusted. Without this the suite
- *                              measures a shell; the trust assertion inside the
- *                              suite is what stops that passing quietly.
  *   --disable-extensions       other installed extensions must not register
  *                              commands or throw into this run.
  *   a temp folder              VS Code opened with no folder behaves differently
  *                              from one with a workspace, and the extension reads
  *                              workspace state on activation.
+ *
+ * WORKSPACE TRUST IS NOT ONE OF THEM, and this file said it was until 2026-09-08.
+ * `src/extension.ts` does return early when the workspace is untrusted, so the
+ * trust assertion inside the suite is a real control. But `--disable-workspace-trust`
+ * is passed by `@vscode/test-electron` ITSELF on every run — unconditionally, in its
+ * own `runTest.js` arg list — so repeating it here changed nothing and the comment
+ * claiming otherwise was a false explanation of why the suite passes.
  *
  * The first run downloads a VS Code build (~100MB) into `.vscode-test/`, which is
  * gitignored. Later runs reuse it.
@@ -90,7 +93,7 @@ async function main() {
             vscodeExecutablePath,
             launchArgs: [
                 workspace,
-                '--disable-workspace-trust',
+                // No --disable-workspace-trust: runTests adds it to every launch.
                 '--disable-extensions',
                 `--user-data-dir=${userData}`,
             ],

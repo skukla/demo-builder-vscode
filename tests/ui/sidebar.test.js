@@ -16,10 +16,20 @@
  *
  * Run with `npm run test:ui`. ExTester downloads a VS Code and a matching
  * ChromeDriver on first use into `.test-extensions/` and `test-resources/`.
+ *
+ * WHY THE SCRIPT PINS `--code_version`. ExTester ships a set of element locators
+ * per VS Code release and applies the newest set at or below the version it is
+ * driving. Left unpinned it downloads whatever VS Code is current, which can be
+ * newer than any locator set the installed tester knows — and the failure is not
+ * "unsupported version", it is a stray "no such element" on some unrelated call.
+ * That is exactly how this tier broke on 2026-09-08: tester 8.24.0's newest set was
+ * 1.129.0, VS Code 1.134 renamed the editor tab's close button, and `closeAllEditors`
+ * started throwing. Tester 8.26.0 ships a 1.134.0 set; 1.136.1 is the version
+ * installed on this machine. When either moves, move the pin deliberately.
  */
 
 const assert = require('node:assert');
-const { ActivityBar, WebviewView, By, VSBrowser } = require('vscode-extension-tester');
+const { ActivityBar, SideBarView, WebviewView, By, VSBrowser } = require('vscode-extension-tester');
 
 // The activity-bar container title, read from package.json contributes rather
 // than guessed: contributes.viewsContainers.activitybar[0].title.
@@ -39,9 +49,17 @@ describe('the Demo Builder sidebar, opened the way a user opens it', function ()
         // `WebviewView`, NOT `WebView`. The latter is for a webview open as an
         // EDITOR and looks for `.editor-instance`; against a sidebar it fails with
         // "Unable to locate element: .editor-instance", which reads like a broken
-        // test rather than the wrong page object. `WebviewView` finds the frame
-        // that best fits the view's own rectangle instead.
-        const webview = new WebviewView();
+        // test rather than the wrong page object.
+        //
+        // AND IT MUST BE HANDED THE SIDEBAR. There is no way to select a webview by
+        // name in this library: `getViewToSwitchTo()` collects every webview iframe
+        // on screen and keeps the one that best fits ITS OWN rectangle. Constructed
+        // bare, that rectangle defaults to the whole workbench
+        // (`locators.Workbench.constructor`), so the largest webview anywhere wins —
+        // the wizard, if one happens to be open. Passing the SideBarView scopes the
+        // rectangle to the sidebar, which is the only thing making this test read
+        // the surface it names.
+        const webview = new WebviewView(new SideBarView());
         await webview.switchToFrame();
 
         try {
