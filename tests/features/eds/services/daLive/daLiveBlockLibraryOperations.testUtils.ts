@@ -128,6 +128,20 @@ export function docPageProbe(
 }
 
 /**
+ * A `fetchWithRetry` implementation for the sheet read-merge-rewrite paths:
+ * the GET of `.da/library/blocks.json` answers with these rows, or 404 when
+ * `rows` is null, and the rewrite POST succeeds.
+ */
+export function sheetProbe(
+    rows: Array<Record<string, string>> | null
+): (url: string, init?: { method?: string }) => Promise<Response> {
+    return async (_url: string, init?: { method?: string }) => {
+        if (init?.method !== 'GET') return fakeResponse(200);
+        return rows === null ? fakeResponse(404) : fakeResponse(200, fakeSheet(rows));
+    };
+}
+
+/**
  * A `component-definition.json` body, as `getFileContent` hands it over —
  * already base64-decoded by `GitHubFileOperations`.
  *
