@@ -40,6 +40,10 @@ import '@/core/ui/styles/modal.css';
 import '../styles/wizard-misc.css';
 // Step/form scaffolding shared with Configure and the Data Installer.
 import '@/core/ui/styles/step-scaffold.css';
+// .vsteplist-* — the vertical step list, shared with Configure.
+import '@/core/ui/styles/vstep-list.css';
+// .choice-* — the option cards, also rendered on the integrations surface.
+import '../styles/choice-cards.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
 // .icon-* — the icon-above-label pattern.

@@ -483,8 +483,10 @@ function printFollowUps(derived) {
  *
  *   mover     no rule inside a conditional at-rule -> `--move` handles it
  *   by hand   at least one rule inside @media/@container/@supports. The block moves
- *             WHOLE, and AFTER the family's plain rules, or the breakpoint stops
- *             applying (2026-09-09: putting it first cost 258 elements)
+ *             WHOLE and goes back AT ITS ORIGINAL INDEX. Putting it FIRST cost 258
+ *             elements; putting it LAST cost nothing visible and still left three
+ *             sheets non-verbatim, with more of the family after the block in the
+ *             god file than before it (2026-09-09)
  *   dead?     no bundle renders the family at all. Neither movable nor obviously
  *             dead — PL-53's question, and a visual diff cannot answer it
  *

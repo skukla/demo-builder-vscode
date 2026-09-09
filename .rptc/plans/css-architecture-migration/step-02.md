@@ -32,7 +32,7 @@ its blockers, and which of three LANES it is in:
 | lane | meaning | what to do |
 |---|---|---|
 | **mover** | nothing inside a conditional at-rule | `--move`, then import the sheet from every entry it lists |
-| **by hand** | at least one rule inside `@media` / `@container` / `@supports` | move the block WHOLE, and place it AFTER the family's plain rules |
+| **by hand** | at least one rule inside `@media` / `@container` / `@supports` | move the block WHOLE, and put it back WHERE IT WAS — not at the end |
 | **dead?** | no bundle renders the family at all | do not move it — this is PL-53's question, and a visual diff cannot answer it |
 
 **A table of families used to live here and it rotted within a day.** It listed
@@ -44,6 +44,15 @@ starting values — fixed the same way.
 **One family per cycle.** Capture, move one family, rebuild, re-capture, diff. An
 empty diff commits; anything else reverts. Batching means a non-empty diff tells you
 several things might be wrong instead of exactly what is.
+
+**A conditional block goes back at its ORIGINAL INDEX.** "After the family's plain
+rules" was the first instruction here and it is wrong: in all three hand-moved
+families the block sat in the MIDDLE, with more of the family after it —
+`.wizard-step-item`, `.sidebar-utility-footer` and `.choice-card--tile` all came
+later in the god file and ended up earlier. Every visual diff was empty, so nothing
+observable moved, but the sheets were not verbatim and three commit messages said
+they were. Reconstruct the family in the god file's source order and check it
+rule-by-rule against the baseline before believing the diff.
 
 **Prefer a mover family reaching ONE bundle.** A family reaching three is still fine
 — `.ai-*` and `.intflow-*` both went that way — but every entry in the list has to

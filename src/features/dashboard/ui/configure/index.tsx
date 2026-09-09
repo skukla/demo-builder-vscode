@@ -5,6 +5,8 @@ import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import '@/core/ui/styles/index.css';
 // Step/form scaffolding shared with the wizard and the Data Installer.
 import '@/core/ui/styles/step-scaffold.css';
+// .vsteplist-* — the vertical step list, shared with the wizard.
+import '@/core/ui/styles/vstep-list.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
 import '@/core/ui/styles/vscode-theme.css';

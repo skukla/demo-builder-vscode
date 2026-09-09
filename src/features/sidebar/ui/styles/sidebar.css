@@ -187,33 +187,15 @@
     width: 100% !important;
 }
 
-/* Short panel → tiles wrap 2-up.
- *
- * Stacked one per row, every tile costs 72px of column, so six of them need
- * ~508px and the last (Logs) was cut off on a zoomed panel — worse with each
- * tile added. Wrapping halves it: six tiles take three rows (~292px), and a
- * seventh fills the empty slot beside the sixth without adding a row at all.
- *
- * Height, not width, and NOT applied to the tiles themselves. Editor zoom makes
- * a CSS px physically bigger, so the panel measured in them shrinks — which is
- * exactly the "less room available" signal this should react to. (Sizing the
- * TILES off `vh` was tried and reverted the same day: it shrank them while every
- * px-sized neighbour grew. Switching LAYOUT on available height is the correct
- * use of the same measurement; scaling controls by it is not.)
- *
- * Threshold: 640px, and it is DERIVED, not chosen by eye. With SEVEN tiles
- * (AI: Chat, Prompts, Workbench — plus the utility bar's four) the roomy layout
- * measures 600px, so the switch has to happen above that or the last tile is
- * clipped in the gap between the two modes — at 560px it was, by ~12px. 640
- * leaves 40px of real slack.
- *
- * (This said 600px against a 596px content height until 2026-08-25 — four
- * pixels, which is not slack. And it said 572px before that, from the era when
- * `.sidebar-view` carried `padding-top: 80px`. Recomputed both times a tile
- * count or the padding actually changed, which is the discipline.)
- *
- * ADDING TILES MEANS RECOMPUTING IT: ~72px per tile in the roomy layout. The
- * arithmetic is in the sidebar feature doc. */
+@media (max-height: 640px) {
+    .sidebar-tile-grid {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        align-items: flex-start !important;
+    }
+}
+
 /* Sidebar welcome container - vertically centered */
 .sidebar-welcome {
     padding: 16px !important;
@@ -288,20 +270,5 @@
     justify-content: center;
     height: 96px;
     flex-shrink: 0;
-}
-}
-@layer theme {
-/* The short-panel breakpoint, moved WHOLE — @media wrapper and all, and placed
-   AFTER this family's plain rules because that is where it sat in the god file.
-   Hoisting a rule out of its condition makes it apply at every height: on the
-   first cycle of this migration that flipped the sidebar tiles from a column to
-   a row, 48 elements, and it looked like a styling opinion rather than a bug. */
-@media (max-height: 640px) {
-    .sidebar-tile-grid {
-        flex-direction: row !important;
-        flex-wrap: wrap !important;
-        justify-content: center !important;
-        align-items: flex-start !important;
-    }
 }
 }

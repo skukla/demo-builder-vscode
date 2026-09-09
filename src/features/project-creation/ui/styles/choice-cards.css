@@ -1,0 +1,135 @@
+/**
+ * .choice-* styles — the choice cards used to pick between options in a stage.
+ *
+ * FEATURE-SCOPED (ADR-017 §6 and §7). The component belongs to project-creation
+ * and no other feature uses these classes, so the sheet lives here — even though
+ * TWO entries render it, `wizard` and `integrations`, and both import it. §7 asks
+ * who OWNS a family, not how many bundles reach it.
+ *
+ * Its `prefers-reduced-motion` block was moved BY HAND, whole, and placed AFTER
+ * the plain rules, which is the order it had. The cut was located by family: three
+ * blocks in the god file opened with the same `@media` line.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), with the comment above each rule.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+/* ---- Backend "choice cards" (.choice-*) — prominent binary pick, not a dense tile.
+ * Roomy, readable, theme-aware; subtle Spectrum surfaces with a confident selected
+ * state (blue accent ring), no saturated fills. ADDED alongside .selector-card (which
+ * StackSelector/ConfigTile still use) — not a replacement. */
+.choice-grid {
+    display: flex !important;
+    gap: var(--spectrum-global-dimension-size-200) !important;
+    flex-wrap: wrap !important;
+    /* Cap ONLY the card row so the two binary-pick cards stay a comfortable
+     * two-up width now that the step-view flexes to the majority of a wider
+     * left column. Forms/headers in the step-view stay full-width — this caps
+     * the card row, not the overall content. */
+    max-width: 720px !important;
+}
+
+.choice-card {
+    flex: 1 1 0 !important;
+    min-width: 240px !important;
+    position: relative !important;
+    /* Flex column + top-align so the heading pins to the TOP of the (stretched)
+       card. A <button> vertically-centers its content by default, so with a
+       shared height the card carrying the shorter 1-line description floats its
+       heading down, out of line with the 2-line card. */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    font-family: inherit !important;
+    background: var(--spectrum-global-color-gray-50) !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: var(--spectrum-global-dimension-size-100) !important;
+    /* Match the demo-package card family (.expandable-brand-card): 16px padding +
+       a shared 100px height floor so the backend picker reads at the same scale. */
+    padding: var(--spectrum-global-dimension-size-200) !important;
+    min-height: 100px !important;
+    cursor: pointer !important;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease,
+        box-shadow 0.2s ease !important;
+}
+
+.choice-card:hover:not(:disabled) {
+    background: var(--spectrum-global-color-gray-75) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.choice-card:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-500) !important;
+    outline-offset: 2px !important;
+}
+
+.choice-card[data-selected="true"] {
+    border-color: var(--spectrum-global-color-blue-400) !important;
+    outline: 1px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: -1px !important;
+    background: var(--spectrum-global-color-blue-100) !important;
+    transform: none !important;
+}
+
+.choice-card[data-selected="true"]:hover {
+    background: var(--spectrum-global-color-blue-100) !important;
+    transform: none !important;
+}
+
+.choice-card:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+
+.choice-card-name {
+    display: block !important;
+    /* Match .brand-card-name (15px / 600) so the two card families share a title scale. */
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+
+.choice-card-description {
+    display: block !important;
+    margin-top: var(--spectrum-global-dimension-size-100) !important;
+    font-size: var(--spectrum-global-dimension-font-size-75) !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    line-height: 1.5 !important;
+}
+
+.choice-card-note {
+    display: block !important;
+    margin-top: var(--spectrum-global-dimension-size-100) !important;
+    font-size: var(--spectrum-global-dimension-font-size-75) !important;
+    color: var(--spectrum-global-color-gray-500) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .choice-card {
+        transition: none !important;
+    }
+    .choice-card:hover:not(:disabled) {
+        transform: none !important;
+    }
+}
+
+/* Catalog entries render as square tiles in the wrapping row (not full-width rows). */
+.choice-card--tile {
+    flex: 0 0 auto !important;
+    width: 168px !important;
+    min-width: 168px !important;
+    min-height: 168px !important;
+}
+
+.choice-card--tile .choice-card-description {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+}
+}

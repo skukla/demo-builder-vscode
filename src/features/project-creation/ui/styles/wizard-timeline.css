@@ -49,60 +49,6 @@
     --commerce-zone-max: var(--content-width);                        /* nav + step-view = app content band */
 }
 
-/* Wizard progress list */
-/* Wizard progress list */
-/* Merged 2 declarations of this selector that the sheet carried separately.
-   Kept at the LAST one's position; for a property declared twice the winner
-   survives (!important over plain, then later over earlier). */
-.wizard-progress-list {
-    list-style: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-}
-
-/* Wizard progress step item */
-/* Wizard step item */
-/* Merged 2 declarations of this selector that the sheet carried separately.
-   Kept at the LAST one's position; for a property declared twice the winner
-   survives (!important over plain, then later over earlier). */
-.wizard-step-item {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    padding: 8px 4px !important;
-    border-radius: 4px !important;
-    transition: background-color 0.15s ease !important;
-}
-
-.wizard-step-item:hover {
-    background-color: var(--spectrum-global-color-gray-200) !important;
-}
-
-.wizard-step-item[role="button"]:focus {
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: -2px !important;
-}
-
-/* Wizard step indicator */
-/* Wizard step indicator */
-/* Merged 2 declarations of this selector that the sheet carried separately.
-   Kept at the LAST one's position; for a property declared twice the winner
-   survives (!important over plain, then later over earlier). */
-.wizard-step-indicator {
-    font-size: 12px !important;
-    width: 16px !important;
-    text-align: center !important;
-}
-
-/* ===========================================
-   Wizard Layout Containers
-   =========================================== */
-.wizard-wrapper {
-    display: flex !important;
-    height: 100% !important;
-    width: 100% !important;
-}
-
 /* The rail-collapse breakpoint, moved WHOLE — @media wrapper and all.
    Hoisting a rule out of its condition makes it apply always, so the block
    travels intact rather than rule by rule. The breakpoint REGISTRY that names
@@ -209,6 +155,61 @@
         animation: none;
     }
 }
+
+/* Wizard progress list */
+/* Wizard progress list */
+/* Merged 2 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
+.wizard-progress-list {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Wizard progress step item */
+/* Wizard step item */
+/* Merged 2 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
+.wizard-step-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 4px !important;
+    border-radius: 4px !important;
+    transition: background-color 0.15s ease !important;
+}
+
+.wizard-step-item:hover {
+    background-color: var(--spectrum-global-color-gray-200) !important;
+}
+
+.wizard-step-item[role="button"]:focus {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: -2px !important;
+}
+
+/* Wizard step indicator */
+/* Wizard step indicator */
+/* Merged 2 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
+.wizard-step-indicator {
+    font-size: 12px !important;
+    width: 16px !important;
+    text-align: center !important;
+}
+
+/* ===========================================
+   Wizard Layout Containers
+   =========================================== */
+.wizard-wrapper {
+    display: flex !important;
+    height: 100% !important;
+    width: 100% !important;
+}
+
 
 /* ===========================================
    Timeline Specific Classes

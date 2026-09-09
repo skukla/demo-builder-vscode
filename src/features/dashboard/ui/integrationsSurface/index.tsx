@@ -29,6 +29,8 @@ import '@/core/ui/styles/modal.css';
 import '@/core/ui/styles/shared-ui.css';
 // .integrations-* — this surface's own shell and grid.
 import '../styles/integrations.css';
+// .choice-* — project-creation's option cards, rendered here too.
+import '@/features/project-creation/ui/styles/choice-cards.css';
 
 const container = document.getElementById('root');
 if (!container) {

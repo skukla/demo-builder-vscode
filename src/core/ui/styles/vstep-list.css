@@ -1,0 +1,166 @@
+/**
+ * .vsteplist-* styles — the vertical step list: steps, titles and their states.
+ *
+ * FEATURE-SCOPED (ADR-017 §6 and §7). A shared component in core/ui, rendered by
+ * TWO entries — `wizard` and `configure` — and imported by those two alone.
+ *
+ * Its `prefers-reduced-motion` block was moved BY HAND, whole, and placed AFTER the
+ * plain rules, which is the order it had. Three blocks in the god file opened with
+ * the same `@media (prefers-reduced-motion: reduce)` line, so the cut was located
+ * by FAMILY rather than by that text — a text match takes the first block, which
+ * belongs to a different family.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), with the comment above each rule.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+/* ---- StepRail (.vsteplist*) — a QUIET HORIZONTAL tab strip across the top ----
+ * The class prefix is historical (the component used to be called VerticalStepList and
+ * used to render as a left menu); it is a top strip now and the names are kept only to
+ * avoid churning the wizard's visual surface. Matched to the summary column (.sum*) so
+ * the panel reads as one family. NO numbered circles, NO connector rail, NO leading
+ * marks — labels only. active → a 2px blue-500 bottom underline + bold gray-900 label;
+ * upcoming/locked → muted + aria-disabled. Subtle Spectrum tokens (theme-aware), no
+ * saturated fills, accessible focus ring. */
+.vsteplist {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    /* Takes the strip's remaining width and scrolls horizontally when the tabs
+       overflow (the active tab is scrolled into view by StepRail). */
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+    overflow-x: auto !important;
+    scroll-behavior: smooth !important;
+    gap: var(--spectrum-global-dimension-size-150)
+        var(--spectrum-global-dimension-size-300) !important;
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.vsteplist-item {
+    display: block !important;
+    flex: 0 0 auto !important;
+}
+
+/* A quiet menu row. Matches the summary's small type scale (font-size-75) and gray
+ * tokens. NO border / outline anywhere except the :focus-visible ring — the active
+ * state is conveyed by the left accent bar + gray-100 fill + bold label only. */
+.vsteplist-step {
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--spectrum-global-dimension-size-100) !important;
+    /* Inline tab: intrinsic width, never shrinks (overflow scrolls instead), one line. */
+    width: auto !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    padding: var(--spectrum-global-dimension-size-100)
+        var(--spectrum-global-dimension-size-150) !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    cursor: pointer !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    font-family: inherit !important;
+    font-size: var(--spectrum-global-dimension-font-size-75) !important;
+    text-align: left !important;
+    transition: background 0.15s ease, color 0.15s ease !important;
+}
+
+.vsteplist-step:hover:not([aria-disabled='true']) {
+    background: var(--spectrum-global-color-gray-100) !important;
+}
+
+.vsteplist-step:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-500) !important;
+    outline-offset: 2px !important;
+}
+
+/* Active tab: a single simple bottom underline (no pill fill, no box) + bold label. */
+.vsteplist-step.active {
+    background: transparent !important;
+    box-shadow: inset 0 -2px 0 var(--spectrum-global-color-blue-500) !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+
+/* A newly-revealed tab (e.g. "Sign in" appearing when the ACCS backend is chosen)
+ * grows + fades in so the siblings shift smoothly instead of the tab popping in —
+ * mirrors the rail's timeline-enter (animate a max dimension + opacity, clip while
+ * growing). Applied for one render by StepRail; zeroed under reduced-motion. */
+.vsteplist-step--enter {
+    overflow: hidden !important;
+    animation: vsteplist-step-enter var(--db-motion-slow) var(--db-motion-ease);
+}
+
+.vsteplist-step[aria-disabled='true'] {
+    cursor: default !important;
+    color: var(--spectrum-global-color-gray-500) !important;
+}
+
+/* No leading status marker: the summary column owns "done" (✓ + value), and the
+ * active highlight + muted upcoming/locked text carry position + reachability. */
+.vsteplist-title {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    font-weight: 500 !important;
+}
+
+/* upcoming / locked labels read muted (gray-500/600) — matched to .sum-label. */
+.vsteplist-step.upcoming .vsteplist-title,
+.vsteplist-step.locked .vsteplist-title {
+    color: var(--spectrum-global-color-gray-600) !important;
+}
+
+/* Active row: a bolder gray-900 label (paired with the left accent + gray-100 fill,
+ * NOT a full border) so the active step reads clearly without a boxed outline. */
+.vsteplist-step.active .vsteplist-title {
+    font-weight: 700 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+
+/* Error marker — the ONE per-item glyph on a tab, and only because the errored step's
+ * body is off screen by definition (Configure shows one section at a time), so nothing
+ * else can carry it. A small negative-500 dot after the label, plus a red-600 label so
+ * the signal is not colour-on-a-dot alone. */
+.vsteplist-step.has-error .vsteplist-title {
+    color: var(--spectrum-global-color-red-600) !important;
+}
+
+.vsteplist-error {
+    flex: 0 0 auto !important;
+    width: var(--spectrum-global-dimension-size-75) !important;
+    height: var(--spectrum-global-dimension-size-75) !important;
+    border-radius: 50% !important;
+    background: var(--spectrum-global-color-red-600) !important;
+}
+
+/* Visually-hidden lock reason (the mark/title stay visible; SR reads the reason). */
+.vsteplist-sr {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+}
+@layer theme {
+/* The short-panel breakpoint, moved WHOLE — @media wrapper and all, and placed
+   AFTER this family's plain rules because that is where it sat in the god file.
+   Hoisting a rule out of its condition makes it apply at every height: on the
+   first cycle of this migration that flipped the sidebar tiles from a column to
+   a row, 48 elements, and it looked like a styling opinion rather than a bug. */
+@media (prefers-reduced-motion: reduce) {
+    .vsteplist-step {
+        transition: none !important;
+    }
+}
+}
