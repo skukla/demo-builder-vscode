@@ -4,7 +4,7 @@ kind: feature
 area: app-builder
 needs: []
 value: high
-status: shipped
+status: active
 ---
 
 # Event-provider lifecycle tooling — so eventing round-trips to zero
@@ -49,3 +49,48 @@ at zero, with the journey scan confirming the providers are gone.
 - 2026-08-28  RESEARCH COMPLETE (.rptc/research/event-provider-lifecycle/research.md) and it NARROWS the item. Already shipped: list+delete for providers/registrations (authentication/services/ioEventsClient.ts:206-258, built for Console teardown, 404-as-success verified) and the App Management install/uninstall spine that drives the starter kit's OWN eventing — the v4 kit declares 2 providers/21 events in app.commerce.config.ts, its install action creates them, its uninstall deletes registrations -> metadata -> provider best-effort (the exact idempotency contract we want; copy its find-before-create + deterministic instance_id model). So the STARTER-KIT lane round-trips already. Remaining scope: (1) CREATE for generic providers/registrations (~4 methods on IoEventsClient; CLI create is interactive-only so REST it is; needs the workspace OAuth S2S credential + the subscribe-on-403 retry consoleProjectTeardownEvents already ships); (2) surface the lifecycle headful (integrations-drawer Eventing detail) + headless (descriptor rows: reads read-only, deletes consent-gated). Spike before build: does deleting a provider with live registrations block or cascade — undocumented; until known, always delete registrations first.
 - 2026-08-28  HEADLESS HALF SHIPPED (51b9b5db4, live-verified serving 114 tools; list_event_providers answered real workspace data): IoEventsClient create half + eventProviderLifecycle service (kit-proven idempotency: deterministic instance_id find-before-create, name-keyed registrations, registrations-first deletes, collect-dont-throw, subscribe-on-403 shared with teardown) + five project-scoped MCP tools (deletes consent-gated with authored copy). Full suite 15,205 green, whole-repo lint clean, floor/ceilings/narration/real-SDK pins all updated. REMAINING: the headful drawer surface (integrations drawer Eventing detail). Journeys A+B running now as the live measure.
 - 2026-08-28  HEADFUL HALF SHIPPED (d08dd4948): lazy workspace-scoped Eventing section on the integrations surface (providers + registrations, per-row delete behind a native confirm), same service AND same deps adapter as the MCP tools via the new shared createEventLifecycleDeps (the tools' private copy deleted). Item complete: both surfaces live.
+
+## PULLED OFF develop, 2026-09-09 — the work is on a branch, not deleted
+
+The owner exercised the headful half in the Extension Development Host and
+called it: **"poorly designed and incomplete"**, and the chevron proves it —
+expanding the section flips the caret and shows a refresh button, and then
+nothing loads. No rows, no spinner, no message. A section whose only state is
+its own emptiness.
+
+**Nothing is lost.** `feature/event-providers` is pushed and points at
+`086bdc41c`, the last commit where the whole feature is present and working as
+built. Restoring it is a branch checkout or a revert of the removal commit, not
+a rewrite.
+
+Removed from develop, ~1,800 lines across six modules and six suites:
+
+| | |
+|---|---|
+| `EventingSection.tsx` + suite | the headful half |
+| `eventing.css` | its stylesheet |
+| `eventingHandlers.ts` + suite | `getEventEntities`, `deleteEventEntity` |
+| `eventProviderTools.ts` + suites | FIVE MCP tools — the agent half |
+| `eventProviderLifecycle.ts` + suite | the service both halves drove |
+| `eventLifecycleDeps.ts` | its dependency wiring |
+
+**`ioEventsClient.ts` STAYS**, and that is the load-bearing detail. Console
+project teardown and `deleteAdobeProjectHandler` both use it, so deleting an
+Adobe project still cleans up its event entities. What went is the surface for
+managing them one at a time, not the ability to tear them down.
+
+Pinned counts that moved with it, all of which are the reason a removal like
+this cannot be a one-file delete: MCP tools 114 -> 109, adobe-provider tools
+42 -> 37, dashboard handlers 40 -> 38, the battery baseline's tool list 56 ->
+51, four mutation-baseline rows, and twelve line-anchored mutation-ledger
+entries that shifted because two lines left `extension.ts`.
+
+### What a redesign has to answer
+
+The gap this item was filed against is still real — the ERP journey's agent
+still has no way to clean up event providers one at a time, and the reasoning
+in "The measured gap" above still holds. What the pulled version got wrong is
+narrower: it put a lazy, workspace-scoped section on a surface where a person
+arrives to look at INTEGRATIONS, and then gave them nothing when they opened
+it. Whatever replaces it should start from where a person would go looking for
+event providers, not from where the data happened to be cheap to fetch.

@@ -187,7 +187,7 @@ describe('dashboardHandlers', () => {
             // the integrations surface's Eventing section — workspace-scoped
             // I/O event providers/registrations, same service as the MCP
             // event tools.
-            expect(types).toHaveLength(40);
+            expect(types).toHaveLength(38);
         });
 
         it('should have handlers as functions', () => {

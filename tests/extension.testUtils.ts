@@ -273,10 +273,6 @@ export const mockRegisterLifecycleTools = jest.fn();
 jest.mock('@/features/ai/server/lifecycleTools', () => ({
     registerLifecycleTools: (...a: unknown[]) => mockRegisterLifecycleTools(...a),
 }));
-export const mockRegisterEventProviderTools = jest.fn();
-jest.mock('@/features/ai/server/eventProviderTools', () => ({
-    registerEventProviderTools: (...a: unknown[]) => mockRegisterEventProviderTools(...a),
-}));
 jest.mock('@/features/ai/server/toolDescriptors', () => ({
     ...jest.requireActual('@/features/ai/server/toolDescriptors'),
     registerDescriptorTools: (...a: unknown[]) => mockRegisterDescriptorTools(...a),

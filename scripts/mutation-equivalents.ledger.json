@@ -9744,7 +9744,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 154,
+            "line": 153,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested — activation must survive this step failing, and a test drives the failure and asserts activation still completes — so emptying the body changes only which line reaches a log channel. Here the step is the agent-trace file sink, and the test that makes it throw asserts activation degrades to channel-only rather than failing.",
@@ -9757,7 +9757,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 258,
+            "line": 257,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested — activation must survive this step failing, and a test drives the failure and asserts activation still completes — so emptying the body changes only which line reaches a log channel. Here the step is seeding the built-in AI prompts.",
@@ -9782,7 +9782,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 492,
+            "line": 491,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a logger.error plus a showErrorMessage whose text is built from the error. Activation's own tests assert showErrorMessage was NOT called on every success path, which is the observable half; the wording of the message when it IS called is the rest.",
@@ -9795,7 +9795,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 528,
+            "line": 527,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested — activation must survive this step failing, and a test drives the failure and asserts activation still completes — so emptying the body changes only which line reaches a log channel. Here the step is the global ~/.claude.json repair, and a test makes it reject and asserts activation still registers its commands.",
@@ -9808,7 +9808,7 @@
             "anchors": [
                 "} catch (err) {"
             ],
-            "line": 751,
+            "line": 749,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested — activation must survive this step failing, and a test drives the failure and asserts activation still completes — so emptying the body changes only which line reaches a log channel. Here the step is starting the in-extension MCP server, whose failure must never abort activation.",
@@ -9821,7 +9821,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 796,
+            "line": 794,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested — activation must survive this step failing, and a test drives the failure and asserts activation still completes — so emptying the body changes only which line reaches a log channel. Here it is the commerce-secret sweep, whose arguments are asserted and whose failure a test drives.",
@@ -9834,7 +9834,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 818,
+            "line": 816,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested — activation must survive this step failing, and a test drives the failure and asserts activation still completes — so emptying the body changes only which line reaches a log channel. Here it is the publish-key renewal sweep.",
@@ -9847,7 +9847,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 842,
+            "line": 840,
             "mutants": 1,
             "category": "block",
             "reason": "The catch body is a single logger call. That the catch EXISTS is tested — activation must survive this step failing, and a test drives the failure and asserts activation still completes — so emptying the body changes only which line reaches a log channel. Here it is the manifest-format sweep.",
@@ -10966,56 +10966,6 @@
             "source": "PL-22 batch MUT-06"
         },
         {
-            "module": "src/features/dashboard/ui/integrationsSurface/EventingSection.tsx",
-            "anchors": [
-                "}, []);"
-            ],
-            "line": 74,
-            "mutants": 1,
-            "category": "other",
-            "reason": "Stryker puts a constant string into load's empty useCallback dependency array. useCallback compares dependencies element-wise with Object.is, and a literal array of one unchanging string compares equal on every render, so the memoised callback keeps the same identity exactly as it does with an empty array. Nothing downstream — the toggle, the delete handler, the refresh button — can observe a difference.",
-            "decision": "none — a constant dependency list is as stable as an empty one",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-06"
-        },
-        {
-            "module": "src/features/dashboard/ui/integrationsSurface/EventingSection.tsx",
-            "anchors": [
-                "[load],"
-            ],
-            "line": 93,
-            "mutants": 1,
-            "category": "other",
-            "reason": "Stryker empties handleDelete's dependency array. The only dependency is load, whose own useCallback has an empty dependency list and therefore never changes identity for the life of the component, so dropping it from the list cannot stale the closure: both versions capture the same function object and handleDelete keeps the same identity across every render.",
-            "decision": "none — the listed dependency is correct and the stale-closure it guards against cannot occur while load is constant",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-06"
-        },
-        {
-            "module": "src/features/dashboard/ui/integrationsSurface/EventingSection.tsx",
-            "anchors": [
-                "{state === 'collapsed' ? <ChevronRight size=\"S\" /> : <ChevronDown size=\"S\" />}"
-            ],
-            "mutants": 3,
-            "category": "branch",
-            "reason": "The ternary picks between two icons that are the SAME component under test: jest.config.js maps every '@spectrum-icons/workflow/*' specifier onto one stub module, so ChevronRight and ChevronDown resolve to one default export and render identical markup. A suite-level jest.mock of either path registers against that same resolved module, so the two cannot be told apart from the DOM. The expanded state itself IS asserted, through aria-expanded on the same button.",
-            "decision": "none — the icon choice is unobservable while the shared icon stub is mapped for all workflow icons",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-06"
-        },
-        {
-            "module": "src/features/dashboard/ui/integrationsSurface/EventingSection.tsx",
-            "anchors": [
-                "{listing?.reason}"
-            ],
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "Stryker drops the '?.', which would throw only if listing were undefined. This node renders only inside showUnavailable, which is computed as state === 'loaded' && listing !== undefined && !listing.available — so listing is proven defined before the node exists. The optional chain is required by the type, because listing is EventingListing | undefined at the declaration, not by any state the render can be in.",
-            "decision": "none — the guard that gates this branch already establishes what the chain checks",
-            "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-06"
-        },
-        {
             "module": "src/commands/diagnostics.ts",
             "anchors": [
                 "if (!owner || !repo) return undefined;"
@@ -11726,30 +11676,6 @@
             "decision": "Recorded as equivalent. The chain is redundant behind the org guard; its unguarded twin is covered.",
             "recorded": "2026-09-05",
             "source": "PL-22 batch MUT-01"
-        },
-        {
-            "module": "src/features/ai/server/eventProviderTools.ts",
-            "anchors": [
-                "if (!mgr) return false;"
-            ],
-            "mutants": 1,
-            "category": "branch",
-            "reason": "Deleting the no-auth-manager guard changes nothing observable. Without it, mgr is undefined, the very next line calls mgr.isAuthenticated() inside the try, the TypeError is caught, and the catch returns false — the same value the guard returns, reaching the same 'Adobe sign-in required' handoff on all five tools. Verified by the no-auth-manager case in eventProviderTools.test.ts, which passes with the guard and with it removed. The sibling BooleanLiteral mutant on this line (return true) IS killed by that same test.",
-            "decision": "none — the guard says what it means and spares a call that would only throw",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-02, 2026-09-05"
-        },
-        {
-            "module": "src/features/ai/server/eventProviderTools.ts",
-            "anchors": [
-                "} catch {"
-            ],
-            "mutants": 1,
-            "category": "block",
-            "reason": "Emptying the catch body makes authed() resolve undefined instead of false. Its only consumer is 'if (!(await authed(ctx)))' in all five tools, and !undefined is !false, so every caller takes the identical branch. No test can tell the two apart without asserting on a value nothing reads. The sibling BooleanLiteral mutant in this catch (return true) IS killed by the auth-check-throws case.",
-            "decision": "none — returning false states the pre-flight's answer explicitly",
-            "recorded": "2026-09-05",
-            "source": "PL-22 MUT-02, 2026-09-05"
         },
         {
             "module": "src/types/typeGuards.ts",
@@ -13233,7 +13159,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 179,
+            "line": 178,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does — never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -13246,7 +13172,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 183,
+            "line": 182,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does — never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -13259,7 +13185,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 187,
+            "line": 186,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does — never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -13272,7 +13198,7 @@
             "anchors": [
                 "}, []);"
             ],
-            "line": 191,
+            "line": 190,
             "mutants": 1,
             "category": "other",
             "reason": "A useCallback dependency array of constants is compared element-wise with Object.is on every render, so a literal ['Stryker was here'] invalidates the memo exactly as often as [] does — never. The callback identity, and therefore everything downstream of it, is byte-for-byte the same either way. Verified by planting all eight at once: the five suites pass unchanged, and no assertion could distinguish them because there is nothing to distinguish.",
@@ -14510,19 +14436,6 @@
             "decision": "none — the swallow-everything catch is deliberate (an already-disposed panel is a normal outcome), so no assertion can distinguish the two paths without changing that behaviour",
             "recorded": "2026-09-06",
             "source": "PL-22 batch MUT-08"
-        },
-        {
-            "module": "src/features/dashboard/handlers/eventingHandlers.ts",
-            "anchors": [
-                "const display = payload?.label || id;"
-            ],
-            "line": 91,
-            "mutants": 1,
-            "category": "optionalChain",
-            "reason": "Stryker drops the `?.`, which would throw only if `payload` were undefined at this line. It cannot be: `kind` and `id` are read off `payload` six lines earlier and the handler returns 'kind (provider|registration) and id are required' unless kind is 'provider' or 'registration' and id is truthy, both of which require a payload object. Planted the mutation and ran the suite (2026-09-06): 18 tests, all green, no throw. The `?.` is required by the handler's optional-payload type, not by any reachable state.",
-            "decision": "none — the guard is compiler-mandated and correct as written",
-            "recorded": "2026-09-06",
-            "source": "PL-22 batch MUT-01"
         },
         {
             "module": "src/features/dashboard/ui/configure/configureHelpers.tsx",

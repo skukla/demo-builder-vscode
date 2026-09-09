@@ -1,5 +1,5 @@
 /**
- * The integrations surface — the MESH card and the workspace eventing section.
+ * The integrations surface — the MESH card.
  *
  * Split from `IntegrationsScreen.test.tsx` (750-line CI limit). Both subjects
  * were unreachable until the harness learned to push a mesh status: the screen
@@ -84,25 +84,5 @@ describe('IntegrationsScreen — the mesh card', () => {
         // Not transitioning — the busy read comes from the mesh status alone,
         // so an `&&` between the two operands would offer actions here.
         expect(screen.getByTestId('card-mesh')).toHaveAttribute('data-actions', '');
-    });
-});
-
-describe('IntegrationsScreen — workspace eventing', () => {
-    it('renders the eventing section for a project with an Adobe context', () => {
-        const handlers = captureHandlers();
-        render(<IntegrationsScreen hasAdobeContext appBuilderComponents={{ a: DEPLOYED }} />);
-        settleStatus(handlers);
-
-        expect(screen.getByTestId('eventing-section')).toBeInTheDocument();
-    });
-
-    // Without a context the handler can only answer "unavailable", and a section
-    // whose sole state is its own absence is noise.
-    it('withholds it from a project with none', () => {
-        const handlers = captureHandlers();
-        render(<IntegrationsScreen appBuilderComponents={{ a: DEPLOYED }} />);
-        settleStatus(handlers);
-
-        expect(screen.queryByTestId('eventing-section')).not.toBeInTheDocument();
     });
 });

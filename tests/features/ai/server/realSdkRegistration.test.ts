@@ -22,7 +22,6 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerAdobeResourceTools } from '@/features/ai/server/adobeResourceTools';
-import { registerEventProviderTools } from '@/features/ai/server/eventProviderTools';
 import { registerAdobeTools } from '@/features/ai/server/adobeTools';
 import { registerApplyUpdatesTool } from '@/features/ai/server/applyUpdatesTool';
 import { registerAuthTools } from '@/features/ai/server/authTools';
@@ -54,7 +53,6 @@ import type { McpToolSchema, McpToolServer } from '@/features/ai/server/mcpToolS
 import { ToolTraceRecorder } from '@/features/ai/server/toolTraceRecorder';
 import { createMockStateManager } from '../../../helpers/stateManagerFake';
 import { createMockHandlerContext } from '../../../helpers/handlerContextTestHelpers';
-import { createMockAuthenticationService } from '../../../helpers/authenticationServiceFake';
 
 /**
  * A REAL SDK server, handed over as our narrowed `McpToolServer`.
@@ -70,7 +68,6 @@ const server = () => new McpServer({ name: 'test', version: '0.0.0' }) as unknow
 const ctxFactory = () => createMockHandlerContext({ sendMessage: async () => {} });
 // The builder's `getCurrentProject` already resolves null, so there is nothing to override.
 const stateManager = createMockStateManager();
-const authService = () => createMockAuthenticationService();
 
 describe('registration against the real MCP SDK', () => {
     it('accepts every descriptor row', () => {
@@ -96,10 +93,6 @@ describe('registration against the real MCP SDK', () => {
         ],
         ['discovery tools', (s: McpToolServer) => registerDiscoveryTools(s)],
         ['adobe resource tools', (s: McpToolServer) => registerAdobeResourceTools(s, ctxFactory)],
-        [
-            'event provider tools',
-            (s: McpToolServer) => registerEventProviderTools(s, ctxFactory, authService),
-        ],
         ['configure_project', (s: McpToolServer) => registerConfigureProjectTool(s, stateManager)],
         ['cloud resource tools', (s: McpToolServer) => registerCloudResourceTools(s, ctxFactory)],
     ])('accepts %s', (_name, register) => {
@@ -139,7 +132,6 @@ describe('registration against the real MCP SDK', () => {
             registerValidateSelectionTool(s, ctxFactory);
             registerComponentRequirementsTool(s);
             registerAdobeResourceTools(s, ctxFactory);
-            registerEventProviderTools(s, ctxFactory, authService);
             registerConfigureProjectTool(s, stateManager);
             registerCloudResourceTools(s, ctxFactory);
             registerStorefrontTools(s, ctxFactory);

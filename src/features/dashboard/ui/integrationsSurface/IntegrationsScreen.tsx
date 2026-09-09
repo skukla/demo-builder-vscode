@@ -32,7 +32,6 @@ import { useLiveAppBuilderComponents } from '../hooks/useLiveAppBuilderComponent
 import { useLiveDestination } from '../hooks/useLiveDestination';
 import { useRowStatusOverrides } from '../hooks/useRowStatusOverrides';
 import { AddIntegrationFlowAdapter } from './AddIntegrationFlowAdapter';
-import { EventingSection } from './EventingSection';
 import {
     getIdentifiedMeshAppBuilderComponent,
     listAppBuilderComponents,
@@ -323,13 +322,6 @@ export function IntegrationsScreen({
                     "add one" rather than "nothing matched"; with the tile gone
                     the area would otherwise be blank, and the header's "0 of N"
                     is a count, not an answer. */}
-                {/* Workspace eventing (AB-6 headful) — lazy section below the
-                    grid; see EventingSection for why it is workspace-scoped
-                    rather than a drawer row. Rendered only when the project
-                    has an Adobe context: without one the handler can only
-                    answer "unavailable", and a section whose sole state is
-                    its own absence is noise. */}
-                {hasAdobeContext && <EventingSection />}
 
                 {searchFoundNothing && (
                     <Flex

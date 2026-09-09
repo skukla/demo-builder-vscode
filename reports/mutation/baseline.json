@@ -2441,22 +2441,6 @@
             "equivalent": 3,
             "openGaps": 0
         },
-        "src/features/ai/server/eventProviderTools.ts": {
-            "score": 79.89,
-            "killed": 143,
-            "survived": 36,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "string": 34,
-                "branch": 1,
-                "block": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 2,
-            "equivalent": 2,
-            "openGaps": 0
-        },
         "src/features/ai/server/handoff.ts": {
             "score": 100,
             "killed": 14,
@@ -3412,20 +3396,6 @@
             "equivalent": 7,
             "openGaps": 0
         },
-        "src/features/authentication/services/eventProviderLifecycle.ts": {
-            "score": 98.94,
-            "killed": 93,
-            "survived": 1,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "string": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 0,
-            "openGaps": 0
-        },
         "src/features/authentication/services/imsTokenClaims.ts": {
             "score": 71.43,
             "killed": 20,
@@ -4111,21 +4081,6 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 7,
             "equivalent": 9,
-            "openGaps": 0
-        },
-        "src/features/dashboard/handlers/eventingHandlers.ts": {
-            "score": 98.18,
-            "killed": 108,
-            "survived": 2,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "logPresentation": 1,
-                "optionalChain": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 0,
-            "equivalent": 1,
             "openGaps": 0
         },
         "src/features/dashboard/handlers/meshStatusHelpers.ts": {
@@ -5196,23 +5151,6 @@
             "uncoveredCategories": {},
             "highValueSurvivors": 0,
             "equivalent": 3,
-            "openGaps": 0
-        },
-        "src/features/dashboard/ui/integrationsSurface/EventingSection.tsx": {
-            "score": 93.39,
-            "killed": 113,
-            "survived": 8,
-            "noCoverage": 0,
-            "timeout": 0,
-            "survivorCategories": {
-                "string": 2,
-                "other": 2,
-                "branch": 3,
-                "optionalChain": 1
-            },
-            "uncoveredCategories": {},
-            "highValueSurvivors": 3,
-            "equivalent": 6,
             "openGaps": 0
         },
         "src/features/data-installer/services/importJobRunner.ts": {

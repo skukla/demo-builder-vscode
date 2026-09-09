@@ -42,7 +42,6 @@ import { registerDeleteProjectTool } from '@/features/ai/server/deleteProjectToo
 import { registerDiagnosticsTools } from '@/features/ai/server/diagnosticsTools';
 import { registerDiscoveryTools } from '@/features/ai/server/discoveryTools';
 import { registerEdsResetTool } from '@/features/ai/server/edsResetTool';
-import { registerEventProviderTools } from '@/features/ai/server/eventProviderTools';
 import { createHeadlessHandlerContext } from '@/features/ai/server/headlessHandlerContext';
 import {
     InExtensionMcpServer,
@@ -719,7 +718,6 @@ async function startInExtensionMcpServer(context: vscode.ExtensionContext): Prom
                 registerAdobeResourceTools(mcpServer, connCtxFactory);
                 // I/O Events lifecycle (AB-6) — scoped to the current
                 // project's Console workspace; deletes are consent-gated.
-                registerEventProviderTools(mcpServer, connCtxFactory, () => authenticationService);
                 registerConfigureProjectTool(mcpServer, connState);
                 registerCloudResourceTools(mcpServer, connCtxFactory);
                 registerStorefrontTools(mcpServer, connCtxFactory);

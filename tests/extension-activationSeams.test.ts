@@ -31,7 +31,6 @@ import {
     mockRegisterDescriptorTools,
     mockSeedDefaultAiPrompts,
     mockRegisterLifecycleTools,
-    mockRegisterEventProviderTools,
     mockWatcherManagerCtor,
     mockEnvWatcherInitialize,
 } from './extension.testUtils';
@@ -299,15 +298,6 @@ describe('the seams activate() hands away', () => {
             expect(get).toHaveBeenCalledWith('ewCanvasBranch');
         });
 
-        it('resolves the auth service LIVE for the event-provider tools', async () => {
-            await activate(createActivationContext());
-            registerExtraTools();
-
-            const resolve = mockRegisterEventProviderTools.mock.calls[0][2] as () => unknown;
-            // A value captured at registration would be the service as it was when
-            // the connection opened, not as it is when the tool runs.
-            expect(resolve()).toBeDefined();
-        });
 
         it('opens a lifecycle-tool URL externally', async () => {
             await activate(createActivationContext());
