@@ -26,35 +26,7 @@
        Force dark theme tokens for consistency
        ========================================= */
 
-    body .spectrum--dark,
-    body .spectrum--light {
-        /* Background colors - use Spectrum dark theme values */
-        /* Depth layering: gray-50 is deepest (content), gray-75 is elevated (sticky bars) */
-        --spectrum-global-color-gray-50: #000000;
-        --spectrum-global-color-gray-75: #0d0d0d;
-        --spectrum-global-color-gray-100: #2d2d2d;
-        --spectrum-global-color-gray-200: #3d3d3d;
-
-        /* Input and interactive element backgrounds */
-        --spectrum-alias-background-color-default: var(--spectrum-global-color-gray-75);
-        --spectrum-alias-background-color-modal: var(--spectrum-global-color-gray-100);
-        --spectrum-alias-background-color-overlay: var(--spectrum-global-color-gray-100);
-
-        /* Text colors - consistent light text on dark background */
-        --spectrum-alias-text-color: var(--spectrum-global-color-gray-800);
-        --spectrum-alias-text-color-secondary: var(--spectrum-global-color-gray-600);
-        --spectrum-alias-label-text-color: var(--spectrum-global-color-gray-800);
-
-        /* Border colors - subtle borders for dark theme */
-        --spectrum-alias-border-color: var(--spectrum-global-color-gray-400);
-        --spectrum-alias-border-color-hover: var(--spectrum-global-color-blue-500);
-        --spectrum-alias-border-color-focus: var(--spectrum-global-color-blue-500);
-
-        /* Selection colors */
-        --spectrum-alias-highlight-hover: rgba(255, 255, 255, 0.06);
-        --spectrum-alias-highlight-active: rgba(255, 255, 255, 0.1);
-        --spectrum-alias-highlight-selected: rgba(255, 255, 255, 0.1);
-    }
+    
 
     /* =========================================
        COMPONENT OVERRIDES

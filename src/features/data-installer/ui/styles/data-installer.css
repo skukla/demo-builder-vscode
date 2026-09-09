@@ -347,12 +347,7 @@
 
    "Data types" was the only one styled, so Spectrum's default sized "Target
    website" and "Store view" larger than the section heading below them — three
-   labels at one level of the hierarchy, rendered three ways.
-
-   The picker labels wear this class DIRECTLY (see `ScopeLabel`). Reaching them
-   through `.datapack-import-scope .spectrum-FieldLabel` was tried and the labels
-   still rendered at their default size. Why is unestablished — the class is
-   present in the bundle (24 occurrences), so "the selector matches nothing" is a
+   labels at one level of the hierarchy, so "the selector matches nothing" is a
    guess, not a finding, and specificity or Spectrum's own cascade are equally
    live. Owning the element removes the question instead of answering it. */
 .datapack-import-label {

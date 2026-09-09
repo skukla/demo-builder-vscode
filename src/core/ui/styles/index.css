@@ -31,12 +31,7 @@
     }
 
     /* Spectrum overrides for quiet mode */
-    .spectrum--quiet {
-        --spectrum-textfield-border-width: 0;
-        --spectrum-textfield-border-width-focused: 1px;
-        --spectrum-picker-border-width: 0;
-        --spectrum-picker-border-width-hover: 1px;
-    }
+    
 
     /* Custom scrollbar styles */
     ::-webkit-scrollbar {
