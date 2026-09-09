@@ -39,12 +39,17 @@ export const MAX_PROVIDER_PAGES = 200;
  * the only kind that can exist under our Console projects, and therefore the
  * only kind teardown may consider for deletion.
  *
- * Revisited 2026-08-28 when the create path shipped (AB-6): the filter STAYS
- * correct BY CONSTRUCTION — the lifecycle service pins
- * `provider_metadata: THIRD_PARTY_PROVIDER_METADATA` on every provider it
- * creates (eventProviderLifecycle.ts), so both kinds that can exist under our
- * Console projects (app-onboarded and extension-created) carry this value and
- * it remains the right ownership test for teardown's "may I delete this".
+ * Revisited 2026-08-28 when the create path shipped (AB-6): the filter stayed
+ * correct BY CONSTRUCTION, because the lifecycle service pinned
+ * `provider_metadata: THIRD_PARTY_PROVIDER_METADATA` on every provider it made.
+ *
+ * That service was REMOVED from develop on 2026-09-09 (`4a3889049`) — the
+ * surface it fed was incomplete, and the design question is [[AB-8]]. Nothing in
+ * this repo creates a provider today, so the only providers teardown can meet
+ * are app-onboarded ones, which carry this value as they always did. The filter
+ * is unchanged and still right; only its second justification is gone. If
+ * creation returns from `feature/event-providers`, the pinning comes back with
+ * it and so does the paragraph above.
  */
 export const THIRD_PARTY_PROVIDER_METADATA = '3rd_party_custom_events';
 
