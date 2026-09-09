@@ -92,6 +92,48 @@ loads them.
 Enforced today by ADR-017 §6's `bundleStylesheets` check. Three violations were
 found and fixed on the day that check was written.
 
+### 3a. PROPOSED AMENDMENT, awaiting the owner — 2026-09-08
+
+**Not adopted. §3 above stands until the owner rules.**
+
+§3 says a class used by a `core/ui` component must live in a *globally-loaded*
+sheet. The proposal is to narrow it to: **a sheet every bundle that renders the
+component loads.**
+
+**Why the current wording overshoots.** It reasons from POTENTIAL usage — a core
+component "can render on any surface". Three things say the actual usage is
+knowable:
+
+1. The import graph determines exactly which of the eight entries reach a given
+   component. Used three times on 2026-09-08; it is how `.prerequisite-*` was
+   proved wizard-only.
+2. **Nothing is loaded dynamically** — zero uses of `React.lazy` or
+   `await import()` anywhere in `src/`. The static graph is the truth here, not
+   an approximation.
+3. **The failure §3 guards against is already caught automatically.** Verified by
+   planting it: a class defined only in a wizard-only sheet, used from a dashboard
+   component, fails `bundleStylesheets` by name and file —
+   `prerequisite-container @ dashboard:src/features/dashboard/ui/ProjectDashboardScreen.tsx`.
+
+**§3 is therefore stricter than its own enforcer**, which checks the narrower and
+correct condition: "a class used in a bundle is styled by that bundle" (ADR-017
+§6). A rule stricter than its enforcer is one people follow only by accident.
+
+**The cost of leaving it:** 321 of the god file's 660 feature rules are pinned
+there permanently, including the largest family (`.intflow-*`, 52 rules, blocked
+by `ApiAccessPicker` living in `core/ui/`).
+
+**The residual risk, stated:** `bundleStylesheets` reads class names statically,
+and 95 sites per bundle assemble them at runtime where it cannot look. That blind
+spot is real, bounded, and already ratcheted by `dynamicClassSiteCeiling`. It
+argues for keeping that ratchet tight, not for keeping half the CSS in one file.
+
+**One honest argument for the current wording:** a single global sheet makes
+cascade order deterministic; split across feature sheets it depends on per-entry
+import order. Cycle 1 on 2026-09-08 showed how sharp that edge is. But that
+applies to all splitting, not specifically to core components, and the
+empty-diff requirement is what handles it.
+
 ### 4. A class a component uses must be defined somewhere
 
 Enforced today as `classesDefinedNowhere`, with 19 known cases seeded so the set
@@ -145,48 +187,99 @@ one that has them.
 - **The 19 classes defined nowhere** (PL-20) — each is either a rule nobody wrote
   or dead markup, and only a person can say which.
 
-## The evidence bar for MIGRATING existing CSS (§§1–2)
+## SUPERSEDED 2026-09-08 — the migration measurement was wrong
 
-Ratifying these as RULES costs nothing: new CSS should not reach for
-`!important` to beat Spectrum regardless, and that is safe from today.
+The section that stood here set an evidence bar for migrating the existing CSS
+and reported that the layer fix alone moved 23 of ~209 elements, while the layer
+fix plus removing 1,866 `!important` moved only 7 — concluding that the
+`!important` declarations were compensating for our own `@layer theme` wrapper,
+so removing both together would land closer to the original than the layer fix
+alone.
 
-**Migrating the 8,044 existing lines is a different authorisation**, and the
-measurement behind §§1–2 does not yet reach it. Four gaps, stated because "5 of 8
-surfaces identical" reads stronger than it is:
+**Both figures and that conclusion are wrong.** Re-measured 2026-09-08 against a
+2,700-element baseline over 48 surface/theme/width cells, with the layer fix
+actually implemented and reverted:
 
-1. **The clean result is concentrated where there was least to test.** The three
-   surfaces with real content — dashboard (72 elements), integrations (46),
-   dataInstaller (36) — ALL moved. The five that held still are the five with
-   almost nothing rendered: 8, 5, 15, 22 and 5 elements. So the honest figure is
-   23 of 154 content-bearing elements moved (15%), not 23 of 209.
+| | elements moved, of 2,700 |
+|---|---|
+| layer fix alone | **762 (28.2%)** |
+| layer fix + all 1,946 layered `!important` removed | **780 (28.9%)** |
 
-2. **467 declarations live in properties the fingerprint does not capture**, and
-   **108 of them carry `!important`** — box-shadow (34 important), border-radius
-   (64), z-index (10), plus transform, overflow, outline, gap and grid columns.
-   The `!important` sweep would touch declarations whose effect the snapshot
-   literally cannot see, and report a clean diff either way.
+The sweep adds 18 elements to the layer fix's 762. It does not cancel it. **The
+layer fix causes essentially all of the movement, and the `!important`s are not
+holding the old rendering in place.**
 
-3. **The 23 moved elements were never LOOKED at.** We know what changed
-   numerically — `font-size: 14px -> 18px`, `width: 762.969px -> 769.969px` — not
-   whether the result is right. Some are probably our intent finally applying;
-   some may be regressions. Nobody has judged which.
+**Why the old number was so much smaller, and it is not that the code changed.**
+That run measured 209 elements over 16 properties; this one measured 2,700 over
+26. `line-height` alone accounts for 528 of the property changes and was added to
+the fingerprint on 2026-09-08 — it was invisible in August by construction. This
+ADR's own self-audit predicted exactly that ("467 declarations live in properties
+the fingerprint does not capture") and under-estimated it.
 
-4. **Only the default state, only the harness.** No hover, focus, disabled or
-   error states were captured — and those are exactly where Spectrum's own rules
-   concentrate. Nor was any of this confirmed in a real VS Code webview; the
-   harness supplies theme variables by hand.
+**The evidence bar it set has been met.** Fixtures now render real content on all
+eight surfaces; the fingerprint captures 26 properties; interaction states
+(hover/focus/active) are captured by `capture-interactions.js`. Two conditions
+remain and both need a human: someone looks at every moved element, and the result
+is confirmed in the Extension Development Host.
 
-**Before the migration is authorised, all of:**
+**What did NOT change: §§1-2 as rules still stand, and are now better supported.**
+See the section below.
 
-- build the four missing surface fixtures, so "identical" means something on
-  every surface
-- extend the fingerprint to box-shadow, border-radius, z-index, transform,
-  overflow, outline and gap at minimum
-- capture interaction states (hover, focus, disabled, error)
-- re-run the before/after, and have a HUMAN look at every moved element
-- confirm the result in the Extension Development Host, not only the harness
+## The approach, settled 2026-09-08
 
-That is roughly a day of work, and it is phase 4's step 0 in PL-21 either way.
+Established by four research lanes plus measurements taken here; full evidence and
+provenance in `.rptc/research/css-architecture-best-practice/research.md`. The
+migration itself is `.rptc/plans/css-architecture-migration/`.
+
+**There are two problems and they are orthogonal. Treating them as one is what
+kept this stuck for months.**
+
+| | problem | fix | optional? |
+|---|---|---|---|
+| 1 | our rules lose to Spectrum, so `!important` is the only way to win | **cascade layers** | **no** |
+| 2 | 6,223 lines in one sheet every bundle loads | co-location into feature sheets | yes — maintainability |
+
+Cascade layers remove no lines from the god file. Co-location removes no
+`!important`. Expect neither to help with the other.
+
+**Cascade layers are the documented remedy, not a local invention.** MDN's
+Specificity page (modified 2026-09-05) names importing third-party CSS into a
+cascade layer as the alternative to `!important`. Material UI ships
+`@layer theme, base, mui, components, utilities` and documents overriding it
+without `!important`. Adobe's own Spectrum 2 wraps 87 of its 92 CSS files in
+`@layer`. GitHub's Primer tried managing specificity with `:where()` on every
+selector first, found it unenforceable, and replaced it with layers
+(`adr-021-css-layers.md`).
+
+**Why a specificity fight cannot be won here**, measured against the installed
+`@adobe/react-spectrum@3.46.0`: of its 5,592 selectors, **70.4% are specificity
+0-2-0 or higher** and **94.9% are unlayered**. A single class loses to seven out
+of ten of them.
+
+**DO NOT ADOPT CSS MODULES as part of this.** Measured here against a real
+Spectrum button: a hashed CSS-Modules-style class and a plain global class behave
+identically — both win only by being unlayered, and the same hashed class inside
+`@layer theme` loses to Spectrum exactly as our current CSS does. Scoping changes
+collision safety, not specificity. It is also not the industry default: across 25
+repositories surveyed it is one of five approaches. Our own `cssInjectionPlugin`
+would silently disable it anyway — its `/\.css$/` filter also matches
+`.module.css`.
+
+**Co-location means feature-level sheets, not one sheet per component.** The
+largest React applications have almost no per-component stylesheets: Grafana has
+3,056 component files and 13 stylesheets. Thin co-location is the norm.
+
+**The target, with a name.** `backstage/packages/ui` is built on
+`react-aria-components` — the same headless layer Spectrum sits on — and carries
+**78 CSS files, 77 of them in `@layer`, and zero `!important`.** That is the
+destination this repo is walking towards.
+
+**A per-rule escape hatch worth knowing.** Deephaven, a real React Spectrum
+consumer, beats Spectrum by doubling the class name —
+`.dh-spectrum-alias.dh-spectrum-alias` — with the reason in the file: "higher
+specificity than spectrum's definitions... regardless of CSS chunk loading order".
+It is 0-2-0, so it loses to Spectrum's 0-3-0 and above, but it is local and
+immune to load order.
 
 ## Consequences
 
