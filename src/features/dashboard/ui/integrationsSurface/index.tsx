@@ -27,6 +27,8 @@ import '@/core/ui/styles/integration-cards.css';
 import '@/core/ui/styles/modal.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
+// .integrations-* — this surface's own shell and grid.
+import '../styles/integrations.css';
 
 const container = document.getElementById('root');
 if (!container) {

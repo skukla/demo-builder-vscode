@@ -31,6 +31,8 @@ import '@/core/ui/styles/modal.css';
 import '@/core/ui/styles/shared-ui.css';
 // .icon-* — the icon-above-label pattern.
 import '@/core/ui/styles/icon-label.css';
+// .integrations-* — the integrations surface shell and grid.
+import './styles/integrations.css';
 
 // Get root element
 const container = document.getElementById('root');

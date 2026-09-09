@@ -174,6 +174,61 @@ VerifiedField happened to be on screen. That is a stranger dependency than the
 one §6 was written for, and the scanner now counts style-block classes as defined
 within their own bundle so it does not report them as missing.
 
+### 7. A stylesheet lives where its OWNER lives — and there are three owners
+
+Section 6 says which bundles must load a sheet. It does not say where the sheet
+should sit, and for a year that question had one answer by default: everything
+went into `custom-spectrum.css`, which all eight entries load.
+
+The 2026-09-09 migration made the answer visible, because it had to place 503
+rules. There are exactly **three kinds of stylesheet** in this codebase, and the
+third had no name until now:
+
+| Owner | Lives in | Loaded by |
+|---|---|---|
+| **A feature** | `src/features/<feature>/ui/styles/` | the entries whose graphs render that feature |
+| **A shared component** in `src/core/ui/components/` | `src/core/ui/styles/` | the entries that render that component |
+| **The base layer** — reset, tokens, theme, utilities | `src/core/ui/styles/` | every entry |
+
+The middle row is the one that was missing. `Modal`, `IntegrationCard` and the
+icon-label pattern are not features and not base layer: they are the shared
+component library, and their CSS belongs beside them and reaches only the
+surfaces that render them. `modal.css` (5 entries), `integration-cards.css` (3)
+and `icon-label.css` (3) are that row done properly.
+
+**The rule, and it is checkable:** a non-base stylesheet under
+`src/core/ui/styles/` may hold a class used by a **shared component**, or by **more
+than one feature**. A class used by exactly ONE feature belongs in that feature's
+directory, whatever the sheet is called.
+
+The cross-feature half is not a loophole, it is a fourth thing that exists: `.icon-*`
+(dashboard, project-creation, sidebar), `.container-*` (dashboard, prerequisites,
+project-creation) and `.btn-*` (components, prerequisites) are used by several
+features and owned by no shared component. Writing the rule without them made
+three correctly-placed families look misplaced, which is how the rule got its
+current shape.
+
+**Enforced** by `tests/sop/stylesheet-bundles.test.ts`, with a planted-violation
+control: moving `.integrations-*` back into `shared-ui.css` fails the check, and
+moving it out passes.
+
+Its first run found one real hit — `.integrations-*`, the integrations SURFACE's
+shell and grid, used by the dashboard feature alone, batched into `shared-ui.css`
+with nineteen families that do belong there. Moved to
+`src/features/dashboard/ui/styles/integrations.css` the same day.
+
+**A class used by NOTHING is skipped, deliberately.** `.section-label` in
+`step-scaffold.css` has no user in any feature and no shared component: that is dead
+CSS, a different defect with a different fix, and reporting it here would bury the
+placement question underneath it.
+
+**What this rule does NOT claim.** `shared-ui.css` satisfies it and is still not a
+good sheet: nineteen families that seven of the eight entries load. It passes
+because those families really are shared-component styles, and loading almost
+everywhere is what "shared" means for them. Splitting it per component — the
+`modal.css` shape — is the improvement, and this rule does not force it. A sheet
+can be correctly placed and still be a bucket.
+
 ## What is NOT architecture
 
 Everything else in `.claude/skills/spectrum-webview-ui` stays a skill: the Flex

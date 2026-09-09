@@ -43,5 +43,7 @@
     "_capturedProperties_note": "A FLOOR. How many CSS properties the visual fingerprint records (.claude/skills/webview-visual-baseline/capture.js PROPS). The net may get sharper and may never get blunter: a migration verified by a coarsening net is unverified and looks identical to a verified one. 16 originally; 23 after the ADR-018 self-audit; 26 on 2026-09-08 when deleting a letter-spacing rule produced an empty diff that proved nothing.",
     "interactionCells": 168,
     "_interactionCells_note": "A FLOOR. Cells captured by capture-interactions.js — 42 interactive elements across 8 surfaces at rest/hover/focus/active. Measured 2026-09-08. Known gap kept deliberately visible: the sidebar's 6 interactive elements respond to NO forced pseudo-state, so its interaction styling is invisible to this instrument and a clean sidebar row is not evidence.",
-    "bundleStylesheets": {}
+    "bundleStylesheets": {},
+    "stylesheetOwner": {},
+    "_stylesheetOwner_note": "ADR-017 §7: a non-base sheet under src/core/ui/styles/ may only define classes a component under src/core/ui/components/ actually uses. EMPTY on purpose — the one violation its first run found (.integrations-*, the integrations surface's shell and grid, batched into shared-ui.css) was fixed rather than ledgered, by moving it to src/features/dashboard/ui/styles/integrations.css. A row here would be a sheet we have decided to leave in the wrong place, and there is no such sheet today."
 }

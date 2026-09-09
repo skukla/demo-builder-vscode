@@ -67,6 +67,13 @@
             "what": "Flip the cascade per feature sheet (step 3), then sweep !important (step 4).",
             "why": "Step 3 is where the 762 moved elements arrive, in reviewable batches, and it needs the owner per surface. PL-33 is blocked on it too: its 'vendor CSS sits in the lowest cascade layer' convention cannot be enforced until it is true. Stopping after step 2 remains a legitimate destination.",
             "blockedOn": "an owner decision, per the plan overview"
+        },
+        {
+            "id": "section-label-has-no-user",
+            "lane": "open",
+            "what": "`.section-label` sits in src/core/ui/styles/step-scaffold.css and no feature or shared component uses it.",
+            "why": "Found by the ADR-017 §7 enforcer on 2026-09-09, which skips zero-user classes rather than reporting them as misplaced — placement and deadness are different defects. It belongs with the 33 dead families, but it is now in a core sheet rather than the god file, so a sweep of the god file alone will miss it.",
+            "blockedOn": "PL-53, same bar as the other dead families"
         }
     ]
 }

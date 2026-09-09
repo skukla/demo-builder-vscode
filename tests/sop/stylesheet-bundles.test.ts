@@ -27,6 +27,7 @@
 
 import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
+import { join } from 'path';
 import { reportBundleClassUsage, type UsageReport } from './webviewBundleClasses';
 import { loadLedger, expectBanned, expectClean, expectCeiling, expectFloor } from './architectureScan';
 
@@ -100,6 +101,138 @@ describe('ADR-017 §6: a class used in a bundle is styled by that bundle', () =>
         // unreadable sites means less of the surface is actually checked.
         // A pin left above an improved count lets the blind spot grow back to it.
         expectCeiling(LEDGER, 'dynamicClassSiteCeiling', report.dynamicSites);
+    });
+});
+
+describe('ADR-017 §7: a stylesheet lives where its owner lives', () => {
+    /**
+     * THREE kinds of stylesheet, and the middle one had no name until 2026-09-09:
+     * a feature's, a SHARED COMPONENT's, and the base layer's. §6 says which
+     * bundles must load a sheet; §7 says where the sheet should sit.
+     *
+     * The checkable half: a non-base sheet under `src/core/ui/styles/` may only
+     * define classes a component under `src/core/ui/components/` actually uses. A
+     * class only feature code uses belongs in that feature's directory, whatever
+     * the sheet is called.
+     *
+     * Found one on its first run — `.integrations-*`, the integrations SURFACE's
+     * shell and grid, batched into shared-ui.css with nineteen families that do
+     * belong there. Moved to the dashboard feature the same day.
+     *
+     * WHAT IT CANNOT SAY: whether a correctly-placed sheet is a GOOD sheet.
+     * shared-ui.css passes and is still nineteen families in one file. That
+     * judgement is not mechanisable and is not attempted here.
+     */
+    const BASE_SHEETS = new Set([
+        'src/core/ui/styles/custom-spectrum.css',
+        'src/core/ui/styles/index.css',
+        'src/core/ui/styles/reset.css',
+        'src/core/ui/styles/tokens.css',
+        'src/core/ui/styles/vscode-theme.css',
+        'src/core/ui/styles/wizard.css',
+    ]);
+
+    /**
+     * Whole class tokens inside string literals — a bare prefix grep matches paths
+     * and prose.
+     *
+     * The DIRECTORY form of `git ls-files`, not a `**` glob: `components/**\/*.tsx`
+     * matches only NESTED files and missed the 50 sitting directly in that
+     * directory, which made ten correctly-placed families look misplaced. The
+     * positive control below still passed, because the nested files alone carry
+     * more than 500 tokens — a control can prove the reader works and say nothing
+     * about whether it read everything.
+     */
+    const tokensUsedUnder = (dir: string): Set<string> => {
+        const files = execSync(`git ls-files '${dir}'`, { encoding: 'utf8' })
+            .split('\n')
+            .filter((f) => /\.tsx?$/.test(f));
+        const out = new Set<string>();
+        for (const f of files) {
+            const code = readFileSync(join(ROOT, f), 'utf8')
+                .replace(/\/\*[\s\S]*?\*\//g, '')
+                .replace(/^\s*\/\/.*$/gm, '');
+            for (const lit of code.match(/['"`][^'"`\n]*['"`]/g) ?? []) {
+                for (const w of lit.match(/[A-Za-z_][\w-]*/g) ?? []) out.add(w);
+            }
+        }
+        return out;
+    };
+
+    /**
+     * The classes a sheet OWNS — the first class of each rule's selector, not every
+     * class the selector mentions.
+     *
+     * `.modal-body:has(.manage-apis-body)` is a modal rule; it does not make
+     * `.manage-*` modal.css's to own. Collecting every mention reported
+     * `.transitioning-*`, `.forward-*`, `.backward-*`, `.manage-*` and `.db-*` as
+     * misplaced families when they are state modifiers and descendants named by a
+     * rule that belongs exactly where it is.
+     */
+    const familiesOwnedBy = (file: string): Map<string, string[]> => {
+        const css = readFileSync(join(ROOT, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+        const out = new Map<string, string[]>();
+        for (const block of css.split('}')) {
+            const open = block.indexOf('{');
+            if (open === -1) continue;
+            const selector = block.slice(0, open);
+            const first = /\.([A-Za-z_][\w-]*)/.exec(selector);
+            if (!first) continue;
+            const fam = first[1].split('-')[0];
+            out.set(fam, [...(out.get(fam) ?? []), ...[...selector.matchAll(/\.([A-Za-z_][\w-]*)/g)].map((m) => m[1])]);
+        }
+        return out;
+    };
+
+    it('POSITIVE CONTROL: the scan can see shared-component classes at all', () => {
+        // Without this every assertion below passes the moment the token reader
+        // breaks, and a zero from a probe that cannot look is indistinguishable
+        // from a clean result.
+        const used = tokensUsedUnder('src/core/ui/components');
+        expect(used.size).toBeGreaterThan(500);
+        expect(used.has('modal-body')).toBe(true);
+        expect(used.has('copyable-text')).toBe(true);
+        // From a file sitting DIRECTLY in the directory, not a subdirectory — the
+        // `**` glob that missed those passed every assertion above.
+        expect(used.has('app-container')).toBe(true);
+    });
+
+    /** Which features use any of these classes, by exact class token. */
+    const featuresUsing = (classes: string[]): Set<string> => {
+        const out = new Set<string>();
+        for (const f of execSync("git ls-files 'src/features'", { encoding: 'utf8' }).split('\n')) {
+            if (!/\.tsx?$/.test(f)) continue;
+            const code = readFileSync(join(ROOT, f), 'utf8')
+                .replace(/\/\*[\s\S]*?\*\//g, '')
+                .replace(/^\s*\/\/.*$/gm, '');
+            const tokens = new Set((code.match(/['"`][^'"`\n]*['"`]/g) ?? []).flatMap((l) => l.match(/[A-Za-z_][\w-]*/g) ?? []));
+            if (classes.some((c) => tokens.has(c))) out.add(f.split('/')[2]);
+        }
+        return out;
+    };
+
+    it('a core/ui sheet holds shared-component or cross-feature classes, never one feature\'s', () => {
+        const sheets = execSync("git ls-files 'src/core/ui/styles/*.css'", { encoding: 'utf8' })
+            .split('\n')
+            .filter((f) => f && !BASE_SHEETS.has(f));
+        expect(sheets.length).toBeGreaterThan(0); // the rule must have something to check
+
+        const coreTokens = tokensUsedUnder('src/core/ui/components');
+        const misplaced: string[] = [];
+        for (const sheet of sheets) {
+            for (const [fam, classes] of familiesOwnedBy(sheet)) {
+                if (classes.some((c) => coreTokens.has(c))) continue; // a shared component owns it
+                const features = featuresUsing(classes);
+                // NO user at all is a different defect — dead CSS, tracked by PL-53
+                // — and reporting it here would bury the placement question under
+                // it. `.section-label` is that case today.
+                if (features.size === 0) continue;
+                if (features.size === 1) {
+                    misplaced.push(`${sheet}: .${fam}-* is used only by src/features/${[...features][0]}`);
+                }
+            }
+        }
+        expectClean(LEDGER, 'stylesheetOwner', misplaced.sort());
     });
 });
 
