@@ -63,3 +63,8 @@ the point" — which would resolve it without building anything.
 - [[AB-6]] — the capability, and the removal record. `feature/event-providers`
   holds the pulled implementation at `086bdc41c`; nothing was deleted.
 - The removal commit is `4a3889049`, revertable on its own.
+
+## Shipped so far
+
+- 2026-09-09  docs(app-builder): ioEventsClient no longer cites a deleted service (`8d1045e0d`)
+- 2026-09-09  docs(backlog): AB-8 — where event-provider management belongs, as a question (`b8bfaaefe`)

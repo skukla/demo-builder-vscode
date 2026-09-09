@@ -87,6 +87,7 @@ every family move currently carries dead weight into a feature sheet.
 - 2026-09-09  SCHEDULED by the owner 2026-09-09. And two families have already been verified dead to this item's OWN level-1 bar (whole-name grep across src including .ts, with a positive control), while answering a different question about where to move them: .architecture-* is entirely dead — all 24 rules, and all 9 'architecture-' mentions in ts/tsx are COMMENTS ('architecture-duplication scan', 'architecture-dependent', 'css-architecture-migration'), zero are class names. .project-button-* is dead — 7 rules, zero mentions. Control: datapack- returns 82 mentions. That is 31 rules of the 351 candidates confirmed by direct evidence rather than by absence from a token scan. It also shows the token scan UNDER-states the problem in one direction and over-states it in another: .project-* looked like 33 users across 6 bundles, which was noise from every string containing 'project-'; decomposed by sub-family it is 36 projectsList-only rules plus 7 dead ones.
 - 2026-09-09  fix(css): delete 32 rules nothing names — and keep the one that is used (`1f777e8f5`)
 - 2026-09-09  docs(backlog): PL-53 — a third of the god file may be dead, and why a diff cannot prove it (`8685c4ef1`)
+- 2026-09-09  fix(css): delete 254 rules no file names — the god file is 967 lines (`18dc95a91`)
 
 ## Answered, 2026-09-09
 

@@ -225,3 +225,6 @@ is the current reference for the four-control pattern.
 - 2026-09-01  feat(hooks): the zsh word-splitting trap is a hook, not a paragraph (`f56080441`)
 - 2026-09-01  fix(hooks): the word-splitting guard now covers LOOP variables (`01b19ac13`)
 - 2026-09-01  fix(ui): the trap we said no tool could catch — caught, emptied, banned (`dab8cd921`)
+- 2026-09-09  fix(css): a component <style> block is a rule too — six were outside every layer (`70295a01d`)
+- 2026-09-09  fix(css): every rule is in a layer now — the ratchet closed to 0 the day it shipped (`7848f1d16`)
+- 2026-09-09  feat(css): the cascade order is declared, carried by every bundle, and enforced (`e13f4caf1`)
