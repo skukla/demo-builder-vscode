@@ -424,3 +424,7 @@ WHAT THIS LEAVES. The layer fix is correct in principle — unlayered normal bea
 - 2026-09-09  docs(css): ADR-018 §3 amended and adopted — reach, not global (`b6892b7b6`)
 - 2026-09-09  Merge loop/2026-09-08-css-migration: 96 CSS rules out of the god file, and the ADR corrected (`cac6c6ac5`)
 - 2026-09-09  docs(handoff): the overnight loop report (`ef817c543`)
+- 2026-09-09  fix(css): nine selectors declared twice in one sheet become one rule each (`ccecea6c9`)
+- 2026-09-09  refactor(css): the Add Integration modal and the wizard rail leave the god file (`8769cf12b`)
+- 2026-09-09  refactor(css): the comments come with the rules, and the sheets say who loads them (`5fb5456b5`)
+- 2026-09-09  fix(tooling): a compound selector is not entanglement, and cycle 3 paid for it (`3fae0f3ce`)
