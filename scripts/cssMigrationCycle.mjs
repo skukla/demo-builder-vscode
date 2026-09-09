@@ -368,23 +368,45 @@ async function bundleReach(prefixes) {
  */
 function orphanComments() {
     const text = readFileSync(join(ROOT, GOD_FILE), 'utf8');
+    const lines = text.split('\n');
     const rules = readRules(text);
     const present = new Set(rules.map((r) => r.prefix));
-    // A comment that DOCUMENTS a surviving rule but mentions a departed family is a
-    // cross-reference, not residue — "Match .brand-card-name so the two card
-    // families share a title scale" belongs exactly where it is. Counting those
-    // inflated this from 8 to 11 on the first run. Only a block with no rule
-    // beneath it is orphaned.
-    const documents = new Set(rules.filter((r) => r.docStart !== r.start).map((r) => r.docStart));
+    const ruleStart = new Set(rules.map((r) => r.start));
+
+    // Inside a rule BODY, and inside a comment. Both exclusions were learned by
+    // getting this number wrong twice on 2026-09-09: it read 11 by counting
+    // cross-references that document a surviving rule, then 9 by missing the ones
+    // separated by a blank line, then 7 by counting comments that explain a
+    // DECLARATION rather than a rule. A comment is orphaned only when nothing
+    // follows it — not when it explains something that is still there.
+    const inBody = new Array(lines.length).fill(false);
+    const inComment = new Array(lines.length).fill(false);
+    for (const r of rules) for (let i = r.start + 1; i < r.end; i++) inBody[i] = true;
+    for (const m of text.matchAll(/\/\*[\s\S]*?\*\//g)) {
+        const a = text.slice(0, m.index).split('\n').length - 1;
+        for (let i = a; i <= a + m[0].split('\n').length - 1; i++) inComment[i] = true;
+    }
+
     let n = 0;
     for (const m of text.matchAll(/\/\*[\s\S]*?\*\//g)) {
-        const line = text.slice(0, m.index).split('\n').length - 1;
-        if (documents.has(line)) continue;
+        const a = text.slice(0, m.index).split('\n').length - 1;
+        const b = a + m[0].split('\n').length - 1;
+        if (inBody[a]) continue;
         const fams = new Set([...m[0].matchAll(/\.([A-Za-z_][\w-]*-[\w-]+)/g)].map((x) => x[1].split('-')[0]));
-        if ([...fams].some((f) => !present.has(f) && !UTILITY_PREFIXES.has(f))) n++;
+        if (![...fams].some((f) => !present.has(f) && !UTILITY_PREFIXES.has(f))) continue;
+        let j = b + 1;
+        while (j < lines.length && (lines[j].trim() === '' || inComment[j])) j++;
+        const next = (lines[j] ?? '').trim();
+        // A DECLARATION beneath it means the comment sits inside a block this parser
+        // does not model — `:root`, an at-rule body — and it documents that
+        // declaration. `readRules` only sees selectors starting `.`, `#` or `[`, so
+        // the `--card-*` token block read as orphaned until this was added.
+        if (/^[-\w]+\s*:/.test(next)) continue;
+        if (!ruleStart.has(j)) n++;
     }
     return n;
 }
+
 
 /**
  * Selectors declared more than once in one sheet WITHOUT a conditional copy.

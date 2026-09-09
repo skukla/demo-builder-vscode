@@ -210,6 +210,22 @@ instrument that reports clean while seeing nothing.
    silently — surfaces still rendered from their init payloads, so it looked
    fine. A broken reply path presents as a slow surface.
 
+## Clear localStorage before a session, and use two fixed keys
+
+The harness serves from the same port every run, so every baseline any session ever
+stored is still there under that origin. On 2026-09-09 the fourteenth accumulated
+key tipped it over and the capture died with `QuotaExceededError: Setting the value
+of 'm-rest' exceeded the quota` — which reads as a broken instrument, not a full
+cupboard.
+
+```js
+await page.evaluate(() => localStorage.clear());
+```
+
+Then store under `vrBefore` and `vrBeforeInter` rather than a name per cycle. Two
+keys that get overwritten cannot accumulate, and the next session inherits nothing
+it has to reason about.
+
 ## Parse-compare the sheets before spending a browser run
 
 A CSS edit that is "only comments" can still be invalid, and an invalid sheet does

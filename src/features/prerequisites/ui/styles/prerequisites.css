@@ -102,6 +102,7 @@
 /* Merged 2 declarations of this selector that the sheet carried separately.
    Kept at the LAST one's position; for a property declared twice the winner
    survives (!important over plain, then later over earlier). */
+/* Smooth text content updates */
 .prerequisite-message {
     font-size: 12px !important;
     font-weight: 400 !important;
@@ -127,6 +128,10 @@
 /* Merged 2 declarations of this selector that the sheet carried separately.
    Kept at the LAST one's position; for a property declared twice the winner
    survives (!important over plain, then later over earlier). */
+/* ===========================================
+   Prerequisite-specific Classes
+   =========================================== */
+/* Prevent layout shift during transitions */
 .prerequisite-container {
     overflow-y: auto !important;
     overflow-x: hidden !important;
@@ -143,6 +148,7 @@
 /* Merged 3 declarations of this selector that the sheet carried separately.
    Kept at the LAST one's position; for a property declared twice the winner
    survives (!important over plain, then later over earlier). */
+/* Prevent jarring height changes */
 .prerequisite-item {
     padding: 12px !important;
     background-color: var(--spectrum-global-color-gray-75) !important;

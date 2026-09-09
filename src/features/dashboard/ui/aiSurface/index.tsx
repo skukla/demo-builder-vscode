@@ -9,6 +9,8 @@ import '@/core/ui/styles/custom-spectrum.css';
 // .ai-* rules, moved out of custom-spectrum.css by the CSS migration. Three
 // entries reach a component using them, so all three import it.
 import '../styles/ai.css';
+// .modal-* — the shared Modal shell.
+import '@/core/ui/styles/modal.css';
 import type { AiOverviewInitialData } from '@/types/webviewPayloads';
 
 const container = document.getElementById('root');

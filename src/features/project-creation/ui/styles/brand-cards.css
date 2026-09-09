@@ -239,6 +239,7 @@
 /* Merged 2 declarations of this selector that the sheet carried separately.
    Kept at the LAST one's position; for a property declared twice the winner
    survives (!important over plain, then later over earlier). */
+/* Expanded card hover - re-open modal */
 .expandable-brand-card.expanded:hover {
     transform: none !important;
     box-shadow: none !important;

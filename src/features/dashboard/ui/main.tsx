@@ -25,6 +25,8 @@ import './styles/ai.css';
 // .dashboard-* rules, moved out of custom-spectrum.css by the same migration.
 // This is the ONLY entry whose graph reaches a component using them.
 import './styles/dashboard.css';
+// .modal-* — the shared Modal shell.
+import '@/core/ui/styles/modal.css';
 
 // Get root element
 const container = document.getElementById('root');

@@ -23,6 +23,8 @@ import '../styles/eventing.css';
 import '@/features/project-creation/ui/styles/add-integration-flow.css';
 // .integration-* — the card and its detail panel.
 import '@/core/ui/styles/integration-cards.css';
+// .modal-* — the shared Modal shell.
+import '@/core/ui/styles/modal.css';
 
 const container = document.getElementById('root');
 if (!container) {

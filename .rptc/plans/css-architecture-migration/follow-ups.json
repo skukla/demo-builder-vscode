@@ -13,10 +13,10 @@
         {
             "id": "orphan-comments",
             "lane": "open",
-            "what": "Comment blocks in custom-spectrum.css that name a family which has left it AND have no rule beneath them.",
-            "why": "The mover took the rule and left the comment for the first eight cycles. 74 were reunited on 2026-09-09; 8 more were refused because the selector appeared more than once in the target sheet. Those duplicates were merged the same day, so a re-run should now place them.",
+            "what": "Comment blocks in custom-spectrum.css naming a departed family with NO rule beneath them.",
+            "why": "The mover took the rule and left the comment for the first eight cycles. 74 were reunited on 2026-09-09 and the remaining 8 on the same day once the duplicate selectors blocking them were merged. One is left: a tombstone reading '.brand-card-check retired — replaced by the shared .selection-check-corner', which belongs next to its replacement rather than where the deleted rule used to be.",
             "derive": "orphanComments",
-            "note": "The probe counts DANGLING blocks only. A comment that documents a surviving rule while mentioning a departed family is a cross-reference and belongs where it is — counting those read 11 where the honest answer is 8."
+            "note": "THIS PROBE WAS WRONG THREE TIMES before it was right, each time in the direction of looking worse: 11 by counting cross-references that document a surviving rule, 9 by missing the ones a blank line below their rule, 7 by counting comments that explain a DECLARATION rather than a rule. A comment is orphaned only when nothing follows it."
         },
         {
             "id": "tests-naming-sheets",

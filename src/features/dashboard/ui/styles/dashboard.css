@@ -258,6 +258,12 @@
 /* Merged 3 declarations of this selector that the sheet carried separately.
    Kept at the LAST one's position; for a property declared twice the winner
    survives (!important over plain, then later over earlier). */
+/* Labels clamp to two lines so a long label can never stretch a tile past its
+   square (the aspect-ratio is the uniform height; content overflow beats it). */
+/* Tile label — smaller to fit the compact tile. Wraps to multiple lines
+   instead of truncating with an ellipsis (Spectrum's Text otherwise clips
+   long labels like "Open in Browser" / "Manage Commerce"). */
+/* Labels for dashboard buttons (4-column layout) */
 .dashboard-action-button .icon-label {
     display: -webkit-box;
     -webkit-line-clamp: 2;

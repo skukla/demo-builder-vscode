@@ -34,6 +34,8 @@ import '../styles/add-integration-flow.css';
 import '../styles/wizard-timeline.css';
 // .integration-* — IntegrationCard lives in core/ui and three entries render it.
 import '@/core/ui/styles/integration-cards.css';
+// .modal-* — the shared Modal shell. Five of the eight entries render it.
+import '@/core/ui/styles/modal.css';
 import type { WizardInitialData } from '@/types/webviewPayloads';
 
 // Get root element
