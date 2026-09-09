@@ -33,6 +33,8 @@ import '../styles/integrations.css';
 import '@/features/project-creation/ui/styles/choice-cards.css';
 // .db-* — the shared detail drawer.
 import '@/core/ui/styles/drawer.css';
+// .inline-notice-*, .inline-rename-* — two small shared components.
+import '@/core/ui/styles/inline-controls.css';
 
 const container = document.getElementById('root');
 if (!container) {

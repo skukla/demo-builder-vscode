@@ -37,6 +37,8 @@ import './styles/integrations.css';
 import '@/core/ui/styles/drawer.css';
 // .two-* — the shared two-column layout's stacking breakpoint.
 import '@/core/ui/styles/two-column-layout.css';
+// .inline-notice-*, .inline-rename-* — two small shared components.
+import '@/core/ui/styles/inline-controls.css';
 
 // Get root element
 const container = document.getElementById('root');

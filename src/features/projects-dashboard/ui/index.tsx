@@ -31,6 +31,8 @@ import './styles/project-cards.css';
 import '@/core/ui/styles/shared-ui.css';
 // .db-* — the shared detail drawer.
 import '@/core/ui/styles/drawer.css';
+// .inline-notice-*, .inline-rename-* — two small shared components.
+import '@/core/ui/styles/inline-controls.css';
 
 // Local constant - webview cannot import TIMEOUTS from extension host
 // Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts

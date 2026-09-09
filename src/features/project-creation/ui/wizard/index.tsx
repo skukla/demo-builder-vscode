@@ -50,6 +50,8 @@ import '@/core/ui/styles/drawer.css';
 import '@/core/ui/styles/two-column-layout.css';
 // .build-* — the Build Your Project area and its summary column.
 import '../styles/build-areas.css';
+// .inline-notice-*, .inline-rename-* — two small shared components.
+import '@/core/ui/styles/inline-controls.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
 // .icon-* — the icon-above-label pattern.

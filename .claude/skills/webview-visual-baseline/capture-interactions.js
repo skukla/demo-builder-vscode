@@ -169,6 +169,33 @@ async function captureInteractions(page, { surfaces = SURFACES, base, theme = 'd
 /** Diff two interaction captures; returns the cells that moved, named by property. */
 function diffInteractions(before, after) {
     const moved = [];
+
+    // A SURFACE WITH A DIFFERENT ELEMENT COUNT INVALIDATES THE WHOLE COMPARISON,
+    // and saying so is the only useful answer. Keys are `surface|index|state`, so
+    // one element more or fewer shifts every index after it and every later cell
+    // reads as changed. On 2026-09-09 the integrations surface rendered 9
+    // interactive elements in a session's FIRST capture and 3 in every one after —
+    // 36 phantom differences, none of them real, and the report named none of them
+    // as a count problem. `capture.js`'s own diff has always refused this way; this
+    // one silently mis-aligned instead.
+    const perSurface = (o) => {
+        const c = new Map();
+        for (const k of Object.keys(o)) {
+            const s = k.split('|')[0];
+            c.set(s, (c.get(s) ?? 0) + 1);
+        }
+        return c;
+    };
+    const a = perSurface(before);
+    const b = perSurface(after);
+    const mismatched = [...a.keys()].filter((s) => a.get(s) !== (b.get(s) ?? 0));
+    if (mismatched.length) {
+        return mismatched.map((s) => ({
+            key: s,
+            note: `element count ${a.get(s) / 4} -> ${(b.get(s) ?? 0) / 4} — the surface rendered differently, so NOTHING here is comparable. Re-run; do not read the cells.`,
+        }));
+    }
+
     for (const key of Object.keys(before)) {
         if (!(key in after)) {
             moved.push({ key, note: 'MISSING from the later capture' });

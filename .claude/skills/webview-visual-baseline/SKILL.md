@@ -296,6 +296,11 @@ is what the ADR-018 audit found.
 
 ## Known gaps
 
+- **The integrations surface renders differently on a session's FIRST capture.**
+  Nine interactive elements once, three on every run after — reproducible on both
+  sides of a change, so it is fixture state, not a regression. `diffInteractions`
+  now refuses a surface whose element count moved rather than reporting the 36
+  phantom differences that shift produces; a count mismatch means re-run, not read.
 - **Three WIDTHS, one height.** The matrix varies width at 420/900/1280 and leaves
   the viewport height alone, so a `@media (max-height: ...)` rule is never
   exercised and an empty diff says nothing about it. The sidebar's short-panel

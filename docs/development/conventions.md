@@ -12,8 +12,8 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **89** conventions, **88** enforced
-- **20** name the decision record behind them
+- **90** conventions, **89** enforced
+- **21** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
 
@@ -92,7 +92,8 @@ it means the rule rests on somebody noticing.
 | Hooks are the webview's service layer. A component renders and handles interaction; the state machine, the calls to the host and the derived data live in a hook. | [ADR](../architecture/adr/017-webview-architecture.md) |  | *named in prose* |
 | One message channel per bundle, and it is a singleton. | [ADR](../architecture/adr/017-webview-architecture.md) |  | `messageChannelOwners` ledger |
 | A CSS class a component uses is defined somewhere. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts`<br>`classesDefinedNowhere` ledger |
-| A class used by shared components lives in a globally-loaded sheet, not in one bundle's stylesheet. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts` |
+| A class used by shared components lives in a sheet every bundle that RENDERS it loads. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts` |
+| A stylesheet lives where its OWNER lives, and there are three owners: a feature, a shared component, or the base layer. | [ADR](../architecture/adr/017-webview-architecture.md) |  | `stylesheet-bundles.test.ts` |
 | No inline styles. |  |  | `inline-styles.test.ts` |
 | Markup repeated in three or more places becomes a component. |  |  | `component-extraction.test.ts` |
 | A `HandlerContext` is built by a factory — `createPanelHandlerContext` or `createHeadlessHandlerContext` — never assembled as an object literal at the surface. |  |  | `handler-context-from-factory.test.ts` |

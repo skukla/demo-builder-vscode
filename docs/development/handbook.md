@@ -471,12 +471,24 @@ Know the difference before relying on it.
 > [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by the
 > `classesDefinedNowhere` ledger in `tests/sop/stylesheet-bundles.test.ts`.
 
-> **Convention.** A class used by shared components lives in a globally-loaded sheet, not
-> in one bundle's stylesheet.
+> **Convention.** A class used by shared components lives in a sheet every bundle that
+> RENDERS it loads.
 > *Why:* a shared component appears on several surfaces; a class defined in one bundle
-> styles it on that surface and nowhere else.
-> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by the cross-bundle
+> styles it on that surface and nowhere else. **Amended 2026-09-09** — this said
+> "a globally-loaded sheet", which was stricter than the check enforcing it and pinned
+> 321 feature rules in one file for a guarantee already provided. Reach, not global.
+> [ADR-018 §3](../architecture/adr/018-css-architecture.md) · Enforced by the cross-bundle
 > check in `tests/sop/stylesheet-bundles.test.ts`.
+
+> **Convention.** A stylesheet lives where its OWNER lives, and there are three owners: a
+> feature, a shared component, or the base layer.
+> *Why:* §6 says which bundles must LOAD a sheet and never said where the sheet should
+> sit, so for a year the answer was "the one file everything imports". A sheet under
+> `src/core/ui/styles/` may hold a class used by a shared component or by MORE THAN ONE
+> feature; a class used by exactly one feature belongs in that feature's directory.
+> [ADR-017 §7](../architecture/adr/017-webview-architecture.md) · Enforced by the
+> `stylesheetOwner` check in `tests/sop/stylesheet-bundles.test.ts`, with a
+> planted-violation control.
 
 #### Also checked here
 
@@ -1216,7 +1228,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 89 conventions. 88 of them are enforced; 1 is not.**
+**This handbook states 90 conventions. 89 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on
