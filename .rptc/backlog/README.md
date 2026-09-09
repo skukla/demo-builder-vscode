@@ -326,7 +326,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-44` | fix | └ [A lint probe planted inside tests/ races every suite that walks tests/](2026-09-05-lint-probe-races-every-tree-walker.md) | — | med | backlog |
 | `PL-51` | fix | [Test suites that rebuild a mock wall their family helper already owns](2026-09-08-suites-rebuilding-their-family-mock-wall.md) | — | med | active |
 | `PL-52` | fix | [A hook-proof suite fails under full parallel load and refuses pushes](2026-09-08-hook-proof-suite-flakes-under-load.md) | — | med | shipped |
-| `PL-53` | question | [351 of the god file's 647 classes appear in no source string](2026-09-09-god-file-classes-nothing-uses.md) | — | med | backlog |
+| `PL-53` | question | [351 of the god file's 647 classes appear in no source string](2026-09-09-god-file-classes-nothing-uses.md) | — | med | planned |
 
 <!-- END GENERATED registry -->
 

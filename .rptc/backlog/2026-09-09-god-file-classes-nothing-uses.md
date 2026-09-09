@@ -4,7 +4,7 @@ kind: question
 area: platform
 needs: []
 value: med
-status: backlog
+status: planned
 ---
 
 # 351 of the god file's 647 classes appear in no source string
@@ -84,3 +84,4 @@ every family move currently carries dead weight into a feature sheet.
 ## Shipped so far
 
 - nothing; this is a finding with a stated method, not started work.
+- 2026-09-09  SCHEDULED by the owner 2026-09-09. And two families have already been verified dead to this item's OWN level-1 bar (whole-name grep across src including .ts, with a positive control), while answering a different question about where to move them: .architecture-* is entirely dead — all 24 rules, and all 9 'architecture-' mentions in ts/tsx are COMMENTS ('architecture-duplication scan', 'architecture-dependent', 'css-architecture-migration'), zero are class names. .project-button-* is dead — 7 rules, zero mentions. Control: datapack- returns 82 mentions. That is 31 rules of the 351 candidates confirmed by direct evidence rather than by absence from a token scan. It also shows the token scan UNDER-states the problem in one direction and over-states it in another: .project-* looked like 33 users across 6 bundles, which was noise from every string containing 'project-'; decomposed by sub-family it is 36 projectsList-only rules plus 7 dead ones.

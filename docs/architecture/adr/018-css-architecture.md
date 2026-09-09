@@ -82,57 +82,50 @@ own JS, and no stylesheet rule beats an inline style. The rule is therefore
 narrow and strict: **"to override Spectrum" is not a justification.** A surviving
 `!important` carries a comment saying what it beats and why nothing else can.
 
-### 3. A class used by shared components lives in a globally-loaded sheet
+### 3. A class lives in a sheet every bundle that RENDERS it loads
+
+**AMENDED 2026-09-09, owner-adopted.** This previously required a class used by a
+`core/ui` component to live in a *globally-loaded* sheet. It now requires only
+what its own enforcer has always checked.
 
 `custom-spectrum.css`, `index.css` and `vscode-theme.css` reach every bundle;
-anything under `src/features/*/ui/styles/` does not. A component in `core/ui/`
-can render on any surface, so its classes must be defined where every surface
-loads them.
+anything under `src/features/*/ui/styles/` does not. The question is therefore not
+"could this component render anywhere" but "which entries actually reach it", and
+that is decided by the import graph.
 
-Enforced today by ADR-017 §6's `bundleStylesheets` check. Three violations were
-found and fixed on the day that check was written.
+**Why the old wording overshot.** It reasoned from POTENTIAL usage. Three things
+make actual usage knowable:
 
-### 3a. PROPOSED AMENDMENT, awaiting the owner — 2026-09-08
-
-**Not adopted. §3 above stands until the owner rules.**
-
-§3 says a class used by a `core/ui` component must live in a *globally-loaded*
-sheet. The proposal is to narrow it to: **a sheet every bundle that renders the
-component loads.**
-
-**Why the current wording overshoots.** It reasons from POTENTIAL usage — a core
-component "can render on any surface". Three things say the actual usage is
-knowable:
-
-1. The import graph determines exactly which of the eight entries reach a given
-   component. Used three times on 2026-09-08; it is how `.prerequisite-*` was
-   proved wizard-only.
-2. **Nothing is loaded dynamically** — zero uses of `React.lazy` or
-   `await import()` anywhere in `src/`. The static graph is the truth here, not
-   an approximation.
-3. **The failure §3 guards against is already caught automatically.** Verified by
-   planting it: a class defined only in a wizard-only sheet, used from a dashboard
-   component, fails `bundleStylesheets` by name and file —
+1. The import graph determines exactly which of the eight entries reach a
+   component. It is what proved `.prerequisite-*` wizard-only and `.eventing-*`
+   integrations-only during the 2026-09 migration.
+2. **Nothing is dynamically loaded** — zero uses of `React.lazy` or
+   `await import()` anywhere in `src/`. The static graph is the truth, not an
+   approximation.
+3. **The failure the old rule guarded against is caught automatically.** Verified
+   by planting it: a class defined only in a wizard-only sheet and used from a
+   dashboard component fails `bundleStylesheets` by name and file —
    `prerequisite-container @ dashboard:src/features/dashboard/ui/ProjectDashboardScreen.tsx`.
 
-**§3 is therefore stricter than its own enforcer**, which checks the narrower and
-correct condition: "a class used in a bundle is styled by that bundle" (ADR-017
-§6). A rule stricter than its enforcer is one people follow only by accident.
+The old rule was therefore stricter than the check enforcing it, and a rule
+stricter than its enforcer is one people follow only by accident. It also pinned
+321 of the god file's feature rules in place for a guarantee the enforcer already
+provides.
 
-**The cost of leaving it:** 321 of the god file's 660 feature rules are pinned
-there permanently, including the largest family (`.intflow-*`, 52 rules, blocked
-by `ApiAccessPicker` living in `core/ui/`).
+**The residual risk, stated rather than waved away.** `bundleStylesheets` reads
+class names statically, and 95 sites per bundle assemble them at runtime where it
+cannot look. That blind spot is real and bounded, and is ratcheted by
+`dynamicClassSiteCeiling`. It argues for keeping that ratchet tight, not for
+keeping half the CSS in one file.
 
-**The residual risk, stated:** `bundleStylesheets` reads class names statically,
-and 95 sites per bundle assemble them at runtime where it cannot look. That blind
-spot is real, bounded, and already ratcheted by `dynamicClassSiteCeiling`. It
-argues for keeping that ratchet tight, not for keeping half the CSS in one file.
+**What this does NOT license.** Moving a family whose consumers span several
+entries still means importing the sheet from EVERY one of them — `.ai-*` is
+imported by three. Check reach before moving, not after: a sheet placed where a
+consumer cannot see it is the `.text-orange-*` bug, and it renders as the colour
+simply not applying.
 
-**One honest argument for the current wording:** a single global sheet makes
-cascade order deterministic; split across feature sheets it depends on per-entry
-import order. Cycle 1 on 2026-09-08 showed how sharp that edge is. But that
-applies to all splitting, not specifically to core components, and the
-empty-diff requirement is what handles it.
+Enforced by ADR-017 §6's `bundleStylesheets` check, which is a BANNED list — it
+takes no exemptions, and an entry in it reads as reopening the ban.
 
 ### 4. A class a component uses must be defined somewhere
 
