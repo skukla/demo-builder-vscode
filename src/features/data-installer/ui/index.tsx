@@ -12,6 +12,11 @@ import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/custom-spectrum.css';
+// .datapack-* rules, moved out of custom-spectrum.css by the CSS migration.
+// The wizard and the data installer both render a component using them; kept
+// separate from data-installer.css so the wizard does not drag in that
+// surface's unrelated rules.
+import './styles/datapack.css';
 // Feature-scoped: this is the ONLY entry that loads it, so its classes exist in
 // this bundle and nowhere else.
 import './styles/data-installer.css';

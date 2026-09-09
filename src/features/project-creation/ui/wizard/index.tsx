@@ -7,6 +7,11 @@ import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/custom-spectrum.css';
+// .datapack-* rules, moved out of custom-spectrum.css by the CSS migration.
+// The wizard and the data installer both render a component using them; kept
+// separate from data-installer.css so the wizard does not drag in that
+// surface's unrelated rules.
+import '@/features/data-installer/ui/styles/datapack.css';
 // The .prerequisite-* rules, moved out of custom-spectrum.css by the CSS
 // migration (.rptc/plans/css-architecture-migration). The wizard is the only
 // entry whose import graph reaches PrerequisitesStep.
