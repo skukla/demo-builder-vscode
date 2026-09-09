@@ -93,7 +93,78 @@ wins. So an `!important` surviving in a low `vendor` layer would beat an
 surviving one harder to reason about. This is already in the repo's CLAUDE.md and
 it is why the sweep must follow the layer fix rather than precede it.
 
-## Problem 2: co-location is right, and it is a separate change
+## Correction: co-location + CSS Modules is NOT the industry standard
+
+An earlier draft of this document, and my recommendation before the final lane
+returned, said co-location + CSS Modules was "the standard". **That is wrong.**
+Across 25 repositories cloned and measured, it is one of five approaches and
+accounts for about 5 of them:
+
+| approach | count |
+|---|---|
+| the design system's own styling API, near-zero CSS files | 7 |
+| co-located plain CSS/SCSS, globally scoped | 7 |
+| CSS-in-JS in the component file | 5 |
+| co-located CSS Modules | 5 |
+| Tailwind utilities in JSX | 3 |
+| one central stylesheet per bundle | 1 |
+
+**The best predictor of what a project does is not best practice — it is how much
+styling the design system already does for it.**
+
+**And co-location never means one stylesheet per component.** The largest React
+apps have almost none at all. Measured here on a real clone: Grafana has **3,056
+component files and 13 stylesheets** (the research lane reported 4,345 and 3 —
+different exclusions; the ratio is the finding, not the digits). Where
+per-component styles do exist they are thin: ~13% of components in Saleor, ~9% in
+OpenShift.
+
+**This corrects a recommendation I made earlier**: that step 2 should aim at
+component-owned sheets rather than feature-owned ones. The evidence says the
+opposite — feature- or area-level sheets are what real projects settle on, which
+is what the existing plan already does. No change to step 2 is needed.
+
+## THE reference point: `backstage/packages/ui`
+
+The closest analogue found to this codebase's situation, because it is built on
+`react-aria-components` — the same headless layer Adobe Spectrum sits on.
+Measured here from a clone:
+
+| | |
+|---|---|
+| CSS files | **78** |
+| using `@layer` | **77** |
+| `.module.css` | 51 |
+| **`!important`** | **0** |
+
+Zero. Across a whole design system built on the same foundation as Spectrum, with
+cascade layers on all but one file.
+
+It also solves the hashed-class problem Primer filed as `adr-023` ("Module hashes
+are not stable across versions, leaving no reliable selector to target") by
+emitting **both** the hashed class and a stable literal `bui-Button`, and putting
+variants on `data-*` attributes.
+
+## A third technique this research surfaced
+
+Not layers, not `!important`: **double the class name**. From Deephaven, a real
+React Spectrum consumer, verified verbatim at
+`packages/components/src/theme/theme-spectrum/theme-spectrum-alias.module.css:5-8`:
+
+> "Intentionally using the classname twice so we have higher specificity than
+> spectrum's definitions. This is to ensure that our overrides are applied
+> regardless of CSS chunk loading order"
+
+```css
+.dh-spectrum-alias.dh-spectrum-alias { ... }
+```
+
+`.x.x` is specificity 0-2-0, which beats the 24.5% of Spectrum selectors at 0-1-0
+and ties the 28.8% at 0-2-0 — and unlike a layer it is immune to load order. It
+does not beat the 0-3-0 and higher rules, so it is a partial answer, but it is
+cheap and local, and worth knowing as a per-rule escape hatch.
+
+## Problem 2: co-location is a separate, lower-priority change
 
 ### What comparable projects actually do — verified by cloning them
 
