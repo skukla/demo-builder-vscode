@@ -300,8 +300,8 @@
 }
 }
 
-.datapack-import-scope > [data-testid='spectrum-picker-wrapper'],
 @layer theme {
+.datapack-import-scope > [data-testid='spectrum-picker-wrapper'],
 .datapack-import-scope > div {
     min-width: 0;
 }

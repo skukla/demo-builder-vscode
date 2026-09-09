@@ -83,4 +83,13 @@
 .sum-check {
     animation: sum-check-in var(--db-motion-base) var(--db-motion-ease);
 }
+
+/* Completion feedback: the shared ✓ renders only when a row is done, so it mounts
+ * on completion and this pop fires once — a subtle reward as each sub-step lands.
+ * Zeroed under the global prefers-reduced-motion reset. Moved here from
+ * custom-spectrum.css 2026-09-09 to sit with the rule that names it. */
+@keyframes sum-check-in {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
+}
 }

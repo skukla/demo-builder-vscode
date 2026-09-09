@@ -97,6 +97,15 @@
     animation: vsteplist-step-enter var(--db-motion-slow) var(--db-motion-ease);
 }
 
+/* The animation the rule above names. It sat in custom-spectrum.css until
+   2026-09-09, four hundred lines from its only user and reaching all eight
+   bundles to serve two. A @keyframes is resolved by NAME, so it has to live in a
+   sheet the consuming bundle loads — which is exactly this one. */
+@keyframes vsteplist-step-enter {
+    from { opacity: 0; max-width: 0; }
+    to { opacity: 1; max-width: 12rem; }
+}
+
 .vsteplist-step[aria-disabled='true'] {
     cursor: default !important;
     color: var(--spectrum-global-color-gray-500) !important;

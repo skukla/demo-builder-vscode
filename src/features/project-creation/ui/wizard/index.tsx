@@ -24,7 +24,7 @@ import '@/features/prerequisites/ui/styles/prerequisites.css';
 import '../styles/brand-cards.css';
 // .int-* (integration flow) and .sum-* (build summary), moved out of
 // custom-spectrum.css by the CSS migration. Wizard-only families.
-import '../styles/integration-flow.css';
+import '../styles/integration-results.css';
 import '../styles/build-summary.css';
 // .intflow-* — the Add Integration modal. TWO entries render it; the dedicated
 // integrations surface imports this same sheet.

@@ -8,7 +8,7 @@
  * the same modal through AddIntegrationFlowAdapter. Both import it; the other six
  * bundles must not, and no component outside those two may use these names.
  *
- * NOT integration-flow.css, which holds `.int-*` — the RESULTS list on the wizard
+ * NOT integration-results.css, which holds `.int-*` — the RESULTS list on the wizard
  * step, wizard-only. Two families, two audiences, two sheets.
  *
  * `.manage-apis-body .intflow-api-picker` stays in custom-spectrum.css: it is a

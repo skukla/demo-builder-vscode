@@ -4,9 +4,10 @@
  * FEATURE-SCOPED (ADR-017 §6). Imported by the `wizard` entry ALONE — the only one
  * whose graph reaches IntegrationsStep.
  *
- * NOT the Add Integration modal. That journey is `.intflow-*`, which is still in
- * custom-spectrum.css and reaches two entries; the filename predates the split and
- * is wider than what the sheet holds.
+ * NOT the Add Integration modal. That journey is `.intflow-*` and lives in
+ * add-integration-flow.css, which the wizard and integrations entries both import.
+ * This file was called integration-flow.css until 2026-09-09 — a name wider than
+ * its contents, sitting next to the sheet that actually holds the flow.
  *
  * Moved out of custom-spectrum.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), each rule with the comment above it.

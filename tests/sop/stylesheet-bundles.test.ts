@@ -26,8 +26,9 @@
  */
 
 import { execSync } from 'child_process';
-import { existsSync, readFileSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { existsSync, readFileSync, readdirSync, writeFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { join, relative } from 'path';
 import { reportBundleClassUsage, type UsageReport } from './webviewBundleClasses';
 import { loadLedger, expectBanned, expectClean, expectCeiling, expectFloor } from './architectureScan';
 
@@ -101,6 +102,93 @@ describe('ADR-017 §6: a class used in a bundle is styled by that bundle', () =>
         // unreadable sites means less of the surface is actually checked.
         // A pin left above an improved count lets the blind spot grow back to it.
         expectCeiling(LEDGER, 'dynamicClassSiteCeiling', report.dynamicSites);
+    });
+});
+
+describe('every stylesheet PARSES — a rule the browser drops is not a rule', () => {
+    /**
+     * A comma-separated selector list interrupted by an at-rule.
+     *
+     * The migration's mover wraps each rule in `@layer theme { ... }`, and it
+     * found rules by their BRACE line. A selector list written across several
+     * lines has its brace on the last one, so the wrapper landed in the middle:
+     *
+     *     .manage-apis-body .intflow-api-picker,
+     *     @layer theme {                          <-- the list never closes
+     *     .manage-apis-body .intflow-api-scroll { ... }
+     *
+     * Chrome keeps ZERO rules from that. Measured 2026-09-09 in a real browser
+     * against the correct form as a control: flex-grow 0 (initial) versus 1.
+     * Three sheets shipped this way — shared-ui, data-installer and
+     * connect-services — and nothing anywhere failed, because esbuild injects
+     * CSS as a string and never parses it, and the visual baseline had captured
+     * the broken state as the "before".
+     *
+     * This is a PARSE check, not a style opinion, which is why it has no ledger:
+     * there is no such thing as a grandfathered unparseable rule.
+     */
+    const SHEETS = execSync('git ls-files "*.css"', { cwd: ROOT, encoding: 'utf8' })
+        .split('\n')
+        .filter((f) => f && !f.includes('node_modules'));
+
+    /** Blank out comments, keeping line numbers so a hit can be cited. */
+    const stripComments = (text: string): string => {
+        let out = '';
+        for (let i = 0; i < text.length; ) {
+            if (text.startsWith('/*', i)) {
+                const close = text.indexOf('*/', i + 2);
+                const end = close < 0 ? text.length : close + 2;
+                out += text.slice(i, end).replace(/[^\n]/g, ' ');
+                i = end;
+            } else {
+                out += text[i];
+                i++;
+            }
+        }
+        return out;
+    };
+
+    const scan = (sheets: string[]): { broken: string[]; continued: number } => {
+        const broken: string[] = [];
+        let continued = 0;
+        for (const f of sheets) {
+            const lines = stripComments(readFileSync(join(ROOT, f), 'utf8')).split('\n');
+            for (let i = 0; i < lines.length - 1; i++) {
+                if (!lines[i].trimEnd().endsWith(',')) continue;
+                continued++;
+                let j = i + 1;
+                while (j < lines.length && lines[j].trim() === '') j++;
+                if ((lines[j] ?? '').trim().startsWith('@')) {
+                    broken.push(`${f}:${i + 1} — selector list broken by ${lines[j].trim()}`);
+                }
+            }
+        }
+        return { broken, continued };
+    };
+
+    it('no selector list is interrupted by an at-rule', () => {
+        const { broken, continued } = scan(SHEETS);
+        // Control: multi-line selector lists must EXIST, or this passes on nothing.
+        expect(continued).toBeGreaterThan(20);
+        expect(broken.sort()).toStrictEqual([]);
+    });
+
+    it('CONTROL: the scan detects the shape it is looking for', () => {
+        // The exact text that shipped, so a rewrite of `scan` that stops seeing
+        // it fails here rather than reporting the corpus clean.
+        const planted = join(tmpdir(), `planted-${process.pid}.css`);
+        writeFileSync(
+            planted,
+            '.a .b,\n@layer theme {\n.a .c {\n    flex: 1 1 auto;\n}\n}\n'
+        );
+        try {
+            const rel = relative(ROOT, planted);
+            const { broken } = scan([rel]);
+            expect(broken).toHaveLength(1);
+            expect(broken[0]).toContain('@layer theme {');
+        } finally {
+            unlinkSync(planted);
+        }
     });
 });
 

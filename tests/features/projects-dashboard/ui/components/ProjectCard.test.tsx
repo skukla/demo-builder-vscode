@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ProjectCard } from '@/features/projects-dashboard/ui/components/ProjectCard';
 import { createProjectsDashboardProject, createRunningProject } from '../../testUtils';
+import { ruleFor, declares } from '../../../../helpers/cssRules';
 
 // Wrap component with Spectrum Provider
 const renderWithProvider = (ui: React.ReactElement) => {
@@ -244,17 +245,15 @@ describe('ProjectCard', () => {
         // the summary was doing the same job one element earlier. Unlike the
         // margin, THIS one is a stylesheet rule, so it is observable here.
         it('does not let the stack summary absorb the card height', () => {
-            const css = require('fs').readFileSync(
-                'src/core/ui/styles/custom-spectrum.css',
-                'utf8'
-            ) as string;
-            const start = css.indexOf('.project-card-spectrum-components {');
-            // Comments stripped first: the rule's own comment explains why there is
-            // no flex-grow, and matching that text would make this pass on prose.
-            const rule = css.slice(start, css.indexOf('}', start)).replace(/\/\*[\s\S]*?\*\//g, '');
+            // Read through the shared helper, which searches EVERY sheet and THROWS
+            // when a selector is absent. It used to open custom-spectrum.css by
+            // path, and `.project-*` moved to project-cards.css on 2026-09-09 —
+            // `indexOf` returned -1, the slice produced an empty string, and both
+            // assertions below passed on "". Vacuously green, found 2026-09-09.
+            const rule = ruleFor('.project-card-spectrum-components');
 
+            expect(declares(rule, 'flex-grow')).toBe(false);
             expect(rule).not.toMatch(/flex:\s*1/);
-            expect(rule).not.toMatch(/flex-grow/);
         });
 
         it('lists runtime first, then deployment', () => {

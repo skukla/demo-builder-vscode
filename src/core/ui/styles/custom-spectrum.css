@@ -257,8 +257,6 @@ button[class*="spectrum-Button"][disabled],
  * Expandable Brand Cards
  * ======================================== */
 
-/* .brand-card-check retired — replaced by the shared .selection-check-corner. */
-
 @keyframes fadeInDown {
     from {
         opacity: 0;
@@ -415,17 +413,6 @@ button[class*="spectrum-Button"][disabled],
 /* Note: .animate-fade-in and @keyframes fadeIn defined in utility section above */
 
 /* Node version status lines transitions */
-/* Merged 2 declarations of this selector that the sheet carried separately.
-   Kept at the LAST one's position; for a property declared twice the winner
-   survives (!important over plain, then later over earlier). */
-.node-version-line {
-    font-size: 12px !important;
-    font-weight: 400 !important;
-    line-height: 18px !important;
-    display: block !important;
-    transition: opacity 0.3s ease, color 0.3s ease !important;
-    animation: fadeIn 0.3s ease;
-}
 
 /* Text color for errors */
 .text-red-700 { color: var(--spectrum-global-color-red-700) !important; }
@@ -445,69 +432,6 @@ button[class*="spectrum-Button"][disabled],
     justify-content: flex-end !important;
 }
 
-/* =========================================================================
-   Project Builder — component overview
-   A calm, flat list of component rows (icon · role · value · right-side state).
-   Editing a component opens a focused modal (the shared Modal in a
-   DialogContainer). The step uses the wizard footer — no own footer, no card,
-   no sub-progress. All theme values come from Spectrum tokens.
-   ========================================================================= */
-
-/* Separate cards (matches .architecture-modal-options) — NOT one bordered list. */
-
-/* One component card — matches the existing .architecture-modal-option treatment. */
-
-/* =========================================================================
- * Project Builder — Commerce: StepRail (.vsteplist*) + [rail / view]
- * column (.commerce-body) + dedicated view (.step-view) + BuildYourProjectSummary (.sum*).
- * Adapted to Spectrum design tokens so the surface follows the active
- * (light/dark) theme.
- * ========================================================================= */
-
-@keyframes vsteplist-step-enter {
-    from { opacity: 0; max-width: 0; }
-    to { opacity: 1; max-width: 12rem; }
-}
-/* =========================================================================
- * Commerce nav — RESPONSIVE (CSS-only). Reuses the wizard's ESTABLISHED
- * viewport breakpoints (1180 = TwoColumnLayout stack; 600 = smallest). No
- * new breakpoints invented. Above 1180px the vertical nav panel is unchanged.
- * ========================================================================= */
-
-/* ≤1180px — the sub-step strip + stacked layout are now the DEFAULT (see the base
- * .commerce-body / .step-nav / .vsteplist rules above), so this breakpoint only
- * still drops the summary: at this width the area body owns the space and the
- * stacked summary block just adds clutter. Scoped to the Build layout
- * (.build-two-col) so other TwoColumnLayout consumers keep their stacked summary. */
-
-/* Completion feedback: the shared ✓ renders only when a row is done, so it mounts
- * on completion and this pop fires once — a subtle reward as each sub-step lands.
- * Zeroed under the global prefers-reduced-motion reset. */
-@keyframes sum-check-in {
-    from { opacity: 0; transform: scale(0.6); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-/* --------------------------------------------------------------------------
- * Integrations — results-only center column (.int-results / .int-destination /
- *   the shared .integration-card)
- * + the one-modal Add Integration journey (.intflow-*).
- *
- * Dark-minimal wizard language: plain divs, gray-50 surfaces, quiet gray-300
- * borders, 8px radius — the wizard card-family language carried into this anatomy.
- * The Modal's .modal-content owns scrolling and its footer is sticky; the
- * stage body only reserves height so stage swaps don't jump the footer.
- * ------------------------------------------------------------------------ */
-
-
-/* ---- Dedicated integrations surface ----
- * The page shell is PageLayout + PageHeader and the content band is
- * `.page-container-padded` (the canonical --content-width band), so this file
- * carries NO page padding, breadcrumb, or banner rules — those were bespoke
- * re-implementations of shared primitives and were removed. */
-
-
-/* Count rides the bottom-right, out of the label's way. */
 } /* End of second @layer theme block */
 
 /* ============================================

@@ -71,6 +71,7 @@
 }
 
 /* Pin to the card's top-right (for whole-card selects); the card is position:relative. */
+/* Replaces the retired .brand-card-check, which is what expandable brand cards used. */
 .selection-check-corner {
     position: absolute;
     top: var(--spectrum-global-dimension-size-200);
@@ -497,8 +498,8 @@
 }
 }
 
-.manage-apis-body .intflow-api-picker,
 @layer theme {
+.manage-apis-body .intflow-api-picker,
 .manage-apis-body .intflow-api-scroll {
     flex: 1 1 auto;
     min-height: 0;

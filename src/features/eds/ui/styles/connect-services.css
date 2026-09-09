@@ -214,8 +214,8 @@
     font-size: 12px !important;
 }
 }
-.dalive-namespace-picker button,
 @layer theme {
+.dalive-namespace-picker button,
 .dalive-namespace-picker button span {
     font-size: 13px !important;
     font-weight: 400 !important;

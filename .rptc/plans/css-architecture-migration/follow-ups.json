@@ -4,48 +4,50 @@
     "items": [
         {
             "id": "dead-families",
-            "lane": "blocked",
+            "lane": "decided",
             "what": "33 families, 114 rules, that NO bundle renders. Neither movable nor provably dead.",
             "why": "A visual diff cannot tell a dead class from one that only renders inside a dialogue the fixtures never open. Deleting on a diff alone is the one action in this migration the instrument cannot validate.",
-            "blockedOn": "PL-53 — its level-1 bar is a whole-name grep across src/ with comments excluded, plus a positive control.",
-            "derive": "deadRules"
+            "derive": "deadRules",
+            "note": "CLOSED 2026-09-09. PL-53 shipped and answered it: 254 rules deleted against its level-1 bar, and the last two survivors — .node-version-line and .section-label — went the same day, each probed by exact token with three positive controls at the same scope (intflow-section-label returns 1, which is what proves the probe is not matching substrings). The DEAD? lane is empty."
         },
         {
             "id": "orphan-comments",
-            "lane": "open",
+            "lane": "decided",
             "what": "Comment blocks in custom-spectrum.css naming a departed family with NO rule beneath them.",
             "why": "The mover took the rule and left the comment for the first eight cycles. 74 were reunited on 2026-09-09 and the remaining 8 on the same day once the duplicate selectors blocking them were merged. One is left: a tombstone reading '.brand-card-check retired — replaced by the shared .selection-check-corner', which belongs next to its replacement rather than where the deleted rule used to be.",
             "derive": "orphanComments",
-            "note": "THIS PROBE WAS WRONG THREE TIMES before it was right, each time in the direction of looking worse: 11 by counting cross-references that document a surviving rule, 9 by missing the ones a blank line below their rule, 7 by counting comments that explain a DECLARATION rather than a rule. A comment is orphaned only when nothing follows it."
+            "note": "CLOSED 2026-09-09 at 0. Seven, not the one this row claimed — the probe was right and the prose was stale. Six were section headers in one 64-line stretch whose families had all left, and they hid two @keyframes that should have travelled with their rules: vsteplist-step-enter -> vstep-list.css and sum-check-in -> build-summary.css, each with exactly one user. A @keyframes resolves by NAME, so it must sit in a sheet the consuming bundle loads; verified in the built bundles that both now reach exactly the entries that use them (wizard+configure, wizard) instead of all eight. The .brand-card-check tombstone moved next to its replacement in shared-ui.css. `--orphans` now PRINTS the list, because a probe that returns only a number cannot be acted on and this one had been wrong four times."
         },
         {
             "id": "tests-naming-sheets",
-            "lane": "open",
+            "lane": "decided",
             "what": "Test suites that read a stylesheet BY PATH instead of using tests/helpers/cssRules.ts.",
             "why": "They assert on where a rule LIVES as much as on what it says, and this migration moves rules between sheets by design. Four suites have broken this way on moves that changed no rendering at all. Two more broke on the .page-* move on 2026-09-09 — pageContentAlignment and destinationRowType, each carrying its own copy of ruleFor — and were converted. That is six of the six that have ever broken; the rest either use the helper or read the sheet as data on purpose.",
-            "note": "Three of the hits are legitimate and must stay: layerDeclarations.test.ts owns cascade-order questions and needs the raw file, and the two sop suites read the sheet as data. Read the list; do not chase the number to zero.",
+            "note": "CLOSED 2026-09-09. The count of 13 was a grep for the FILENAME, which mostly caught comments recording an earlier conversion. Exactly one suite still read a sheet by path — ProjectCard.test.tsx — and it had gone VACUOUS: it opened custom-spectrum.css for `.project-card-spectrum-components`, which moved to project-cards.css on 2026-09-09, so indexOf returned -1, the slice produced '' and both assertions passed on an empty string. Converted to tests/helpers/cssRules.ts, which THROWS on a missing selector. Proved non-vacuous by planting flex-grow:1 and watching it fail. The other three hits are the legitimate ones this row already named.",
             "probe": "grep -rl custom-spectrum.css tests/ --include='*.ts' --include='*.tsx' | wc -l"
         },
         {
             "id": "sheet-header-todo",
-            "lane": "open",
+            "lane": "decided",
             "what": "A generated sheet header still carrying the placeholder instead of its entry list.",
             "why": "The mover writes the header BEFORE the imports are added, so it cannot know the entries. Reach is the property ADR-017 section 6 turns on and the one a reader cannot get from the file itself.",
-            "probe": "grep -rl 'name them here' src/ --include='*.css' | wc -l"
+            "probe": "grep -rl 'name them here' src/ --include='*.css' | wc -l",
+            "note": "CLOSED 2026-09-09 at 0 — every generated sheet header names its entry list. The probe stays; it is how a new sheet with a placeholder header gets caught."
         },
         {
             "id": "integration-flow-filename",
-            "lane": "open",
+            "lane": "decided",
             "what": "src/features/project-creation/ui/styles/integration-flow.css holds only `.int-*`, the results LIST. The Add Integration flow is `.intflow-*` and lives in add-integration-flow.css.",
             "why": "The name predates the split and is wider than the file's contents, which is exactly the kind of thing the next person reads as authoritative. A rename is cheap and touches one import.",
-            "probe": "grep -rl integration-flow.css src/features/project-creation/ui/wizard/ | wc -l"
+            "probe": "grep -rl integration-flow.css src/features/project-creation/ui/wizard/ | wc -l",
+            "note": "CLOSED 2026-09-09 — renamed to integration-results.css. One import, plus cross-references in its own header and in add-integration-flow.css, which still described the .intflow-* family as living in custom-spectrum.css."
         },
         {
             "id": "manage-apis-leftover",
-            "lane": "blocked",
+            "lane": "decided",
             "what": "`.manage-apis-body .intflow-api-picker` is still in custom-spectrum.css after .intflow-* left.",
             "why": "It is a `.manage-*` rule that styles intflow elements as descendants, so it belongs to that family and moves when `.manage-*` does. Correct as it stands, recorded so it is not mistaken for an incomplete move.",
-            "blockedOn": "the .manage-* cycle (2 rules, dashboard+integrations+wizard)"
+            "note": "CLOSED 2026-09-09, and it found a SHIPPED BUG rather than a leftover. The .manage-* rules had already left for shared-ui.css with the shared-ui batch, so this row was stale. What was still true is worse: `.manage-apis-body .intflow-api-picker,` sat on its own line with `@layer theme {` inserted BELOW it, splitting a comma-separated selector list with an at-rule. Chrome keeps ZERO rules from that shape — measured in a real browser against the correct form as a control (flex-grow 0 vs 1). Three sheets shipped it (shared-ui, data-installer, connect-services) and nothing caught it: esbuild injects CSS as a string and never parses it, and the visual baseline had captured the broken state as its own 'before'. All three fixed; a parse check with a planted control now lives in tests/sop/stylesheet-bundles.test.ts, and control R in the mover's --selftest pins that a multi-line selector list starts at its FIRST line."
         },
         {
             "id": "duplicate-selectors",
@@ -63,17 +65,18 @@
         },
         {
             "id": "steps-3-and-4",
-            "lane": "blocked",
+            "lane": "open",
             "what": "Flip the cascade per feature sheet (step 3), then sweep !important (step 4).",
             "why": "Step 3 is where the 762 moved elements arrive, in reviewable batches, and it needs the owner per surface. PL-33 is blocked on it too: its 'vendor CSS sits in the lowest cascade layer' convention cannot be enforced until it is true. Stopping after step 2 remains a legitimate destination.",
-            "blockedOn": "an owner decision, per the plan overview"
+            "blockedOn": "step 4 only. Step 3 is UNDER WAY, one entry at a time.",
+            "note": "STEP 3 STARTED 2026-09-09 with the sidebar, at the owner's instruction to try it before the release rather than after. The build's CSS plugin is now a factory and the webview build is two contexts; `LAYERED_VENDOR_ENTRIES` in esbuild.config.js names which entries get Spectrum wrapped in @layer vendor, and tests/sop/stylesheet-bundles.test.ts pins both that list and the order string against the sheets. RESULT: ZERO of 276 elements moved — sidebar, 2 themes x 3 widths, 46 elements each. Controls: the vendor layer confirmed live in the captured document (16 blocks, 20 order declarations, the CSSOM parses the statement); a width comparison on the same data reported 4 changes; a tampered value was detected. NOT MEASURED: interaction states. 8 hover/focus rules reach this bundle, and capture-interactions.js threw its forcing control — identically on the UNLAYERED control build, so the instrument is at fault and not the change. That gap is written up in the webview-visual-baseline skill. NEXT ENTRY: pick the next smallest and repeat; step 4 (the !important sweep, 1,309) stays blocked until enough entries are layered that removing one cannot promote a Spectrum rule on an unlayered surface."
         },
         {
             "id": "section-label-has-no-user",
-            "lane": "open",
+            "lane": "decided",
             "what": "`.section-label` sits in src/core/ui/styles/step-scaffold.css and no feature or shared component uses it.",
             "why": "Found by the ADR-017 §7 enforcer on 2026-09-09, which skips zero-user classes rather than reporting them as misplaced — placement and deadness are different defects. It belongs with the 33 dead families, but it is now in a core sheet rather than the god file, so a sweep of the god file alone will miss it.",
-            "blockedOn": "PL-53, same bar as the other dead families"
+            "note": "CLOSED 2026-09-09 — deleted. Its only lookalike user is .intflow-section-label, a different class in a different sheet."
         }
     ]
 }

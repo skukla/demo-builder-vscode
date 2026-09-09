@@ -404,7 +404,10 @@ function orphanComments() {
         for (let i = a; i <= a + m[0].split('\n').length - 1; i++) inComment[i] = true;
     }
 
-    let n = 0;
+    // Returns the LIST, not a count. The follow-up row for this says "read the
+    // list" — a bare number cannot be acted on, and this probe was wrong three
+    // times in a row while its number looked perfectly plausible.
+    const found = [];
     for (const m of text.matchAll(/\/\*[\s\S]*?\*\//g)) {
         const a = text.slice(0, m.index).split('\n').length - 1;
         const b = a + m[0].split('\n').length - 1;
@@ -419,9 +422,15 @@ function orphanComments() {
         // declaration. `readRules` only sees selectors starting `.`, `#` or `[`, so
         // the `--card-*` token block read as orphaned until this was added.
         if (/^[-\w]+\s*:/.test(next)) continue;
-        if (!ruleStart.has(j)) n++;
+        if (!ruleStart.has(j)) {
+            found.push({
+                line: a + 1,
+                families: [...fams].filter((f) => !present.has(f) && !UTILITY_PREFIXES.has(f)),
+                head: m[0].split('\n')[0].replace(/^\/\*+\s*/, '').slice(0, 70),
+            });
+        }
     }
-    return n;
+    return found;
 }
 
 
@@ -537,7 +546,7 @@ async function cmdWorklist() {
 
     printFollowUps({
         deadRules: rows.filter((r) => r.lane === 'dead?').reduce((a, b) => a + b.n, 0),
-        orphanComments: orphanComments(),
+        orphanComments: orphanComments().length,
         duplicateSelectors: duplicateSelectors(),
     });
 }
@@ -1058,6 +1067,24 @@ function cmdSelfTest() {
         qBlock.inside.some((r) => r.prefix !== qRules[0].prefix),
         `open ${qBlock.open}, end ${qBlock.end}, inside ${qBlock.inside.map((r) => r.prefix).join('+')}`);
 
+    // R: a multi-line selector list is ONE rule that starts at its FIRST line.
+    //    If `start` lands on the `{` line instead, the emitter's `@layer theme {`
+    //    wrapper is written INTO the middle of the list and the browser drops the
+    //    whole rule — Chrome keeps zero rules from that shape, measured 2026-09-09
+    //    against the correct form (flex-grow 0 vs 1). Three sheets shipped it, and
+    //    nothing caught it: esbuild injects CSS as a string without parsing, and
+    //    the visual baseline had captured the broken state as its "before".
+    const multiLineList = [
+        '.manage-apis-body .intflow-api-picker,',
+        '.manage-apis-body .intflow-api-scroll {',
+        '    flex: 1 1 auto;',
+        '}',
+    ].join('\n');
+    const r = readRules(multiLineList);
+    check('R-a-multi-line-selector-list-starts-at-its-first-line',
+        r.length === 1 && r[0].start === 0 && r[0].end === 3,
+        `rules ${r.length}, start ${r[0]?.start}, end ${r[0]?.end}`);
+
     // D: the CONTROL on the controls — a deliberately broken expectation must FAIL,
     //    or all of the above could be passing vacuously.
     const d = readRules('.only-one { color: red; }');
@@ -1078,8 +1105,19 @@ else if (cmd === '--move') {
 } else if (cmd === '--verify') cmdVerify(rest[0], rest[1], rest[2]);
 else if (cmd === '--check') cmdCheck();
 else if (cmd === '--leftovers') cmdLeftovers(rest[0]);
+else if (cmd === '--orphans') {
+    // The list behind the worklist's orphan-comment count. A number cannot be
+    // acted on and this probe was wrong three times while its number looked fine.
+    const found = orphanComments();
+    console.log(`${found.length} comment block(s) naming a departed family with no rule beneath\n`);
+    for (const o of found) {
+        console.log(`  ${GOD_FILE}:${o.line}  [${o.families.join(', ')}]`);
+        console.log(`      ${o.head}`);
+    }
+}
 else {
     console.log('usage: cssMigrationCycle.mjs --next | --worklist | --move <prefix> --to <path>');
-    console.log('       --verify <prefix> <sheet> <ref> | --check | --leftovers <prefix> | --selftest');
+    console.log('       --verify <prefix> <sheet> <ref> | --check | --leftovers <prefix>');
+    console.log('       --orphans | --selftest');
     process.exit(2);
 }

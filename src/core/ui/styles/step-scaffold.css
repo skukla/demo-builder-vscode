@@ -207,15 +207,6 @@
     width: 100% !important;
 }
 
-/* Section label - uppercase heading for sections */
-.section-label {
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    margin-bottom: 8px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-}
 
 /* ===========================================
    ClickableUrl Component Styles
