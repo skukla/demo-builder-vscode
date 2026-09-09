@@ -4,6 +4,43 @@ Written 2026-09-08, after PL-21 phase 4 was attempted, measured and reverted the
 same day. That attempt is the reason this plan exists and the reason it is shaped
 the way it is.
 
+## START HERE — resuming cold
+
+Nothing in this plan needs a previous conversation. Two commands recover the state:
+
+```bash
+node scripts/cssMigrationCycle.mjs --next     # where we are, and what is next
+node scripts/cssVisualHarness.mjs             # stand up the verification harness
+```
+
+`--next` prints the live pins and the remaining families, read from the ledger and
+the stylesheet rather than from anyone's memory. The harness script does the seven
+staging steps that were hand-derived on every cycle of 2026-09-08/09, and stops at
+the sentinel check — which is not optional, because port 8899 is answered by an
+unrelated app inside the browser container and a wrong server produces blank
+captures and an empty diff for every change.
+
+**The cycle, in full:**
+
+1. `--next` to pick a family. Prefer one whose consumers sit in ONE feature.
+2. Check bundle reach through the import graph BEFORE moving. A sheet placed where
+   a consumer cannot see it renders as the style silently not applying.
+3. `--move <prefix> --to <path>`. It refuses a family containing a rule inside
+   `@media`/`@container`/`@supports`, and refuses an incomplete move.
+4. Add the import to EVERY entry whose graph reaches a consumer.
+5. `git add` the new sheet **before** gating — the `!important` ceiling reads
+   `git ls-files`, so an unstaged sheet makes the count appear to fall.
+6. Rebuild, re-copy bundles, re-capture, diff. **Empty commits, anything else
+   reverts.**
+7. `--check`, then pin both counts in the ledger. The suite refuses to pass until
+   you do; that refusal is the ratchet.
+
+**Two traps that cost cycles, both now scripted or documented rather than
+remembered:** a suite that names the stylesheets it expects a rule to live in will
+break on a move that changes no rendering — use `tests/helpers/cssRules.ts`; and a
+family can be entangled with another through a compound selector, in which case
+they move together or not at all.
+
 ## What the failed attempt established
 
 The layer fix (`@layer vendor, reset, theme, overrides;` with vendor CSS wrapped)
@@ -80,7 +117,13 @@ Steps 3 and 4 buy correctness of the cascade. They do not buy a better-looking
 product. If the UI is where the owner wants it, that is a poor trade, and this
 plan should stop at step 2 rather than push on out of tidiness.
 
-## Measured starting values, 2026-09-08
+## Starting values, 2026-09-08 — HISTORICAL
+
+**These are the values the plan STARTED from, not current ones.** For current
+figures run `node scripts/cssMigrationCycle.mjs --next`, which reads the ledger
+and the stylesheet. Numbers copied out of a plan document are stale the moment a
+cycle runs.
+
 
 ```
 godFileLines                  6223
@@ -110,8 +153,9 @@ Sheet reach today: `custom-spectrum.css` 8 entries, `index.css` 7,
 
 ## Related
 
-- ADR-018 — the rules; §§1-2's migration evidence is superseded by the measurement
-  above and the ADR needs amending as part of step 1
+- ADR-018 — the rules. Its migration evidence WAS superseded by the measurement
+  above; corrected in the ADR on 2026-09-08, which also carries "The approach,
+  settled" and the §3 amendment the owner adopted on 2026-09-09
 - ADR-017 §6 — a stylesheet belongs to its bundle's graph; step 2 is what finally
   makes that true of our largest sheet
 - PL-21 — the backlog item this plan serves
