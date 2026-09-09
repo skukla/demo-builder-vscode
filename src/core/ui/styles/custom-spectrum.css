@@ -79,8 +79,6 @@
 .p-0 { padding: 0 !important; }
 .p-2 { padding: 8px !important; }
 
-
-
 /* ===========================================
    Border & Radius Classes
    =========================================== */
@@ -98,11 +96,7 @@ button[class*="spectrum-Button"][disabled],
     opacity: 0.5 !important;
 }
 
-
-
-
 } /* End of first @layer theme block */
-
 
 /* ============================================
    CTA BUTTON OVERRIDES
@@ -130,14 +124,6 @@ button[class*="spectrum-Button"][disabled],
    ============================================ */
 @layer theme {
 
-
-
-
-
-
-
-
-
 /* ===========================================
    Utility Classes
    =========================================== */
@@ -147,14 +133,8 @@ button[class*="spectrum-Button"][disabled],
 .cursor-pointer { cursor: pointer !important; }
 .cursor-default { cursor: default !important; }
 
-
-
 .whitespace-pre-wrap { white-space: pre-wrap !important; }
 .whitespace-nowrap { white-space: nowrap !important; }
-
-
-
-
 
 /* ===========================================
    Position Classes
@@ -164,7 +144,6 @@ button[class*="spectrum-Button"][disabled],
 .fixed { position: fixed !important; }
 .sticky { position: sticky !important; }
 
-
 /* ===========================================
    Display Variations
    =========================================== */
@@ -173,14 +152,11 @@ button[class*="spectrum-Button"][disabled],
 .inline-flex { display: inline-flex !important; }
 .grid { display: grid !important; }
 
-
 .rounded { border-radius: 4px !important; }
 .rounded-full { border-radius: 50% !important; }
 
 .border-t { border-top: 1px solid var(--spectrum-global-color-gray-200) !important; }
 .border-b { border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important; }
-
-
 
 .bg-gray-400 { background-color: var(--spectrum-global-color-gray-400) !important; }
 
@@ -196,8 +172,6 @@ button[class*="spectrum-Button"][disabled],
    =========================================== */
 .letter-spacing-05 { letter-spacing: 0.5px !important; }
 
-
-
 .min-w-100 { min-width: 100px !important; }
 .max-w-800 { max-width: 800px !important; }
 
@@ -205,7 +179,6 @@ button[class*="spectrum-Button"][disabled],
    Semantic Layout Classes
    Replace utility class combinations with meaningful names
    =========================================== */
-
 
 /* === Dedicated content layouts (ContentColumn / ContentWithSidebar) ===
  * --content-width is the canonical, LEFT-ALIGNED content width shared across ALL
@@ -234,28 +207,10 @@ button[class*="spectrum-Button"][disabled],
     --card-gap: 8px;
 }
 
-
-
-
-
-
-
-
-
 /* Footer grid cell alignment */
 .grid-align-start { justify-self: start !important; }
 .grid-align-center { justify-self: center !important; }
 .grid-align-end { justify-self: end !important; }
-
-
-
-
-
-
-
-
-
-
 
 /* --------------------------------------------------------------------------
    Responsive layout: narrow-viewport adjustments for the wizard chrome and
@@ -290,40 +245,9 @@ button[class*="spectrum-Button"][disabled],
     to { opacity: 1; transform: translateY(-50%) translateX(0); }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* ========================================
  * Expandable Brand Cards
  * ======================================== */
-
 
 /* .brand-card-check retired — replaced by the shared .selection-check-corner. */
 
@@ -359,35 +283,14 @@ button[class*="spectrum-Button"][disabled],
     min-width: fit-content !important;
 }
 
-
-
-
-
-
-
 /* Optional addons section in architecture modal */
 
 /* Checkbox focus ring for keyboard navigation */
 
-
 /* Architecture modal footer with Done button */
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 .min-h-0 { min-height: 0 !important; }
 .min-h-48 { min-height: 48px !important; }
-
 
 /* ===========================================
    Animation Classes
@@ -399,10 +302,7 @@ button[class*="spectrum-Button"][disabled],
     to { transform: translateY(0); opacity: 1; }
 }
 
-
 .shadow { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important; }
-
-
 
 @keyframes timeline-enter {
     0% {
@@ -430,14 +330,6 @@ button[class*="spectrum-Button"][disabled],
     }
 }
 
-
-
-
-
-
-
-
-
 /* AI badge + its capabilities link on one line. The link was a standalone row
    beneath the badges, which cost the band a whole row to say one thing. */
 
@@ -450,9 +342,7 @@ button[class*="spectrum-Button"][disabled],
 :root {
     --dashboard-tile-size: 96px;
     --dashboard-tile-gap: 16px;
-    /* Extra breathing room between the Primary and Storefront clusters in row 1
-       so they read as two distinct groups rather than one row of four. */
-}
+    }
 
 /* Org-mismatch banner — a dark, accent-bordered warning card that matches the
    dashboard's bordered-tile attention idiom (cf. the Delete tile's accent
@@ -484,7 +374,6 @@ button[class*="spectrum-Button"][disabled],
     border-radius: 8px;
     animation: inline-notice-fade-in 200ms ease-out;
 }
-
 
 .inline-notice--info .inline-notice-icon {
     color: var(--spectrum-global-color-blue-600);
@@ -527,98 +416,24 @@ button[class*="spectrum-Button"][disabled],
     margin-right: 6px;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* ===========================================
    Projects Dashboard Layout Prototypes
    =========================================== */
 
 /* Option B: Button grid (matches dashboard action buttons) */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 .pb-6 { padding-bottom: 24px !important; }
 
 .grow { flex-grow: 1 !important; }
-
-
-
-
-
-
 
 /* AI surface — drill-down row typography reuses the wizard's existing
    utility classes (.text-sm, .font-semibold, .text-gray-700) for
    name/description. Only the unique pieces live here: the source
    classification badge pill and the row separator. */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @keyframes loading-overlay-spin {
     to { transform: rotate(360deg); }
 }
-
-
-
-
-
-
-
-
-
-
 
 /* Progress bar entrance/exit animations */
 [class*="spectrum-ProgressBar"] {
@@ -642,9 +457,7 @@ button[class*="spectrum-Button"][disabled],
     transition: width 0.3s ease !important;
 }
 
-
 /* Note: .animate-fade-in and @keyframes fadeIn defined in utility section above */
-
 
 /* Node version status lines transitions */
 /* Merged 2 declarations of this selector that the sheet carried separately.
@@ -659,27 +472,8 @@ button[class*="spectrum-Button"][disabled],
     animation: fadeIn 0.3s ease;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* Text color for errors */
 .text-red-700 { color: var(--spectrum-global-color-red-700) !important; }
-
-
-
-
 
 /* ===========================================
    Optional/Muted Label Styles
@@ -689,50 +483,12 @@ button[class*="spectrum-Button"][disabled],
     opacity: 0.7 !important;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* Flex End Container - Right-aligned flex child */
 .flex-end-container {
     flex: 1 !important;
     display: flex !important;
     justify-content: flex-end !important;
 }
-
-
-
 
 /* =========================================================================
    Project Builder — component overview
@@ -742,17 +498,9 @@ button[class*="spectrum-Button"][disabled],
    no sub-progress. All theme values come from Spectrum tokens.
    ========================================================================= */
 
-
-
-
 /* Separate cards (matches .architecture-modal-options) — NOT one bordered list. */
 
 /* One component card — matches the existing .architecture-modal-option treatment. */
-
-
-
-
-
 
 /* =========================================================================
  * Project Builder — Commerce: StepRail (.vsteplist*) + [rail / view]
@@ -760,7 +508,6 @@ button[class*="spectrum-Button"][disabled],
  * Adapted to Spectrum design tokens so the surface follows the active
  * (light/dark) theme.
  * ========================================================================= */
-
 
 @keyframes vsteplist-step-enter {
     from { opacity: 0; max-width: 0; }
@@ -778,10 +525,6 @@ button[class*="spectrum-Button"][disabled],
  * stacked summary block just adds clutter. Scoped to the Build layout
  * (.build-two-col) so other TwoColumnLayout consumers keep their stacked summary. */
 
-
-
-
-
 /* Completion feedback: the shared ✓ renders only when a row is done, so it mounts
  * on completion and this pop fires once — a subtle reward as each sub-step lands.
  * Zeroed under the global prefers-reduced-motion reset. */
@@ -789,7 +532,6 @@ button[class*="spectrum-Button"][disabled],
     from { opacity: 0; transform: scale(0.6); }
     to { opacity: 1; transform: scale(1); }
 }
-
 
 /* --------------------------------------------------------------------------
  * Integrations — results-only center column (.int-results / .int-destination /
@@ -801,7 +543,6 @@ button[class*="spectrum-Button"][disabled],
  * The Modal's .modal-content owns scrolling and its footer is sticky; the
  * stage body only reserves height so stage swaps don't jump the footer.
  * ------------------------------------------------------------------------ */
-
 
 /* --------------------------------------------------------------------------
  * InlineRenameField (core/ui/forms) — rename-in-place for a displayed name.
@@ -882,7 +623,6 @@ button[class*="spectrum-Button"][disabled],
     overflow-wrap: anywhere;
 }
 
-
 /* ---- Dedicated integrations surface ----
  * The page shell is PageLayout + PageHeader and the content band is
  * `.page-container-padded` (the canonical --content-width band), so this file
@@ -908,15 +648,8 @@ button[class*="spectrum-Button"][disabled],
     text-decoration: underline;
 }
 
-
-
-
-
-
-
 /* Count rides the bottom-right, out of the label's way. */
 } /* End of second @layer theme block */
-
 
 /* ============================================
    TEXT COLOUR UTILITIES  (unlayered — see below)

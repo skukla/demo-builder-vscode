@@ -368,6 +368,11 @@ describe('the CSS migration ratchets', () => {
         'grid', 'rounded', 'shadow', 'opacity', 'overflow', 'cursor', 'hidden',
         'block', 'inline', 'relative', 'absolute', 'space', 'leading', 'tracking',
         'letter', 'uppercase', 'truncate', 'whitespace', 'align', 'self', 'order', 'z',
+        // Added 2026-09-09. `.fixed`, `.sticky` and `.grow` sit beside `.relative`
+        // and `.absolute` in the same one-line utility block and are the same kind
+        // of thing; their absence here counted three utilities as FEATURE rules and
+        // left step 2's metric reading 4 when the real remainder is 1.
+        'fixed', 'sticky', 'grow',
     ]);
 
     /** Top-level rules, split into utility and feature families. */
