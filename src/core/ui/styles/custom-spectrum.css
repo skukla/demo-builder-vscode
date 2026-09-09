@@ -14,6 +14,14 @@
    There is NO "safe" className prop in React Spectrum.
    ============================================ */
 
+/* THE CASCADE ORDER — repeated here deliberately, byte-identical to the copy in
+   index.css. Layer precedence is fixed by the FIRST declaration a bundle sees, and
+   sheets arrive in whatever order the bundle graph produces; index.css reaches
+   seven of the eight entries and the sidebar reaches this one. Two identical
+   declarations are safe — whichever lands first says the same thing — and the
+   enforcer requires every declaration in src/ to match this text exactly. */
+@layer vendor, reset, theme, overrides;
+
 /* ============================================
    UTILITY & COMPONENT CLASSES
    Wrapped in @layer theme for cascade control

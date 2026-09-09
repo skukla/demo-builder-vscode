@@ -26,7 +26,7 @@
  */
 
 import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { reportBundleClassUsage, type UsageReport } from './webviewBundleClasses';
 import { loadLedger, expectBanned, expectClean, expectCeiling, expectFloor } from './architectureScan';
@@ -101,6 +101,97 @@ describe('ADR-017 §6: a class used in a bundle is styled by that bundle', () =>
         // unreadable sites means less of the surface is actually checked.
         // A pin left above an improved count lets the blind spot grow back to it.
         expectCeiling(LEDGER, 'dynamicClassSiteCeiling', report.dynamicSites);
+    });
+});
+
+describe('ADR-018 §1: one cascade order, declared, and every bundle carries it', () => {
+    /**
+     * THE ORDER, lowest priority first for NORMAL declarations:
+     *
+     *     vendor  <  reset  <  theme  <  overrides
+     *
+     * `vendor` is declared and EMPTY today — nothing wraps Spectrum's CSS yet.
+     * Declaring an empty layer changes nothing about the rules that exist, and it
+     * means the remaining work is "put Spectrum in it", not "and also re-decide
+     * precedence". Verified by an empty diff across 2,700 elements when it was
+     * added, 2026-09-09.
+     *
+     * WHY EVERY BUNDLE AND NOT JUST ONE SHEET. Layer precedence is fixed by the
+     * FIRST declaration a bundle sees, and sheets arrive in whatever order the
+     * bundle graph produces. The declaration lived only in index.css, which seven
+     * of the eight entries import — the SIDEBAR imported none of it and took
+     * whatever order its own graph happened to emit. It worked by luck, which is
+     * the failure ADR-018 named in advance and nothing was checking for.
+     */
+    const CANONICAL = '@layer vendor, reset, theme, overrides;';
+    const LAYERS = ['vendor', 'reset', 'theme', 'overrides'];
+
+    const sheets = (): string[] =>
+        execSync("git ls-files 'src/**/*.css'", { cwd: ROOT, encoding: 'utf8' })
+            .split('\n')
+            .filter(Boolean);
+
+    const noComments = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    it('POSITIVE CONTROL: the canonical declaration is actually present somewhere', () => {
+        // Without this every assertion below passes vacuously the moment the
+        // reader breaks — zero declarations found reads the same as zero wrong.
+        const found = sheets().filter((f) => noComments(readFileSync(join(ROOT, f), 'utf8')).includes(CANONICAL));
+        expect(found.length).toBeGreaterThan(0);
+    });
+
+    it('every layer-order declaration in src/ is the canonical one, byte for byte', () => {
+        const wrong: string[] = [];
+        for (const f of sheets()) {
+            for (const m of noComments(readFileSync(join(ROOT, f), 'utf8')).matchAll(/@layer\s+[^{;]+;/g)) {
+                if (m[0].replace(/\s+/g, ' ').trim() !== CANONICAL) wrong.push(`${f}: ${m[0].trim()}`);
+            }
+        }
+        // Two identical declarations are safe — whichever a bundle sees first says
+        // the same thing. Two DIFFERENT ones are a coin toss decided by the graph.
+        expect(wrong.sort()).toStrictEqual([]);
+    });
+
+    it('every @layer block names a layer the order declares', () => {
+        const unknown: string[] = [];
+        for (const f of sheets()) {
+            for (const m of noComments(readFileSync(join(ROOT, f), 'utf8')).matchAll(/@layer\s+([\w-]+)\s*\{/g)) {
+                if (!LAYERS.includes(m[1])) unknown.push(`${f}: @layer ${m[1]}`);
+            }
+        }
+        expect(unknown.sort()).toStrictEqual([]);
+    });
+
+    it('EVERY built bundle declares the order — not just the ones importing index.css', () => {
+        // The one that catches the sidebar. It reads the BUILT output rather than
+        // the sources, because the question is what a bundle contains, and that is
+        // decided by the import graph rather than by any sheet's own text.
+        const dist = join(ROOT, 'dist/webview');
+        if (!existsSync(dist)) return; // `npm run compile` has not run; the gate's jest step does not build
+        const missing = readdirSync(dist)
+            .filter((f) => f.endsWith('-bundle.js'))
+            .filter((f) => !readFileSync(join(dist, f), 'utf8').includes(CANONICAL));
+        expect(missing.sort()).toStrictEqual([]);
+    });
+
+    it('rules outside every layer may not grow', () => {
+        // Unlayered beats layered for normal declarations, so a loose rule silently
+        // outranks everything in `theme`. 135 of them today across nine sheets;
+        // this is a ratchet rather than a ban because emptying it moves pixels and
+        // belongs to the cascade flip, not to a convention.
+        let loose = 0;
+        for (const f of sheets()) {
+            const lines = noComments(readFileSync(join(ROOT, f), 'utf8')).split('\n');
+            let depth = 0;
+            let layerDepth: number | null = null;
+            for (const l of lines) {
+                if (/^\s*@layer\s+[\w-]+\s*\{/.test(l)) layerDepth = depth;
+                else if (/^\s*[.#[]/.test(l) && l.includes('{') && layerDepth === null) loose++;
+                depth += (l.match(/\{/g) ?? []).length - (l.match(/\}/g) ?? []).length;
+                if (layerDepth !== null && depth <= layerDepth) layerDepth = null;
+            }
+        }
+        expectCeiling(LEDGER, 'unlayeredRuleCeiling', loose);
     });
 });
 

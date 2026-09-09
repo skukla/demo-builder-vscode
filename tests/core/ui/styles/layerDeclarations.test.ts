@@ -19,7 +19,11 @@ describe('CSS Layer Declarations', () => {
     });
 
     it('declares layer order at top of file', () => {
-      expect(indexCSS).toContain('@layer reset, theme, overrides;');
+      // `vendor` was added to the order on 2026-09-09 — declared and empty, so
+      // nothing wraps Spectrum's CSS in it yet and no rule changed position. The
+      // canonical string is enforced byte-for-byte by `layerOrder` in
+      // tests/sop/stylesheet-bundles.test.ts; this asserts index.css carries it.
+      expect(indexCSS).toContain('@layer vendor, reset, theme, overrides;');
     });
 
     it('imports reset.css', () => {

@@ -424,11 +424,35 @@ Know the difference before relying on it.
 > those reaches a dependency array cannot be decided without following it into the
 > receiving hook.
 
+> **Convention.** The cascade order is `vendor < reset < theme < overrides`, declared
+> once and carried by every bundle.
+> *Why:* layer precedence is fixed by the FIRST declaration a bundle sees, and sheets
+> arrive in whatever order the bundle graph produces. The declaration lived only in
+> `index.css`, which seven of the eight entries import — the SIDEBAR carried none and
+> took whatever order its own graph emitted. It worked by luck, which is the failure
+> ADR-018 named in advance and nothing was checking for. `vendor` is declared and
+> empty: nothing wraps Spectrum's CSS yet, and declaring an empty layer moves nothing
+> (verified by an empty diff across 2,700 elements, 2026-09-09).
+> [ADR-018 §1](../architecture/adr/018-css-architecture.md) · Enforced by `layerOrder`
+> in `tests/sop/stylesheet-bundles.test.ts` — every declaration byte-identical, every
+> `@layer` block naming a declared layer, every BUILT bundle carrying the line, with a
+> planted-violation control.
+
+> **Convention.** A rule sits inside a cascade layer. The count outside every layer may
+> not grow.
+> *Why:* unlayered beats layered for a normal declaration, so a loose rule silently
+> outranks everything in `theme` — which is why a rule that looks like it should win
+> sometimes does not. 135 remain across nine sheets; a ratchet rather than a ban,
+> because emptying it moves pixels and belongs to the cascade flip.
+> [ADR-018 §1](../architecture/adr/018-css-architecture.md) · Enforced by the
+> `unlayeredRuleCeiling` pin in `tests/sop/stylesheet-bundles.test.ts`.
+
 > **Convention.** Vendor CSS sits in the lowest cascade layer.
 > *Why:* layers settle specificity by declaration order rather than by escalation, so
 > nothing downstream has to out-shout the vendor.
 > [ADR-018](../architecture/adr/018-css-architecture.md) · **Not enforced — and not yet
-> true.** No `@layer vendor` exists in `src/` today. This is the one rule here the code
+> true.** `@layer vendor` is now DECLARED (2026-09-09) but empty: nothing wraps
+> Spectrum's CSS in it, so the rule the order exists to serve is still unmet. This is the one rule here the code
 > does not already follow. The migration WAS authorised by the owner on 2026-09-08 and is
 > running: `.rptc/plans/css-architecture-migration/`, tracked by the `vendorLayerBundles`
 > floor (0 of 8), which is also what makes this convention enforceable once it reaches 8.
@@ -1228,7 +1252,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 90 conventions. 89 of them are enforced; 1 is not.**
+**This handbook states 92 conventions. 91 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

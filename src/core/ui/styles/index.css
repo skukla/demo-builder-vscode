@@ -3,8 +3,16 @@
    Layer order controls cascade priority
    ============================================ */
 
-/* Layer order declaration - MUST be first */
-@layer reset, theme, overrides;
+/* THE CASCADE ORDER, and the only place it is decided.
+   Lowest priority first: vendor < reset < theme < overrides, for NORMAL
+   declarations. `vendor` is declared but EMPTY today — nothing wraps Spectrum's
+   CSS yet — and declaring an empty layer changes nothing about the rules that
+   exist. It is here so the order is stated once and completely, rather than
+   growing a name later and re-deciding precedence by accident.
+   Enforced by `layerOrder` in tests/sop/stylesheet-bundles.test.ts, which also
+   checks that EVERY bundle carries this line — the sidebar carried none until
+   2026-09-09 and took whatever order its graph happened to produce. */
+@layer vendor, reset, theme, overrides;
 
 /* Import design system files */
 @import './reset.css';
