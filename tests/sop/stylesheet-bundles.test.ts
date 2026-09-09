@@ -174,6 +174,36 @@ describe('ADR-018 §1: one cascade order, declared, and every bundle carries it'
         expect(missing.sort()).toStrictEqual([]);
     });
 
+    it('a component <style> block is layered too', () => {
+        // THE .css FILES ARE NOT THE WHOLE SURFACE. Five files build CSS inside a
+        // `<style>` block; three of them assemble a standalone `<!DOCTYPE html>`
+        // page that loads none of our sheets, where layers mean nothing. The other
+        // two are React components rendering into a webview ALONGSIDE the layered
+        // sheets, and their six rules sat outside every layer — invisible to the
+        // check above, which reads `.css` only, while the convention said "every
+        // rule". Found 2026-09-09 by asking whether the convention was actually
+        // true rather than whether the test passed.
+        const files = execSync("git ls-files 'src/**/*.ts' 'src/**/*.tsx'", { cwd: ROOT, encoding: 'utf8' })
+            .split('\n')
+            .filter(Boolean);
+        const loose: string[] = [];
+        let blocksSeen = 0;
+        for (const f of files) {
+            const text = readFileSync(join(ROOT, f), 'utf8');
+            if (/<!doctype html>/i.test(text)) continue; // a standalone page, not a bundle
+            for (const m of text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) {
+                const css = m[1].replace(/\/\*[\s\S]*?\*\//g, '');
+                const rules = (css.match(/(?:^|\n)\s*[.#[][^{}\n]*\{/g) ?? []).length;
+                if (!rules) continue;
+                blocksSeen++;
+                if (!css.includes('@layer')) loose.push(`${f}: ${rules} rule(s) in a <style> block, outside every layer`);
+            }
+        }
+        // Control: a reader that found no blocks would report clean forever.
+        expect(blocksSeen).toBeGreaterThan(0);
+        expect(loose.sort()).toStrictEqual([]);
+    });
+
     it('rules outside every layer may not grow', () => {
         // Unlayered beats layered for normal declarations, so a loose rule silently
         // outranks everything in `theme`. 135 of them today across nine sheets;

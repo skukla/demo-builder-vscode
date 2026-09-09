@@ -128,8 +128,11 @@ export function VerifiedField({
             )}
 
             <style>{`
+                /* In the theme layer like every other rule we own. */
+                @layer theme {
                 .text-green-500 { color: var(--spectrum-semantic-positive-color-icon); }
                 .text-red-500 { color: var(--spectrum-semantic-negative-color-icon); }
+                }
             `}</style>
         </Flex>
     );

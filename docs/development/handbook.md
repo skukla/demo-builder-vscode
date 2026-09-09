@@ -447,8 +447,15 @@ Know the difference before relying on it.
 > NOTHING — empty diff across 2,700 elements and 168 interaction cells. Being
 > unlayered only matters where a vendor rule actually competes for the same property
 > on the same element, and for these it never did.
+> **A component's `<style>` block counts.** Five files build CSS that way; three
+> assemble a standalone `<!DOCTYPE html>` page which loads none of our sheets, where
+> layers mean nothing. The other two render into a webview beside the layered sheets,
+> and their six rules sat outside every layer — invisible to a check that reads `.css`
+> only, while this convention said "every rule". Both are layered now and the check
+> reads style blocks too.
 > [ADR-018 §1](../architecture/adr/018-css-architecture.md) · Enforced by the
-> `unlayeredRuleCeiling` pin at 0 in `tests/sop/stylesheet-bundles.test.ts`.
+> `unlayeredRuleCeiling` pin at 0 in `tests/sop/stylesheet-bundles.test.ts`, plus a
+> style-block check with a planted-violation control.
 
 > **Convention.** Vendor CSS sits in the lowest cascade layer.
 > *Why:* layers settle specificity by declaration order rather than by escalation, so
