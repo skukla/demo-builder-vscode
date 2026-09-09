@@ -1,0 +1,45 @@
+/**
+ * .two-* styles — the two-column layout's STACKING BREAKPOINT, and nothing else.
+ *
+ * FEATURE-SCOPED (ADR-017 §6 and §7). A shared component in core/ui, rendered by
+ * `dashboard` and `wizard`, imported by those two.
+ *
+ * ALL THREE RULES ARE CONDITIONAL. The layout's resting styles are set by the
+ * component itself; the only CSS it has ever had here is the 1180px rule that
+ * turns the row into a column. A sheet that is one `@media` block is unusual
+ * enough to say so rather than leave the next reader wondering what is missing.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), in source order, with the comment
+ * above each rule. Verbatim otherwise.
+ */
+
+@layer theme {
+@media (max-width: 1180px) { /* bp: two-column stack — TwoColumnLayout row→column */
+    /* TwoColumnLayout stack mode: row → column. Each column becomes
+       full-width; the left max-width and right min-width are released so
+       neither one squeezes the other, and the divider moves from between
+       them to above the summary card. */
+    .two-column-layout {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        /* Stacked columns are flex 0-0-auto (content height), which unbounds
+           any inner flex-1 scroll region (e.g. Configure's .container-form) —
+           the container itself must scroll or tall content paints past the
+           page footer with no way to reach it. Inert where the container is
+           height:auto in normal flow (no bounded height → no scrollbar). */
+        overflow-y: auto !important;
+    }
+    .two-column-layout-left {
+        max-width: none !important;
+        flex: 0 0 auto !important;
+        width: 100% !important;
+    }
+    .two-column-layout-right {
+        flex: 0 0 auto !important;
+        min-width: 0 !important;
+        border-left: none !important;
+        border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+    }
+}
+}

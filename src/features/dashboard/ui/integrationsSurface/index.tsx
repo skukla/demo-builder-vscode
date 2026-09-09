@@ -31,6 +31,8 @@ import '@/core/ui/styles/shared-ui.css';
 import '../styles/integrations.css';
 // .choice-* — project-creation's option cards, rendered here too.
 import '@/features/project-creation/ui/styles/choice-cards.css';
+// .db-* — the shared detail drawer.
+import '@/core/ui/styles/drawer.css';
 
 const container = document.getElementById('root');
 if (!container) {

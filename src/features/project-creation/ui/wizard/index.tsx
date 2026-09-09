@@ -44,6 +44,12 @@ import '@/core/ui/styles/step-scaffold.css';
 import '@/core/ui/styles/vstep-list.css';
 // .choice-* — the option cards, also rendered on the integrations surface.
 import '../styles/choice-cards.css';
+// .db-* — the shared detail drawer.
+import '@/core/ui/styles/drawer.css';
+// .two-* — the shared two-column layout's stacking breakpoint.
+import '@/core/ui/styles/two-column-layout.css';
+// .build-* — the Build Your Project area and its summary column.
+import '../styles/build-areas.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
 // .icon-* — the icon-above-label pattern.

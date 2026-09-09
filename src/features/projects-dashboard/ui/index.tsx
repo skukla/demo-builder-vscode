@@ -29,6 +29,8 @@ import '@/core/ui/styles/custom-spectrum.css';
 import './styles/project-cards.css';
 // The shared UI vocabulary — 19 small families. Seven of the eight entries.
 import '@/core/ui/styles/shared-ui.css';
+// .db-* — the shared detail drawer.
+import '@/core/ui/styles/drawer.css';
 
 // Local constant - webview cannot import TIMEOUTS from extension host
 // Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts

@@ -33,6 +33,10 @@ import '@/core/ui/styles/shared-ui.css';
 import '@/core/ui/styles/icon-label.css';
 // .integrations-* — the integrations surface shell and grid.
 import './styles/integrations.css';
+// .db-* — the shared detail drawer.
+import '@/core/ui/styles/drawer.css';
+// .two-* — the shared two-column layout's stacking breakpoint.
+import '@/core/ui/styles/two-column-layout.css';
 
 // Get root element
 const container = document.getElementById('root');

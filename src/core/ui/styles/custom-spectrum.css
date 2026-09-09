@@ -462,33 +462,6 @@ button[class*="spectrum-Button"][disabled],
     to { opacity: 1; transform: translateY(-50%) translateX(0); }
 }
 
-@media (max-width: 1180px) { /* bp: two-column stack — TwoColumnLayout row→column */
-    /* TwoColumnLayout stack mode: row → column. Each column becomes
-       full-width; the left max-width and right min-width are released so
-       neither one squeezes the other, and the divider moves from between
-       them to above the summary card. */
-    .two-column-layout {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        /* Stacked columns are flex 0-0-auto (content height), which unbounds
-           any inner flex-1 scroll region (e.g. Configure's .container-form) —
-           the container itself must scroll or tall content paints past the
-           page footer with no way to reach it. Inert where the container is
-           height:auto in normal flow (no bounded height → no scrollbar). */
-        overflow-y: auto !important;
-    }
-    .two-column-layout-left {
-        max-width: none !important;
-        flex: 0 0 auto !important;
-        width: 100% !important;
-    }
-    .two-column-layout-right {
-        flex: 0 0 auto !important;
-        min-width: 0 !important;
-        border-left: none !important;
-        border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
-    }
-}
 
 
 
@@ -1532,29 +1505,6 @@ button[class*="spectrum-Button"][disabled],
  * (light/dark) theme.
  * ========================================================================= */
 
-/* ---- Commerce body (.commerce-body) — the [left nav | active view] row.
- * The left nav (.step-nav = area label + vertical step list) takes its intrinsic
- * width (~200-240px); the step-view flexes to fill the rest so the choice-grid cards
- * read spacious. */
-/* The Build step owns ONE two-column [ active area body | unified summary ] (.build-two-col).
- * The content band max applies to the CONTENT, not the column: .step-nav is a full-bleed
- * toolbar whose fill and bottom divider must reach the column's right edge. Capping the
- * COLUMN clipped that strip short — invisible at 100% zoom (panel narrower than the cap),
- * visible as a gap at reduced zoom (panel wider than the 960px cap). So the column runs
- * full width and each content region below carries the cap itself. */
-.build-two-col .two-column-layout-left {
-    min-width: 0 !important;
-}
-/* Non-nav area bodies (Storefront / Integrations) supply their own padding since the
- * Build two-column drops the left padding (so Commerce's nav can bleed to the edge). */
-.build-area-pad {
-    padding: var(--spectrum-global-dimension-size-400);
-    /* Fill the (overflow:hidden) left column and scroll its own content — area bodies
-       without an inner scroll (e.g. Integrations) were otherwise clipped. */
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-}
 
 @keyframes vsteplist-step-enter {
     from { opacity: 0; max-width: 0; }
@@ -1571,11 +1521,6 @@ button[class*="spectrum-Button"][disabled],
  * still drops the summary: at this width the area body owns the space and the
  * stacked summary block just adds clutter. Scoped to the Build layout
  * (.build-two-col) so other TwoColumnLayout consumers keep their stacked summary. */
-@media (max-width: 1180px) { /* bp: two-column stack — Build summary hidden */
-    .build-two-col .two-column-layout-right {
-        display: none !important;
-    }
-}
 
 
 
@@ -1712,97 +1657,7 @@ button[class*="spectrum-Button"][disabled],
     text-decoration: underline;
 }
 
-/* Footer pinned to the card bottom; hosts the at-most-one face affordance. */
-/* Only pushed to the bottom when the card HAS a face affordance — an empty foot
-   was reserving a row on every deployed card. */
-/* The deploying pulse lives in StatusDot now (`status-dot--pulse`, index.css) —
-   it is a property of the `info` status, not of this card. */
-/* ---- Detail FLYOUT (over the grid) ----
- * Restored from the pre-master/detail build: this surface IS the integrations
- * grid, so an overlay covers only its own page. The scrim + slide live on the
- * Drawer primitive's classes; everything below styles the CONTENT, which is
- * host-independent and survived the host swap unchanged. */
-/* Scrim + panel stay mounted; `.open` drives the slide. */
-.db-drawer-scrim {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.42);
-    z-index: 100;
-    opacity: 0;
-    visibility: hidden;
-    transition:
-        opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-        visibility 0.22s;
-}
-.db-drawer-scrim.open {
-    opacity: 1;
-    visibility: visible;
-}
-.db-drawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 392px;
-    max-width: 92vw;
-    /* Surface matches the panel treatment this flyout inherited its content from
-       (gray-75 over gray-200 dividers) — the restored shell used gray-50/gray-300,
-       which disagreed with the `.integration-panel-row` dividers INSIDE it. */
-    background: var(--spectrum-global-color-gray-75);
-    border-left: 1px solid var(--spectrum-global-color-gray-200);
-    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.18);
-    z-index: 101;
-    transform: translateX(100%);
-    visibility: hidden;
-    transition:
-        transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-        visibility 0.22s;
-    display: flex;
-    flex-direction: column;
-    outline: none;
-}
-.db-drawer.open {
-    transform: translateX(0);
-    visibility: visible;
-}
-@media (prefers-reduced-motion: reduce) {
-    .db-drawer,
-    .db-drawer-scrim {
-        transition: none;
-    }
-}
-/* The flyout's sections: fixed head, scrolling body, fixed action bar. */
-.db-drawer-head {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 16px 18px;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
-}
-.db-drawer-body {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    padding: 16px 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-.db-drawer-actions {
-    display: flex;
-    /* Right, not centred and not the flex-start this defaulted to before: it is
-       what .modal-footer-actions above already does, and what Spectrum specifies
-       for a dialog footer. A drawer footer that centred its action would be the
-       only surface here doing so. */
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: 7px;
-    padding: 13px 18px 16px;
-    border-top: 1px solid var(--spectrum-global-color-gray-200);
-}
 
-.db-drawer-head > *:last-child {
-    margin-left: auto;
-}
 
 
 
