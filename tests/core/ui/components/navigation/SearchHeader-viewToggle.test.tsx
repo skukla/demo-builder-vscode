@@ -171,19 +171,15 @@ describe('SearchHeader view toggle', () => {
             expect(rowsButton()).toHaveAttribute('aria-pressed', 'true');
         });
 
-        it('adds is-selected to the active button only', () => {
-            renderHeader({ viewMode: 'cards', onViewModeChange: jest.fn() });
-
-            expect(cardsButton().getAttribute('class')).toBe('cursor-pointer is-selected');
-            expect(rowsButton().getAttribute('class')).toBe('cursor-pointer');
-        });
-
-        it('adds is-selected to the list button when rows is active', () => {
-            renderHeader({ viewMode: 'rows', onViewModeChange: jest.fn() });
-
-            expect(rowsButton().getAttribute('class')).toBe('cursor-pointer is-selected');
-            expect(cardsButton().getAttribute('class')).toBe('cursor-pointer');
-        });
+        // The two `is-selected` class assertions that stood here were deleted on
+        // 2026-09-09. Nothing styled that class — it was defined only in compound
+        // selectors (`.datapack-card.is-selected`, `.sample-data-none.is-selected`)
+        // and SearchHeader's bare copy matched neither. The selected state is already
+        // asserted twice below and above: `aria-pressed` for assistive tech and the
+        // background fill for sight. A third marker that no rule matches is not a
+        // behaviour worth pinning, and the ADR-017 §6 enforcer objected to it as soon
+        // as the CSS migration stopped a globally-loaded compound from making it look
+        // defined.
 
         it('fills only the active button, and rounds both', () => {
             renderHeader({ viewMode: 'cards', onViewModeChange: jest.fn() });

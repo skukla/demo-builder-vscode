@@ -25,9 +25,30 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-const CSS = fs
-    .readFileSync(path.join(__dirname, '../../../src/core/ui/styles/custom-spectrum.css'), 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, '');
+/**
+ * Read every sheet that can hold a card rule, not just the global one.
+ *
+ * `.expandable-brand-card` moved to the wizard's own sheet on 2026-09-09 when the
+ * CSS migration split `.brand-*` and `.expandable-*` out of custom-spectrum.css
+ * (.rptc/plans/css-architecture-migration). Reading one file made this test
+ * assert on where a rule LIVED rather than on what it SAYS, so it failed on a
+ * move that changed no rendering at all — the visual diff for that move was empty
+ * across 2,700 elements.
+ */
+const CSS = [
+    '../../../src/core/ui/styles/custom-spectrum.css',
+    '../../../src/features/project-creation/ui/styles/brand-cards.css',
+]
+    .map((rel) => fs.readFileSync(path.join(__dirname, rel), 'utf8'))
+    .join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    // STRIP LAYER WRAPPERS before parsing. `ruleFor` below splits on `}` and reads
+    // the text before the next `{` as the selector. A rule that is FIRST inside an
+    // `@layer theme { ... }` block therefore reads as `@layer theme` rather than as
+    // its own selector — so exactly one rule per moved sheet became invisible.
+    // Removing the wrapper changes no declaration and no assertion here; these
+    // suites test what a rule SAYS, not where it sits in the cascade.
+    .replace(/@layer\s+[\w.-]+\s*\{/g, '');
 
 function ruleFor(selectorList: string): string {
     const norm = (t: string) => t.replace(/\s+/g, ' ').trim();

@@ -1,0 +1,127 @@
+/**
+ * ai styles.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
+ * when the visual diff is empty, so the rules are not edited on the way.
+ */
+
+@layer theme {
+.ai-capabilities-body {
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 8px; /* keep the scrollbar off the text */
+}
+
+.ai-capabilities-body::-webkit-scrollbar {
+    width: 10px;
+}
+
+.ai-capabilities-body::-webkit-scrollbar-track {
+    background: var(--spectrum-global-color-gray-100);
+    border-radius: 5px;
+}
+
+.ai-capabilities-body::-webkit-scrollbar-thumb {
+    background: var(--spectrum-global-color-gray-400);
+    border-radius: 5px;
+}
+
+.ai-capabilities-body::-webkit-scrollbar-thumb:hover {
+    background: var(--spectrum-global-color-gray-500);
+}
+
+.ai-capabilities-columns {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.ai-section-heading {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+    /* Mirrors `.config-section-header` — the app's section convention, used by
+       ConfigureScreen: a title over a hairline rule. Matching it is what makes
+       this modal read as part of the same application.
+       (Ideally this would REUSE ConfigSection rather than restate its look, but
+       that component takes no test id and this list is queried by one; worth
+       doing when ConfigSection next earns a `data-testid` prop.) */
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
+    padding-bottom: 4px !important;
+    margin: 0 0 4px 0 !important;
+}
+
+.ai-skills-scroll {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px 24px;
+    align-items: start;
+}
+
+.ai-skills-group-header {
+    position: sticky;
+    top: 0;
+    /* 13px: still clearly subordinate to the 16px section heading, but the names
+       beneath it now sit at the Spectrum default rather than a forced 12px, so a
+       12px group header had stopped reading as a header at all. */
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-600);
+    background: var(--spectrum-global-color-gray-100);
+    padding: 4px 0;
+    margin-bottom: 4px;
+}
+
+.ai-surface-source-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 10px;
+    background-color: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-gray-800) !important;
+}
+
+.ai-surface-row + .ai-surface-row {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--spectrum-global-color-gray-200);
+}
+
+.ai-surface-two-col {
+    display: grid !important;
+    grid-template-columns: minmax(160px, 220px) 1fr;
+    column-gap: 24px;
+    align-items: center;
+}
+
+.ai-surface-sidebar {
+    max-width: 280px !important;
+}
+
+.ai-surface-refreshable {
+    transition: opacity 200ms ease-in-out !important;
+}
+
+.ai-surface-refreshable.refreshing {
+    opacity: 0.5 !important;
+    pointer-events: none !important;
+}
+
+.ai-prompt-card {
+    transition: background 120ms ease-in-out, border-color 120ms ease-in-out;
+}
+
+.ai-prompt-card:hover {
+    background: var(--spectrum-global-color-gray-100) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+}
+
+.ai-prompt-card:focus-visible {
+    outline: 2px solid var(--spectrum-semantic-cta-color-default) !important;
+    outline-offset: 2px !important;
+}
+}

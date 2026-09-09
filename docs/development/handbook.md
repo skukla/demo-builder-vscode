@@ -429,13 +429,21 @@ Know the difference before relying on it.
 > nothing downstream has to out-shout the vendor.
 > [ADR-018](../architecture/adr/018-css-architecture.md) · **Not enforced — and not yet
 > true.** No `@layer vendor` exists in `src/` today. This is the one rule here the code
-> does not already follow; it waits on the CSS migration (PL-21), which is not authorised.
+> does not already follow. The migration WAS authorised by the owner on 2026-09-08 and is
+> running: `.rptc/plans/css-architecture-migration/`, tracked by the `vendorLayerBundles`
+> floor (0 of 8), which is also what makes this convention enforceable once it reaches 8.
+> Doing it is not optional tidying — cascade layers are the ONLY thing that removes the
+> `!important` count, measured three ways on 2026-09-08. Scoping (CSS Modules) does not
+> help and is deliberately not being adopted; see ADR-018 "The approach, settled".
 
 > **Convention.** `!important` is not how you win a specificity argument. The count may
 > not grow.
 > *Why:* it is the escalation the layers exist to make unnecessary, and each one makes the
-> next harder to avoid. Migrating the existing 1,969 is not authorised yet, so the rule is
-> a ratchet rather than a ban.
+> next harder to avoid. The migration is authorised and running, so the count now falls
+> rather than merely holding: 1,965 -> 1,923 on 2026-09-08 when 47 selectors that had
+> matched nothing since before Spectrum 3.16 were deleted. It stays a ratchet rather than
+> a ban until the layer fix lands, because until then `!important` is genuinely the only
+> way a layered rule of ours beats Spectrum.
 > [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by the
 > `importantCeiling` pin in `tests/sop/stylesheet-bundles.test.ts`.
 

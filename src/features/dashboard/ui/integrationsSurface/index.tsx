@@ -12,6 +12,11 @@ import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/custom-spectrum.css';
+// .ai-* rules, moved out of custom-spectrum.css by the CSS migration. Three
+// entries reach a component using them, so all three import it.
+import '../styles/ai.css';
+// .eventing-* rules — only this entry reaches EventingSection.
+import '../styles/eventing.css';
 
 const container = document.getElementById('root');
 if (!container) {

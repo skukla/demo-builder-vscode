@@ -249,20 +249,8 @@ button[class*="spectrum-Button"][disabled],
 
 
 /* Progress bar customizations */
-.progress-bar-small-label [class*="spectrum-ProgressBar-label"] {
-    font-size: 12px !important;
-    font-weight: 400 !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-}
 
-.progress-bar-full-width {
-    width: 100% !important;
-    max-width: none !important;
-}
 
-.progress-bar-full-width [class*="spectrum-ProgressBar"] {
-    width: 100% !important;
-}
 
 /* ===========================================
    Transition Classes
@@ -1034,9 +1022,6 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* Brand section container */
-.brand-section {
-    margin-bottom: 24px !important;
-}
 
 /* Small loading spinner size */
 .loading-spinner-small {
@@ -1072,9 +1057,6 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* Progress bar spacing */
-.progress-bar-spacing {
-    margin-bottom: 8px !important;
-}
 
 /* Description block with bottom margin */
 .description-block {
@@ -1201,91 +1183,24 @@ button[class*="spectrum-Button"][disabled],
 /* Self-reflowing CSS grid (mirrors .projects-grid / .selector-grid above): the
    browser fits as many 220px-min columns as the container allows with zero JS.
    `align-items: start` so an expanded card doesn't stretch its row-mates. */
-.expandable-brand-grid {
-    display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
-    gap: 20px !important;
-    align-items: start !important;
-    margin-bottom: 24px !important;
-}
 
 /* Base brand card - expandable variant */
 /* Demo Setup renders BrandGallery in a SingleColumnLayout whose padding is an INLINE
    style (24px). !important overrides just the top to size-400 (32px) so its content
    starts at the same inset below the header as every other flow step; sides/bottom keep
    the layout's default 24px. */
-.brand-gallery-column {
-    padding-top: var(--spectrum-global-dimension-size-400) !important;
-}
 
-.expandable-brand-card {
-    position: relative !important;
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 8px !important;
-    padding: 16px !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease-out !important;
-    /* Grid items default to min-width:auto (=min-content); without this a card
-       refuses to shrink into its reflowing-grid track and overflows. */
-    min-width: 0 !important;
-    box-sizing: border-box !important;
-    /* Shared card-family height floor so package cards and stack (selector) cards
-       read at a consistent height across steps. */
-    min-height: 100px !important;
-}
 
-.expandable-brand-card:hover {
-    background: var(--spectrum-global-color-gray-75) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
-}
 
-.expandable-brand-card:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-}
 
 /* Selected state - brand chosen, shows blue border */
-.expandable-brand-card.selected {
-    border-color: var(--spectrum-global-color-blue-400) !important;
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-}
 
 /* Expanded state - shows architecture selection */
-.expandable-brand-card.expanded {
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-color: var(--spectrum-global-color-blue-400) !important;
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-    transform: none !important;
-    cursor: pointer !important;
-}
 
-.expandable-brand-card.expanded:hover {
-    transform: none !important;
-    box-shadow: none !important;
-}
 
 /* Dimmed state - other cards when one is expanded */
-.expandable-brand-card.dimmed {
-    opacity: 0.5 !important;
-    transform: none !important;
-}
 
-.expandable-brand-card.dimmed:hover {
-    opacity: 0.7 !important;
-    transform: none !important;
-    box-shadow: none !important;
-}
 
-.expandable-brand-card.coming-soon {
-    position: relative;
-    opacity: 0.45;
-    cursor: default !important;
-    pointer-events: none;
-}
 
 .architecture-badge {
     position: absolute;
@@ -1299,45 +1214,16 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* Brand card header area */
-.brand-card-header {
-    margin-bottom: 0 !important;
-}
 
-.expandable-brand-card.expanded .brand-card-header {
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
-    /* No border here - selection section has its own border-top */
-}
 
-.brand-card-title-row {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    margin-bottom: 4px !important;
-}
 
-.brand-card-name {
-    display: block !important;
-    font-size: 15px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-}
 
 /* .brand-card-check retired — replaced by the shared .selection-check-corner. */
 
-.brand-card-description {
-    display: block !important;
-    font-size: 12px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    line-height: 1.4 !important;
-}
 
 /* Architecture options section (inside expanded card) slides + fades down on expand.
  * Its own keyframe (was a second `fadeIn` definition that the later plain `fadeIn`
  * silently shadowed — so this slide never actually ran; renamed to restore it). */
-.brand-card-architectures {
-    animation: fadeInDown var(--db-motion-base) var(--db-motion-ease) !important;
-}
 
 @keyframes fadeInDown {
     from {
@@ -1350,13 +1236,6 @@ button[class*="spectrum-Button"][disabled],
     }
 }
 
-.brand-card-section-label {
-    display: block !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    margin-bottom: 12px !important;
-}
 
 .architecture-options {
     display: flex !important;
@@ -1476,91 +1355,22 @@ button[class*="spectrum-Button"][disabled],
 /* Compact selection summary in expanded brand card */
 /* A quiet secondary line — no divider / uppercase micro-label — so the package card's
    architecture summary reads in the same tone as the backend card's description. */
-.brand-card-selection {
-    margin-top: 6px !important;
-    animation: fadeIn 0.2s ease-out !important;
-}
-.brand-card-selection-summary {
-    font-size: 12px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    line-height: 1.4 !important;
-}
-.brand-card-selection-sep {
-    color: var(--spectrum-global-color-gray-400) !important;
-}
 
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
 }
 
-.brand-card-selection-label {
-    display: block !important;
-    font-size: 10px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-    margin-bottom: 2px !important;
-}
 
-.brand-card-selection-value {
-    display: block !important;
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-}
 
 /* Hover tooltip for block library details */
-.brand-card-detail-trigger {
-    position: relative !important;
-    /* Inline on the architecture summary line (was a block below it). */
-    white-space: nowrap !important;
-}
 
-.brand-card-detail-link {
-    display: inline-block !important;
-    font-size: 12px !important;
-    color: var(--spectrum-global-color-blue-500) !important;
-    text-decoration: underline !important;
-    text-decoration-style: dotted !important;
-    text-underline-offset: 2px !important;
-    cursor: default !important;
-}
 
-.brand-card-detail-tooltip {
-    display: none !important;
-    position: absolute !important;
-    left: 0 !important;
-    bottom: calc(100% + 6px) !important;
-    width: max-content !important;
-    padding: 10px 14px !important;
-    background: var(--spectrum-global-color-gray-50) !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    border-radius: 8px !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
-    z-index: 20 !important;
-    white-space: nowrap !important;
-}
 
-.brand-card-detail-trigger:hover .brand-card-detail-tooltip {
-    display: block !important;
-}
 
 
 /* Edit hint for expanded card */
-.brand-card-edit-hint {
-    display: block !important;
-    font-size: 11px !important;
-    color: var(--spectrum-global-color-blue-400) !important;
-    margin-top: 8px !important;
-    opacity: 0.7 !important;
-    transition: opacity 0.15s ease !important;
-}
 
-.expandable-brand-card.expanded:hover .brand-card-edit-hint {
-    opacity: 1 !important;
-}
 
 /* Picker dropdown menu: prevent item text wrapping, ensure items fit content */
 [role="listbox"] [role="option"] {
@@ -1662,9 +1472,6 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* Expanded card hover - re-open modal */
-.expandable-brand-card.expanded:hover {
-    background: var(--spectrum-global-color-gray-75) !important;
-}
 
 /* Modal button - focusable button matching Spectrum design language */
 .modal-button {
@@ -2307,11 +2114,6 @@ button[class*="spectrum-Button"][disabled],
 /* AI Capabilities — ONE scroll region for everything beneath the modal
    heading (MCP servers + skills together); the modal frame never resizes.
    Replaces the skills-only inner scroll, which felt like a nested widget. */
-.ai-capabilities-body {
-    max-height: 420px;
-    overflow-y: auto;
-    padding-right: 8px; /* keep the scrollbar off the text */
-}
 
 /* A PERSISTENT scrollbar. macOS paints overlay scrollbars only while you are
    scrolling, so a bounded region at rest looks like a complete list — which is
@@ -2320,31 +2122,12 @@ button[class*="spectrum-Button"][disabled],
    A bar rather than a bottom fade: a static fade keeps promising more content
    after you have reached the end, and making it honest needs scroll-position
    state for something a scrollbar already says. */
-.ai-capabilities-body::-webkit-scrollbar {
-    width: 10px;
-}
-.ai-capabilities-body::-webkit-scrollbar-track {
-    background: var(--spectrum-global-color-gray-100);
-    border-radius: 5px;
-}
-.ai-capabilities-body::-webkit-scrollbar-thumb {
-    background: var(--spectrum-global-color-gray-400);
-    border-radius: 5px;
-}
-.ai-capabilities-body::-webkit-scrollbar-thumb:hover {
-    background: var(--spectrum-global-color-gray-500);
-}
 
 /* Sections stack full-width; the SKILLS GROUPS are what run in two columns
    (see .ai-skills-scroll). Putting the columns around the two sections was the
    first attempt and barely helped — skills is the tall section, so a 3-row MCP
    list beside a 21-row skills list takes the height from 3 + 21 to max(3, 21):
    three rows saved, not half. */
-.ai-capabilities-columns {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
 
 /* Section heading (MCP servers / Skills) — the level ABOVE a group header.
    Both used to be 12px, differing only in colour, so "section > group > names"
@@ -2356,20 +2139,6 @@ button[class*="spectrum-Button"][disabled],
    167 of the 238 font declarations in this file. Dropping it silently reverted
    the heading to Spectrum's own size, which is how this shipped looking
    unchanged the first time. */
-.ai-section-heading {
-    font-size: 16px !important;
-    font-weight: 700 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-    /* Mirrors `.config-section-header` — the app's section convention, used by
-       ConfigureScreen: a title over a hairline rule. Matching it is what makes
-       this modal read as part of the same application.
-       (Ideally this would REUSE ConfigSection rather than restate its look, but
-       that component takes no test id and this list is queried by one; worth
-       doing when ConfigSection next earns a `data-testid` prop.) */
-    border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
-    padding-bottom: 4px !important;
-    margin: 0 0 4px 0 !important;
-}
 
 /* The skills GROUPS run in two columns — this is what stops the list cutting
    itself off. With 21 skills a single column ended mid-group at `sync-changes`
@@ -2380,30 +2149,11 @@ button[class*="spectrum-Button"][disabled],
    `minmax(0, 1fr)` rather than `1fr` so a long name shrinks its track instead of
    pushing the grid wider than the dialog; `align-items: start` keeps a short
    group from stretching to match a tall neighbour. */
-.ai-skills-scroll {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 12px 24px;
-    align-items: start;
-}
 
 /* Sticky group headers — deliberately QUIETER than the "Skills · N installed"
    section heading above them: sentence case (caps read as emphasis regardless
    of size), small, muted. Hierarchy: section > group > names. They pin to the
    top of the scroll region while their group's skills scroll under. */
-.ai-skills-group-header {
-    position: sticky;
-    top: 0;
-    /* 13px: still clearly subordinate to the 16px section heading, but the names
-       beneath it now sit at the Spectrum default rather than a forced 12px, so a
-       12px group header had stopped reading as a header at all. */
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--spectrum-global-color-gray-600);
-    background: var(--spectrum-global-color-gray-100);
-    padding: 4px 0;
-    margin-bottom: 4px;
-}
 
 /* ===========================================
    Dashboard Action Buttons - Spectrum Style
@@ -3348,69 +3098,26 @@ button[class*="spectrum-Button"][disabled],
    name/description. Only the unique pieces live here: the source
    classification badge pill and the row separator. */
 
-.ai-surface-source-badge {
-    display: inline-block;
-    padding: 2px 8px;
-    font-size: 10px !important;
-    font-weight: 600 !important;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-radius: 10px;
-    background-color: var(--spectrum-global-color-gray-200);
-    color: var(--spectrum-global-color-gray-800) !important;
-}
 
-.ai-surface-row + .ai-surface-row {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--spectrum-global-color-gray-200);
-}
 
 /* Two-column row used by skills + tool entries — name + badge on
    the left, description on the right, with the left column
    vertically centered against the (often taller) description. */
-.ai-surface-two-col {
-    display: grid !important;
-    grid-template-columns: minmax(160px, 220px) 1fr;
-    column-gap: 24px;
-    align-items: center;
-}
 
 /* AI surface sidebar (right-column) — constrained sidebar width so the
    CTA + text reads as a sidebar, not a full-page banner. */
-.ai-surface-sidebar {
-    max-width: 280px !important;
-}
 
 /* AI surface content fade — mirrors the wizard's
    .list-refresh-container.refreshing pattern (200ms opacity fade
    + pointer-events: none) so the user gets a visible "data is
    refreshing" cue without toast notifications or button spinners. */
-.ai-surface-refreshable {
-    transition: opacity 200ms ease-in-out !important;
-}
 
-.ai-surface-refreshable.refreshing {
-    opacity: 0.5 !important;
-    pointer-events: none !important;
-}
 
 /* AI prompt card (Batch E2) — clickable card in the AI Overview sidebar
    that launches Claude Code with the prompt pre-filled. Subtle outline,
    rounded corners, hover state. Matches the wizard's existing aesthetic. */
-.ai-prompt-card {
-    transition: background 120ms ease-in-out, border-color 120ms ease-in-out;
-}
 
-.ai-prompt-card:hover {
-    background: var(--spectrum-global-color-gray-100) !important;
-    border-color: var(--spectrum-global-color-gray-400) !important;
-}
 
-.ai-prompt-card:focus-visible {
-    outline: 2px solid var(--spectrum-semantic-cta-color-default) !important;
-    outline-offset: 2px !important;
-}
 
 /* ===========================================
    Width/Height Additions
@@ -4616,75 +4323,13 @@ div[class*="spectrum"] input[type="search"] {
 .commerce-summary-content {
     max-width: 280px !important;
 }
-.sum-title {
-    font-size: var(--spectrum-global-dimension-font-size-50) !important;
-    letter-spacing: 0.1em !important;
-    text-transform: uppercase !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    margin-bottom: var(--spectrum-global-dimension-size-150) !important;
-}
-.sum-arch {
-    font-size: var(--spectrum-global-dimension-font-size-100) !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-    padding-bottom: var(--spectrum-global-dimension-size-125) !important;
-    margin-bottom: var(--spectrum-global-dimension-size-75) !important;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
-}
-.sum-arch .empty {
-    color: var(--spectrum-global-color-gray-600) !important;
-    font-weight: 400 !important;
-    font-style: italic !important;
-}
-.sum-group-h {
-    font-size: var(--spectrum-global-dimension-font-size-50) !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
-    margin: var(--spectrum-global-dimension-size-150) 0 var(--spectrum-global-dimension-size-40) !important;
-}
-.sum-row {
-    display: flex !important;
-    justify-content: space-between !important;
-    gap: var(--spectrum-global-dimension-size-125) !important;
-    padding: var(--spectrum-global-dimension-size-50) 0 !important;
-    font-size: var(--spectrum-global-dimension-font-size-75) !important;
-}
-.sum-row + .sum-row {
-    border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
-}
 /* Left group: the shared small CheckmarkCircle (done only) + the row label. */
-.sum-rowlabel {
-    display: flex !important;
-    align-items: center !important;
-    gap: var(--spectrum-global-dimension-size-65) !important;
-    min-width: 0 !important;
-}
-.sum-label {
-    color: var(--spectrum-global-color-gray-600) !important;
-    white-space: nowrap !important;
-}
-.sum-value {
-    color: var(--spectrum-global-color-gray-900) !important;
-    text-align: right !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-}
-.sum-value.empty {
-    color: var(--spectrum-global-color-gray-600) !important;
-    font-style: italic !important;
-}
 /* Completion feedback: the shared ✓ renders only when a row is done, so it mounts
  * on completion and this pop fires once — a subtle reward as each sub-step lands.
  * Zeroed under the global prefers-reduced-motion reset. */
 @keyframes sum-check-in {
     from { opacity: 0; transform: scale(0.6); }
     to { opacity: 1; transform: scale(1); }
-}
-.sum-check {
-    animation: sum-check-in var(--db-motion-base) var(--db-motion-ease);
 }
 
 /* Canonical page header — one tight single row (title · subtitle crumb … action),
@@ -4744,65 +4389,14 @@ div[class*="spectrum"] input[type="search"] {
  * ------------------------------------------------------------------------ */
 
 /* ---- Center column: the result-row list + Add launchpad ---- */
-.int-results {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-width: 720px;
-}
 /* Empty state escapes the row-width cap so it centers in the full view. */
-.int-results--empty {
-    max-width: none;
-}
 /* Empty state: one centered unit (title, copy, Add button) filling the view —
    a left-anchored fragment in the dark expanse reads as unfinished. */
-.int-results-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    min-height: min(420px, 50vh);
-    width: 100%;
-}
-.int-results-empty-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--spectrum-global-color-gray-800);
-}
-.int-results-empty-copy {
-    margin-top: 6px;
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--spectrum-global-color-gray-600);
-    max-width: 52ch;
-}
-.int-results-empty-action {
-    margin-top: 20px;
-}
-.int-results-add {
-    margin-top: 4px;
-}
 
 /* ---- The surface's ONE destination line, above the cards ---- */
 /* Was repeated on every row while always printing the same project/workspace.
    `DestinationContext` supplies the value + Change; this rule only lays the
    label beside it. */
-.int-destination {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0 2px 4px;
-    font-size: var(--spectrum-global-dimension-font-size-75);
-    color: var(--spectrum-global-color-gray-600);
-}
-.int-destination-label {
-    color: var(--spectrum-global-color-gray-600);
-}
-.int-destination-unset {
-    color: var(--spectrum-global-color-gray-500);
-    font-style: italic;
-}
 
 /* ---- The wizard's integration cards ----
    The card itself is `.integration-card`, shared with the dashboard's
@@ -4810,22 +4404,8 @@ div[class*="spectrum"] input[type="search"] {
    or the two surfaces drift apart again. This column only stacks them: the
    dashboard lays the same cards out on a grid, which does not fit inside
    `.int-results`' 720px cap. */
-.int-results > .integration-card {
-    width: 100%;
-    /* Drop the grid's reserved height. `--card-min-height` (128px) exists so
-       cells in `.integrations-grid` share a baseline with their NEIGHBOURS —
-       a card with a short status line stays as tall as one carrying a message.
-       A single column has no neighbour to match, so the reservation is just
-       ~90px of empty card under two lines of text. Height comes from content
-       plus `--card-padding`. */
-    min-height: 0;
-}
 /* The subline is prose here, not a status pair, so it keeps the muted
    statusline metrics without the dot's leading gap. */
-.int-results > .integration-card .integration-card-statusline {
-    font-size: var(--spectrum-global-dimension-font-size-75);
-    color: var(--spectrum-global-color-gray-600);
-}
 
 /* ---- Flow modal: stage body + per-stage layouts ---- */
 /* The 360px min-height that used to live here reserved stage height so
@@ -5882,151 +5462,24 @@ div[class*="spectrum"] input[type="search"] {
 /* ===========================================
    Datapack card
    =========================================== */
-.datapack-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--card-gap);
-    box-sizing: border-box;
-    min-height: var(--card-min-height);
-    min-width: var(--card-min-width);
-    border: 1px solid var(--spectrum-global-color-gray-300);
-    border-radius: 8px;
-    background: var(--spectrum-global-color-gray-50);
-    overflow: hidden;
-    /* The whole card is the control (role=button, or radio when choosing), and
-       every other clickable card here says so with the cursor. This one only
-       changed colour on hover, which reads as decoration rather than a target. */
-    cursor: pointer;
-}
 
-.datapack-card:hover {
-    background: var(--spectrum-global-color-gray-75);
-    border-color: var(--spectrum-global-color-gray-400);
-}
 
 /* A fixed 16:9 band so every card in a row shares a baseline whatever its art
    is — covers, thumbnails and letter tiles all differ in intrinsic size. */
-.datapack-card-art {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: var(--spectrum-global-color-gray-200);
-    overflow: hidden;
-}
 
-.datapack-card-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
 
-.datapack-card-tile {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 32px;
-    font-weight: 700;
-    line-height: 1;
-    color: var(--spectrum-global-color-gray-600);
-    user-select: none;
-}
 
-.datapack-card-body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--card-gap);
-    box-sizing: border-box;
-    padding: var(--card-padding);
-}
 
-.datapack-card-title-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
 
-.datapack-card-name {
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.3;
-    color: var(--spectrum-global-color-gray-900);
-}
 
-.datapack-card-tag {
-    flex-shrink: 0;
-    padding: 1px 6px;
-    border: 1px solid var(--spectrum-global-color-gray-300);
-    border-radius: 4px;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--spectrum-global-color-gray-600);
-}
 
-.datapack-card-version {
-    align-self: flex-start;
-}
 
-.datapack-card-types {
-    font-size: 12px;
-    line-height: 1.4;
-    color: var(--spectrum-global-color-gray-600);
-}
 
 /* The choosing variant. The card is a radio when a `selected` prop is passed;
    this is what being the chosen one looks like. Mirrors the wizard's other
    selection cards rather than inventing a second selected treatment. */
-.datapack-card.is-selected {
-    border-color: var(--spectrum-global-color-blue-500);
-    background: var(--spectrum-global-color-gray-75);
-}
 
 /* ── Eventing section (AB-6 headful) — integrations surface ─────────────── */
-.eventing-section {
-    margin-top: 16px;
-    border-top: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.2));
-    padding-top: 8px;
-}
-.eventing-section-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-.eventing-section-title {
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-left: 4px;
-}
-.eventing-section-body {
-    padding: 8px 4px 4px 24px;
-}
-.eventing-section-note {
-    color: var(--vscode-descriptionForeground);
-    font-size: 12px;
-}
-.eventing-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 2px 0;
-}
-.eventing-row-label {
-    min-width: 160px;
-}
-.eventing-row-id {
-    flex: 1;
-    font-family: var(--vscode-editor-font-family, monospace);
-    font-size: 11px;
-    color: var(--vscode-descriptionForeground);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
 
 
 /* ============================================
