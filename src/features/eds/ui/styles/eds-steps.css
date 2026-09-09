@@ -13,20 +13,26 @@
 
 
 /* ========== Color Utilities (Spectrum Design Tokens) ========== */
+@layer theme {
 .text-gray-400 {
     color: var(--spectrum-global-color-gray-400);
 }
-
-
-
-
-.text-gray-900 {
-    color: var(--spectrum-global-color-gray-900);
 }
 
 
+
+
+@layer theme {
+.text-gray-900 {
+    color: var(--spectrum-global-color-gray-900);
+}
+}
+
+
+@layer theme {
 .text-blue-500 {
     color: var(--spectrum-global-color-blue-500);
+}
 }
 
 /* .text-orange-500 / .text-orange-600 moved to custom-spectrum.css (ADR-017 §6).
@@ -61,16 +67,21 @@
    Add a utility to custom-spectrum.css, not to a feature sheet. */
 
 /* ========== Layout Utilities ========== */
+@layer theme {
 .flex-shrink-0 {
     flex-shrink: 0;
 }
+}
 
+@layer theme {
 .py-4 {
     padding-top: 1rem;
     padding-bottom: 1rem;
 }
+}
 
 /* ========== GitHub Repository List Styling ========== */
+@layer theme {
 .repo-private-badge {
     display: inline-flex;
     align-items: center;
@@ -83,16 +94,21 @@
     text-transform: uppercase;
     letter-spacing: 0.02em;
 }
+}
 
+@layer theme {
 .repo-no-description {
     font-style: italic;
 }
+}
 
 /* ========== DA.live Site List Styling ========== */
+@layer theme {
 .site-list {
     max-height: 320px;
     border: 1px solid var(--spectrum-global-color-gray-300);
     border-radius: 4px;
+}
 }
 
 /* ========== Repository picker: reset-to-template option (top of the list) ========== */
@@ -106,11 +122,13 @@
  * area instead: always visible, no scroll, zero layout dependency. A bottom rule separates
  * it from the search/list below.
  */
+@layer theme {
 .reset-to-template-top {
     margin-top: 0 !important;
     margin-bottom: var(--spectrum-global-dimension-size-100);
     padding-bottom: var(--spectrum-global-dimension-size-100);
     border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
 }
 
 /* Keep the reset checkbox + search bar in view by giving the repo LIST its own
@@ -118,8 +136,10 @@
    area scrolling as one block. The checkbox and search sit ABOVE this container,
    so they stay put. The cap reserves room for the wizard chrome (header, tabs,
    checkbox, search, footer) — tune the subtrahend if it feels tall/short. */
+@layer theme {
 .repo-selection-inline .list-refresh-container {
     max-height: calc(100vh - 24rem);
+}
 }
 
 /* ========== Reset Warning Animation ========== */
@@ -127,22 +147,28 @@
  * Smooth fade in/out transition for the "Reset to template" warning message.
  * Used in both GitHub and DA.live steps when the reset checkbox is toggled.
  */
+@layer theme {
 .reset-warning-container {
     /* Fixed height container prevents layout jump during animation */
+}
 }
 
 /* The warning collapses its own height when unchecked (rather than reserving a
    permanent empty line), reclaiming vertical space; it animates open on check. */
+@layer theme {
 .reset-warning-visible {
     max-height: 3em;
     opacity: 1;
     overflow: hidden;
     transition: max-height 0.15s ease-out, opacity 0.15s ease-out;
 }
+}
 
+@layer theme {
 .reset-warning-hidden {
     max-height: 0;
     opacity: 0;
     overflow: hidden;
     transition: max-height 0.15s ease-out, opacity 0.15s ease-out;
+}
 }

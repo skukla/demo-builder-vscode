@@ -438,14 +438,17 @@ Know the difference before relying on it.
 > `@layer` block naming a declared layer, every BUILT bundle carrying the line, with a
 > planted-violation control.
 
-> **Convention.** A rule sits inside a cascade layer. The count outside every layer may
-> not grow.
+> **Convention.** Every rule sits inside a cascade layer. None may sit outside one.
 > *Why:* unlayered beats layered for a normal declaration, so a loose rule silently
 > outranks everything in `theme` — which is why a rule that looks like it should win
-> sometimes does not. 135 remain across nine sheets; a ratchet rather than a ban,
-> because emptying it moves pixels and belongs to the cascade flip.
+> sometimes does not. **This shipped as a ratchet at 135 and closed to 0 the same
+> day**, because the prediction behind the ratchet was wrong: layering them was
+> supposed to demote 128 plain rules below Spectrum and break them, and it moved
+> NOTHING — empty diff across 2,700 elements and 168 interaction cells. Being
+> unlayered only matters where a vendor rule actually competes for the same property
+> on the same element, and for these it never did.
 > [ADR-018 §1](../architecture/adr/018-css-architecture.md) · Enforced by the
-> `unlayeredRuleCeiling` pin in `tests/sop/stylesheet-bundles.test.ts`.
+> `unlayeredRuleCeiling` pin at 0 in `tests/sop/stylesheet-bundles.test.ts`.
 
 > **Convention.** Vendor CSS sits in the lowest cascade layer.
 > *Why:* layers settle specificity by declaration order rather than by escalation, so

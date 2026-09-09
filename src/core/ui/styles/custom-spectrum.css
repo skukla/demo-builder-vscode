@@ -522,12 +522,16 @@ button[class*="spectrum-Button"][disabled],
    rules were unlayered author rules and outranked every layered one. Putting them
    in a layer here would preserve the text but change the cascade, which is a
    different kind of bug from the one being fixed. */
+@layer theme {
 .text-orange-500 {
     color: var(--spectrum-global-color-orange-500);
 }
+}
 
+@layer theme {
 .text-orange-600 {
     color: var(--spectrum-global-color-orange-600);
+}
 }
 
 /* .text-orange-700 and .text-red-500 were USED but defined nowhere a component
@@ -540,12 +544,16 @@ button[class*="spectrum-Button"][disabled],
    nowhere else. AdobeAuthStep uses it on the auth-failure icon and never gets
    it. Defining it here makes it real everywhere and leaves the inline copy
    harmlessly redundant. */
+@layer theme {
 .text-orange-700 {
     color: var(--spectrum-global-color-orange-700);
 }
+}
 
+@layer theme {
 .text-red-500 {
     color: var(--spectrum-semantic-negative-color-icon);
+}
 }
 
 /* ============================================

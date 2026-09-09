@@ -62,6 +62,7 @@
 }
 
 /* Terminal output styles */
+@layer theme {
 .terminal-output {
     font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
     font-size: 12px;
@@ -75,68 +76,95 @@
     word-break: break-all;
     line-height: 1.4;
 }
+}
 
 /* Terminal colors for different output types */
+@layer theme {
 .terminal-output .command {
     color: var(--db-terminal-command);
 }
+}
 
+@layer theme {
 .terminal-output .success {
     color: var(--db-terminal-success);
 }
+}
 
+@layer theme {
 .terminal-output .error {
     color: var(--db-terminal-error);
 }
+}
 
+@layer theme {
 .terminal-output .warning {
     color: var(--db-terminal-warning);
 }
+}
 
 /* Step animation */
+@layer theme {
 .wizard-step-enter {
     opacity: 0;
     transform: translateX(20px);
 }
+}
 
+@layer theme {
 .wizard-step-enter-active {
     opacity: 1;
     transform: translateX(0);
     transition: opacity 300ms ease, transform 300ms ease;
 }
+}
 
+@layer theme {
 .wizard-step-exit {
     opacity: 1;
     transform: translateX(0);
 }
+}
 
+@layer theme {
 .wizard-step-exit-active {
     opacity: 0;
     transform: translateX(-20px);
     transition: opacity 300ms ease, transform 300ms ease;
 }
+}
 
 /* Status indicators */
+@layer theme {
 .status-indicator {
     display: inline-flex;
     align-items: center;
     gap: 8px;
 }
+}
 
+@layer theme {
 .status-indicator.success {
     color: var(--spectrum-global-color-green-600);
 }
+}
 
+@layer theme {
 .status-indicator.error {
     color: var(--spectrum-global-color-red-600);
 }
+}
 
+@layer theme {
 .status-indicator.warning {
     color: var(--spectrum-global-color-orange-600);
 }
+}
 
+@layer theme {
 .status-indicator.checking {
     color: var(--spectrum-global-color-blue-600);
+}
 }
 
 /* ===========================================
@@ -148,8 +176,10 @@
    itself whenever its variant is `info`, so no surface has to remember. Kept
    distinct from the generic `.pulse` below, which is a layout-level effect with
    its own timing and callers. */
+@layer theme {
 .status-dot--pulse {
     animation: status-dot-pulse 1.2s ease-in-out infinite;
+}
 }
 @keyframes status-dot-pulse {
     0%,
@@ -164,9 +194,11 @@
    previous per-card pulse carried its own reduced-motion rule, which a second
    implementation would simply have missed. */
 @media (prefers-reduced-motion: reduce) {
+@layer theme {
     .status-dot--pulse {
         animation: none;
     }
+}
 }
 
 /* Pulse animation for checking status */
@@ -182,11 +214,14 @@
     to { opacity: 1; }
 }
 
+@layer theme {
 .pulse {
     animation: pulse 1.5s ease-in-out infinite;
 }
+}
 
 /* Code block styles */
+@layer theme {
 .code-block {
     font-family: 'Courier New', Courier, monospace;
     font-size: 12px;
@@ -195,10 +230,13 @@
     border-radius: var(--spectrum-global-dimension-size-50);
     overflow-x: auto;
 }
+}
 
+@layer theme {
 .code-block.dark {
     background: var(--spectrum-global-color-gray-800);
     color: var(--spectrum-global-color-gray-100);
+}
 }
 @layer theme {
 /* Page container — caps content at the canonical width, LEFT-ALIGNED.

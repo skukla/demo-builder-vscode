@@ -495,10 +495,12 @@
    turn the region into a two-axis scroller. The bottom padding keeps the final row
    off the clip edge, so a list that ALMOST fits reads as "scroll me" rather than
    as a rendering fault. */
+@layer theme {
 .intflow-api-scroll {
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
     padding-right: 8px; /* keep the scrollbar off the row labels */
     padding-bottom: 4px;
+}
 }

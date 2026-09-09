@@ -367,9 +367,11 @@
 }
 
 /* Search header - padding provides space for focus ring (2px outline + 2px offset) */
+@layer theme {
 .search-header {
     padding: 4px !important;
     margin: -4px !important;
+}
 }
 
 @layer theme {
@@ -481,6 +483,7 @@
    The tell was that it happened for exactly one pill: every other filter overflows
    the row list, so the list consumes the gesture and nothing reaches `.modal-body`.
    The one whose rows FIT let the gesture through to the oversized body underneath. */
+@layer theme {
 .manage-apis-body {
     display: flex;
     flex-direction: column;
@@ -492,11 +495,14 @@
     min-height: 0;
     min-width: 0; /* a flex child defaults to min-width:auto and refuses to shrink */
 }
+}
 
 .manage-apis-body .intflow-api-picker,
+@layer theme {
 .manage-apis-body .intflow-api-scroll {
     flex: 1 1 auto;
     min-height: 0;
+}
 }
 
 @layer theme {

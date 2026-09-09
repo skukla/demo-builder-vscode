@@ -273,17 +273,21 @@
    once cannot drift.
    ========================================================================== */
 
+@layer theme {
 .sample-data-area {
     display: flex;
     flex-direction: column;
     gap: 16px;
     max-width: var(--content-width);
 }
+}
 
+@layer theme {
 .sample-data-note {
     margin: 0;
     font-size: 12px;
     color: var(--vscode-descriptionForeground);
+}
 }
 
 /* The pack grid. Same shape as the panel's `.datapack-grid` — this surface shows
@@ -291,16 +295,19 @@
    Restated rather than shared because that class lives in the feature-scoped
    data-installer sheet, which this bundle never loads; the CARD's own styles
    moved to custom-spectrum.css, which both bundles do load. */
+@layer theme {
 .sample-data-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 24px;
     padding: 8px;
 }
+}
 
 /* "None" is one option among the packs, so it sits IN the grid rather than
    beside it — a choice parked outside the group reads as "nothing chosen yet"
    rather than as a decision. Sized to the cards it stands with. */
+@layer theme {
 .sample-data-none {
     display: flex;
     flex-direction: column;
@@ -314,21 +321,30 @@
        inside a grid track — state it rather than inherit it by luck. */
     box-sizing: border-box;
 }
+}
 
+@layer theme {
 .sample-data-none:hover {
     border-color: var(--spectrum-global-color-gray-400);
 }
+}
 
+@layer theme {
 .sample-data-none.is-selected {
     border-color: var(--spectrum-global-color-blue-500);
     background: var(--spectrum-global-color-gray-75);
 }
+}
 
+@layer theme {
 .sample-data-none-label {
     font-weight: 600;
 }
+}
 
+@layer theme {
 .sample-data-none-description {
     font-size: 12px;
     color: var(--vscode-descriptionForeground);
+}
 }
