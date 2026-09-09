@@ -4338,75 +4338,13 @@ div[class*="spectrum"] input[type="search"] {
 .commerce-summary-content {
     max-width: 280px !important;
 }
-.sum-title {
-    font-size: var(--spectrum-global-dimension-font-size-50) !important;
-    letter-spacing: 0.1em !important;
-    text-transform: uppercase !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    margin-bottom: var(--spectrum-global-dimension-size-150) !important;
-}
-.sum-arch {
-    font-size: var(--spectrum-global-dimension-font-size-100) !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-    padding-bottom: var(--spectrum-global-dimension-size-125) !important;
-    margin-bottom: var(--spectrum-global-dimension-size-75) !important;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
-}
-.sum-arch .empty {
-    color: var(--spectrum-global-color-gray-600) !important;
-    font-weight: 400 !important;
-    font-style: italic !important;
-}
-.sum-group-h {
-    font-size: var(--spectrum-global-dimension-font-size-50) !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
-    margin: var(--spectrum-global-dimension-size-150) 0 var(--spectrum-global-dimension-size-40) !important;
-}
-.sum-row {
-    display: flex !important;
-    justify-content: space-between !important;
-    gap: var(--spectrum-global-dimension-size-125) !important;
-    padding: var(--spectrum-global-dimension-size-50) 0 !important;
-    font-size: var(--spectrum-global-dimension-font-size-75) !important;
-}
-.sum-row + .sum-row {
-    border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
-}
 /* Left group: the shared small CheckmarkCircle (done only) + the row label. */
-.sum-rowlabel {
-    display: flex !important;
-    align-items: center !important;
-    gap: var(--spectrum-global-dimension-size-65) !important;
-    min-width: 0 !important;
-}
-.sum-label {
-    color: var(--spectrum-global-color-gray-600) !important;
-    white-space: nowrap !important;
-}
-.sum-value {
-    color: var(--spectrum-global-color-gray-900) !important;
-    text-align: right !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-}
-.sum-value.empty {
-    color: var(--spectrum-global-color-gray-600) !important;
-    font-style: italic !important;
-}
 /* Completion feedback: the shared ✓ renders only when a row is done, so it mounts
  * on completion and this pop fires once — a subtle reward as each sub-step lands.
  * Zeroed under the global prefers-reduced-motion reset. */
 @keyframes sum-check-in {
     from { opacity: 0; transform: scale(0.6); }
     to { opacity: 1; transform: scale(1); }
-}
-.sum-check {
-    animation: sum-check-in var(--db-motion-base) var(--db-motion-ease);
 }
 
 /* Canonical page header — one tight single row (title · subtitle crumb … action),
@@ -4466,65 +4404,14 @@ div[class*="spectrum"] input[type="search"] {
  * ------------------------------------------------------------------------ */
 
 /* ---- Center column: the result-row list + Add launchpad ---- */
-.int-results {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-width: 720px;
-}
 /* Empty state escapes the row-width cap so it centers in the full view. */
-.int-results--empty {
-    max-width: none;
-}
 /* Empty state: one centered unit (title, copy, Add button) filling the view —
    a left-anchored fragment in the dark expanse reads as unfinished. */
-.int-results-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    min-height: min(420px, 50vh);
-    width: 100%;
-}
-.int-results-empty-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--spectrum-global-color-gray-800);
-}
-.int-results-empty-copy {
-    margin-top: 6px;
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--spectrum-global-color-gray-600);
-    max-width: 52ch;
-}
-.int-results-empty-action {
-    margin-top: 20px;
-}
-.int-results-add {
-    margin-top: 4px;
-}
 
 /* ---- The surface's ONE destination line, above the cards ---- */
 /* Was repeated on every row while always printing the same project/workspace.
    `DestinationContext` supplies the value + Change; this rule only lays the
    label beside it. */
-.int-destination {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0 2px 4px;
-    font-size: var(--spectrum-global-dimension-font-size-75);
-    color: var(--spectrum-global-color-gray-600);
-}
-.int-destination-label {
-    color: var(--spectrum-global-color-gray-600);
-}
-.int-destination-unset {
-    color: var(--spectrum-global-color-gray-500);
-    font-style: italic;
-}
 
 /* ---- The wizard's integration cards ----
    The card itself is `.integration-card`, shared with the dashboard's
@@ -4532,22 +4419,8 @@ div[class*="spectrum"] input[type="search"] {
    or the two surfaces drift apart again. This column only stacks them: the
    dashboard lays the same cards out on a grid, which does not fit inside
    `.int-results`' 720px cap. */
-.int-results > .integration-card {
-    width: 100%;
-    /* Drop the grid's reserved height. `--card-min-height` (128px) exists so
-       cells in `.integrations-grid` share a baseline with their NEIGHBOURS —
-       a card with a short status line stays as tall as one carrying a message.
-       A single column has no neighbour to match, so the reservation is just
-       ~90px of empty card under two lines of text. Height comes from content
-       plus `--card-padding`. */
-    min-height: 0;
-}
 /* The subline is prose here, not a status pair, so it keeps the muted
    statusline metrics without the dot's leading gap. */
-.int-results > .integration-card .integration-card-statusline {
-    font-size: var(--spectrum-global-dimension-font-size-75);
-    color: var(--spectrum-global-color-gray-600);
-}
 
 /* ---- Flow modal: stage body + per-stage layouts ---- */
 /* The 360px min-height that used to live here reserved stage height so

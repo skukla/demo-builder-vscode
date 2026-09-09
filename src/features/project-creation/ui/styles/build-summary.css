@@ -1,0 +1,82 @@
+/**
+ * sum styles.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
+ * when the visual diff is empty, so the rules are not edited on the way.
+ */
+
+@layer theme {
+.sum-title {
+    font-size: var(--spectrum-global-dimension-font-size-50) !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    margin-bottom: var(--spectrum-global-dimension-size-150) !important;
+}
+
+.sum-arch {
+    font-size: var(--spectrum-global-dimension-font-size-100) !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+    padding-bottom: var(--spectrum-global-dimension-size-125) !important;
+    margin-bottom: var(--spectrum-global-dimension-size-75) !important;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
+}
+
+.sum-arch .empty {
+    color: var(--spectrum-global-color-gray-600) !important;
+    font-weight: 400 !important;
+    font-style: italic !important;
+}
+
+.sum-group-h {
+    font-size: var(--spectrum-global-dimension-font-size-50) !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    margin: var(--spectrum-global-dimension-size-150) 0 var(--spectrum-global-dimension-size-40) !important;
+}
+
+.sum-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: var(--spectrum-global-dimension-size-125) !important;
+    padding: var(--spectrum-global-dimension-size-50) 0 !important;
+    font-size: var(--spectrum-global-dimension-font-size-75) !important;
+}
+
+.sum-row + .sum-row {
+    border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+}
+
+.sum-rowlabel {
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--spectrum-global-dimension-size-65) !important;
+    min-width: 0 !important;
+}
+
+.sum-label {
+    color: var(--spectrum-global-color-gray-600) !important;
+    white-space: nowrap !important;
+}
+
+.sum-value {
+    color: var(--spectrum-global-color-gray-900) !important;
+    text-align: right !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.sum-value.empty {
+    color: var(--spectrum-global-color-gray-600) !important;
+    font-style: italic !important;
+}
+
+.sum-check {
+    animation: sum-check-in var(--db-motion-base) var(--db-motion-ease);
+}
+}

@@ -1,0 +1,86 @@
+/**
+ * int styles.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
+ * when the visual diff is empty, so the rules are not edited on the way.
+ */
+
+@layer theme {
+.int-results {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 720px;
+}
+
+.int-results--empty {
+    max-width: none;
+}
+
+.int-results-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: min(420px, 50vh);
+    width: 100%;
+}
+
+.int-results-empty-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-800);
+}
+
+.int-results-empty-copy {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-600);
+    max-width: 52ch;
+}
+
+.int-results-empty-action {
+    margin-top: 20px;
+}
+
+.int-results-add {
+    margin-top: 4px;
+}
+
+.int-destination {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 2px 4px;
+    font-size: var(--spectrum-global-dimension-font-size-75);
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.int-destination-label {
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.int-destination-unset {
+    color: var(--spectrum-global-color-gray-500);
+    font-style: italic;
+}
+
+.int-results > .integration-card {
+    width: 100%;
+    /* Drop the grid's reserved height. `--card-min-height` (128px) exists so
+       cells in `.integrations-grid` share a baseline with their NEIGHBOURS —
+       a card with a short status line stays as tall as one carrying a message.
+       A single column has no neighbour to match, so the reservation is just
+       ~90px of empty card under two lines of text. Height comes from content
+       plus `--card-padding`. */
+    min-height: 0;
+}
+
+.int-results > .integration-card .integration-card-statusline {
+    font-size: var(--spectrum-global-dimension-font-size-75);
+    color: var(--spectrum-global-color-gray-600);
+}
+}

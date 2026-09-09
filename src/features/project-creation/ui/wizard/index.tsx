@@ -22,6 +22,10 @@ import '@/features/prerequisites/ui/styles/prerequisites.css';
 // other — so they moved together and share a sheet. The wizard is the only entry
 // whose graph reaches a component using either.
 import '../styles/brand-cards.css';
+// .int-* (integration flow) and .sum-* (build summary), moved out of
+// custom-spectrum.css by the CSS migration. Wizard-only families.
+import '../styles/integration-flow.css';
+import '../styles/build-summary.css';
 import type { WizardInitialData } from '@/types/webviewPayloads';
 
 // Get root element
