@@ -27,23 +27,16 @@
  * against either.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import { ruleFor, allCss } from '../../helpers/cssRules';
 
-const CSS = fs
-    .readFileSync(path.join(__dirname, '../../../src/core/ui/styles/custom-spectrum.css'), 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, '');
-
-/** Declarations of the rule whose FULL selector list matches, whitespace normalised. */
-function ruleFor(selectorList: string): string {
-    const norm = (t: string) => t.replace(/\s+/g, ' ').trim();
-    for (const block of CSS.split('}')) {
-        const open = block.indexOf('{');
-        if (open === -1) continue;
-        if (norm(block.slice(0, open)) === norm(selectorList)) return block.slice(open);
-    }
-    throw new Error(`no rule for: ${selectorList}`);
-}
+/**
+ * Read the rule from WHEREVER it ships, not from a named sheet.
+ *
+ * This suite read `custom-spectrum.css` by path and hand-rolled its own `ruleFor`.
+ * It broke the day `.page-*` moved to index.css — a change that moved no pixel on
+ * any surface. The shared helper reads every stylesheet under `src/`, so a rule's
+ * LOCATION stops being something a layout test asserts.
+ */
 
 describe('page content alignment', () => {
     it.each(['.page-container', '.page-container-padded'])(
@@ -76,8 +69,8 @@ describe('page content alignment', () => {
         // `.page-left-anchored` (formerly `.dashboard-left`) existed only because
         // the default was wrong. Keeping it would leave the trap that let the
         // integrations surface ship centred.
-        expect(CSS).not.toContain('page-left-anchored');
-        expect(CSS).not.toContain('dashboard-left');
+        expect(allCss).not.toContain('page-left-anchored');
+        expect(allCss).not.toContain('dashboard-left');
     });
 
     it('agrees with the wizard, which was right all along', () => {

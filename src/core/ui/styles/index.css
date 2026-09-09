@@ -192,3 +192,85 @@
     background: var(--spectrum-global-color-gray-800);
     color: var(--spectrum-global-color-gray-100);
 }
+@layer theme {
+/* Page container — caps content at the canonical width, LEFT-ALIGNED.
+   These used to centre (margin: auto), contradicting the --content-width
+   docblock below and the wizard's .content-column, which never centred. Screens
+   coped one at a time: the project dashboard added an opt-out, the integrations
+   surface inherited the centred default when its grid moved out of that
+   dashboard, and the projects list and Prompt Library never opted out at all.
+   Fixing the DEFAULT is the only version that cannot rot — a new screen gets
+   canonical behaviour by doing nothing. */
+.page-container {
+    max-width: var(--content-width) !important;
+}
+
+/* Page container with horizontal padding */
+/* size-400 (32px), NOT 16: PageHeader pads its own content by size-400, so a
+   narrower body inset left every screen's content 16px adrift of its title. The
+   old per-screen opt-out had been silently correcting that too. */
+.page-container-padded {
+    max-width: var(--content-width) !important;
+    padding-left: var(--spectrum-global-dimension-size-400) !important;
+    padding-right: var(--spectrum-global-dimension-size-400) !important;
+}
+
+/* Page header section spacing */
+.page-header-section {
+    padding-top: 24px !important;
+    padding-bottom: 16px !important;
+}
+
+/* Page body section spacing */
+.page-body-section {
+    padding-top: 24px !important;
+    padding-bottom: 16px !important;
+}
+
+/* Page body section with larger bottom spacing */
+.page-body-section-lg {
+    padding-bottom: 24px !important;
+}
+
+/* Integrations band, context row: "Deploys to <project> · <workspace>  Change".
+   Rides the END of SearchHeader's count row, which is space-between and has an
+   empty right half once a search field shows. Costs the band no extra line for
+   what is the least-used fact on the screen. The label is what distinguishes
+   the REMOTE Adobe destination from the LOCAL project name in the page header;
+   they used to sit in one dot-separated run in the subtitle, where nothing told
+   them apart. */
+.page-destination-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* One size for the whole row — it sits beside SearchHeader's 12px count, and
+   11px uppercase (borrowed from the dashboard's badge rows, where it stands
+   alone) read as a mismatch rather than a hierarchy. Sentence case, so the row
+   reads as a phrase: "Deploys to Kukla Mesh · Stage". The three roles separate by
+   COLOUR now that size does not: dim label, darker value, blue action. */
+.page-destination-label {
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-500);
+}
+
+/* Canonical page header — one tight single row (title · subtitle crumb … action),
+ * the same reclaimed density on every screen. The page context (a rail, a grid) owns
+ * the wayfinding, so the title stays modest and the header spends little vertical budget. */
+.page-header-title {
+    font-size: var(--spectrum-global-dimension-font-size-300) !important;
+    line-height: 1.2 !important;
+    /* Zero the Spectrum Heading's default block margins so the single-row header
+     * content sits vertically centered in its (now tight) padded band. */
+    margin: 0 !important;
+}
+
+.page-header-subtitle {
+    font-size: var(--spectrum-global-dimension-font-size-100) !important;
+}
+
+.page-header-secondary {
+    margin-top: var(--spectrum-global-dimension-size-75) !important;
+}
+}

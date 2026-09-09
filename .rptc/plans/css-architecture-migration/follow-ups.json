@@ -22,7 +22,7 @@
             "id": "tests-naming-sheets",
             "lane": "open",
             "what": "Test suites that read a stylesheet BY PATH instead of using tests/helpers/cssRules.ts.",
-            "why": "They assert on where a rule LIVES as much as on what it says, and this migration moves rules between sheets by design. Four suites have broken this way on moves that changed no rendering at all.",
+            "why": "They assert on where a rule LIVES as much as on what it says, and this migration moves rules between sheets by design. Four suites have broken this way on moves that changed no rendering at all. Two more broke on the .page-* move on 2026-09-09 — pageContentAlignment and destinationRowType, each carrying its own copy of ruleFor — and were converted. That is six of the six that have ever broken; the rest either use the helper or read the sheet as data on purpose.",
             "note": "Three of the hits are legitimate and must stay: layerDeclarations.test.ts owns cascade-order questions and needs the raw file, and the two sop suites read the sheet as data. Read the list; do not chase the number to zero.",
             "probe": "grep -rl custom-spectrum.css tests/ --include='*.ts' --include='*.tsx' | wc -l"
         },
