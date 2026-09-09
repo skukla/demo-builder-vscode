@@ -402,3 +402,17 @@ THE FONT-WEIGHT FINDING MATTERS BEYOND THIS ITEM. !important was not only beatin
 A SCRIPT BUG WORTH RECORDING because it nearly shipped as data. The first strip walked the text with a character buffer and dropped the buffer whenever it met a comment, silently deleting 806 lines from custom-spectrum.css while reporting the correct 1,946 removals. It was caught by a check that the file must equal the original once !important is stripped from BOTH — not by reading the diff, which was 5,338 lines. Rewritten index-based so it can only delete the spans it selected, with a fixture proving a comment mentioning !important survives and line counts do not change.
 
 WHAT THIS LEAVES. The layer fix is correct in principle — unlayered normal beats layered normal, and that is why !important exists here. But applying it moves 28% of rendered elements, which is a redesign, not a refactor. The remaining evidence-bar conditions (a human looks at every moved element; confirm in the Extension Development Host) cannot be met by adjudicating 762 elements one at a time. The next move is the owner's: accept a bounded visual change and review it in batches, or scope the layer fix to one surface at a time so each batch is reviewable.
+- 2026-09-09  refactor(css): cycle 7 — eventing to one entry, progress into an existing sheet (`56a169f17`)
+- 2026-09-09  refactor(css): cycle 6 — integration flow and build summary leave the god file (`e9e44538d`)
+- 2026-09-09  refactor(css): cycle 5 — datapack, and a class the move proved had never worked (`aba424bad`)
+- 2026-09-09  refactor(css): cycle 4 — the ai family, and the shape that keeps breaking tests (`3fc37191f`)
+- 2026-09-09  refactor(css): cycle 3 — brand and expandable leave together, because they are entangled (`15db8b01b`)
+- 2026-09-09  docs(css): ADR-018 carried a measurement this repo has since disproved (`bf0d40af3`)
+- 2026-09-08  fix(css): delete 47 selectors that have matched nothing since before Spectrum 3.16 (`4b57bcf1a`)
+- 2026-09-08  docs(css): the final lane corrects my own recommendation (`230cfae5b`)
+- 2026-09-08  docs(css): research — layers are the fix, co-location is a separate change (`e0c5bf6a5`)
+- 2026-09-08  refactor(css): cycle 1 — .prerequisite-* leaves the god file, empty diff (`cce2007bb`)
+- 2026-09-08  feat(css): step 1 — the ratchets, and a mover that refuses to lie about pixels (`efa11ba69`)
+- 2026-09-08  docs(css): the migration plan — split first, flip second, ratchet all of it (`817690b74`)
+- 2026-09-08  docs(css): phase 4's layer fix, measured and REVERTED — 28% of elements move (`620394d48`)
+- 2026-09-08  feat(tooling): the net can finally see hover, focus and active (`c47eb6041`)
