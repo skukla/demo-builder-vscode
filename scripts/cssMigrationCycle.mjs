@@ -277,9 +277,19 @@ function cmdMove(prefix, target) {
     console.log(`  3. the diff MUST be empty; a non-empty diff reverts the move`);
     console.log(`  4. then: node scripts/cssMigrationCycle.mjs --check`);
 
-    const rest = leftovers(prefix);
-    if (rest.length) {
-        console.error(`\nINCOMPLETE MOVE — ${rest.length} line(s) still mention .${prefix}-*:`);
+    const { owned, foreign, dangling } = classifyMentions(prefix);
+    if (foreign.length) {
+        console.log(`\nreferenced by ${foreign.length} rule(s) of OTHER families — not a leftover:`);
+        for (const r of foreign) console.log('   ' + r);
+        console.log(
+            'Each stays in the god file, unchanged, styling .' + prefix + '-* elements as a\n' +
+            'descendant. Its own rendering cannot change, and the moved rules\' new position\n' +
+            'IS visible to the visual diff — so this is covered, not hidden.'
+        );
+    }
+    if (owned.length || dangling.length) {
+        const rest = [...owned, ...dangling];
+        console.error(`\nINCOMPLETE MOVE — ${rest.length} line(s) of .${prefix}-*'s OWN rules remain:`);
         for (const r of rest) console.error('   ' + r);
         console.error('The visual diff CANNOT catch this: a leftover still applies.');
         process.exit(1);
@@ -288,16 +298,41 @@ function cmdMove(prefix, target) {
 }
 
 /**
- * After moving family X, no rule in the god file may still mention `.X-`.
+ * Every remaining mention of `.X-` in the god file, split by WHO OWNS THE RULE.
  *
- * THE VISUAL DIFF CANNOT DO THIS. A leftover rule still applies — the god file is
- * still imported by the bundle that renders the family — so a half-moved family
- * renders identically and the diff is empty. The split looks done and is not.
- * Found on the first real cycle: `.sidebar-action-tile:hover` stayed behind while
- * its base rule left, and only a direct search found it.
+ * THE VISUAL DIFF CANNOT SEE AN OWNED LEFTOVER. A rule of family X left behind
+ * still applies — the god file is still imported by the bundle that renders the
+ * family — so a half-moved family renders identically and the diff is empty. The
+ * split looks done and is not. Found on the first real cycle:
+ * `.sidebar-action-tile:hover` stayed behind while its base rule left, and only a
+ * direct search found it.
+ *
+ * BUT DIRECTION MATTERS, AND THE FIRST VERSION OF THIS CHECK IGNORED IT. It
+ * refused on ANY remaining mention, which conflated two different things:
+ *
+ *   owned    `.timeline-step { }` — a rule of the family, left behind. A real
+ *            incompleteness. Refuse.
+ *   foreign  `.wizard-timeline-column .timeline-step { }` — a rule of ANOTHER
+ *            family that styles this one as a descendant. It belongs to `.wizard-*`
+ *            and is not part of this move at all.
+ *
+ * A foreign rule stays in the god file, unedited, so its own rendering cannot
+ * change; and the only thing the move DOES change — where the moved rules sit in
+ * the cascade relative to it — is exactly what the visual diff measures. So it is
+ * covered rather than hidden, and blocking on it is a false refusal.
+ *
+ * Measured 2026-09-09: 23 cross-family selectors in this file, and 12 families
+ * blocked by a foreign rule alone. That includes `.intflow-*` — the largest
+ * remaining family at 52 rules — blocked by ONE rule owned by `.manage-*`, and
+ * `.timeline-*` (19), blocked by seven owned by `.wizard-*`.
+ *
+ * A third bucket refuses too: a mention inside NO parsed rule is a dangling
+ * fragment the mover left behind, which is worse than either.
  */
-function leftovers(prefix) {
-    const text = readFileSync(join(ROOT, GOD_FILE), 'utf8');
+function classifyMentions(prefix, source = null) {
+    // The text is injectable ONLY so `--selftest` can plant each of the three
+    // buckets. Production callers pass nothing and read the real file.
+    const text = source ?? readFileSync(join(ROOT, GOD_FILE), 'utf8');
 
     // Test where the MATCH sits, not where its line starts. A comment that begins
     // after indentation — `    /* Match .brand-card-name ... */` — leaves the line
@@ -307,21 +342,43 @@ function leftovers(prefix) {
     const inComment = (pos) => spans.some(([a, b]) => pos >= a && pos < b);
 
     const lines = text.split('\n');
+
+    // Which family owns each line, from the SAME parser `--move` selects with, so
+    // ownership here and selection there cannot disagree. A line inside no rule
+    // stays null and is reported as dangling.
+    const ownerOf = new Array(lines.length).fill(null);
+    for (const r of readRules(text)) {
+        for (let i = r.start; i <= r.end; i++) ownerOf[i] = r.prefix;
+    }
+
     const re = new RegExp(`(?<![\\w-])\\.${prefix}-[\\w-]+`);
-    const out = [];
+    const owned = [];
+    const foreign = [];
+    const dangling = [];
     let offset = 0;
     for (let i = 0; i < lines.length; i++) {
         const m = re.exec(lines[i]);
-        if (m && !inComment(offset + m.index)) out.push(`${i + 1}: ${lines[i].trim().slice(0, 76)}`);
+        if (m && !inComment(offset + m.index)) {
+            const line = `${i + 1}: ${lines[i].trim().slice(0, 76)}`;
+            if (ownerOf[i] === prefix) owned.push(line);
+            else if (ownerOf[i] === null) dangling.push(line);
+            else foreign.push(`[.${ownerOf[i]}-*] ${line}`);
+        }
         offset += lines[i].length + 1;
     }
-    return out;
+    return { owned, foreign, dangling };
 }
 
 function cmdLeftovers(prefix) {
-    const rest = leftovers(prefix);
+    const { owned, foreign, dangling } = classifyMentions(prefix);
+    if (foreign.length) {
+        console.log(`${foreign.length} rule(s) of OTHER families reference .${prefix}-* — not leftovers:`);
+        for (const r of foreign) console.log('   ' + r);
+        console.log('');
+    }
+    const rest = [...owned, ...dangling];
     if (rest.length) {
-        console.error(`REFUSED: ${rest.length} line(s) still mention .${prefix}-* in the god file:`);
+        console.error(`REFUSED: ${rest.length} line(s) of .${prefix}-*'s own rules remain in the god file:`);
         for (const r of rest) console.error('   ' + r);
         console.error('\nA leftover still APPLIES, so the visual diff cannot see this. Move them too.');
         process.exit(1);
@@ -420,6 +477,38 @@ function cmdSelfTest() {
     check('F-conditional-at-rule-is-detected',
         f.length === 2 && f[0].conditional === false && f[1].conditional === true,
         `flags ${JSON.stringify(f.map((r) => [r.selector.trim(), r.conditional]))}`);
+
+    // G: an OWNED leftover is still refused. This is the 2026-09-08 defect the
+    //    check was built for — a multi-line selector list whose head stayed behind
+    //    while its body left — and making the check direction-aware must not
+    //    weaken it.
+    const ownedLeft = [
+        '.sidebar-action-tile:hover,',
+        '.sidebar-action-tile * {',
+        '    color: red;',
+        '}',
+    ].join('\n');
+    const g = classifyMentions('sidebar', ownedLeft);
+    check('G-owned-leftover-is-refused', g.owned.length === 2 && g.foreign.length === 0,
+        `owned ${g.owned.length}, foreign ${g.foreign.length}, dangling ${g.dangling.length}`);
+
+    // H: a FOREIGN rule mentioning the family is reported, not refused. Without
+    //    this, `.intflow-*` (52 rules) stays blocked by one `.manage-*` rule.
+    const foreignRef = [
+        '.manage-apis-body .intflow-api-picker {',
+        '    overflow: hidden;',
+        '}',
+    ].join('\n');
+    const h = classifyMentions('intflow', foreignRef);
+    check('H-foreign-reference-is-not-a-leftover', h.owned.length === 0 && h.foreign.length === 1,
+        `owned ${h.owned.length}, foreign ${h.foreign.length}, dangling ${h.dangling.length}`);
+
+    // I: a mention inside NO rule is a dangling fragment and must refuse. A move
+    //    that cut a rule in half leaves exactly this, and it parses as neither.
+    const fragment = ['    color: red;', '}', '.intflow-orphan-tail,'].join('\n');
+    const iRes = classifyMentions('intflow', fragment);
+    check('I-dangling-fragment-is-refused', iRes.dangling.length === 1 && iRes.owned.length === 0,
+        `owned ${iRes.owned.length}, foreign ${iRes.foreign.length}, dangling ${iRes.dangling.length}`);
 
     // D: the CONTROL on the controls — a deliberately broken expectation must FAIL,
     //    or all of the above could be passing vacuously.

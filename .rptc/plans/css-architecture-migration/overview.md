@@ -38,8 +38,15 @@ captures and an empty diff for every change.
 **Two traps that cost cycles, both now scripted or documented rather than
 remembered:** a suite that names the stylesheets it expects a rule to live in will
 break on a move that changes no rendering — use `tests/helpers/cssRules.ts`; and a
-family can be entangled with another through a compound selector, in which case
-they move together or not at all.
+compound selector is NOT automatically entanglement.
+
+`--move` sorts the mentions left behind by who OWNS the rule: one of the moved
+family refuses the move, one of a DIFFERENT family that merely styles this one as a
+descendant is reported and allowed. The older check refused both, which cost cycle 3
+a needless joint move (brand and expandable could each have gone alone) and was
+still holding 12 families on 2026-09-09 — `.intflow-*`, 52 rules, behind a single
+`.manage-*` rule among them. Genuine entanglement is both sides owning rules that
+name the other; `.wizard-*` + `.timeline-*` is the one such pair left.
 
 ## What the failed attempt established
 
