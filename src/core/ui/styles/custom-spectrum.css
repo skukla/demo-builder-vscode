@@ -28,23 +28,14 @@
 .text-md { font-size: 14px !important; }
 .text-lg { font-size: 16px !important; }
 .text-xl { font-size: 18px !important; }
-.text-2xl { font-size: 22px !important; }
-.text-3xl { font-size: 28px !important; }
-.text-4xl { font-size: 32px !important; }
-.text-5xl { font-size: 36px !important; }
-.text-15 { font-size: 15px !important; }
 
 .font-normal { font-weight: 400 !important; }
 .font-medium { font-weight: 500 !important; }
 .font-semibold { font-weight: 600 !important; }
-.font-bold { font-weight: 700 !important; }
 .font-mono { font-family: var(--spectrum-font-family-code, monospace) !important; }
 
 .text-center { text-align: center !important; }
-.text-left { text-align: left !important; }
-.text-right { text-align: right !important; }
 .text-uppercase { text-transform: uppercase !important; }
-.text-italic { font-style: italic !important; }
 
 /* ===========================================
    Color Classes (using Spectrum variables)
@@ -55,12 +46,9 @@
 .text-red-600 { color: var(--spectrum-global-color-red-600) !important; }
 .text-green-600 { color: var(--spectrum-global-color-green-600) !important; }
 .text-yellow-600 { color: var(--spectrum-global-color-yellow-600) !important; }
-.text-green-700 { color: var(--spectrum-global-color-green-700) !important; }
 .text-blue-600 { color: var(--spectrum-global-color-blue-600) !important; }
 
-.bg-gray-50 { background-color: var(--spectrum-global-color-gray-50) !important; }
 .bg-gray-75 { background-color: var(--spectrum-global-color-gray-75) !important; }
-.bg-gray-100 { background-color: var(--spectrum-global-color-gray-100) !important; }
 
 /* ===========================================
    Layout Classes
@@ -68,29 +56,20 @@
 .w-full { width: 100% !important; }
 .h-full { height: 100% !important; }
 
-.max-w-full { max-width: 100% !important; }
 .min-w-0 { min-width: 0 !important; }
 
 .flex { display: flex !important; }
-.flex-center { 
-    display: flex !important; 
-    align-items: center !important; 
-    justify-content: center !important;
-}
 .flex-column { 
     display: flex !important; 
     flex-direction: column !important; 
 }
 .flex-1 { flex: 1 !important; }
-.items-center { align-items: center !important; }
 .items-stretch { align-items: stretch !important; }
-.justify-between { justify-content: space-between !important; }
 
 .block { display: block !important; }
 .hidden { display: none !important; }
 
 .overflow-hidden { overflow: hidden !important; }
-.overflow-auto { overflow: auto !important; }
 .overflow-y-auto { overflow-y: auto !important; }
 .overflow-x-hidden { overflow-x: hidden !important; }
 
@@ -98,36 +77,15 @@
    Spacing Classes
    =========================================== */
 .p-0 { padding: 0 !important; }
-.p-badge { padding: 2px 6px !important; }
 .p-2 { padding: 8px !important; }
-.p-3 { padding: 12px !important; }
-.p-4 { padding: 16px !important; }
-.p-5 { padding: 20px !important; }
 
-.px-3 { padding-left: 12px !important; padding-right: 12px !important; }
-.px-4 { padding-left: 16px !important; padding-right: 16px !important; }
-.py-2 { padding-top: 8px !important; padding-bottom: 8px !important; }
-.py-3 { padding-top: 12px !important; padding-bottom: 12px !important; }
 
-.m-0 { margin: 0 !important; }
-.mb-0 { margin-bottom: 0 !important; }
-.mb-1 { margin-bottom: 4px !important; }
-.mb-2 { margin-bottom: 8px !important; }
-.mb-3 { margin-bottom: 12px !important; }
-.mb-4 { margin-bottom: 16px !important; }
-.mb-5 { margin-bottom: 20px !important; }
-.mt-1 { margin-top: 4px !important; }
-.mt-2 { margin-top: 8px !important; }
-.mt-auto { margin-top: auto !important; }
-.mr-3 { margin-right: 12px !important; }
-.ml-5 { margin-left: 20px !important; }
 
 /* ===========================================
    Border & Radius Classes
    =========================================== */
 .border { border: 1px solid var(--spectrum-global-color-gray-300) !important; }
 .border-radius { border-radius: 4px !important; }
-.rounded-md { border-radius: 6px !important; }
 button[class*="spectrum-Button"]:not(:disabled),
 button[class*="spectrum-Button"]:not([disabled]),
 [class*="spectrum-Button"]:not([aria-disabled="true"]) {
@@ -171,37 +129,11 @@ button[class*="spectrum-Button"][disabled],
    Wrapped in @layer theme for cascade control
    ============================================ */
 @layer theme {
-    /* ===========================================
-       Container Classes
-       =========================================== */
-    .bordered-container {
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    border-radius: 4px !important;
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    padding: 12px !important;
-}
-
-.card-container {
-    background-color: var(--spectrum-global-color-gray-75) !important;
-    border-radius: 4px !important;
-    padding: 12px !important;
-    transition: all 0.3s ease !important;
-}
-
-.card-hover:hover {
-    background-color: var(--spectrum-global-color-gray-100) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
-}
 
 
-.node-version-success {
-    color: var(--spectrum-global-color-green-600) !important;
-}
 
-.node-version-error {
-    color: var(--spectrum-global-color-red-600) !important;
-}
+
+
 
 
 
@@ -210,41 +142,19 @@ button[class*="spectrum-Button"][disabled],
    Utility Classes
    =========================================== */
 .opacity-50 { opacity: 0.5 !important; }
-.opacity-60 { opacity: 0.6 !important; }
-.opacity-70 { opacity: 0.7 !important; }
 .opacity-100 { opacity: 1 !important; }
 
 .cursor-pointer { cursor: pointer !important; }
-.cursor-not-allowed { cursor: not-allowed !important; }
 .cursor-default { cursor: default !important; }
 
-.min-h-16 { min-height: 16px !important; }
-.h-28 { height: 28px !important; }
-.h-32 { height: 32px !important; }
 
 
 .whitespace-pre-wrap { white-space: pre-wrap !important; }
 .whitespace-nowrap { white-space: nowrap !important; }
-.word-break { word-break: break-word !important; }
-
-.scale-180 { transform: scale(1.8) !important; }
 
 
-/* ===========================================
-   Success State Styling
-   =========================================== */
-.success-banner {
-    padding: 12px !important;
-    background-color: var(--spectrum-global-color-green-100) !important;
-    border-radius: 4px !important;
-    margin-top: auto !important;
-}
 
-.success-text {
-    font-size: 13px !important;
-    color: var(--spectrum-global-color-green-600) !important;
-    font-weight: 500 !important;
-}
+
 
 /* ===========================================
    Position Classes
@@ -254,18 +164,6 @@ button[class*="spectrum-Button"][disabled],
 .fixed { position: fixed !important; }
 .sticky { position: sticky !important; }
 
-.top-0 { top: 0 !important; }
-.top-2 { top: 8px !important; }
-.top-7 { top: 28px !important; }
-.left-0 { left: 0 !important; }
-.left-3 { left: 11px !important; }
-.right-0 { right: 0 !important; }
-.right-2 { right: 8px !important; }
-.bottom-0 { bottom: 0 !important; }
-.bottom-14 { bottom: 56px !important; }
-.z-1 { z-index: 1 !important; }
-.z-2 { z-index: 2 !important; }
-.z-10 { z-index: 10 !important; }
 
 /* ===========================================
    Display Variations
@@ -275,58 +173,16 @@ button[class*="spectrum-Button"][disabled],
 .inline-flex { display: inline-flex !important; }
 .grid { display: grid !important; }
 
-/* ===========================================
-   Flexbox Gap Classes
-   =========================================== */
-.gap-1 { gap: 4px !important; }
-.gap-2 { gap: 8px !important; }
-.gap-3 { gap: 12px !important; }
-.gap-4 { gap: 16px !important; }
-.gap-5 { gap: 20px !important; }
 
-/* ===========================================
-   Border Radius Variations
-   =========================================== */
-.rounded-none { border-radius: 0 !important; }
-.rounded-sm { border-radius: 2px !important; }
 .rounded { border-radius: 4px !important; }
-.rounded-lg { border-radius: 8px !important; }
-.rounded-xl { border-radius: 12px !important; }
 .rounded-full { border-radius: 50% !important; }
 
-/* ===========================================
-   Border Styles
-   =========================================== */
-.border-none { border: none !important; }
 .border-t { border-top: 1px solid var(--spectrum-global-color-gray-200) !important; }
-.border-r { border-right: 1px solid var(--spectrum-global-color-gray-200) !important; }
 .border-b { border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important; }
-.border-l { border-left: 1px solid var(--spectrum-global-color-gray-200) !important; }
 
-.border-2 { border-width: 2px !important; }
-.border-3 { border-width: 3px !important; }
-.border-dashed { border-style: dashed !important; }
-.border-dotted { border-style: dotted !important; }
 
-.border-gray-400 { border-color: var(--spectrum-global-color-gray-400) !important; }
-.border-blue-400 { border-color: var(--spectrum-global-color-blue-400) !important; }
-.border-green-600 { border-color: var(--spectrum-global-color-green-600) !important; }
 
-/* ===========================================
-   Background Color Extensions
-   =========================================== */
-.bg-white { background-color: var(--spectrum-global-color-gray-100) !important; }
-.bg-transparent { background-color: transparent !important; }
-.bg-gray-200 { background-color: var(--spectrum-global-color-gray-200) !important; }
-.bg-gray-300 { background-color: var(--spectrum-global-color-gray-300) !important; }
 .bg-gray-400 { background-color: var(--spectrum-global-color-gray-400) !important; }
-.bg-gray-600 { background-color: var(--spectrum-global-color-gray-600) !important; }
-.bg-gray-700 { background-color: var(--spectrum-global-color-gray-700) !important; }
-.bg-gray-800 { background-color: var(--spectrum-global-color-gray-800) !important; }
-.bg-green-100 { background-color: var(--spectrum-global-color-green-100) !important; }
-.bg-green-600 { background-color: var(--spectrum-global-color-green-600) !important; }
-.bg-blue-600 { background-color: var(--spectrum-global-color-blue-600) !important; }
-.bg-red-100 { background-color: var(--spectrum-global-color-red-100) !important; }
 
 /* ===========================================
    Text Color Extensions
@@ -339,39 +195,11 @@ button[class*="spectrum-Button"][disabled],
    Text Utilities
    =========================================== */
 .letter-spacing-05 { letter-spacing: 0.5px !important; }
-.letter-spacing-1 { letter-spacing: 1px !important; }
 
-/* ===========================================
-   Width and Height Utilities
-   =========================================== */
-.w-3 { width: 12px !important; }
-.w-4 { width: 16px !important; }
-.w-6 { width: 24px !important; }
-.w-100 { width: 100px !important; }
-.w-150 { width: 150px !important; }
-.w-200 { width: 200px !important; }
-.w-300 { width: 300px !important; }
-.w-400 { width: 400px !important; }
-.w-600 { width: 600px !important; }
 
-.h-3 { height: 12px !important; }
-.h-4 { height: 16px !important; }
-.h-6 { height: 24px !important; }
-.h-100 { height: 100px !important; }
-.h-screen { height: 100vh !important; }
 
-.min-w-60 { min-width: 60px !important; }
-.min-w-80 { min-width: 80px !important; }
 .min-w-100 { min-width: 100px !important; }
-.min-w-150 { min-width: 150px !important; }
-.min-w-200 { min-width: 200px !important; }
-.min-w-240 { min-width: 240px !important; }
-.max-w-240 { max-width: 240px !important; }
-.max-w-400 { max-width: 400px !important; }
-.max-w-500 { max-width: 500px !important; }
-.max-w-600 { max-width: 600px !important; }
 .max-w-800 { max-width: 800px !important; }
-.max-w-900 { max-width: 900px !important; }
 
 /* ===========================================
    Semantic Layout Classes
@@ -475,91 +303,22 @@ button[class*="spectrum-Button"][disabled],
 
 
 
-/* Help content area minimum height */
-.help-content-area {
-    min-height: 192px !important;
-}
-
-/* Checkbox item spacing */
-.checkbox-spacing {
-    margin-bottom: 4px !important;
-}
 
 
 
 
 
 
-/* Compact selector grid for brand/stack selection */
-.selector-grid {
-    display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
-    gap: 12px !important;
-    margin-bottom: 20px !important;
-}
 
-/* Compact card variant for selectors - matches project-card-spectrum style but smaller */
-.selector-card {
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 8px !important;
-    padding: 12px !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    cursor: pointer !important;
-    transition: all 0.3s ease !important;
-}
 
-.selector-card:hover {
-    background: var(--spectrum-global-color-gray-75) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
-}
 
-.selector-card:focus-visible {
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-}
 
-.selector-card[data-selected="true"] {
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-color: var(--spectrum-global-color-blue-400) !important;
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-    transform: none !important;
-}
 
-.selector-card[data-selected="true"]:hover {
-    background: var(--spectrum-global-color-gray-75) !important;
-    transform: none !important;
-}
 
-.selector-card-name {
-    display: block !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-    margin-bottom: 4px !important;
-}
 
-.selector-card-description {
-    display: block !important;
-    font-size: 11px !important;
-    color: var(--spectrum-global-color-gray-500) !important;
-    line-height: 1.4 !important;
-}
 
-/* Disabled selector card (e.g. a backend not offered by the current package). */
-.selector-card:disabled {
-    opacity: 0.5 !important;
-    cursor: not-allowed !important;
-}
 
-/* Muted note inside a (disabled) selector card — matches the description token style. */
-.selector-card-note {
-    display: block !important;
-    font-size: 11px !important;
-    color: var(--spectrum-global-color-gray-500) !important;
-    margin-top: 8px !important;
-}
+
 
 /* ========================================
  * Expandable Brand Cards
@@ -604,18 +363,7 @@ button[class*="spectrum-Button"][disabled],
 
 
 
-/* Addons section wrapper - animated show/hide */
-.addons-section {
-    max-height: 0 !important;
-    opacity: 0 !important;
-    overflow: hidden !important;
-    transition: max-height 0.3s ease, opacity 0.3s ease !important;
-}
 
-.addons-section.addons-visible {
-    max-height: 200px !important;
-    opacity: 1 !important;
-}
 
 /* Optional addons section in architecture modal */
 
@@ -636,19 +384,9 @@ button[class*="spectrum-Button"][disabled],
 
 
 
-/* Border top with gray-200 */
-.border-t-gray-200 {
-    border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
-}
 
 .min-h-0 { min-height: 0 !important; }
 .min-h-48 { min-height: 48px !important; }
-.min-h-96 { min-height: 96px !important; }
-.min-h-120 { min-height: 120px !important; }
-.min-h-200 { min-height: 200px !important; }
-.max-h-300 { max-height: 300px !important; }
-.max-h-400 { max-height: 400px !important; }
-.max-h-500 { max-height: 500px !important; }
 
 
 /* ===========================================
@@ -662,26 +400,8 @@ button[class*="spectrum-Button"][disabled],
 }
 
 
-/* ===========================================
-   Shadow Classes
-   =========================================== */
-.shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important; }
 .shadow { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important; }
-.shadow-md { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important; }
-.shadow-lg { box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important; }
-.shadow-xl { box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important; }
-.shadow-none { box-shadow: none !important; }
 
-/* ===========================================
-   Transform Classes
-   =========================================== */
-.translate-y-0 { transform: translateY(0) !important; }
-.translate-y--2 { transform: translateY(-2px) !important; }
-.translate-y-2 { transform: translateY(2px) !important; }
-.scale-110 { transform: scale(1.1) !important; }
-.scale-125 { transform: scale(1.25) !important; }
-.scale-150 { transform: scale(1.5) !important; }
-.scale-200 { transform: scale(2) !important; }
 
 
 @keyframes timeline-enter {
@@ -710,61 +430,11 @@ button[class*="spectrum-Button"][disabled],
     }
 }
 
-/* ===========================================
-   Welcome Screen Card Styles
-   =========================================== */
-.welcome-card {
-    padding: 30px !important;
-    background: linear-gradient(135deg, var(--spectrum-global-color-blue-50) 0%, var(--spectrum-global-color-blue-100) 100%) !important;
-    border-radius: 12px !important;
-    border: 1px solid var(--spectrum-global-color-blue-200) !important;
-    cursor: pointer !important;
-    transition: all 0.3s ease !important;
-}
 
-.welcome-card:hover {
-    transform: translateY(-4px) !important;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
-}
 
-.welcome-card-secondary {
-    padding: 30px !important;
-    background: var(--spectrum-global-color-gray-75) !important;
-    border-radius: 12px !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    cursor: pointer !important;
-    transition: all 0.3s ease !important;
-}
 
-.welcome-card-secondary:hover {
-    background: var(--spectrum-global-color-gray-100) !important;
-    transform: translateY(-4px) !important;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
-}
 
-.welcome-action-card {
-    background: var(--spectrum-global-color-gray-100) !important;
-    border-radius: 8px !important;
-    padding: 40px !important;
-    transition: all 0.15s ease !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    text-align: center !important;
-    min-height: 200px !important;
-    width: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: center !important;
-    cursor: pointer !important;
-}
 
-.welcome-action-card:hover,
-.welcome-action-card:focus {
-    background: var(--spectrum-global-color-gray-200) !important;
-    border-color: var(--spectrum-global-color-gray-400) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
-    outline: none !important;
-}
 
 
 
@@ -815,10 +485,6 @@ button[class*="spectrum-Button"][disabled],
     animation: inline-notice-fade-in 200ms ease-out;
 }
 
-/* Info tone: same shape, blue accent. For context rather than something to act on. */
-.inline-notice--info {
-    border-color: var(--spectrum-global-color-blue-500);
-}
 
 .inline-notice--info .inline-notice-icon {
     color: var(--spectrum-global-color-blue-600);
@@ -877,31 +543,9 @@ button[class*="spectrum-Button"][disabled],
 
 
 
-/* ===========================================
-   Component Card Styles
-   =========================================== */
-.component-card {
-    padding: 16px !important;
-    background: var(--spectrum-global-color-gray-50) !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    border-radius: 8px !important;
-    transition: all 0.3s ease !important;
-}
 
-.component-card:hover {
-    background: var(--spectrum-global-color-gray-75) !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
-}
 
-.component-card-selected {
-    background: var(--spectrum-global-color-blue-100) !important;
-    border-color: var(--spectrum-global-color-blue-400) !important;
-}
 
-.component-card-disabled {
-    opacity: 0.5 !important;
-    cursor: not-allowed !important;
-}
 
 /* ===========================================
    Projects Dashboard Layout Prototypes
@@ -915,149 +559,28 @@ button[class*="spectrum-Button"][disabled],
 
 
 
-/* ===========================================
-   Dependency Item Styles
-   =========================================== */
-.dependency-item-container {
-    padding: 12px !important;
-    background: var(--spectrum-global-color-gray-75) !important;
-    border-radius: 4px !important;
-    margin-bottom: 8px !important;
-    transition: all 0.2s ease !important;
-}
 
-.dependency-item-container:hover {
-    background: var(--spectrum-global-color-gray-100) !important;
-}
 
-.dependency-item-title {
-    font-size: 14px !important;
-    font-weight: 500 !important;
-}
 
-.dependency-item-description {
-    font-size: 12px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    margin-top: 2px !important;
-}
 
-/* ===========================================
-   Compact Option Styles
-   =========================================== */
-.compact-option-container {
-    padding: 8px 12px !important;
-    cursor: pointer !important;
-    transition: background 0.2s ease !important;
-}
 
-.compact-option-container:hover {
-    background: var(--spectrum-global-color-gray-100) !important;
-}
 
-.compact-option-title {
-    font-size: 14px !important;
-    font-weight: 500 !important;
-}
 
-.compact-option-description {
-    font-size: 12px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-}
 
-.compact-option-tag {
-    font-size: 10px !important;
-    padding: 2px 6px !important;
-    background-color: var(--spectrum-global-color-gray-200) !important;
-    border-radius: 4px !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-}
 
-/* ===========================================
-   WelcomeStep Styles
-   =========================================== */
-.welcome-step-container {
-    padding: 20px !important;
-    max-width: var(--content-width) !important;
-    margin: 0 auto !important;
-    width: 100% !important;
-}
 
-.welcome-step-subtitle {
-    color: var(--spectrum-global-color-gray-700) !important;
-    font-size: 14px !important;
-}
 
-.welcome-step-description {
-    color: var(--spectrum-global-color-gray-600) !important;
-    font-size: 13px !important;
-}
 
-.info-tip-icon {
-    font-size: 14px !important;
-}
 
-.info-tip-text {
-    font-size: 13px !important;
-    color: var(--spectrum-global-color-blue-700) !important;
-}
 
-/* ===========================================
-   Additional Utilities
-   =========================================== */
-.compact-option-icon {
-    color: var(--spectrum-global-color-gray-700) !important;
-    flex-shrink: 0 !important;
-}
 
-.opacity-60 {
-    opacity: 0.6 !important;
-}
 
-/* ===========================================
-   Grid Utilities
-   =========================================== */
-.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
-.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-.grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
-.grid-gap-4 { gap: 16px !important; }
 
-/* ===========================================
-   Alignment Utilities
-   =========================================== */
-.items-start { align-items: flex-start !important; }
-.items-end { align-items: flex-end !important; }
-.justify-start { justify-content: flex-start !important; }
-.justify-end { justify-content: flex-end !important; }
-.justify-center { justify-content: center !important; }
 
-/* ===========================================
-   Additional Spacing
-   =========================================== */
-.pt-1 { padding-top: 4px !important; }
-.pt-2 { padding-top: 8px !important; }
-.pt-3 { padding-top: 12px !important; }
-.pt-4 { padding-top: 16px !important; }
-.pt-6 { padding-top: 24px !important; }
-.pt-8 { padding-top: 32px !important; }
-.pb-1 { padding-bottom: 4px !important; }
-.pb-2 { padding-bottom: 8px !important; }
-.pb-4 { padding-bottom: 16px !important; }
 .pb-6 { padding-bottom: 24px !important; }
-.pb-15 { padding-bottom: 60px !important; }
-.pl-5 { padding-left: 20px !important; }
-.p-6 { padding: 24px !important; }
-.mr-2 { margin-right: 8px !important; }
-.ml-1 { margin-left: 4px !important; }
-.mx-auto { margin-left: auto !important; margin-right: auto !important; }
 
-.grow-0 { flex-grow: 0 !important; }
 .grow { flex-grow: 1 !important; }
 
-/* ===========================================
-   Scroll Utilities
-   =========================================== */
-.scroll-mt-4 { scroll-margin-top: 16px !important; }
-.scroll-mt-6 { scroll-margin-top: 24px !important; }
 
 
 
@@ -1069,24 +592,8 @@ button[class*="spectrum-Button"][disabled],
    name/description. Only the unique pieces live here: the source
    classification badge pill and the row separator. */
 
-/* ===========================================
-   Width/Height Additions
-   =========================================== */
-.w-5 { width: 20px !important; }
-.h-5 { height: 20px !important; }
 
-/* ===========================================
-   Text Alignment (Additional)
-   =========================================== */
-.text-center-max-450 {
-    text-align: center !important;
-    max-width: 450px !important;
-}
 
-.text-center-max-500 {
-    text-align: center !important;
-    max-width: 500px !important;
-}
 
 
 
@@ -1106,38 +613,10 @@ button[class*="spectrum-Button"][disabled],
 
 
 
-/* Review step text patterns */
-.text-ready-label {
-    font-weight: 600 !important;
-    font-size: 16px !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-}
 
-.text-project-name {
-    font-size: 26px !important;
-    font-weight: 700 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-    line-height: 1.3 !important;
-}
 
-.text-section-title {
-    font-size: 15px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-800) !important;
-    line-height: 1.5 !important;
-}
 
-.text-child-arrow {
-    font-size: 14px !important;
-    line-height: 1 !important;
-    color: var(--spectrum-global-color-gray-500) !important;
-}
 
-.text-child-item {
-    font-size: 14px !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    line-height: 1.5 !important;
-}
 
 
 
@@ -1190,9 +669,6 @@ button[class*="spectrum-Button"][disabled],
 
 
 
-/* Pointer cursor for interactive elements */
-.pointer-events-none { pointer-events: none !important; }
-.pointer-events-auto { pointer-events: auto !important; }
 
 
 
@@ -1213,208 +689,35 @@ button[class*="spectrum-Button"][disabled],
     opacity: 0.7 !important;
 }
 
-/* ===========================================
-   Tip Component Styles
-   =========================================== */
-.tip-icon {
-    font-size: 16px !important;
-    line-height: 20px !important;
-    flex-shrink: 0 !important;
-}
-
-.tip-icon-container {
-    flex-shrink: 0 !important;
-    padding-top: 2px !important;
-}
-
-.tip-text {
-    font-size: 14px !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    line-height: 20px !important;
-}
-
-
-/* ===========================================
-   Dropdown Container (Component Selection boxes)
-   Custom styled containers for checkbox groups
-   Uses lighter colors for visibility in dark mode
-   =========================================== */
-.dropdown-container {
-    border: 1px solid var(--spectrum-global-color-gray-400) !important;
-    border-radius: 4px !important;
-    background-color: var(--spectrum-global-color-gray-100) !important;
-    padding: 12px !important;
-    transition: all 0.2s ease !important;
-}
-
-.dropdown-container:hover {
-    border-color: var(--spectrum-global-color-gray-500) !important;
-    background-color: var(--spectrum-global-color-gray-200) !important;
-}
 
 
 
-/* ===========================================
-   Template Card Grid Styles
-   Used in WelcomeStep for demo template selection
-   =========================================== */
-.template-card-grid {
-    display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
-    gap: 16px !important;
-    padding: 8px 0 !important;
-}
 
-.template-card {
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 8px !important;
-    padding: 20px !important;
-    border: 2px solid var(--spectrum-global-color-gray-300) !important;
-    cursor: pointer !important;
-    transition: all 0.3s ease !important;
-    min-height: 100px !important;
-}
 
-.template-card:hover {
-    background: var(--spectrum-global-color-gray-75) !important;
-    border-color: var(--spectrum-global-color-gray-400) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
-}
 
-.template-card:focus {
-    outline: none !important;
-    border-color: var(--spectrum-global-color-blue-500) !important;
-    box-shadow: 0 0 0 2px var(--spectrum-global-color-blue-400) !important;
-}
 
-.template-card-name {
-    font-size: 15px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-    line-height: 1.3 !important;
-}
 
-.template-card-description {
-    font-size: 13px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    line-height: 1.4 !important;
-}
 
-/* Template Row Styles (List View) */
-.template-row-list {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-}
 
-.template-row {
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 6px !important;
-    padding: 12px 16px !important;
-    border: 2px solid var(--spectrum-global-color-gray-300) !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-}
 
-.template-row:hover {
-    background: var(--spectrum-global-color-gray-75) !important;
-    border-color: var(--spectrum-global-color-gray-400) !important;
-}
 
-.template-row:focus {
-    outline: none !important;
-    border-color: var(--spectrum-global-color-blue-500) !important;
-    box-shadow: 0 0 0 2px var(--spectrum-global-color-blue-400) !important;
-}
 
-.template-row-selected,
-.template-row[data-selected="true"] {
-    background: var(--spectrum-global-color-blue-100) !important;
-    border-color: var(--spectrum-global-color-blue-500) !important;
-}
 
-.template-row-name {
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-    min-width: 180px !important;
-}
 
-.template-row-description {
-    font-size: 13px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-}
 
-/* Template Tag Styles (inside cards/rows) */
-.template-tag {
-    display: inline-block !important;
-    font-size: 11px !important;
-    padding: 2px 8px !important;
-    background: var(--spectrum-global-color-gray-200) !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    border-radius: 12px !important;
-}
 
-/* Template Tag Filter Styles (gallery filter chips) */
-.template-tag-filter {
-    display: inline-block !important;
-    font-size: 12px !important;
-    padding: 4px 12px !important;
-    background: var(--spectrum-global-color-gray-100) !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    border-radius: 16px !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-}
 
-.template-tag-filter:hover {
-    background: var(--spectrum-global-color-gray-200) !important;
-    border-color: var(--spectrum-global-color-gray-400) !important;
-}
 
-.template-tag-filter:focus {
-    outline: none !important;
-    border-color: var(--spectrum-global-color-blue-500) !important;
-    box-shadow: 0 0 0 2px var(--spectrum-global-color-blue-400) !important;
-}
 
-.template-tag-filter-selected,
-.template-tag-filter[aria-pressed="true"] {
-    background: var(--spectrum-global-color-blue-500) !important;
-    color: white !important;
-    border-color: var(--spectrum-global-color-blue-600) !important;
-}
 
-.template-tag-filter-selected:hover,
-.template-tag-filter[aria-pressed="true"]:hover {
-    background: var(--spectrum-global-color-blue-600) !important;
-}
 
-/* Template Featured Badge */
-.template-featured-badge {
-    font-size: 10px !important;
-}
 
-/* Template Gallery Container */
-.template-gallery {
-    width: 100% !important;
-    max-width: 500px !important;
-}
 
-/* Welcome Step Centered Layout */
-.welcome-step-centered {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    min-height: 100% !important;
-    padding: 40px 20px !important;
-}
+
+
+
+
+
 
 
 
@@ -1439,64 +742,17 @@ button[class*="spectrum-Button"][disabled],
    no sub-progress. All theme values come from Spectrum tokens.
    ========================================================================= */
 
-/* Overview shell: a single scrollable column (no footer of its own). */
-.builder-overview {
-    display: flex !important;
-    flex-direction: column !important;
-    height: 100% !important;
-    overflow-y: auto !important;
-    box-sizing: border-box !important;
-}
 
-/* LEFT-aligned to match the PageHeader (which is full-width with size-400 padding,
-   not constrained/centered) so the rows' left edge lines up under the step title.
-   max-width keeps the rows readable; size-400 padding matches the header. */
-.builder-overview-wrap {
-    width: 100% !important;
-    max-width: var(--content-width) !important;
-    margin: 0 !important;
-    padding: var(--spectrum-global-dimension-size-400) !important;
-    box-sizing: border-box !important;
-}
 
-.builder-overview-intro {
-    display: block !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    margin-bottom: var(--spectrum-global-dimension-size-300) !important;
-}
 
 /* Separate cards (matches .architecture-modal-options) — NOT one bordered list. */
 
 /* One component card — matches the existing .architecture-modal-option treatment. */
 
-.builder-overview-role {
-    font-size: var(--spectrum-global-dimension-font-size-50) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.06em !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-}
 
-.builder-overview-value {
-    font-size: var(--spectrum-global-dimension-font-size-100) !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-900) !important;
-}
 
-.builder-overview-desc {
-    font-size: var(--spectrum-global-dimension-font-size-75) !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    line-height: 1.4 !important;
-}
 
-/* Read-only "Included" state. */
-.builder-overview-included {
-    color: var(--spectrum-global-color-green-600) !important;
-}
 
-.builder-overview-included-label {
-    font-size: var(--spectrum-global-dimension-font-size-75) !important;
-    color: var(--spectrum-global-color-green-600) !important;
-}
 
 /* =========================================================================
  * Project Builder — Commerce: StepRail (.vsteplist*) + [rail / view]
@@ -1525,11 +781,6 @@ button[class*="spectrum-Button"][disabled],
 
 
 
-/* .choice-card-check retired — replaced by the shared .selection-check(-corner). */
-/* The config-step "Save & continue" CTA row, spaced below the form fields. */
-.sec-cta {
-    margin-top: var(--spectrum-global-dimension-size-200) !important;
-}
 
 /* Completion feedback: the shared ✓ renders only when a row is done, so it mounts
  * on completion and this pop fires once — a subtle reward as each sub-step lands.

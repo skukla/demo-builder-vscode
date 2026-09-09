@@ -389,8 +389,18 @@ describe('the CSS migration ratchets', () => {
     it('CONTROL: the god file is found and parses to a plausible rule count', () => {
         const { total, feature } = countGodFileRules();
         // Without this, a moved/renamed file would read as "every rule migrated".
-        expect(total).toBeGreaterThan(100);
+        //
+        // A FLOOR OF 100 RULES WAS THE FIRST SHAPE AND THE MIGRATION IS DESIGNED
+        // TO CROSS IT. The file reached 95 on 2026-09-09 and the control failed for
+        // being right. What the control actually needs to prove is that the parser
+        // is reading THIS file and getting rules out of it — so it asserts a class
+        // the file still defines, which a moved or emptied file cannot satisfy and
+        // a shrinking one can.
+        expect(total).toBeGreaterThan(0);
         expect(feature).toBeLessThanOrEqual(total);
+        const css = readFileSync(join(ROOT, 'src/core/ui/styles/custom-spectrum.css'), 'utf8');
+        expect(css).toContain('.text-sm');
+        expect(css.length).toBeGreaterThan(5_000);
     });
 
     it('feature rules leave the global sheet and never come back', () => {
