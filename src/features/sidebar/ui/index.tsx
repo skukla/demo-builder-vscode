@@ -11,6 +11,8 @@ import { createRoot } from 'react-dom/client';
 import '@/core/ui/styles/custom-spectrum.css';
 // .icon-* — the icon-above-label pattern.
 import '@/core/ui/styles/icon-label.css';
+// .sidebar-* — this panel's own styles, including its short-panel breakpoint.
+import './styles/sidebar.css';
 import type { SidebarContext } from '../types';
 import { Sidebar } from './Sidebar';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';

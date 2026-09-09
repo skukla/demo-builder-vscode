@@ -296,6 +296,12 @@ is what the ADR-018 audit found.
 
 ## Known gaps
 
+- **Three WIDTHS, one height.** The matrix varies width at 420/900/1280 and leaves
+  the viewport height alone, so a `@media (max-height: ...)` rule is never
+  exercised and an empty diff says nothing about it. The sidebar's short-panel
+  breakpoint is the one that matters today; when you move or touch a
+  height-conditional rule, read it directly at two heights instead of trusting the
+  matrix (2026-09-09).
 - **Default state only.** No hover, focus, disabled or error states — and those
   are where Spectrum's own rules concentrate.
 - **Not confirmed in a real VS Code webview.** The harness supplies `--vscode-*`
