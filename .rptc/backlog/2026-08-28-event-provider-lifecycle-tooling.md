@@ -85,6 +85,13 @@ this cannot be a one-file delete: MCP tools 114 -> 109, adobe-provider tools
 51, four mutation-baseline rows, and twelve line-anchored mutation-ledger
 entries that shifted because two lines left `extension.ts`.
 
+### The design question is its own item
+
+[[AB-8]] holds it. This item keeps the CAPABILITY — can eventing round-trip to
+zero — and closes when an agent can tear a provider down. AB-8 asks where such a
+thing belongs in the product and closes on a decision, possibly the decision that
+no UI surface should exist.
+
 ### What a redesign has to answer
 
 The gap this item was filed against is still real — the ERP journey's agent
