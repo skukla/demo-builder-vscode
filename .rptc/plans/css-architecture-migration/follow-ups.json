@@ -1,0 +1,72 @@
+{
+    "_what": "Everything this migration deferred, with a PROBE where one exists. `node scripts/cssMigrationCycle.mjs --worklist` prints these under the family lanes and re-measures each one, so an item cannot quietly stop being true. Add here rather than to a message: four of these were first recorded only in a commit body, which nothing re-reads.",
+    "_lanes": "open = do it. blocked = waiting on a named thing. decided = examined and deliberately not done; kept so it is not re-raised.",
+    "items": [
+        {
+            "id": "dead-families",
+            "lane": "blocked",
+            "what": "33 families, 114 rules, that NO bundle renders. Neither movable nor provably dead.",
+            "why": "A visual diff cannot tell a dead class from one that only renders inside a dialogue the fixtures never open. Deleting on a diff alone is the one action in this migration the instrument cannot validate.",
+            "blockedOn": "PL-53 — its level-1 bar is a whole-name grep across src/ with comments excluded, plus a positive control.",
+            "derive": "deadRules"
+        },
+        {
+            "id": "orphan-comments",
+            "lane": "open",
+            "what": "Comment blocks in custom-spectrum.css that name a family which has left it AND have no rule beneath them.",
+            "why": "The mover took the rule and left the comment for the first eight cycles. 74 were reunited on 2026-09-09; 8 more were refused because the selector appeared more than once in the target sheet. Those duplicates were merged the same day, so a re-run should now place them.",
+            "derive": "orphanComments",
+            "note": "The probe counts DANGLING blocks only. A comment that documents a surviving rule while mentioning a departed family is a cross-reference and belongs where it is — counting those read 11 where the honest answer is 8."
+        },
+        {
+            "id": "tests-naming-sheets",
+            "lane": "open",
+            "what": "Test suites that read a stylesheet BY PATH instead of using tests/helpers/cssRules.ts.",
+            "why": "They assert on where a rule LIVES as much as on what it says, and this migration moves rules between sheets by design. Four suites have broken this way on moves that changed no rendering at all.",
+            "note": "Three of the hits are legitimate and must stay: layerDeclarations.test.ts owns cascade-order questions and needs the raw file, and the two sop suites read the sheet as data. Read the list; do not chase the number to zero.",
+            "probe": "grep -rl custom-spectrum.css tests/ --include='*.ts' --include='*.tsx' | wc -l"
+        },
+        {
+            "id": "sheet-header-todo",
+            "lane": "open",
+            "what": "A generated sheet header still carrying the placeholder instead of its entry list.",
+            "why": "The mover writes the header BEFORE the imports are added, so it cannot know the entries. Reach is the property ADR-017 section 6 turns on and the one a reader cannot get from the file itself.",
+            "probe": "grep -rl 'name them here' src/ --include='*.css' | wc -l"
+        },
+        {
+            "id": "integration-flow-filename",
+            "lane": "open",
+            "what": "src/features/project-creation/ui/styles/integration-flow.css holds only `.int-*`, the results LIST. The Add Integration flow is `.intflow-*` and lives in add-integration-flow.css.",
+            "why": "The name predates the split and is wider than the file's contents, which is exactly the kind of thing the next person reads as authoritative. A rename is cheap and touches one import.",
+            "probe": "grep -rl integration-flow.css src/features/project-creation/ui/wizard/ | wc -l"
+        },
+        {
+            "id": "manage-apis-leftover",
+            "lane": "blocked",
+            "what": "`.manage-apis-body .intflow-api-picker` is still in custom-spectrum.css after .intflow-* left.",
+            "why": "It is a `.manage-*` rule that styles intflow elements as descendants, so it belongs to that family and moves when `.manage-*` does. Correct as it stands, recorded so it is not mistaken for an incomplete move.",
+            "blockedOn": "the .manage-* cycle (2 rules, dashboard+integrations+wizard)"
+        },
+        {
+            "id": "duplicate-selectors",
+            "lane": "decided",
+            "what": "Selectors declared twice in one sheet with no conditional copy — i.e. real duplication.",
+            "why": "Nine were merged on 2026-09-09. SEVEN groups remain and every one is a base rule plus a copy inside @media or prefers-reduced-motion, which is how a breakpoint is written. An earlier count of five came from looking at only the sheets that cycle touched; index.css and connect-services.css hold one each. The probe excludes conditional groups, so it reads 0 and a real regression would show.",
+            "derive": "duplicateSelectors",
+            "note": "The seven legitimate overrides: .sidebar-tile-grid, .vsteplist-step, .choice-card and .choice-card:hover:not(:disabled) in custom-spectrum.css, .status-dot--pulse in index.css, .services-cards-grid in connect-services.css, .wizard-timeline-column in wizard-timeline.css."
+        },
+        {
+            "id": "blank-line-comments",
+            "lane": "decided",
+            "what": "Two comment blocks sat one blank line above a moved rule and stayed in the god file.",
+            "why": "Attachment is deliberately ADJACENT-ONLY: a block one blank line up is as likely to be a section banner over several families, and taking it would move a heading away from most of what it heads. Two of 84 is the cost of that choice."
+        },
+        {
+            "id": "steps-3-and-4",
+            "lane": "blocked",
+            "what": "Flip the cascade per feature sheet (step 3), then sweep !important (step 4).",
+            "why": "Step 3 is where the 762 moved elements arrive, in reviewable batches, and it needs the owner per surface. PL-33 is blocked on it too: its 'vendor CSS sits in the lowest cascade layer' convention cannot be enforced until it is true. Stopping after step 2 remains a legitimate destination.",
+            "blockedOn": "an owner decision, per the plan overview"
+        }
+    ]
+}

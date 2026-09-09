@@ -21,6 +21,7 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
+import { execSync } from 'child_process';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -28,6 +29,7 @@ const require = createRequire(import.meta.url);
 const ROOT = process.cwd();
 const GOD_FILE = 'src/core/ui/styles/custom-spectrum.css';
 const LEDGER = 'tests/sop/webview-architecture-rules.exemptions.json';
+const FOLLOW_UPS = '.rptc/plans/css-architecture-migration/follow-ups.json';
 
 /** Must match tests/sop/stylesheet-bundles.test.ts — the test is the authority. */
 const UTILITY_PREFIXES = new Set([
@@ -357,6 +359,89 @@ async function bundleReach(prefixes) {
 }
 
 /**
+ * Comment blocks in the god file that document a family which has LEFT it.
+ *
+ * The mover took the rule and left the comment for the first eight cycles, which
+ * separates the documentation from the code in both directions. This is the residue
+ * of the 2026-09-09 repair: it counts blocks naming a `.x-` class where no `.x-*`
+ * rule remains in this file.
+ */
+function orphanComments() {
+    const text = readFileSync(join(ROOT, GOD_FILE), 'utf8');
+    const rules = readRules(text);
+    const present = new Set(rules.map((r) => r.prefix));
+    // A comment that DOCUMENTS a surviving rule but mentions a departed family is a
+    // cross-reference, not residue — "Match .brand-card-name so the two card
+    // families share a title scale" belongs exactly where it is. Counting those
+    // inflated this from 8 to 11 on the first run. Only a block with no rule
+    // beneath it is orphaned.
+    const documents = new Set(rules.filter((r) => r.docStart !== r.start).map((r) => r.docStart));
+    let n = 0;
+    for (const m of text.matchAll(/\/\*[\s\S]*?\*\//g)) {
+        const line = text.slice(0, m.index).split('\n').length - 1;
+        if (documents.has(line)) continue;
+        const fams = new Set([...m[0].matchAll(/\.([A-Za-z_][\w-]*-[\w-]+)/g)].map((x) => x[1].split('-')[0]));
+        if ([...fams].some((f) => !present.has(f) && !UTILITY_PREFIXES.has(f))) n++;
+    }
+    return n;
+}
+
+/**
+ * Selectors declared more than once in one sheet WITHOUT a conditional copy.
+ *
+ * A base rule plus a copy inside `@media` or `prefers-reduced-motion` is how a
+ * breakpoint is written; counting those as duplication reported 7 where the real
+ * answer is 0. Every one of the seven has exactly one conditional member.
+ */
+function duplicateSelectors() {
+    let n = 0;
+    const sheets = execSync('git ls-files "*.css"', { cwd: ROOT, encoding: 'utf8' })
+        .split('\n').filter((f) => f && !f.includes('node_modules'));
+    for (const f of sheets) {
+        const seen = new Map();
+        for (const r of readRules(readFileSync(join(ROOT, f), 'utf8'))) {
+            const key = r.selector.replace(/\s+/g, ' ').replace(/\s*\{$/, '').trim();
+            if (!seen.has(key)) seen.set(key, []);
+            seen.get(key).push(r);
+        }
+        for (const g of seen.values()) if (g.length > 1 && !g.some((r) => r.conditional)) n++;
+    }
+    return n;
+}
+
+/**
+ * The deferred work, re-measured on every run.
+ *
+ * A follow-up recorded in a commit body is recorded nowhere anyone re-reads. Four
+ * of these were, and the owner asked on 2026-09-09 for them to live in the work
+ * list instead. Each carries a PROBE or a derived count where one is possible, so
+ * an item cannot quietly stop being true — and the ones that cannot be measured say
+ * so rather than presenting a stale number.
+ */
+function printFollowUps(derived) {
+    if (!existsSync(join(ROOT, FOLLOW_UPS))) return;
+    const { items } = JSON.parse(readFileSync(join(ROOT, FOLLOW_UPS), 'utf8'));
+    console.log(`== FOLLOW-UPS — ${items.length} recorded\n`);
+    for (const it of items) {
+        let measure = 'not measurable';
+        if (it.derive) measure = `${derived[it.derive]}`;
+        else if (it.probe) {
+            try {
+                measure = execSync(it.probe, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+            } catch {
+                measure = 'PROBE FAILED';
+            }
+        }
+        console.log(`   [${it.lane}] ${it.id}  ->  ${measure}`);
+        console.log(`        ${it.what}`);
+        if (it.blockedOn) console.log(`        blocked on: ${it.blockedOn}`);
+        if (it.note) console.log(`        note: ${it.note}`);
+    }
+    console.log(`\n   Recorded in ${FOLLOW_UPS}. A probe that reads PROBE FAILED is a broken`);
+    console.log('   instrument, not a clean result — fix the probe before believing the row.');
+}
+
+/**
  * The triaged work list: what is left, and which LANE each family is in.
  *
  * `--next` sorts by size and says nothing about whether a family can actually be
@@ -404,7 +489,13 @@ async function cmdWorklist() {
         console.log('');
     }
     console.log('Prefer a MOVER family reaching ONE bundle. Import the sheet from every');
-    console.log('entry listed, or the style silently does not apply there.');
+    console.log('entry listed, or the style silently does not apply there.\n');
+
+    printFollowUps({
+        deadRules: rows.filter((r) => r.lane === 'dead?').reduce((a, b) => a + b.n, 0),
+        orphanComments: orphanComments(),
+        duplicateSelectors: duplicateSelectors(),
+    });
 }
 
 function cmdMove(prefix, target) {

@@ -21,6 +21,8 @@ import '../styles/eventing.css';
 // AddIntegrationFlowAdapter and on the wizard's Integrations area. Both entries
 // import it; neither owns it alone.
 import '@/features/project-creation/ui/styles/add-integration-flow.css';
+// .integration-* — the card and its detail panel.
+import '@/core/ui/styles/integration-cards.css';
 
 const container = document.getElementById('root');
 if (!container) {

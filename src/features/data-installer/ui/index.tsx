@@ -17,6 +17,8 @@ import '@/core/ui/styles/custom-spectrum.css';
 // separate from data-installer.css so the wizard does not drag in that
 // surface's unrelated rules.
 import './styles/datapack.css';
+// .integration-* — DatapackDetailPanel renders an integration card.
+import '@/core/ui/styles/integration-cards.css';
 // Feature-scoped: this is the ONLY entry that loads it, so its classes exist in
 // this bundle and nowhere else.
 import './styles/data-installer.css';

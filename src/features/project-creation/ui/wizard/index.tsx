@@ -32,6 +32,8 @@ import '../styles/add-integration-flow.css';
 // .timeline-* and .wizard-* — the SETUP PROGRESS rail and the wizard shell,
 // including the rail-collapse breakpoint. Wizard-only.
 import '../styles/wizard-timeline.css';
+// .integration-* — IntegrationCard lives in core/ui and three entries render it.
+import '@/core/ui/styles/integration-cards.css';
 import type { WizardInitialData } from '@/types/webviewPayloads';
 
 // Get root element

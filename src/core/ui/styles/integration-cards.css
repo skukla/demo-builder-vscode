@@ -1,0 +1,318 @@
+/**
+ * .integration-* styles — the integration card and its detail panel.
+ *
+ * FEATURE-SCOPED DESPITE LIVING IN core/ui (ADR-017 §6, and §3 as amended
+ * 2026-09-09: reach, not global). `IntegrationCard` is a shared component, but only
+ * THREE entries render it — `wizard`, `integrations` and `dataInstaller`, the last
+ * through DatapackDetailPanel — and only those three import this sheet. The other
+ * five bundles do not carry it, and no component they reach may use these names.
+ *
+ * In core/ui/styles rather than a feature directory because the component is in
+ * core/ui/components/integrations. It is NOT global: `wizard.css` beside it reaches
+ * four entries and is the precedent.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), with the comment above each rule.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+.integration-count {
+    font-size: 12px;
+    line-height: 18px;
+    min-width: 18px;
+    padding: 0 6px;
+    border-radius: 9px;
+    text-align: center;
+    background: var(--spectrum-global-color-gray-200);
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.integration-card {
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    /* Shared --card-* tokens (see :root) — the same values .project-card-spectrum
+       reads, so the two families are equal by construction rather than by two
+       comments promising each other they match. The mesh carries no accent
+       border: it is a peer card, identified by its name, not chrome. */
+    padding: var(--card-padding);
+    display: flex;
+    flex-direction: column;
+    gap: var(--card-gap);
+    min-height: var(--card-min-height);
+    min-width: var(--card-min-width);
+    transition: all 0.3s ease;
+}
+
+/* Pointer + hover lift only where a press DOES something. A card renders without
+   `role="button"` when its host passed no `onOpen` (the wizard's mesh and catalog
+   cards have no editable detail), and a cursor and a lift on something inert
+   promise a click that never lands. Dashboard cards always pass `onOpen`, so this
+   scoping leaves them exactly as they were. */
+.integration-card[role='button'] {
+    cursor: pointer;
+}
+
+.integration-card[role='button']:hover,
+.integration-card[role='button']:focus {
+    background: var(--spectrum-global-color-gray-75);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-color: var(--spectrum-global-color-gray-400);
+    outline: none;
+}
+
+/* Scoped to `[role='button']` for the SAME reason as the lift above, but also to
+   keep specificity level with it. `:focus` there sets `outline: none`; if only
+   that rule carried the attribute selector it would score (0,3,0) against this
+   rule's (0,2,0) and win outright, silently removing the keyboard focus ring
+   from every card — dashboard included, since those always carry the role.
+   Matched specificity puts source order back in charge, and this comes second. */
+.integration-card[role='button']:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400);
+    outline-offset: 2px;
+}
+
+/* `min-height` pins the row to a Spectrum ActionButton, because otherwise the
+   row's height is set by a control you cannot see. The kebab is `opacity: 0` at
+   rest but still in flow at ~32px, so IT sizes the head — until a deploying card
+   drops it from the DOM entirely (menuActions is [] while deploying, and
+   IntegrationActionsMenu returns null on an empty list). The head then collapsed
+   to the name's ~20px line box and the whole card shifted up mid-deploy
+   (reported 2026-08-07). Same reason `.footer-grid` pins 32px. */
+.integration-card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 32px;
+}
+
+.integration-card-head > .integration-card-name {
+    flex: 1 1 auto;
+}
+
+.integration-card-head > span {
+    flex: 0 0 auto;
+    margin-right: -6px;
+}
+
+/* The rename pencil expands INSIDE the name's lane, never into the kebab's.
+   Without this the growing InlineRenameField pushed the kebab out from under the
+   cursor — hovering to reveal it also moved it away (reported 2026-07-31). */
+.integration-card-head > .inline-rename {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* Revealed on card hover/focus like the rename pencil — a kebab on every card
+   at rest turns a calm grid into a row of controls. Always available to
+   keyboards via :focus-within. */
+.integration-card-menu-button {
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+.integration-card:hover .integration-card-menu-button,
+.integration-card:focus-within .integration-card-menu-button {
+    opacity: 1;
+}
+
+.integration-card-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* `.integration-statusline` is the same row inside the detail flyout — one rule
+ * rather than a third copy of the four declarations. The flyout is the card's
+ * detail view, so the status has to read identically in both; it used to render
+ * an 8px dot, a plain JSX space and a sentence-case label. */
+.integration-card-statusline,
+.integration-statusline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+/* The house status treatment, identical to `.project-card-spectrum-status`:
+ * 11px uppercase with letter-spacing, NOT 12px sentence case. Both cards pair
+ * it with a 6px StatusDot, so the two grids read as one family. */
+.integration-card-status {
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.integration-card-status--error {
+    color: var(--spectrum-global-color-red-600);
+}
+
+/* One line, not two.
+
+   `.integration-panel-row` ends with a border-bottom, guarded by a
+   `:last-child` rule so the final row does not leave a trailing line. That guard
+   silently stops applying the moment ANYTHING follows the rows — and this footer
+   does, as their sibling inside `.db-drawer-body`. So the last row kept its
+   bottom border, this kept its top border, and the two rendered a pixel apart as
+   a double rule.
+
+   Dropping the footer's border only where a row precedes it: the row's own line
+   is already there, and where the panel body ends with something else the footer
+   still draws its own. Exactly one line either way. */
+.integration-panel-row + .db-drawer-actions {
+    border-top: none;
+}
+
+.integration-panel-title {
+    font-size: 15px;
+    font-weight: 600;
+    min-width: 0;
+}
+
+.integration-panel-role {
+    font-size: 11px;
+    color: var(--spectrum-global-color-blue-600);
+}
+
+/* Labels center against the FULL height of their value, not its first baseline.
+ * Baseline alignment pinned the label to line 1, so once values grew to several
+ * lines (the wrapped endpoint, one-API-per-line) the label hung at the top of a
+ * tall row and read as misaligned. */
+.integration-panel-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200);
+}
+
+.integration-panel-row:last-child {
+    border-bottom: none;
+}
+
+.integration-panel-row-key {
+    flex: 0 0 88px;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.integration-panel-row-value {
+    min-width: 0;
+    color: var(--spectrum-global-color-gray-800);
+    overflow-wrap: anywhere;
+}
+
+.integration-panel-row-value--mono {
+    font-family: var(--spectrum-font-family-code, monospace);
+    font-size: 12px;
+}
+
+/* The kind prefix inside a mono Source row ("Pre-built · acme/repo"). It is prose,
+   so it opts back out of the code face its container sets. */
+.integration-panel-row-prefix {
+    font-family: var(--spectrum-font-family-base, sans-serif);
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* One API per line — a comma-joined run of long Adobe API names is unreadable
+   in a 352px column. */
+.integration-panel-api {
+    display: block;
+}
+
+/* Commerce scope: three sub-labelled lines inside ONE row's value column.
+   Grid rather than flex so the codes align down a column no matter how the
+   labels differ in width, and so a long code wraps inside its own cell instead
+   of widening the drawer (the value column is only ~264px). */
+.integration-panel-scope {
+    display: grid;
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 8px;
+    align-items: baseline;
+    padding: 1px 0;
+}
+
+.integration-panel-scope-key {
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Prose, because the NAME the user picked leads the cell. The code inside opts
+   back into the code face; with no name that span holds the bare code, so the
+   mono face lives there rather than here. */
+.integration-panel-scope-value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* The code itself — always mono, so it reads as a value you could grep for. */
+.integration-panel-scope-code {
+    font-family: var(--spectrum-font-family-code, monospace);
+    font-size: 12px;
+}
+
+/* Muted only when a NAME precedes it: then the code is the secondary reading.
+   Standing alone it is the whole value and must not look de-emphasised. */
+.integration-panel-scope-code--aside {
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Heading over a RUN of rows that share a kind (the deployed endpoints), as
+   opposed to `.integration-panel-row-key`, which labels one row's value. Without
+   it a list of N per-action URLs reads as N more metadata rows peered with Status
+   and Kind. Sits outside the row flex so it spans the full width instead of
+   taking the 88px key column. */
+.integration-panel-group-label {
+    /* NO border-top. The row above already draws a border-bottom, so a rule here
+       renders as a double line a few pixels apart. Separation is the margin. */
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Copyable values inside the flyout must WRAP.
+ * `.copyable-text` is nowrap by design — it is a core component sized for short
+ * inline snippets. A mesh endpoint runs ~70 chars, so in this 352px panel nowrap
+ * pushed the ⧉ affordance clean off the edge: the value looked hoverable but gave
+ * no visible sign it could be copied. Scoped here so the core component's other
+ * consumers keep their single-line treatment. */
+.integration-panel-row-value .copyable-text {
+    display: inline-block;
+    max-width: 100%;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+}
+
+/* Never let the affordance be the thing that wraps away from its value. */
+.integration-panel-row-value .copyable-icon,
+.integration-panel-row-value .copyable-icon-copied {
+    white-space: nowrap;
+}
+
+/* Live deploy progress / failure detail under the Status row's label. */
+.integration-panel-status-message {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Remove trails the row (the prototype separates it from the safe actions). */
+.integration-panel-danger {
+    margin-left: auto;
+}
+}
