@@ -14,29 +14,9 @@
  */
 
 @layer theme {
-.prerequisite-container {
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    margin-bottom: 16px !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    border-radius: 4px !important;
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    padding: 12px !important;
-    max-width: 100% !important;
-    width: 100% !important;
-}
 
 .prerequisite-list {
     padding-bottom: 60px !important;
-}
-
-.prerequisite-item {
-    padding: 12px !important;
-    background-color: var(--spectrum-global-color-gray-75) !important;
-    border-radius: 4px !important;
-    width: 100% !important;
-    overflow: hidden !important;
-    transition: all 0.3s ease !important;
 }
 
 .prerequisite-item:not(:last-child) {
@@ -60,19 +40,6 @@
     font-size: 12px !important;
     color: var(--spectrum-global-color-gray-600) !important;
     display: block !important;
-}
-
-.prerequisite-message {
-    font-size: 12px !important;
-    font-weight: 400 !important;
-    display: block !important;
-    margin-top: 4px !important;
-    min-height: 17px !important;
-    line-height: 17px !important;
-    transition: color 0.3s ease, opacity 0.3s ease !important;
-    white-space: pre-wrap !important;
-    word-break: break-word !important;
-    overflow: hidden !important;
 }
 
 .prerequisite-message-error {
@@ -121,10 +88,6 @@
     transition: opacity 0.3s ease, transform 0.2s ease, color 0.3s ease !important;
 }
 
-.prerequisite-item {
-    transition: min-height 0.3s ease, padding 0.3s ease !important;
-}
-
 /* Smooth transitions for conditional content */
 .prerequisite-content > div {
     transition: all 0.3s ease !important;
@@ -136,7 +99,19 @@
     animation: fadeInUp 0.3s ease;
 }
 
+/* Merged 2 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
 .prerequisite-message {
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    display: block !important;
+    margin-top: 4px !important;
+    min-height: 17px !important;
+    line-height: 17px !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow: hidden !important;
     transition: opacity 0.2s ease !important;
 }
 
@@ -149,11 +124,32 @@
     transition: opacity 0.3s ease, transform 0.2s ease !important;
 }
 
+/* Merged 2 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
 .prerequisite-container {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    margin-bottom: 16px !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: 4px !important;
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    padding: 12px !important;
+    max-width: 100% !important;
+    width: 100% !important;
     will-change: scroll-position;
 }
 
+/* Merged 3 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
 .prerequisite-item {
+    padding: 12px !important;
+    background-color: var(--spectrum-global-color-gray-75) !important;
+    border-radius: 4px !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    transition: min-height 0.3s ease, padding 0.3s ease !important;
     will-change: transform;
 }
 

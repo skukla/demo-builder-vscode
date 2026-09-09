@@ -198,26 +198,10 @@
     cursor: pointer !important;
 }
 
-.dashboard-action-button .icon-label {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
 /* Scale icons proportionally to the smaller tile */
 .dashboard-action-button svg {
     width: 20px !important;
     height: 20px !important;
-}
-
-.dashboard-action-button .icon-label {
-    font-size: 12px !important;
-    line-height: 1.2 !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    overflow-wrap: anywhere !important;
 }
 
 /* Hero accent — emphasize the top-tier actions (Start/Stop, Open, AI).
@@ -271,7 +255,18 @@
     background-color: transparent !important;
 }
 
+/* Merged 3 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
 .dashboard-action-button .icon-label {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere !important;
     font-size: 12px !important;
     margin-top: 8px !important;
 }

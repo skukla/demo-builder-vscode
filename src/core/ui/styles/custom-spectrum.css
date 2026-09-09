@@ -222,23 +222,6 @@ button[class*="spectrum-Button"][disabled],
    Prerequisite-specific Classes
    =========================================== */
 
-
-
-
-
-
-
-
-
-
-
-.node-version-line {
-    font-size: 12px !important;
-    font-weight: 400 !important;
-    line-height: 18px !important;
-    display: block !important;
-}
-
 .node-version-success {
     color: var(--spectrum-global-color-green-600) !important;
 }
@@ -246,10 +229,6 @@ button[class*="spectrum-Button"][disabled],
 .node-version-error {
     color: var(--spectrum-global-color-red-600) !important;
 }
-
-
-
-
 
 /* ===========================================
    Transition Classes
@@ -770,9 +749,6 @@ button[class*="spectrum-Button"][disabled],
     background-color: transparent !important;
 }
 
-
-
-
 /* --------------------------------------------------------------------------
    Responsive layout: narrow-viewport adjustments for the wizard chrome and
    the shared TwoColumnLayout primitive. On a 13-14" laptop at ideal zoom
@@ -834,7 +810,6 @@ button[class*="spectrum-Button"][disabled],
     }
 }
 
-
 /* Step main content area */
 .step-main-content {
     flex: 1 !important;
@@ -893,7 +868,6 @@ button[class*="spectrum-Button"][disabled],
     min-width: 100px !important;
 }
 
-
 /* Small loading spinner size */
 .loading-spinner-small {
     width: 16px !important;
@@ -927,7 +901,6 @@ button[class*="spectrum-Button"][disabled],
     margin-bottom: 4px !important;
 }
 
-
 /* Description block with bottom margin */
 .description-block {
     color: var(--spectrum-global-color-gray-600) !important;
@@ -949,7 +922,6 @@ button[class*="spectrum-Button"][disabled],
     padding-top: 16px !important;
     padding-bottom: 16px !important;
 }
-
 
 /* ===========================================
    Projects Dashboard Specific
@@ -1049,17 +1021,6 @@ button[class*="spectrum-Button"][disabled],
  * Expandable Brand Cards
  * ======================================== */
 
-
-
-
-
-
-
-
-
-
-
-
 .architecture-badge {
     position: absolute;
     top: 8px;
@@ -1071,13 +1032,7 @@ button[class*="spectrum-Button"][disabled],
     letter-spacing: 0.3px;
 }
 
-
-
-
-
 /* .brand-card-check retired — replaced by the shared .selection-check-corner. */
-
-
 
 @keyframes fadeInDown {
     from {
@@ -1090,57 +1045,18 @@ button[class*="spectrum-Button"][disabled],
     }
 }
 
-
-
-
 /* Individual architecture option (radio-like) - compact */
-
-
-
-
-
-
-
 
 /* Radio circle indicator */
 
-
-
-
-
-
 /* Architecture option text content */
 
-
-
-
-
-
 /* Architecture options in modal - more spacious */
-
-
-
-
-
-
-
-
-
-
 
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
 }
-
-
-
-
-
-
-
-
-
 
 /* Picker dropdown menu: prevent item text wrapping, ensure items fit content */
 [role="listbox"] [role="option"] {
@@ -1184,17 +1100,7 @@ button[class*="spectrum-Button"][disabled],
 
 /* Optional addons section in architecture modal */
 
-
-
-
-
-
-
-
 /* Checkbox focus ring for keyboard navigation */
-
-
-
 
 .settings-link {
     margin-top: var(--spectrum-global-dimension-size-200);
@@ -1202,7 +1108,6 @@ button[class*="spectrum-Button"][disabled],
 }
 
 /* Architecture modal footer with Done button */
-
 
 /* Expanded card hover - re-open modal */
 
@@ -1277,9 +1182,6 @@ button[class*="spectrum-Button"][disabled],
     cursor: pointer !important;
 }
 
-
-
-
 /* Border top with gray-200 */
 .border-t-gray-200 {
     border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
@@ -1344,20 +1246,6 @@ button[class*="spectrum-Button"][disabled],
 .icon-lg { width: 24px !important; height: 24px !important; }
 .icon-xl { width: 32px !important; height: 32px !important; }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 @keyframes timeline-enter {
     0% {
         opacity: 0;
@@ -1370,7 +1258,6 @@ button[class*="spectrum-Button"][disabled],
         margin-bottom: var(--spectrum-global-dimension-size-300);
     }
 }
-
 
 @keyframes timeline-exit {
     0% {
@@ -1441,8 +1328,6 @@ button[class*="spectrum-Button"][disabled],
     outline: none !important;
 }
 
-
-
 /* Integrations band, context row: "Deploys to <project> · <workspace>  Change".
    Rides the END of SearchHeader's count row, which is space-between and has an
    empty right half once a search field shows. Costs the band no extra line for
@@ -1469,7 +1354,6 @@ button[class*="spectrum-Button"][disabled],
 /* AI badge + its capabilities link on one line. The link was a standalone row
    beneath the badges, which cost the band a whole row to say one thing. */
 
-
 /* Dashboard action-tile geometry. Only the tile size + inter-cluster gaps are
    tokens now — the dashboard no longer derives a bespoke content width. Every
    block (status header, org banner, integrations) shares the standard --content-width
@@ -1482,16 +1366,6 @@ button[class*="spectrum-Button"][disabled],
     /* Extra breathing room between the Primary and Storefront clusters in row 1
        so they read as two distinct groups rather than one row of four. */
 }
-
-
-
-
-
-
-
-
-
-
 
 /* Org-mismatch banner — a dark, accent-bordered warning card that matches the
    dashboard's bordered-tile attention idiom (cf. the Delete tile's accent
@@ -1570,36 +1444,17 @@ button[class*="spectrum-Button"][disabled],
     margin-right: 6px;
 }
 
-
-
-
-
 /* Destructive overflow-menu entry (Delete lives at the bottom of "More"). */
 .menu-item-destructive {
     color: var(--spectrum-global-color-red-600) !important;
 }
 
-
-
-
-
-
-
-
 /* Labels clamp to two lines so a long label can never stretch a tile past its
    square (the aspect-ratio is the uniform height; content overflow beats it). */
-
 
 /* Tile label — smaller to fit the compact tile. Wraps to multiple lines
    instead of truncating with an ellipsis (Spectrum's Text otherwise clips
    long labels like "Open in Browser" / "Manage Commerce"). */
-
-
-
-
-
-
-
 
 /* Sidebar provider - use Spectrum gray-75 for consistency */
 /* The sidebar's scroll container.
@@ -1695,7 +1550,6 @@ button[class*="spectrum-Button"][disabled],
     }
 }
 
-
 /* Sidebar welcome container - vertically centered */
 .sidebar-welcome {
     padding: 16px !important;
@@ -1764,11 +1618,6 @@ button[class*="spectrum-Button"][disabled],
     /* No padding here - TimelineNav handles its own padding */
 }
 
-
-
-
-
-
 /* ===========================================
    Component Card Styles
    =========================================== */
@@ -1795,53 +1644,11 @@ button[class*="spectrum-Button"][disabled],
     cursor: not-allowed !important;
 }
 
-
-
-
-
-
-
-
-
-
-
 /* ===========================================
    Projects Dashboard Layout Prototypes
    =========================================== */
 
-
-
-
-
-
-
-
-
 /* Option B: Button grid (matches dashboard action buttons) */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /* ===========================================
    Selection Summary Styles
@@ -1946,11 +1753,6 @@ button[class*="spectrum-Button"][disabled],
     border-radius: 4px !important;
     color: var(--spectrum-global-color-gray-700) !important;
 }
-
-
-
-
-
 
 /* ===========================================
    WelcomeStep Styles
@@ -2067,7 +1869,6 @@ button[class*="spectrum-Button"][disabled],
     padding: var(--spectrum-global-dimension-size-400) 24px 24px !important;
 }
 
-
 .container-dashboard {
     padding: var(--spectrum-global-dimension-size-400) !important;
     height: 100vh !important;
@@ -2088,15 +1889,6 @@ button[class*="spectrum-Button"][disabled],
    utility classes (.text-sm, .font-semibold, .text-gray-700) for
    name/description. Only the unique pieces live here: the source
    classification badge pill and the row separator. */
-
-
-
-
-
-
-
-
-
 
 /* ===========================================
    Width/Height Additions
@@ -2291,9 +2083,6 @@ button[class*="spectrum-Button"][disabled],
     flex-shrink: 0;
 }
 
-
-
-
 /* Progress bar entrance/exit animations */
 [class*="spectrum-ProgressBar"] {
     animation: fadeInUp 0.3s ease;
@@ -2316,26 +2105,26 @@ button[class*="spectrum-Button"][disabled],
     transition: width 0.3s ease !important;
 }
 
-
 /* Prevent jarring height changes */
-
 
 /* Note: .animate-fade-in and @keyframes fadeIn defined in utility section above */
 
-
 /* Smooth text content updates */
 
-
 /* Node version status lines transitions */
+/* Merged 2 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
 .node-version-line {
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    line-height: 18px !important;
+    display: block !important;
     transition: opacity 0.3s ease, color 0.3s ease !important;
     animation: fadeIn 0.3s ease;
 }
 
-
 /* Prevent layout shift during transitions */
-
-
 
 .content-area {
     display: flex !important;
@@ -2594,8 +2383,6 @@ div[class*="spectrum"] input[type="search"] {
     box-shadow: 0 0 0 2px var(--spectrum-global-color-blue-400) !important;
 }
 
-
-
 .template-card-name {
     font-size: 15px !important;
     font-weight: 600 !important;
@@ -2847,9 +2634,7 @@ div[class*="spectrum"] input[type="search"] {
 
 /* Separate cards (matches .architecture-modal-options) — NOT one bordered list. */
 
-
 /* One component card — matches the existing .architecture-modal-option treatment. */
-
 
 .builder-overview-role {
     font-size: var(--spectrum-global-dimension-font-size-50) !important;
@@ -3325,10 +3110,6 @@ div[class*="spectrum"] input[type="search"] {
  * stage body only reserves height so stage swaps don't jump the footer.
  * ------------------------------------------------------------------------ */
 
-
-
-
-
 /* The committed destination as a quiet CONTEXT LINE above the active stage — it
    replaced the `dest-summary` step (a whole step to confirm a destination the user
    never chose). Quiet by design: it is orientation, not the task. */
@@ -3349,8 +3130,6 @@ div[class*="spectrum"] input[type="search"] {
     padding: 0 0 10px;
     border-bottom: 1px solid var(--spectrum-global-color-gray-300);
 }
-
-
 
 /* --------------------------------------------------------------------------
  * InlineRenameField (core/ui/forms) — rename-in-place for a displayed name.
@@ -3942,20 +3721,6 @@ div[class*="spectrum"] input[type="search"] {
     flex: 1 1 auto;
     min-height: 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /* ============================================
    TEXT COLOUR UTILITIES  (unlayered — see below)

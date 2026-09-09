@@ -50,6 +50,10 @@
 }
 
 /* Wizard progress list */
+/* Wizard progress list */
+/* Merged 2 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
 .wizard-progress-list {
     list-style: none !important;
     padding: 0 !important;
@@ -57,28 +61,10 @@
 }
 
 /* Wizard progress step item */
-.wizard-step-item {
-    padding: 6px 12px !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-}
-
-/* Wizard step indicator */
-.wizard-step-indicator {
-    font-size: 12px !important;
-    width: 16px !important;
-    text-align: center !important;
-}
-
-/* Wizard progress list */
-.wizard-progress-list {
-    list-style: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-}
-
 /* Wizard step item */
+/* Merged 2 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
 .wizard-step-item {
     display: flex !important;
     align-items: center !important;
@@ -98,6 +84,10 @@
 }
 
 /* Wizard step indicator */
+/* Wizard step indicator */
+/* Merged 2 declarations of this selector that the sheet carried separately.
+   Kept at the LAST one's position; for a property declared twice the winner
+   survives (!important over plain, then later over earlier). */
 .wizard-step-indicator {
     font-size: 12px !important;
     width: 16px !important;
