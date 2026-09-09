@@ -294,6 +294,27 @@ Before fixtures this was 209 elements with four surfaces under 16 — and an
 "IDENTICAL" verdict on a five-element surface is not evidence of anything, which
 is what the ADR-018 audit found.
 
+## The interaction harness needs Playwright, and its forcing failed in Chrome-MCP (2026-09-09)
+
+`capture.js` runs anywhere you can evaluate JavaScript. **`capture-interactions.js`
+does not** — it takes a Playwright `page` and opens its own CDP session to call
+`CSS.forcePseudoState`. Driven through the containerised Playwright MCP (reachable
+at `host.docker.internal`, not `127.0.0.1`), it captured 24 cells for the sidebar
+and then `assertForcingWorks` threw: **no element responded to a forced
+pseudo-state.**
+
+**Run it against a build you have NOT changed before concluding anything.** That
+distinction is the whole value of the control and it is not automatic: a dead
+forcing mechanism and a change that flattened every hover style produce the same
+throw. The sidebar's `@layer vendor` flip was measured this way — the unlayered
+control build threw identically, so the instrument was at fault and the change was
+exonerated. Reported the other way round it would have been a false regression on
+a change that moved nothing.
+
+Unresolved: why forcing does not take through that session. Until it is, an
+interaction result from this route is unavailable rather than clean, and the
+fallback is the owner hovering the surface in the Extension Development Host.
+
 ## Known gaps
 
 - **The integrations surface renders differently on a session's FIRST capture.**

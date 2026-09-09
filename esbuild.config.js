@@ -69,22 +69,61 @@ const aliasPlugin = {
 // ---------------------------------------------------------------------------
 // Plugin: convert CSS imports to style-tag injection (replaces style-loader)
 // ---------------------------------------------------------------------------
-const cssInjectionPlugin = {
-    name: 'css-injection',
-    setup(build) {
-        build.onLoad({ filter: /\.css$/ }, async (args) => {
-            const css = await fs.promises.readFile(args.path, 'utf8');
-            return {
-                contents: `
+/**
+ * The cascade order every layered sheet is written against (ADR-018 §1).
+ *
+ * Kept here as ONE string so the build cannot disagree with the sheets. It is
+ * asserted byte-for-byte against the declarations in `src/` by
+ * `tests/sop/stylesheet-bundles.test.ts`.
+ */
+const LAYER_ORDER = '@layer vendor, reset, theme, overrides;';
+
+/**
+ * Convert CSS imports to style-tag injection (replaces style-loader).
+ *
+ * `layerVendor` is ADR-018 STEP 3, and it is enabled for ONE entry at a time.
+ *
+ * Our rules sit in `@layer theme`. Spectrum's arrive unlayered, and an UNLAYERED
+ * normal declaration beats a LAYERED one however specific the layered rule is —
+ * which is why this codebase carries ~1,300 `!important`. Wrapping Spectrum in
+ * `@layer vendor` puts it below `theme`, so our rules win on their own merits and
+ * the `!important` can eventually go.
+ *
+ * It is per-entry because the whole-repo version was measured on 2026-09-08 and
+ * moved 762 of 2,700 elements (28%) — a redesign, not a refactor, and far too much
+ * to review at once. The sidebar is the smallest surface (46 elements, 21 injected
+ * sheets), so it is where the theory gets tested cheaply. If it is wrong, it is
+ * wrong somewhere a person can look at the whole thing in one screen.
+ */
+function makeCssInjectionPlugin({ layerVendor = false } = {}) {
+    return {
+        name: 'css-injection',
+        setup(build) {
+            build.onLoad({ filter: /\.css$/ }, async (args) => {
+                const raw = await fs.promises.readFile(args.path, 'utf8');
+                // `@import` must stay first in a sheet, and a layer block around one
+                // would be invalid. None of our sheets or Spectrum's use it; assert
+                // rather than assume, because the failure is silent.
+                const vendor = layerVendor && args.path.includes('node_modules');
+                if (vendor && /^\s*@import/m.test(raw)) {
+                    throw new Error(`cannot wrap ${args.path} in @layer vendor: it uses @import`);
+                }
+                const body = vendor ? `@layer vendor {\n${raw}\n}` : raw;
+                const css = layerVendor ? `${LAYER_ORDER}\n${body}` : body;
+                return {
+                    contents: `
 const __s = document.createElement('style');
 __s.textContent = ${JSON.stringify(css)};
 document.head.appendChild(__s);
 `,
-                loader: 'js',
-            };
-        });
-    },
-};
+                    loader: 'js',
+                };
+            });
+        },
+    };
+}
+
+const cssInjectionPlugin = makeCssInjectionPlugin();
 
 // ---------------------------------------------------------------------------
 // Build stamp — write dist/build-info.json naming the checkout, branch, commit
@@ -213,9 +252,41 @@ const WEBVIEW_ENTRIES = {
     dataInstaller: 'src/features/data-installer/ui/index.tsx',
 };
 
+/**
+ * Entries built with Spectrum wrapped in `@layer vendor` (ADR-018 step 3).
+ *
+ * ONE at a time, smallest first. Adding an entry here is a visual change that has
+ * to be measured with `.claude/skills/webview-visual-baseline` and looked at by a
+ * person before it lands — see the plugin's comment for why the all-at-once
+ * version was rejected.
+ */
+const LAYERED_VENDOR_ENTRIES = ['sidebar'];
+
+function pick(entries, names) {
+    return Object.fromEntries(Object.entries(entries).filter(([k]) => names.includes(k)));
+}
+
+/**
+ * Two contexts, because the vendor wrapper is a per-BUILD plugin option and one
+ * build cannot vary it per entry. Both write to the same outdir with the same
+ * entryNames, so the eight bundles land exactly where they always did.
+ */
 function runWebviewBuild() {
-    return startContext('webview', {
-        entryPoints: WEBVIEW_ENTRIES,
+    const layered = LAYERED_VENDOR_ENTRIES;
+    const plain = Object.keys(WEBVIEW_ENTRIES).filter((k) => !layered.includes(k));
+    return Promise.all([
+        runWebviewBuildFor('webview', pick(WEBVIEW_ENTRIES, plain), cssInjectionPlugin),
+        runWebviewBuildFor(
+            'webview-layered',
+            pick(WEBVIEW_ENTRIES, layered),
+            makeCssInjectionPlugin({ layerVendor: true }),
+        ),
+    ]);
+}
+
+function runWebviewBuildFor(label, entryPoints, cssPlugin) {
+    return startContext(label, {
+        entryPoints,
         bundle: true,
         format: 'iife',
         platform: 'browser',
@@ -235,7 +306,7 @@ function runWebviewBuild() {
             // Required for React's dead-code elimination of development warnings
             'process.env.NODE_ENV': production ? '"production"' : '"development"',
         },
-        plugins: [aliasPlugin, cssInjectionPlugin],
+        plugins: [aliasPlugin, cssPlugin],
         logLevel: 'info',
         metafile: true,
     });
@@ -362,4 +433,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { WEBVIEW_ENTRIES, aliasPlugin };
+module.exports = { WEBVIEW_ENTRIES, aliasPlugin, LAYER_ORDER, LAYERED_VENDOR_ENTRIES };

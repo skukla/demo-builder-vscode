@@ -105,6 +105,51 @@ describe('ADR-017 §6: a class used in a bundle is styled by that bundle', () =>
     });
 });
 
+describe('ADR-018 step 3: Spectrum in @layer vendor, one entry at a time', () => {
+    /**
+     * The build wraps `node_modules` CSS in `@layer vendor` for the entries named
+     * in `LAYERED_VENDOR_ENTRIES`, and prepends the cascade order to every sheet
+     * it injects for them.
+     *
+     * WHY IT IS PER-ENTRY. Our rules sit in `@layer theme`; Spectrum's arrive
+     * unlayered, and an unlayered NORMAL declaration beats a layered one at any
+     * specificity. That is why this repo carries ~1,300 `!important`. Doing the
+     * whole repo at once was measured on 2026-09-08: 762 of 2,700 elements moved,
+     * including inputs losing 11px of line-height and buttons losing their bold.
+     * That is a redesign. One entry at a time is reviewable; eight is not.
+     *
+     * These two checks are cheap and they guard the thing a rebuild could silently
+     * undo: the order string drifting from the sheets, and the list growing without
+     * anyone measuring the surface it was added for.
+     */
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { LAYER_ORDER, LAYERED_VENDOR_ENTRIES } = require(join(ROOT, 'esbuild.config.js'));
+
+    it('the order the BUILD prepends is byte-identical to the one the sheets declare', () => {
+        const declared = [...new Set(
+            readdirSync(join(ROOT, 'src/core/ui/styles'))
+                .filter((f) => f.endsWith('.css'))
+                .flatMap((f) =>
+                    (readFileSync(join(ROOT, 'src/core/ui/styles', f), 'utf8')
+                        .match(/^@layer [^;{]+;$/m) ?? [])
+                )
+        )];
+        // Control: the sheets must actually declare an order, or this compares
+        // the build's string against an empty set and passes on nothing.
+        expect(declared).toHaveLength(1);
+        expect(LAYER_ORDER).toBe(declared[0]);
+    });
+
+    it('only entries that have been MEASURED are layered', () => {
+        // Growing this list is a visual change. It needs a before/after from
+        // `.claude/skills/webview-visual-baseline` and a person looking at what
+        // moved — so the list is pinned here and moves only with that evidence.
+        //
+        // sidebar, 2026-09-09: 46 elements x 2 themes x 3 widths.
+        expect(LAYERED_VENDOR_ENTRIES).toStrictEqual(['sidebar']);
+    });
+});
+
 describe('every stylesheet PARSES — a rule the browser drops is not a rule', () => {
     /**
      * A comma-separated selector list interrupted by an at-rule.
