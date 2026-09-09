@@ -511,7 +511,9 @@
         "health": "node scripts/healthSnapshot.mjs",
         "health:write": "node scripts/healthSnapshot.mjs --write",
         "codemod:selftest": "node scripts/codemod/selftest.mjs",
-        "test:electron": "node tests/electron/runTest.js"
+        "test:electron": "node tests/electron/runTest.js",
+        "css:cycle": "node scripts/cssMigrationCycle.mjs",
+        "css:harness": "node scripts/cssVisualHarness.mjs"
     },
     "devDependencies": {
         "@eslint/js": "^9.15.0",

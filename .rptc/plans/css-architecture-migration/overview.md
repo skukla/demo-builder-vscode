@@ -9,8 +9,8 @@ the way it is.
 Nothing in this plan needs a previous conversation. Two commands recover the state:
 
 ```bash
-node scripts/cssMigrationCycle.mjs --worklist # every family left, triaged by lane
-node scripts/cssVisualHarness.mjs             # stand up the verification harness
+npm run css:cycle -- --worklist   # every family left, triaged by lane
+npm run css:harness               # stand up the verification harness
 ```
 
 `--worklist` is the one to read: it sorts the remaining families into MOVER (the
@@ -35,9 +35,15 @@ captures and an empty diff for every change.
 4. Add the import to EVERY entry whose graph reaches a consumer.
 5. `git add` the new sheet **before** gating — the `!important` ceiling reads
    `git ls-files`, so an unstaged sheet makes the count appear to fall.
-6. Rebuild, re-copy bundles, re-capture, diff. **Empty commits, anything else
-   reverts.**
-7. `--check`, then pin both counts in the ledger. The suite refuses to pass until
+6. `--verify <family> <sheet> <ref-before-the-move>` — same rules, same text, same
+   layer, same order. **Do this before the visual diff, not after it.** Four of the
+   six families moved on 2026-09-09 render on NO fixture surface, so their captures
+   were empty for reasons unrelated to correctness; this is the check that caught
+   three sheets whose commit messages said "verbatim" and were not.
+7. Rebuild, re-copy bundles, re-capture, diff. **Empty commits, anything else
+   reverts.** The diff's job is collateral damage — what else moved — not this
+   family.
+8. `--check`, then pin both counts in the ledger. The suite refuses to pass until
    you do; that refusal is the ratchet.
 
 **Two traps that cost cycles, both now scripted or documented rather than

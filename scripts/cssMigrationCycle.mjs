@@ -481,12 +481,11 @@ function printFollowUps(derived) {
  * `--next` sorts by size and says nothing about whether a family can actually be
  * moved. Three things decide that, and all three are computable:
  *
- *   mover     no rule inside a conditional at-rule -> `--move` handles it
- *   by hand   at least one rule inside @media/@container/@supports. The block moves
- *             WHOLE and goes back AT ITS ORIGINAL INDEX. Putting it FIRST cost 258
- *             elements; putting it LAST cost nothing visible and still left three
- *             sheets non-verbatim, with more of the family after the block in the
- *             god file than before it (2026-09-09)
+ *   mover     `--move` handles it, conditional blocks included — it emits in
+ *             SOURCE ORDER, so a block travels whole and stays where it was
+ *   split     a conditional block holding TWO families. `--move` refuses: taking
+ *             the block moves the other family's rule out of its own condition.
+ *             Split the block by hand first
  *   dead?     no bundle renders the family at all. Neither movable nor obviously
  *             dead — PL-53's question, and a visual diff cannot answer it
  *
@@ -499,25 +498,29 @@ async function cmdWorklist() {
     const fam = families(rules);
     const reach = await bundleReach(fam.map(([p]) => p));
 
+    const lines = text.split('\n');
+    const stripped = text.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' ')).split('\n');
     const rows = fam.map(([prefix, n]) => {
         const mine = rules.filter((r) => r.prefix === prefix && r.feature);
-        const cond = mine.filter((r) => r.conditional).length;
+        const cond = mine.filter((r) => r.conditional);
+        // A condition is no longer a blocker; a SHARED condition is.
+        const shared = cond.some((r) => enclosingBlock(lines, stripped, rules, r).inside.some((x) => x.prefix !== prefix));
         const bundles = [...reach.get(prefix)].sort();
         const foreign = classifyMentions(prefix, text).foreign.length;
-        const lane = bundles.length === 0 ? 'dead?' : cond ? 'by hand' : 'mover';
-        return { prefix, n, cond, bundles, foreign, lane };
+        const lane = bundles.length === 0 ? 'dead?' : shared ? 'split' : 'mover';
+        return { prefix, n, cond: cond.length, bundles, foreign, lane };
     });
 
     const { total, feature } = counts();
     console.log(`${feature} feature rules left in the god file, ${total} rules total, ${rows.length} families\n`);
-    for (const lane of ['mover', 'by hand', 'dead?']) {
+    for (const lane of ['mover', 'split', 'dead?']) {
         const group = rows.filter((r) => r.lane === lane).sort((a, b) => b.n - a.n);
         const sum = group.reduce((a, b) => a + b.n, 0);
         console.log(`== ${lane.toUpperCase()} — ${group.length} families, ${sum} rules`);
         for (const r of group) {
             const where = r.bundles.length ? r.bundles.join('+') : 'no bundle uses it';
             const notes = [
-                r.cond ? `${r.cond} in an at-rule` : '',
+                r.cond ? `${r.cond} in an at-rule, taken whole` : '',
                 r.foreign ? `${r.foreign} foreign ref` : '',
             ].filter(Boolean).join(', ');
             console.log(`   ${String(r.n).padStart(3)}  .${(r.prefix + '-*').padEnd(16)} ${where}${notes ? '   (' + notes + ')' : ''}`);
@@ -534,34 +537,52 @@ async function cmdWorklist() {
     });
 }
 
+/**
+ * The block enclosing a conditional rule, and every rule inside it.
+ *
+ * A rule inside `@media`/`@container`/`@supports` cannot be lifted out — that
+ * makes it apply always — so the block travels whole, at the point its first rule
+ * appears in source order. If the block holds a rule of ANOTHER family, taking it
+ * would move that family's rule out of its own condition, so the move refuses.
+ */
+function enclosingBlock(lines, stripped, rules, rule) {
+    let open = rule.start;
+    while (open >= 0 && !/^\s*@(media|container|supports)/.test(stripped[open])) open--;
+    let depth = 0;
+    let end = open;
+    for (let j = open; j < lines.length; j++) {
+        depth += (stripped[j].match(/\{/g) || []).length;
+        depth -= (stripped[j].match(/\}/g) || []).length;
+        if (depth <= 0) { end = j; break; }
+    }
+    return { open, end, inside: rules.filter((r) => r.start > open && r.end <= end) };
+}
+
+/**
+ * Move one family out of the god file, IN SOURCE ORDER, in a single pass.
+ *
+ * THE POSITION OF A CONDITIONAL BLOCK IS NOT A DETAIL, and this is the third
+ * shape of this function because the first two got it wrong. Cutting the block
+ * and putting it FIRST cost 258 elements — the wizard rail stopped collapsing,
+ * because two `.wizard-timeline-column` rules of equal specificity swapped order.
+ * The correction — put it LAST — was also wrong: in every hand-moved family the
+ * block sat in the MIDDLE, with more of the family after it, and three sheets
+ * ended up non-verbatim while every visual diff stayed empty.
+ *
+ * Emitting in source order removes the question. Nothing is repositioned, so
+ * there is no position to get wrong.
+ */
 function cmdMove(prefix, target) {
     const godPath = join(ROOT, GOD_FILE);
     const text = readFileSync(godPath, 'utf8');
     const lines = text.split('\n');
-    const rules = readRules(text).filter((r) => r.prefix === prefix && r.feature);
+    const stripped = text.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' ')).split('\n');
+    const all = readRules(text);
+    const mine = all.filter((r) => r.prefix === prefix && r.feature);
 
-    if (!rules.length) {
+    if (!mine.length) {
         console.error(`no feature rules with prefix .${prefix}-* — nothing to move`);
         process.exit(2);
-    }
-
-    // REFUSE a family with any rule inside @media/@container/@supports. Hoisting
-    // one out makes it apply unconditionally, and moving only the others leaves a
-    // leftover that still applies — both look like a successful move.
-    const nested = rules.filter((r) => r.conditional);
-    if (nested.length) {
-        console.error(
-            `REFUSED: ${nested.length} of ${rules.length} .${prefix}-* rules sit inside a ` +
-            `conditional at-rule (@media / @container / @supports):`
-        );
-        for (const r of nested) console.error(`   line ${r.start + 1}: ${r.selector.slice(0, 66)}`);
-        console.error(
-            '\nMoving them would hoist them out of their condition so they always apply, and\n' +
-            'moving only the rest leaves a leftover that still applies. Neither is visible in\n' +
-            'a visual diff as a MISTAKE — it just looks like a styling change. Handle this\n' +
-            'family by hand, preserving each at-rule wrapper.'
-        );
-        process.exit(1);
     }
     if (!target) {
         console.error('--to <path> is required');
@@ -576,27 +597,44 @@ function cmdMove(prefix, target) {
         process.exit(2);
     }
 
-    // Extract in source order, preserving the text verbatim AND the cascade layer
-    // each rule came from. Rules are grouped by layer so the emitted sheet
-    // reproduces the position they had, not merely the text.
+    const chunks = [];
     const drop = new Set();
-    const byLayer = new Map();
-    let withDocs = 0;
-    for (const r of rules) {
-        const key = r.layer ?? '';
-        if (!byLayer.has(key)) byLayer.set(key, []);
-        // From docStart, so the rule arrives with the comment that explains it.
-        byLayer.get(key).push(lines.slice(r.docStart, r.end + 1).join('\n'));
-        for (let i = r.docStart; i <= r.end; i++) drop.add(i);
-        if (r.docStart !== r.start) withDocs++;
+    let blocks = 0;
+    for (let i = 0; i < mine.length; ) {
+        const r = mine[i];
+        if (r.conditional) {
+            const b = enclosingBlock(lines, stripped, all, r);
+            const foreign = b.inside.filter((x) => x.prefix !== prefix);
+            if (foreign.length) {
+                console.error(
+                    `REFUSED: the ${stripped[b.open].trim().slice(0, 40)} block at line ${b.open + 1} also holds ` +
+                    `${[...new Set(foreign.map((x) => '.' + x.prefix + '-*'))].join(', ')}.`
+                );
+                console.error('Taking it would move those rules out of their own condition. Split the block first.');
+                process.exit(1);
+            }
+            chunks.push({ layer: r.layer, text: lines.slice(b.open, b.end + 1).join('\n') });
+            for (let k = b.open; k <= b.end; k++) drop.add(k);
+            i += b.inside.length;
+            blocks++;
+        } else {
+            chunks.push({ layer: r.layer, text: lines.slice(r.docStart, r.end + 1).join('\n') });
+            for (let k = r.docStart; k <= r.end; k++) drop.add(k);
+            i++;
+        }
     }
-    const layersSeen = [...byLayer.keys()];
-    const taken = layersSeen.map((layer) =>
-        layer
-            ? `@layer ${layer} {\n${byLayer.get(layer).join('\n\n')}\n}`
-            : byLayer.get(layer).join('\n\n')
-    );
-    const remaining = lines.filter((_, i) => !drop.has(i)).join('\n');
+
+    // Consecutive chunks sharing a layer go in ONE wrapper, so the emitted sheet
+    // reproduces the position each rule had, not merely its text.
+    const groups = [];
+    for (const c of chunks) {
+        const last = groups[groups.length - 1];
+        if (last && last.layer === c.layer) last.parts.push(c.text);
+        else groups.push({ layer: c.layer, parts: [c.text] });
+    }
+    const body = groups
+        .map((g) => (g.layer ? `@layer ${g.layer} {\n${g.parts.join('\n\n')}\n}` : g.parts.join('\n\n')))
+        .join('\n\n');
 
     const targetPath = join(ROOT, target);
     // The header states REACH, because that is the property ADR-017 §6 turns on and
@@ -606,13 +644,14 @@ function cmdMove(prefix, target) {
     const header = existsSync(targetPath)
         ? ''
         : `/**\n * .${prefix}-* styles.\n *\n` +
-          ` * FEATURE-SCOPED (ADR-017 §6). This sheet reaches only the esbuild entries\n` +
-          ` * that import it — TODO: name them here. A class defined here is absent from\n` +
-          ` * every other webview bundle, and an element using it there renders raw with\n` +
-          ` * no error anywhere.\n *\n` +
+          ` * FEATURE-SCOPED (ADR-017 §6 and §7). This sheet reaches only the esbuild\n` +
+          ` * entries that import it — TODO: name them here. A class defined here is absent\n` +
+          ` * from every other webview bundle, and an element using it there renders raw\n` +
+          ` * with no error anywhere.\n *\n` +
           ` * Moved out of custom-spectrum.css by the CSS migration\n` +
-          ` * (.rptc/plans/css-architecture-migration), with the comment above each rule.\n` +
-          ` * Verbatim otherwise: a move is only correct when the visual diff is empty.\n */\n\n`;
+          ` * (.rptc/plans/css-architecture-migration), in source order, with the comment\n` +
+          ` * above each rule. Verbatim otherwise: a move is only correct when the rules\n` +
+          ` * are unchanged — check with \`--verify\`, not only with a visual diff.\n */\n\n`;
     const existing = existsSync(targetPath) ? readFileSync(targetPath, 'utf8') : '';
 
     // A feature that has never had a stylesheet has no styles/ directory yet.
@@ -621,19 +660,18 @@ function cmdMove(prefix, target) {
     // Target FIRST, source second. If the target write fails, the god file is
     // untouched and nothing is lost — which is what happened during this script's
     // own self-test, and is the reason the order is stated rather than incidental.
-    writeFileSync(
-        targetPath,
-        mergeAdjacentLayerBlocks(header + existing + (existing ? '\n' : '') + taken.join('\n\n') + '\n')
-    );
-    writeFileSync(godPath, remaining);
+    writeFileSync(targetPath, mergeAdjacentLayerBlocks(header + existing + (existing ? '\n' : '') + body + '\n'));
+    writeFileSync(godPath, lines.filter((_, k) => !drop.has(k)).join('\n'));
 
-    console.log(`moved ${rules.length} rule(s) .${prefix}-* -> ${target}`);
-    console.log(`cascade layers preserved: ${layersSeen.map((l) => l || '(unlayered)').join(', ')}`);
-    console.log(`${withDocs} of ${rules.length} rule(s) travelled with the comment block above them`);
+    const withDocs = mine.filter((r) => r.docStart !== r.start).length;
+    console.log(`moved ${mine.length} rule(s) .${prefix}-* -> ${target}`);
+    console.log(`cascade layers preserved: ${groups.map((g) => g.layer || '(unlayered)').join(', ')}`);
+    console.log(`${blocks} conditional block(s) taken whole, in source order`);
+    console.log(`${withDocs} of ${mine.length} rule(s) travelled with the comment block above them`);
     console.log(`\nNOT DONE YET. This changed counts, not pixels. Before committing:`);
     console.log(`  1. import ${target} from the entry/entries whose components use .${prefix}-*`);
-    console.log(`  2. capture -> rebuild -> re-capture -> diff  (webview-visual-baseline)`);
-    console.log(`  3. the diff MUST be empty; a non-empty diff reverts the move`);
+    console.log(`  2. --verify ${prefix} ${target} <ref>  — rules unchanged, in order`);
+    console.log(`  3. capture -> rebuild -> re-capture -> diff  (webview-visual-baseline)`);
     console.log(`  4. then: node scripts/cssMigrationCycle.mjs --check`);
 
     const { owned, foreign, dangling } = classifyMentions(prefix);
@@ -654,6 +692,53 @@ function cmdMove(prefix, target) {
         process.exit(1);
     }
     console.log(`\ncompleteness: no .${prefix}-* rules left behind`);
+}
+
+/**
+ * Did a family survive its move UNCHANGED — same rules, text, layer and order?
+ *
+ * THE VISUAL DIFF CANNOT ANSWER THIS AND IT IS NOT A BACKUP FOR IT. Four of the
+ * last six families moved on 2026-09-09 render on NONE of the eight fixture
+ * surfaces — `.choice-*`, `.db-*`, `.two-*`, `.build-*` — so their captures were
+ * empty for reasons unrelated to correctness. An empty diff there says only that
+ * nothing ELSE moved.
+ *
+ * This is the check that caught three sheets whose commit messages claimed
+ * "verbatim" and were not: a conditional block appended at the end had moved the
+ * rules that followed it in the god file. Compare against the ref BEFORE the move.
+ */
+function cmdVerify(prefix, sheet, ref) {
+    if (!prefix || !sheet || !ref) {
+        console.error('usage: --verify <family> <sheet> <ref-before-the-move>');
+        process.exit(2);
+    }
+    const before = execSync(`git show ${ref}:${GOD_FILE}`, { cwd: ROOT, encoding: 'utf8', maxBuffer: 64e6 });
+    const beforeLines = before.split('\n');
+    const was = readRules(before).filter((r) => r.prefix === prefix);
+    const after = readFileSync(join(ROOT, sheet), 'utf8');
+    const afterLines = after.split('\n');
+    const is = readRules(after).filter((r) => r.prefix === prefix);
+
+    const body = (lines, r) => lines.slice(r.start, r.end + 1).join('\n').replace(/\s+/g, ' ').trim();
+    const problems = [];
+    if (was.length !== is.length) problems.push(`count: ${was.length} before, ${is.length} after`);
+    for (let i = 0; i < Math.min(was.length, is.length); i++) {
+        if (body(beforeLines, was[i]) !== body(afterLines, is[i])) {
+            problems.push(`rule ${i} differs: was ${was[i].selector.trim().slice(0, 48)}, is ${is[i].selector.trim().slice(0, 48)}`);
+        } else if (was[i].layer !== is[i].layer) {
+            problems.push(`rule ${i} changed layer: ${was[i].layer} -> ${is[i].layer}`);
+        } else if (was[i].conditional !== is[i].conditional) {
+            problems.push(`rule ${i} changed condition: ${was[i].conditional} -> ${is[i].conditional}`);
+        }
+    }
+    console.log(`.${prefix}-*  ${was.length} rule(s) in ${ref}:${GOD_FILE}  ->  ${is.length} in ${sheet}`);
+    console.log(`conditional: ${was.filter((r) => r.conditional).length} before, ${is.filter((r) => r.conditional).length} after`);
+    if (problems.length) {
+        console.error('\nNOT VERBATIM:');
+        for (const p of problems) console.error('   ' + p);
+        process.exit(1);
+    }
+    console.log('\nVERBATIM: same rules, same text, same cascade layer, same order.');
 }
 
 /**
@@ -951,6 +1036,23 @@ function cmdSelfTest() {
         pRes.length === 1 && pRes[0].prefix === 'search' && pRes[0].start === 0,
         `found ${pRes.length}: ${JSON.stringify(pRes.map((r) => [r.prefix, r.start]))}`);
 
+    // Q: a conditional block is found whole, and a block holding TWO families is
+    //    visible as such. `--move` refuses on that second case, because taking the
+    //    block would move the other family's rule out of its own condition.
+    const twoFamilyBlock = [
+        '@media (max-width: 100px) {',
+        '    .alpha-thing {', '        color: red;', '    }',
+        '    .beta-thing {', '        color: blue;', '    }',
+        '}',
+    ].join('\n');
+    const qLines = twoFamilyBlock.split('\n');
+    const qRules = readRules(twoFamilyBlock);
+    const qBlock = enclosingBlock(qLines, qLines, qRules, qRules[0]);
+    check('Q-a-shared-conditional-block-is-visible',
+        qBlock.open === 0 && qBlock.end === 7 && qBlock.inside.length === 2 &&
+        qBlock.inside.some((r) => r.prefix !== qRules[0].prefix),
+        `open ${qBlock.open}, end ${qBlock.end}, inside ${qBlock.inside.map((r) => r.prefix).join('+')}`);
+
     // D: the CONTROL on the controls — a deliberately broken expectation must FAIL,
     //    or all of the above could be passing vacuously.
     const d = readRules('.only-one { color: red; }');
@@ -968,9 +1070,11 @@ else if (cmd === '--worklist') await cmdWorklist();
 else if (cmd === '--move') {
     const toIdx = rest.indexOf('--to');
     cmdMove(rest[0], toIdx >= 0 ? rest[toIdx + 1] : null);
-} else if (cmd === '--check') cmdCheck();
+} else if (cmd === '--verify') cmdVerify(rest[0], rest[1], rest[2]);
+else if (cmd === '--check') cmdCheck();
 else if (cmd === '--leftovers') cmdLeftovers(rest[0]);
 else {
-    console.log('usage: cssMigrationCycle.mjs --next | --worklist | --move <prefix> --to <path> | --check | --leftovers <prefix> | --selftest');
+    console.log('usage: cssMigrationCycle.mjs --next | --worklist | --move <prefix> --to <path>');
+    console.log('       --verify <prefix> <sheet> <ref> | --check | --leftovers <prefix> | --selftest');
     process.exit(2);
 }

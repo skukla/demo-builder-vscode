@@ -32,7 +32,7 @@ its blockers, and which of three LANES it is in:
 | lane | meaning | what to do |
 |---|---|---|
 | **mover** | nothing inside a conditional at-rule | `--move`, then import the sheet from every entry it lists |
-| **by hand** | at least one rule inside `@media` / `@container` / `@supports` | move the block WHOLE, and put it back WHERE IT WAS — not at the end |
+| **split** | a conditional block holding TWO families | `--move` refuses: taking it moves the other family's rule out of its own condition. Split the block by hand first |
 | **dead?** | no bundle renders the family at all | do not move it — this is PL-53's question, and a visual diff cannot answer it |
 
 **A table of families used to live here and it rotted within a day.** It listed
@@ -45,7 +45,12 @@ starting values — fixed the same way.
 empty diff commits; anything else reverts. Batching means a non-empty diff tells you
 several things might be wrong instead of exactly what is.
 
-**A conditional block goes back at its ORIGINAL INDEX.** "After the family's plain
+**`--move` now handles conditional blocks itself**, by emitting the family in
+SOURCE ORDER — the block travels whole, at the point its first rule appears, and
+nothing is repositioned. That removed the by-hand lane entirely.
+
+The rule it replaced, kept because it explains the shape: a conditional block goes
+back at its ORIGINAL INDEX. "After the family's plain
 rules" was the first instruction here and it is wrong: in all three hand-moved
 families the block sat in the MIDDLE, with more of the family after it —
 `.wizard-step-item`, `.sidebar-utility-footer` and `.choice-card--tile` all came
