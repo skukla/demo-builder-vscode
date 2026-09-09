@@ -25,8 +25,22 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-const CSS = fs
-    .readFileSync(path.join(__dirname, '../../../src/core/ui/styles/custom-spectrum.css'), 'utf8')
+/**
+ * Read every sheet that can hold a card rule, not just the global one.
+ *
+ * `.expandable-brand-card` moved to the wizard's own sheet on 2026-09-09 when the
+ * CSS migration split `.brand-*` and `.expandable-*` out of custom-spectrum.css
+ * (.rptc/plans/css-architecture-migration). Reading one file made this test
+ * assert on where a rule LIVED rather than on what it SAYS, so it failed on a
+ * move that changed no rendering at all — the visual diff for that move was empty
+ * across 2,700 elements.
+ */
+const CSS = [
+    '../../../src/core/ui/styles/custom-spectrum.css',
+    '../../../src/features/project-creation/ui/styles/brand-cards.css',
+]
+    .map((rel) => fs.readFileSync(path.join(__dirname, rel), 'utf8'))
+    .join('\n')
     .replace(/\/\*[\s\S]*?\*\//g, '');
 
 function ruleFor(selectorList: string): string {

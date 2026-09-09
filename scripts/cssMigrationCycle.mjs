@@ -298,13 +298,24 @@ function cmdMove(prefix, target) {
  */
 function leftovers(prefix) {
     const text = readFileSync(join(ROOT, GOD_FILE), 'utf8');
-    const skip = commentLines(text);
+
+    // Test where the MATCH sits, not where its line starts. A comment that begins
+    // after indentation — `    /* Match .brand-card-name ... */` — leaves the line
+    // START outside the comment span, so a line-based check reported three such
+    // comments as leftover RULES on 2026-09-08 and refused a legitimate move.
+    const spans = [...text.matchAll(/\/\*[\s\S]*?\*\//g)].map((m) => [m.index, m.index + m[0].length]);
+    const inComment = (pos) => spans.some(([a, b]) => pos >= a && pos < b);
+
+    const lines = text.split('\n');
     const re = new RegExp(`(?<![\\w-])\\.${prefix}-[\\w-]+`);
-    return text
-        .split('\n')
-        .map((l, i) => [i + 1, l])
-        .filter(([i, l]) => !skip.has(i - 1) && re.test(l))
-        .map(([i, l]) => `${i}: ${l.trim().slice(0, 76)}`);
+    const out = [];
+    let offset = 0;
+    for (let i = 0; i < lines.length; i++) {
+        const m = re.exec(lines[i]);
+        if (m && !inComment(offset + m.index)) out.push(`${i + 1}: ${lines[i].trim().slice(0, 76)}`);
+        offset += lines[i].length + 1;
+    }
+    return out;
 }
 
 function cmdLeftovers(prefix) {

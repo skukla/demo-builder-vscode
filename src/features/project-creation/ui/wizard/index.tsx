@@ -11,6 +11,12 @@ import '@/core/ui/styles/custom-spectrum.css';
 // migration (.rptc/plans/css-architecture-migration). The wizard is the only
 // entry whose import graph reaches PrerequisitesStep.
 import '@/features/prerequisites/ui/styles/prerequisites.css';
+// .brand-* and .expandable-* rules, moved out of custom-spectrum.css by the CSS
+// migration. They are ENTANGLED — rules like `.expandable-brand-card.expanded
+// .brand-card-header` belong to one family by their first class and style the
+// other — so they moved together and share a sheet. The wizard is the only entry
+// whose graph reaches a component using either.
+import '../styles/brand-cards.css';
 import type { WizardInitialData } from '@/types/webviewPayloads';
 
 // Get root element

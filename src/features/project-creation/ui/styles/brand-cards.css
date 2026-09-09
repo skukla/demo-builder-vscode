@@ -1,0 +1,220 @@
+/**
+ * brand styles.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
+ * when the visual diff is empty, so the rules are not edited on the way.
+ */
+
+@layer theme {
+.brand-section {
+    margin-bottom: 24px !important;
+}
+
+.brand-gallery-column {
+    padding-top: var(--spectrum-global-dimension-size-400) !important;
+}
+
+.brand-card-header {
+    margin-bottom: 0 !important;
+}
+
+.brand-card-title-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: 4px !important;
+}
+
+.brand-card-name {
+    display: block !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+
+.brand-card-description {
+    display: block !important;
+    font-size: 12px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    line-height: 1.4 !important;
+}
+
+.brand-card-architectures {
+    animation: fadeInDown var(--db-motion-base) var(--db-motion-ease) !important;
+}
+
+.brand-card-section-label {
+    display: block !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    margin-bottom: 12px !important;
+}
+
+.brand-card-selection {
+    margin-top: 6px !important;
+    animation: fadeIn 0.2s ease-out !important;
+}
+
+.brand-card-selection-summary {
+    font-size: 12px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    line-height: 1.4 !important;
+}
+
+.brand-card-selection-sep {
+    color: var(--spectrum-global-color-gray-400) !important;
+}
+
+.brand-card-selection-label {
+    display: block !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 2px !important;
+}
+
+.brand-card-selection-value {
+    display: block !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+
+.brand-card-detail-trigger {
+    position: relative !important;
+    /* Inline on the architecture summary line (was a block below it). */
+    white-space: nowrap !important;
+}
+
+.brand-card-detail-link {
+    display: inline-block !important;
+    font-size: 12px !important;
+    color: var(--spectrum-global-color-blue-500) !important;
+    text-decoration: underline !important;
+    text-decoration-style: dotted !important;
+    text-underline-offset: 2px !important;
+    cursor: default !important;
+}
+
+.brand-card-detail-tooltip {
+    display: none !important;
+    position: absolute !important;
+    left: 0 !important;
+    bottom: calc(100% + 6px) !important;
+    width: max-content !important;
+    padding: 10px 14px !important;
+    background: var(--spectrum-global-color-gray-50) !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+    z-index: 20 !important;
+    white-space: nowrap !important;
+}
+
+.brand-card-detail-trigger:hover .brand-card-detail-tooltip {
+    display: block !important;
+}
+
+.brand-card-edit-hint {
+    display: block !important;
+    font-size: 11px !important;
+    color: var(--spectrum-global-color-blue-400) !important;
+    margin-top: 8px !important;
+    opacity: 0.7 !important;
+    transition: opacity 0.15s ease !important;
+}
+}
+
+@layer theme {
+.expandable-brand-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+    gap: 20px !important;
+    align-items: start !important;
+    margin-bottom: 24px !important;
+}
+
+.expandable-brand-card {
+    position: relative !important;
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease-out !important;
+    /* Grid items default to min-width:auto (=min-content); without this a card
+       refuses to shrink into its reflowing-grid track and overflows. */
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    /* Shared card-family height floor so package cards and stack (selector) cards
+       read at a consistent height across steps. */
+    min-height: 100px !important;
+}
+
+.expandable-brand-card:hover {
+    background: var(--spectrum-global-color-gray-75) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+.expandable-brand-card:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+.expandable-brand-card.selected {
+    border-color: var(--spectrum-global-color-blue-400) !important;
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+.expandable-brand-card.expanded {
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-color: var(--spectrum-global-color-blue-400) !important;
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+    transform: none !important;
+    cursor: pointer !important;
+}
+
+.expandable-brand-card.expanded:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.expandable-brand-card.dimmed {
+    opacity: 0.5 !important;
+    transform: none !important;
+}
+
+.expandable-brand-card.dimmed:hover {
+    opacity: 0.7 !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.expandable-brand-card.coming-soon {
+    position: relative;
+    opacity: 0.45;
+    cursor: default !important;
+    pointer-events: none;
+}
+
+.expandable-brand-card.expanded .brand-card-header {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+    /* No border here - selection section has its own border-top */
+}
+
+.expandable-brand-card.expanded:hover .brand-card-edit-hint {
+    opacity: 1 !important;
+}
+
+.expandable-brand-card.expanded:hover {
+    background: var(--spectrum-global-color-gray-75) !important;
+}
+}
