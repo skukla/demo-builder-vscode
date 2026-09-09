@@ -17,15 +17,21 @@ import '@/features/data-installer/ui/styles/datapack.css';
 // entry whose import graph reaches PrerequisitesStep.
 import '@/features/prerequisites/ui/styles/prerequisites.css';
 // .brand-* and .expandable-* rules, moved out of custom-spectrum.css by the CSS
-// migration. They are ENTANGLED — rules like `.expandable-brand-card.expanded
-// .brand-card-header` belong to one family by their first class and style the
-// other — so they moved together and share a sheet. The wizard is the only entry
+// migration. They share a sheet because `.expandable-brand-card` IS a brand card,
+// not because they could not be separated — the refusal that forced them to move
+// together was a false one (corrected 2026-09-09). The wizard is the only entry
 // whose graph reaches a component using either.
 import '../styles/brand-cards.css';
 // .int-* (integration flow) and .sum-* (build summary), moved out of
 // custom-spectrum.css by the CSS migration. Wizard-only families.
 import '../styles/integration-flow.css';
 import '../styles/build-summary.css';
+// .intflow-* — the Add Integration modal. TWO entries render it; the dedicated
+// integrations surface imports this same sheet.
+import '../styles/add-integration-flow.css';
+// .timeline-* and .wizard-* — the SETUP PROGRESS rail and the wizard shell,
+// including the rail-collapse breakpoint. Wizard-only.
+import '../styles/wizard-timeline.css';
 import type { WizardInitialData } from '@/types/webviewPayloads';
 
 // Get root element

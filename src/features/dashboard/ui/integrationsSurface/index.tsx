@@ -17,6 +17,10 @@ import '@/core/ui/styles/custom-spectrum.css';
 import '../styles/ai.css';
 // .eventing-* rules — only this entry reaches EventingSection.
 import '../styles/eventing.css';
+// .intflow-* — the Add Integration modal, rendered here through
+// AddIntegrationFlowAdapter and on the wizard's Integrations area. Both entries
+// import it; neither owns it alone.
+import '@/features/project-creation/ui/styles/add-integration-flow.css';
 
 const container = document.getElementById('root');
 if (!container) {

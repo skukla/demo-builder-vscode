@@ -119,16 +119,42 @@ function docCommentBlocks(text) {
  * A rule in this position is NOT MOVABLE by this script. Refusing is the whole
  * behaviour: a partially-moved family is worse than an unmoved one, because the
  * leftovers still apply and the split reads as done.
+ *
+ * COUNTS BRACES, NOT INDENTED LINES — and the difference is the whole check.
+ * The first version popped its stack on any line matching `^\s*\}\s*$`, which is
+ * what EVERY rule inside a media query ends with. So the block was treated as
+ * closed after its FIRST rule and every rule below read as unconditional. Found
+ * 2026-09-09 while moving `.wizard-*`, whose 1280px block holds ten rules: the
+ * mover reported one of them as conditional and would have hoisted the other nine
+ * out of their breakpoint, which is exactly the defect this exists to stop — the
+ * cycle-1 sidebar failure, at nine times the size.
  */
-function insideConditionalAtRule(lines, lineIndex) {
-    const stack = [];
-    for (let i = 0; i < lineIndex; i++) {
-        const l = lines[i];
-        if (/^\s*@(media|container|supports)[^{]*\{/.test(l)) stack.push('cond');
-        else if (/^\s*@layer\s+[\w-]+\s*\{/.test(l)) stack.push('layer');
-        else if (/^\s*\}\s*$/.test(l) && stack.length) stack.pop();
+function conditionalLines(text) {
+    // Comments stripped first: a brace inside prose would corrupt the depth, and
+    // this file has 489 comment blocks, several of which quote selectors.
+    const stripped = text.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
+    const out = new Set();
+    const openedCond = [];
+    let line = 0;
+    let condDepth = 0;
+    let pendingCond = false;
+    for (let i = 0; i < stripped.length; i++) {
+        const ch = stripped[i];
+        if (ch === '\n') {
+            line++;
+            if (condDepth > 0) out.add(line);
+            continue;
+        }
+        if (ch === '@') pendingCond = /^@(media|container|supports)\b/.test(stripped.slice(i, i + 12));
+        else if (ch === '{') {
+            openedCond.push(pendingCond);
+            if (pendingCond) condDepth++;
+            pendingCond = false;
+        } else if (ch === '}') {
+            if (openedCond.pop()) condDepth--;
+        }
     }
-    return stack.includes('cond');
+    return out;
 }
 
 function enclosingLayer(text, lines, lineIndex) {
@@ -150,6 +176,7 @@ function readRules(text) {
     const lines = text.split('\n');
     const skip = commentLines(text);
     const doc = docCommentBlocks(text);
+    const conditional = conditionalLines(text);
     const rules = [];
     for (let i = 0; i < lines.length; i++) {
         if (skip.has(i)) continue;
@@ -187,7 +214,7 @@ function readRules(text) {
         // the one thing about this migration the visual diff is genuinely good at
         // catching, because it changes what renders.
         const layer = enclosingLayer(text, lines, head);
-        const conditional = insideConditionalAtRule(lines, head);
+        const isConditional = conditional.has(head);
 
         // The documentation block DIRECTLY above, with no blank line between.
         //
@@ -215,7 +242,7 @@ function readRules(text) {
             docStart,
             end,
             layer,
-            conditional,
+            conditional: isConditional,
             selector: selectorText.replace(/\s+/g, ' ').trim(),
             prefix,
             feature: !UTILITY_PREFIXES.has(prefix),
@@ -678,6 +705,21 @@ function cmdSelfTest() {
     check('N-blank-line-inside-a-comment-does-not-split-it',
         n.length === 1 && n[0].docStart === 0 && n[0].start === 3,
         `docStart ${n[0]?.docStart}, start ${n[0]?.start}`);
+
+    // O: EVERY rule inside a conditional at-rule is flagged, not just the first,
+    //    and a rule after the block closes is not. The line-based stack this
+    //    replaced popped on the first inner rule's closing brace.
+    const twoInMedia = [
+        '@media (max-width: 100px) {',
+        '    .first-thing {', '        color: red;', '    }',
+        '    .second-thing {', '        color: blue;', '    }',
+        '}',
+        '.after-thing {', '    color: green;', '}',
+    ].join('\n');
+    const o = readRules(twoInMedia);
+    check('O-every-rule-in-a-media-block-is-conditional',
+        o.length === 3 && o[0].conditional && o[1].conditional && !o[2].conditional,
+        `flags ${JSON.stringify(o.map((r) => [r.prefix, r.conditional]))}`);
 
     // D: the CONTROL on the controls — a deliberately broken expectation must FAIL,
     //    or all of the above could be passing vacuously.

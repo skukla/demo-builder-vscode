@@ -1,0 +1,346 @@
+/**
+ * .timeline-* and .wizard-* styles — the SETUP PROGRESS rail and the wizard shell.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `wizard` entry ALONE
+ * (project-creation/ui/wizard/index.tsx). TimelineNav and TimelineChildren live in
+ * core/ui, but no other entry's graph reaches them.
+ *
+ * TWO FAMILIES, and these two really are entangled: nine rules led by
+ * `.wizard-timeline-column` style `.timeline-*` descendants, so the rail's collapsed
+ * appearance is written half in one family and half in the other. Splitting them
+ * across sheets would put a rule and its override in different files for no gain.
+ *
+ * The rail-collapse `@media (max-width: 1280px)` block was moved BY HAND, whole.
+ * `--move` refuses a family with a rule inside a conditional at-rule, correctly:
+ * lifting one out makes it apply at every width. The breakpoint registry naming
+ * this and the other three literals stays in custom-spectrum.css, where the other
+ * blocks still are.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), with the comment above each rule.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+/* Wizard timeline column — left rail housing TimelineNav (formerly in the
+   sidebar). Width matches VS Code's default primary sidebar so the timeline
+   has the same visual footprint as before. */
+.wizard-timeline-column {
+    flex: 0 0 280px !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    border-right: 1px solid var(--spectrum-global-color-gray-200) !important;
+}
+
+/* Wizard main content area */
+.wizard-main-content {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    /* Commerce step tokens. Its left zone (nav + step-view) is capped at the canonical
+     * --content-width (960) — the SAME band as every other screen, not an exception. That
+     * width is what fits Commerce's widest step (the Business Structure Website / Store /
+     * Store View row, ~720 of content) after the 240 sub-nav, which is why 960 is the
+     * app-wide content width. --wizard-content-pad is content padding. */
+    --wizard-content-pad: var(--spectrum-global-dimension-size-300);  /* 24px content padding */
+    --commerce-nav-width: var(--spectrum-global-dimension-size-3000); /* 240px Commerce sub-nav */
+    --commerce-zone-max: var(--content-width);                        /* nav + step-view = app content band */
+}
+
+/* Wizard progress list */
+.wizard-progress-list {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Wizard progress step item */
+.wizard-step-item {
+    padding: 6px 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+/* Wizard step indicator */
+.wizard-step-indicator {
+    font-size: 12px !important;
+    width: 16px !important;
+    text-align: center !important;
+}
+
+/* Wizard progress list */
+.wizard-progress-list {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Wizard step item */
+.wizard-step-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 4px !important;
+    border-radius: 4px !important;
+    transition: background-color 0.15s ease !important;
+}
+
+.wizard-step-item:hover {
+    background-color: var(--spectrum-global-color-gray-200) !important;
+}
+
+.wizard-step-item[role="button"]:focus {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: -2px !important;
+}
+
+/* Wizard step indicator */
+.wizard-step-indicator {
+    font-size: 12px !important;
+    width: 16px !important;
+    text-align: center !important;
+}
+
+/* ===========================================
+   Wizard Layout Containers
+   =========================================== */
+.wizard-wrapper {
+    display: flex !important;
+    height: 100% !important;
+    width: 100% !important;
+}
+
+/* The rail-collapse breakpoint, moved WHOLE — @media wrapper and all.
+   Hoisting a rule out of its condition makes it apply always, so the block
+   travels intact rather than rule by rule. The breakpoint REGISTRY that names
+   this and the other three literals stays in custom-spectrum.css, because the
+   other blocks are still there. */
+@media (max-width: 1280px) { /* bp: rail-collapse — SETUP PROGRESS rail → 56px dots + tooltips */
+    .wizard-timeline-column {
+        flex: 0 0 56px !important;
+        /* `overflow-y: auto` (the rail's default for vertical scrolling) makes
+           the browser compute `overflow-x: auto` too — per CSS spec, when one
+           axis is non-visible, the other can't stay `visible`. That clipped
+           the step-name tooltips (which need to overflow horizontally past
+           the 56px rail edge) on the right.
+           In collapsed mode the rail content is dots-only and fits in any
+           normal viewport, so dropping scroll here is safe and necessary for
+           the `::after` tooltips to escape the rail bounds. */
+        overflow: visible !important;
+    }
+    /* Hide the SETUP PROGRESS header label and individual step labels when
+       the rail collapses; the dots + their connector line still convey
+       position and status, and hover surfaces the name. */
+    .wizard-timeline-column .timeline-header-label,
+    .wizard-timeline-column .timeline-step-label {
+        display: none !important;
+    }
+
+    /* Also hide the active step's nested sub-step rail (TimelineChildren) when the rail
+       collapses — its indented text labels (e.g. Commerce / Integrations) would spill past
+       the 56px column. The current area stays visible in the content's sub-nav strip, and
+       area navigation happens via Back/Continue at this width (matching how the collapsed
+       main steps can't be freely jumped either). */
+    .wizard-timeline-column .timeline-children {
+        display: none !important;
+    }
+    /* With the sub-steps hidden, undo the layout that accommodated them on the current
+       step: un-clip the wrapper so the current step's persistent `::after` tooltip (the
+       only "where am I" label in collapsed mode) can escape the rail edge, and revert the
+       connector from its clipped 9999px stretch back to the normal length (there is no
+       longer a children block to stretch past — without this, un-clipping would let the
+       9999px line spill down the rail). */
+    .wizard-timeline-column .timeline-step-wrap-clip {
+        overflow: visible !important;
+    }
+    .wizard-timeline-column .timeline-connector-stretch {
+        height: var(--spectrum-global-dimension-size-500, 40px) !important;
+    }
+
+    /* CSS-only step-name tooltip. Anchored to the per-step `<View>` wrapper
+       which is `position: relative`, so the `::after` floats to its right.
+       HOVER / FOCUS ONLY — deliberately NOT persistent:
+
+         - `:hover` — a step's name shows on pointer hover, so users can scan
+            ahead/behind without changing steps.
+         - `:focus-visible` — same trigger, for keyboard users tabbing the rail.
+
+       The current step is intentionally NOT labelled persistently: at
+       `left: 100%` the tooltip floats into the content zone (the rail is only
+       56px wide), so an always-on label sits on top of the section header. And
+       it would be redundant — "where am I" is already answered, more prominently
+       and without overlap, by the content header ("… · Build Your Project") and
+       the sub-nav, while the active (blue) dot shows position. So the tooltip is
+       a transient scan aid, shown only on demand.
+
+       100ms delay + 150ms fade-in feels snappy without being jumpy on a
+       casual pointer pass. Pointer-events disabled so the tooltip never
+       blocks click targets. */
+    .wizard-timeline-column .timeline-step {
+        position: relative;
+    }
+    .wizard-timeline-column .timeline-step:hover::after,
+    .wizard-timeline-column .timeline-step:focus-visible::after {
+        content: attr(data-step-name);
+        position: absolute;
+        /* Offset from the .nav-item-row's right edge — the row's flex layout
+           makes `100%` equal to the dot's right edge plus the row's natural
+           padding (the label is `display: none` in collapsed mode, so it
+           contributes no width). A small size-50 (4px) offset lets the pill
+           sit just past the dot with breathing room. */
+        left: calc(100% + var(--spectrum-global-dimension-size-50));
+        top: 50%;
+        transform: translateY(-50%);
+        /* Spectrum tokens invert with theme — in the dark theme the wizard
+           runs in, gray-200 is a near-black surface and gray-800 is the
+           light-ink text. Subtle 1px border and gentle shadow keep the
+           overlay readable without feeling like a stacked card. The same
+           rule reads correctly in light theme (light surface, dark text). */
+        background: var(--spectrum-global-color-gray-200);
+        color: var(--spectrum-global-color-gray-800);
+        border: 1px solid var(--spectrum-global-color-gray-300);
+        padding: var(--spectrum-global-dimension-size-75) var(--spectrum-global-dimension-size-100); /* 6px 8px */
+        border-radius: var(--spectrum-global-dimension-size-50); /* 4px */
+        font-size: 12px;
+        font-weight: 400;
+        white-space: nowrap;
+        z-index: 1000;
+        pointer-events: none;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+        animation: timeline-step-tooltip-fade 150ms 100ms both;
+    }
+    /* The current step's persistent tooltip skips the entrance animation —
+       it should be there when the rail mounts, not fade in. Hover/focus
+       tooltips keep the fade for snap. */
+    .wizard-timeline-column .timeline-step[aria-current="step"]:not(:hover):not(:focus-visible)::after {
+        animation: none;
+    }
+}
+
+/* ===========================================
+   Timeline Specific Classes
+   =========================================== */
+.timeline-container {
+    border-right: 1px solid var(--spectrum-global-color-gray-300) !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+}
+
+/* Timeline in sidebar - no border, use Spectrum gray-75 for consistency */
+.timeline-container.timeline-sidebar {
+    border-right: none !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+}
+
+.timeline-step-dot {
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+.timeline-step-dot-completed {
+    background: var(--spectrum-global-color-green-600) !important; /* Green - Completed steps */
+}
+
+.timeline-step-dot-review {
+    background: var(--spectrum-global-color-blue-600) !important; /* Blue - Edit mode (reviewing completed steps) */
+}
+
+.timeline-step-dot-current {
+    background: var(--spectrum-global-color-blue-600) !important; /* Blue - Active step */
+    border: 2px solid var(--spectrum-global-color-blue-400) !important; /* Blue - Active step border */
+}
+
+.timeline-step-dot-upcoming {
+    background: var(--spectrum-global-color-gray-75) !important;
+    border: 2px solid var(--spectrum-global-color-gray-400) !important;
+}
+
+.timeline-connector {
+    position: absolute !important;
+    /* The connector is a CHILD of the step dot (its positioning anchor), so it centers
+       on the dot by construction: left:50% is the dot's own center and translateX(-50%)
+       centers the line on it. Robust to Spectrum scale, the collapsed 56px rail, and any
+       wrapper offset — none of which a computed left could survive. */
+    left: 50% !important;
+    top: 100% !important; /* start at the dot's bottom edge */
+    transform: translateX(-50%) !important;
+    width: 3px !important;
+    /* Bridge the gap to the next dot (overlaps slightly behind it — z-index keeps it under). */
+    height: var(--spectrum-global-dimension-size-500, 40px) !important;
+    z-index: 0 !important;
+}
+
+/* When the current step shows an indented child rail, the parent line must run
+   continuously down to the next top-level step past the children. A very tall line,
+   clipped by the step wrapper's overflow (.timeline-step-wrap-clip), lands exactly at
+   the wrapper's bottom regardless of how many children show. */
+.timeline-connector-stretch {
+    height: 9999px !important;
+}
+
+/* Applied to a step wrapper ONLY while it shows its child rail: clips the tall
+   stretch connector at the wrapper's bottom (the next-step boundary). Normal step
+   wrappers stay overflow:visible so their connectors reach into the gap below. */
+.timeline-step-wrap-clip {
+    overflow: hidden !important;
+}
+
+.timeline-connector-completed {
+    background: repeating-linear-gradient(to bottom, var(--spectrum-global-color-blue-600) 0px, var(--spectrum-global-color-blue-600) 4px, transparent 4px, transparent 8px) !important;
+}
+
+.timeline-connector-pending {
+    background: repeating-linear-gradient(to bottom, var(--spectrum-global-color-gray-400) 0px, var(--spectrum-global-color-gray-400) 4px, transparent 4px, transparent 8px) !important;
+}
+
+/* Nested sub-step rail — quiet indented LABELS (no dots / checkmarks / pulse). The
+   active child gets a 2px accent bar + bold gray-900 label; a done child is a touch
+   darker than an upcoming one. The whole rail is indented well clear of the parent's
+   dotted spine (TimelineChildren CHILD_INDENT) so the accent bar never reads as a
+   second rail next to the dotted line. Mirrors the in-body StepRail nav. */
+.timeline-child {
+    box-sizing: border-box;
+    padding: 5px 0 5px 12px;
+    border-left: 2px solid transparent;
+}
+
+.timeline-child-label {
+    font-size: var(--spectrum-global-dimension-font-size-100);
+    color: var(--spectrum-global-color-gray-500);
+    white-space: nowrap;
+    user-select: none;
+}
+
+.timeline-child--done .timeline-child-label {
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.timeline-child--active {
+    border-left-color: var(--spectrum-global-color-blue-500);
+}
+
+.timeline-child--active .timeline-child-label {
+    color: var(--spectrum-global-color-gray-900);
+    font-weight: 600;
+}
+
+/* Timeline step entrance animation - fade in with expand */
+.timeline-step-enter {
+    animation: timeline-enter 0.3s ease-out forwards !important;
+    overflow: hidden !important;
+}
+
+/* Timeline step exit animation - fade out with collapse */
+.timeline-step-exit {
+    animation: timeline-exit 0.3s ease-out forwards !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+}
+}

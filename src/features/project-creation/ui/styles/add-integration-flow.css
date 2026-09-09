@@ -1,0 +1,504 @@
+/**
+ * .intflow-* styles — the one-modal Add Integration journey.
+ *
+ * FEATURE-SCOPED (ADR-017 §6), and the first sheet to reach TWO entries for a
+ * reason other than a shared component's convenience: `wizard`
+ * (project-creation/ui/wizard/index.tsx) renders this flow on the Integrations
+ * area, and `integrations` (dashboard/ui/integrationsSurface/index.tsx) renders
+ * the same modal through AddIntegrationFlowAdapter. Both import it; the other six
+ * bundles must not, and no component outside those two may use these names.
+ *
+ * NOT integration-flow.css, which holds `.int-*` — the RESULTS list on the wizard
+ * step, wizard-only. Two families, two audiences, two sheets.
+ *
+ * `.manage-apis-body .intflow-api-picker` stays in custom-spectrum.css: it is a
+ * `.manage-*` rule that styles these elements as descendants, so it belongs to
+ * that family and not to this move.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), with the comment above each rule.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+/* ---- Flow modal: stage body + per-stage layouts ---- */
+/* The 360px min-height that used to live here reserved stage height so
+   Back/Continue wouldn't jump between short and tall stages. That was a
+   workaround for the shared Modal's floating footer (sticky is a no-op when the
+   content doesn't overflow). The Modal now grows .modal-body to push the footer
+   to the true bottom, so the reservation is redundant — removed. */
+.intflow-stage-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.intflow-stage-lead {
+    margin: 0 0 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+/* Section label inside a stage ("Start from"): small caps over a card group,
+   making the group read as a labeled sub-choice rather than the modal's main
+   event (the unlabeled seed row was the owner's 2026-08-27 design flag). */
+.intflow-section-label {
+    margin: 0 0 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* The optional name field sits a beat below the card group it follows. */
+.intflow-blank {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Kind picker: the (at most) three kind cards stretch equal-width across the
+   modal row (default .choice-card flex: 1 1 0 / min-width 240px — NOT the
+   catalog gallery's 168px tiles), wrapping only when the modal is narrow. */
+/* Kind picker: a balanced 2-column grid (4 cards → 2×2) rather than a flex row
+   that wraps the 4th card full-width. Equal-height rows via the grid. */
+.intflow-kind-choices {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    align-items: stretch;
+}
+
+/* Catalog stage: search header over the wrapping tile gallery. */
+.intflow-catalog {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.intflow-choices {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.intflow-empty {
+    padding: 24px 8px;
+    text-align: center;
+    color: var(--spectrum-global-color-gray-600);
+    font-size: 13px;
+}
+
+/* Custom stage: the lead sentence + URL field. */
+.intflow-custom {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+    max-width: 480px;
+}
+
+/* ---- Destination stages (sign-in / project / workspace / summary) ---- */
+.intflow-destination {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* The project/workspace list keeps ONE height whether it shows 726 rows or the 5
+   that match a filter. By default `.list-refresh-container` is `flex: 1` inside an
+   auto-height chain, so the list is sized by its CONTENT — and the modal is
+   `fitContent`, so every keystroke resized the dialog and re-centred it under the
+   cursor. Same remedy as `.repo-selection-inline .list-refresh-container`, but a
+   definite height rather than a cap, because a cap still collapses when filtering.
+   It also moves the scrolling INTO the list (ListView virtualizes) instead of
+   scrolling the whole modal body past the sticky footer.
+   The ListView's `.flex-1` is what lets the "no <noun>s match" line share the box:
+   its `flex-basis: 0` overrides the `height="100%"` prop, so on an empty filter the
+   list yields the line its ~20px instead of pushing it out of view. */
+.intflow-destination .list-refresh-container {
+    flex: 0 0 auto !important;
+    /* The viewport term reserves the modal chrome (title, search, count, context
+       line, footer, dialog margins) so a short window shrinks the list rather than
+       overflowing the dialog. */
+    height: min(420px, calc(100vh - 22rem)) !important;
+}
+
+/* A committed choice (project/workspace) collapsed to one compact boxed line. */
+.intflow-chosen {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    background: var(--spectrum-global-color-gray-50);
+}
+
+.intflow-chosen-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: var(--spectrum-global-color-green-500);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.intflow-chosen-label {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.intflow-chosen-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+/* ---- API-access stage: two-column (the builder's center-work/right-summary
+   grammar). Center = the filterable free-API picker; right = the "API Access"
+   summary panel owning the facts (Applied: required/enable state · Selected:
+   the free picks). Wraps to a single column when the modal is narrow. ---- */
+.intflow-api-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.intflow-api-columns {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.intflow-api-main {
+    flex: 1 1 380px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.intflow-api-summary {
+    flex: 0 1 260px;
+    min-width: 220px;
+    box-sizing: border-box;
+    padding: 14px 16px;
+    background: var(--spectrum-global-color-gray-50);
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    /* Stay visible while the API list scrolls. The modal's scroll region is
+       .modal-content (its footer pins the same way); align-self keeps the panel
+       its own height so it can pin instead of stretching the whole column. */
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+}
+
+.intflow-api-summary-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.intflow-api-summary-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.intflow-api-summary-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-800);
+}
+
+/* "Added" sub-heading — the user's optional picks below the always-on facts. */
+.intflow-api-summary-subhead {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-500);
+    margin-bottom: 2px;
+}
+
+/* Inline remove (×) for an added pick — quiet until hover, right-aligned. */
+.intflow-api-summary-remove {
+    flex: 0 0 auto;
+    appearance: none;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--spectrum-global-color-gray-500);
+}
+
+.intflow-api-summary-remove:hover {
+    color: var(--spectrum-global-color-red-600);
+}
+
+/* The API name takes the rest of the row after the status icon. */
+.intflow-api-summary-name {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Informational API-access step (deterministic integrations): read-only facts,
+   left-aligned in the content band — no picker, no side panel. */
+.intflow-api-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 520px;
+}
+
+/* The interactive picker fills the full modal width (filter, chips, and the API
+   list use the room); read-only info/confirmation text keeps the narrow measure. */
+.intflow-api-info--full {
+    max-width: none;
+}
+
+/* API-access loading/error: fill the reserved stage body and center on both axes
+   (full width — not the left-aligned .intflow-api-info band), so the spinner sits
+   in the middle of the modal rather than a small band near the top. */
+.intflow-api-center {
+    flex: 1 1 auto;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 360px;
+}
+
+.intflow-api-info-head {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+.intflow-api-info-sub {
+    margin: 0 0 4px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.intflow-api-info-note {
+    margin: 8px 0 0;
+    font-size: var(--spectrum-global-dimension-font-size-75);
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Mesh enable failure on Add — the modal stays open and Add becomes a retry. */
+.intflow-api-info-error {
+    margin: 12px 0 0;
+    font-size: var(--spectrum-global-dimension-font-size-75);
+    line-height: 1.5;
+    color: var(--spectrum-global-color-red-600);
+}
+
+.intflow-api-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* The shared SearchHeader ships generous size-200 (16px) margins for full-page
+   lists; inside this modal picker that pushes the actual API list below the fold.
+   Tighten them here (inline Spectrum margins need !important to lose). */
+.intflow-api-picker .search-header > div {
+    margin-bottom: 6px !important;
+}
+
+/* Kill the HORIZONTAL half of `.search-header`'s `margin: -4px` bleed.
+   That negative margin pairs with `padding: 4px` to give the search field's focus
+   ring room without shifting layout — invisible on a full-page list, but it makes
+   the element's box 4px wider than its container on EACH side. Inside a modal
+   whose body sets `overflow-y: auto` (which computes overflow-x to auto), that
+   overhang is a real horizontal scroll region: the modal scrolled a few px
+   sideways under a two-finger swipe.
+   Only left/right are neutralised — the vertical bleed costs nothing, and the
+   4px padding stays so the focus ring is still unclipped. */
+.intflow-api-picker .search-header {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+/* Left browse-column header + at-a-glance picks count (Selected has no mirror). */
+.intflow-api-browse-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--spectrum-global-color-gray-600);
+    margin-bottom: 6px;
+}
+
+.intflow-api-added {
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 600;
+    color: var(--spectrum-global-color-blue-600);
+}
+
+.intflow-api-helper {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--spectrum-global-color-gray-600);
+    max-width: 80ch;
+}
+
+.intflow-api-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Product-family filter chips (the dev-console "Filter by product" row) — one
+   click narrows "All available" to a family. Wrap on a narrow modal. */
+.intflow-api-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 4px;
+}
+
+/* These are the picker's primary filter control, not metadata — 11.5px/2px read as
+   a caption and were hard to hit. Sized to match the row labels they filter. */
+.intflow-api-chip {
+    appearance: none;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1.3;
+    padding: 5px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--spectrum-global-color-gray-300);
+    background: var(--spectrum-global-color-gray-50);
+    color: var(--spectrum-global-color-gray-700);
+}
+
+.intflow-api-chip:hover {
+    border-color: var(--spectrum-global-color-gray-400);
+    background: var(--spectrum-global-color-gray-100);
+}
+
+.intflow-api-chip[data-active] {
+    border-color: var(--spectrum-global-color-blue-500);
+    background: var(--spectrum-global-color-blue-500);
+    color: var(--spectrum-global-color-static-white, #fff);
+}
+
+.intflow-api-row {
+    padding: 2px 0;
+}
+
+/* Display name primary, code secondary gray — names first, codes for the curious. */
+.intflow-api-name {
+    font-size: 13px;
+    color: var(--spectrum-global-color-gray-900);
+}
+
+.intflow-api-code {
+    margin-left: 8px;
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+/* Why a row cannot be unchecked (`lockedReason`), rendered after the name and code.
+   Secondary explanatory text, so it takes the same register as `.intflow-api-code`
+   directly above rather than a new one. It had no rule at all until 2026-09-08
+   (PL-20) and rendered at inherited body size, louder than the code beside it. */
+.intflow-api-reason {
+    margin-left: 8px;
+    font-size: 11px;
+    color: var(--spectrum-global-color-gray-600);
+}
+
+.intflow-api-empty {
+    padding: 24px 8px;
+    text-align: center;
+    color: var(--spectrum-global-color-gray-600);
+    font-size: 13px;
+}
+
+/* Non-blocking fetch failure: inline error + Retry (Continue never gates on it). */
+.intflow-api-error {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--spectrum-global-color-red-400);
+    border-radius: 8px;
+}
+
+.intflow-api-error-message {
+    flex: 1 1 auto;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--spectrum-global-color-red-600);
+    overflow-wrap: anywhere;
+}
+}
+
+/* API picker: the row area as its own element, so a host can make it THE scroll
+   region. Unconstrained (the wizard stage) it just stacks and the page scrolls;
+   constrained by a flex chain (the Manage APIs modal, below) it becomes the only
+   thing in the dialog that moves.
+
+   DO NOT add `overscroll-behavior: contain` here. It pins the header above this
+   region — without it, scrolling past the last row hands the leftover gesture to an
+   ancestor which carries the search box and chips out of view — but it also stops
+   this region scrolling at all.
+
+   That was isolated by experiment (2026-08-05), not inferred: with the region
+   genuinely overflowing (255px of rows in ~258px) the line was re-added alone and
+   the list went unscrollable again; removed alone, it scrolls. The spec says
+   `contain` should only prevent CHAINING, never an element's own scroll, so
+   something in this Spectrum dialog does not behave the way the property is
+   documented. Believe the experiment.
+
+   The fixed header is therefore an open trade, not a solved problem. If it is worth
+   another attempt, put the containment on an ANCESTOR scroll container (.modal-body)
+   so the chain stops above this element instead of on it.
+
+   overflow-x is hidden deliberately: a long API name should wrap or clip, never
+   turn the region into a two-axis scroller. The bottom padding keeps the final row
+   off the clip edge, so a list that ALMOST fits reads as "scroll me" rather than
+   as a rendering fault. */
+.intflow-api-scroll {
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    padding-right: 8px; /* keep the scrollbar off the row labels */
+    padding-bottom: 4px;
+}
