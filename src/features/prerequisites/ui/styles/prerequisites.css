@@ -140,3 +140,24 @@
     will-change: transform;
 }
 }
+
+@layer theme {
+.progress-bar-small-label [class*="spectrum-ProgressBar-label"] {
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+}
+
+.progress-bar-full-width {
+    width: 100% !important;
+    max-width: none !important;
+}
+
+.progress-bar-full-width [class*="spectrum-ProgressBar"] {
+    width: 100% !important;
+}
+
+.progress-bar-spacing {
+    margin-bottom: 8px !important;
+}
+}
