@@ -27,6 +27,10 @@ import './styles/ai.css';
 import './styles/dashboard.css';
 // .modal-* — the shared Modal shell.
 import '@/core/ui/styles/modal.css';
+// The shared UI vocabulary — 19 small families. Seven of the eight entries.
+import '@/core/ui/styles/shared-ui.css';
+// .icon-* — the icon-above-label pattern.
+import '@/core/ui/styles/icon-label.css';
 
 // Get root element
 const container = document.getElementById('root');

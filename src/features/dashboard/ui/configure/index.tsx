@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { ConfigureScreen } from './ConfigureScreen';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import '@/core/ui/styles/index.css';
+// Step/form scaffolding shared with the wizard and the Data Installer.
+import '@/core/ui/styles/step-scaffold.css';
+// The shared UI vocabulary — 19 small families. Seven of the eight entries.
+import '@/core/ui/styles/shared-ui.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/custom-spectrum.css';

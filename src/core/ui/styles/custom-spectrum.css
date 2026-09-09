@@ -68,8 +68,6 @@
 .w-full { width: 100% !important; }
 .h-full { height: 100% !important; }
 
-/* Label width for label/value pairs (ReviewStep, etc.) */
-.review-label-width { min-width: 100px !important; }
 .max-w-full { max-width: 100% !important; }
 .min-w-0 { min-width: 0 !important; }
 
@@ -142,33 +140,11 @@ button[class*="spectrum-Button"][disabled],
     opacity: 0.5 !important;
 }
 
-/* Button size variations */
-.btn-compact {
-    height: 28px !important;
-    font-size: 12px !important;
-    padding: 0 12px !important;
-    min-width: 60px !important;
-}
 
-.btn-standard {
-    height: 32px !important;
-    font-size: 13px !important;
-    padding: 0 16px !important;
-}
 
-.btn-large {
-        height: 40px !important;
-        font-size: 14px !important;
-        padding: 0 20px !important;
-    }
 
 } /* End of first @layer theme block */
 
-/* Search header - padding provides space for focus ring (2px outline + 2px offset) */
-.search-header {
-    padding: 4px !important;
-    margin: -4px !important;
-}
 
 /* ============================================
    CTA BUTTON OVERRIDES
@@ -227,20 +203,8 @@ button[class*="spectrum-Button"][disabled],
     color: var(--spectrum-global-color-red-600) !important;
 }
 
-/* ===========================================
-   Transition Classes
-   =========================================== */
-.transition-all {
-    transition: all 0.3s ease !important;
-}
 
-.transition-colors {
-    transition: color 0.3s ease, background-color 0.3s ease !important;
-}
 
-.transition-opacity {
-    transition: opacity 0.3s ease !important;
-}
 
 /* ===========================================
    Utility Classes
@@ -258,7 +222,6 @@ button[class*="spectrum-Button"][disabled],
 .h-28 { height: 28px !important; }
 .h-32 { height: 32px !important; }
 
-.line-height-16 { line-height: 16px !important; }
 
 .whitespace-pre-wrap { white-space: pre-wrap !important; }
 .whitespace-nowrap { white-space: nowrap !important; }
@@ -266,24 +229,6 @@ button[class*="spectrum-Button"][disabled],
 
 .scale-180 { transform: scale(1.8) !important; }
 
-/* Small accent pill button for inline actions */
-.action-pill {
-    background: var(--spectrum-accent-background-color-default, var(--spectrum-global-color-blue-400));
-    border: none;
-    border-radius: 11px;
-    padding: 3px 9px;
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--spectrum-global-color-gray-900);
-    cursor: pointer;
-    transition: background 0.15s ease;
-}
-.action-pill:hover {
-    background: var(--spectrum-accent-background-color-hover, var(--spectrum-global-color-blue-500));
-}
-.action-pill:active {
-    background: var(--spectrum-accent-background-color-down, var(--spectrum-global-color-blue-600));
-}
 
 /* ===========================================
    Success State Styling
@@ -395,8 +340,6 @@ button[class*="spectrum-Button"][disabled],
    =========================================== */
 .letter-spacing-05 { letter-spacing: 0.5px !important; }
 .letter-spacing-1 { letter-spacing: 1px !important; }
-.user-select-none { user-select: none !important; }
-.user-select-text { user-select: text !important; }
 
 /* ===========================================
    Width and Height Utilities
@@ -462,53 +405,14 @@ button[class*="spectrum-Button"][disabled],
     --card-padding: 16px;
     --card-gap: 8px;
 }
-.content-column {
-    width: 100% !important;
-    max-width: var(--content-width) !important;
-    box-sizing: border-box !important;
-    /* Content starts size-400 (32px) below the header; sides/bottom stay size-300 (24px). */
-    padding: var(--spectrum-global-dimension-size-400) var(--spectrum-global-dimension-size-300) var(--spectrum-global-dimension-size-300) !important;
-}
-/* Cap the LEFT column at the canonical width (overrides TwoColumnLayout's inline
- * leftMaxWidth so it's single-sourced); the right column flex-grows to the screen edge
- * (TwoColumnLayout default), with the sidebar's inner content capped by the component. */
-.content-with-sidebar .two-column-layout-left {
-    max-width: var(--content-width) !important;
-}
-
-/* ControlPanelLayout single-column fallback (no detail panel): pad the action
- * column to match the two-column left padding (TwoColumnLayout leftPadding
- * size-400) so the tiles still align under the masthead content. */
-.control-panel-single {
-    padding: var(--spectrum-global-dimension-size-400);
-}
 
 
 
 
 
-/* Step container - full width with max constraint */
-.step-content-container {
-    max-width: var(--content-width) !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 20px !important;
-}
 
-/* Footer content container */
-.footer-content-container {
-    max-width: var(--content-width) !important;
-    width: 100% !important;
-}
 
-/* Footer grid - 3 column layout for left/center/right content */
-.footer-grid {
-    display: grid !important;
-    grid-template-columns: 1fr auto 1fr !important;
-    align-items: center !important;
-    width: 100% !important;
-    min-height: 32px !important;
-}
+
 
 /* Footer grid cell alignment */
 .grid-align-start { justify-self: start !important; }
@@ -674,86 +578,17 @@ button[class*="spectrum-Button"][disabled],
     }
 }
 
-/* Step main content area */
-.step-main-content {
-    flex: 1 !important;
-    display: flex !important;
-    width: 100% !important;
-}
 
-/* Status row - inline status indicator with gap */
-.status-row {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-}
 
-/* Status text - standard status label styling */
-.status-text {
-    font-size: 14px !important;
-    color: var(--spectrum-global-color-gray-800) !important;
-    font-weight: normal !important;
-}
 
-/* Navigation item row - larger gap for nav items */
-.nav-item-row {
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-}
 
-/* Description text - muted secondary text */
-.description-text {
-    color: var(--spectrum-global-color-gray-500) !important;
-    font-size: 12px !important;
-}
 
-/* Description text with top margin */
-.description-text-spaced {
-    color: var(--spectrum-global-color-gray-500) !important;
-    font-size: 12px !important;
-    margin-top: 16px !important;
-}
 
-/* Section label - uppercase heading for sections */
-.section-label {
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    margin-bottom: 8px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-}
 
-/* Review label - label/value pair label */
-.review-label {
-    font-size: 14px !important;
-    color: var(--spectrum-global-color-gray-500) !important;
-    min-width: 100px !important;
-}
 
-/* Small loading spinner size */
-.loading-spinner-small {
-    width: 16px !important;
-    height: 16px !important;
-}
 
-/* Centered narrow content */
-.centered-content-narrow {
-    max-width: 400px !important;
-    text-align: center !important;
-}
 
-/* Centered padding variations */
-.centered-padding-lg {
-    padding-top: 32px !important;
-    padding-bottom: 32px !important;
-}
 
-.centered-padding-md {
-    padding-top: 16px !important;
-    padding-bottom: 16px !important;
-}
 
 /* Help content area minimum height */
 .help-content-area {
@@ -765,50 +600,10 @@ button[class*="spectrum-Button"][disabled],
     margin-bottom: 4px !important;
 }
 
-/* Description block with bottom margin */
-.description-block {
-    color: var(--spectrum-global-color-gray-600) !important;
-    margin-bottom: 16px !important;
-    display: block !important;
-}
 
-/* Description block small variant */
-.description-block-sm {
-    color: var(--spectrum-global-color-gray-600) !important;
-    font-size: 12px !important;
-    margin-bottom: 8px !important;
-    display: block !important;
-}
 
-/* Empty state text with padding */
-.empty-state-text {
-    color: var(--spectrum-global-color-gray-500) !important;
-    padding-top: 16px !important;
-    padding-bottom: 16px !important;
-}
 
-/* ===========================================
-   Projects Dashboard Specific
-   =========================================== */
-/* Sticky header for search/filter controls - middle layer between header and content */
-.projects-sticky-header {
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 10 !important;
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
-    margin-bottom: 16px !important;
-}
 
-.projects-grid {
-    display: grid !important;
-    /* Larger cards: 240px min for more square appearance */
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
-    /* Increased gap: 24px (Spectrum size-300) */
-    gap: 24px !important;
-    /* Padding for shadow overflow */
-    padding: 8px !important;
-}
 
 /* Compact selector grid for brand/stack selection */
 .selector-grid {
@@ -885,16 +680,6 @@ button[class*="spectrum-Button"][disabled],
  * Expandable Brand Cards
  * ======================================== */
 
-.architecture-badge {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--spectrum-global-color-gray-500);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
 
 /* .brand-card-check retired — replaced by the shared .selection-check-corner. */
 
@@ -951,10 +736,6 @@ button[class*="spectrum-Button"][disabled],
 
 /* Checkbox focus ring for keyboard navigation */
 
-.settings-link {
-    margin-top: var(--spectrum-global-dimension-size-200);
-    font-size: var(--spectrum-global-dimension-font-size-75);
-}
 
 /* Architecture modal footer with Done button */
 
@@ -995,11 +776,6 @@ button[class*="spectrum-Button"][disabled],
 .max-h-400 { max-height: 400px !important; }
 .max-h-500 { max-height: 500px !important; }
 
-/* ===========================================
-   Box Model Utilities
-   =========================================== */
-.box-border { box-sizing: border-box !important; }
-.box-content { box-sizing: content-box !important; }
 
 /* ===========================================
    Animation Classes
@@ -1011,9 +787,6 @@ button[class*="spectrum-Button"][disabled],
     to { transform: translateY(0); opacity: 1; }
 }
 
-.animate-pulse { animation: pulse 2s infinite !important; }
-.animate-fade-in { animation: fadeIn 0.3s ease !important; }
-.animate-slide-down { animation: slide-down 0.3s ease !important; }
 
 /* ===========================================
    Shadow Classes
@@ -1036,14 +809,6 @@ button[class*="spectrum-Button"][disabled],
 .scale-150 { transform: scale(1.5) !important; }
 .scale-200 { transform: scale(2) !important; }
 
-/* ===========================================
-   Icon Size Classes
-   =========================================== */
-.icon-xs { width: 12px !important; height: 12px !important; }
-.icon-sm { width: 16px !important; height: 16px !important; }
-.icon-md { width: 20px !important; height: 20px !important; }
-.icon-lg { width: 24px !important; height: 24px !important; }
-.icon-xl { width: 32px !important; height: 32px !important; }
 
 @keyframes timeline-enter {
     0% {
@@ -1222,10 +987,6 @@ button[class*="spectrum-Button"][disabled],
     margin-right: 6px;
 }
 
-/* Destructive overflow-menu entry (Delete lives at the bottom of "More"). */
-.menu-item-destructive {
-    color: var(--spectrum-global-color-red-600) !important;
-}
 
 
 
@@ -1423,52 +1184,11 @@ button[class*="spectrum-Button"][disabled],
 
 /* Option B: Button grid (matches dashboard action buttons) */
 
-/* ===========================================
-   Selection Summary Styles
-   =========================================== */
-.selection-summary-container {
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-}
 
-.selection-summary-label {
-    font-size: 11px !important;
-    text-transform: uppercase !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.5px !important;
-    margin-bottom: 4px !important;
-}
 
-.selection-summary-value {
-    font-size: 13px !important;
-    font-weight: 500 !important;
-}
 
-.selection-summary-placeholder {
-    font-size: 13px !important;
-    color: var(--spectrum-global-color-gray-500) !important;
-}
 
-/* ===========================================
-   App Container Styles
-   =========================================== */
-.app-container {
-    width: 100% !important;
-    height: 100vh !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: var(--spectrum-global-color-gray-75) !important;
-}
 
-/* ===========================================
-   Empty State Styles
-   =========================================== */
-.empty-state-container {
-    text-align: center !important;
-    background: var(--spectrum-global-color-gray-100) !important;
-    border-radius: 8px !important;
-    border: 1px solid var(--spectrum-global-color-gray-400) !important;
-}
 
 /* ===========================================
    Dependency Item Styles
@@ -1604,13 +1324,7 @@ button[class*="spectrum-Button"][disabled],
 .mr-2 { margin-right: 8px !important; }
 .ml-1 { margin-left: 4px !important; }
 .mx-auto { margin-left: auto !important; margin-right: auto !important; }
-.my-2 { margin-top: 8px !important; margin-bottom: 8px !important; }
-.my-5 { margin-top: 20px !important; margin-bottom: 20px !important; }
 
-/* ===========================================
-   Flex Utilities (Additional)
-   =========================================== */
-.shrink-0 { flex-shrink: 0 !important; }
 .grow-0 { flex-grow: 0 !important; }
 .grow { flex-grow: 1 !important; }
 
@@ -1620,42 +1334,10 @@ button[class*="spectrum-Button"][disabled],
 .scroll-mt-4 { scroll-margin-top: 16px !important; }
 .scroll-mt-6 { scroll-margin-top: 24px !important; }
 
-/* ===========================================
-   Icon Label Pattern (Dashboard action buttons)
-   Used for consistent styling of icon labels
-   =========================================== */
-.icon-label {
-    font-size: 14px !important;
-    margin-top: 8px !important;
-}
 
 
-/* ===========================================
-   Container Patterns
-   =========================================== */
-.container-wizard {
-    max-width: var(--content-width) !important;
-    width: 100% !important;
-    margin: 0 !important;
-    /* Content starts size-400 (32px) below the header (no nav rail on these steps). */
-    padding: var(--spectrum-global-dimension-size-400) 24px 24px !important;
-}
 
-.container-dashboard {
-    padding: var(--spectrum-global-dimension-size-400) !important;
-    height: 100vh !important;
-    max-width: 500px !important;
-    margin: 0 auto !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
 
-.container-form {
-    flex: 1 !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-}
 
 /* AI surface — drill-down row typography reuses the wizard's existing
    utility classes (.text-sm, .font-semibold, .text-gray-700) for
@@ -1681,131 +1363,23 @@ button[class*="spectrum-Button"][disabled],
     max-width: 500px !important;
 }
 
-/* ===========================================
-   CopyableText Component Styles
-   SOP §11: Extracted from inline style objects
-   =========================================== */
-.copyable-text {
-    font-family: var(--spectrum-alias-body-text-font-family, monospace) !important;
-    font-size: 0.9em !important;
-    background-color: var(--db-code-background) !important;
-    padding: 4px 10px !important;
-    border-radius: 4px !important;
-    color: var(--spectrum-global-color-blue-700) !important;
-    border: 1px solid var(--db-code-border) !important;
-    font-weight: 600 !important;
-    white-space: nowrap !important;
-    cursor: pointer !important;
-    transition: background-color 0.15s ease !important;
-}
 
-.copyable-text:hover {
-    background-color: var(--spectrum-global-color-gray-200) !important;
-}
 
-.copyable-icon {
-    margin-left: 6px !important;
-    font-size: 1em !important;
-    opacity: 0.7 !important;
-}
 
-.copyable-icon-copied {
-    margin-left: 6px !important;
-    font-size: 1em !important;
-    color: var(--spectrum-global-color-green-600) !important;
-    opacity: 1 !important;
-}
 
-/* ===========================================
-   ClickableUrl Component Styles
-   URLs in help text that open in browser
-   =========================================== */
-.clickable-url {
-    font-family: var(--spectrum-alias-body-text-font-family, monospace) !important;
-    font-size: 0.9em !important;
-    background-color: var(--db-code-background) !important;
-    padding: 2px 8px !important;
-    border-radius: 4px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    cursor: pointer !important;
-    text-decoration: underline !important;
-    color: var(--spectrum-global-color-blue-600) !important;
-    transition: background-color 0.15s ease, color 0.15s ease !important;
-}
 
-.clickable-url:hover {
-    background-color: var(--spectrum-global-color-gray-200) !important;
-    color: var(--spectrum-global-color-blue-700) !important;
-}
 
-.clickable-url:focus {
-    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
-    outline-offset: 2px !important;
-}
 
-/* ===========================================
-   LoadingOverlay Component Styles
-   SOP §11: Extracted from inline style objects
-   =========================================== */
-.loading-overlay-container {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    background-color: var(--db-loading-overlay-bg) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    z-index: 1000 !important;
-    border-radius: 4px !important;
-    gap: 16px !important;
-}
 
-.loading-overlay-container-opaque {
-    background-color: var(--spectrum-global-color-gray-50) !important;
-}
 
-.loading-overlay-spinner-container {
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    padding: 24px !important;
-    border-radius: 50% !important;
-    box-shadow: 0 4px 12px var(--db-loading-overlay-shadow) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
 
-.loading-overlay-spinner {
-    width: 32px !important;
-    height: 32px !important;
-    border-radius: 50% !important;
-    border: 3px solid var(--spectrum-global-color-blue-400) !important;
-    border-top-color: transparent !important;
-    animation: loading-overlay-spin 1s linear infinite !important;
-}
 
 @keyframes loading-overlay-spin {
     to { transform: rotate(360deg); }
 }
 
-.loading-overlay-text {
-    color: var(--db-loading-text) !important;
-    font-weight: 500 !important;
-}
 
-/* Status indicator icons (checkmarks, counts) */
-.status-icon-sm {
-    font-size: 14px !important;
-    line-height: 14px !important;
-}
 
-.status-icon-md {
-    font-size: 16px !important;
-    line-height: 16px !important;
-}
 
 /* Review step text patterns */
 .text-ready-label {
@@ -1840,12 +1414,6 @@ button[class*="spectrum-Button"][disabled],
     line-height: 1.5 !important;
 }
 
-/* Footer bar pattern */
-.footer-bar {
-    padding: 16px !important;
-    border-top: 1px solid var(--spectrum-global-color-gray-400) !important;
-    background-color: var(--spectrum-global-color-gray-75) !important;
-}
 
 .sidebar-utility-footer {
     display: flex;
@@ -1895,152 +1463,29 @@ button[class*="spectrum-Button"][disabled],
 }
 
 
-.content-area {
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 !important;
-    height: 100% !important;
-    width: 100% !important;
-}
 
-.step-content-area {
-    width: 100% !important;
-    height: 100% !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    position: relative !important;
-}
 
-.step-inner {
-    height: 100% !important;
-    width: 100% !important;
-}
 
-/* ===========================================
-   Configure Screen Container
-   =========================================== */
-.container-configure {
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    width: 100% !important;
-    height: 100vh !important;
-    display: flex !important;
-    overflow: hidden !important;
-    /* Configure renders the SAME StepAreaShell as the wizard's areas, and .step-nav /
-     * .step-view-anim reference these two tokens in their padding and max-width. They
-     * are declared on .wizard-main-content, which Configure is not inside — so without
-     * this block the whole declaration is invalid and DROPPED: the rail still renders,
-     * every test still passes, and the padding is silently gone. Redeclared here rather
-     * than promoted to :root so the two surfaces stay independently adjustable. */
-    --wizard-content-pad: var(--spectrum-global-dimension-size-300); /* 24px content padding */
-    --commerce-zone-max: var(--content-width); /* same 960 band as every screen */
-}
 
-/* ===========================================
-   Selection Step Content Container
-   =========================================== */
-.selection-step-content {
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 !important;
-    min-height: 0 !important;  /* Allow shrinking below content size */
-    overflow: visible !important;  /* Allow focus rings to show */
-}
 
-/* ===========================================
-   List Refresh Container
-   =========================================== */
-.list-refresh-container {
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 !important;
-    min-height: 0 !important;  /* Allow shrinking below content size */
-    overflow: auto !important;  /* Enable scrolling */
-    transition: opacity 200ms ease-in-out !important;
-}
 
-.list-refresh-container.refreshing {
-    opacity: 0.5 !important;
-    pointer-events: none !important;
-}
 
-/* ===========================================
-   Searchable List Container
-   =========================================== */
-.searchable-list-container {
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 !important;
-    min-height: 0 !important;  /* Allow shrinking below content size */
-    overflow: visible !important;  /* Allow focus rings to show */
-}
 
-/* SearchField input padding - accounts for magnifying glass icon */
-.searchable-list-search-field input {
-    padding-left: 32px !important;
-}
 
 /* Pointer cursor for interactive elements */
 .pointer-events-none { pointer-events: none !important; }
 .pointer-events-auto { pointer-events: auto !important; }
 
-/* ===========================================
-   Config Section Styles
-   =========================================== */
-.config-section {
-    scroll-margin-top: -16px !important;
-    padding-bottom: 4px !important;
-}
 
-.config-section-with-padding {
-    scroll-margin-top: -16px !important;
-    padding-top: 4px !important;
-    padding-bottom: 4px !important;
-}
 
-.config-section-header {
-    padding-bottom: 4px !important;
-    margin-bottom: 12px !important;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
-}
-/* Zero the Spectrum Heading's default top margin so the first group title sits tight
- * under the tab strip (section dividers/padding handle separation between groups). */
-.config-section-header h3 {
-    margin-top: 0 !important;
-}
 
-/* Config field scroll margin */
-.config-field {
-    scroll-margin-top: 24px !important;
-}
 
 /* Text color for errors */
 .text-red-700 { color: var(--spectrum-global-color-red-700) !important; }
 
-/* ===========================================
-   Instruction Card Styles
-   =========================================== */
-.instruction-card {
-    padding: 16px !important;
-    border-radius: 6px !important;
-}
 
-/* Instruction step title */
-.instruction-title {
-    font-size: 15px !important;
-}
 
-/* Instruction details line height */
-.instruction-details {
-    line-height: 2.0 !important;
-}
 
-/* ===========================================
-   Placeholder Icon (for pending/unknown states)
-   =========================================== */
-.placeholder-icon {
-    width: 20px !important;
-    height: 20px !important;
-}
 
 /* ===========================================
    Optional/Muted Label Styles
@@ -2070,14 +1515,6 @@ button[class*="spectrum-Button"][disabled],
     line-height: 20px !important;
 }
 
-/* ===========================================
-   Button Icon Wrapper
-   =========================================== */
-.button-icon-wrapper {
-    margin-right: 8px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-}
 
 /* ===========================================
    Dropdown Container (Component Selection boxes)
@@ -2097,26 +1534,7 @@ button[class*="spectrum-Button"][disabled],
     background-color: var(--spectrum-global-color-gray-200) !important;
 }
 
-/* ===========================================
-   SearchField Input Padding
-   Account for magnifying glass icon space
-   =========================================== */
-/* Target SearchField inputs with multiple selector strategies */
-/* React Spectrum uses various class patterns - cover them all */
-.search-field-custom input,
-.search-field-custom input[type="search"],
-[class*="SearchField"] input,
-[class*="Search-input"],
-[data-testid*="search"] input,
-div[class*="spectrum"] input[type="search"] {
-    padding-left: 32px !important;
-}
 
-    /* Also target via the icon positioning wrapper */
-    .search-field-custom [class*="icon"] + input,
-    .search-field-custom [class*="Icon"] + input {
-        padding-left: 32px !important;
-    }
 
 /* ===========================================
    Template Card Grid Styles
@@ -2280,55 +1698,10 @@ div[class*="spectrum"] input[type="search"] {
     padding: 40px 20px !important;
 }
 
-/* ===========================================
-   Image Zoom Overlay - FieldHelpButton
-   Fullscreen overlay for zoomed images
-   =========================================== */
-.image-zoom-overlay {
-    position: fixed !important;
-    inset: 0 !important;
-    background: rgba(0, 0, 0, 0.9) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    z-index: 10000 !important;
-    cursor: zoom-out !important;
-    padding: 20px !important;
-}
 
-.image-zoom-image {
-    max-width: 100% !important;
-    max-height: 100% !important;
-    object-fit: contain !important;
-    border-radius: 4px !important;
-    cursor: zoom-out !important;
-}
 
-.image-zoom-hint {
-    position: absolute !important;
-    top: 20px !important;
-    right: 20px !important;
-    color: white !important;
-    font-size: 14px !important;
-    opacity: 0.7 !important;
-}
 
-/* Screenshot Thumbnail - FieldHelpButton step images */
-.screenshot-thumbnail {
-    width: 100% !important;
-    max-height: 380px !important;
-    object-fit: contain !important;
-    border-radius: 4px !important;
-    border: 1px solid var(--spectrum-global-color-gray-300) !important;
-    cursor: zoom-in !important;
-}
 
-/* Step Counter - Modal header step indicator */
-.step-counter {
-    font-size: 13px !important;
-    font-weight: normal !important;
-    color: var(--spectrum-global-color-gray-500) !important;
-}
 
 /* Flex End Container - Right-aligned flex child */
 .flex-end-container {
@@ -2337,35 +1710,8 @@ div[class*="spectrum"] input[type="search"] {
     justify-content: flex-end !important;
 }
 
-/* ===========================================
-   GitHub Avatar with Badge
-   Used in GitHubSetupStep connected state
-   Sized to match the L checkmark icon (~36px)
-   =========================================== */
-.github-avatar-container {
-    position: relative !important;
-    display: inline-block !important;
-}
 
-.github-avatar-container img {
-    width: 64px !important;
-    height: 64px !important;
-    border-radius: 50% !important;
-    object-fit: cover !important;
-}
 
-.github-avatar-badge {
-    position: absolute !important;
-    bottom: 0 !important;
-    right: 0 !important;
-    background: var(--spectrum-global-color-gray-50) !important;
-    border-radius: 50% !important;
-    padding: 3px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
-}
 
 /* =========================================================================
    Project Builder — component overview
@@ -2454,11 +1800,6 @@ div[class*="spectrum"] input[type="search"] {
 .build-two-col .two-column-layout-left {
     min-width: 0 !important;
 }
-/* The capped content regions — Commerce's active view, and the non-nav area bodies. */
-.commerce-body > .step-view,
-.build-two-col .build-area-pad {
-    max-width: var(--commerce-zone-max) !important;
-}
 /* Non-nav area bodies (Storefront / Integrations) supply their own padding since the
  * Build two-column drops the left padding (so Commerce's nav can bleed to the edge). */
 .build-area-pad {
@@ -2469,57 +1810,7 @@ div[class*="spectrum"] input[type="search"] {
     min-height: 0;
     overflow-y: auto;
 }
-.commerce-body {
-    display: flex !important;
-    /* Sub-step nav is a horizontal strip ON TOP, the active view fills below
-       (was a [left rail | view] row). */
-    flex-direction: column !important;
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    gap: 0 !important;
-    align-items: stretch !important;
-}
-.commerce-body > .step-view {
-    flex: 1 1 auto !important;
-    min-width: 0 !important;
-    /* Scroll the view when its content exceeds the area (the strip stays fixed above;
-       the two-column-left column is overflow:hidden, so the scroll must live here).
-       min-height:0 lets this flex child shrink below its content so overflow engages. */
-    min-height: 0 !important;
-    overflow-y: auto !important;
-}
 
-/* ---- Sub-step nav (.step-nav) — a horizontal strip across the top of the area
- * body: the all-caps area label inline at the left, then the sub-step tabs. The
- * label names the area the user is configuring now that the area sub-nav left the
- * wizard timeline. (Was a vertical left rail — promoted the small-screen strip to
- * the default.) */
-.step-nav {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    flex: 0 0 auto !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    /* Thinner rail: trim the vertical padding (keep the horizontal content padding so
-       the label + tabs stay aligned with the content band). */
-    padding: var(--spectrum-global-dimension-size-150) var(--wizard-content-pad) !important;
-    gap: var(--spectrum-global-dimension-size-300) !important;
-    /* Matched toolbar — gray-75 fill + a bottom divider (was a right border on the
-     * left rail) so the strip and summary still read as the same panel family. */
-    background: var(--spectrum-global-color-gray-75) !important;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
-}
-/* All-caps area label — pinned at the strip's left edge (doesn't scroll with tabs). */
-.step-nav-area {
-    font-size: var(--spectrum-global-dimension-font-size-50) !important;
-    color: var(--spectrum-global-color-gray-700) !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.05em !important;
-    margin: 0 !important;
-    flex: 0 0 auto !important;
-}
 /* ---- StepRail (.vsteplist*) — a QUIET HORIZONTAL tab strip across the top ----
  * The class prefix is historical (the component used to be called VerticalStepList and
  * used to render as a left menu); it is a top strip now and the names are kept only to
@@ -2669,46 +1960,8 @@ div[class*="spectrum"] input[type="search"] {
     }
 }
 
-/* ---- Dedicated view (.step-view) — the active step's roomy full-width body ----
- * Transparent (no box framing empty space): the content sits in the column over the
- * column background, with generous top padding for breathing room. */
-.step-view {
-    width: 100% !important;
-    box-sizing: border-box !important;
-    /* Content sits size-400 (32px) below the flush sub-step nav rail — the rail is chrome,
-       this view is the content. Horizontal + bottom stay at --wizard-content-pad (24px). */
-    padding: var(--spectrum-global-dimension-size-400) var(--wizard-content-pad) var(--wizard-content-pad) !important;
-}
 
-/* Sub-step view crossfade: the active view body fades + slides up when the sub-step
- * (or area) changes. The body is wrapped in a `.step-view-anim` element keyed on the
- * active sub-step, so React remounts it on each change → this entrance fires. Reuses
- * the existing `fadeInUp` (opacity + 4px). Zeroed under prefers-reduced-motion. */
-.step-view-anim {
-    animation: fadeInUp var(--db-motion-base) var(--db-motion-ease);
-    /* Pass the pane's height DOWN. An area body that wants to centre itself in the
-       view (the Code Sync states) cannot: a percentage height resolves against the
-       nearest definite ancestor, and this wrapper was auto-height, so `100%` two
-       levels below it computed to zero and the body sat at the top of a tall pane.
-       A flex column with a 100% MINIMUM makes this box at least the pane and lets a
-       body opt in with `flex-1` — while taller content still grows and scrolls,
-       because it is a minimum and .step-view owns the scroll. */
-    display: flex;
-    flex-direction: column;
-    min-height: 100%;
-}
 
-/* The `fill` variant of CenteredFeedbackContainer. Its inline `min-height: 100%`
- * measures against .step-view-anim, whose own height is content-driven — so the
- * percentage is indefinite and collapses, leaving a short state (the Code Sync
- * spinner) near the TOP of a tall pane. Growing as a flex item is what actually
- * reaches the bottom. This is the `flex-1` opt-in .step-view-anim's own comment
- * describes. It cannot live on the Spectrum `flex` prop: `Flex` takes container
- * props and drops item props silently.
- * `auto` basis, so taller content still grows and .step-view keeps the scroll. */
-.centered-feedback--fill {
-    flex: 1 1 auto;
-}
 
 /* ---- Backend "choice cards" (.choice-*) — prominent binary pick, not a dense tile.
  * Roomy, readable, theme-aware; subtle Spectrum surfaces with a confident selected
@@ -2808,13 +2061,6 @@ div[class*="spectrum"] input[type="search"] {
     margin-top: var(--spectrum-global-dimension-size-200) !important;
 }
 
-/* ---- BuildYourProjectSummary (.sum*) — the unified "Your project" column ---- */
-/* The summary column GROWS to fill the remaining width (its gray panel reaches the
-   screen edge), but the CONTENT is capped + left-aligned so label↔value stay tight
-   inside the wide panel instead of flinging apart. */
-.commerce-summary-content {
-    max-width: 280px !important;
-}
 /* Completion feedback: the shared ✓ renders only when a row is done, so it mounts
  * on completion and this pop fires once — a subtle reward as each sub-step lands.
  * Zeroed under the global prefers-reduced-motion reset. */
@@ -2824,21 +2070,6 @@ div[class*="spectrum"] input[type="search"] {
 }
 
 
-/* The ONE selection checkmark, shared across every "pick this" card in the wizard
-   (package cards, backend cards, block-library cards, integration cards). */
-.selection-check {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--spectrum-global-color-blue-500);
-}
-/* Pin to the card's top-right (for whole-card selects); the card is position:relative. */
-.selection-check-corner {
-    position: absolute;
-    top: var(--spectrum-global-dimension-size-200);
-    right: var(--spectrum-global-dimension-size-200);
-}
 /* Catalog entries render as square tiles in the wrapping row (not full-width rows). */
 .choice-card--tile {
     flex: 0 0 auto !important;
@@ -2863,26 +2094,6 @@ div[class*="spectrum"] input[type="search"] {
  * stage body only reserves height so stage swaps don't jump the footer.
  * ------------------------------------------------------------------------ */
 
-/* The committed destination as a quiet CONTEXT LINE above the active stage — it
-   replaced the `dest-summary` step (a whole step to confirm a destination the user
-   never chose). Quiet by design: it is orientation, not the task. */
-.dest-context {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 10px;
-    font-size: var(--spectrum-global-dimension-font-size-75);
-}
-.dest-context-value {
-    color: var(--spectrum-global-color-gray-700);
-}
-/* The MODAL's variant: a full-width line with a rule under it. The page header
-   uses the inline base above — same fact, two placements. */
-.dest-context--block {
-    display: flex;
-    margin: 0 0 14px;
-    padding: 0 0 10px;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
-}
 
 /* --------------------------------------------------------------------------
  * InlineRenameField (core/ui/forms) — rename-in-place for a displayed name.
@@ -2963,19 +2174,6 @@ div[class*="spectrum"] input[type="search"] {
     overflow-wrap: anywhere;
 }
 
-/* --------------------------------------------------------------------------
- * Integrations grid + drawer (dashboard)
- * Card grid + right detail drawer replacing the stacked integration rows.
- * Grid, cards, scrim, and drawer are PLAIN DIVS (Spectrum Flex caps at
- * 450px); tokens flip light/dark. Card family: .project-card-spectrum
- * (gray-50 base, gray-75 hover, lift, radius 8).
- * ------------------------------------------------------------------------ */
-/* The grid's root. Kept flexible so it fills whatever host it sits in — on the
- * dedicated surface that is the full page width. */
-.integrations-surface {
-    flex: 1 1 auto;
-    min-width: 0;
-}
 
 /* ---- Dedicated integrations surface ----
  * The page shell is PageLayout + PageHeader and the content band is
@@ -2983,37 +2181,6 @@ div[class*="spectrum"] input[type="search"] {
  * carries NO page padding, breadcrumb, or banner rules — those were bespoke
  * re-implementations of shared primitives and were removed. */
 
-/* Heading · count pill · Add button on one baseline; the Add button trails. */
-.integrations-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 8px;
-}
-.integrations-header > *:last-child {
-    margin-left: auto;
-}
-/* Card tracks are CAPPED, not 1fr: with two cards in a wide band, `1fr` inflated
-   them to ~420px and the content read as mostly empty. `justify-content: start`
-   packs them left instead of spreading. Gap matches the extension's card-grid
-   rhythm (.projects-grid, 24px / size-300). */
-/* Mirrors .projects-grid — the same card-grid problem, already solved there.
-   `minmax(268px, 300px)` needed 3*268 + 2*24 = 852px for three columns and the
-   left-anchored content band is ~815px, so it fell to two and wrapped the third
-   tile onto a row of its own. 240px min clears three columns with room to spare;
-   `1fr` fills the row, which is why `justify-content: start` is gone (it only
-   mattered while tracks were capped at 300px).
-
-   `grid-auto-rows: 1fr` equalises rows. Grid equalises heights WITHIN a row, so
-   an add tile alone on the last row kept its own floor while the cards' row was
-   sized by card content — they matched only when they happened to share a row. */
-.integrations-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    grid-auto-rows: 1fr;
-    gap: 24px;
-    padding: 8px;
-}
 /* Name on the left, overflow menu pinned right. The name must be free to
    ellipsize without shoving the kebab off the card. */
 /* A text-styled <button> for a small inline action ("Change", "Reset"). GLOBAL
@@ -3129,87 +2296,9 @@ div[class*="spectrum"] input[type="search"] {
 
 
 
-/* ---- Dashboard integrations summary tile (build zone) ----
- * Shaped exactly like its neighbours (Configure / More) — the dot and count are
- * absolutely positioned overlays, NOT extra inline content, so the tile keeps a
- * neighbour's footprint and the action row stays on one line. Widening the tile
- * is what pushed it to wrap onto its own row. */
-.integrations-tile {
-    position: relative;
-}
-/* Status dot rides the tile's top-right corner. */
-/* POSITION only. Colour, size and the in-progress pulse come from StatusDot;
-   this tile used to restate all three from Spectrum globals, which is how it
-   ended up with a blue dot that never pulsed. */
-.integrations-tile-dot {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-}
 /* Count rides the bottom-right, out of the label's way. */
 } /* End of second @layer theme block */
 
-/* The modal body owns its own column layout — a plain div, because Spectrum's
-   Flex caps width at ~450px and clipped the API list inside the L dialog.
-
-   It also makes the API LIST the dialog's only scroll region. The list used to be
-   a fixed 320px inside a `fitContent` dialog, which gave the modal TWO scrollers:
-   once the content outgrew the dialog, .modal-body scrolled as well — and being
-   the outer one it won, so the row list would not move while the whole body did,
-   carrying the search box and chips away with it.
-
-   The fix is a CONSTANT height here, and a flex chain that hands every spare
-   pixel down to the row area: body → picker → rows, each `min-height: 0` so a
-   flex item is actually allowed to shrink below its content (the default `auto`
-   refuses, and the overflow would silently move back up to .modal-body).
-
-   Why an explicit height rather than `height: 100%`: 100% only resolves against a
-   parent with a definite height, which depends on whether Spectrum's modal wrapper
-   stretches the dialog — behaviour this codebase has already been surprised by once
-   (see .modal-fit-content). Setting it here makes the dialog's size independent of
-   that question: `fitContent` collapses the dialog to its content, and its content
-   is this. Filtering to four APIs cannot resize anything; only the row area's
-   scrollback changes.
-
-   Why it is VIEWPORT-CAPPED and not a bare 480px: a flat 480 was taller than a
-   short window could give. The dialog hit its max-height, `.modal-content` shrank
-   (`flex: 0 1 auto`), `.modal-body` ended up shorter than this box — and clipped
-   it. Measured on a ~628px-tall viewport: the row area reported clientHeight ===
-   scrollHeight === 276, i.e. NOT overflowing, while the last row was visibly cut.
-   The cut came from `.modal-body` above, not the list below, and because the list
-   had nothing to scroll while `overscroll-behavior: contain` blocked the gesture
-   reaching the body, nothing moved at all.
-
-   `min()` keeps it stable where it matters: the viewport does not change while you
-   type in the filter, so this is constant across filtering — which is the actual
-   requirement — while still fitting a short window.
-
-   The subtraction is the dialog's own chrome — heading, footer, backdrop margins.
-   A bare `Nvh` ignores it, and the dialog can only absorb the difference while it
-   has room to grow (`max-height: none`, so it is sized BY this box). Zoomed in,
-   the viewport shrinks, the dialog runs out of room, `.modal-body` ends up shorter
-   than this box and starts scrolling — a SECOND scroller, which is what dragged
-   the header away again.
-
-   The tell was that it happened for exactly one pill: every other filter overflows
-   the row list, so the list consumes the gesture and nothing reaches `.modal-body`.
-   The one whose rows FIT let the gesture through to the oversized body underneath. */
-.manage-apis-body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    height: min(560px, calc(100vh - 260px));
-    /* The body no longer scrolls, so overrunning it would CLIP rather than
-       scroll. This yields to the parent whenever the calc guesses high. */
-    max-height: 100%;
-    min-height: 0;
-    min-width: 0; /* a flex child defaults to min-width:auto and refuses to shrink */
-}
-.manage-apis-body .intflow-api-picker,
-.manage-apis-body .intflow-api-scroll {
-    flex: 1 1 auto;
-    min-height: 0;
-}
 
 /* ============================================
    TEXT COLOUR UTILITIES  (unlayered — see below)
@@ -3257,18 +2346,4 @@ div[class*="spectrum"] input[type="search"] {
    components any surface can render. Wrapped in `@layer theme` exactly as it was
    at its old home, so the cascade position does not move with it. */
 @layer theme {
-    .number-badge {
-        min-width: 32px;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background-color: var(--vscode-badge-background, var(--db-status-info));
-        color: var(--vscode-badge-foreground, #ffffff);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 16px;
-        flex-shrink: 0;
-    }
 }

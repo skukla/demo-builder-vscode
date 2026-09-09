@@ -276,4 +276,16 @@
     font-size: 12px !important;
     margin-top: 8px !important;
 }
+
+/* ControlPanelLayout single-column fallback (no detail panel): pad the action
+ * column to match the two-column left padding (TwoColumnLayout leftPadding
+ * size-400) so the tiles still align under the masthead content. */
+.control-panel-single {
+    padding: var(--spectrum-global-dimension-size-400);
+}
+
+/* Destructive overflow-menu entry (Delete lives at the bottom of "More"). */
+.menu-item-destructive {
+    color: var(--spectrum-global-color-red-600) !important;
+}
 }

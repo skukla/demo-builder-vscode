@@ -36,6 +36,14 @@ import '../styles/wizard-timeline.css';
 import '@/core/ui/styles/integration-cards.css';
 // .modal-* — the shared Modal shell. Five of the eight entries render it.
 import '@/core/ui/styles/modal.css';
+// The wizard's 14 small families, batched into one sheet — see its header.
+import '../styles/wizard-misc.css';
+// Step/form scaffolding shared with Configure and the Data Installer.
+import '@/core/ui/styles/step-scaffold.css';
+// The shared UI vocabulary — 19 small families. Seven of the eight entries.
+import '@/core/ui/styles/shared-ui.css';
+// .icon-* — the icon-above-label pattern.
+import '@/core/ui/styles/icon-label.css';
 import type { WizardInitialData } from '@/types/webviewPayloads';
 
 // Get root element

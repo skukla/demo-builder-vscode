@@ -197,11 +197,23 @@ function readRules(text) {
         // COULD NOT SEE IT, because the leftover still applied from the sheet the
         // bundle still imports. 51 lines in that file are selector-then-comma.
         let head = i;
-        while (head > 0 && !skip.has(head - 1) && /^\s*[.#[][^{}]*,\s*$/.test(lines[head - 1])) head--;
+        while (head > 0 && !skip.has(head - 1) && /^\s*[A-Za-z.#[][^{}]*,\s*$/.test(lines[head - 1])) head--;
 
-        const m = /^\s*([.#[][^{]*)\{/.exec(lines[i]);
+        // The `{` line may start with an ELEMENT name, not a class — a selector list
+        // ending `div[class*="spectrum"] input[type="search"] {` after four lines
+        // that do start with a dot. Anchoring on `[.#[]` made that whole rule
+        // invisible, so `--move search` moved two of three and the completeness
+        // check refused the result (2026-09-09). Letting a letter start the match
+        // costs nothing: `from`, `to` and a bare `button[...]` selector reach the
+        // class test below and are dropped there for having no class at all.
+        const m = /^\s*([A-Za-z.#[][^{]*)\{/.exec(lines[i]);
         if (!m) continue;
-        const classes = [...m[1].matchAll(/\.([A-Za-z_][\w-]*)/g)].map((x) => x[1]);
+        // Test the WHOLE selector list for a class, not just the `{` line. The
+        // rule at custom-spectrum.css:1543 carries its classes on the first four
+        // lines and ends `div[class*="spectrum"] input[type="search"] {`, so a
+        // check against that last line alone found none and dropped the rule —
+        // control P.
+        const classes = [...lines.slice(head, i + 1).join(' ').matchAll(/\.([A-Za-z_][\w-]*)/g)].map((x) => x[1]);
         if (!classes.length) continue;
         // find the closing brace of this rule
         let depth = 0;
@@ -921,6 +933,21 @@ function cmdSelfTest() {
     check('O-every-rule-in-a-media-block-is-conditional',
         o.length === 3 && o[0].conditional && o[1].conditional && !o[2].conditional,
         `flags ${JSON.stringify(o.map((r) => [r.prefix, r.conditional]))}`);
+
+    // P: a selector list whose `{` line starts with an ELEMENT name is one rule,
+    //    found, and owned by the first CLASS in the list. Anchoring the match on
+    //    `[.#[]` hid it entirely and split a family across two files.
+    const elementTail = [
+        '.search-field-custom input,',
+        '[data-testid*="search"] input,',
+        'div[class*="spectrum"] input[type="search"] {',
+        '    padding-left: 32px;',
+        '}',
+    ].join('\n');
+    const pRes = readRules(elementTail);
+    check('P-element-led-brace-line-is-still-a-rule',
+        pRes.length === 1 && pRes[0].prefix === 'search' && pRes[0].start === 0,
+        `found ${pRes.length}: ${JSON.stringify(pRes.map((r) => [r.prefix, r.start]))}`);
 
     // D: the CONTROL on the controls — a deliberately broken expectation must FAIL,
     //    or all of the above could be passing vacuously.

@@ -21,6 +21,10 @@ import './styles/datapack.css';
 import '@/core/ui/styles/integration-cards.css';
 // .modal-* — the shared Modal shell.
 import '@/core/ui/styles/modal.css';
+// Step/form scaffolding shared with the wizard and Configure.
+import '@/core/ui/styles/step-scaffold.css';
+// The shared UI vocabulary — 19 small families. Seven of the eight entries.
+import '@/core/ui/styles/shared-ui.css';
 // Feature-scoped: this is the ONLY entry that loads it, so its classes exist in
 // this bundle and nowhere else.
 import './styles/data-installer.css';

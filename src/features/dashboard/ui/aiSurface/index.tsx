@@ -11,6 +11,8 @@ import '@/core/ui/styles/custom-spectrum.css';
 import '../styles/ai.css';
 // .modal-* — the shared Modal shell.
 import '@/core/ui/styles/modal.css';
+// The shared UI vocabulary — 19 small families. Seven of the eight entries.
+import '@/core/ui/styles/shared-ui.css';
 import type { AiOverviewInitialData } from '@/types/webviewPayloads';
 
 const container = document.getElementById('root');

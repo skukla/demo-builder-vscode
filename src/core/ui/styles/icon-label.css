@@ -1,0 +1,38 @@
+/**
+ * .icon-* styles — the icon-above-label pattern on action tiles and buttons.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by `dashboard`, `sidebar` and `wizard`.
+ * It is the ONLY family left in the migration that the sidebar renders, which is
+ * why it gets a sheet of its own rather than joining shared-ui.css beside it.
+ *
+ * `.sidebar-action-tile .icon-label` stays in custom-spectrum.css: it is a
+ * `.sidebar-*` rule and belongs to that family's move.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), with the comment above each rule.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+/* ===========================================
+   Icon Size Classes
+   =========================================== */
+.icon-xs { width: 12px !important; height: 12px !important; }
+
+.icon-sm { width: 16px !important; height: 16px !important; }
+
+.icon-md { width: 20px !important; height: 20px !important; }
+
+.icon-lg { width: 24px !important; height: 24px !important; }
+
+.icon-xl { width: 32px !important; height: 32px !important; }
+
+/* ===========================================
+   Icon Label Pattern (Dashboard action buttons)
+   Used for consistent styling of icon labels
+   =========================================== */
+.icon-label {
+    font-size: 14px !important;
+    margin-top: 8px !important;
+}
+}

@@ -27,6 +27,8 @@ import '@/core/ui/styles/custom-spectrum.css';
 // them — the family looked cross-cutting on a bare `project-` prefix match, which
 // was catching file paths and prose rather than class names.
 import './styles/project-cards.css';
+// The shared UI vocabulary — 19 small families. Seven of the eight entries.
+import '@/core/ui/styles/shared-ui.css';
 
 // Local constant - webview cannot import TIMEOUTS from extension host
 // Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts

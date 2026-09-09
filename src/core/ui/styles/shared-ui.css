@@ -1,0 +1,603 @@
+/**
+ * The shared UI vocabulary — selection, loading, status, search, config, copyable
+ * text, footers and the rest. Nineteen families, 64 rules.
+ *
+ * FEATURE-SCOPED (ADR-017 §6) but only just: imported by SEVEN of the eight
+ * entries, everything except `sidebar`. That is the honest union of what these
+ * families reach, measured one at a time from esbuild's graph.
+ *
+ * WHAT THIS BUYS, STATED PLAINLY. For a family like `.dashboard-*` or
+ * `.intflow-*` the split narrows a sheet to one or two screens, which is what
+ * makes step 3 reviewable a screen at a time. It does NOT do that here. These are
+ * primitives that genuinely appear almost everywhere, so what the move buys is a
+ * named home and a god file that is finally a utility sheet — not narrower scope.
+ * Giving each family its exact reach would have meant fifteen more sheets for
+ * sixty-four rules, which is worse than what it replaces.
+ *
+ * If a family in here later proves to be used by one screen, take it out; the
+ * sheet is a bucket, not a decision.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration), with the comment above each rule.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
+ */
+
+@layer theme {
+/* ===========================================
+   Selection Summary Styles
+   =========================================== */
+.selection-summary-container {
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+}
+
+.selection-summary-label {
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 4px !important;
+}
+
+.selection-summary-value {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+}
+
+.selection-summary-placeholder {
+    font-size: 13px !important;
+    color: var(--spectrum-global-color-gray-500) !important;
+}
+
+/* ===========================================
+   Selection Step Content Container
+   =========================================== */
+.selection-step-content {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    min-height: 0 !important;  /* Allow shrinking below content size */
+    overflow: visible !important;  /* Allow focus rings to show */
+}
+
+/* The ONE selection checkmark, shared across every "pick this" card in the wizard
+   (package cards, backend cards, block-library cards, integration cards). */
+.selection-check {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--spectrum-global-color-blue-500);
+}
+
+/* Pin to the card's top-right (for whole-card selects); the card is position:relative. */
+.selection-check-corner {
+    position: absolute;
+    top: var(--spectrum-global-dimension-size-200);
+    right: var(--spectrum-global-dimension-size-200);
+}
+
+/* Small loading spinner size */
+.loading-spinner-small {
+    width: 16px !important;
+    height: 16px !important;
+}
+
+/* ===========================================
+   LoadingOverlay Component Styles
+   SOP §11: Extracted from inline style objects
+   =========================================== */
+.loading-overlay-container {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background-color: var(--db-loading-overlay-bg) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 1000 !important;
+    border-radius: 4px !important;
+    gap: 16px !important;
+}
+
+.loading-overlay-container-opaque {
+    background-color: var(--spectrum-global-color-gray-50) !important;
+}
+
+.loading-overlay-spinner-container {
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    padding: 24px !important;
+    border-radius: 50% !important;
+    box-shadow: 0 4px 12px var(--db-loading-overlay-shadow) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.loading-overlay-spinner {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    border: 3px solid var(--spectrum-global-color-blue-400) !important;
+    border-top-color: transparent !important;
+    animation: loading-overlay-spin 1s linear infinite !important;
+}
+
+.loading-overlay-text {
+    color: var(--db-loading-text) !important;
+    font-weight: 500 !important;
+}
+
+/* --------------------------------------------------------------------------
+ * Integrations grid + drawer (dashboard)
+ * Card grid + right detail drawer replacing the stacked integration rows.
+ * Grid, cards, scrim, and drawer are PLAIN DIVS (Spectrum Flex caps at
+ * 450px); tokens flip light/dark. Card family: .project-card-spectrum
+ * (gray-50 base, gray-75 hover, lift, radius 8).
+ * ------------------------------------------------------------------------ */
+/* The grid's root. Kept flexible so it fills whatever host it sits in — on the
+ * dedicated surface that is the full page width. */
+.integrations-surface {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Heading · count pill · Add button on one baseline; the Add button trails. */
+.integrations-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+}
+
+.integrations-header > *:last-child {
+    margin-left: auto;
+}
+
+/* Card tracks are CAPPED, not 1fr: with two cards in a wide band, `1fr` inflated
+   them to ~420px and the content read as mostly empty. `justify-content: start`
+   packs them left instead of spreading. Gap matches the extension's card-grid
+   rhythm (.projects-grid, 24px / size-300). */
+/* Mirrors .projects-grid — the same card-grid problem, already solved there.
+   `minmax(268px, 300px)` needed 3*268 + 2*24 = 852px for three columns and the
+   left-anchored content band is ~815px, so it fell to two and wrapped the third
+   tile onto a row of its own. 240px min clears three columns with room to spare;
+   `1fr` fills the row, which is why `justify-content: start` is gone (it only
+   mattered while tracks were capped at 300px).
+
+   `grid-auto-rows: 1fr` equalises rows. Grid equalises heights WITHIN a row, so
+   an add tile alone on the last row kept its own floor while the cards' row was
+   sized by card content — they matched only when they happened to share a row. */
+.integrations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 24px;
+    padding: 8px;
+}
+
+/* ---- Dashboard integrations summary tile (build zone) ----
+ * Shaped exactly like its neighbours (Configure / More) — the dot and count are
+ * absolutely positioned overlays, NOT extra inline content, so the tile keeps a
+ * neighbour's footprint and the action row stays on one line. Widening the tile
+ * is what pushed it to wrap onto its own row. */
+.integrations-tile {
+    position: relative;
+}
+
+/* Status dot rides the tile's top-right corner. */
+/* POSITION only. Colour, size and the in-progress pulse come from StatusDot;
+   this tile used to restate all three from Spectrum globals, which is how it
+   ended up with a blue dot that never pulsed. */
+.integrations-tile-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+
+/* ===========================================
+   Config Section Styles
+   =========================================== */
+.config-section {
+    scroll-margin-top: -16px !important;
+    padding-bottom: 4px !important;
+}
+
+.config-section-with-padding {
+    scroll-margin-top: -16px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+}
+
+.config-section-header {
+    padding-bottom: 4px !important;
+    margin-bottom: 12px !important;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
+}
+
+/* Zero the Spectrum Heading's default top margin so the first group title sits tight
+ * under the tab strip (section dividers/padding handle separation between groups). */
+.config-section-header h3 {
+    margin-top: 0 !important;
+}
+
+/* Config field scroll margin */
+.config-field {
+    scroll-margin-top: 24px !important;
+}
+
+/* Status row - inline status indicator with gap */
+.status-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+/* Status text - standard status label styling */
+.status-text {
+    font-size: 14px !important;
+    color: var(--spectrum-global-color-gray-800) !important;
+    font-weight: normal !important;
+}
+
+/* Status indicator icons (checkmarks, counts) */
+.status-icon-sm {
+    font-size: 14px !important;
+    line-height: 14px !important;
+}
+
+.status-icon-md {
+    font-size: 16px !important;
+    line-height: 16px !important;
+}
+
+/* Description text - muted secondary text */
+.description-text {
+    color: var(--spectrum-global-color-gray-500) !important;
+    font-size: 12px !important;
+}
+
+/* Description text with top margin */
+.description-text-spaced {
+    color: var(--spectrum-global-color-gray-500) !important;
+    font-size: 12px !important;
+    margin-top: 16px !important;
+}
+
+/* Description block with bottom margin */
+.description-block {
+    color: var(--spectrum-global-color-gray-600) !important;
+    margin-bottom: 16px !important;
+    display: block !important;
+}
+
+/* Description block small variant */
+.description-block-sm {
+    color: var(--spectrum-global-color-gray-600) !important;
+    font-size: 12px !important;
+    margin-bottom: 8px !important;
+    display: block !important;
+}
+
+/* Centered narrow content */
+.centered-content-narrow {
+    max-width: 400px !important;
+    text-align: center !important;
+}
+
+/* Centered padding variations */
+.centered-padding-lg {
+    padding-top: 32px !important;
+    padding-bottom: 32px !important;
+}
+
+.centered-padding-md {
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+}
+
+/* The `fill` variant of CenteredFeedbackContainer. Its inline `min-height: 100%`
+ * measures against .step-view-anim, whose own height is content-driven — so the
+ * percentage is indefinite and collapses, leaving a short state (the Code Sync
+ * spinner) near the TOP of a tall pane. Growing as a flex item is what actually
+ * reaches the bottom. This is the `flex-1` opt-in .step-view-anim's own comment
+ * describes. It cannot live on the Spectrum `flex` prop: `Flex` takes container
+ * props and drops item props silently.
+ * `auto` basis, so taller content still grows and .step-view keeps the scroll. */
+.centered-feedback--fill {
+    flex: 1 1 auto;
+}
+
+/* ===========================================
+   CopyableText Component Styles
+   SOP §11: Extracted from inline style objects
+   =========================================== */
+.copyable-text {
+    font-family: var(--spectrum-alias-body-text-font-family, monospace) !important;
+    font-size: 0.9em !important;
+    background-color: var(--db-code-background) !important;
+    padding: 4px 10px !important;
+    border-radius: 4px !important;
+    color: var(--spectrum-global-color-blue-700) !important;
+    border: 1px solid var(--db-code-border) !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    transition: background-color 0.15s ease !important;
+}
+
+.copyable-text:hover {
+    background-color: var(--spectrum-global-color-gray-200) !important;
+}
+
+.copyable-icon {
+    margin-left: 6px !important;
+    font-size: 1em !important;
+    opacity: 0.7 !important;
+}
+
+.copyable-icon-copied {
+    margin-left: 6px !important;
+    font-size: 1em !important;
+    color: var(--spectrum-global-color-green-600) !important;
+    opacity: 1 !important;
+}
+
+/* The capped content regions — Commerce's active view, and the non-nav area bodies. */
+.commerce-body > .step-view,
+.build-two-col .build-area-pad {
+    max-width: var(--commerce-zone-max) !important;
+}
+
+.commerce-body {
+    display: flex !important;
+    /* Sub-step nav is a horizontal strip ON TOP, the active view fills below
+       (was a [left rail | view] row). */
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    gap: 0 !important;
+    align-items: stretch !important;
+}
+
+.commerce-body > .step-view {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    /* Scroll the view when its content exceeds the area (the strip stays fixed above;
+       the two-column-left column is overflow:hidden, so the scroll must live here).
+       min-height:0 lets this flex child shrink below its content so overflow engages. */
+    min-height: 0 !important;
+    overflow-y: auto !important;
+}
+
+/* ---- BuildYourProjectSummary (.sum*) — the unified "Your project" column ---- */
+/* The summary column GROWS to fill the remaining width (its gray panel reaches the
+   screen edge), but the CONTENT is capped + left-aligned so label↔value stay tight
+   inside the wide panel instead of flinging apart. */
+.commerce-summary-content {
+    max-width: 280px !important;
+}
+
+/* Footer content container */
+.footer-content-container {
+    max-width: var(--content-width) !important;
+    width: 100% !important;
+}
+
+/* Footer grid - 3 column layout for left/center/right content */
+.footer-grid {
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-height: 32px !important;
+}
+
+/* Footer bar pattern */
+.footer-bar {
+    padding: 16px !important;
+    border-top: 1px solid var(--spectrum-global-color-gray-400) !important;
+    background-color: var(--spectrum-global-color-gray-75) !important;
+}
+
+/* The committed destination as a quiet CONTEXT LINE above the active stage — it
+   replaced the `dest-summary` step (a whole step to confirm a destination the user
+   never chose). Quiet by design: it is orientation, not the task. */
+.dest-context {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: var(--spectrum-global-dimension-font-size-75);
+}
+
+.dest-context-value {
+    color: var(--spectrum-global-color-gray-700);
+}
+
+/* The MODAL's variant: a full-width line with a rule under it. The page header
+   uses the inline base above — same fact, two placements. */
+.dest-context--block {
+    display: flex;
+    margin: 0 0 14px;
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300);
+}
+}
+
+/* Search header - padding provides space for focus ring (2px outline + 2px offset) */
+.search-header {
+    padding: 4px !important;
+    margin: -4px !important;
+}
+
+@layer theme {
+    /* Also target via the icon positioning wrapper */
+    .search-field-custom [class*="icon"] + input,
+    .search-field-custom [class*="Icon"] + input {
+        padding-left: 32px !important;
+    }
+
+/* ===========================================
+   Projects Dashboard Specific
+   =========================================== */
+/* Sticky header for search/filter controls - middle layer between header and content */
+.projects-sticky-header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
+    margin-bottom: 16px !important;
+}
+
+.projects-grid {
+    display: grid !important;
+    /* Larger cards: 240px min for more square appearance */
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+    /* Increased gap: 24px (Spectrum size-300) */
+    gap: 24px !important;
+    /* Padding for shadow overflow */
+    padding: 8px !important;
+}
+
+/* ===========================================
+   List Refresh Container
+   =========================================== */
+.list-refresh-container {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    min-height: 0 !important;  /* Allow shrinking below content size */
+    overflow: auto !important;  /* Enable scrolling */
+    transition: opacity 200ms ease-in-out !important;
+}
+
+.list-refresh-container.refreshing {
+    opacity: 0.5 !important;
+    pointer-events: none !important;
+}
+
+/* ===========================================
+   Searchable List Container
+   =========================================== */
+.searchable-list-container {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    min-height: 0 !important;  /* Allow shrinking below content size */
+    overflow: visible !important;  /* Allow focus rings to show */
+}
+
+/* SearchField input padding - accounts for magnifying glass icon */
+.searchable-list-search-field input {
+    padding-left: 32px !important;
+}
+}
+
+/* The modal body owns its own column layout — a plain div, because Spectrum's
+   Flex caps width at ~450px and clipped the API list inside the L dialog.
+
+   It also makes the API LIST the dialog's only scroll region. The list used to be
+   a fixed 320px inside a `fitContent` dialog, which gave the modal TWO scrollers:
+   once the content outgrew the dialog, .modal-body scrolled as well — and being
+   the outer one it won, so the row list would not move while the whole body did,
+   carrying the search box and chips away with it.
+
+   The fix is a CONSTANT height here, and a flex chain that hands every spare
+   pixel down to the row area: body → picker → rows, each `min-height: 0` so a
+   flex item is actually allowed to shrink below its content (the default `auto`
+   refuses, and the overflow would silently move back up to .modal-body).
+
+   Why an explicit height rather than `height: 100%`: 100% only resolves against a
+   parent with a definite height, which depends on whether Spectrum's modal wrapper
+   stretches the dialog — behaviour this codebase has already been surprised by once
+   (see .modal-fit-content). Setting it here makes the dialog's size independent of
+   that question: `fitContent` collapses the dialog to its content, and its content
+   is this. Filtering to four APIs cannot resize anything; only the row area's
+   scrollback changes.
+
+   Why it is VIEWPORT-CAPPED and not a bare 480px: a flat 480 was taller than a
+   short window could give. The dialog hit its max-height, `.modal-content` shrank
+   (`flex: 0 1 auto`), `.modal-body` ended up shorter than this box — and clipped
+   it. Measured on a ~628px-tall viewport: the row area reported clientHeight ===
+   scrollHeight === 276, i.e. NOT overflowing, while the last row was visibly cut.
+   The cut came from `.modal-body` above, not the list below, and because the list
+   had nothing to scroll while `overscroll-behavior: contain` blocked the gesture
+   reaching the body, nothing moved at all.
+
+   `min()` keeps it stable where it matters: the viewport does not change while you
+   type in the filter, so this is constant across filtering — which is the actual
+   requirement — while still fitting a short window.
+
+   The subtraction is the dialog's own chrome — heading, footer, backdrop margins.
+   A bare `Nvh` ignores it, and the dialog can only absorb the difference while it
+   has room to grow (`max-height: none`, so it is sized BY this box). Zoomed in,
+   the viewport shrinks, the dialog runs out of room, `.modal-body` ends up shorter
+   than this box and starts scrolling — a SECOND scroller, which is what dragged
+   the header away again.
+
+   The tell was that it happened for exactly one pill: every other filter overflows
+   the row list, so the list consumes the gesture and nothing reaches `.modal-body`.
+   The one whose rows FIT let the gesture through to the oversized body underneath. */
+.manage-apis-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: min(560px, calc(100vh - 260px));
+    /* The body no longer scrolls, so overrunning it would CLIP rather than
+       scroll. This yields to the parent whenever the calc guesses high. */
+    max-height: 100%;
+    min-height: 0;
+    min-width: 0; /* a flex child defaults to min-width:auto and refuses to shrink */
+}
+
+.manage-apis-body .intflow-api-picker,
+.manage-apis-body .intflow-api-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+@layer theme {
+/* ===========================================
+   App Container Styles
+   =========================================== */
+.app-container {
+    width: 100% !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+}
+
+/* ===========================================
+   Flex Utilities (Additional)
+   =========================================== */
+.shrink-0 { flex-shrink: 0 !important; }
+
+/* ===========================================
+   Button Icon Wrapper
+   =========================================== */
+.button-icon-wrapper {
+    margin-right: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+/* ===========================================
+   SearchField Input Padding
+   Account for magnifying glass icon space
+   =========================================== */
+/* Target SearchField inputs with multiple selector strategies */
+/* React Spectrum uses various class patterns - cover them all */
+.search-field-custom input,
+.search-field-custom input[type="search"],
+[class*="SearchField"] input,
+[class*="Search-input"],
+[data-testid*="search"] input,
+div[class*="spectrum"] input[type="search"] {
+    padding-left: 32px !important;
+}
+}
