@@ -20,27 +20,34 @@ exists. Once `.dashboard-*` lives in a sheet only `src/features/dashboard/ui/mai
 - the class-reachability question ("is this styled on the surface that uses it?")
   becomes answerable by reading an import instead of running a scan
 
-## The order: biggest first, and one family per cycle
+## The order: read it from the repo, never from this file
 
-| family | rules | likely home |
+```bash
+node scripts/cssMigrationCycle.mjs --worklist
+```
+
+It prints every remaining family with its bundle reach (from esbuild's real graph),
+its blockers, and which of three LANES it is in:
+
+| lane | meaning | what to do |
 |---|---|---|
-| `.intflow-` | 52 | integrations |
-| `.project-` | 43 | projects-dashboard |
-| `.integration-` | 35 | integrations |
-| `.dashboard-` | 28 | dashboard |
-| `.prerequisite-` | 25 | prerequisites |
-| `.sidebar-` | 24 | sidebar |
-| `.architecture-` | 24 | project-creation |
-| `.modal-`, `.template-`, `.wizard-`, `.timeline-`, `.brand-`, `.ai-` | 21-18 each | various |
+| **mover** | nothing inside a conditional at-rule | `--move`, then import the sheet from every entry it lists |
+| **by hand** | at least one rule inside `@media` / `@container` / `@supports` | move the block WHOLE, and place it AFTER the family's plain rules |
+| **dead?** | no bundle renders the family at all | do not move it — this is PL-53's question, and a visual diff cannot answer it |
 
-23 families carry 10+ rules and cover 464 of the 685. The remaining ~221 sit in 79
-small families and are the long tail — do them last, in groups, once the pattern is
-established.
+**A table of families used to live here and it rotted within a day.** It listed
+`.architecture-` (deleted as dead), `.project-` as needing a judgement call (it was
+a one-bundle move), and counts from before the first cycle. Numbers copied into a
+plan are stale the moment a cycle runs, which is the same failure as the overview's
+starting values — fixed the same way.
 
-**One family per cycle.** The cycle is: capture, move one family, rebuild,
-re-capture, diff. An empty diff commits; anything else reverts. Batching families
-means a non-empty diff tells you several things might be wrong instead of exactly
-what is.
+**One family per cycle.** Capture, move one family, rebuild, re-capture, diff. An
+empty diff commits; anything else reverts. Batching means a non-empty diff tells you
+several things might be wrong instead of exactly what is.
+
+**Prefer a mover family reaching ONE bundle.** A family reaching three is still fine
+— `.ai-*` and `.intflow-*` both went that way — but every entry in the list has to
+import the new sheet, and a missed one renders as the style silently not applying.
 
 ## The trap: document order is part of the cascade
 

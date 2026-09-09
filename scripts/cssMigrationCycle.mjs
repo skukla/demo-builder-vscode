@@ -21,6 +21,9 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 const ROOT = process.cwd();
 const GOD_FILE = 'src/core/ui/styles/custom-spectrum.css';
@@ -317,6 +320,91 @@ function mergeAdjacentLayerBlocks(text) {
         if (depth !== 1) return m;
         return '\n';
     });
+}
+
+/**
+ * Which bundles render a family — from esbuild's OWN graph, not a grep.
+ *
+ * A grep for the prefix catches file paths and prose: `project-` matched
+ * `project-creation` in a path and reported .project-* as a six-bundle family when
+ * it is a one-bundle family. This walks the real entry graph with the real alias
+ * plugin and matches whole CLASS TOKENS in the source it finds.
+ */
+async function bundleReach(prefixes) {
+    const esbuild = require(join(ROOT, 'node_modules/esbuild'));
+    const { WEBVIEW_ENTRIES, aliasPlugin } = require(join(ROOT, 'esbuild.config.js'));
+    const out = new Map(prefixes.map((p) => [p, new Set()]));
+    for (const [bundle, entry] of Object.entries(WEBVIEW_ENTRIES)) {
+        const result = await esbuild.build({
+            entryPoints: [entry], bundle: true, write: false, metafile: true,
+            format: 'iife', platform: 'browser', target: ['chrome91'], absWorkingDir: ROOT,
+            loader: { '.css': 'text', '.png': 'empty', '.jpg': 'empty', '.svg': 'empty', '.gif': 'empty' },
+            define: { 'process.env.NODE_ENV': '"development"' },
+            plugins: [aliasPlugin], logLevel: 'silent',
+        });
+        for (const file of Object.keys(result.metafile.inputs)) {
+            if (!/\.tsx?$/.test(file) || !file.startsWith('src/')) continue;
+            const code = readFileSync(join(ROOT, file), 'utf8')
+                .replace(/\/\*[\s\S]*?\*\//g, '')
+                .replace(/^\s*\/\/.*$/gm, '');
+            const tokens = code.match(/[A-Za-z_][\w-]*/g) || [];
+            for (const p of prefixes) {
+                if (tokens.some((t) => t.startsWith(p + '-'))) out.get(p).add(bundle);
+            }
+        }
+    }
+    return out;
+}
+
+/**
+ * The triaged work list: what is left, and which LANE each family is in.
+ *
+ * `--next` sorts by size and says nothing about whether a family can actually be
+ * moved. Three things decide that, and all three are computable:
+ *
+ *   mover     no rule inside a conditional at-rule -> `--move` handles it
+ *   by hand   at least one rule inside @media/@container/@supports. The block moves
+ *             WHOLE, and AFTER the family's plain rules, or the breakpoint stops
+ *             applying (2026-09-09: putting it first cost 258 elements)
+ *   dead?     no bundle renders the family at all. Neither movable nor obviously
+ *             dead — PL-53's question, and a visual diff cannot answer it
+ *
+ * Printed rather than filed, because a list of families written into a document is
+ * stale the moment a cycle runs. That is why step-02's table now points here.
+ */
+async function cmdWorklist() {
+    const text = readFileSync(join(ROOT, GOD_FILE), 'utf8');
+    const rules = readRules(text);
+    const fam = families(rules);
+    const reach = await bundleReach(fam.map(([p]) => p));
+
+    const rows = fam.map(([prefix, n]) => {
+        const mine = rules.filter((r) => r.prefix === prefix && r.feature);
+        const cond = mine.filter((r) => r.conditional).length;
+        const bundles = [...reach.get(prefix)].sort();
+        const foreign = classifyMentions(prefix, text).foreign.length;
+        const lane = bundles.length === 0 ? 'dead?' : cond ? 'by hand' : 'mover';
+        return { prefix, n, cond, bundles, foreign, lane };
+    });
+
+    const { total, feature } = counts();
+    console.log(`${feature} feature rules left in the god file, ${total} rules total, ${rows.length} families\n`);
+    for (const lane of ['mover', 'by hand', 'dead?']) {
+        const group = rows.filter((r) => r.lane === lane).sort((a, b) => b.n - a.n);
+        const sum = group.reduce((a, b) => a + b.n, 0);
+        console.log(`== ${lane.toUpperCase()} — ${group.length} families, ${sum} rules`);
+        for (const r of group) {
+            const where = r.bundles.length ? r.bundles.join('+') : 'no bundle uses it';
+            const notes = [
+                r.cond ? `${r.cond} in an at-rule` : '',
+                r.foreign ? `${r.foreign} foreign ref` : '',
+            ].filter(Boolean).join(', ');
+            console.log(`   ${String(r.n).padStart(3)}  .${(r.prefix + '-*').padEnd(16)} ${where}${notes ? '   (' + notes + ')' : ''}`);
+        }
+        console.log('');
+    }
+    console.log('Prefer a MOVER family reaching ONE bundle. Import the sheet from every');
+    console.log('entry listed, or the style silently does not apply there.');
 }
 
 function cmdMove(prefix, target) {
@@ -734,12 +822,13 @@ function cmdSelfTest() {
 const [cmd, ...rest] = process.argv.slice(2);
 if (cmd === '--selftest') cmdSelfTest();
 else if (cmd === '--next') cmdNext();
+else if (cmd === '--worklist') await cmdWorklist();
 else if (cmd === '--move') {
     const toIdx = rest.indexOf('--to');
     cmdMove(rest[0], toIdx >= 0 ? rest[toIdx + 1] : null);
 } else if (cmd === '--check') cmdCheck();
 else if (cmd === '--leftovers') cmdLeftovers(rest[0]);
 else {
-    console.log('usage: cssMigrationCycle.mjs --next | --move <prefix> --to <path> | --check | --leftovers <prefix> | --selftest');
+    console.log('usage: cssMigrationCycle.mjs --next | --worklist | --move <prefix> --to <path> | --check | --leftovers <prefix> | --selftest');
     process.exit(2);
 }

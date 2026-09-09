@@ -9,12 +9,17 @@ the way it is.
 Nothing in this plan needs a previous conversation. Two commands recover the state:
 
 ```bash
-node scripts/cssMigrationCycle.mjs --next     # where we are, and what is next
+node scripts/cssMigrationCycle.mjs --worklist # every family left, triaged by lane
 node scripts/cssVisualHarness.mjs             # stand up the verification harness
 ```
 
-`--next` prints the live pins and the remaining families, read from the ledger and
-the stylesheet rather than from anyone's memory. The harness script does the seven
+`--worklist` is the one to read: it sorts the remaining families into MOVER (the
+script handles it), BY HAND (a rule inside a breakpoint, which must move whole and
+in the right order) and DEAD? (no bundle renders it at all — PL-53's question, not a
+move). `--next` still prints the bare size ranking.
+
+Both read the ledger and the stylesheet rather than anyone's memory, and the reach
+column comes from esbuild's own graph. The harness script does the seven
 staging steps that were hand-derived on every cycle of 2026-09-08/09, and stops at
 the sentinel check — which is not optional, because port 8899 is answered by an
 unrelated app inside the browser container and a wrong server produces blank
