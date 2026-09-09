@@ -19,6 +19,9 @@ import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
 import '@/core/ui/styles/custom-spectrum.css';
+// .ai-* rules, moved out of custom-spectrum.css by the CSS migration. Three
+// entries reach a component using them, so all three import it.
+import './styles/ai.css';
 
 // Get root element
 const container = document.getElementById('root');

@@ -41,7 +41,14 @@ const CSS = [
 ]
     .map((rel) => fs.readFileSync(path.join(__dirname, rel), 'utf8'))
     .join('\n')
-    .replace(/\/\*[\s\S]*?\*\//g, '');
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    // STRIP LAYER WRAPPERS before parsing. `ruleFor` below splits on `}` and reads
+    // the text before the next `{` as the selector. A rule that is FIRST inside an
+    // `@layer theme { ... }` block therefore reads as `@layer theme` rather than as
+    // its own selector — so exactly one rule per moved sheet became invisible.
+    // Removing the wrapper changes no declaration and no assertion here; these
+    // suites test what a rule SAYS, not where it sits in the cascade.
+    .replace(/@layer\s+[\w.-]+\s*\{/g, '');
 
 function ruleFor(selectorList: string): string {
     const norm = (t: string) => t.replace(/\s+/g, ' ').trim();
