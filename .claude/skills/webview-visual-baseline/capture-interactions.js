@@ -103,6 +103,12 @@ async function captureInteractions(page, { surfaces = SURFACES, base, theme = 'd
         // mount would also freeze whatever entrance animation the fixture needs to
         // finish, and the rest fingerprint would be of a half-arrived surface.
         await page.addStyleTag({ content: FREEZE_TRANSITIONS });
+        // The CSS freeze does not reach a Web Animations API animation, which no
+        // stylesheet declares and no `!important` can outrank. `capture.js` pins
+        // those through the harness's `__FREEZE__`; this did not, and one sidebar
+        // tile kept drifting by a colour channel or two between runs of the SAME
+        // build after the transition freeze had removed every other disagreement.
+        await page.evaluate(() => { if (window.__FREEZE__) window.__FREEZE__(); });
 
         const cdp = await page.context().newCDPSession(page);
         await cdp.send('DOM.enable');
@@ -124,6 +130,9 @@ async function captureInteractions(page, { surfaces = SURFACES, base, theme = 'd
         const read = (i) =>
             page.evaluate(
                 ([idx, props, sel]) => {
+                    // Re-pin before every read: forcing a state can START an
+                    // animation, so freezing once at mount is not enough.
+                    if (window.__FREEZE__) window.__FREEZE__();
                     const el = document.querySelectorAll(sel)[idx];
                     if (!el) return null;
                     const cs = getComputedStyle(el);

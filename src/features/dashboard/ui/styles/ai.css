@@ -1,18 +1,35 @@
 /**
- * ai styles.
+ * .ai-* styles — the AI zone, capability list and prompt cards.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by THREE entries, because three surfaces
+ * render a component that uses these classes: `dashboard` (ui/main.tsx),
+ * `aiOverview` (ui/aiSurface/index.tsx) and `integrations`
+ * (ui/integrationsSurface/index.tsx). A class defined here is absent from the
+ * other five bundles, and an element using it there renders raw with no error
+ * anywhere.
  *
  * Moved out of custom-spectrum.css by the CSS migration
- * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
- * when the visual diff is empty, so the rules are not edited on the way.
+ * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
 
 @layer theme {
+/* AI Capabilities — ONE scroll region for everything beneath the modal
+   heading (MCP servers + skills together); the modal frame never resizes.
+   Replaces the skills-only inner scroll, which felt like a nested widget. */
 .ai-capabilities-body {
     max-height: 420px;
     overflow-y: auto;
     padding-right: 8px; /* keep the scrollbar off the text */
 }
 
+/* A PERSISTENT scrollbar. macOS paints overlay scrollbars only while you are
+   scrolling, so a bounded region at rest looks like a complete list — which is
+   how 10 of 21 skills went missing with nothing to suggest more existed.
+   Nothing else in this app styles a scrollbar; this is the first.
+   A bar rather than a bottom fade: a static fade keeps promising more content
+   after you have reached the end, and making it honest needs scroll-position
+   state for something a scrollbar already says. */
 .ai-capabilities-body::-webkit-scrollbar {
     width: 10px;
 }
@@ -31,12 +48,27 @@
     background: var(--spectrum-global-color-gray-500);
 }
 
+/* Sections stack full-width; the SKILLS GROUPS are what run in two columns
+   (see .ai-skills-scroll). Putting the columns around the two sections was the
+   first attempt and barely helped — skills is the tall section, so a 3-row MCP
+   list beside a 21-row skills list takes the height from 3 + 21 to max(3, 21):
+   three rows saved, not half. */
 .ai-capabilities-columns {
     display: flex;
     flex-direction: column;
     gap: 24px;
 }
 
+/* Section heading (MCP servers / Skills) — the level ABOVE a group header.
+   Both used to be 12px, differing only in colour, so "section > group > names"
+   existed in the comments and not on screen. */
+/* `!important` because this lands on Spectrum `Heading`/`Text`, which ship their
+   own single-class rules — a tie on specificity that source order decides, and
+   Spectrum wins it. The three utilities this replaced (.text-sm,
+   .font-semibold, .text-gray-800) all carried it for the same reason, as do
+   167 of the 238 font declarations in this file. Dropping it silently reverted
+   the heading to Spectrum's own size, which is how this shipped looking
+   unchanged the first time. */
 .ai-section-heading {
     font-size: 16px !important;
     font-weight: 700 !important;
@@ -52,6 +84,15 @@
     margin: 0 0 4px 0 !important;
 }
 
+/* The skills GROUPS run in two columns — this is what stops the list cutting
+   itself off. With 21 skills a single column ended mid-group at `sync-changes`
+   and everything after it sat below a fold that macOS overlay scrollbars never
+   advertise: the heading said 21, the eye saw 11.
+
+   Whole groups are the unit, so a header never separates from its own skills.
+   `minmax(0, 1fr)` rather than `1fr` so a long name shrinks its track instead of
+   pushing the grid wider than the dialog; `align-items: start` keeps a short
+   group from stretching to match a tall neighbour. */
 .ai-skills-scroll {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -59,6 +100,10 @@
     align-items: start;
 }
 
+/* Sticky group headers — deliberately QUIETER than the "Skills · N installed"
+   section heading above them: sentence case (caps read as emphasis regardless
+   of size), small, muted. Hierarchy: section > group > names. They pin to the
+   top of the scroll region while their group's skills scroll under. */
 .ai-skills-group-header {
     position: sticky;
     top: 0;
@@ -91,6 +136,9 @@
     border-top: 1px solid var(--spectrum-global-color-gray-200);
 }
 
+/* Two-column row used by skills + tool entries — name + badge on
+   the left, description on the right, with the left column
+   vertically centered against the (often taller) description. */
 .ai-surface-two-col {
     display: grid !important;
     grid-template-columns: minmax(160px, 220px) 1fr;
@@ -98,10 +146,16 @@
     align-items: center;
 }
 
+/* AI surface sidebar (right-column) — constrained sidebar width so the
+   CTA + text reads as a sidebar, not a full-page banner. */
 .ai-surface-sidebar {
     max-width: 280px !important;
 }
 
+/* AI surface content fade — mirrors the wizard's
+   .list-refresh-container.refreshing pattern (200ms opacity fade
+   + pointer-events: none) so the user gets a visible "data is
+   refreshing" cue without toast notifications or button spinners. */
 .ai-surface-refreshable {
     transition: opacity 200ms ease-in-out !important;
 }
@@ -111,6 +165,9 @@
     pointer-events: none !important;
 }
 
+/* AI prompt card (Batch E2) — clickable card in the AI Overview sidebar
+   that launches Claude Code with the prompt pre-filled. Subtle outline,
+   rounded corners, hover state. Matches the wizard's existing aesthetic. */
 .ai-prompt-card {
     transition: background 120ms ease-in-out, border-color 120ms ease-in-out;
 }

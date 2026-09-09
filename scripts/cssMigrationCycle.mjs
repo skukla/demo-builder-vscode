@@ -57,6 +57,50 @@ function commentLines(text) {
 }
 
 /**
+ * Whole-line comment BLOCKS, mapped last line -> first line.
+ *
+ * Spans, not lines, and that distinction is the whole point. The first version
+ * classified each line as comment-or-not and walked upwards while the line above
+ * was a comment. A block comment containing a BLANK LINE — this file has several,
+ * the longest running 20 lines with two paragraph breaks — stops that walk in the
+ * middle of itself. Applied on 2026-09-09 it cut two blocks in half, left the
+ * opening `/*` behind in the god file, and the orphaned tail turned into CSS: the
+ * browser dropped `.dashboard-status-badges` and
+ * `.dashboard-status-capabilities-link` entirely, and 48 elements moved.
+ *
+ * THE VISUAL DIFF CAUGHT IT, which is the argument for the diff and not for the
+ * care. A block comment is one span whatever is inside it.
+ *
+ * A block counts only if it occupies its lines WHOLE — nothing but whitespace
+ * before the `/*` and after the `*\/`. That excludes a trailing
+ * `color: red; /* why *\/`, which documents the declaration it sits on rather than
+ * the rule below, and includes an INDENTED block, which the line-start test in
+ * `commentLines` reads as code (the 2026-09-08 false-leftover bug).
+ */
+function docCommentBlocks(text) {
+    const lines = text.split('\n');
+    const lineStart = [];
+    let off = 0;
+    for (const l of lines) { lineStart.push(off); off += l.length + 1; }
+    const lineOf = (pos) => {
+        let lo = 0, hi = lineStart.length - 1;
+        while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (lineStart[mid] <= pos) lo = mid; else hi = mid - 1; }
+        return lo;
+    };
+    const map = new Map();
+    for (const m of text.matchAll(/\/\*[\s\S]*?\*\//g)) {
+        const a = m.index;
+        const b = a + m[0].length;
+        const la = lineOf(a);
+        const lb = lineOf(b - 1);
+        const before = lines[la].slice(0, a - lineStart[la]);
+        const after = lines[lb].slice(b - lineStart[lb]);
+        if (before.trim() === '' && after.trim() === '') map.set(lb, la);
+    }
+    return map;
+}
+
+/**
  * The cascade layer enclosing the rule that starts at `lineIndex`, or null.
  *
  * Counts `@layer <name> {` openings against closings before that point. Crude, and
@@ -105,6 +149,7 @@ function enclosingLayer(text, lines, lineIndex) {
 function readRules(text) {
     const lines = text.split('\n');
     const skip = commentLines(text);
+    const doc = docCommentBlocks(text);
     const rules = [];
     for (let i = 0; i < lines.length; i++) {
         if (skip.has(i)) continue;
@@ -144,11 +189,30 @@ function readRules(text) {
         const layer = enclosingLayer(text, lines, head);
         const conditional = insideConditionalAtRule(lines, head);
 
+        // The documentation block DIRECTLY above, with no blank line between.
+        //
+        // A move that takes the rule and leaves its comment splits the two apart in
+        // BOTH directions: the feature sheet arrives undocumented and the god file
+        // keeps prose about rules it no longer holds. Measured 2026-09-09 across the
+        // eight cycles already run — 84 of 185 moved rules left their comment behind,
+        // 82 of them directly adjacent like this.
+        //
+        // ADJACENT ONLY, deliberately. A block one blank line up is as likely to be a
+        // SECTION banner covering rules of several families, and taking it would move
+        // a heading away from most of what it heads. Two of the 84 are that shape;
+        // they are left, and left visible.
+        // Walk up through CONSECUTIVE whole-line blocks. A blank line between two
+        // blocks ends the walk, because the higher one is as likely to be a section
+        // banner over several families as documentation of this rule.
+        let docStart = head;
+        for (let above = head - 1; doc.has(above); above = docStart - 1) docStart = doc.get(above);
+
         const selectorText = lines.slice(head, i + 1).join(' ');
         const allClasses = [...selectorText.matchAll(/\.([A-Za-z_][\w-]*)/g)].map((x) => x[1]);
         const prefix = allClasses[0].split('-')[0];
         rules.push({
             start: head,
+            docStart,
             end,
             layer,
             conditional,
@@ -191,6 +255,41 @@ function cmdNext() {
     console.log('next, largest first:');
     for (const [prefix, n] of fam.slice(0, 8)) console.log(`   ${String(n).padStart(4)}  .${prefix}-*`);
     if (!fam.length) console.log('   none — step 2 is complete');
+}
+
+/**
+ * Fold `@layer X { A }` immediately followed by `@layer X { B }` into one block.
+ *
+ * Appending a family to an existing sheet opened a SECOND wrapper of the same name
+ * each time — prerequisites.css and brand-cards.css both ended up with two. It is
+ * identical to the cascade (same layer, same order) and it reads as though the two
+ * halves were in different layers, which is the one thing about this file that has
+ * repeatedly been got wrong.
+ *
+ * ADJACENT ONLY. Two blocks of one name with a rule between them are NOT the same
+ * as one block: merging those would move that rule's position in the cascade.
+ */
+function mergeAdjacentLayerBlocks(text) {
+    return text.replace(/\}\s*\n\s*@layer\s+([A-Za-z-]+)\s*\{\n/g, (m, name, offset, whole) => {
+        // Only when the `}` being consumed closes a @layer block of the SAME name.
+        const before = whole.slice(0, offset);
+        const opens = [...before.matchAll(/@layer\s+([A-Za-z-]+)\s*\{/g)];
+        if (!opens.length) return m;
+        // Walk from the last `@layer` opening. If depth ever returns to 0 the block
+        // is ALREADY CLOSED, and the `}` this matched belongs to something else —
+        // a rule sitting between two same-named blocks. Merging then would move
+        // that rule in the cascade, so refuse. Without this check the separated
+        // case merges and control M fails, which is how it was found.
+        const last = opens[opens.length - 1];
+        if (last[1] !== name) return m;
+        let depth = 0;
+        for (const ch of before.slice(last.index)) {
+            if (ch === '{') depth++;
+            else if (ch === '}' && --depth === 0) return m;
+        }
+        if (depth !== 1) return m;
+        return '\n';
+    });
 }
 
 function cmdMove(prefix, target) {
@@ -240,11 +339,14 @@ function cmdMove(prefix, target) {
     // reproduces the position they had, not merely the text.
     const drop = new Set();
     const byLayer = new Map();
+    let withDocs = 0;
     for (const r of rules) {
         const key = r.layer ?? '';
         if (!byLayer.has(key)) byLayer.set(key, []);
-        byLayer.get(key).push(lines.slice(r.start, r.end + 1).join('\n'));
-        for (let i = r.start; i <= r.end; i++) drop.add(i);
+        // From docStart, so the rule arrives with the comment that explains it.
+        byLayer.get(key).push(lines.slice(r.docStart, r.end + 1).join('\n'));
+        for (let i = r.docStart; i <= r.end; i++) drop.add(i);
+        if (r.docStart !== r.start) withDocs++;
     }
     const layersSeen = [...byLayer.keys()];
     const taken = layersSeen.map((layer) =>
@@ -255,9 +357,20 @@ function cmdMove(prefix, target) {
     const remaining = lines.filter((_, i) => !drop.has(i)).join('\n');
 
     const targetPath = join(ROOT, target);
+    // The header states REACH, because that is the property ADR-017 §6 turns on and
+    // the one a reader cannot get from the file itself. The entry list is left for
+    // the operator to fill: the imports are added AFTER this runs (step 4 of the
+    // cycle), so anything written here would be a guess.
     const header = existsSync(targetPath)
         ? ''
-        : `/**\n * ${prefix} styles.\n *\n * Moved out of custom-spectrum.css by the CSS migration\n * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct\n * when the visual diff is empty, so the rules are not edited on the way.\n */\n\n`;
+        : `/**\n * .${prefix}-* styles.\n *\n` +
+          ` * FEATURE-SCOPED (ADR-017 §6). This sheet reaches only the esbuild entries\n` +
+          ` * that import it — TODO: name them here. A class defined here is absent from\n` +
+          ` * every other webview bundle, and an element using it there renders raw with\n` +
+          ` * no error anywhere.\n *\n` +
+          ` * Moved out of custom-spectrum.css by the CSS migration\n` +
+          ` * (.rptc/plans/css-architecture-migration), with the comment above each rule.\n` +
+          ` * Verbatim otherwise: a move is only correct when the visual diff is empty.\n */\n\n`;
     const existing = existsSync(targetPath) ? readFileSync(targetPath, 'utf8') : '';
 
     // A feature that has never had a stylesheet has no styles/ directory yet.
@@ -266,11 +379,15 @@ function cmdMove(prefix, target) {
     // Target FIRST, source second. If the target write fails, the god file is
     // untouched and nothing is lost — which is what happened during this script's
     // own self-test, and is the reason the order is stated rather than incidental.
-    writeFileSync(targetPath, header + existing + (existing ? '\n' : '') + taken.join('\n\n') + '\n');
+    writeFileSync(
+        targetPath,
+        mergeAdjacentLayerBlocks(header + existing + (existing ? '\n' : '') + taken.join('\n\n') + '\n')
+    );
     writeFileSync(godPath, remaining);
 
     console.log(`moved ${rules.length} rule(s) .${prefix}-* -> ${target}`);
     console.log(`cascade layers preserved: ${layersSeen.map((l) => l || '(unlayered)').join(', ')}`);
+    console.log(`${withDocs} of ${rules.length} rule(s) travelled with the comment block above them`);
     console.log(`\nNOT DONE YET. This changed counts, not pixels. Before committing:`);
     console.log(`  1. import ${target} from the entry/entries whose components use .${prefix}-*`);
     console.log(`  2. capture -> rebuild -> re-capture -> diff  (webview-visual-baseline)`);
@@ -509,6 +626,58 @@ function cmdSelfTest() {
     const iRes = classifyMentions('intflow', fragment);
     check('I-dangling-fragment-is-refused', iRes.dangling.length === 1 && iRes.owned.length === 0,
         `owned ${iRes.owned.length}, foreign ${iRes.foreign.length}, dangling ${iRes.dangling.length}`);
+
+    // J: a comment DIRECTLY above a rule is part of it, so a move takes both.
+    const withDoc = ['/* why this rule exists */', '.a-thing {', '    color: red;', '}'].join('\n');
+    const j = readRules(withDoc);
+    check('J-adjacent-comment-attaches', j.length === 1 && j[0].docStart === 0 && j[0].start === 1,
+        `docStart ${j[0]?.docStart}, start ${j[0]?.start}`);
+
+    // K: a blank line breaks the attachment. A block up there is as likely to be a
+    //    section banner over several families as documentation of this one rule.
+    const gapped = ['/* a section banner */', '', '.a-thing {', '    color: red;', '}'].join('\n');
+    const k = readRules(gapped);
+    check('K-blank-line-breaks-attachment', k.length === 1 && k[0].docStart === k[0].start,
+        `docStart ${k[0]?.docStart}, start ${k[0]?.start}`);
+
+    // L: an INDENTED comment block still attaches, and a TRAILING comment on the
+    //    previous line does not. Both are the `commentLines` line-start bug, which
+    //    is why doc attachment uses its own detector.
+    const indented = ['.prev { color: red; /* trailing note */ }', '    /* real doc */', '.a-thing {', '    color: blue;', '}'].join('\n');
+    const l = readRules(indented);
+    const target = l.find((r) => r.prefix === 'a');
+    check('L-indented-doc-attaches-trailing-note-does-not',
+        !!target && target.docStart === 1 && target.start === 2,
+        `docStart ${target?.docStart}, start ${target?.start}`);
+
+    // M: appending to a sheet that already has an `@layer theme` block yields ONE
+    //    block, not two — and two blocks of the same name with a rule between them
+    //    are left alone, because merging those would move that rule in the cascade.
+    const twoBlocks = '@layer theme {\n.a { color: red; }\n}\n\n@layer theme {\n.b { color: blue; }\n}\n';
+    const merged = mergeAdjacentLayerBlocks(twoBlocks);
+    const separated = '@layer theme {\n.a { color: red; }\n}\n.mid { color: green; }\n@layer theme {\n.b { color: blue; }\n}\n';
+    check('M-adjacent-layer-blocks-merge',
+        (merged.match(/@layer theme \{/g) || []).length === 1 &&
+        merged.includes('.a {') && merged.includes('.b {') &&
+        (mergeAdjacentLayerBlocks(separated).match(/@layer theme \{/g) || []).length === 2,
+        `merged ${(merged.match(/@layer theme \{/g) || []).length}, separated ${(mergeAdjacentLayerBlocks(separated).match(/@layer theme \{/g) || []).length}`);
+
+    // N: a block comment containing a BLANK LINE attaches WHOLE. The line-based
+    //    walk this replaced stopped at the blank line, left `/*` behind in the
+    //    source file and moved the tail — which parses as CSS and silently kills
+    //    the rules after it. 48 elements moved before the visual diff caught it.
+    const withBlank = [
+        '/* First paragraph of the reason.',
+        '',
+        '   Second paragraph, after a blank line. */',
+        '.a-thing {',
+        '    color: red;',
+        '}',
+    ].join('\n');
+    const n = readRules(withBlank);
+    check('N-blank-line-inside-a-comment-does-not-split-it',
+        n.length === 1 && n[0].docStart === 0 && n[0].start === 3,
+        `docStart ${n[0]?.docStart}, start ${n[0]?.start}`);
 
     // D: the CONTROL on the controls — a deliberately broken expectation must FAIL,
     //    or all of the above could be passing vacuously.

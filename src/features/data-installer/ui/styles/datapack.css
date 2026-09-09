@@ -1,11 +1,29 @@
 /**
- * datapack styles.
+ * .datapack-* styles — the datapack card and its choosing variant.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by TWO entries: `dataInstaller`
+ * (ui/index.tsx) and `wizard`, which renders the same card on the Datapacks step
+ * inside the Commerce area.
+ *
+ * These rules were in custom-spectrum's UNLAYERED carve-out and are emitted
+ * unlayered here, which is the layer preservation working in the other direction.
  *
  * Moved out of custom-spectrum.css by the CSS migration
- * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
- * when the visual diff is empty, so the rules are not edited on the way.
+ * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
 
+/* ==========================================================================
+   Datapack card — SHARED, and here for that reason.
+
+   It lives in two webviews: the Data Installer panel's catalog and the wizard's
+   sample-data sub-step. Feature-scoped stylesheets are imported by one entry
+   only (data-installer.css by the panel's index.tsx), so a card styled there
+   renders unstyled anywhere else — the same rule that put db-drawer-* here.
+   ========================================================================== */
+/* ===========================================
+   Datapack card
+   =========================================== */
 .datapack-card {
     display: flex;
     flex-direction: column;
@@ -28,6 +46,8 @@
     border-color: var(--spectrum-global-color-gray-400);
 }
 
+/* A fixed 16:9 band so every card in a row shares a baseline whatever its art
+   is — covers, thumbnails and letter tiles all differ in intrinsic size. */
 .datapack-card-art {
     position: relative;
     width: 100%;
@@ -98,6 +118,9 @@
     color: var(--spectrum-global-color-gray-600);
 }
 
+/* The choosing variant. The card is a radio when a `selected` prop is passed;
+   this is what being the chosen one looks like. Mirrors the wizard's other
+   selection cards rather than inventing a second selected treatment. */
 .datapack-card.is-selected {
     border-color: var(--spectrum-global-color-blue-500);
     background: var(--spectrum-global-color-gray-75);

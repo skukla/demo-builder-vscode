@@ -1,12 +1,19 @@
 /**
- * project styles.
+ * .project-card-* and .project-row-* styles — the cards on the Projects list.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `projectsList` entry ALONE
+ * (ui/index.tsx). Verified at the move: 41 rules reach that bundle and zero reach
+ * the other seven.
  *
  * Moved out of custom-spectrum.css by the CSS migration
- * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
- * when the visual diff is empty, so the rules are not edited on the way.
+ * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
 
 @layer theme {
+/* ===========================================
+   Project Card Styles
+   =========================================== */
 .project-card {
     padding: 16px !important;
     background: var(--spectrum-global-color-gray-100) !important;
@@ -21,6 +28,7 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
+/* Polished project card - matches welcome-action-card pattern */
 .project-card-polished {
     background: var(--spectrum-global-color-gray-100) !important;
     border-radius: 8px !important;
@@ -50,6 +58,7 @@
     outline-offset: 2px !important;
 }
 
+/* Compact project card - Demo System Next design (domino shape) */
 .project-card-compact {
     background: var(--spectrum-global-color-gray-100) !important;
     border-radius: 8px !important;
@@ -76,6 +85,7 @@
     outline-offset: 2px !important;
 }
 
+/* Card header - Dark area with icon (slightly darker than content) */
 .project-card-header {
     background: var(--spectrum-global-color-gray-100) !important;
     padding: 24px 16px !important;
@@ -86,6 +96,7 @@
     border-bottom: 1px solid var(--spectrum-global-color-gray-400) !important;
 }
 
+/* Card content - Slightly lighter area with metadata */
 .project-card-content {
     padding: 12px 16px !important;
     display: flex !important;
@@ -94,6 +105,7 @@
     background: var(--spectrum-global-color-gray-75) !important;
 }
 
+/* Option A: Row-based list - Spectrum aligned */
 .project-row-list {
     display: flex !important;
     flex-direction: column !important;
@@ -138,6 +150,7 @@
     color: var(--spectrum-global-color-gray-900) !important;
 }
 
+/* Component summary - secondary text between name and status */
 .project-row-components {
     font-size: 12px !important;
     color: var(--spectrum-global-color-gray-500) !important;
@@ -146,6 +159,7 @@
     margin-left: 4px !important;
 }
 
+/* Status gets wizard label treatment - uppercase */
 .project-row-status {
     font-size: 11px !important;
     color: var(--spectrum-global-color-gray-600) !important;
@@ -157,6 +171,7 @@
     color: var(--spectrum-global-color-gray-500) !important;
 }
 
+/* Option C: Simplified cards (no dark header) */
 .project-card-simple {
     background: var(--spectrum-global-color-gray-100) !important;
     border-radius: 8px !important;
@@ -191,6 +206,10 @@
     color: var(--spectrum-global-color-gray-600) !important;
 }
 
+/* ===========================================
+   Project Card Spectrum Style
+   Aligns with wizard component-card patterns
+   =========================================== */
 .project-card-spectrum {
     background: var(--spectrum-global-color-gray-50) !important;
     border-radius: 8px !important;
@@ -235,6 +254,7 @@
     outline-offset: 2px !important;
 }
 
+/* Typography - name stays similar */
 .project-card-spectrum-name {
     /* Match .brand-card-name (15px) so the project card title reads at the same scale. */
     font-size: 15px !important;
@@ -243,6 +263,7 @@
     line-height: 1.3 !important;
 }
 
+/* Typography - component summary */
 .project-card-spectrum-components {
     font-size: 12px !important;
     /* Match .brand-card-description (gray-600) — the package card's description tone. */
@@ -255,6 +276,7 @@
        card's slack belongs below them. */
 }
 
+/* Typography - status gets wizard label treatment */
 .project-card-spectrum-status {
     font-size: 11px !important;
     color: var(--spectrum-global-color-gray-600) !important;
@@ -262,6 +284,9 @@
     letter-spacing: 0.5px !important;
 }
 
+/* ===========================================
+   ProjectCard Styles
+   =========================================== */
 .project-card-wrapper {
     position: relative !important;
     cursor: pointer !important;
@@ -288,6 +313,7 @@
     font-size: 11px !important;
 }
 
+/* Template card selected state - matches component-card-selected pattern */
 .project-card-spectrum.template-card-selected,
 .project-card-spectrum[data-selected="true"] {
     background: var(--spectrum-global-color-blue-100) !important;

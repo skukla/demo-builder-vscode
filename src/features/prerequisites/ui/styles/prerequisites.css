@@ -1,9 +1,16 @@
 /**
- * prerequisite styles.
+ * .prerequisite-* and .progress-* styles.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `wizard` entry ALONE — the only one
+ * whose graph reaches PrerequisitesStep.
+ *
+ * TWO FAMILIES, one sheet. `.progress-*` was appended here rather than given a
+ * sheet of its own; four rules do not earn a file, and that is what keeps this
+ * migration from ending in forty single-family stylesheets.
  *
  * Moved out of custom-spectrum.css by the CSS migration
- * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
- * when the visual diff is empty, so the rules are not edited on the way.
+ * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
 
 @layer theme {
@@ -85,10 +92,15 @@
     margin-left: 20px !important;
 }
 
+/* Prerequisite item spacing */
 .prerequisite-item-spacing {
     margin-bottom: 8px !important;
 }
 
+/* ===========================================
+   Smooth Transitions for Prerequisites
+   =========================================== */
+/* Smooth transitions for all prerequisite elements */
 .prerequisite-item * {
     transition: opacity 0.3s ease, transform 0.3s ease !important;
 }
@@ -97,12 +109,14 @@
     transition: opacity 0.3s ease !important;
 }
 
+/* Message text transitions */
 .prerequisite-message,
 .prerequisite-description,
 .prerequisite-title {
     transition: opacity 0.2s ease, color 0.3s ease !important;
 }
 
+/* Status icon transitions */
 .prerequisite-item svg {
     transition: opacity 0.3s ease, transform 0.2s ease, color 0.3s ease !important;
 }
@@ -111,10 +125,12 @@
     transition: min-height 0.3s ease, padding 0.3s ease !important;
 }
 
+/* Smooth transitions for conditional content */
 .prerequisite-content > div {
     transition: all 0.3s ease !important;
 }
 
+/* Ensure smooth transitions for dynamically added content */
 .prerequisite-item [role="progressbar"],
 .prerequisite-item .progress-bar-small-label {
     animation: fadeInUp 0.3s ease;
@@ -128,6 +144,7 @@
     animation: fadeIn 0.2s ease;
 }
 
+/* Smooth install button transitions */
 .prerequisite-item button {
     transition: opacity 0.3s ease, transform 0.2s ease !important;
 }
@@ -139,9 +156,8 @@
 .prerequisite-item {
     will-change: transform;
 }
-}
 
-@layer theme {
+/* Progress bar customizations */
 .progress-bar-small-label [class*="spectrum-ProgressBar-label"] {
     font-size: 12px !important;
     font-weight: 400 !important;
@@ -157,6 +173,7 @@
     width: 100% !important;
 }
 
+/* Progress bar spacing */
 .progress-bar-spacing {
     margin-bottom: 8px !important;
 }

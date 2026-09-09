@@ -1,20 +1,35 @@
 /**
- * brand styles.
+ * .brand-* and .expandable-* styles — the demo-package cards on the Welcome step.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `wizard` entry ALONE — the only one
+ * whose graph reaches BrandGallery or WelcomeStep.
+ *
+ * TWO FAMILIES, one sheet, and they belong together: `.expandable-brand-card` IS a
+ * brand card. They were moved in one commit under the belief that they could not be
+ * split, which was wrong (see that commit's correction in the ledger) — but the
+ * shared home is right either way.
  *
  * Moved out of custom-spectrum.css by the CSS migration
- * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
- * when the visual diff is empty, so the rules are not edited on the way.
+ * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
 
 @layer theme {
+/* Brand section container */
 .brand-section {
     margin-bottom: 24px !important;
 }
 
+/* Base brand card - expandable variant */
+/* Demo Setup renders BrandGallery in a SingleColumnLayout whose padding is an INLINE
+   style (24px). !important overrides just the top to size-400 (32px) so its content
+   starts at the same inset below the header as every other flow step; sides/bottom keep
+   the layout's default 24px. */
 .brand-gallery-column {
     padding-top: var(--spectrum-global-dimension-size-400) !important;
 }
 
+/* Brand card header area */
 .brand-card-header {
     margin-bottom: 0 !important;
 }
@@ -40,6 +55,9 @@
     line-height: 1.4 !important;
 }
 
+/* Architecture options section (inside expanded card) slides + fades down on expand.
+ * Its own keyframe (was a second `fadeIn` definition that the later plain `fadeIn`
+ * silently shadowed — so this slide never actually ran; renamed to restore it). */
 .brand-card-architectures {
     animation: fadeInDown var(--db-motion-base) var(--db-motion-ease) !important;
 }
@@ -52,6 +70,9 @@
     margin-bottom: 12px !important;
 }
 
+/* Compact selection summary in expanded brand card */
+/* A quiet secondary line — no divider / uppercase micro-label — so the package card's
+   architecture summary reads in the same tone as the backend card's description. */
 .brand-card-selection {
     margin-top: 6px !important;
     animation: fadeIn 0.2s ease-out !important;
@@ -84,6 +105,7 @@
     color: var(--spectrum-global-color-gray-900) !important;
 }
 
+/* Hover tooltip for block library details */
 .brand-card-detail-trigger {
     position: relative !important;
     /* Inline on the architecture summary line (was a block below it). */
@@ -119,6 +141,7 @@
     display: block !important;
 }
 
+/* Edit hint for expanded card */
 .brand-card-edit-hint {
     display: block !important;
     font-size: 11px !important;
@@ -127,9 +150,10 @@
     opacity: 0.7 !important;
     transition: opacity 0.15s ease !important;
 }
-}
 
-@layer theme {
+/* Self-reflowing CSS grid (mirrors .projects-grid / .selector-grid above): the
+   browser fits as many 220px-min columns as the container allows with zero JS.
+   `align-items: start` so an expanded card doesn't stretch its row-mates. */
 .expandable-brand-grid {
     display: grid !important;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
@@ -166,12 +190,14 @@
     outline-offset: 2px !important;
 }
 
+/* Selected state - brand chosen, shows blue border */
 .expandable-brand-card.selected {
     border-color: var(--spectrum-global-color-blue-400) !important;
     outline: 2px solid var(--spectrum-global-color-blue-400) !important;
     outline-offset: 2px !important;
 }
 
+/* Expanded state - shows architecture selection */
 .expandable-brand-card.expanded {
     background: var(--spectrum-global-color-gray-50) !important;
     border-color: var(--spectrum-global-color-blue-400) !important;
@@ -186,6 +212,7 @@
     box-shadow: none !important;
 }
 
+/* Dimmed state - other cards when one is expanded */
 .expandable-brand-card.dimmed {
     opacity: 0.5 !important;
     transform: none !important;

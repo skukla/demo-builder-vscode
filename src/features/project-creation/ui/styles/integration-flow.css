@@ -1,12 +1,20 @@
 /**
- * int styles.
+ * .int-* styles — the integration RESULTS list on the wizard's Integrations step.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `wizard` entry ALONE — the only one
+ * whose graph reaches IntegrationsStep.
+ *
+ * NOT the Add Integration modal. That journey is `.intflow-*`, which is still in
+ * custom-spectrum.css and reaches two entries; the filename predates the split and
+ * is wider than what the sheet holds.
  *
  * Moved out of custom-spectrum.css by the CSS migration
- * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
- * when the visual diff is empty, so the rules are not edited on the way.
+ * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
 
 @layer theme {
+/* ---- Center column: the result-row list + Add launchpad ---- */
 .int-results {
     display: flex;
     flex-direction: column;
@@ -14,10 +22,13 @@
     max-width: 720px;
 }
 
+/* Empty state escapes the row-width cap so it centers in the full view. */
 .int-results--empty {
     max-width: none;
 }
 
+/* Empty state: one centered unit (title, copy, Add button) filling the view —
+   a left-anchored fragment in the dark expanse reads as unfinished. */
 .int-results-empty {
     display: flex;
     flex-direction: column;
@@ -50,6 +61,10 @@
     margin-top: 4px;
 }
 
+/* ---- The surface's ONE destination line, above the cards ---- */
+/* Was repeated on every row while always printing the same project/workspace.
+   `DestinationContext` supplies the value + Change; this rule only lays the
+   label beside it. */
 .int-destination {
     display: flex;
     align-items: center;
@@ -68,6 +83,12 @@
     font-style: italic;
 }
 
+/* ---- The wizard's integration cards ----
+   The card itself is `.integration-card`, shared with the dashboard's
+   integrations page (core/ui/components/integrations) — do NOT restyle it here,
+   or the two surfaces drift apart again. This column only stacks them: the
+   dashboard lays the same cards out on a grid, which does not fit inside
+   `.int-results`' 720px cap. */
 .int-results > .integration-card {
     width: 100%;
     /* Drop the grid's reserved height. `--card-min-height` (128px) exists so
@@ -79,6 +100,8 @@
     min-height: 0;
 }
 
+/* The subline is prose here, not a status pair, so it keeps the muted
+   statusline metrics without the dot's leading gap. */
 .int-results > .integration-card .integration-card-statusline {
     font-size: var(--spectrum-global-dimension-font-size-75);
     color: var(--spectrum-global-color-gray-600);

@@ -91,6 +91,14 @@ runs of one build agree on all 168 cells. **A false positive is the failure mode
 that makes an instrument worse than none**, because the response to it is to revert
 correct work.
 
+**Web Animations are pinned too, not only CSS ones (2026-09-09).** The CSS freeze
+cannot reach an animation started through `element.animate()` — no stylesheet
+declares it, so no `!important` outranks it. `capture.js` has always pinned those
+through the harness's `window.__FREEZE__`; this did not, and one sidebar tile kept
+drifting a colour channel or two between runs of the same build after the
+transition freeze had removed every other disagreement. `__FREEZE__` is now called
+at mount AND before every read, because forcing a state can start an animation.
+
 **`assertForcingWorks` is the control and it is not optional.** If no element
 responds to a forced state, either CDP never reached the page or the surface did
 not mount — and a clean interaction diff would then mean nothing at all. It throws
@@ -201,6 +209,35 @@ instrument that reports clean while seeing nothing.
    `requestId`, so **no request was ever answered** and every one timed out
    silently — surfaces still rendered from their init payloads, so it looked
    fine. A broken reply path presents as a slow surface.
+
+## Parse-compare the sheets before spending a browser run
+
+A CSS edit that is "only comments" can still be invalid, and an invalid sheet does
+not fail loudly — the browser drops the rules it cannot parse and everything else
+renders. On 2026-09-09 a comment-relocation pass cut two block comments in half;
+the orphaned tails became CSS, Chrome dropped `.dashboard-status-badges` and
+`.dashboard-status-capabilities-link`, and 48 elements moved. Brace counts
+balanced, `tsc` and the whole jest suite were green, and the file looked right in a
+diff.
+
+Parse both versions of every touched sheet and compare the rules, which takes
+seconds and names the missing selector:
+
+```js
+const flatten = (css) => {
+  const s = new CSSStyleSheet(); s.replaceSync(css);
+  const out = []; const walk = (rules, layer) => { for (const r of rules) {
+    if (r.cssRules) { walk(r.cssRules, r.name !== undefined ? `@layer ${r.name}` : layer); continue; }
+    out.push((layer || '') + ' :: ' + (r.cssText || '').replace(/\s+/g, ' '));
+  } }; walk(s.cssRules, ''); return out;
+};
+// A.filter(x => !B.includes(x)) must be empty, and B.filter(x => !A.includes(x)) too.
+```
+
+Serve `git show HEAD:<file>` and the working copy next to the harness as `.txt`
+and read them through the page. This is a PRE-CHECK, not a replacement: it proves
+the sheet still says the same thing, not that the cascade still resolves the same
+way across sheets.
 
 ## Fixtures
 

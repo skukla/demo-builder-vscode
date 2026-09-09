@@ -1,11 +1,17 @@
 /**
- * eventing styles.
+ * .eventing-* styles — the Eventing section on the integrations surface.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `integrations` entry ALONE
+ * (ui/integrationsSurface/index.tsx). EventingSection lives under that surface, so
+ * the dashboard and aiOverview entries in the SAME feature do not get this sheet —
+ * feature ownership and bundle reach are different questions.
  *
  * Moved out of custom-spectrum.css by the CSS migration
- * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
- * when the visual diff is empty, so the rules are not edited on the way.
+ * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
 
+/* ── Eventing section (AB-6 headful) — integrations surface ─────────────── */
 .eventing-section {
     margin-top: 16px;
     border-top: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.2));

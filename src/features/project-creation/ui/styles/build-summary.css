@@ -1,9 +1,12 @@
 /**
- * sum styles.
+ * .sum-* styles — the cross-area summary column in Build Your Project.
+ *
+ * FEATURE-SCOPED (ADR-017 §6). Imported by the `wizard` entry ALONE — the only one
+ * whose graph reaches BuildYourProjectSummary.
  *
  * Moved out of custom-spectrum.css by the CSS migration
- * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
- * when the visual diff is empty, so the rules are not edited on the way.
+ * (.rptc/plans/css-architecture-migration), each rule with the comment above it.
+ * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
 
 @layer theme {
@@ -51,6 +54,7 @@
     border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
 }
 
+/* Left group: the shared small CheckmarkCircle (done only) + the row label. */
 .sum-rowlabel {
     display: flex !important;
     align-items: center !important;

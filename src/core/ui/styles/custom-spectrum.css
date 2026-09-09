@@ -248,7 +248,6 @@ button[class*="spectrum-Button"][disabled],
 }
 
 
-/* Progress bar customizations */
 
 
 
@@ -1021,7 +1020,6 @@ button[class*="spectrum-Button"][disabled],
     min-width: 100px !important;
 }
 
-/* Brand section container */
 
 /* Small loading spinner size */
 .loading-spinner-small {
@@ -1056,7 +1054,6 @@ button[class*="spectrum-Button"][disabled],
     margin-bottom: 4px !important;
 }
 
-/* Progress bar spacing */
 
 /* Description block with bottom margin */
 .description-block {
@@ -1080,7 +1077,6 @@ button[class*="spectrum-Button"][disabled],
     padding-bottom: 16px !important;
 }
 
-/* Prerequisite item spacing */
 
 /* ===========================================
    Projects Dashboard Specific
@@ -1180,25 +1176,14 @@ button[class*="spectrum-Button"][disabled],
  * Expandable Brand Cards
  * ======================================== */
 
-/* Self-reflowing CSS grid (mirrors .projects-grid / .selector-grid above): the
-   browser fits as many 220px-min columns as the container allows with zero JS.
-   `align-items: start` so an expanded card doesn't stretch its row-mates. */
-
-/* Base brand card - expandable variant */
-/* Demo Setup renders BrandGallery in a SingleColumnLayout whose padding is an INLINE
-   style (24px). !important overrides just the top to size-400 (32px) so its content
-   starts at the same inset below the header as every other flow step; sides/bottom keep
-   the layout's default 24px. */
 
 
 
 
-/* Selected state - brand chosen, shows blue border */
-
-/* Expanded state - shows architecture selection */
 
 
-/* Dimmed state - other cards when one is expanded */
+
+
 
 
 
@@ -1213,7 +1198,6 @@ button[class*="spectrum-Button"][disabled],
     letter-spacing: 0.3px;
 }
 
-/* Brand card header area */
 
 
 
@@ -1221,9 +1205,6 @@ button[class*="spectrum-Button"][disabled],
 /* .brand-card-check retired — replaced by the shared .selection-check-corner. */
 
 
-/* Architecture options section (inside expanded card) slides + fades down on expand.
- * Its own keyframe (was a second `fadeIn` definition that the later plain `fadeIn`
- * silently shadowed — so this slide never actually ran; renamed to restore it). */
 
 @keyframes fadeInDown {
     from {
@@ -1273,9 +1254,6 @@ button[class*="spectrum-Button"][disabled],
 
 
 
-/* Compact selection summary in expanded brand card */
-/* A quiet secondary line — no divider / uppercase micro-label — so the package card's
-   architecture summary reads in the same tone as the backend card's description. */
 
 @keyframes fadeIn {
     from { opacity: 0; }
@@ -1284,13 +1262,11 @@ button[class*="spectrum-Button"][disabled],
 
 
 
-/* Hover tooltip for block library details */
 
 
 
 
 
-/* Edit hint for expanded card */
 
 
 /* Picker dropdown menu: prevent item text wrapping, ensure items fit content */
@@ -1716,12 +1692,7 @@ button[class*="spectrum-Button"][disabled],
     outline: none !important;
 }
 
-/* Dashboard status header - middle layer between header and content for depth */
 
-/* The band is ambient context, not content — it should not claim the vertical
-   space of a section header. Scoped to this header rather than changed on
-   `.page-header-section`, which the projects dashboard and integrations screen
-   also use for their real titles. */
 
 /* Integrations band, context row: "Deploys to <project> · <workspace>  Change".
    Rides the END of SearchHeader's count row, which is space-between and has an
@@ -1749,7 +1720,6 @@ button[class*="spectrum-Button"][disabled],
 /* AI badge + its capabilities link on one line. The link was a standalone row
    beneath the badges, which cost the band a whole row to say one thing. */
 
-/* Match the height of the Projects List search header so content aligns */
 
 /* Dashboard action-tile geometry. Only the tile size + inter-cluster gaps are
    tokens now — the dashboard no longer derives a bespoke content width. Every
@@ -1764,54 +1734,15 @@ button[class*="spectrum-Button"][disabled],
        so they read as two distinct groups rather than one row of four. */
 }
 
-/* Status header spans the standard content band (its padded container), badges
-   left-aligned with the title; the inner flex pushes "All Projects" to the right
-   edge — a header-row pattern (content left, action right). */
-
-/* Dashboard status — the badge row plus the "View AI Capabilities" link below it. */
-
-/* Badges STACKED one per line (2026-07-09, reversing the earlier inline row):
-   mixed-length statuses read as a scannable column. */
-/* STACKED, deliberately. The column came in on 2026-07-09 so the values line
-   up — "READY" and "ADOBE DEMO SYSTEM" starting at the same x — which is what
-   lets two facts read as a scannable pair rather than a sentence.
-
-   A stale markup comment claimed the opposite ("a single horizontal row…
-   instead of stacking") and briefly got this flattened to a row to match. Wrong
-   direction: the comment predated the column and was the thing out of date.
-   Both say stacked now.
-
-   The height to save here is PADDING, not rows — see the scoped
-   `.page-header-section` override above. Pinned by
-   tests/features/dashboard/ui/components/DashboardStatusHeader-layout.test.ts,
-   which reads this stylesheet because jsdom resolves no layout. */
-
-/* Each badge is a self-contained inline unit: dot · label · value (· action). */
-
-/* Fixed label column so the stacked badges' VALUE texts align vertically.
-   80px clears the widest label (FRONTEND/API MESH/IMS ORG at 11px uppercase);
-   scoped to the masthead stack — other StatusCard uses keep natural widths. */
-
-/* "View AI Capabilities" on its own line, indented to the status column so it
-   reads as a continuation of the AI row above it rather than a new fact.
-
-   102px = the dot (6px at StatusCard size="S" — see getSizeInPixels) + the
-   .status-row gap (8) + the reserved label column (80) + gap (8), i.e. exactly
-   where "READY" starts. An earlier 104 used 8px for the dot, which is the size
-   "M" value.
-
-   This replaced a min-width reservation on the AI row's status text. That could
-   not work: the link followed the StatusCard, and the Regenerate remediation
-   renders INSIDE that card, after the status text — so an unhealthy AI badge
-   displaced the link no matter how much room the text was given. Taking the link
-   out of the row removes the coupling instead of padding around it. */
-
-/* Dashboard status badges - match card grid style */
 
 
 
-/* Dashboard grid - left-align the stacked action zones so their left edge
-   matches the project title and status badges above. */
+
+
+
+
+
+
 
 /* Org-mismatch banner — a dark, accent-bordered warning card that matches the
    dashboard's bordered-tile attention idiom (cf. the Delete tile's accent
@@ -1890,99 +1821,36 @@ button[class*="spectrum-Button"][disabled],
     margin-right: 6px;
 }
 
-/* Stacked, labeled rows + isolated delete footer. No fixed width — the zones
-   take their intrinsic content width and sit left within the standard band (a
-   compact action cluster); the delete divider spans that cluster, not the band. */
-
-/* The action row lays its groups (Primary + Storefront + Build) side by side.
-   Wraps only if the viewport is too narrow. Inter-group gap EQUALS the tile
-   gap (2026-07-09): with the zone headings gone, the row reads as one even
-   strip — grouping semantics are not communicated visually. */
 
 
-/* Each zone lays its tiles out in a horizontal row, wrapping only if the
-   row runs out of width. Flex (not auto-fit grid) because the parent is
-   fit-content — an auto-fit grid with no width target collapses to a single
-   column (tiles stack vertically). */
+
 
 /* Destructive overflow-menu entry (Delete lives at the bottom of "More"). */
 .menu-item-destructive {
     color: var(--spectrum-global-color-red-600) !important;
 }
 
-/* AI Capabilities — ONE scroll region for everything beneath the modal
-   heading (MCP servers + skills together); the modal frame never resizes.
-   Replaces the skills-only inner scroll, which felt like a nested widget. */
 
-/* A PERSISTENT scrollbar. macOS paints overlay scrollbars only while you are
-   scrolling, so a bounded region at rest looks like a complete list — which is
-   how 10 of 21 skills went missing with nothing to suggest more existed.
-   Nothing else in this app styles a scrollbar; this is the first.
-   A bar rather than a bottom fade: a static fade keeps promising more content
-   after you have reached the end, and making it honest needs scroll-position
-   state for something a scrollbar already says. */
 
-/* Sections stack full-width; the SKILLS GROUPS are what run in two columns
-   (see .ai-skills-scroll). Putting the columns around the two sections was the
-   first attempt and barely helped — skills is the tall section, so a 3-row MCP
-   list beside a 21-row skills list takes the height from 3 + 21 to max(3, 21):
-   three rows saved, not half. */
 
-/* Section heading (MCP servers / Skills) — the level ABOVE a group header.
-   Both used to be 12px, differing only in colour, so "section > group > names"
-   existed in the comments and not on screen. */
-/* `!important` because this lands on Spectrum `Heading`/`Text`, which ship their
-   own single-class rules — a tie on specificity that source order decides, and
-   Spectrum wins it. The three utilities this replaced (.text-sm,
-   .font-semibold, .text-gray-800) all carried it for the same reason, as do
-   167 of the 238 font declarations in this file. Dropping it silently reverted
-   the heading to Spectrum's own size, which is how this shipped looking
-   unchanged the first time. */
 
-/* The skills GROUPS run in two columns — this is what stops the list cutting
-   itself off. With 21 skills a single column ended mid-group at `sync-changes`
-   and everything after it sat below a fold that macOS overlay scrollbars never
-   advertise: the heading said 21, the eye saw 11.
 
-   Whole groups are the unit, so a header never separates from its own skills.
-   `minmax(0, 1fr)` rather than `1fr` so a long name shrinks its track instead of
-   pushing the grid wider than the dialog; `align-items: start` keeps a short
-   group from stretching to match a tall neighbour. */
 
-/* Sticky group headers — deliberately QUIETER than the "Skills · N installed"
-   section heading above them: sentence case (caps read as emphasis regardless
-   of size), small, muted. Hierarchy: section > group > names. They pin to the
-   top of the scroll region while their group's skills scroll under. */
-
-/* ===========================================
-   Dashboard Action Buttons - Spectrum Style
-   Matches project-card-spectrum patterns
-   =========================================== */
 
 /* Labels clamp to two lines so a long label can never stretch a tile past its
    square (the aspect-ratio is the uniform height; content overflow beats it). */
 
-/* Scale icons proportionally to the smaller tile */
 
 /* Tile label — smaller to fit the compact tile. Wraps to multiple lines
    instead of truncating with an ellipsis (Spectrum's Text otherwise clips
    long labels like "Open in Browser" / "Manage Commerce"). */
 
-/* Hero accent — emphasize the top-tier actions (Start/Stop, Open, AI).
-   A modifier class, NOT a Spectrum variant, to keep the icon-over-label tile look. */
 
 
 
 
 
 
-/* Prevent internal Spectrum elements from showing their own hover states.
- *
- * Exempts status indicators: this suppresses Spectrum's own hover fills, but it
- * matched EVERY descendant, and an indicator whose colour IS its background got
- * blanked to transparent — so the integrations dot vanished on the one gesture a
- * user makes right before clicking through to check on it. Any future dot needs
- * the same exemption, hence the shared `.tile-status-dot` marker. */
 
 /* Sidebar provider - use Spectrum gray-75 for consistency */
 /* The sidebar's scroll container.
@@ -2206,36 +2074,26 @@ button[class*="spectrum-Button"][disabled],
     cursor: not-allowed !important;
 }
 
-/* ===========================================
-   Project Card Styles
-   =========================================== */
-
-
-/* Polished project card - matches welcome-action-card pattern */
 
 
 
-/* Compact project card - Demo System Next design (domino shape) */
 
 
 
-/* Card header - Dark area with icon (slightly darker than content) */
 
-/* Card content - Slightly lighter area with metadata */
+
+
 
 /* ===========================================
    Projects Dashboard Layout Prototypes
    =========================================== */
 
-/* Option A: Row-based list - Spectrum aligned */
 
 
 
 
 
-/* Component summary - secondary text between name and status */
 
-/* Status gets wizard label treatment - uppercase */
 
 
 /* Option B: Button grid (matches dashboard action buttons) */
@@ -2253,24 +2111,16 @@ button[class*="spectrum-Button"][disabled],
 
 
 
-/* Option C: Simplified cards (no dark header) */
 
 
 
 
 
-/* ===========================================
-   Project Card Spectrum Style
-   Aligns with wizard component-card patterns
-   =========================================== */
 
 
 
-/* Typography - name stays similar */
 
-/* Typography - component summary */
 
-/* Typography - status gets wizard label treatment */
 
 /* ===========================================
    Selection Summary Styles
@@ -2376,9 +2226,6 @@ button[class*="spectrum-Button"][disabled],
     color: var(--spectrum-global-color-gray-700) !important;
 }
 
-/* ===========================================
-   ProjectCard Styles
-   =========================================== */
 
 
 
@@ -2523,22 +2370,10 @@ button[class*="spectrum-Button"][disabled],
 
 
 
-/* Two-column row used by skills + tool entries — name + badge on
-   the left, description on the right, with the left column
-   vertically centered against the (often taller) description. */
-
-/* AI surface sidebar (right-column) — constrained sidebar width so the
-   CTA + text reads as a sidebar, not a full-page banner. */
-
-/* AI surface content fade — mirrors the wizard's
-   .list-refresh-container.refreshing pattern (200ms opacity fade
-   + pointer-events: none) so the user gets a visible "data is
-   refreshing" cue without toast notifications or button spinners. */
 
 
-/* AI prompt card (Batch E2) — clickable card in the AI Overview sidebar
-   that launches Claude Code with the prompt pre-filled. Subtle outline,
-   rounded corners, hover state. Matches the wizard's existing aesthetic. */
+
+
 
 
 
@@ -2735,13 +2570,8 @@ button[class*="spectrum-Button"][disabled],
     flex-shrink: 0;
 }
 
-/* ===========================================
-   Smooth Transitions for Prerequisites
-   =========================================== */
-/* Smooth transitions for all prerequisite elements */
 
 
-/* Message text transitions */
 
 /* Progress bar entrance/exit animations */
 [class*="spectrum-ProgressBar"] {
@@ -2765,15 +2595,12 @@ button[class*="spectrum-Button"][disabled],
     transition: width 0.3s ease !important;
 }
 
-/* Status icon transitions */
 
 /* Prevent jarring height changes */
 
-/* Smooth transitions for conditional content */
 
 /* Note: .animate-fade-in and @keyframes fadeIn defined in utility section above */
 
-/* Ensure smooth transitions for dynamically added content */
 
 /* Smooth text content updates */
 
@@ -2784,7 +2611,6 @@ button[class*="spectrum-Button"][disabled],
     animation: fadeIn 0.3s ease;
 }
 
-/* Smooth install button transitions */
 
 /* Prevent layout shift during transitions */
 
@@ -3055,7 +2881,6 @@ div[class*="spectrum"] input[type="search"] {
     box-shadow: 0 0 0 2px var(--spectrum-global-color-blue-400) !important;
 }
 
-/* Template card selected state - matches component-card-selected pattern */
 
 
 .template-card-name {
@@ -3723,7 +3548,6 @@ div[class*="spectrum"] input[type="search"] {
 .commerce-summary-content {
     max-width: 280px !important;
 }
-/* Left group: the shared small CheckmarkCircle (done only) + the row label. */
 /* Completion feedback: the shared ✓ renders only when a row is done, so it mounts
  * on completion and this pop fires once — a subtle reward as each sub-step lands.
  * Zeroed under the global prefers-reduced-motion reset. */
@@ -3788,24 +3612,8 @@ div[class*="spectrum"] input[type="search"] {
  * stage body only reserves height so stage swaps don't jump the footer.
  * ------------------------------------------------------------------------ */
 
-/* ---- Center column: the result-row list + Add launchpad ---- */
-/* Empty state escapes the row-width cap so it centers in the full view. */
-/* Empty state: one centered unit (title, copy, Add button) filling the view —
-   a left-anchored fragment in the dark expanse reads as unfinished. */
 
-/* ---- The surface's ONE destination line, above the cards ---- */
-/* Was repeated on every row while always printing the same project/workspace.
-   `DestinationContext` supplies the value + Change; this rule only lays the
-   label beside it. */
 
-/* ---- The wizard's integration cards ----
-   The card itself is `.integration-card`, shared with the dashboard's
-   integrations page (core/ui/components/integrations) — do NOT restyle it here,
-   or the two surfaces drift apart again. This column only stacks them: the
-   dashboard lays the same cards out on a grid, which does not fit inside
-   `.int-results`' 720px cap. */
-/* The subline is prose here, not a status pair, so it keeps the muted
-   statusline metrics without the dot's leading gap. */
 
 /* ---- Flow modal: stage body + per-stage layouts ---- */
 /* The 360px min-height that used to live here reserved stage height so
@@ -4851,21 +4659,6 @@ div[class*="spectrum"] input[type="search"] {
     min-height: 0;
 }
 
-/* ==========================================================================
-   Datapack card — SHARED, and here for that reason.
-
-   It lives in two webviews: the Data Installer panel's catalog and the wizard's
-   sample-data sub-step. Feature-scoped stylesheets are imported by one entry
-   only (data-installer.css by the panel's index.tsx), so a card styled there
-   renders unstyled anywhere else — the same rule that put db-drawer-* here.
-   ========================================================================== */
-/* ===========================================
-   Datapack card
-   =========================================== */
-
-
-/* A fixed 16:9 band so every card in a row shares a baseline whatever its art
-   is — covers, thumbnails and letter tiles all differ in intrinsic size. */
 
 
 
@@ -4875,11 +4668,9 @@ div[class*="spectrum"] input[type="search"] {
 
 
 
-/* The choosing variant. The card is a radio when a `selected` prop is passed;
-   this is what being the chosen one looks like. Mirrors the wizard's other
-   selection cards rather than inventing a second selected treatment. */
 
-/* ── Eventing section (AB-6 headful) — integrations surface ─────────────── */
+
+
 
 
 /* ============================================
