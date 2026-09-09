@@ -586,12 +586,19 @@ check says so and names the file.
 > Enforced by `.claude/hooks/rules/31-registry-dir.rule`, which lists the directory's
 > contents at the moment you create the file.
 
-> **Convention.** A component's own style block styles that component only.
-> *Why:* a component that reaches out to style its neighbours makes both un-moveable, and
-> the styling then depends on where the definer happens to be mounted.
-> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by the
-> `styleBlockLeaks` ledger in `tests/sop/webview-architecture-rules.exemptions.json` —
-> thirteen predate the rule and the set may only shrink.
+> **Convention.** A webview component defines no CSS in a `<style>` block. Its styles go
+> in a stylesheet.
+> *Why:* a class defined in a style block exists only while that component is MOUNTED, so
+> anyone else using it gets the styling on some screens and not others, with no error
+> anywhere. `.text-red-500` was exactly that — the error icon on the Adobe sign-in step
+> rendered colourless because the component that defined red was not on screen. The
+> weaker version of this rule banned only SHARING a block's classes, which left that
+> hazard in place; the ban replaced it on 2026-09-09 once the last two blocks were gone
+> (five of their six rules were byte-identical to copies already in a sheet, and the
+> sixth was used by nothing).
+> [ADR-018](../architecture/adr/018-css-architecture.md) · Enforced by
+> `tests/sop/stylesheet-bundles.test.ts`. Standalone `<!DOCTYPE html>` pages are out of
+> scope — they load none of our sheets, so a block is the only styling they can have.
 
 > **Convention.** Utility classes live in the overrides layer, not scattered through
 > component sheets.

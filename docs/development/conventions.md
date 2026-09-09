@@ -103,7 +103,7 @@ it means the rule rests on somebody noticing.
 | A CSS class used in a bundle is styled by that bundle. |  |  | `stylesheet-bundles.test.ts` |
 | Before writing a new UI component, check whether the shared vocabulary already has it. |  |  | `30-reuse-first.rule` |
 | Before adding a file to a curated directory, read what is already in it. |  |  | `31-registry-dir.rule` |
-| A component's own style block styles that component only. | [ADR](../architecture/adr/018-css-architecture.md) |  | `styleBlockLeaks` ledger |
+| A webview component defines no CSS in a `<style>` block. Its styles go in a stylesheet. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts` |
 | Utility classes live in the overrides layer, not scattered through component sheets. | [ADR](../architecture/adr/018-css-architecture.md) |  | `inline-styles.test.ts` |
 | Styling reaches Spectrum through `UNSAFE_className` and the `cn()` helper, not through style objects. |  |  | `inline-styles.test.ts` |
 | Class names are not assembled dynamically beyond a small ceiling. |  |  | `dynamicClassSiteCeiling` ledger |

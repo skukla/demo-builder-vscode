@@ -541,9 +541,9 @@ button[class*="spectrum-Button"][disabled],
 
    .text-red-500 did exist, but only inside VerifiedField's inline <style>
    block, so it applied wherever that component happened to be mounted and
-   nowhere else. AdobeAuthStep uses it on the auth-failure icon and never gets
-   it. Defining it here makes it real everywhere and leaves the inline copy
-   harmlessly redundant. */
+   nowhere else. AdobeAuthStep uses it on the auth-failure icon and never got
+   it. Defining it here made it real everywhere; the inline copy was deleted
+   with the rest of that block on 2026-09-09, when style blocks were banned. */
 @layer theme {
 .text-orange-700 {
     color: var(--spectrum-global-color-orange-700);

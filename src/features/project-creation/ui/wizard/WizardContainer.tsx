@@ -454,29 +454,6 @@ export function WizardContainer({
                     )}
                 </div>
             </div>
-
-            <style>{`
-                /* In the theme layer like every other rule we own — a style block outside a
-                   layer outranks every layered sheet, and nobody chose that. */
-                @layer theme {
-                .step-content {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-                
-                .step-content.transitioning {
-                    opacity: 0;
-                }
-                
-                .step-content.transitioning.forward {
-                    transform: translateX(-20px);
-                }
-                
-                .step-content.transitioning.backward {
-                    transform: translateX(20px);
-                }
-                }
-            `}</style>
         </View>
     );
 }

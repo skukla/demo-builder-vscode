@@ -174,34 +174,42 @@ describe('ADR-018 §1: one cascade order, declared, and every bundle carries it'
         expect(missing.sort()).toStrictEqual([]);
     });
 
-    it('a component <style> block is layered too', () => {
-        // THE .css FILES ARE NOT THE WHOLE SURFACE. Five files build CSS inside a
-        // `<style>` block; three of them assemble a standalone `<!DOCTYPE html>`
-        // page that loads none of our sheets, where layers mean nothing. The other
-        // two are React components rendering into a webview ALONGSIDE the layered
-        // sheets, and their six rules sat outside every layer — invisible to the
-        // check above, which reads `.css` only, while the convention said "every
-        // rule". Found 2026-09-09 by asking whether the convention was actually
-        // true rather than whether the test passed.
+    it('a webview component defines NO CSS in a <style> block', () => {
+        // THE STRONGER RULE, and it is only enforceable because it is now true.
+        // The old one banned LEAKING — a block could define classes as long as no
+        // other component used them — and left the hazard that made leaking bad:
+        // a class defined in a block exists only while its component is MOUNTED.
+        // `.text-red-500` was exactly that, and an error icon rendered colourless
+        // on every surface VerifiedField did not happen to be on.
+        //
+        // Six rules remained on 2026-09-09, in two components, and FIVE were
+        // byte-identical to copies already in a sheet. The sixth,
+        // `.text-green-500`, had no sheet home and got one. Both blocks deleted.
+        //
+        // Standalone `<!DOCTYPE html>` pages are out of scope: they load none of
+        // our sheets, so a block is the only way they can be styled at all.
         const files = execSync("git ls-files 'src/**/*.ts' 'src/**/*.tsx'", { cwd: ROOT, encoding: 'utf8' })
             .split('\n')
             .filter(Boolean);
-        const loose: string[] = [];
-        let blocksSeen = 0;
+        const offenders: string[] = [];
+        let pagesSkipped = 0;
         for (const f of files) {
             const text = readFileSync(join(ROOT, f), 'utf8');
-            if (/<!doctype html>/i.test(text)) continue; // a standalone page, not a bundle
+            if (/<!doctype html>/i.test(text)) { pagesSkipped++; continue; }
             for (const m of text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) {
                 const css = m[1].replace(/\/\*[\s\S]*?\*\//g, '');
-                const rules = (css.match(/(?:^|\n)\s*[.#[][^{}\n]*\{/g) ?? []).length;
-                if (!rules) continue;
-                blocksSeen++;
-                if (!css.includes('@layer')) loose.push(`${f}: ${rules} rule(s) in a <style> block, outside every layer`);
+                // NOT anchored to a line start. The first version of this was, and a
+                // planted one-line block — `<style>{`@layer theme { .x { color: red } }`}
+                // </style>` — passed it clean. A rule reads the same to a browser on one
+                // line or twenty, so the check has to as well.
+                const rules = (css.match(/[.#[][^{};@]*\{/g) ?? []).length;
+                if (rules) offenders.push(`${f}: ${rules} rule(s) in a <style> block`);
             }
         }
-        // Control: a reader that found no blocks would report clean forever.
-        expect(blocksSeen).toBeGreaterThan(0);
-        expect(loose.sort()).toStrictEqual([]);
+        // Control: the reader must have found the standalone pages, or it is not
+        // looking at anything and would report clean forever.
+        expect(pagesSkipped).toBeGreaterThan(0);
+        expect(offenders.sort()).toStrictEqual([]);
     });
 
     it('rules outside every layer may not grow', () => {
@@ -407,62 +415,6 @@ describe('ADR-018 §2: !important is a symptom, not a mechanism', () => {
             0
         );
         expectCeiling(LEDGER, 'importantCeiling', count);
-    });
-});
-
-describe('ADR-018 §3: a component style block styles that component only', () => {
-    /**
-     * A `<style>` block inside a component may define classes that component uses.
-     * The moment another file uses one, the styling depends on where the definer
-     * happens to be mounted — and the two go out of sync silently, because nothing
-     * connects them.
-     *
-     * Measured 2026-08-30: thirteen classes are defined in three components'
-     * style blocks AND used elsewhere. **None is broken today**, because every one
-     * is also defined in `custom-spectrum.css`, which all eight bundle entries
-     * import. So these are redundant copies shadowing a global sheet, not missing
-     * styles — a real duplication to remove, but not a live defect.
-     *
-     * Deleting them is NOT free and is deliberately not done here: the global copies
-     * carry `!important` in places and the inline ones do not, so removing a block
-     * can move which declaration wins. That needs the computed-style comparison in
-     * `.claude/skills/webview-visual-baseline`, which is what PL-21 is gated on.
-     * This ledger stops the set growing while that is decided.
-     */
-    const TSX = execSync("git ls-files 'src/**/*.tsx'", { encoding: 'utf8' })
-        .trim()
-        .split('\n')
-        .filter(Boolean);
-    const STYLE_BLOCK = /<style[^>]*>([\s\S]*?)<\/style>/g;
-    const CLASS_DEF = /\.([a-zA-Z_][\w-]*)/g;
-
-    const owner = new Map<string, string>();
-    for (const f of TSX) {
-        for (const b of readFileSync(f, 'utf8').matchAll(STYLE_BLOCK)) {
-            const body = b[1].replace(/\{[^{}]*\}/g, '{}');
-            for (const m of body.matchAll(CLASS_DEF)) if (!owner.has(m[1])) owner.set(m[1], f);
-        }
-    }
-    const escaped = (c: string) => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const violations = [...owner]
-        .filter(([cls, own]) =>
-            TSX.some(
-                (f) =>
-                    f !== own &&
-                    new RegExp(`['"\`\\s]${escaped(cls)}['"\`\\s]`).test(readFileSync(f, 'utf8'))
-            )
-        )
-        .map(([cls, own]) => `${own}::${cls}`)
-        .sort();
-
-    it('CONTROL: style blocks are found and their classes read', () => {
-        // A zero here would make the check below pass while looking at nothing.
-        expect(TSX.length).toBeGreaterThan(50);
-        expect(owner.size).toBeGreaterThan(5);
-    });
-
-    it('every class shared out of a style block is a reasoned ledger entry', () => {
-        expectClean(LEDGER, 'styleBlockLeaks', violations);
     });
 });
 

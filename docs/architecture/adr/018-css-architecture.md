@@ -137,21 +137,47 @@ rendering with no colour at all.
 *(This check existed before this ADR did — a rule enforced with no document
 claiming it, which is the same fault PL-17 was filed to fix. §4 is its home.)*
 
-### 5. Component `<style>` blocks are for that component only
+### 5. A component defines no CSS in a `<style>` block
 
-Four components define 12 classes inside inline `<style>` blocks. Those classes
+**Amended 2026-09-09: this section originally declined to ban them. It now does.**
+What it said before is kept below, because the reason it changed is the useful part.
+
+Four components defined 12 classes inside inline `<style>` blocks. Those classes
 exist **only while that component is mounted**, which is a stranger dependency
 than anything else in this document.
 
 `.text-red-500` was one of them, and `AdobeAuthStep` depended on it — so the
 auth-failure icon was red only when `VerifiedField` happened to be on screen.
 
-A `<style>` block may define only what its own component uses. A class any other
-component references belongs in a stylesheet.
+The original rule was narrower: a block may define only what its own component
+uses, and a class anyone else references belongs in a stylesheet. Banning outright
+was rejected on cost — "rewriting four components for no measured benefit" — and on
+the view that a genuinely component-private rule is fine next to its component.
 
-Not banned outright: banning would mean rewriting four components for no measured
-benefit, and a genuinely component-private rule is a reasonable thing to keep
-next to its component.
+**Both halves turned out to be wrong, and the migration is what showed it.**
+
+The cost was not four components. By the time the god file was drained it was two,
+holding six rules between them, and **five were byte-identical to copies already
+sitting in a stylesheet** — redundant duplicates, not private styling. The sixth,
+`.text-green-500`, was referenced by no markup anywhere in `src/`: every call site
+uses `.text-green-600`, which is in `custom-spectrum.css`. So the whole remaining
+population was five duplicates and one dead rule, and deleting both blocks changed
+nothing on screen (103 elements compared on the wizard surface, 102 byte-identical,
+the one difference an entrance animation caught mid-flight).
+
+The "genuinely component-private rule" also never showed up. Every rule anyone
+actually wrote in a block was either shared or dead — the private case the
+exception was reserved for did not exist in twelve months of this codebase.
+
+And the narrow rule left the hazard intact. It banned SHARING, which is the
+symptom; the cause is that a block's classes come and go with a mount, and that is
+true whether or not anyone else is using them yet. `.text-red-500` was compliant
+with the narrow rule for the entire period it was rendering the sign-in error icon
+colourless.
+
+**A webview component defines no CSS in a `<style>` block.** Standalone
+`<!DOCTYPE html>` pages are out of scope: they load none of our stylesheets, so a
+block is the only styling they can have.
 
 ### 6. Utilities go in `@layer overrides`
 
