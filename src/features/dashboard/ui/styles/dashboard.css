@@ -1,0 +1,203 @@
+/**
+ * dashboard styles.
+ *
+ * Moved out of custom-spectrum.css by the CSS migration
+ * (.rptc/plans/css-architecture-migration). Verbatim: a move is only correct
+ * when the visual diff is empty, so the rules are not edited on the way.
+ */
+
+@layer theme {
+.dashboard-status-header {
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
+    margin-bottom: 12px !important;
+}
+
+.dashboard-status-header .page-header-section {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+}
+
+.dashboard-status-header > div {
+    min-height: 122px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.dashboard-status-content {
+    width: 100%;
+    margin: 0;
+}
+
+.dashboard-status-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    /* Was 8px to separate the badge stack from the capabilities-link row below
+       it. Both are gone — the link moved onto the AI badge line and the badges
+       onto one row — so this now only ever spaces the single badge line from the
+       org-mismatch notice, which appears on mismatch only. */
+    gap: 4px !important;
+}
+
+.dashboard-status-badges {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    row-gap: 4px !important;
+}
+
+.dashboard-status-badges .status-row {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+.dashboard-status-badges .status-label {
+    min-width: 80px !important;
+}
+
+.dashboard-status-capabilities-link {
+    margin-left: 102px !important;
+    font-size: 12px !important;
+}
+
+.dashboard-status-badge .status-label,
+.dashboard-status-badge .status-text {
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+.dashboard-status-badge .status-label {
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+}
+
+.dashboard-status-badge .status-text {
+    color: var(--spectrum-global-color-gray-600) !important;
+}
+
+.dashboard-grid-container {
+    display: flex;
+    justify-content: flex-start;
+    padding: 8px; /* Shadow overflow padding */
+}
+
+.dashboard-zones {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: fit-content;
+}
+
+.dashboard-zone-row {
+    display: flex;
+    flex-flow: row wrap;
+    gap: var(--dashboard-tile-gap);
+    align-items: flex-start;
+}
+
+.dashboard-zone-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dashboard-zone-grid {
+    display: flex;
+    flex-flow: row wrap;
+    gap: var(--dashboard-tile-gap);
+}
+
+.dashboard-action-button {
+    /* Base - lighter background matching cards */
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+
+    /* Smoother transition matching cards */
+    transition: all 0.3s ease !important;
+
+    /* Layout — compact square tiles (icon over label) */
+    text-align: center !important;
+    width: var(--dashboard-tile-size) !important;
+    height: auto !important;
+    aspect-ratio: 1 / 1 !important; /* Square buttons */
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 6px !important;
+    cursor: pointer !important;
+}
+
+.dashboard-action-button .icon-label {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.dashboard-action-button svg {
+    width: 20px !important;
+    height: 20px !important;
+}
+
+.dashboard-action-button .icon-label {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere !important;
+}
+
+.dashboard-action-button--hero {
+    background: var(--spectrum-global-color-blue-100) !important;
+    border-color: var(--spectrum-global-color-blue-400) !important;
+}
+
+.dashboard-action-button--hero:hover,
+.dashboard-action-button--hero:focus {
+    background: var(--spectrum-global-color-blue-200) !important;
+    border-color: var(--spectrum-global-color-blue-500) !important;
+}
+
+.dashboard-action-button--hero svg,
+.dashboard-action-button--hero .icon-label {
+    color: var(--spectrum-global-color-blue-700) !important;
+}
+
+.dashboard-action-button:hover,
+.dashboard-action-button:focus {
+    /* Layered depth matching cards */
+    background: var(--spectrum-global-color-gray-75) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+
+    /* Lift animation matching cards */
+    transform: translateY(-2px) !important;
+
+    /* Shadow matching cards */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+
+    outline: none !important;
+}
+
+.dashboard-action-button:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+.dashboard-action-button:hover *:not(.tile-status-dot),
+.dashboard-action-button:focus *:not(.tile-status-dot) {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+.dashboard-action-button .icon-label {
+    font-size: 12px !important;
+    margin-top: 8px !important;
+}
+}

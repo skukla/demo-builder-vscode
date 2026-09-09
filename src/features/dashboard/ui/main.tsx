@@ -22,6 +22,9 @@ import '@/core/ui/styles/custom-spectrum.css';
 // .ai-* rules, moved out of custom-spectrum.css by the CSS migration. Three
 // entries reach a component using them, so all three import it.
 import './styles/ai.css';
+// .dashboard-* rules, moved out of custom-spectrum.css by the same migration.
+// This is the ONLY entry whose graph reaches a component using them.
+import './styles/dashboard.css';
 
 // Get root element
 const container = document.getElementById('root');
