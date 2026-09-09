@@ -440,3 +440,5 @@ WHAT THIS LEAVES. The layer fix is correct in principle — unlayered normal bea
 - 2026-09-09  refactor(css): the shared Modal leaves, and the last stranded comments go with it (`fa58dd61c`)
 - 2026-09-09  refactor(css): the integration card family leaves, and the follow-ups join the work list (`43fb533a7`)
 - 2026-09-09  feat(tooling): the work list is computed, not written down (`8da30f396`)
+- 2026-09-09  feat(css): ADR-018 step 3 begins — Spectrum layered, sidebar only (`19f092ea8`)
+- 2026-09-09  fix(css): three sheets shipped a rule the browser throws away (`47159f69b`)
