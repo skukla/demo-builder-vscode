@@ -79,6 +79,18 @@ const before = await mod.exports.captureInteractions(page, { base: BASE });
 mod.exports.assertForcingWorks(before);   // NEVER skip this
 ```
 
+**Transitions are frozen before any state is forced (2026-09-09).** Forcing a
+pseudo-class changes which rules match instantly, but a transitioned property takes
+its duration to arrive — so `getComputedStyle` returns whatever value the animation
+is at, and the fingerprint becomes a function of how long the previous `await` took.
+Two runs of the SAME bundle disagreed about `sidebar|0`, and a correct
+`.dashboard-*` move was reported as changing `dashboard|7` at focus and active: the
+captured values were about 10% and 0% through a 200ms lift. `captureInteractions`
+now injects `transition: none !important` after the surface has mounted, and two
+runs of one build agree on all 168 cells. **A false positive is the failure mode
+that makes an instrument worse than none**, because the response to it is to revert
+correct work.
+
 **`assertForcingWorks` is the control and it is not optional.** If no element
 responds to a forced state, either CDP never reached the page or the surface did
 not mount — and a clean interaction diff would then mean nothing at all. It throws

@@ -65,11 +65,44 @@ const STATES = ['hover', 'focus', 'active'];
 /** A real surface never has zero interactive elements; zero means it did not mount. */
 const MIN_INTERACTIVE = 1;
 
+/**
+ * Kill transitions before forcing anything.
+ *
+ * `CSS.forcePseudoState` changes which rules match INSTANTLY; a transitioned
+ * property then takes its duration to arrive, and `getComputedStyle` reads
+ * whatever value the animation happens to be at. So the fingerprint of a
+ * transitioned element is a function of how long the previous await took — the
+ * same build compared against itself moves.
+ *
+ * Measured 2026-09-09, on the .dashboard-* migration cycle: two runs of the SAME
+ * bundle disagreed about `sidebar|0` (background rgb(0,0,0) vs rgb(1,1,1)), and a
+ * clean move was reported as changing `dashboard|7` at focus and active — the
+ * captured values were ~10% and ~0% through a 200ms lift. Re-measured with the
+ * transition disabled, all 36 dashboard cells were byte-identical across the move.
+ * A false positive is the one failure mode that makes an instrument worse than
+ * none, because the response to it is to revert correct work.
+ *
+ * Unlayered `!important` so it beats our layered rules (ADR-018's own trap), and
+ * `transition` is not one of the properties captured, so removing it cannot hide
+ * a real change.
+ */
+const FREEZE_TRANSITIONS = `
+    *, *::before, *::after {
+        transition: none !important;
+        animation: none !important;
+    }
+`;
+
 async function captureInteractions(page, { surfaces = SURFACES, base, theme = 'dark', width = 1280 } = {}) {
     const out = {};
     for (const surface of surfaces) {
         await page.goto(`${base}/h.html?b=${surface}&t=${theme}&cb=${Date.now()}${Math.random()}`);
         await page.waitForTimeout(3500);
+
+        // AFTER the surface has mounted and settled, not before: freezing during
+        // mount would also freeze whatever entrance animation the fixture needs to
+        // finish, and the rest fingerprint would be of a half-arrived surface.
+        await page.addStyleTag({ content: FREEZE_TRANSITIONS });
 
         const cdp = await page.context().newCDPSession(page);
         await cdp.send('DOM.enable');
