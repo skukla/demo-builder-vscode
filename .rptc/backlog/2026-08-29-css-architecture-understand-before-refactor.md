@@ -453,3 +453,4 @@ WHAT THIS LEAVES. The layer fix is correct in principle — unlayered normal bea
 - 2026-09-10  feat(tooling): the fingerprint can see motion, and it found a rule on its first run (`c47686d00`)
 - 2026-09-10  refactor(css): !important goes 1,294 -> 0 (`1a2edfae4`)
 - 2026-09-10  refactor(ui): layout parameters become custom properties, not inline styles (`6d6012884`)
+- 2026-09-10  refactor(ui): the rest of the inline styles — 34 sites down to 12 (`79028c880`)
