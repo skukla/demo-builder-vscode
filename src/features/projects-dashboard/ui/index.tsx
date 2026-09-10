@@ -20,9 +20,19 @@ import type {
 } from '@/types/webviewPayloads';
 
 // Import global styles
+// The base layers. They arrive as REAL imports, in this entry's graph, because
+// that is the only delivery this build resolves. index.css used to pull them in
+// with `@import './reset.css'` — which webpack's css-loader inlined at build
+// time, and which the esbuild plugin that replaced it (580495214, 2026-04-13)
+// passes through as literal text. The browser then tried to fetch them relative
+// to a vscode-webview:// URL and got nothing, so the reset and every design
+// token were absent from all eight bundles for five months. ADR-017 §6 asks for
+// exactly this: a stylesheet belongs to its bundle's GRAPH.
+import '@/core/ui/styles/reset.css';
+import '@/core/ui/styles/tokens.css';
 import '@/core/ui/styles/index.css';
-import '@/core/ui/styles/custom-spectrum.css';
-// .project-card-* and .project-row-* rules, moved out of custom-spectrum.css by
+import '@/core/ui/styles/utilities.css';
+// .project-card-* and .project-row-* rules, moved out of utilities.css by
 // the CSS migration. This is the ONLY entry whose graph reaches a component using
 // them — the family looked cross-cutting on a bare `project-` prefix match, which
 // was catching file paths and prose rather than class names.

@@ -15,7 +15,7 @@
  * at every height, flipping the tiles from a column to a row — 48 elements, and it
  * read as a styling opinion rather than a bug.
  *
- * Moved out of custom-spectrum.css by the CSS migration
+ * Moved out of utilities.css by the CSS migration
  * (.rptc/plans/css-architecture-migration), with the comment above each rule.
  * Verbatim otherwise: a move is only correct when the visual diff is empty.
  */
@@ -95,6 +95,23 @@
     overflow: visible !important;
     text-overflow: clip !important;
     overflow-wrap: anywhere !important;
+    /* Spectrum's ActionButton gives its label `padding: 0 12px 0 7px`, which is
+       sized for a normal button and means nothing inside a 64px square tile. The
+       label is laid out 46px wide, so those 19px have ALWAYS been wrong — under
+       content-box they pushed a 65px box through a 46px slot and `overflow:
+       visible` hid it. When reset.css finally reached the bundles on 2026-09-09
+       and `* { box-sizing: border-box }` began applying, the same 19px came out
+       of the INSIDE instead: 46px of text width became 27px and every tile label
+       wrapped to two lines, growing the panel from 498px to 534px.
+       Zeroing it fixes both the wrap and the overflow that preceded it.
+
+       NO `!important`, and that is the point. Every other declaration in this
+       block carries one because Spectrum's CSS was UNLAYERED and unlayered beats
+       any layer at any specificity. The sidebar is a LAYERED_VENDOR_ENTRIES entry
+       (ADR-018 step 3), so Spectrum now sits in `@layer vendor`, below `theme`,
+       and a plain declaration of ours wins on its own. This is the first rule in
+       the codebase written that way, and it is what step 3 is for. */
+    padding: 0;
 }
 
 .sidebar-action-tile:hover,

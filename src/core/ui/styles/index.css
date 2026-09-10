@@ -5,18 +5,22 @@
 
 /* THE CASCADE ORDER, and the only place it is decided.
    Lowest priority first: vendor < reset < theme < overrides, for NORMAL
-   declarations. `vendor` is declared but EMPTY today — nothing wraps Spectrum's
-   CSS yet — and declaring an empty layer changes nothing about the rules that
-   exist. It is here so the order is stated once and completely, rather than
-   growing a name later and re-deciding precedence by accident.
+   declarations. `vendor` carries Spectrum's own CSS for the entries listed in
+   LAYERED_VENDOR_ENTRIES (esbuild.config.js); the rest still get it unlayered,
+   where it outranks every layer. reset sits BELOW vendor because a reset
+   neutralises the browser, not the component library — see ADR-018 §1.
    Enforced by `layerOrder` in tests/sop/stylesheet-bundles.test.ts, which also
    checks that EVERY bundle carries this line — the sidebar carried none until
    2026-09-09 and took whatever order its graph happened to produce. */
 @layer reset, vendor, theme, overrides;
 
-/* Import design system files */
-@import './reset.css';
-@import './tokens.css';
+/* reset.css and tokens.css are imported by each BUNDLE ENTRY, not from here.
+   They used to be pulled in with `@import` — resolved at build time by webpack's
+   css-loader, and NOT by the esbuild plugin that replaced it, which passes the
+   line through as text for a browser to resolve against a vscode-webview:// URL.
+   It never resolved, so neither sheet reached any bundle between 2026-04-13 and
+   2026-09-09. An import in the entry is visible to the bundler AND to the
+   ADR-017 §6 reach check; an @import inside a stylesheet is visible to neither. */
 
 /* Base styles wrapped in theme layer */
 @layer theme {

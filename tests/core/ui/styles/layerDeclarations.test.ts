@@ -26,12 +26,43 @@ describe('CSS Layer Declarations', () => {
       expect(indexCSS).toContain('@layer reset, vendor, theme, overrides;');
     });
 
-    it('imports reset.css', () => {
-      expect(indexCSS).toMatch(/@import.*reset\.css/);
+    /**
+     * These two used to assert that index.css contained `@import './reset.css'`
+     * and `@import './tokens.css'`. They passed for five months while NEITHER
+     * SHEET REACHED A SINGLE BUNDLE.
+     *
+     * webpack's css-loader inlined those imports at build time. The esbuild
+     * plugin that replaced it (580495214, 2026-04-13) reads each sheet as text
+     * and passes `@import` through untouched, leaving the browser to resolve a
+     * relative URL against a `vscode-webview://` document. It never resolved.
+     * The old assertions checked the TEXT of the mechanism, so they agreed with
+     * the implementation and neither agreed with reality.
+     *
+     * What replaces them checks DELIVERY: every bundle entry imports both sheets
+     * itself, which is what the bundler follows and what ADR-017 §6 requires.
+     */
+    it('every bundle entry imports reset.css and tokens.css itself', () => {
+      // Read the build config as TEXT. `require`-ing it pulls in esbuild, which
+      // throws under this suite's jsdom environment ("Buffer.from('') instanceof
+      // Uint8Array is incorrectly false").
+      const config = readFileSync(resolve(__dirname, '../../../../esbuild.config.js'), 'utf-8');
+      const block = /const WEBVIEW_ENTRIES = \{([\s\S]*?)\n\};/.exec(config);
+      expect(block).not.toBeNull();
+      const entries: string[] = [...(block as RegExpExecArray)[1].matchAll(/'([^']+\.tsx?)'/g)].map(
+        (m) => m[1]
+      );
+      // Control: a mis-resolved list would make the loop below assert nothing.
+      expect(entries.length).toBe(8);
+
+      const missing = entries.filter((e) => {
+        const src = readFileSync(resolve(__dirname, '../../../../', e), 'utf-8');
+        return !src.includes("styles/reset.css'") || !src.includes("styles/tokens.css'");
+      });
+      expect(missing).toStrictEqual([]);
     });
 
-    it('imports tokens.css', () => {
-      expect(indexCSS).toMatch(/@import.*tokens\.css/);
+    it('index.css no longer uses @import — the build cannot resolve it', () => {
+      expect(indexCSS).not.toMatch(/^\s*@import/m);
     });
 
     it('wraps base styles in @layer theme', () => {
@@ -39,14 +70,14 @@ describe('CSS Layer Declarations', () => {
     });
   });
 
-  describe('custom-spectrum.css', () => {
+  describe('utilities.css', () => {
     let customSpectrumCSS: string;
 
     beforeAll(() => {
       customSpectrumCSS = readFileSync(
         resolve(
           __dirname,
-          '../../../../src/core/ui/styles/custom-spectrum.css'
+          '../../../../src/core/ui/styles/utilities.css'
         ),
         'utf-8'
       );

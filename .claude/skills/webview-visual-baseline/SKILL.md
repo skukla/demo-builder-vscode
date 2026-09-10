@@ -315,6 +315,22 @@ Unresolved: why forcing does not take through that session. Until it is, an
 interaction result from this route is unavailable rather than clean, and the
 fallback is the owner hovering the surface in the Extension Development Host.
 
+## `width`/`height` are box-sizing-dependent — a box-model change fakes a diff
+
+`getComputedStyle().height` returns the CONTENT box under `content-box` and the
+BORDER box under `border-box`. So any change that flips `box-sizing` reports every
+padded element as moved, at exactly the padding, while nothing moves on screen.
+
+Measured 2026-09-09, switching on a reset that had not reached the bundles for five
+months: `.sidebar-view` read `498px -> 534px`, and 534 is simply 498 plus its
+`20px/16px` padding. `getBoundingClientRect().height` was **534 in both**, and the
+last tile's `bottom` was **518 in both**.
+
+**Confirm a height/width delta against `getBoundingClientRect()` before believing
+it**, whenever the change could touch the box model. The rect is box-sizing
+independent; the computed style is not. Read the delta first: if it equals the
+element's padding (or border), suspect this before hunting for a layout cause.
+
 ## Known gaps
 
 - **The integrations surface renders differently on a session's FIRST capture.**
