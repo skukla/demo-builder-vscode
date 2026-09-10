@@ -4,7 +4,7 @@ kind: chore
 area: platform
 needs: []
 value: high
-status: built
+status: shipped
 parent: PL-30
 ---
 
@@ -229,3 +229,4 @@ is the current reference for the four-control pattern.
 - 2026-09-09  fix(css): every rule is in a layer now — the ratchet closed to 0 the day it shipped (`7848f1d16`)
 - 2026-09-09  feat(css): the cascade order is declared, carried by every bundle, and enforced (`e13f4caf1`)
 - 2026-09-10  docs(handbook): the last unenforced convention is enforced — 96 of 96 (`b304e7a2f`)
+- 2026-09-10  2026-09-10  SHIPPED: its user is the build. 109 conventions, all enforced; the last one (vendor CSS in the lowest layer) went in at b304e7a2f and has run on every gate since.

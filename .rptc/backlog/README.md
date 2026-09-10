@@ -312,14 +312,14 @@ each item's own file; what has already landed against an item is in its
 | `PL-13` | chore | └ [ADR-015 convergence — empty the exemption ledger](2026-08-28-adr-015-convergence.md) | — | high | shipped |
 | `PL-19` | fix | └ [The sidebar is the only webview not using the shared client](2026-08-29-sidebar-converge-on-webview-client.md) | — | med | shipped |
 | `PL-20` | fix | └ [19 classes a component asks for that nothing styles](2026-08-29-triage-classes-defined-nowhere.md) | — | med | shipped |
-| `PL-21` | question | └ [CSS: understand it, then get a safety net, then rule on it — refactor last, if at all](2026-08-29-css-architecture-understand-before-refactor.md) | — | high | active |
+| `PL-21` | question | └ [CSS: understand it, then get a safety net, then rule on it — refactor last, if at all](2026-08-29-css-architecture-understand-before-refactor.md) | — | high | built |
 | `PL-26` | feature | └ [A glossary, so the agent describes things back in our words](project-glossary.md) | — | med | active |
 | `PL-27` | question | └ [Is any of our 37 skills doing a job a check should hold?](skills-vs-enforcement-layer.md) | — | low | open |
 | `PL-29` | epic | └ [Track 2 — documentation synthesis, and every document enforced](doc-synthesis-track.md) | PL-11 | high | active |
 | `PL-31` | chore | └ [Retire the 43 re-export index files, module by module](2026-08-31-core-barrels-are-not-curated.md) | — | med | shipped |
-| `PL-33` | chore | └ [Every convention is enforced, or it stops being a convention](2026-08-31-every-convention-enforced.md) | — | high | built |
+| `PL-33` | chore | └ [Every convention is enforced, or it stops being a convention](2026-08-31-every-convention-enforced.md) | — | high | shipped |
 | `PL-34` | chore | └ [Every open finding from the 2026-09-01 toolchain day, in one list](2026-09-01-cast-and-builder-worklog.md) | — | high | shipped |
-| `PL-54` | fix | └ [The nudge rules cover two file shapes; reinvention happens in more than two](2026-09-10-agent-nudge-coverage.md) | — | high | built |
+| `PL-54` | fix | └ [The nudge rules cover two file shapes; reinvention happens in more than two](2026-09-10-agent-nudge-coverage.md) | — | high | shipped |
 | `PL-37` | chore | [The webview handshake's `stateVersion` is write-only](2026-09-02-webview-state-version-dead.md) | — | low | backlog |
 | `PL-38` | chore | [Our two most-mocked modules are faked 122 different ways](2026-09-02-webviewclient-mock-divergence.md) | — | med | shipped |
 | `PL-39` | chore | [An item can be marked done while its own body says what is left](2026-09-02-finished-items-carrying-remainders.md) | — | med | backlog |

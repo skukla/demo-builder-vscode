@@ -4,7 +4,7 @@ kind: fix
 area: platform
 needs: []
 value: high
-status: built
+status: shipped
 parent: PL-30
 ---
 
@@ -83,3 +83,4 @@ that actually happened on 2026-09-10.
 - 2026-09-10  2026-09-10  Proofs for all 4 nudge rules + 6 new rules (32-37), each with a stated convention
 - 2026-09-10  2026-09-10  All 13 gaps closed — 25 rules, every one proved; 109 conventions
 - 2026-09-10  2026-09-10  All 13 gaps routed: 25 rules, 25 proofs, 109 conventions (46a737d6e)
+- 2026-09-10  2026-09-10  SHIPPED: its user is the agent, and the rules fired in real use the day they landed — 31 and 32 on the new enforcer, 42 on the daLive edit, 49 on the god file.

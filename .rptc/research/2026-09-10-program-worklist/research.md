@@ -1,9 +1,11 @@
 # The work list, remade — 2026-09-10
 
-Rebuilt after a full pass over the program. 114 backlog items: **55 shipped, 55
-unfinished, 3 dropped, 1 superseded.** This ranks the 55 against what was actually
-measured rather than against how they were filed, and three of them turn out to be
-finished.
+Rebuilt after a full pass over the program. 114 backlog items. Ranked against what
+was actually measured rather than against how they were filed — which moved three of
+them, though not all in the same direction: **two were finished and said otherwise,
+one had never reached a user and said it had.**
+
+After the pass: **57 shipped, 53 unfinished, 3 dropped, 1 superseded.**
 
 The program is **14 active days old** (ADR-015/016 ratified 2026-08-28), 1,574
 commits. Repo state right now: **1,555 suites · 29,351 tests · 0 errors · 13
@@ -11,16 +13,27 @@ warnings**, all thirteen `max-lines` in the judgement tier and none blocking CI.
 
 ---
 
-## Tier 0 — done, and the record should say so (3)
+## Tier 0 — resolved: two shipped, one demoted (3)
 
-Each is `active`/`built` with nothing left. `shipped` is a human call, so these are
-recommendations, not changes.
+**Resolved 2026-09-10, and they did not all land the same way.** `shipped` means
+done AND USED. The check that decided it: the last release is **v1.0.0-beta.145,
+cut 2026-08-28** — before this entire program — and **1,628 commits sit on develop
+unreleased**, all 46 CSS commits among them.
 
-| item | why it is finished |
+So the question is who each one's USER is:
+
+- **PL-33 and PL-54 → shipped.** Their user is the build and the agent, and both
+  have been used heavily since landing. PL-54's rules fired four times in real work
+  the day they went in.
+- **PL-21 → `built`, not shipped.** Its user is an SC, and no SC has seen it. Every
+  phase of its sequence is complete and the fingerprint is clean, but user-facing
+  CSS that has never been in front of a user is exactly what `built` is for.
+
+| item | verdict |
 |---|---|
-| **PL-21** CSS | Every ratchet is at its terminal value: `!important` **0**, inline styles **0/0**, unlayered rules **0**, feature-rules-in-global-sheet **0**, `vendorLayerBundles` **8 of 8**. Interaction states measured at 168 cells; 33 moved, none a regression. It is a `question` — "understand it, then get a safety net, then rule on it" — and ADR-018 is the answer. |
-| **PL-33** every convention enforced | The last unenforced one — vendor CSS in the lowest cascade layer — was enforced 2026-09-10, once PL-21 made it TRUE rather than aspirational. **109 conventions, all 109 enforced.** |
-| **PL-54** nudge-rule coverage | All 13 routing gaps closed. **25 hook rules, 25 proofs**, every rule naming a stated convention. |
+| **PL-33** every convention enforced | **SHIPPED.** The last unenforced one — vendor CSS in the lowest cascade layer — went in at `b304e7a2f` once PL-21 made it TRUE rather than aspirational, and has run on every gate since. **109 conventions, all 109 enforced.** |
+| **PL-54** nudge-rule coverage | **SHIPPED.** All 13 routing gaps closed; **25 hook rules, 25 proofs**, every rule naming a stated convention. Four of them fired in real work the day they landed. |
+| **PL-21** CSS | **DEMOTED active → built.** Every ratchet is terminal — `!important` **0**, inline styles **0/0**, unlayered **0**, `vendorLayerBundles` **8 of 8**, 168 interaction cells with no regression — and its five-step sequence is complete. But it ships CSS to an SC, and no SC has run it. |
 
 ---
 
@@ -60,7 +73,7 @@ it safe to do slowly.
 
 ---
 
-## Tier 2 — built, waiting on use (3)
+## Tier 2 — built, waiting on use (4)
 
 `built` means code landed and nobody has used it. Only a person closes these.
 
@@ -69,6 +82,7 @@ it safe to do slowly.
 | **AB-7** *(high, and it is a real defect)* | `remove_integration` reports success while leaving deployed code running in the Runtime namespace. The manifest goes clean; the code does not. **This one is user-facing and silent** — it should be verified before anything in Tier 3. |
 | **PL-14** ADR-016 enforcement tooling | Seven artifacts built; waiting to be lived with. |
 | **EDS-12** reset parity | Resetting the same EDS project does less from the dashboard than from the projects list. Two code paths, one job. |
+| **PL-21** CSS *(joined from Tier 0)* | Needs a release cut, or an owner pass in the Extension Development Host: hover and focus on the layered surfaces, sidebar tile labels, terminal output on a light theme, the Manage APIs list. |
 
 ---
 
@@ -118,7 +132,10 @@ only because they are mis-filed rather than unimportant:
 
 1. **AB-7** — verify it. It is a shipped defect that reports success, and everything
    else here is internal.
-2. **Close Tier 0** — three items whose record disagrees with reality.
+2. **Cut a release.** This is the finding underneath Tier 0 and it applies to
+   everything: 1,628 commits and 46 CSS commits sit on develop, and the last tag is
+   from before the program started. Nothing user-facing from these 14 days has
+   reached anyone.
 3. **EDS-8, one file per block** — start with `daLiveContentCopy`'s three remaining
    seams, then `dashboardHandlers`. The ratchet holds the line between sessions.
 4. **PL-42** then **PL-50** — both are reads over lists that already exist, and PL-50

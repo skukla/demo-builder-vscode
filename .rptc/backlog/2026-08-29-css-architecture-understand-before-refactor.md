@@ -4,7 +4,7 @@ kind: question
 area: platform
 needs: []
 value: high
-status: active
+status: built
 title: CSS has no architecture and no safety net — understand it before changing any of it
 parent: PL-30
 ---
@@ -456,3 +456,4 @@ WHAT THIS LEAVES. The layer fix is correct in principle — unlayered normal bea
 - 2026-09-10  refactor(ui): the rest of the inline styles — 34 sites down to 12 (`79028c880`)
 - 2026-09-10  refactor(css): no component writes CSS through a style object any more (`882035540`)
 - 2026-09-10  fix(tooling): the harness proves it is the harness, instead of asking you to (`d37ca2f0a`)
+- 2026-09-10  2026-09-10  NOT shipped: every phase of its sequence is complete and the fingerprint is clean, but the last release is beta.145 (2026-08-28) and all 46 CSS commits are unreleased. This is user-facing CSS that no SC has seen. Stays 'built' until a release cut or an owner pass in the Extension Development Host.
