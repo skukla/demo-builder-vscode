@@ -224,7 +224,7 @@ each item's own file; what has already landed against an item is in its
 | `AI-7` | question | [Unattended teardown consent — how does a commissioned journey get to zero?](2026-08-28-unattended-teardown-consent.md) | — | med | shipped |
 | `AI-8` | question | [Audit our context files against what the research actually says](2026-08-29-context-file-audit-against-evidence.md) | — | high | backlog |
 
-### eds  (13)
+### eds  (12)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
@@ -235,7 +235,6 @@ each item's own file; what has already landed against an item is in its
 | `EDS-5` | feature | [Block authoring has no oracle — the type scale exists and nothing points at it](2026-08-13-block-authoring-has-no-type-scale-oracle.md) | _field feedback — the next authored block, or the next 'fonts too small' report_ | med | gated |
 | `EDS-6` | fix | [Bodea's shared catalogs assign identical categories — catalog-driven menus cannot be demoed](2026-08-17-bodea-shared-catalogs-are-undifferentiated.md) | _owner decision on which catalog-differentiation approach to take; the unattended re-measure is also blocked on a machine-scoped data-installer setting absent from the isolated dev-host profile_ | med | gated |
 | `EDS-7` | fix | [The two EDS service cards are one shell rendered twice](2026-08-25-eds-service-cards-are-one-shell.md) | — | low | shipped |
-| `EDS-8` | chore | [Files over the god-file threshold](eds-services-over-size-threshold.md) | — | low | backlog |
 | `EDS-9` | feature | [DA.live sign-in has no command palette entry](2026-08-26-dalive-sign-in-from-command-palette.md) | — | med | shipped |
 | `EDS-10` | feature | [Custom themes as savable entities](2026-08-28-custom-themes-as-savable-entities.md) | — | med | backlog |
 | `EDS-11` | fix | [RETRACTED — HelixService's optional credentials are not the hazard I described](2026-08-28-helix-auth-variance-unmodeled.md) | — | low | dropped |
@@ -275,10 +274,11 @@ each item's own file; what has already landed against an item is in its
 | `PL-36` | fix | [The third Node-version sort in installHandler is untested](2026-09-02-install-handler-target-version-sort.md) | — | med | backlog |
 | `PR-1` | epic | [Reframe prerequisites: extension-wide tools vs project-shape requirements (Path A)](2026-06-11-prereqs-architecture-reframe.md) | — | low | backlog |
 
-### platform  (50)
+### platform  (51)
 
 | ID | Kind | Item | Needs | Value | Status |
 |---|---|---|---|---|---|
+| `EDS-8` | chore | [Files over the god-file threshold](eds-services-over-size-threshold.md) | — | high | backlog |
 | `PL-1` | chore | [Manifest write-back migration — retire the legacy-format read layer](2026-08-24-manifest-write-back-migration.md) | — | med | shipped |
 | `PL-2` | chore | [Regroup crowded service directories into subfolders — where measurement says so](2026-08-23-services-directory-regrouping.md) | — | low | shipped |
 | `PL-3` | chore | [Monorepo Support with Independent Release Tracking - Implementation Plan](monorepo-independent-release-tracking/overview.md) | — | low | backlog |
@@ -319,7 +319,7 @@ each item's own file; what has already landed against an item is in its
 | `PL-31` | chore | └ [Retire the 43 re-export index files, module by module](2026-08-31-core-barrels-are-not-curated.md) | — | med | shipped |
 | `PL-33` | chore | └ [Every convention is enforced, or it stops being a convention](2026-08-31-every-convention-enforced.md) | — | high | built |
 | `PL-34` | chore | └ [Every open finding from the 2026-09-01 toolchain day, in one list](2026-09-01-cast-and-builder-worklog.md) | — | high | shipped |
-| `PL-54` | fix | └ [The nudge rules cover two file shapes; reinvention happens in more than two](2026-09-10-agent-nudge-coverage.md) | — | high | backlog |
+| `PL-54` | fix | └ [The nudge rules cover two file shapes; reinvention happens in more than two](2026-09-10-agent-nudge-coverage.md) | — | high | built |
 | `PL-37` | chore | [The webview handshake's `stateVersion` is write-only](2026-09-02-webview-state-version-dead.md) | — | low | backlog |
 | `PL-38` | chore | [Our two most-mocked modules are faked 122 different ways](2026-09-02-webviewclient-mock-divergence.md) | — | med | shipped |
 | `PL-39` | chore | [An item can be marked done while its own body says what is left](2026-09-02-finished-items-carrying-remainders.md) | — | med | backlog |

@@ -82,3 +82,4 @@ that actually happened on 2026-09-10.
   (`.rptc/research/test-file-size-audit/research.md`)
 - 2026-09-10  2026-09-10  Proofs for all 4 nudge rules + 6 new rules (32-37), each with a stated convention
 - 2026-09-10  2026-09-10  All 13 gaps closed — 25 rules, every one proved; 109 conventions
+- 2026-09-10  2026-09-10  All 13 gaps routed: 25 rules, 25 proofs, 109 conventions (46a737d6e)
