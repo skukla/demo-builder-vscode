@@ -26,7 +26,7 @@ into `core/ui/` at its **second** consumer, never speculatively.
 
 | You want | Read |
 |---|---|
-| The rules, each naming its enforcer | [handbook §7](../../../docs/development/handbook.md) — 16 conventions, 14 enforced |
+| The rules, each naming its enforcer | [handbook §7](../../../docs/development/handbook.md) — 17 conventions, 15 enforced |
 | Why the webview side is ruled separately at all | [ADR-017](../../../docs/architecture/adr/017-webview-architecture.md) |
 | Why CSS works the way it does here | [ADR-018](../../../docs/architecture/adr/018-css-architecture.md) |
 | An existing component, before you write one | [`components/CLAUDE.md`](components/CLAUDE.md) — pick by JOB |

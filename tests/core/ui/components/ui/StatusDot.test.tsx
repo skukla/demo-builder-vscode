@@ -22,7 +22,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="success" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-success, #10b981)',
+                backgroundColor: 'var(--spectrum-semantic-positive-color-status)',
             });
         });
 
@@ -30,7 +30,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="error" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-error, #ef4444)',
+                backgroundColor: 'var(--spectrum-semantic-negative-color-status)',
             });
         });
 
@@ -38,7 +38,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="warning" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-warning, #f59e0b)',
+                backgroundColor: 'var(--spectrum-semantic-notice-color-status)',
             });
         });
 
@@ -46,7 +46,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="info" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-info, #3b82f6)',
+                backgroundColor: 'var(--spectrum-semantic-informative-color-status)',
             });
         });
 
@@ -54,7 +54,7 @@ describe('StatusDot', () => {
             renderWithProviders(<StatusDot variant="neutral" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-neutral, #6b7280)',
+                backgroundColor: 'var(--spectrum-global-color-gray-500)',
             });
         });
     });
@@ -149,7 +149,7 @@ describe('StatusDot', () => {
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveClass('custom-status');
             expect(dot).toHaveStyle({
-                backgroundColor: 'var(--db-status-dot-warning, #f59e0b)',
+                backgroundColor: 'var(--spectrum-semantic-notice-color-status)',
                 width: '10px',
                 height: '10px',
             });

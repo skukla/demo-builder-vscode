@@ -605,6 +605,21 @@ check says so and names the file.
 > `tests/sop/stylesheet-bundles.test.ts`. Standalone `<!DOCTYPE html>` pages are out of
 > scope — they load none of our sheets, so a block is the only styling they can have.
 
+> **Convention.** There is ONE design system — Adobe Spectrum's. Our own tokens map
+> the user's VS Code theme onto a few semantic names, or hold a constant Spectrum has
+> no opinion about. They never restate a colour Spectrum already defines.
+> *Why:* a second palette does not replace the first, it fights it. `--db-status-*`
+> held `#10b981`/`#ef4444`/`#f59e0b`/`#3b82f6` — Tailwind — and `vscode-theme.css` used
+> them to repaint elements Spectrum had ALREADY coloured through its own
+> `color="positive"` prop. Measured 2026-09-09: 519 uses of `--spectrum-*` against 30
+> of `--db-*`, and 65 of the 101 `--db-*` tokens were referenced by nothing at all —
+> a system nobody adopted, which reached no bundle for five months without being
+> missed. Where the USER'S theme should win, defer to `--vscode-*` with our value as
+> the fallback (terminal colours, the number badge).
+> Enforced by `tests/core/ui/styles/tokens.test.ts` — every token reachable, terminal
+> colours deferring to `--vscode-*`, and no `--db-status-*` at all, with a
+> planted-violation control.
+
 > **Convention.** Utility classes live in the overrides layer, not scattered through
 > component sheets.
 > *Why:* a utility defined beside a component is invisible to everyone who could reuse it,
@@ -1274,7 +1289,7 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 92 conventions. 91 of them are enforced; 1 is not.**
+**This handbook states 93 conventions. 92 of them are enforced; 1 is not.**
 
 The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
 `src/`, so a check would fail the build today rather than protect anything. It waits on

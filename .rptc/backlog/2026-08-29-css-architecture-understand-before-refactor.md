@@ -444,3 +444,5 @@ WHAT THIS LEAVES. The layer fix is correct in principle — unlayered normal bea
 - 2026-09-09  fix(css): three sheets shipped a rule the browser throws away (`47159f69b`)
 - 2026-09-09  fix(css): the cascade order was backwards — reset belongs below vendor (`90d2ca07a`)
 - 2026-09-09  docs(css): projectsList tried and reverted — step 3 is not a queue (`793897cba`)
+- 2026-09-09  fix(css): the reset and every design token stopped shipping in April (`07b2e7521`)
+- 2026-09-09  refactor(css): custom-spectrum.css becomes utilities.css (`53c171834`)

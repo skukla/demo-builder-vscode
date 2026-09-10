@@ -302,7 +302,7 @@
         width: 32px;
         height: 32px;
         border-radius: 50%;
-        background-color: var(--vscode-badge-background, var(--db-status-info));
+        background-color: var(--vscode-badge-background, var(--spectrum-semantic-informative-color-default));
         color: var(--vscode-badge-foreground, #ffffff);
         display: flex;
         align-items: center;

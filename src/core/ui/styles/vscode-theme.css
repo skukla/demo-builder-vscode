@@ -116,17 +116,23 @@
         color: var(--spectrum-global-color-gray-700) !important;
     }
 
-    /* Status colors - preserve semantic meaning with our tokens */
+    /* Status colours, from SPECTRUM's semantic ramp.
+       `color="positive"` is Spectrum's own prop, so these rules were taking an
+       element Spectrum had already coloured correctly and repainting it with a
+       Tailwind hex (#10b981 / #ef4444 / #f59e0b) that matched nothing else on
+       screen. They read as "preserve semantic meaning with our tokens"; what
+       they did was replace one palette with a foreign one. `-text-small` is the
+       right member of the ramp here because these select text. */
     body [color="positive"] {
-        color: var(--db-status-success) !important;
+        color: var(--spectrum-semantic-positive-color-text-small) !important;
     }
 
     body [color="negative"] {
-        color: var(--db-status-error) !important;
+        color: var(--spectrum-semantic-negative-color-text-small) !important;
     }
 
     body [color="notice"] {
-        color: var(--db-status-warning) !important;
+        color: var(--spectrum-semantic-notice-color-text-small) !important;
     }
 
     /* =========================================

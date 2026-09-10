@@ -26,29 +26,37 @@ export interface StatusDotProps {
  * ```
  */
 export function StatusDot({ variant, size = 8, className, testId }: StatusDotProps) {
-    // Each variant resolves to a design token WITH a literal fallback. The
-    // fallback is load-bearing, not cosmetic: the `--db-*` tokens live in
-    // `tokens.css` (reached via an `@import`), and when that token doesn't
-    // resolve in a given webview the bare `var()` collapses to a transparent
-    // background — a correctly-sized but invisible dot. The literal (identical
-    // to the token's current value) guarantees the dot is always visible while
-    // still honoring the token when it IS available.
+    // SPECTRUM'S semantic status colours, not our own. `-color-status` is the
+    // token Spectrum defines for exactly this — a small filled status indicator.
+    //
+    // These used to be `--db-status-dot-*` with a literal Tailwind hex as a
+    // fallback, and the comment explained that the fallback was load-bearing
+    // because the token "doesn't resolve in a given webview". That was true and
+    // the cause was not local: tokens.css reached NO bundle between 2026-04-13
+    // and 2026-09-09, because index.css pulled it in with an `@import` that the
+    // esbuild plugin never resolved. So every dot in the product rendered from
+    // the fallback, which is why the fallback had to exist.
+    //
+    // Two things follow. The delivery is fixed, so a token resolves now. And the
+    // colours were the wrong ones anyway — #10b981 and friends are Tailwind, in
+    // an Adobe Spectrum app, sitting next to Spectrum's own greens and reds.
+    // No fallback: Spectrum's CSS is in all eight bundles by construction (519
+    // uses of `--spectrum-*` across our sheets), so there is nothing to guard.
     const getColor = (): string => {
         switch (variant) {
             case 'success':
-                return 'var(--db-status-dot-success, #10b981)';
+                return 'var(--spectrum-semantic-positive-color-status)';
             case 'error':
-                return 'var(--db-status-dot-error, #ef4444)';
+                return 'var(--spectrum-semantic-negative-color-status)';
             case 'warning':
-                return 'var(--db-status-dot-warning, #f59e0b)';
+                return 'var(--spectrum-semantic-notice-color-status)';
             case 'info':
-                return 'var(--db-status-dot-info, #3b82f6)';
-            // `neutral` IS the fallback, so it shares the default rather than
-            // restating the same token twice — two copies of one colour is two
-            // things to keep in agreement for no gain.
+                return 'var(--spectrum-semantic-informative-color-status)';
+            // `neutral` has no semantic counterpart — it means "no status", so it
+            // takes a plain grey from the global ramp.
             case 'neutral':
             default:
-                return 'var(--db-status-dot-neutral, #6b7280)';
+                return 'var(--spectrum-global-color-gray-500)';
         }
     };
 

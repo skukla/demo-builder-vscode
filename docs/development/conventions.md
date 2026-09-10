@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **92** conventions, **91** enforced
+- **93** conventions, **92** enforced
 - **23** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -104,6 +104,7 @@ it means the rule rests on somebody noticing.
 | Before writing a new UI component, check whether the shared vocabulary already has it. |  |  | `30-reuse-first.rule` |
 | Before adding a file to a curated directory, read what is already in it. |  |  | `31-registry-dir.rule` |
 | A webview component defines no CSS in a `<style>` block. Its styles go in a stylesheet. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts` |
+| There is ONE design system — Adobe Spectrum's. Our own tokens map the user's VS Code theme onto a few semantic names, or hold a constant Spectrum has no opinion about. They never restate a colour Spectrum already defines. |  |  | `tokens.test.ts` |
 | Utility classes live in the overrides layer, not scattered through component sheets. | [ADR](../architecture/adr/018-css-architecture.md) |  | `inline-styles.test.ts` |
 | Styling reaches Spectrum through `UNSAFE_className` and the `cn()` helper, not through style objects. |  |  | `inline-styles.test.ts` |
 | Class names are not assembled dynamically beyond a small ceiling. |  |  | `dynamicClassSiteCeiling` ledger |
