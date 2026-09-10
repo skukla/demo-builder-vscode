@@ -45,8 +45,8 @@ finished (see [[PL-29]]'s second-pass table).
 |---|---|---|---|
 | 1 | Claims from three t3.gg videos, applied where they fit | **Done**, enforced | — |
 | 2 | Documentation synthesis — canonical, useful, enforced | **Phases A, B and C all DONE** — [[PL-29]] | Nothing this track owns. Two documents stay provisional until track 3 settles the strategy they describe |
-| 3 | Test strategy — de-duplicate and clean up | **Substantially done.** ADR-016 ratified; the convergence plan SHIPPED and archived; 8 enforcer suites; ~24 completed test plans. The mock walls, the shared fixture builders ([[PL-16]]) and the mutation burn-down ([[PL-22]]) all SHIPPED | [[PL-48]] (mid-flight), [[PL-50]] and [[PL-46]] (open questions), [[PL-47]] (not started), [[PL-14]] (waiting on use) |
-| 4 | Architecture programme and standards | **Substantially done.** SEVEN ADRs ratified 2026-08-28→30 (015, 016, 017, 018, 020, 021, 022); the handbook — now 88 conventions, 87 enforced; `where-code-goes.md`; 5 enforcer suites. [[PL-31]] closed 2026-09-08 | 3 ledger rows + one ceiling ([[PL-13]]), the parked CSS decision ([[PL-21]]), [[PL-19]], [[PL-20]], [[PL-27]], and [[PL-33]]'s last convention which PL-21 gates |
+| 3 | Test strategy — de-duplicate and clean up | **Substantially done.** ADR-016 ratified; the convergence plan SHIPPED and archived; 48 enforcer suites; ~24 completed test plans. The mock walls, the shared fixture builders ([[PL-16]]), the mutation burn-down ([[PL-22]]), the repetitive-suite read ([[PL-48]]) and the harness probes ([[PL-47]]) have all SHIPPED | [[PL-50]] and [[PL-46]] (open questions), [[PL-14]] (waiting on use), [[PL-11]] (active) |
+| 4 | Architecture programme and standards | **Substantially done.** SEVEN ADRs ratified 2026-08-28→30 (015, 016, 017, 018, 020, 021, 022); the handbook — now **109 conventions, ALL 109 enforced**; `where-code-goes.md`; 48 enforcer suites and 25 hook rules. [[PL-31]], [[PL-13]], [[PL-19]], [[PL-20]] and [[PL-34]] all closed. [[PL-33]]'s last convention — vendor CSS in the lowest layer — was enforced 2026-09-10 once [[PL-21]] made it TRUE | [[PL-21]]'s remaining decomposition queue, [[PL-26]], [[PL-27]], and [[PL-54]]'s seven unbuilt nudge candidates |
 
 **Tracks 3 and 4 are NOT pending — they are the tracks that produced the handbook**,
 and they ran FIRST. The program's earliest commits, 2026-08-28, are test-builder
@@ -218,3 +218,4 @@ the state table above is the record until there is real work to hold.
 - 2026-09-02  fix(backlog): `set` stored a list field as a string, and refused with a nonsense reason (`f907f2aac`)
 - 2026-09-08  docs(backlog): the finish list for the four-track programme, measured not remembered (`353b62b6c`)
 - 2026-09-08  fix(backlog): the glossary item was on the roster in prose only (`c191e6bf4`)
+- 2026-09-10  2026-09-10  Table corrected: PL-47/48 shipped, PL-13/19/20/34 closed, conventions 88->109 all enforced
