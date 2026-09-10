@@ -442,3 +442,5 @@ WHAT THIS LEAVES. The layer fix is correct in principle — unlayered normal bea
 - 2026-09-09  feat(tooling): the work list is computed, not written down (`8da30f396`)
 - 2026-09-09  feat(css): ADR-018 step 3 begins — Spectrum layered, sidebar only (`19f092ea8`)
 - 2026-09-09  fix(css): three sheets shipped a rule the browser throws away (`47159f69b`)
+- 2026-09-09  fix(css): the cascade order was backwards — reset belongs below vendor (`90d2ca07a`)
+- 2026-09-09  docs(css): projectsList tried and reverted — step 3 is not a queue (`793897cba`)
