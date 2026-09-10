@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **110** conventions, **110** enforced
+- **111** conventions, **111** enforced
 - **28** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -174,6 +174,7 @@ it means the rule rests on somebody noticing.
 | Rule | Why | How | Enforced by |
 |---|---|---|---|
 | Every scan declares a control: something it is known to find. A detector that has silently stopped detecting reports "all clear" in exactly the same words as one that verified. |  |  | `every-scan-declares-a-control.test.ts`<br>`rule-proofs.test.ts`<br>`eslint-type-aware.test.ts`<br>`codemod-harness.test.ts`<br>`eslint.config.mjs` |
+| Every top-level directory is classified: it ships in the VSIX, or `.vscodeignore` excludes it by name. Being in `.gitignore` counts for nothing. |  |  | `vsix-contents.test.ts` |
 | Never publish an identifier you have not read from the source. Setting keys, env vars, command ids, file paths and function names are cheap to grep and expensive to get wrong in something a user reads. |  |  | `cited-identifiers.test.ts`<br>`doc-module-refs.test.ts` |
 | Capture an exit code in a variable. Never read one through a pipe. |  |  | `13-piped-exit-code.rule` |
 | A list of paths reaches a command through `xargs`, never as a bare `$VAR`. Quote the variable when one argument is what you meant. |  |  | `16-unsplit-var.rule`<br>`eslint.config.mjs` |

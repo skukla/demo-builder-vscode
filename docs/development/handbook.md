@@ -1458,11 +1458,11 @@ it is, and the count of unenforced rules is stated rather than hidden.
 Conventions decay unless something checks them. Four layers do:
 
 - **Hooks** stop a bad action as it happens — 25 rules in `.claude/hooks/rules/`
-- **Enforcer suites** fail the build when code drifts — 49 in `tests/sop/`
+- **Enforcer suites** fail the build when code drifts — 50 in `tests/sop/`
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 110 conventions. 110 of them are enforced; 0 are not.**
+**This handbook states 111 conventions. 111 of them are enforced; 0 are not.**
 
 The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
 outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
@@ -1540,6 +1540,22 @@ not.
 > cover the tree — needs a planted defect it must find AND a clean case it must
 > ignore, or it can degrade into a command that reports nothing and reads as good
 > news.
+
+> **Convention.** Every top-level directory is classified: it ships in the VSIX, or
+> `.vscodeignore` excludes it by name. Being in `.gitignore` counts for nothing.
+> *Why:* vsce reads `.vscodeignore` INSTEAD of `.gitignore` whenever it exists, so a
+> directory hidden from git is invisible to review and still ships. Four have gone out
+> this way — the jest cache, the ExTester downloads, the mutation reports (144 MB in
+> beta.145), and the mutation SANDBOX (112 MB and 8,836 files, caught mid-cut on
+> 2026-09-10 when the release-cut sweep's mutation run left `.stryker-tmp/` behind and
+> packaging swept it in, taking the VSIX from 7.7 MB to 41.2 MB). `reports/**` had been
+> added two days earlier; the sandbox is a different directory and nobody looked for it.
+> *How it is checked:* `tests/sop/vsix-contents.test.ts` — it does NOT build a VSIX,
+> because a check nobody can afford to run is not a check. It asserts that the known
+> artifact directories are named in `.vscodeignore` whether or not they exist right now
+> (`.stryker-tmp` is transient, so a disk scan would never see it), and that any
+> top-level directory on disk is classified one way or the other, so a new one is a
+> decision rather than an oversight.
 
 > **Convention.** Never publish an identifier you have not read from the source. Setting
 > keys, env vars, command ids, file paths and function names are cheap to grep and
