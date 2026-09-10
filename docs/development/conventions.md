@@ -12,7 +12,7 @@ were wrong within an hour of being written. This one is derived from the
 handbook's own callouts and checked against the enforcers on disk in both
 directions, so it cannot.
 
-- **96** conventions, **95** enforced
+- **96** conventions, **96** enforced
 - **27** name the decision record behind them
 - **6** name a procedure — an SOP or a skill
 - **1** have all three layers
@@ -89,7 +89,7 @@ it means the rule rests on somebody noticing.
 | A value passed into a hook is stable across renders. No inline array, object or arrow literal as a prop that will reach a dependency array — hoist it to a module-level constant or wrap it. |  |  | `webview-architecture-rules.test.ts` |
 | The cascade order is `reset < vendor < theme < overrides`, declared once and carried by every bundle. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts` |
 | Every rule sits inside a cascade layer. None may sit outside one. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts` |
-| Vendor CSS sits in the lowest cascade layer. | [ADR](../architecture/adr/018-css-architecture.md) |  | **—** |
+| Vendor CSS sits in the lowest cascade layer. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts` |
 | `!important` is not how you win a specificity argument. The count may not grow. | [ADR](../architecture/adr/018-css-architecture.md) |  | `stylesheet-bundles.test.ts` |
 | Hooks are the webview's service layer. A component renders and handles interaction; the state machine, the calls to the host and the derived data live in a hook. | [ADR](../architecture/adr/017-webview-architecture.md) |  | *named in prose* |
 | One message channel per bundle, and it is a singleton. | [ADR](../architecture/adr/017-webview-architecture.md) |  | `messageChannelOwners` ledger |

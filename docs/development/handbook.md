@@ -386,8 +386,9 @@ renders and handles interaction; a hook holds the state machine, the calls to th
 and the derived data. When a component starts growing conditionals about what the data
 *means*, that has become a hook's job.
 
-The UI is Adobe Spectrum. CSS uses cascade layers — `reset`, `theme`, `overrides` —
-declared in one place, with vendor styles below ours.
+The UI is Adobe Spectrum. CSS uses cascade layers — `reset`, `vendor`, `theme`,
+`overrides`, in that order — declared in one place. Spectrum's own CSS goes into
+`vendor`, above our reset and below everything else we write.
 
 > **Convention.** The bundle entry is the composition root; dependencies arrive as props;
 > hooks are the service layer. [ADR-017](../architecture/adr/017-webview-architecture.md) ·
@@ -465,15 +466,26 @@ Know the difference before relying on it.
 > **Convention.** Vendor CSS sits in the lowest cascade layer.
 > *Why:* layers settle specificity by declaration order rather than by escalation, so
 > nothing downstream has to out-shout the vendor.
-> [ADR-018](../architecture/adr/018-css-architecture.md) · **Not enforced — and not yet
-> true.** `@layer vendor` is now DECLARED (2026-09-09) but empty: nothing wraps
-> Spectrum's CSS in it, so the rule the order exists to serve is still unmet. This is the one rule here the code
-> does not already follow. The migration WAS authorised by the owner on 2026-09-08 and is
-> running: `.rptc/plans/css-architecture-migration/`, tracked by the `vendorLayerBundles`
-> floor (0 of 8), which is also what makes this convention enforceable once it reaches 8.
-> Doing it is not optional tidying — cascade layers are the ONLY thing that removes the
-> `!important` count, measured three ways on 2026-09-08. Scoping (CSS Modules) does not
-> help and is deliberately not being adopted; see ADR-018 "The approach, settled".
+> [ADR-018](../architecture/adr/018-css-architecture.md) · enforced by
+> `tests/sop/stylesheet-bundles.test.ts`.
+>
+> **This was the last unenforced rule on this page, and it was unenforced because it was
+> not yet TRUE.** `@layer vendor` was declared on 2026-09-09 and empty; nothing wrapped
+> Spectrum's CSS in it, so a check would have failed the build rather than protected
+> anything. All eight bundles wrap it as of 2026-09-10 — `vendorLayerBundles` 0 → 8 — and
+> the rule is now checked two ways: the exact set of layered entries is pinned, so an
+> entry added to `WEBVIEW_ENTRIES` and quietly left out fails, and the floor is compared
+> against reality.
+>
+> **The floor was cited here as evidence while no test read it.** For two days
+> `vendorLayerBundles` sat at 0 in the ledger, the eight bundles were layered, and this
+> paragraph pointed at the number as the thing that made the rule enforceable. A metric
+> nothing reads is a citation that looks checked; it has a reader now.
+>
+> It was not optional tidying — cascade layers are the ONLY thing that removes the
+> `!important` count, measured three ways on 2026-09-08, and the count is now 0. Scoping
+> (CSS Modules) does not help and is deliberately not being adopted; see ADR-018 "The
+> approach, settled".
 
 > **Convention.** `!important` is not how you win a specificity argument. The count may
 > not grow.
@@ -1329,12 +1341,13 @@ Conventions decay unless something checks them. Four layers do:
 - **Typecheck and lint** run over the whole repository in CI
 - **Scans** measure at release cuts: duplication, dead code, cycles, agent coverage
 
-**This handbook states 96 conventions. 95 of them are enforced; 1 is not.**
+**This handbook states 96 conventions. 96 of them are enforced; 0 are not.**
 
-The one is not unenforceable — it is **not yet true**. No `@layer vendor` exists in
-`src/`, so a check would fail the build today rather than protect anything. It waits on
-the CSS migration (PL-21), which is not authorised. That is a rule with a start date,
-not debt.
+The last one to get there was "vendor CSS sits in the lowest cascade layer", and it was
+outstanding because it was **not yet true**: `@layer vendor` existed in no bundle, so a
+check would have failed the build rather than protected anything. It was a rule with a
+start date, not debt. The CSS migration (PL-21) reached all eight bundles on 2026-09-10
+and the check went in with it.
 
 Everything else on this page has something that fails the build when it is broken.
 

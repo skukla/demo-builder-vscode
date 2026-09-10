@@ -455,3 +455,4 @@ WHAT THIS LEAVES. The layer fix is correct in principle — unlayered normal bea
 - 2026-09-10  refactor(ui): layout parameters become custom properties, not inline styles (`6d6012884`)
 - 2026-09-10  refactor(ui): the rest of the inline styles — 34 sites down to 12 (`79028c880`)
 - 2026-09-10  refactor(css): no component writes CSS through a style object any more (`882035540`)
+- 2026-09-10  fix(tooling): the harness proves it is the harness, instead of asking you to (`d37ca2f0a`)

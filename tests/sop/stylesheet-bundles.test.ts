@@ -159,19 +159,48 @@ describe('ADR-018 step 3: Spectrum in @layer vendor, one entry at a time', () =>
             'integrations', 'projectsList', 'sidebar', 'wizard',
         ]);
     });
+
+    /**
+     * `vendorLayerBundles` is the number the handbook cites as the thing that
+     * makes "vendor CSS sits in the lowest cascade layer" enforceable. Until
+     * 2026-09-10 NO TEST READ IT: it sat at 0 in the ledger while all eight
+     * entries were layered, and the handbook pointed at it as evidence.
+     *
+     * A metric nothing reads is worse than no metric — it is a citation that
+     * looks checked. This is the reader.
+     */
+    it('the vendorLayerBundles floor matches reality, and covers every entry', () => {
+        const ledger = JSON.parse(
+            readFileSync(join(__dirname, 'webview-architecture-rules.exemptions.json'), 'utf8')
+        ) as Record<string, unknown>;
+        const { WEBVIEW_ENTRIES } = require(join(ROOT, 'esbuild.config.js'));
+        const entries = Object.keys(WEBVIEW_ENTRIES);
+
+        // Control: the key must exist, or `undefined === undefined` passes on nothing.
+        expect(typeof ledger.vendorLayerBundles).toBe('number');
+
+        expect(ledger.vendorLayerBundles).toBe(LAYERED_VENDOR_ENTRIES.length);
+        // A FLOOR: it counts up, and 8 of 8 is the finished state. A new entry
+        // that skips the vendor layer drops this below the entry count and fails.
+        expect(ledger.vendorLayerBundles).toBe(entries.length);
+    });
 });
 
 describe('ADR-018 §1: one cascade order, declared, and every bundle carries it', () => {
     /**
      * THE ORDER, lowest priority first for NORMAL declarations:
      *
-     *     vendor  <  reset  <  theme  <  overrides
+     *     reset  <  vendor  <  theme  <  overrides
      *
-     * `vendor` is declared and EMPTY today — nothing wraps Spectrum's CSS yet.
-     * Declaring an empty layer changes nothing about the rules that exist, and it
-     * means the remaining work is "put Spectrum in it", not "and also re-decide
-     * precedence". Verified by an empty diff across 2,700 elements when it was
-     * added, 2026-09-09.
+     * This comment said `vendor < reset` until 2026-09-10 — the pre-correction
+     * order, left behind and contradicting the CANONICAL string six lines below
+     * it. Not cosmetic: under `vendor, reset` a plain `font: inherit` in the reset
+     * beat Spectrum, and projectsList moved 45 of 77 elements. ADR-018 §1 has the
+     * correction; this block had the version it replaced.
+     *
+     * `vendor` is no longer empty either. All EIGHT entries wrap Spectrum's CSS in
+     * it as of 2026-09-10, which is what makes "vendor CSS sits in the lowest
+     * cascade layer" a rule the code follows rather than a rule with a start date.
      *
      * WHY EVERY BUNDLE AND NOT JUST ONE SHEET. Layer precedence is fixed by the
      * FIRST declaration a bundle sees, and sheets arrive in whatever order the
