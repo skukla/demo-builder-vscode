@@ -5,12 +5,9 @@
  * Ensures logs can only be replayed from trusted paths.
  */
 
-import {
-    mockDebugChannel,
-    createDebugLoggerContext,
-    resetMocks,
-} from './debugLogger.testUtils';
+import { mockDebugChannel, createDebugLoggerContext, resetMocks } from './debugLogger.testUtils';
 
+import { promises as fs } from 'fs';
 import * as vscode from 'vscode';
 import { DebugLogger, _resetLoggerForTesting } from '@/core/logging/debugLogger';
 
@@ -30,6 +27,11 @@ describe('DebugLogger - replayLogsFromFile Path Validation', () => {
 
     afterEach(() => {
         process.env = originalEnv;
+        // Hands every fs spy back to the real implementation. Load-bearing across
+        // FILES, not just tests: `fs.promises` is a Node builtin, so one object is
+        // shared by every suite a jest worker runs, and a mock left on it outlives
+        // this file.
+        jest.restoreAllMocks();
     });
 
     it('should reject paths outside ~/.demo-builder directory', async () => {
@@ -42,9 +44,7 @@ describe('DebugLogger - replayLogsFromFile Path Validation', () => {
     });
 
     it('should reject path traversal attempts', async () => {
-        await logger.replayLogsFromFile(
-            '/Users/testuser/.demo-builder/../.ssh/id_rsa'
-        );
+        await logger.replayLogsFromFile('/Users/testuser/.demo-builder/../.ssh/id_rsa');
 
         // Debug channel receives info() with [debug] prefix
         expect(mockDebugChannel.info).toHaveBeenCalledWith(
@@ -52,11 +52,27 @@ describe('DebugLogger - replayLogsFromFile Path Validation', () => {
         );
     });
 
+    // `jest.spyOn`, NOT `fs.readFile = jest.fn()`.
+    //
+    // This test used to assign the mocks straight onto `require('fs').promises`
+    // and hand `readFile` back at the end — `unlink` was never handed back at
+    // all, and even `readFile` only was when every assertion above it passed.
+    //
+    // `fs.promises` is a Node builtin: one object, shared by every suite a jest
+    // worker runs, and outside the module registry jest resets between files. So
+    // the abandoned `unlink` mock stayed on it for the rest of the worker's life,
+    // and `restoreMocks` could not help — jest only restores spies it created.
+    //
+    // The next suite in that worker then did `jest.spyOn(fs, 'unlink')`, and
+    // spyOn hands back a property that is ALREADY a mock function rather than
+    // wrapping it, call history and all. That is how
+    // `debugLogger-fileIO.test.ts` came to see four `unlink` calls it never made
+    // and fail `expect(unlink).not.toHaveBeenCalled()` — but only when the two
+    // files landed in the same worker in this order, which is why it read as
+    // random and passed in isolation.
     it('should accept paths within ~/.demo-builder directory', async () => {
-        const fs = require('fs').promises;
-        const originalReadFile = fs.readFile;
-        fs.readFile = jest.fn().mockResolvedValue('');
-        fs.unlink = jest.fn().mockResolvedValue(undefined);
+        jest.spyOn(fs, 'readFile').mockResolvedValue('');
+        jest.spyOn(fs, 'unlink').mockResolvedValue(undefined);
 
         const validPath = '/Users/testuser/.demo-builder/session-logs.txt';
         await logger.replayLogsFromFile(validPath);
@@ -64,13 +80,8 @@ describe('DebugLogger - replayLogsFromFile Path Validation', () => {
         // Debug channel receives info() calls
         const infoCalls = mockDebugChannel.info.mock.calls;
         const hasRejection = infoCalls.some((call: unknown[]) =>
-            call.some(
-                (arg: unknown) =>
-                    typeof arg === 'string' && arg.includes('Rejecting replay')
-            )
+            call.some((arg: unknown) => typeof arg === 'string' && arg.includes('Rejecting replay'))
         );
         expect(hasRejection).toBe(false);
-
-        fs.readFile = originalReadFile;
     });
 });
