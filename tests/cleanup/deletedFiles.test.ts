@@ -8,6 +8,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+/*
+ * These checks COLLECT their violations into `problems` and assert
+ * `expect(problems).toStrictEqual([])`, rather than throwing on the first one.
+ *
+ * Both fail the test. Collecting is better for two reasons: jest prints every
+ * offending entry in one run instead of dying on the first, and an `expect` is
+ * visible to `jest/expect-expect` where a `throw` is not — 31 tests here were
+ * reported as assertion-free while they were doing real work, and that noise is
+ * what let 20 genuinely assertion-free tests elsewhere sit unread.
+ */
+
+
 const projectRoot = path.resolve(__dirname, '..', '..');
 
 describe('Deleted Files - Step 8 Final Cleanup', () => {
@@ -94,6 +106,8 @@ describe('No Deprecated Imports Remain', () => {
     }
 
     it('should not import AbstractCacheManager in any source file', () => {
+        const problems: string[] = [];
+
         const srcDir = path.join(projectRoot, 'src');
         const files = getAllTsFiles(srcDir);
 
@@ -108,12 +122,16 @@ describe('No Deprecated Imports Remain', () => {
             const hasExtends = /extends\s+AbstractCacheManager/.test(content);
 
             if (hasImport || hasExtends) {
-                throw new Error(`File ${file} still imports/extends AbstractCacheManager`);
+                problems.push(`File ${file} still imports/extends AbstractCacheManager`);
             }
         }
+
+        expect(problems).toStrictEqual([]);
     });
 
     it('should not import deprecated strategy classes in any source file', () => {
+        const problems: string[] = [];
+
         const srcDir = path.join(projectRoot, 'src');
         const files = getAllTsFiles(srcDir);
 
@@ -134,13 +152,17 @@ describe('No Deprecated Imports Remain', () => {
             for (const strategy of deprecatedStrategies) {
                 const hasImport = new RegExp(`from\\s+['"].*${strategy}['"]`).test(content);
                 if (hasImport) {
-                    throw new Error(`File ${file} still imports ${strategy}`);
+                    problems.push(`File ${file} still imports ${strategy}`);
                 }
             }
         }
+
+        expect(problems).toStrictEqual([]);
     });
 
     it('should not import CommandResolver or ElapsedTimeTracker in any source file', () => {
+        const problems: string[] = [];
+
         const srcDir = path.join(projectRoot, 'src');
         const files = getAllTsFiles(srcDir);
 
@@ -155,12 +177,14 @@ describe('No Deprecated Imports Remain', () => {
             const hasElapsedTimeTrackerImport = /from\s+['"].*ElapsedTimeTracker['"]/.test(content);
 
             if (hasCommandResolverImport) {
-                throw new Error(`File ${file} still imports CommandResolver`);
+                problems.push(`File ${file} still imports CommandResolver`);
             }
             if (hasElapsedTimeTrackerImport) {
-                throw new Error(`File ${file} still imports ElapsedTimeTracker`);
+                problems.push(`File ${file} still imports ElapsedTimeTracker`);
             }
         }
+
+        expect(problems).toStrictEqual([]);
     });
 });
 

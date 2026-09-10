@@ -139,8 +139,10 @@ describe('WizardContainer - State Management', () => {
             // Click Continue (should show loading overlay during backend call)
             await user.click(getButton());
 
-            // Loading overlay should appear briefly
-            // (Visual verification through isConfirmingSelection state)
+            // "Visual verification through isConfirmingSelection state" asserted
+            // nothing. LoadingOverlay renders null when hidden and carries
+            // data-testid="loading-overlay" when shown, so the state IS queryable.
+            expect(await screen.findByTestId('loading-overlay')).toBeInTheDocument();
         });
     });
 });

@@ -190,12 +190,16 @@ describe('useDebouncedLoading', () => {
             // Unmount before delay completes
             unmount();
 
+            // The claim is in the title: the pending timer is gone AT unmount.
+            // Advancing afterwards and observing no crash cannot distinguish a
+            // cleared timer from one that fired harmlessly.
+            expect(jest.getTimerCount()).toBe(0);
+
             // Advance time - should not cause errors
             act(() => {
                 jest.advanceTimersByTime(300);
             });
 
-            // No assertions needed - just verify no errors
         });
 
         it('clears timeout when loading completes', () => {

@@ -9,6 +9,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+/*
+ * These checks COLLECT their violations into `problems` and assert
+ * `expect(problems).toStrictEqual([])`, rather than throwing on the first one.
+ *
+ * Both fail the test. Collecting is better for two reasons: jest prints every
+ * offending entry in one run instead of dying on the first, and an `expect` is
+ * visible to `jest/expect-expect` where a `throw` is not — 31 tests here were
+ * reported as assertion-free while they were doing real work, and that noise is
+ * what let 20 genuinely assertion-free tests elsewhere sit unread.
+ */
+
+
 // ============================================================================
 // Allowed Fields from TypeScript Interfaces
 // ============================================================================
@@ -201,22 +213,28 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
 
     describe('stacks.json <-> Stack alignment', () => {
         it('should have no unknown fields in root config', () => {
+            const problems: string[] = [];
+
             const rootAllowed = new Set(['$schema', 'version', 'stacks', 'addonDefinitions']);
             const unknown = findUnknownFields(stacksConfig, rootAllowed);
             if (unknown.length > 0) {
-                throw new Error(
+                problems.push(
                     `stacks.json root has unknown fields: ${unknown.join(', ')}. ` +
                         `Add to StacksConfig (src/types/stacks.ts) or remove from JSON.`
                 );
             }
+
+            expect(problems).toStrictEqual([]);
         });
 
         it('should have no unknown fields in any stack', () => {
+            const problems: string[] = [];
+
             const stacks = stacksConfig.stacks as Array<Record<string, unknown>>;
             stacks.forEach((stack) => {
                 const unknown = findUnknownFields(stack, STACK_FIELDS);
                 if (unknown.length > 0) {
-                    throw new Error(
+                    problems.push(
                         formatUnknownFieldsError(
                             'Stack',
                             stack.id,
@@ -226,24 +244,28 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
                     );
                 }
             });
+
+            expect(problems).toStrictEqual([]);
         });
     });
 
     describe('components.json <-> RawComponentRegistry alignment', () => {
-        function validateSectionEntries(
+        /** Returns every offending entry; the caller asserts the list is empty. */
+        function sectionProblems(
             sectionName: string,
             allowedFields: Set<string>,
             typeLabel: string
-        ): void {
+        ): string[] {
             const section = componentsConfig[sectionName] as
                 | Record<string, Record<string, unknown>>
                 | undefined;
-            if (!section) return;
+            if (!section) return [];
 
+            const problems: string[] = [];
             Object.entries(section).forEach(([id, entry]) => {
                 const unknown = findUnknownFields(entry, allowedFields);
                 if (unknown.length > 0) {
-                    throw new Error(
+                    problems.push(
                         formatUnknownFieldsError(
                             typeLabel,
                             id,
@@ -253,16 +275,21 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
                     );
                 }
             });
+            return problems;
         }
 
         it('should have no unknown fields in root config', () => {
+            const problems: string[] = [];
+
             const unknown = findUnknownFields(componentsConfig, COMPONENTS_ROOT_FIELDS);
             if (unknown.length > 0) {
-                throw new Error(
+                problems.push(
                     `components.json root has unknown fields: ${unknown.join(', ')}. ` +
                         `Add to COMPONENTS_ROOT_FIELDS or RawComponentRegistry (src/types/components.ts) or remove from JSON.`
                 );
             }
+
+            expect(problems).toStrictEqual([]);
         });
 
         const componentSections = [
@@ -282,11 +309,15 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
         it.each(componentSections)(
             'should have no unknown fields in %s entries',
             (sectionName, typeLabel) => {
-                validateSectionEntries(sectionName, COMPONENT_DEFINITION_FIELDS, typeLabel);
+                expect(
+                    sectionProblems(sectionName, COMPONENT_DEFINITION_FIELDS, typeLabel)
+                ).toStrictEqual([]);
             }
         );
 
         it('should have no unknown fields in component configuration blocks', () => {
+            const problems: string[] = [];
+
             const sectionsWithConfig = [
                 'frontends',
                 'backends',
@@ -307,16 +338,20 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
                     const config = component.configuration as Record<string, unknown>;
                     const unknown = findUnknownFields(config, COMPONENT_CONFIGURATION_FIELDS);
                     if (unknown.length > 0) {
-                        throw new Error(
+                        problems.push(
                             `${section}.${id}.configuration has unknown fields: ${unknown.join(', ')}. ` +
                                 `Add to COMPONENT_CONFIGURATION_FIELDS or RawComponentDefinition.configuration (src/types/components.ts) or remove from JSON.`
                         );
                     }
                 });
             });
+
+            expect(problems).toStrictEqual([]);
         });
 
         it('should have no unknown fields in component source blocks', () => {
+            const problems: string[] = [];
+
             const sectionsWithSource = ['frontends', 'backends', 'mesh', 'tools'] as const;
 
             sectionsWithSource.forEach((section) => {
@@ -330,16 +365,20 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
                     const source = component.source as Record<string, unknown>;
                     const unknown = findUnknownFields(source, COMPONENT_SOURCE_FIELDS);
                     if (unknown.length > 0) {
-                        throw new Error(
+                        problems.push(
                             `${section}.${id}.source has unknown fields: ${unknown.join(', ')}. ` +
                                 `Add to COMPONENT_SOURCE_FIELDS or RawComponentDefinition.source (src/types/components.ts) or remove from JSON.`
                         );
                     }
                 });
             });
+
+            expect(problems).toStrictEqual([]);
         });
 
         it('should have no unknown fields in source.gitOptions blocks', () => {
+            const problems: string[] = [];
+
             const sectionsWithSource = ['frontends', 'backends', 'mesh', 'tools'] as const;
 
             sectionsWithSource.forEach((section) => {
@@ -355,16 +394,20 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
                     const gitOptions = source.gitOptions as Record<string, unknown>;
                     const unknown = findUnknownFields(gitOptions, COMPONENT_GIT_OPTIONS_FIELDS);
                     if (unknown.length > 0) {
-                        throw new Error(
+                        problems.push(
                             `${section}.${id}.source.gitOptions has unknown fields: ${unknown.join(', ')}. ` +
                                 `Add to COMPONENT_GIT_OPTIONS_FIELDS (src/types/components.ts) or remove from JSON.`
                         );
                     }
                 });
             });
+
+            expect(problems).toStrictEqual([]);
         });
 
         it('should have no unknown fields in envVars entries', () => {
+            const problems: string[] = [];
+
             const envVars = componentsConfig.envVars as
                 | Record<string, Record<string, unknown>>
                 | undefined;
@@ -373,15 +416,19 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
             Object.entries(envVars).forEach(([key, envVar]) => {
                 const unknown = findUnknownFields(envVar, ENV_VAR_DEFINITION_FIELDS);
                 if (unknown.length > 0) {
-                    throw new Error(
+                    problems.push(
                         `envVars.${key} has unknown fields: ${unknown.join(', ')}. ` +
                             `Add to ENV_VAR_DEFINITION_FIELDS or EnvVarDefinition (src/types/components.ts) or remove from JSON.`
                     );
                 }
             });
+
+            expect(problems).toStrictEqual([]);
         });
 
         it('should have no unknown fields in selectionGroups', () => {
+            const problems: string[] = [];
+
             const selectionGroups = componentsConfig.selectionGroups as
                 | Record<string, unknown>
                 | undefined;
@@ -389,14 +436,18 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
 
             const unknown = findUnknownFields(selectionGroups, SELECTION_GROUPS_FIELDS);
             if (unknown.length > 0) {
-                throw new Error(
+                problems.push(
                     `selectionGroups has unknown fields: ${unknown.join(', ')}. ` +
                         `Add to SELECTION_GROUPS_FIELDS or RawComponentRegistry.selectionGroups (src/types/components.ts) or remove from JSON.`
                 );
             }
+
+            expect(problems).toStrictEqual([]);
         });
 
         it('should have no unknown fields in services', () => {
+            const problems: string[] = [];
+
             const services = componentsConfig.services as
                 | Record<string, Record<string, unknown>>
                 | undefined;
@@ -405,12 +456,14 @@ describe('Type/JSON Alignment - Stacks & Components', () => {
             Object.entries(services).forEach(([serviceId, service]) => {
                 const unknown = findUnknownFields(service, SERVICE_DEFINITION_FIELDS);
                 if (unknown.length > 0) {
-                    throw new Error(
+                    problems.push(
                         `services.${serviceId} has unknown fields: ${unknown.join(', ')}. ` +
                             `Add to SERVICE_DEFINITION_FIELDS or ServiceDefinition (src/types/components.ts) or remove from JSON.`
                     );
                 }
             });
+
+            expect(problems).toStrictEqual([]);
         });
     });
 });

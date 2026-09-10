@@ -25,7 +25,6 @@ const mockIsStartActionDisabled = isStartActionDisabled as unknown as jest.Mock;
 
 /** The webview stub installed by the shared mock wall. */
 function client() {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     return require('@/core/ui/utils/WebviewClient').webviewClient;
 }
 

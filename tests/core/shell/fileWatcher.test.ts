@@ -60,7 +60,13 @@ describe('FileWatcher', () => {
             // Advance fake timers to trigger the setTimeout callback
             jest.advanceTimersByTime(100);
 
-            await promise;
+            // Resolving IS the claim; a hang or rejection fails here. The watcher
+            // must also be torn down — waitForFileSystem disposes it on the event,
+            // and a leaked watcher is the defect this suite exists to catch.
+            await expect(promise).resolves.toBeUndefined();
+            const watcher = (vscode.workspace.createFileSystemWatcher as jest.Mock).mock.results[0]
+                .value as { dispose: jest.Mock };
+            expect(watcher.dispose).toHaveBeenCalled();
         });
 
         it('should wait for file creation', async () => {
@@ -75,7 +81,13 @@ describe('FileWatcher', () => {
             // Advance fake timers to trigger the setTimeout callback
             jest.advanceTimersByTime(100);
 
-            await promise;
+            // Resolving IS the claim; a hang or rejection fails here. The watcher
+            // must also be torn down — waitForFileSystem disposes it on the event,
+            // and a leaked watcher is the defect this suite exists to catch.
+            await expect(promise).resolves.toBeUndefined();
+            const watcher = (vscode.workspace.createFileSystemWatcher as jest.Mock).mock.results[0]
+                .value as { dispose: jest.Mock };
+            expect(watcher.dispose).toHaveBeenCalled();
         });
 
         it('should wait for file deletion', async () => {
@@ -90,7 +102,13 @@ describe('FileWatcher', () => {
             // Advance fake timers to trigger the setTimeout callback
             jest.advanceTimersByTime(100);
 
-            await promise;
+            // Resolving IS the claim; a hang or rejection fails here. The watcher
+            // must also be torn down — waitForFileSystem disposes it on the event,
+            // and a leaked watcher is the defect this suite exists to catch.
+            await expect(promise).resolves.toBeUndefined();
+            const watcher = (vscode.workspace.createFileSystemWatcher as jest.Mock).mock.results[0]
+                .value as { dispose: jest.Mock };
+            expect(watcher.dispose).toHaveBeenCalled();
         });
 
         it('should timeout if no change occurs', async () => {

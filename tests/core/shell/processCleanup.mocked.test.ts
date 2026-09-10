@@ -314,7 +314,9 @@ describe('ProcessCleanup - Mocked Tests', () => {
             await jest.runAllTimersAsync();
             await killPromise;
 
-            // Test passes if Jest doesn't complain about open handles
+            // "Jest doesn't complain about open handles" was the whole check, and
+            // jest complains about that AFTER the suite, if at all. Ask directly.
+            expect(jest.getTimerCount()).toBe(0);
         });
 
         it('should clean up on error', async () => {
@@ -338,7 +340,8 @@ describe('ProcessCleanup - Mocked Tests', () => {
                 // Expected to throw
             }
 
-            // Test passes if no hanging handles
+            // The error path has to clean up too — that is the actual claim here.
+            expect(jest.getTimerCount()).toBe(0);
         });
     });
 });

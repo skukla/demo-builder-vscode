@@ -269,8 +269,14 @@ describe('ProcessCleanup - Error Handling', () => {
     });
 
     describe('Cleanup During Errors (Mocked)', () => {
-        it('should clean up polling intervals on error', async () => {
-            // Given: Mock process.kill to throw error
+        // ONE test where there were two. 'should clean up polling intervals on
+        // error' and 'should clean up timeouts on error' had byte-identical bodies
+        // and neither asserted anything, so neither could tell an interval from a
+        // timeout — or a cleanup from a leak. This suite runs on REAL timers, so
+        // `jest.getTimerCount()` is unavailable here; the interval-vs-timeout
+        // distinction is checked in processCleanup.mocked.test.ts, which uses fake
+        // timers and counts them. What IS checkable here is the error path itself.
+        it('rejects with the underlying error when the kill is refused', async () => {
             process.kill = jest.fn().mockImplementation(() => {
                 const error: any = new Error('EPERM: permission denied');
                 error.code = 'EPERM';
@@ -279,35 +285,12 @@ describe('ProcessCleanup - Error Handling', () => {
 
             const testPid = 12345;
 
-            // When: Kill fails
-            try {
-                await processCleanup.killProcessTree(testPid, 'SIGTERM');
-            } catch {
-                // Expected to fail
-            }
+            await expect(
+                processCleanup.killProcessTree(testPid, 'SIGTERM')
+            ).rejects.toThrow(/EPERM/);
 
-            // Then: No hanging intervals (test completes without timeout)
-            // If intervals aren't cleaned up, Jest will hang
-            await new Promise(resolve => setTimeout(resolve, 100));
-        });
-
-        it('should clean up timeouts on error', async () => {
-            // Given: Mock error
-            process.kill = jest.fn().mockImplementation(() => {
-                const error: any = new Error('EPERM: permission denied');
-                error.code = 'EPERM';
-                throw error;
-            });
-
-            const testPid = 12345;
-
-            try {
-                await processCleanup.killProcessTree(testPid, 'SIGTERM');
-            } catch {
-                // Expected
-            }
-
-            // Verify no hanging timeouts
+            // A leaked interval keeps the event loop alive past the test; jest
+            // reports it as an open handle after the run rather than failing here.
             await new Promise(resolve => setTimeout(resolve, 100));
         });
     });

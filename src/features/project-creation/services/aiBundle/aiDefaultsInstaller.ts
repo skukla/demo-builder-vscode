@@ -35,8 +35,8 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import { DEFAULT_SHELL } from '@/core/shell/defaultShell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AiDefaults } from '@/types/aiDefaults';
-import type { Logger } from '@/types/logger';
 import type { Project } from '@/types/base';
+import type { Logger } from '@/types/logger';
 
 const aiDefaults: AiDefaults = aiDefaultsConfig as AiDefaults;
 

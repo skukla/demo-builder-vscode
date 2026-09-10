@@ -52,7 +52,7 @@ describe('CSS Layer Declarations', () => {
         (m) => m[1]
       );
       // Control: a mis-resolved list would make the loop below assert nothing.
-      expect(entries.length).toBe(8);
+      expect(entries).toHaveLength(8);
 
       const missing = entries.filter((e) => {
         const src = readFileSync(resolve(__dirname, '../../../../', e), 'utf-8');

@@ -9,12 +9,12 @@ import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import type { SidebarContext } from '../types';
 import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
-import { LAST_UPDATE_CHECK } from '@/core/constants';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     createWebviewCommunication,
     WebviewCommunicationManager,
 } from '@/core/communication/webviewCommunicationManager';
+import { LAST_UPDATE_CHECK } from '@/core/constants';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { toggleLogsPanel } from '@/features/lifecycle/services/lifecycleService';
 import type { Logger } from '@/types/logger';
 import type { StateManager } from '@/types/state';

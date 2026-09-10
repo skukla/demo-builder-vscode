@@ -121,7 +121,6 @@ describe('ADR-018 step 3: Spectrum in @layer vendor, one entry at a time', () =>
      * undo: the order string drifting from the sheets, and the list growing without
      * anyone measuring the surface it was added for.
      */
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { LAYER_ORDER, LAYERED_VENDOR_ENTRIES } = require(join(ROOT, 'esbuild.config.js'));
 
     it('the order the BUILD prepends is byte-identical to the one the sheets declare', () => {

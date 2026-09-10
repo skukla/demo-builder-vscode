@@ -10,6 +10,7 @@
  */
 
 import type { ApiOwner } from './apiRowState';
+import type { Project } from '@/types/base';
 
 /**
  * Reads one App Builder catalog entry by id.
@@ -29,7 +30,6 @@ import type { ApiOwner } from './apiRowState';
 export type CatalogEntryLookup = (
     id: string,
 ) => { name?: string; requiredApis?: string[] } | undefined;
-import type { Project } from '@/types/base';
 
 /**
  * Every integration in the project, named, with its catalog-declared requiredApis.

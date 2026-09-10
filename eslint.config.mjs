@@ -177,7 +177,30 @@ export default tseslint.config(
             'jest/no-focused-tests': 'error',      // .only disables its whole file
             'jest/no-identical-title': 'error',    // a shadowed test never runs alone
             'jest/valid-expect': 'error',          // a malformed expect asserts nothing
-            'jest/expect-expect': 'warn',          // assertion-free tests (census: 2)
+            // Assertion-free tests. `assertFunctionNames` must list this repo's own
+            // assertion helpers or the rule reports every test that uses one — 65 of
+            // the 107 it flagged on 2026-09-10 were helper calls, not missing
+            // assertions, and the noise is what let the real ones sit unread. Each
+            // name below was checked to FAIL its test on violation — by `expect` or, for
+            // `expectWithinCeiling`, by throwing, which fails a test just as well. Add a
+            // new helper here
+            // when you write one; a warning naming it is the prompt to confirm it
+            // actually asserts.
+            'jest/expect-expect': ['warn', {
+                assertFunctionNames: [
+                    'expect',
+                    'expectCeiling',
+                    'expectWithinCeiling',
+                    'expectFloor',
+                    'expectClean',
+                    'expectBanned',
+                    'expectEnvelope',
+                    'expectEnabled',
+                    'expectDisabled',
+                    'expectStartDisabled',
+                    'expectExportDisabled',
+                ],
+            }],
             'jest/no-disabled-tests': 'warn',
             'jest/no-conditional-expect': 'warn',  // assertions that can be skipped
             'jest/no-standalone-expect': 'warn',

@@ -164,7 +164,10 @@ describe('ProcessCleanup - Coverage Gaps', () => {
             jest.advanceTimersByTime(1100);
 
             // Then: should resolve without error (ESRCH during SIGKILL is handled)
-            await promise;
+            // and leave nothing pending — the poll interval and the force-kill
+            // timeout both have to be cleared on the way out.
+            await expect(promise).resolves.toBeUndefined();
+            expect(jest.getTimerCount()).toBe(0);
         });
 
         it('should skip force-kill timeout when signal is SIGKILL', async () => {
@@ -358,7 +361,9 @@ describe('ProcessCleanup - Coverage Gaps', () => {
             jest.advanceTimersByTime(1500);
 
             // Then: should resolve without error (ESRCH is handled gracefully)
-            await promise;
+            // and leave no interval or timeout behind.
+            await expect(promise).resolves.toBeUndefined();
+            expect(jest.getTimerCount()).toBe(0);
         });
     });
 });

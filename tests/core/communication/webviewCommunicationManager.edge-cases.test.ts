@@ -13,6 +13,7 @@ import {
     setupHandshakenManager,
 } from './webviewCommunicationManager.testUtils';
 import { Message } from '@/types/messages';
+import { getLogger } from '@/core/logging/debugLogger';
 
 describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
     let mockPanel: vscode.WebviewPanel;
@@ -216,24 +217,43 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
         });
 
         it('should handle response to non-existent request', async () => {
-            // Response to request that doesn't exist
-            listener()({
-                id: 'resp-1',
-                type: '__response__',
-                payload: { result: 'orphan' },
-                timestamp: Date.now(),
-                isResponse: true,
-                responseToId: 'nonexistent-request'
+            // "Should not crash" WAS the claim, and it is a real one — it just was
+            // not asserted. Delivering the orphan is the assertion now, and the
+            // manager still has to work afterwards; a listener left in a broken
+            // state would pass a bare not-to-throw.
+            await expect(
+                listener()({
+                    id: 'resp-1',
+                    type: '__response__',
+                    payload: { result: 'orphan' },
+                    timestamp: Date.now(),
+                    isResponse: true,
+                    responseToId: 'nonexistent-request'
+                })
+            ).resolves.toBeUndefined();
+
+            const handler = jest.fn().mockResolvedValue(undefined);
+            manager.on('after-orphan', handler);
+            await listener()({
+                id: 'msg-after',
+                type: 'after-orphan',
+                payload: {},
+                timestamp: Date.now()
             });
 
-            await Promise.resolve();
-
-            // Should not crash
+            expect(handler).toHaveBeenCalled();
         });
     });
 
     describe('logging configuration', () => {
         it('should respect enableLogging option', async () => {
+            // The old version said "we can't easily test this without exposing the
+            // logger" and asserted nothing. The logger is a module singleton, so it
+            // can simply be spied on — and the path that logs is QUEUEING, which
+            // happens only before the handshake completes.
+            const debug = jest.spyOn(getLogger(), 'debug');
+            debug.mockClear();
+
             manager = new WebviewCommunicationManager(mockPanel, {
                 enableLogging: false
             });
@@ -241,6 +261,8 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
             const initPromise = manager.initialize();
             await Promise.resolve();
 
+            void manager.sendMessage('queued-while-opening', {});
+
             listener()({
                 id: 'webview-1',
                 type: '__webview_ready__',
@@ -249,16 +271,24 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
 
             await initPromise;
 
-            // Logger should not be called if logging disabled
-            // (We can't easily test this without exposing logger, but config is set)
+            expect(debug).not.toHaveBeenCalledWith(
+                expect.stringContaining('[WebviewComm]')
+            );
         });
 
         it('should enable logging by default', async () => {
+            // The positive half. Same path, no config — if this did not log, the
+            // negative test above would pass for the wrong reason.
+            const debug = jest.spyOn(getLogger(), 'debug');
+            debug.mockClear();
+
             manager = new WebviewCommunicationManager(mockPanel);
 
             const initPromise = manager.initialize();
             await Promise.resolve();
 
+            void manager.sendMessage('queued-while-opening', {});
+
             listener()({
                 id: 'webview-1',
                 type: '__webview_ready__',
@@ -267,7 +297,9 @@ describe('WebviewCommunicationManager - Edge Cases & Error Handling', () => {
 
             await initPromise;
 
-            // Logging should be enabled (default behavior)
+            expect(debug).toHaveBeenCalledWith(
+                expect.stringContaining('[WebviewComm]')
+            );
         });
     });
 });

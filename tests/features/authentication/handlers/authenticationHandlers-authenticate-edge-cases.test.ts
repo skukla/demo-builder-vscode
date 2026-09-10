@@ -142,7 +142,14 @@ describe('authenticationHandlers - handleAuthenticate - Edge Cases', () => {
 
 			await handleAuthenticate(mockContext);
 
-			// Validation is NOT done during login
+			// Login RESOLVES an org (getOrganizations -> setCachedOrganization) but does
+			// not VALIDATE access to it. That distinction is the whole point of the
+			// title and was asserted by nothing — the first attempt at this assertion
+			// claimed getOrganizations was never called, which is simply false. An
+			// unasserted negative agrees with whatever the code does.
+			expect(mockContext.authManager!.login).toHaveBeenCalled();
+			expect(mockContext.authManager!.getOrganizations).toHaveBeenCalled();
+			expect(mockContext.authManager!.getValidationCache).not.toHaveBeenCalled();
 		});
 
 		it('should NOT check permissions during login (cache unchanged)', async () => {

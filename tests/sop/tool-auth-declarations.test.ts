@@ -84,7 +84,7 @@ describe('every tool declares real sign-ins', () => {
 
     it('CONTROL: the derivation actually found the tool surface', () => {
         // A vocabulary check over an empty list passes trivially.
-        expect(decls.length).toBe(EXPECTED_TOOLS);
+        expect(decls).toHaveLength(EXPECTED_TOOLS);
         expect(decls.some((d) => (d.providers ?? []).includes('adobe'))).toBe(true);
         expect(decls.some((d) => d.providers?.length === 0)).toBe(true);
     });
