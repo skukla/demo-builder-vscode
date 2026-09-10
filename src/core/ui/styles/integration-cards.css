@@ -42,7 +42,7 @@
     gap: var(--card-gap);
     min-height: var(--card-min-height);
     min-width: var(--card-min-width);
-    transition: all 0.3s ease;
+    transition: all var(--spectrum-global-animation-duration-600) ease;
 }
 
 /* Pointer + hover lift only where a press DOES something. A card renders without
@@ -112,7 +112,7 @@
    keyboards via :focus-within. */
 .integration-card-menu-button {
     opacity: 0;
-    transition: opacity 120ms ease;
+    transition: opacity var(--spectrum-global-animation-duration-100) ease;
 }
 
 .integration-card:hover .integration-card-menu-button,

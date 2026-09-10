@@ -105,7 +105,7 @@
  * active sub-step, so React remounts it on each change → this entrance fires. Reuses
  * the existing `fadeInUp` (opacity + 4px). Zeroed under prefers-reduced-motion. */
 .step-view-anim {
-    animation: fadeInUp var(--db-motion-base) var(--db-motion-ease);
+    animation: fadeInUp var(--spectrum-global-animation-duration-300) var(--spectrum-global-animation-ease-out);
     /* Pass the pane's height DOWN. An area body that wants to centre itself in the
        view (the Code Sync states) cannot: a percentage height resolves against the
        nearest definite ancestor, and this wrapper was auto-height, so `100%` two
@@ -223,7 +223,7 @@
     cursor: pointer !important;
     text-decoration: underline !important;
     color: var(--spectrum-global-color-blue-600) !important;
-    transition: background-color 0.15s ease, color 0.15s ease !important;
+    transition: background-color var(--spectrum-global-animation-duration-200) ease, color var(--spectrum-global-animation-duration-200) ease !important;
 }
 
 .clickable-url:hover {

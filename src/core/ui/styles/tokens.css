@@ -11,9 +11,6 @@
        one source so motion stays consistent + tunable. All durations are zeroed
        under the global prefers-reduced-motion reset (reset.css).
        ========================================= */
-    --db-motion-base: 200ms;   /* view crossfades, reveals */
-    --db-motion-slow: 300ms;   /* entrances, expands */
-    --db-motion-ease: cubic-bezier(0.2, 0, 0, 1); /* Spectrum-ish ease-out */
 
     /* =========================================
        LAYER 1: PRIMITIVE TOKENS

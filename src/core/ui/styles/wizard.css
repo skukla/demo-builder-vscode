@@ -83,7 +83,7 @@
 
     /* Smooth transition for progress bar appearance */
     .prerequisites-container .animate-fade-in {
-        animation: fadeIn 0.3s ease-in-out;
+        animation: fadeIn var(--spectrum-global-animation-duration-600) ease-in-out;
     }
 
     /* Circular Number Badge
@@ -173,7 +173,7 @@
 
     /* Timeline Step Hover Effect */
     .timeline-step {
-        transition: background-color 0.2s ease;
+        transition: background-color var(--spectrum-global-animation-duration-300) ease;
         padding: 4px 8px;
         border-radius: 4px;
         cursor: pointer;
@@ -206,7 +206,7 @@
 
     /* Smooth Transitions */
     * {
-        transition: opacity 0.2s ease, transform 0.2s ease;
+        transition: opacity var(--spectrum-global-animation-duration-300) ease, transform var(--spectrum-global-animation-duration-300) ease;
     }
 
     /* Remove default focus outlines for cleaner look */

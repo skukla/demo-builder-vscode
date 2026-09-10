@@ -331,6 +331,26 @@ it**, whenever the change could touch the box model. The rect is box-sizing
 independent; the computed style is not. Read the delta first: if it equals the
 element's padding (or border), suspect this before hunting for a layout cause.
 
+## The fingerprint is BLIND to motion — twice over
+
+`PROPS` captures 26 properties and **not one of them is `transition-*` or
+`animation-*`**. And `capture()` injects a transition freeze, so even a probe you
+write by hand inside the harness reads `transition-duration: 0s` for everything.
+
+Both bit on 2026-09-10, converting 84 duration literals to Spectrum's scale. A
+probe reported that ZERO of ten animated elements could resolve
+`--spectrum-global-animation-duration-600`, which would have made the whole change
+impossible. It was the freeze: a **literal** `.3s` read back as `0s` in the same
+probe, and that control is what exposed it. Reading the custom property directly —
+which the freeze cannot touch — showed all ten resolved fine.
+
+**To verify a motion change, fingerprint motion yourself, in a frame where
+`capture()` has never run:** walk the DOM, record
+`transitionDuration|animationDuration|transitionTimingFunction|animationTimingFunction`
+per element, and diff those. The check that matters is not "did a value change" —
+it is **"did a duration become `0s`"**, because that is what a failed `var()` looks
+like, and it means the motion died rather than moved.
+
 ## Known gaps
 
 - **The integrations surface renders differently on a session's FIRST capture.**

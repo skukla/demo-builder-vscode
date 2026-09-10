@@ -163,6 +163,75 @@ describe('ADR-018 step 3: Spectrum in @layer vendor, one entry at a time', () =>
     });
 });
 
+describe('ADR-018 §7: motion timings come from Spectrum\'s scale', () => {
+    /**
+     * Durations in `animation`/`transition` are Spectrum duration tokens, not
+     * hand-written milliseconds.
+     *
+     * WHY. Measured 2026-09-10: 72 animation/transition declarations, of which
+     * FOUR used a token and 68 hand-wrote their timing, across **11 distinct
+     * durations** and 6 easing curves. `--db-motion-*` was three constants with
+     * four consumers in a codebase where everyone else typed `0.2s ease` — it
+     * unified nothing, and its own curve was a sixth one.
+     *
+     * The tell that adoption had stalled rather than finished: `--db-motion-fast:
+     * 150ms` was deleted as "referenced by nothing", and 150ms is hand-written 17
+     * times. A reachability check asks whether anything NAMES a token, never
+     * whether anything uses its VALUE.
+     *
+     * Spectrum's scale was verified usable first — 24 animated elements across all
+     * eight surfaces, every one able to resolve the token. The largest shift for a
+     * UI timing is 30ms, on one declaration.
+     *
+     * LOOP DURATIONS ARE EXEMPT. A 1.2s pulse or a 1s spinner is a designed rhythm,
+     * not a UI transition, and forcing those onto the scale moves them by up to
+     * 500ms. They stay literal, and this check leaves anything >= 1s alone.
+     */
+    const SHEETS = execSync('git ls-files "*.css"', { cwd: ROOT, encoding: 'utf8' })
+        .split('\n')
+        .filter((f) => f && !f.includes('node_modules'));
+
+    const LOOP_MS = 1000;
+    const stripComments = (css: string): string => css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    it('no hand-written sub-second duration survives', () => {
+        const offenders: string[] = [];
+        let scanned = 0;
+        for (const f of SHEETS) {
+            const css = stripComments(readFileSync(join(ROOT, f), 'utf8'));
+            for (const m of css.matchAll(/(?:animation|transition)(?:-duration)?\s*:\s*([^;]+);/g)) {
+                scanned++;
+                for (const d of m[1].matchAll(/(\d*\.?\d+)(ms|s)\b/g)) {
+                    const ms = parseFloat(d[1]) * (d[2] === 'ms' ? 1 : 1000);
+                    // Below 10ms is an OFF SWITCH, not a timing — reset.css's
+                    // reduced-motion block uses `0.01ms !important` to stop
+                    // animation without breaking code that listens for its end.
+                    if (ms >= 10 && ms < LOOP_MS) {
+                        offenders.push(`${f}: ${d[0]} in "${m[1].trim().slice(0, 46)}"`);
+                    }
+                }
+            }
+        }
+        // Control: declarations must EXIST to be checked.
+        expect(scanned).toBeGreaterThan(50);
+        expect(offenders.sort()).toStrictEqual([]);
+    });
+
+    it('CONTROL: the scan sees a hand-written duration', () => {
+        const planted = join(tmpdir(), `motion-${process.pid}.css`);
+        writeFileSync(planted, '.a { transition: opacity 0.2s ease; }\n');
+        try {
+            const css = stripComments(readFileSync(planted, 'utf8'));
+            const found = [...css.matchAll(/(?:animation|transition)\s*:\s*([^;]+);/g)].flatMap((m) =>
+                [...m[1].matchAll(/(\d*\.?\d+)(ms|s)\b/g)].map((d) => d[0])
+            );
+            expect(found).toStrictEqual(['0.2s']);
+        } finally {
+            unlinkSync(planted);
+        }
+    });
+});
+
 describe('every stylesheet PARSES — a rule the browser drops is not a rule', () => {
     /**
      * A comma-separated selector list interrupted by an at-rule.

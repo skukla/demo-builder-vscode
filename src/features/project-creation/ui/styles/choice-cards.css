@@ -53,8 +53,8 @@
     padding: var(--spectrum-global-dimension-size-200) !important;
     min-height: 100px !important;
     cursor: pointer !important;
-    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease,
-        box-shadow 0.2s ease !important;
+    transition: background var(--spectrum-global-animation-duration-300) ease, border-color var(--spectrum-global-animation-duration-300) ease, transform var(--spectrum-global-animation-duration-300) ease,
+        box-shadow var(--spectrum-global-animation-duration-300) ease !important;
 }
 
 .choice-card:hover:not(:disabled) {

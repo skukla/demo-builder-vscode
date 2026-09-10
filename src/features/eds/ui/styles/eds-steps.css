@@ -160,7 +160,7 @@
     max-height: 3em;
     opacity: 1;
     overflow: hidden;
-    transition: max-height 0.15s ease-out, opacity 0.15s ease-out;
+    transition: max-height var(--spectrum-global-animation-duration-200) ease-out, opacity var(--spectrum-global-animation-duration-200) ease-out;
 }
 }
 
@@ -169,6 +169,6 @@
     max-height: 0;
     opacity: 0;
     overflow: hidden;
-    transition: max-height 0.15s ease-out, opacity 0.15s ease-out;
+    transition: max-height var(--spectrum-global-animation-duration-200) ease-out, opacity var(--spectrum-global-animation-duration-200) ease-out;
 }
 }

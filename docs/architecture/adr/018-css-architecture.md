@@ -250,13 +250,47 @@ nothing renders exactly as before. `.number-badge` made the same trip to
 `--vscode-badge-*` in August, for the same reason: contrast against the user's
 background is the theme author's problem, not ours.
 
-**Not everything local is a duplicate.** `--db-motion-*` was proposed for deletion
-and kept: `200ms` against Spectrum's nearest `220ms`, and
-`cubic-bezier(0.2, 0, 0, 1)` against Spectrum's `ease-out` of
-`cubic-bezier(0, 0, .4, 1)`. Those are deliberate values, so swapping them would
-have changed the feel of four animations in order to delete one token family. The
-test for "does this belong" is whether Spectrum already answers the question — not
-whether the name starts with `--db-`.
+**Motion follows Spectrum's scale too. `--db-motion-*` is deleted.**
+
+This paragraph argued the opposite for one day, and the argument was wrong. It
+said those were deliberate values rather than duplicates, so swapping them would
+change the feel of four animations to delete one token family. Both halves fall
+apart the moment you count the OTHER declarations:
+
+| | |
+|---|---|
+| `animation`/`transition` declarations in our sheets | **72** |
+| using a `--db-motion-*` token | **4** |
+| hand-writing their timing | **68** |
+| distinct durations in play | **11** |
+| distinct easing curves | **6** |
+
+Three constants with four consumers, in a codebase where everyone else typed
+`0.2s ease`, is not a design system — it is an adoption that stalled. Its curve
+was not a fourth opinion either; it was a *sixth*.
+
+**The tell was in the prune that preceded it.** `--db-motion-fast: 150ms` was
+deleted as "referenced by nothing" — and `150ms` is hand-written **17 times**, the
+third most-used duration here. A reachability check asks whether anything NAMES a
+token, never whether anything uses its VALUE, so it cannot tell dead from
+un-adopted. That deletion was reported as a cleanup and was really evidence.
+
+84 hand-written durations now read Spectrum's scale. The largest shift for a UI
+timing is 30ms, on one declaration; 39 were already exact. **Loop durations are
+exempt** — a 1.2s pulse or a 1s spinner is a designed rhythm, not a UI transition,
+and forcing those onto the scale moves them by up to 500ms.
+
+Verified usable BEFORE converting anything: 24 animated elements across all eight
+surfaces, every one able to resolve `--spectrum-global-animation-duration-*`. An
+earlier probe said none could, and was wrong — it read `transition-duration` from
+inside the visual-baseline harness, which freezes transitions by design. A literal
+`.3s` read back as `0s` in the same probe, which is what exposed it.
+
+So the test for "does this belong" stands, and it is stricter than it looked:
+whether Spectrum already answers the question — not whether the value is one we
+happen to have chosen deliberately.
+Enforced by `tests/sop/stylesheet-bundles.test.ts` — no hand-written sub-second
+duration in any sheet, with a planted-violation control.
 
 Enforced by `tests/core/ui/styles/tokens.test.ts`: every token reachable
 (transitively), terminal colours deferring to `--vscode-*`, and no `--db-status-*`

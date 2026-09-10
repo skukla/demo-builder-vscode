@@ -69,34 +69,34 @@
    =========================================== */
 /* Smooth transitions for all prerequisite elements */
 .prerequisite-item * {
-    transition: opacity 0.3s ease, transform 0.3s ease !important;
+    transition: opacity var(--spectrum-global-animation-duration-600) ease, transform var(--spectrum-global-animation-duration-600) ease !important;
 }
 
 .prerequisite-content > * {
-    transition: opacity 0.3s ease !important;
+    transition: opacity var(--spectrum-global-animation-duration-600) ease !important;
 }
 
 /* Message text transitions */
 .prerequisite-message,
 .prerequisite-description,
 .prerequisite-title {
-    transition: opacity 0.2s ease, color 0.3s ease !important;
+    transition: opacity var(--spectrum-global-animation-duration-300) ease, color var(--spectrum-global-animation-duration-600) ease !important;
 }
 
 /* Status icon transitions */
 .prerequisite-item svg {
-    transition: opacity 0.3s ease, transform 0.2s ease, color 0.3s ease !important;
+    transition: opacity var(--spectrum-global-animation-duration-600) ease, transform var(--spectrum-global-animation-duration-300) ease, color var(--spectrum-global-animation-duration-600) ease !important;
 }
 
 /* Smooth transitions for conditional content */
 .prerequisite-content > div {
-    transition: all 0.3s ease !important;
+    transition: all var(--spectrum-global-animation-duration-600) ease !important;
 }
 
 /* Ensure smooth transitions for dynamically added content */
 .prerequisite-item [role="progressbar"],
 .prerequisite-item .progress-bar-small-label {
-    animation: fadeInUp 0.3s ease;
+    animation: fadeInUp var(--spectrum-global-animation-duration-600) ease;
 }
 
 /* Merged 2 declarations of this selector that the sheet carried separately.
@@ -113,16 +113,16 @@
     white-space: pre-wrap !important;
     word-break: break-word !important;
     overflow: hidden !important;
-    transition: opacity 0.2s ease !important;
+    transition: opacity var(--spectrum-global-animation-duration-300) ease !important;
 }
 
 .prerequisite-message:not(:empty) {
-    animation: fadeIn 0.2s ease;
+    animation: fadeIn var(--spectrum-global-animation-duration-300) ease;
 }
 
 /* Smooth install button transitions */
 .prerequisite-item button {
-    transition: opacity 0.3s ease, transform 0.2s ease !important;
+    transition: opacity var(--spectrum-global-animation-duration-600) ease, transform var(--spectrum-global-animation-duration-300) ease !important;
 }
 
 /* Merged 2 declarations of this selector that the sheet carried separately.
@@ -155,7 +155,7 @@
     border-radius: 4px !important;
     width: 100% !important;
     overflow: hidden !important;
-    transition: min-height 0.3s ease, padding 0.3s ease !important;
+    transition: min-height var(--spectrum-global-animation-duration-600) ease, padding var(--spectrum-global-animation-duration-600) ease !important;
     will-change: transform;
 }
 

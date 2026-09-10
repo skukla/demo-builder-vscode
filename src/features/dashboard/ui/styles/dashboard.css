@@ -182,7 +182,7 @@
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
 
     /* Smoother transition matching cards */
-    transition: all 0.3s ease !important;
+    transition: all var(--spectrum-global-animation-duration-600) ease !important;
 
     /* Layout — compact square tiles (icon over label) */
     text-align: center !important;

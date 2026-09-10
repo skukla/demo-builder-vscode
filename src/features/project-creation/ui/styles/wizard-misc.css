@@ -24,15 +24,15 @@
    Transition Classes
    =========================================== */
 .transition-all {
-    transition: all 0.3s ease !important;
+    transition: all var(--spectrum-global-animation-duration-600) ease !important;
 }
 
 .transition-colors {
-    transition: color 0.3s ease, background-color 0.3s ease !important;
+    transition: color var(--spectrum-global-animation-duration-600) ease, background-color var(--spectrum-global-animation-duration-600) ease !important;
 }
 
 .transition-opacity {
-    transition: opacity 0.3s ease !important;
+    transition: opacity var(--spectrum-global-animation-duration-600) ease !important;
 }
 
 /* Small accent pill button for inline actions */
@@ -45,7 +45,7 @@
     font-weight: 400;
     color: var(--spectrum-global-color-gray-900);
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background var(--spectrum-global-animation-duration-200) ease;
 }
 
 .action-pill:hover {
@@ -58,9 +58,9 @@
 
 .animate-pulse { animation: pulse 2s infinite !important; }
 
-.animate-fade-in { animation: fadeIn 0.3s ease !important; }
+.animate-fade-in { animation: fadeIn var(--spectrum-global-animation-duration-600) ease !important; }
 
-.animate-slide-down { animation: slide-down 0.3s ease !important; }
+.animate-slide-down { animation: slide-down var(--spectrum-global-animation-duration-600) ease !important; }
 
 /* ===========================================
    GitHub Avatar with Badge

@@ -36,7 +36,7 @@
     border: 1px solid var(--spectrum-global-color-orange-500);
     border-left-width: 3px;
     border-radius: 8px;
-    animation: inline-notice-fade-in 200ms ease-out;
+    animation: inline-notice-fade-in var(--spectrum-global-animation-duration-300) ease-out;
 }
 
 .inline-notice--info .inline-notice-icon {
@@ -123,10 +123,9 @@
     overflow: hidden;
     opacity: 0;
     pointer-events: none;
-    transition:
-        opacity 120ms ease,
-        max-width 120ms ease,
-        margin-left 120ms ease;
+    transition: opacity var(--spectrum-global-animation-duration-100) ease,
+        max-width var(--spectrum-global-animation-duration-100) ease,
+        margin-left var(--spectrum-global-animation-duration-100) ease;
 }
 
 .inline-rename:hover .inline-rename-pencil-slot,

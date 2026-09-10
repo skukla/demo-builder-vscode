@@ -317,8 +317,8 @@ button[class*="spectrum-Button"][disabled],
 
 /* Progress bar entrance/exit animations */
 [class*="spectrum-ProgressBar"] {
-    animation: fadeInUp 0.3s ease;
-    transition: opacity 0.3s ease !important;
+    animation: fadeInUp var(--spectrum-global-animation-duration-600) ease;
+    transition: opacity var(--spectrum-global-animation-duration-600) ease !important;
 }
 
 @keyframes fadeInUp {
@@ -334,7 +334,7 @@ button[class*="spectrum-Button"][disabled],
 
 /* Smooth progress bar value changes */
 [class*="spectrum-ProgressBar-fill"] {
-    transition: width 0.3s ease !important;
+    transition: width var(--spectrum-global-animation-duration-600) ease !important;
 }
 
 /* Note: .animate-fade-in and @keyframes fadeIn defined in utility section above */

@@ -33,9 +33,8 @@
     z-index: 100;
     opacity: 0;
     visibility: hidden;
-    transition:
-        opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-        visibility 0.22s;
+    transition: opacity var(--spectrum-global-animation-duration-400) cubic-bezier(0.4, 0, 0.2, 1),
+        visibility var(--spectrum-global-animation-duration-400);
 }
 
 .db-drawer-scrim.open {
@@ -59,9 +58,8 @@
     z-index: 101;
     transform: translateX(100%);
     visibility: hidden;
-    transition:
-        transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-        visibility 0.22s;
+    transition: transform var(--spectrum-global-animation-duration-400) cubic-bezier(0.4, 0, 0.2, 1),
+        visibility var(--spectrum-global-animation-duration-400);
     display: flex;
     flex-direction: column;
     outline: none;

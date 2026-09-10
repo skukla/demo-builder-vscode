@@ -69,7 +69,7 @@
     font-family: inherit !important;
     font-size: var(--spectrum-global-dimension-font-size-75) !important;
     text-align: left !important;
-    transition: background 0.15s ease, color 0.15s ease !important;
+    transition: background var(--spectrum-global-animation-duration-200) ease, color var(--spectrum-global-animation-duration-200) ease !important;
 }
 
 .vsteplist-step:hover:not([aria-disabled='true']) {
@@ -94,7 +94,7 @@
  * growing). Applied for one render by StepRail; zeroed under reduced-motion. */
 .vsteplist-step--enter {
     overflow: hidden !important;
-    animation: vsteplist-step-enter var(--db-motion-slow) var(--db-motion-ease);
+    animation: vsteplist-step-enter var(--spectrum-global-animation-duration-600) var(--spectrum-global-animation-ease-out);
 }
 
 /* The animation the rule above names. It sat in utilities.css until

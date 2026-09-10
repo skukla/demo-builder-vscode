@@ -59,7 +59,7 @@
  * Its own keyframe (was a second `fadeIn` definition that the later plain `fadeIn`
  * silently shadowed — so this slide never actually ran; renamed to restore it). */
 .brand-card-architectures {
-    animation: fadeInDown var(--db-motion-base) var(--db-motion-ease) !important;
+    animation: fadeInDown var(--spectrum-global-animation-duration-300) var(--spectrum-global-animation-ease-out) !important;
 }
 
 .brand-card-section-label {
@@ -75,7 +75,7 @@
    architecture summary reads in the same tone as the backend card's description. */
 .brand-card-selection {
     margin-top: 6px !important;
-    animation: fadeIn 0.2s ease-out !important;
+    animation: fadeIn var(--spectrum-global-animation-duration-300) ease-out !important;
 }
 
 .brand-card-selection-summary {
@@ -148,7 +148,7 @@
     color: var(--spectrum-global-color-blue-400) !important;
     margin-top: 8px !important;
     opacity: 0.7 !important;
-    transition: opacity 0.15s ease !important;
+    transition: opacity var(--spectrum-global-animation-duration-200) ease !important;
 }
 
 /* Self-reflowing CSS grid (mirrors .projects-grid / .selector-grid above): the
@@ -169,7 +169,7 @@
     padding: 16px !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     cursor: pointer !important;
-    transition: all 0.2s ease-out !important;
+    transition: all var(--spectrum-global-animation-duration-300) ease-out !important;
     /* Grid items default to min-width:auto (=min-content); without this a card
        refuses to shrink into its reflowing-grid track and overflows. */
     min-width: 0 !important;

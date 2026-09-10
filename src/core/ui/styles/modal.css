@@ -127,7 +127,7 @@
 .modal-step-content {
     opacity: 1 !important;
     transform: translateX(0) !important;
-    transition: opacity 0.2s ease, transform 0.2s ease !important;
+    transition: opacity var(--spectrum-global-animation-duration-300) ease, transform var(--spectrum-global-animation-duration-300) ease !important;
 }
 
 .modal-step-content.transitioning {
@@ -153,7 +153,7 @@
     font-size: 14px !important;
     font-weight: 600 !important;
     cursor: pointer !important;
-    transition: background-color 0.13s ease, border-color 0.13s ease !important;
+    transition: background-color var(--spectrum-global-animation-duration-100) ease, border-color var(--spectrum-global-animation-duration-100) ease !important;
     border: 2px solid transparent !important;
     box-sizing: border-box !important;
 }
