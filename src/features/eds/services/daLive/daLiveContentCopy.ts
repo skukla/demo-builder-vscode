@@ -33,12 +33,14 @@ import {
     DA_LIVE_BASE_URL,
     MAX_RETRY_ATTEMPTS,
     getRetryDelay,
-    normalizePath,
 } from './daLiveConstants';
 import { DaLiveContentDiscovery } from './daLiveContentDiscovery';
 import { transformHtmlForDaLive, buildSourceUrl, resolveDaPath } from './daLiveContentHelpers';
 import { DaLiveSourceOperations } from './daLiveSourceOperations';
-import { convertSpreadsheetJsonToHtml } from './daLiveSpreadsheetUtils';
+import {
+    copySpreadsheetFile as copySpreadsheetFileImpl,
+    isSpreadsheetPath as isSpreadsheetPathImpl,
+} from './daLiveSpreadsheetCopy';
 import { sleep } from '@/core/utils/sleep';
 import { formatDuration } from '@/core/utils/timeFormatting';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -434,107 +436,30 @@ export class DaLiveContentCopy {
     }
 
     /**
-     * Check if a path is a spreadsheet (Excel file in DA.live, served as JSON on CDN)
-     * Spreadsheets don't have .plain.html versions, they're served as .json
+     * Spreadsheet handling lives in `daLiveSpreadsheetCopy.ts` — a DA.live
+     * spreadsheet is an Excel doc served as JSON, with no `.plain.html`, so it
+     * cannot use the normal copy path at all. These two keep the class's shape;
+     * the logic moved out on 2026-09-10.
      */
-    private async isSpreadsheetPath(baseUrl: string, path: string): Promise<boolean> {
-        // Skip paths that already have extensions or are obviously HTML
-        if (path.match(/\.(html|htm)$/i) || path === '/' || path.endsWith('/')) {
-            return false;
-        }
-
-        // Try fetching as JSON - spreadsheets return JSON, HTML pages return 404
-        const jsonUrl = `${baseUrl}${path}.json`;
-        try {
-            const response = await fetch(jsonUrl, {
-                method: 'HEAD',
-                signal: AbortSignal.timeout(TIMEOUTS.QUICK),
-            });
-            if (response.ok) {
-                const contentType = response.headers.get('content-type') || '';
-                return contentType.includes('application/json');
-            }
-        } catch {
-            // Ignore errors - not a spreadsheet
-        }
-        return false;
+    private isSpreadsheetPath(baseUrl: string, path: string): Promise<boolean> {
+        return isSpreadsheetPathImpl(baseUrl, path);
     }
 
-    /**
-     * Copy a spreadsheet file from source to destination
-     * Fetches JSON from public CDN and converts to HTML table for DA.live upload
-     * (Can't use DA.live admin API for cross-org copies - no auth access to source)
-     */
-    private async copySpreadsheetFile(
+    private copySpreadsheetFile(
         token: string,
         source: { org: string; site: string },
         sourcePath: string,
         destination: { org: string; site: string },
         destPath: string,
     ): Promise<boolean> {
-        // Fetch JSON from public CDN (works without auth for any org)
-        const sourceUrl = `https://main--${source.site}--${source.org}.aem.live${sourcePath}.json`;
-
-        try {
-            const sourceResponse = await fetch(sourceUrl, {
-                signal: AbortSignal.timeout(TIMEOUTS.NORMAL),
-            });
-
-            if (!sourceResponse.ok) {
-                this.logger.warn(
-                    `[DA.live] Failed to fetch spreadsheet JSON ${sourcePath}: ${sourceResponse.status}`,
-                );
-                return false;
-            }
-
-            const jsonData = await sourceResponse.json();
-
-            // Convert JSON to HTML table format that DA.live can process
-            const htmlContent = convertSpreadsheetJsonToHtml(jsonData);
-            if (!htmlContent) {
-                this.logger.warn(`[DA.live] Failed to convert spreadsheet ${sourcePath} to HTML`);
-                return false;
-            }
-
-            // Upload as HTML to destination DA.live (will be converted to sheet)
-            const destNormalizedPath = normalizePath(destPath);
-            const destUrl = `${DA_LIVE_BASE_URL}/source/${destination.org}/${destination.site}/${destNormalizedPath}.html`;
-
-            // DA.live write via the shared client (retry + fresh FormData per
-            // attempt; page-level 429 tolerance).
-            const response = await this.apiClient.fetchWithRetry(
-                destUrl,
-                () => {
-                    const formData = new FormData();
-                    formData.append('data', new Blob([htmlContent], { type: 'text/html' }));
-                    return {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${token}` },
-                        body: formData,
-                    };
-                },
-                { rateLimit: 'return' },
-            );
-
-            if (response.ok) {
-                this.logger.info(`[DA.live] Copied spreadsheet ${sourcePath}`);
-                return true;
-            }
-
-            // Token expired — throw so caller can pause-and-prompt for re-auth
-            if (response.status === 401) {
-                throw new DaLiveAuthError('DA.live token expired during spreadsheet copy');
-            }
-
-            this.logger.warn(
-                `[DA.live] Failed to upload spreadsheet ${destPath}: ${response.status}`,
-            );
-            return false;
-        } catch (error) {
-            if (error instanceof DaLiveAuthError) throw error;
-            this.logger.error(`[DA.live] Spreadsheet copy error for ${destPath}`, error as Error);
-            return false;
-        }
+        return copySpreadsheetFileImpl(
+            { apiClient: this.apiClient, logger: this.logger },
+            token,
+            source,
+            sourcePath,
+            destination,
+            destPath,
+        );
     }
 
     /**

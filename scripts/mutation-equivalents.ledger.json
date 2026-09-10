@@ -5549,7 +5549,7 @@
             "anchors": [
                 "if (!href) return;"
             ],
-            "line": 95,
+            "line": 97,
             "mutants": 1,
             "category": "branch",
             "reason": "Removing this empty-href guard changes nothing: an empty href fails every later test the same way. It does not start with the source base URL, the scheme regex and the '//' test both fail on an empty string, and the very next guard returns for anything not starting with '/'. Verified by re-running consider() over a 33-href corpus (empty, whitespace, root, anchors, relatives, schemes, absolute same-site and foreign URLs, media, product overlays, .html collapse) with the guard removed: identical output per href and in aggregate.",
@@ -5562,7 +5562,7 @@
             "anchors": [
                 "if (!href || href === '/') return;"
             ],
-            "line": 109,
+            "line": 111,
             "mutants": 3,
             "category": "branch",
             "reason": "All three mutants (drop the guard, replace || with &&, and drop the href === '/' operand) let an empty-or-root href fall through to the final guard on line 119, which admits a path only when it is non-empty and not '/'. Whatever this guard would have returned for, that one refuses to add. Verified by re-running consider() over a 33-href corpus with the guard removed and with && substituted: identical output per href in both cases. The final guard is NOT equivalent in the same way - '/.html' collapses to '/' after the extension strip and only line 119 catches it - so it is killed by a test rather than recorded here.",
@@ -5599,7 +5599,7 @@
             "anchors": [
                 "try {"
             ],
-            "line": 410,
+            "line": 412,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this inner try leaves errorDetail as the empty string it was initialised to, and errorDetail is read in exactly one place: the warn line that reports a failed copy. The function returns false either way, nothing is written, and the caller sees the same boolean. The try exists only so an unreadable response body cannot turn a reported failure into a thrown one, and that IS tested - a response whose text() rejects still returns false.",
@@ -5612,7 +5612,7 @@
             "anchors": [
                 "return false;"
             ],
-            "line": 433,
+            "line": 432,
             "mutants": 1,
             "category": "branch",
             "reason": "This is the return after the retry for-loop, and it is unreachable: every iteration either returns or hits the catch, and the catch's last attempt (attempt === MAX_RETRY_ATTEMPTS) returns false rather than continuing. TypeScript cannot see that the loop always exits by return, so it requires a terminal return here; deleting it does not compile. Stryker reports it as NoCoverage for the same reason no test can reach it.",
@@ -5621,16 +5621,17 @@
             "source": "PL-22 batch MUT-02"
         },
         {
-            "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
+            "module": "src/features/eds/services/daLive/daLiveSpreadsheetCopy.ts",
             "anchors": [
                 "if (path.match(/\\.(html|htm)$/i) || path === '/' || path.endsWith('/')) {"
             ],
             "mutants": 1,
             "category": "branch",
-            "reason": "The mutant drops the path === '/' operand only. The very next operand, path.endsWith('/'), is true for '/' as well, so the disjunction still holds and the function still returns false without probing. There is no path for which the two disagree: every string equal to '/' ends with '/'. The other two operands of the same condition ARE tested - a .html path is never probed and a path whose .html is not at the end is.",
+            "reason": "The mutant drops the path === '/' operand only. The very next operand, path.endsWith('/'), is true for '/' as well, so the disjunction still holds and the function still returns false without probing. There is no path for which the two disagree: every string equal to '/' ends with '/'. The other two operands of the same condition ARE tested - a .html path is never probed and a path whose .html is not at the end is. Moved 2026-09-10 with the spreadsheet pair into daLiveSpreadsheetCopy.ts; the code is unchanged.",
             "decision": "none - the operand is fully subsumed by the endsWith('/') test beside it.",
             "recorded": "2026-09-05",
-            "source": "PL-22 batch MUT-02"
+            "source": "PL-22 batch MUT-02",
+            "line": 44
         },
         {
             "module": "src/features/eds/services/daLive/daLiveContentCopy.ts",
@@ -5722,7 +5723,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 775,
+            "line": 700,
             "mutants": 1,
             "category": "block",
             "reason": "This is the else of 'did the discovered reference copy succeed', and its body is one logger.debug line saying the reference was skipped. The success arm pushes the path; the failure arm pushes nothing and never has. A test covers a discovered reference that 404s on source - the copy stays successful and the path is absent from copiedFiles - and that holds with the block emptied.",
@@ -5735,7 +5736,7 @@
             "anchors": [
                 "} else {"
             ],
-            "line": 995,
+            "line": 920,
             "mutants": 1,
             "category": "block",
             "reason": "This is the else of 'did the auth-page stub write succeed', and its body is one logger.warn. The success arm records the path and increments the count; the failure arm records nothing. A test covers a stub whose write returns 500 - it is absent from copiedFiles and from totalFiles while the others land - and that holds with the block emptied.",
@@ -5748,7 +5749,7 @@
             "anchors": [
                 "} catch (error) {"
             ],
-            "line": 1000,
+            "line": 925,
             "mutants": 1,
             "category": "block",
             "reason": "Emptying this catch body leaves the catch itself in place, so a stub write that throws is still swallowed and the loop still continues to the next auth page. The body is a single logger.warn naming the page. A test covers a throwing stub write - the remaining two stubs are still created and the copy still reports success - and it passes with the body removed.",
